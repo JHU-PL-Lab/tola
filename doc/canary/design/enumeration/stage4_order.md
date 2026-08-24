@@ -1,4 +1,4 @@
-# Stage 3 — scenario identity, exclusive resources, and run order
+# Stage 4 — scenario identity, exclusive resources, and run order
 
 **Kind: rationale.** Standalone. Stage 2 hands over a list of
 assignments; this stage answers three questions before anything runs:

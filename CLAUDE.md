@@ -13,7 +13,7 @@ dune exec src/bin/canary_main.exe -- action llvm             # 3 scenarios (2026
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived scenarios = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
 dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 scenarios (drops both dev axes)
 dune exec src/bin/canary_main.exe -- action @all           # THE batch: every registry project under the default config — Heavy (z3/llvm) THIN (bypasses the source-built Dev chains), Light FULL; --thin forces thin everywhere; --refs A,B = only the source-repo refs with those pinned ids (any project; the batch never sets it); single-project runs always full
-dune exec src/bin/canary_main.exe -- emit sqlite --stage 3    # ONE PIPELINE PASS (2026-08-24): --stage 1 the declaration, 2 the enumerated worlds, 3 the RUN order (grouped by the store state each scenario locks — NOT the same list as 2 since 2026-08-21), 4 one scenario's realized steps. --raw = the derived `show` form (faithful, diffable); --thin/--refs as elsewhere. Goes through `Canary_pipeline`, never a re-derivation, so a dump cannot disagree with what runs. Design: doc/canary/design/enumeration/emit_stages.md
+dune exec src/bin/canary_main.exe -- emit sqlite --stage order  # ONE PIPELINE PASS (2026-08-24). Six passes, each answering to a NAME or an index: 1 declare (the project_spec), 2 enumerate (the worlds the project HAS — invocation-independent), 3 select (what THIS run asked for: z3 has 16, thin asks for 1), 4 order (the run order, grouped by the store state each scenario locks — not the same order as 3 since 2026-08-21), 5 realize (one scenario's steps). --raw = the derived `show` form (faithful, diffable); --thin/--refs as elsewhere; reads the CATALOGUE so a muted project can still be dumped. Goes through `Canary_pipeline`, never a re-derivation. Design: doc/canary/design/enumeration/emit_stages.md
 dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). ALL of tiny-full/sqlite/z3/llvm are project_run now (the raw variant view retired with A5 phase 5)
 dune exec src/bin/canary_main.exe -- spec-check @all         # STATIC spec-maturity audit (✓/✗/⚠ per project, --json for web status, exit 1 on errors; tiny-full github/opam n/a). Reads only the declared artifact table
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
@@ -212,7 +212,7 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_contract_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
-| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage4_realization.md` §2). |
+| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage5_realize.md` §2). |
 | `src/canary/project/canary_opam_binding.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
 | `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
 | `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
@@ -228,10 +228,10 @@ reconciling with, not duplicating.
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
 | `doc/canary/index.md`                          | **THE doc index** — every file under `doc/canary/`, grouped by intent. A new doc gets its row there; the rows below are only the ones a coding session hits constantly |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
-| `doc/canary/design/enumeration/stage4_realization.md` | **Stage 4** — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. Absorbed `algorithm_explainer.md` |
+| `doc/canary/design/enumeration/stage5_realize.md` | **Stage 4** — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. Absorbed `algorithm_explainer.md` |
 | `doc/canary/design/ssot.md`                    | Project-wide SSOT — canonical ID tables (Ar/Sf/Ag/Sc/scenarios/actions) bridging manuscript ↔ code    |
 | `doc/canary/design/enumeration/stage0_naming.md` | **Stage 0** — naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
-| `doc/canary/design/enumeration/stage3_identity.md` | **Stage 3, standalone** — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
+| `doc/canary/design/enumeration/stage4_order.md` | **Stage 3, standalone** — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
 | `doc/canary/project/opam_exclusive_store_issue.md` | opam's one-version-per-switch problem — ONE instance of stage 3's principle: what a pin costs, the per-version-switch measurement (`ocaml-system` = ~5 s), and the two open questions (which switch model; what a collateral rebuild is FOR) |
 | `doc/canary/design/staged_parity.md` | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation (the isolation half generalized into stage 3) |
 | `doc/canary/design/enumeration/README.md`       | **THE stage map** for the enumeration — stage → types → functions → the pins that guard it. Read before changing how scenarios are produced; a doc there citing a dead pin fails `make canary-test` |
@@ -316,7 +316,7 @@ tiny-full assembles its vendored tree INSIDE its `pr_runner_spec`
 `canary_tiny_workspace`); a real project builds/fetches into the
 runner-given dir. See SSOT §6.1 for the taxonomy
 (project → scenario ≡ variant → runner_spec → step → action) and
-`design/enumeration/stage4_realization.md` §2 for what is data vs code.
+`design/enumeration/stage5_realize.md` §2 for what is data vs code.
 
 ### Two testing axes
 
@@ -404,7 +404,7 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   no build runs, but status reads PASS. Force a fresh run with `rm -rf
   _out/canary/projects/<name>` or a distinct `variant_id`. To coexist (Built vs
   Vendored, dev vs stable) put those axes in `variant_id`. See
-  [`doc/canary/design/enumeration/stage4_realization.md`](doc/canary/design/enumeration/stage4_realization.md) §4.
+  [`doc/canary/design/enumeration/stage5_realize.md`](doc/canary/design/enumeration/stage5_realize.md) §4.
 - **OCaml LSP stale diagnostics**: Cross-module edits show false errors
   until dune rebuilds. ocamllsp reads compiled `.cmi` files; no
   in-memory cross-module resolution. Ignore during multi-file refactors,

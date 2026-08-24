@@ -1086,7 +1086,7 @@ let deploy_mismatch_test : pure_test =
               ~runtime:Canary_store.Independent
               ~universe:[ (Fetched, [ B.Stable ]) ] () ]
       in
-      let asgs = enumerate_assignments ~policy:(full_policy ()) spec in
+      let asgs = enumerate_follows_tree ~policy:(full_policy ()) spec in
       (* Two independent roots: lib(2) × binding(1) = 2 scenarios *)
       let ok_count = List.length asgs = 2 in
       (* Find the deploy-mismatch assignment: lib=B@D, binding=F@S *)

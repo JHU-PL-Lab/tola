@@ -5,8 +5,8 @@ opam's one-version-per-switch rule costs us, what a per-version switch
 would cost instead, and the two questions still open. The GENERAL
 principle — how to run a scenario that needs exclusive use of a mutated
 singleton, and how to choose between partitioning and serializing it — is
-[`../design/enumeration/stage3_identity.md`
-§2](../design/enumeration/stage3_identity.md).
+[`../design/enumeration/stage4_order.md`
+§2](../design/enumeration/stage4_order.md).
 
 > Narrowed 2026-08-24 (user: *"the remaining part is still an opam
 > store_switching issue, which is a specific problem"*), then moved here

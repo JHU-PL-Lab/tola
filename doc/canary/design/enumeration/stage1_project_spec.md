@@ -228,7 +228,7 @@ A project never hand-writes the pin axis. It declares versions on the
 a required **state of a singleton resource** — opam holds one version of
 a package per switch. So declaring two pins on one artifact declares two
 worlds that **cannot coexist**, and the runner has to serialize and
-verify them: [`stage3_identity.md` §2](stage3_identity.md) is the general
+verify them: [`stage4_order.md` §2](stage4_order.md) is the general
 principle (partition a place, serialize a state), and
 [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) is opam's case.
 

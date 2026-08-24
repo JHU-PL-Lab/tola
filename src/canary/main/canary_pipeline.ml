@@ -66,8 +66,8 @@ let spec_of (pr : project_run) : Canary_artifact.project_spec =
 let worlds (pr : project_run) : Canary_artifact.assignment list =
   let module EN = Canary_enumerate in
   (* THROUGH [scenarios_of], deliberately. Stage 2 has two
-     implementations — [enumerate] (via [enumerate_worlds]) and
-     [enumerate_assignments] (via [patterns_of], which is what
+     implementations — [enumerate] (via [enumerate_product]) and
+     [enumerate_follows_tree] (via [patterns_of], which is what
      [scenarios_of] and therefore the RUNNER use). Building [worlds] on
      the other one made this function a third opinion; the pin
      [select.full_policy_selects_everything] caught it immediately.

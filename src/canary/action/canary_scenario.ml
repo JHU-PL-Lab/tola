@@ -11,7 +11,7 @@
       ("Sc.1", "Sc.2.OCaml", …) that name the abstract shape of a
       scenario. These ids are SSOT-stable (like GitHub issue numbers)
       and appear in the manuscript.
-    - Concrete scenarios produced by [Canary_enumerate.enumerate_assignments]
+    - Concrete scenarios produced by [Canary_enumerate.enumerate_follows_tree]
       instantiate one or more of these patterns. The naming bridge
       (assignment → pattern ids) is the next step.
     - The mutation vocabulary ([mutation_kind], [manifest], [detector],

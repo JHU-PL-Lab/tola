@@ -27,7 +27,7 @@ D is a real arc.
 > when `run_model_revisit.md` was purged. Item 1 (build steps redirect to
 > a log; the detect event names it) LANDED as plan item A. The findings
 > went to the docs that own them —
-> [`../design/enumeration/stage5_matrix.md`](../design/enumeration/stage5_matrix.md)
+> [`../design/enumeration/stage6_report.md`](../design/enumeration/stage6_report.md)
 > §7 (a `·` is not neutral; a ref is a perturbation and 96% of its cells
 > restate the baseline) and
 > [`../design/artifact_cache.md`](../design/artifact_cache.md) §6 (two
@@ -322,7 +322,7 @@ directions):
 - [ ] **`string_of_assignment` is not canonical** (found 2026-08-24 while
   splitting the selection pass) — it prints an assignment's pairs in list
   order, and it IS the dedup key in `scenarios_of`. Two enumerators
-  (`enumerate` and `enumerate_assignments`) produce the same content in
+  (`enumerate` and `enumerate_follows_tree`) produce the same content in
   different orders, so the key can differ for equal worlds.
   `scenario_dir_of` was given a canonical kind order on 2026-08-19 for
   exactly this reason; the dedup key never was. Fix: sort by kind there

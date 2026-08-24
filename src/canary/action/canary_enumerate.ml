@@ -698,7 +698,7 @@ let unselected (p : 'm policy) : 'm policy =
     version and refs axes are wide open here and only the model
     constraints prune. That is what makes a stage-2 dump a fact about the
     project rather than about today's flags. *)
-let enumerate_worlds ~(tag : 'm -> string) ~(policy : 'm policy)
+let enumerate_product ~(tag : 'm -> string) ~(policy : 'm policy)
     (s : project_spec) : assignment list =
   let assignments =
     run_config ~artifacts:(ps_artifacts s)
@@ -743,7 +743,7 @@ let enumerate_worlds ~(tag : 'm -> string) ~(policy : 'm policy)
     [select.thin_post_filter_equals_universe_restriction]. *)
 let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
     assignment list =
-  enumerate_worlds ~tag ~policy:(unselected policy) s
+  enumerate_product ~tag ~policy:(unselected policy) s
   |> select (selection_of_policy policy)
 
 (** Read a slot's provision off a concrete action set (which action-graph
@@ -832,7 +832,33 @@ let string_of_assignment (a : assignment) : string =
    needs both; without a Built lib (or without a lib at all), source
    and lib don't need pairing. *)
 
-let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment list =
+(* ── THE SECOND STAGE-2 CONSTRUCTION (named 2026-08-24) ──
+
+   There are TWO enumerators, and neither is legacy — they are different
+   constructions that agree on content for every spec we have:
+
+   - {!enumerate_product} — product-then-filter, the model the docs
+     describe (design/enumeration/stage2_filters.md). MUTATION-AWARE: it
+     takes [~tag] and folds each point's mutation into its target's
+     [quality = Bad tag]. tiny's oracle needs that; the general projects
+     do not use it.
+   - {!enumerate_follows_tree} (here) — a ROOT/CHILD walk over the
+     [ax_follows] relation, positive-only (no mutation axis at all). This
+     is what {!patterns_of} calls, so it is what [scenarios_of] and
+     therefore the RUNNER use.
+
+   Measured 2026-08-24 over every catalogued project: same assignments,
+   but the PAIRS WITHIN an assignment come out in different orders — and
+   [string_of_assignment] is the dedup key in [scenarios_of], which is
+   order-sensitive. [scenario_dir_of] was given a canonical kind order on
+   2026-08-19 for exactly this reason; the dedup key never was. Both
+   follow-ons (canonical key, then reconciling the two) are in
+   doc/canary/project/status_project.md.
+
+   Until then: a caller that needs what the RUNNER enumerates must reach
+   this one, and {!Canary_pipeline.worlds} routes through [scenarios_of]
+   so it cannot become a third opinion. *)
+let enumerate_follows_tree ~(policy : 'm policy) (s : project_spec) : assignment list =
   let artifacts = ps_artifacts s in
   let follows_of id = match ps_axes_of s id with Some ax -> ax.ax_follows | None -> None in
   let provisions_of id = ps_provisions_of s id in
@@ -1177,7 +1203,7 @@ let provision_of_action (act : Canary_basic.action_sig) : provision option =
 
 (** Pattern-based enumeration using the universal chain table.
     1. Filter universal chains applicable to the spec (provision-aware).
-    2. Enumerate version combinations via [enumerate_assignments]
+    2. Enumerate version combinations via [enumerate_follows_tree]
        (handles lockstep and source-primary).
     3. Match each assignment to its chain by provision. *)
 let patterns_of ?(policy = full_policy ()) (s : project_spec)
@@ -1202,7 +1228,7 @@ let patterns_of ?(policy = full_policy ()) (s : project_spec)
                 || equal_provision pv needed
             | None -> true)
   in
-  let assignments = enumerate_assignments ~policy s in
+  let assignments = enumerate_follows_tree ~policy s in
   let seen = Hashtbl.create (module String) in
   List.concat_map assignments ~f:(fun a ->
       let key = string_of_assignment a in

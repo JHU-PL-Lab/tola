@@ -282,15 +282,16 @@ let emit_cmd =
   in
   let stage =
     Arg.(
-      value & opt string "2"
-      & info [ "stage" ] ~docv:"N"
+      value & opt string "enumerate"
+      & info [ "stage" ] ~docv:"PASS"
           ~doc:
-            "Which pass to print. 1 = the declaration (project_spec). 2 = \
-             the worlds the project HAS (invocation-independent: --thin \
-             and --refs do not affect it). 2.5 = the worlds this RUN asked \
-             for (2 through the selection). 3 = the RUN order (2.5 grouped \
-             by the store state each scenario locks — since 2026-08-21 not \
-             the same order as 2.5). 4 = one scenario's realized steps.")
+            "Which pass to print, by NAME or by index: 1 declare (the \
+             project_spec), 2 enumerate (the worlds the project HAS — \
+             invocation-independent, --thin and --refs do not affect it), \
+             3 select (the worlds this RUN asked for), 4 order (the run \
+             order — 3 grouped by the store state each scenario locks; \
+             since 2026-08-21 not the same order as 3), 5 realize (one \
+             scenario's steps).")
   in
   let raw =
     Arg.(
@@ -356,8 +357,19 @@ let emit_cmd =
                 Fmt.pr "  %s@." (EN.string_of_assignment a))
             asgs
         in
-        (match stage with
-        | "1" ->
+        (* NAME or index — the passes have both (2026-08-24, user: "use a
+           more memorable name and an integer pass index"). *)
+        let pass =
+          match String.lowercase_ascii stage with
+          | "1" | "declare" -> `Declare
+          | "2" | "enumerate" -> `Enumerate
+          | "3" | "select" -> `Select
+          | "4" | "order" -> `Order
+          | "5" | "realize" -> `Realize
+          | other -> `Unknown other
+        in
+        (match pass with
+        | `Declare ->
             let spec = P.spec_of pr in
             if raw then
               Fmt.pr "%s@." (Canary_artifact.show_project_spec spec)
@@ -402,23 +414,23 @@ let emit_cmd =
                     universe pins follows runtime)
                 spec.Canary_artifact.ps_universe
             end
-        | "2" ->
+        | `Enumerate ->
             pp_assignments
-              (project ^ " — worlds the project HAS (stage 2)")
+              (project ^ " — 2 enumerate: worlds the project HAS")
               (P.worlds pr)
-        | "2.5" ->
+        | `Select ->
             let all = List.length (P.worlds pr) in
             let sel = P.enumerated ?policy pr in
-            Fmt.pr "%s — asked for (stage 2.5) — %d of %d@." project
+            Fmt.pr "%s — 3 select: asked for %d of %d@." project
               (List.length sel) all;
             List.iter
               (fun a ->
                 if raw then Fmt.pr "%s@." (Canary_artifact.show_assignment a)
                 else Fmt.pr "  %s@." (EN.string_of_assignment a))
               sel
-        | "3" ->
+        | `Order ->
             let ordered = P.ordered ?policy pr in
-            Fmt.pr "%s — run order (stage 3) — %d@." project
+            Fmt.pr "%s — 4 order: run order — %d@." project
               (List.length ordered);
             let last = ref None in
             List.iter
@@ -439,7 +451,7 @@ let emit_cmd =
                   Fmt.pr "%s@." (Canary_artifact.show_assignment a)
                 else Fmt.pr "    %s@." (EN.string_of_assignment a))
               ordered
-        | "4" ->
+        | `Realize ->
             let ordered = P.ordered ?policy pr in
             let pick =
               match scenario with
@@ -460,7 +472,7 @@ let emit_cmd =
                  Stdlib.exit 2
              | Some a ->
                  let ctx = P.ctx_of pr a in
-                 Fmt.pr "%s — steps (stage 4)@.  scenario %s@." project
+                 Fmt.pr "%s — 5 realize: steps@.  scenario %s@." project
                    (Filename.basename ctx.P.sc_workspace);
                  Fmt.pr
                    "  (deriving steps APPLIES pr_runner_spec — for \
@@ -471,9 +483,11 @@ let emit_cmd =
                      Fmt.pr "  %-26s deps=[%s]@." s.Canary_step_model.tag
                        (String.concat "," s.Canary_step_model.deps))
                    steps)
-        | n ->
+        | `Unknown n ->
             Fmt.epr
-              "canary emit: --stage %s is not a pass (use 1, 2, 2.5, 3, 4)@." n;
+              "canary emit: %s is not a pass. Use a name or an index: 1 \
+               declare, 2 enumerate, 3 select, 4 order, 5 realize.@."
+              n;
             Stdlib.exit 2)
   in
   Cmd.v

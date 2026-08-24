@@ -1,6 +1,6 @@
-# Stage 4 — realization and execution
+# Stage 5 — realization and execution
 
-**Kind: rationale.** Standalone. Stage 3 hands over an ordered list of
+**Kind: rationale.** Standalone. Stage 4 hands over an ordered list of
 scenarios; this stage turns each one into commands, runs them, and decides
 what happened. The map is [`README.md`](README.md).
 
@@ -58,7 +58,7 @@ from the catalogue is the open cleanup.
 4. run_with_info_status(steps)  →  verdicts
 ```
 
-**1** is stage 3's ([`stage3_identity.md`](stage3_identity.md) §1) — it
+**1** is stage 3's ([`stage4_order.md`](stage4_order.md) §1) — it
 appears here because it is also the cache key, and §4 below depends on
 that.
 
@@ -190,7 +190,7 @@ The invariant is **`ran ⊆ enumerated`** — a scenario that ran without
 being predicted is a bug. Note the asymmetry, because it is the honest
 one: the reverse containment does NOT hold and is not meant to.
 Enumeration coverage is not verification coverage, and a `·` is not a
-neutral cell — see [`stage5_matrix.md`](stage5_matrix.md) §6.
+neutral cell — see [`stage6_report.md`](stage6_report.md) §6.
 
 ## 7. Ownership
 

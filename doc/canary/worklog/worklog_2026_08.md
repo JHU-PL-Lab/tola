@@ -504,7 +504,7 @@ Split `Canary_enumerate` into three modules:
 - `build_deps_of` checks source-is-declared (sqlite no-source case)
 - Child merge uses cartesian product with dedup
 - Dead branch removed (both arms of lib-provision check were identical)
-- Renamed to `enumerate_assignments`
+- Renamed to `enumerate_follows_tree`
 
 ### Pattern-based enumeration
 

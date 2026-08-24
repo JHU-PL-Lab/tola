@@ -93,7 +93,7 @@ package. What it touched, checklist order:
   the world-check half: the Fetched-binding probe verifies the store
   holds the STOCK package (the stable repo's version id) and
   self-heals by reinstalling it — each scenario lands itself in the
-  right world IN-RUN (the pin-switch dance, enumeration/stage3_identity.md
+  right world IN-RUN (the pin-switch dance, enumeration/stage4_order.md
   §10).
 - **Declaration**: `pr_wrapper_pkgs` derives from the decl — spec-check
   goes Ok without executing anything.

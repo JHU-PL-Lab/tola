@@ -75,7 +75,7 @@
     should also exploit: {b order scenarios by the stateful-store state
     they need}. Nothing does that yet — the enumerated list IS the run
     order. The general principle (partition a place, serialize a state)
-    is [doc/canary/design/enumeration/stage3_identity.md] §2; opam's
+    is [doc/canary/design/enumeration/stage4_order.md] §2; opam's
     instance is [doc/canary/project/opam_exclusive_store_issue.md].
 
     {1 These are CONFIRMATIONS, not derivations (user, 2026-08-20)}
