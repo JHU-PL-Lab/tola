@@ -1865,39 +1865,46 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
    from [scenario_dir_of], every scenario silently writes somewhere
    else — and the run-cache would serve markers from the old location. *)
 let pipeline_ctx_pin : Canary_project_test.pure_test =
-  { name = "pipeline.ctx_matches_scenario_dir";
+  { name = "pipeline.scenario_names_are_born_safe";
     check =
       (fun () ->
+        (* TWO claims, and the second is the one that lets the first be
+           simple. (1) [ctx_of] agrees with [scenario_dir_of] and derives
+           the project name from it — the runner used to compute both
+           inline, and they reach output paths and env vars, so drift
+           relocates every scenario and orphans its cache markers.
+           (2) the names are BORN safe: no scenario dir basename contains
+           a character that would need escaping in a path or a
+           ':'-separated env var. The runner carried a sanitizer for
+           exactly that until 2026-08-24; it was dead code, and the
+           honest replacement is to assert the producer rather than patch
+           the consumer. *)
+        let unsafe c =
+          match c with
+          | ':' | '#' | '+' | ' ' | '\'' | '"' | '$' | '&' | '|' | ';'
+          | '(' | ')' | '*' | '?' | '<' | '>' ->
+              true
+          | _ -> false
+        in
         List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
             List.for_all (Canary_pipeline.ordered pr) ~f:(fun a ->
                 let ctx = Canary_pipeline.ctx_of pr a in
                 let ws = Canary_project_run.scenario_dir_of ~pr_name:name a in
                 let base = Stdlib.Filename.basename ws in
-                let sanitized =
-                  String.map base ~f:(function
-                    | ':' | '#' | '+' -> '-'
-                    | c -> c)
-                in
-                let ok =
+                let agrees =
                   String.equal ctx.Canary_pipeline.sc_workspace ws
                   && String.equal ctx.Canary_pipeline.sc_project
-                       (name ^ "/" ^ sanitized)
-                  (* born-safe: these reach PYTHONPATH / LD_LIBRARY_PATH.
-                     NOTE the sanitizer is a no-op for every scenario
-                     today — [string_of_id] already emits '-' not ':', so
-                     no basename contains a character it maps. It stays as
-                     the backstop, and THIS clause is the live half of the
-                     claim; falsify by changing the workspace, not by
-                     removing the map. *)
-                  && not
-                       (String.exists ctx.Canary_pipeline.sc_project
-                          ~f:(function ':' | '#' | '+' -> true | _ -> false))
+                       (name ^ "/" ^ base)
                 in
-                if not ok then
+                let born_safe = not (String.exists base ~f:unsafe) in
+                if not agrees then
                   Fmt.pr "  pipeline.ctx: %s → %s / %s@." name
                     ctx.Canary_pipeline.sc_workspace
                     ctx.Canary_pipeline.sc_project;
-                ok))) }
+                if not born_safe then
+                  Fmt.pr "  pipeline.name: %s has an unsafe scenario name %s@."
+                    name base;
+                agrees && born_safe))) }
 
 (* Stages 1-3 are TOTAL over the catalogue — muted projects included, since
    a dump of a muted project is exactly when you want one. Stage 1's

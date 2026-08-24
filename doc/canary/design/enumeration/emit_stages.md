@@ -91,6 +91,37 @@ snapshot); `emit` is the debugging surface.
 
 `--json` for diffing two runs. `--why` is §6.
 
+## 4a. Two findings from building steps 1–4 (2026-08-24)
+
+**`pr_runner_spec` is not pure — but the impure branch is unreachable
+today.** Deriving a step list applies `pr_runner_spec`, and tiny-full's
+realization can call `Canary_tiny_workspace.materialize_built_lib`, which
+does `rm_rf` + rebuild. Measured: tiny-full enumerates ONE scenario, all
+Vendored, which dispatches to `Base` → `witness_base_workspace ()`, which
+is path arithmetic and touches nothing. The impure branch is idempotent
+and writes into tiny's own cache rather than the passed workspace, and it
+becomes reachable only if tiny-full regains its Built-lib scenarios. The
+right fix is the one CLAUDE.md already names as missing — materialization
+as an ACTION in the catalogue rather than something that happens while
+building the spec — and that is an arc, not a patch. Deferred
+deliberately; `emit --stage 4` says so in its output.
+
+**Three sanitizers, none of which can fire.** The runner mapped `:` `#`
+`+` out of the scenario basename; `scenario_dir_of` maps `:` out of the
+artifact kind and `/` out of a pin id; and the producer,
+`string_of_artifact_kind`, emits `_` and never `:` in the first place. So
+the naming scheme was already valid and the sanitizers were accreted
+defensively. The runner's was removed (user: an old issue whose better
+answer is a valid naming scheme); `scenario_dir_of`'s stay, because a
+backstop belongs at the producer while a patch at the consumer does not.
+
+`pipeline.scenario_names_are_born_safe` asserts the scheme rather than
+the patches: whatever the producers emit, the name that reaches the
+filesystem carries no character needing escaping in a path or a
+`:`-separated env var. Falsifying it takes breaking the producer AND its
+normalization together — which is the correct difficulty for a claim
+about a scheme.
+
 ## 5. The closure problem, and its answer
 
 Two of the IRs contain closures and therefore cannot be `deriving show`:

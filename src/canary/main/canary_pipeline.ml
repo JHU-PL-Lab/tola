@@ -88,16 +88,20 @@ type scenario_ctx = {
   sc_project : string;    (** "<project>/<safe-basename>" *)
 }
 
-(** The naming the runner used to compute inline. [':'], ['#'] and ['+']
-    are mapped out because the basename reaches paths and env vars. *)
+(** The naming the runner used to compute inline.
+
+    It used to map [':'], ['#'] and ['+'] out of the basename. That
+    sanitizer was removed 2026-08-24, on the user's call that it was an
+    old issue whose better answer is a valid naming scheme rather than a
+    patch. It had already been dead code: [Canary_artifact.string_of_id]
+    emits ['-'], never [':'], so no scenario dir has contained a
+    character it mapped for some time. Removing a patch on the consumer
+    is only safe if the producer is right, so
+    [pipeline.scenario_names_are_born_safe] now asserts the producer's
+    claim directly. *)
 let ctx_of (pr : project_run) (a : Canary_artifact.assignment) : scenario_ctx =
   let ws = scenario_dir_of ~pr_name:pr.pr_name a in
-  let safe =
-    String.map
-      (function ':' | '#' | '+' -> '-' | c -> c)
-      (Filename.basename ws)
-  in
-  { sc_workspace = ws; sc_project = pr.pr_name ^ "/" ^ safe }
+  { sc_workspace = ws; sc_project = pr.pr_name ^ "/" ^ Filename.basename ws }
 
 let langs = Canary_lang.[ OCaml; Python ]
 
