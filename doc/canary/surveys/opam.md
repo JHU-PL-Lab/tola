@@ -485,7 +485,7 @@ Incomplete coverage (common in Pattern B packages):
    conf→binding pairs could inline their check. The most complex conf
    packages (custom_script) have the highest mean reverse deps (25.3)
    — they're both the hardest to replace and the most impactful.
-   See [raw/conf_revdeps_classified.md](raw/conf_revdeps_classified.md).
+   See [raw/conf_revdeps_classified.md](../raw/conf_revdeps_classified.md).
 
 9. **Version resolution chain**: The seam between system PM, locator
    tool (pkg-config/llvm-config), conf package, and lang binding is

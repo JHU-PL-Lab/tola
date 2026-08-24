@@ -6,7 +6,7 @@ split `plan.md` + `roadmap.md` (2026-05-19).
 
 Companion to [`surface.md`](draft.md) (manuscript) +
 [`surface_draft/`](surface_draft/) (materials) for theory, and
-[`tiny.md`](tiny.md) (witness); see [`../README.md`](../README.md) for the
+[`tiny.md`](tiny.md) (witness); see [`../index.md`](../index.md) for the
 four-pillar map.
 
 ## Quick map

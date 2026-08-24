@@ -208,7 +208,7 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_contract_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
-| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `dynamic_enumeration.md` "Derived vs hand-written"). |
+| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `algorithm_explainer.md`). |
 | `src/canary/project/canary_opam_binding.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
 | `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
 | `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
@@ -222,15 +222,19 @@ reconciling with, not duplicating.
 | `canary/scripts/inspect_ocaml.py`            | ocamlobjinfo parser → `ocaml` summary (module list)                                                    |
 | `canary/scripts/inspect_python.py`           | Python `dir()` parser → `python` summary (attrs + watchlist + extras)                                  |
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
+| `doc/canary/index.md`                          | **THE doc index** — every file under `doc/canary/`, grouped by intent. A new doc gets its row there; the rows below are only the ones a coding session hits constantly |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
+| `doc/canary/design/algorithm_explainer.md`     | The pipeline walkthrough (declaration → catalogue → chains → assignments → execution) + the run cache (§9) and store pins (§10). Absorbed the retired `dynamic_enumeration.md` |
 | `doc/canary/design/ssot.md`                    | Project-wide SSOT — canonical ID tables (Ar/Sf/Ag/Sc/scenarios/actions) bridging manuscript ↔ code    |
+| `doc/canary/design/scenario.md`                | Scenario naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
+| `doc/canary/design/store_switching.md`         | Shared-store version switching: one version per package per switch, the pin as an exclusive LOCK (run order groups by it, §5g), the three tiers of pin cost |
 | `doc/canary/design/versioning.md`              | Versioning-unification tracker — typed `version` as artifact identity across enumeration/store/cache; scope (pieces A/B/C), simple-projects-first strategy, test plan, open questions |
-| `doc/canary/design/dynamic_enumeration.md`     | The enumeration→node-graph model (short, canonical): the stage pipeline (spec/policy → `enumerate` → assignment → `close_deps` → node graph); assignment = flat IR, node graph = derived backend view; build edges grammatical (the seam), runtime edge resolved by `dep_mode` (Lockstep/Independent/Ambient). To-dos in status §A. (Absorbed the retired `enumeration_graph.md`.) |
-| `doc/canary/design/scenario_terms.md`          | OPEN terminology to-do: "scenario" still overloaded vs abstract senses (`Sc.N` patterns, coverage *stages*); audit + T0/T1/T2 options + open questions. Decide before renaming `canary scenarios` or splitting the dual-use scenario type (ride F5). |
-| `doc/canary/README.md`                         | Directory map + four-pillar alignment entry point (theory + tiny witness + roadmap)                   |
-| `doc/canary/research/surface.md`               | **Manuscript-in-progress** (renamed from `notes.md` 2026-06-04). Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM); backbone (rules / traces / worlds), PL notation, implementation slots. **Authoritative** for current framing. |
+| `doc/canary/project/projects.md`               | **The project roster** — what exists: dimension model, per-project lib/binding axes + 2×2 status, landing history, candidates |
+| `doc/canary/project/status_project.md`         | **The project layer's SOLO to-do tracker** — the ordered plan, general to-dos, the report milestone |
+| `doc/canary/project/issues.md`                 | OPEN per-project findings, declaration gaps, chores — the standalone worklist |
+| `doc/canary/project/landing.md`                | How to land a project: workflow, data structures, the testing harness that verifies each step |
+| `doc/canary/research/draft.md`                 | **Manuscript-in-progress** (was `surface.md`, renamed 2026-08). Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM); backbone (rules / traces / worlds), PL notation, implementation slots. **Authoritative** for current framing. |
 | `doc/canary/research/surface_draft/`           | **Materials collection** (split 2026-06-04, surface_theory.md removed). Older drafts split across `main.md`, `surface.md`, `principle.md`, `implementation.md` (§2.7 pointers, may be stale), `package.md`, `versioning.md`, `notation.md`. Mine for content; not authoritative. |
-| `doc/canary/research/drafting.md`              | Drafting playbook + active edit queue for `surface.md` (drafting order, per-section sources, batched edits)  |
 | `doc/canary/research/tiny.md`                  | Witness (current): minimal C lib + 3 bindings + 13-variant canary matrix + harness scenario table + findings |
 | `doc/canary/research/plan.md`                  | Paper venues + milestones + working roadmap (steps 1-5; step 1+2 done)                                |
 | `doc/canary/ops/install_targets.md`            | Z3 vs LLVM cmake install patterns; informs TODO #40                                                    |
@@ -304,7 +308,7 @@ tiny-full assembles its vendored tree INSIDE its `pr_runner_spec`
 `canary_tiny_workspace`); a real project builds/fetches into the
 runner-given dir. See SSOT §6.1 for the taxonomy
 (project → scenario ≡ variant → runner_spec → step → action) and
-`dynamic_enumeration.md` ("Derived vs hand-written") for what's data vs code.
+`design/algorithm_explainer.md` for what is data vs code.
 
 ### Two testing axes
 

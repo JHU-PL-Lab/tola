@@ -2,12 +2,15 @@
 
 The design narrative: vision, identity model, action graph, workflow,
 design principles. For surface theory see
-[../research/surface.md](../research/draft.md) (manuscript) and
+[../research/draft.md](../research/draft.md) (manuscript) and
 [../research/surface_draft/](../research/surface_draft/) (materials,
 with `implementation.md` for the compat-check implementation). For the
 expansion roadmap and per-target plans see
-[../project/projects.md](../project/projects.md). Doc map at
-[../README.md](../README.md).
+[../project/projects.md](../project/projects.md).
+
+This is the design NARRATIVE, not the doc map — the map (every file in
+`doc/canary/`, grouped by intent) is [../index.md](../index.md), and
+that is where a new design note gets its row.
 
 > **Current kernel (2026-08-04), not yet folded into the narrative below:**
 > scenarios are enumerated by `Canary_enumerate.enumerate ~policy` over a static
@@ -45,7 +48,7 @@ Canary's two-track approach:
   abstraction: the *surface* between a library and a binding. If we can
   characterise this surface formally we can *infer* compatibility,
   *generate* targeted tests, and *explain* failures in interface terms.
-  Details in [../research/surface.md](../research/draft.md) (manuscript)
+  Details in [../research/draft.md](../research/draft.md) (manuscript)
   and [../research/surface_draft/](../research/surface_draft/) (materials).
 
 The two tracks reinforce each other. Empirical results validate or contradict
@@ -292,10 +295,9 @@ the implementation path yet.
 
 ## 8. Related design notes
 
-- [algorithm_explainer.md](algorithm_explainer.md) — the enumeration→node-graph
-  model, plus (absorbed from the retired `harness_canary_orthogonality.md`) the
-  two-engines and store/runner/producer factoring between the standalone tiny
-  harness and canary's workspace model. Historical note: two implicit-coupling
-  leaks were fixed in Phase 14e (cext RUNPATH pointing at the live tree;
-  `abi_soname_bump` deleting `libtiny.so` and relying on dune's cache)
-  and what an "ideal" orthogonal factoring would look like.
+Every design note has a row in the doc index, [../index.md](../index.md)
+§design — including [algorithm_explainer.md](algorithm_explainer.md),
+which absorbed the retired `harness_canary_orthogonality.md` (the
+two-engines and store/runner/producer factoring between the standalone
+tiny harness and canary's workspace model, plus the two
+implicit-coupling leaks Phase 14e fixed).
