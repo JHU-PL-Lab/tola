@@ -293,6 +293,14 @@ let emit_cmd =
              since 2026-08-21 not the same order as 3), 5 realize (one \
              scenario's steps).")
   in
+  let json =
+    Arg.(
+      value & flag
+      & info [ "json" ]
+          ~doc:
+            "Emit the pass as JSON — one encoder per pass, so a dump can \
+             be diffed between runs. Keys are canonical.")
+  in
   let raw =
     Arg.(
       value & flag
@@ -318,7 +326,7 @@ let emit_cmd =
             "--stage 4 only: which scenario to realize (its directory \
              basename). Defaults to the first in run order.")
   in
-  let run project stage raw thin refs scenario () =
+  let run project stage json raw thin refs scenario () =
     let module P = Canary_pipeline in
     let module EN = Canary_enumerate in
     (* the CATALOGUE, not the active set: muting suppresses RUNNING, not
@@ -368,7 +376,21 @@ let emit_cmd =
           | "5" | "realize" -> `Realize
           | other -> `Unknown other
         in
+        let out j = print_string (Yojson.Basic.pretty_to_string j ^ "\n") in
         (match pass with
+        | `Declare when json -> out (P.json_declare pr)
+        | `Enumerate when json ->
+            out (P.json_assignments ~pass:"enumerate" pr (P.worlds pr))
+        | `Select when json ->
+            out
+              (P.json_assignments ~pass:"select"
+                 ~of_total:(List.length (P.worlds pr))
+                 pr (P.enumerated ?policy pr))
+        | `Order when json -> out (P.json_order ?policy pr)
+        | `Realize when json -> (
+            match P.ordered ?policy pr with
+            | a :: _ -> out (P.json_realize ~root:"_out" pr a)
+            | [] -> Fmt.epr "no scenarios@.")
         | `Declare ->
             let spec = P.spec_of pr in
             if raw then
@@ -495,7 +517,9 @@ let emit_cmd =
        ~doc:
          "Print one pipeline pass's output (the value it hands the next \
           pass). See design/enumeration/emit_stages.md.")
-    Term.(const run $ project $ stage $ raw $ thin $ refs $ scenario $ const ())
+    Term.(
+      const run $ project $ stage $ json $ raw $ thin $ refs $ scenario
+      $ const ())
 
 let spec_cmd =
   let project =

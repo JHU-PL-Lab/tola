@@ -1951,6 +1951,111 @@ let select_post_filter_pin : Canary_project_test.pure_test =
                 (List.length restricted) (List.length post_filtered);
             ok)) }
 
+(* ── EACH PASS ENCODES ON ITS OWN (2026-08-24) ──
+
+   The user's reason for wanting per-pass JSON was structural: if every
+   pass can be serialized independently, the layering is real rather than
+   asserted. This pin is that claim made testable — every pure pass
+   encodes, for every catalogued project, and each encoding NAMES its own
+   pass and carries the project. (Pass 5 is excluded: encoding it applies
+   [pr_runner_spec], which is not pure — see the pipeline header.)
+
+   The second half is the one with teeth: the encoded assignment keys
+   must equal the pass's own keys. An encoder that re-derived its content
+   could drift from the pass it claims to serialize, which is the same
+   failure the pipeline module exists to prevent one level up. *)
+let json_per_pass_pin : Canary_project_test.pure_test =
+  { name = "emit.each_pass_encodes_independently";
+    check =
+      (fun () ->
+        let field name = function
+          | `Assoc kvs -> List.Assoc.find kvs name ~equal:String.equal
+          | _ -> None
+        in
+        let str name j =
+          match field name j with Some (`String s) -> Some s | _ -> None
+        in
+        let keys j =
+          match field "assignments" j with
+          | Some (`List xs) ->
+              List.filter_map xs ~f:(fun x ->
+                  match str "key" x with Some k -> Some k | None -> None)
+          | _ -> []
+        in
+        List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            let declare = Canary_pipeline.json_declare pr in
+            let enumerate =
+              Canary_pipeline.json_assignments ~pass:"enumerate" pr
+                (Canary_pipeline.worlds pr)
+            in
+            let order = Canary_pipeline.json_order pr in
+            let named j want =
+              Poly.equal (str "project" j) (Some name)
+              && Poly.equal (str "pass" j) (Some want)
+            in
+            let self_describing =
+              named declare "declare" && named enumerate "enumerate"
+              && named order "order"
+            in
+            (* the encoding is the pass, not a re-derivation *)
+            let faithful =
+              List.equal String.equal (keys enumerate)
+                (List.map (Canary_pipeline.worlds pr)
+                   ~f:Canary_enumerate.string_of_assignment)
+            in
+            if not (self_describing && faithful) then
+              Fmt.pr "  emit.json: %s self=%b faithful=%b@." name
+                self_describing faithful;
+            self_describing && faithful)) }
+
+(* ── THE TWO STAGE-2 CONSTRUCTIONS AGREE (2026-08-24) ──
+
+   [enumerate_product] (product-then-filter, mutation-aware) and
+   [enumerate_follows_tree] (a root/child walk over ax_follows,
+   positive-only) are different algorithms that should compute the same
+   worlds. Until today they could not be compared, because
+   [string_of_assignment] printed pairs in list order and the two build
+   them in different orders; making the key canonical made the question
+   answerable, and this pin answers it for every catalogued project.
+
+   Its value is forward-looking: it is the evidence for eventually
+   deleting one of them, and until then it is what stops them drifting
+   apart unnoticed while the docs describe only the first. *)
+let two_constructions_agree_pin : Canary_project_test.pure_test =
+  { name = "enumerate.two_constructions_agree";
+    check =
+      (fun () ->
+        let module EN = Canary_enumerate in
+        let full = EN.unselected (EN.full_policy ()) in
+        let key asgs =
+          List.map asgs ~f:EN.string_of_assignment
+          |> List.sort ~compare:String.compare
+          |> List.dedup_and_sort ~compare:String.compare
+        in
+        List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            let spec =
+              Canary_project_spec.project_spec_of_rows
+                pr.Canary_project_run.pr_artifacts
+            in
+            let product =
+              key (EN.enumerate_product ~tag:(fun () -> "") ~policy:full spec)
+            in
+            let tree = key (EN.enumerate_follows_tree ~policy:full spec) in
+            let ok = List.equal String.equal product tree in
+            if not ok then begin
+              Fmt.pr "  enumerate: %s product=%d follows_tree=%d@." name
+                (List.length product) (List.length tree);
+              List.iter
+                (List.filter product ~f:(fun x ->
+                     not (List.mem tree x ~equal:String.equal)))
+                ~f:(fun x -> Fmt.pr "    only in product: %s@." x);
+              List.iter
+                (List.filter tree ~f:(fun x ->
+                     not (List.mem product x ~equal:String.equal)))
+                ~f:(fun x -> Fmt.pr "    only in follows_tree: %s@." x)
+            end;
+            ok)) }
+
 (* The DEFAULT run asks for everything: stage 2.5 under the full policy
    is stage 2 unchanged. Without this, a selection that quietly narrowed
    by default would shrink every run while every count still "matched" —
@@ -3093,6 +3198,8 @@ let base_tests : Canary_project_test.pure_test list =
       select_post_filter_pin;
       select_subset_pin;
       select_default_is_identity_pin;
+      two_constructions_agree_pin;
+      json_per_pass_pin;
       run_order_groups_state_pin;
       z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;

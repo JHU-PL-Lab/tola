@@ -153,3 +153,127 @@ let actions_of (pr : project_run) (a : Canary_artifact.assignment) :
   in
   List.map (fun (s : Canary_step_model.step) -> s.Canary_step_model.action) steps
   |> List.sort_uniq Stdlib.compare
+
+(* ── JSON per pass (2026-08-24) ──
+
+   One encoder per pass, living HERE rather than in the CLI, because the
+   user's reason for wanting them is structural: if each pass can be
+   serialized on its own, the layering is real rather than asserted. A
+   pass whose value could not be encoded without reaching into a
+   neighbour would be the counter-evidence.
+
+   Stable by construction: assignments are keyed by
+   [string_of_assignment], which became CANONICAL (sorted by artifact
+   kind) on 2026-08-24 — before that, two runs could encode the same
+   world two ways and a diff would show phantom churn. *)
+
+let json_of_placement (id : Canary_artifact.artifact_id)
+    (pl : Canary_artifact.placement) : Yojson.Basic.t =
+  let v = pl.Canary_artifact.version in
+  `Assoc
+    [ ("artifact", `String (Canary_artifact.string_of_id id));
+      ("provision",
+       `String (Canary_artifact.string_of_provision pl.Canary_artifact.provision));
+      ("channel", `String (Canary_basic.string_of_channel v.Canary_basic.channel));
+      (* "" for a version-ambient placement — the distinction stage 4's
+         identity rule turns on, so it is encoded rather than elided *)
+      ("version_id", `String v.Canary_basic.id) ]
+
+let json_of_assignment (a : Canary_artifact.assignment) : Yojson.Basic.t =
+  `Assoc
+    [ ("key", `String (Canary_enumerate.string_of_assignment a));
+      ("placements", `List (List.map (fun (id, pl) -> json_of_placement id pl) a))
+    ]
+
+(** Pass 1 — declare. *)
+let json_declare (pr : project_run) : Yojson.Basic.t =
+  let spec = spec_of pr in
+  let row (id, (ax : Canary_artifact.artifact_axes)) =
+    `Assoc
+      [ ("artifact", `String (Canary_artifact.string_of_id id));
+        ("universe",
+         `List
+           (List.map
+              (fun (pv, chs) ->
+                `Assoc
+                  [ ("provision", `String (Canary_artifact.string_of_provision pv));
+                    ("channels",
+                     `List
+                       (List.map
+                          (fun c -> `String (Canary_basic.string_of_channel c))
+                          chs)) ])
+              ax.Canary_artifact.ax_universe));
+        ("pins",
+         `List
+           (List.map
+              (fun b -> `String (Canary_basic.string_of_build_id b))
+              ax.Canary_artifact.ax_pins));
+        ("follows",
+         match ax.Canary_artifact.ax_follows with
+         | None -> `Null
+         | Some f -> `String (Canary_artifact.string_of_id f));
+        ("runtime",
+         match ax.Canary_artifact.ax_runtime with
+         | None -> `Null
+         | Some Canary_store.Lockstep -> `String "lockstep"
+         | Some Canary_store.Independent -> `String "independent"
+         | Some (Canary_store.Ambient why) -> `String ("ambient:" ^ why)) ]
+  in
+  `Assoc
+    [ ("project", `String pr.pr_name); ("pass", `String "declare");
+      ("artifacts", `List (List.map row spec.Canary_artifact.ps_universe)) ]
+
+(** Passes 2 and 3 — enumerate and select. [of_total] is present on
+    select so a reader sees the narrowing without a second call. *)
+let json_assignments ~(pass : string) ?(of_total : int option)
+    (pr : project_run) (asgs : Canary_artifact.assignment list) : Yojson.Basic.t
+    =
+  `Assoc
+    ([ ("project", `String pr.pr_name); ("pass", `String pass);
+       ("count", `Int (List.length asgs)) ]
+    @ (match of_total with None -> [] | Some n -> [ ("of_total", `Int n) ])
+    @ [ ("assignments", `List (List.map json_of_assignment asgs)) ])
+
+(** Pass 4 — order. Each entry carries the store state it locks, which is
+    the sort key, so the grouping is readable from the encoding. *)
+let json_order ?policy (pr : project_run) : Yojson.Basic.t =
+  let rows =
+    List.map
+      (fun a ->
+        `Assoc
+          [ ("key", `String (Canary_enumerate.string_of_assignment a));
+            ("store_state",
+             `Assoc
+               (List.map
+                  (fun (p, v) -> (p, `String v))
+                  (store_state_key pr a))) ])
+      (ordered ?policy pr)
+  in
+  `Assoc
+    [ ("project", `String pr.pr_name); ("pass", `String "order");
+      ("count", `Int (List.length rows)); ("scenarios", `List rows) ]
+
+(** Pass 5 — realize. NOT pure: see the module header. *)
+let json_realize ~(root : string) (pr : project_run)
+    (a : Canary_artifact.assignment) : Yojson.Basic.t =
+  let ctx = ctx_of pr a in
+  let steps = steps_of ~root pr ~ctx a in
+  `Assoc
+    [ ("project", `String pr.pr_name); ("pass", `String "realize");
+      ("scenario", `String (Filename.basename ctx.sc_workspace));
+      ("workspace", `String ctx.sc_workspace);
+      ("steps",
+       `List
+         (List.map
+            (fun (s : Canary_step_model.step) ->
+              `Assoc
+                [ ("tag", `String s.Canary_step_model.tag);
+                  ("action",
+                   `String
+                     (Canary_basic.string_of_action s.Canary_step_model.action));
+                  ("deps",
+                   `List
+                     (List.map
+                        (fun d -> `String d)
+                        s.Canary_step_model.deps)) ])
+            steps)) ]

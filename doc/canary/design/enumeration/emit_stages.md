@@ -17,8 +17,13 @@ is [`README.md`](README.md).
 > 1, `--refs latest` asks for 5). Pins
 > `select.thin_post_filter_equals_universe_restriction`,
 > `select.is_a_subset_of_stage2`,
-> `select.full_policy_selects_everything`. **Still open:** `--json` and
-> `--why` (§6).
+> `select.full_policy_selects_everything`. `--json` landed the same day
+> — one encoder per pass, living in `Canary_pipeline` so "each pass
+> serializes on its own" is a testable claim
+> (`emit.each_pass_encodes_independently`) rather than an assertion; it
+> needed `string_of_assignment` to become canonical first, which in turn
+> let `enumerate.two_constructions_agree` compare the two enumerators for
+> the first time. **Still open:** `--why` (§6), deliberately postponed.
 
 > 2026-08-24, user: *"is it possible to print every stage's output, so
 > that making the whole pipeline a compiling-pass experience, then
@@ -165,35 +170,47 @@ a run in order to fingerprint it, and `runner.marker_stale_on_spec_change`
 depends on that. `emit --stage 4` is that realization, printed instead of
 hashed.
 
-## 6. `--why` — attribution, and why it is the payoff
+## 6. `--why` — POSTPONED, and sharpened by the postponement
 
-Stage 2's constraints currently answer *yes/no*. The debugging question is
-*which one, and about which artifact*. Cheaply available, because **three
-of the five are already predicates**:
+*(2026-08-24, user: "if the `why` is the printing version of how code is
+working in some stages, we can also postpone it, since I would ask you
+directly in the chat … but we will need it finally. you decide.")*
 
-| constraint | shape today | to attribute |
-| --- | --- | --- |
-| `assignment_ok` | `assignment -> bool` | free — run it, record the verdict |
-| `binding_couples` | `spec -> assignment -> id -> bool` | free, per artifact |
-| `source_ref_ok` | `spec -> assignment -> id -> bool` | free, per artifact |
-| `ax_follows` (lockstep) | inline in `enumerate` | small — lift to a named predicate |
-| `shadow_filter` | `assignment list -> assignment list` | return `(kept, dropped × reason)` |
-| `ref_filter` | `assignment list -> assignment list` | same |
+**Decision: postponed.** The test the user proposed is the right one, and
+applying it honestly splits `--why` in two:
 
-Output shape:
+- **The summary** — "8 dropped by `assignment_ok`, 4 by `source_ref_ok`"
+  — is *narration of the algorithm*. It is derivable by reading the five
+  constraints against a spec, which is exactly the thing that can be
+  asked for in chat rather than built into a terminal. Postponable.
+- **The per-candidate ledger** — "the world you expected is absent, and
+  HERE is what removed it" — is an *observation*, computed by the code
+  that runs rather than reasoned about by a reader. Not narration. This
+  is the half worth building.
 
-```
-$ canary emit sqlite --stage 2 --why
-product: 24 candidates
-  kept    10
-  dropped 14
-    assignment_ok        8   (lib Built@Dev without its source)
-    source_ref_ok        4   (unread source: not the canonical ref)
-    shadow_filter        2   (prebuilt shadows Built at the same version)
-```
+So when it is built, build the ledger, not the histogram. A drop-reason
+count is the tempting first version and it is the less useful one.
 
-The invariant worth having is stronger than the listing: **kept + dropped
-= the product**. Nothing disappears unexplained.
+**A sharper framing the user supplied**: *"a tool for us to inspect why
+something works AS EXPECTED"* — note the positive direction. For a
+checking framework the audit trail of a GREEN run matters as much as the
+diagnosis of a missing one: "this world exists, and here are the five
+constraints it passed" is a different and arguably more valuable
+statement than "these got dropped". So the ledger should carry **both
+fates**, per candidate, not just the removals.
+
+**The trigger for building it.** Today's counts are small (10 projects,
+26 active scenarios) and pinned, so a surprising number is noticed
+immediately and can be reasoned through. The forcing case is a NEW
+project whose scenario count surprises whoever landed it — which is a
+landing-workflow moment (ncurses, lmdb, sundials are queued). Build it
+then, when there is a real missing world to point it at.
+
+**What it will need, unchanged:** three of the five constraints are
+already `-> bool` predicates, so attribution is a recorder around them;
+`shadow_filter` and `ref_filter` return their dropped set with a reason.
+The invariant is stronger than the listing — **kept + dropped = the
+product** — and it is the only part with behavioural risk.
 
 ## 7. The missing pass — selection
 

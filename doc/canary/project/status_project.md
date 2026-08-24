@@ -319,14 +319,16 @@ directions):
 
 **Enhancements** (no hurry — recorded, not scheduled):
 
-- [ ] **`string_of_assignment` is not canonical** (found 2026-08-24 while
-  splitting the selection pass) — it prints an assignment's pairs in list
-  order, and it IS the dedup key in `scenarios_of`. Two enumerators
-  (`enumerate` and `enumerate_follows_tree`) produce the same content in
-  different orders, so the key can differ for equal worlds.
-  `scenario_dir_of` was given a canonical kind order on 2026-08-19 for
-  exactly this reason; the dedup key never was. Fix: sort by kind there
-  too — then reconcile the two enumerators, which is the larger half.
+- [ ] **Reconcile the two stage-2 constructions** — `enumerate_product`
+  (product-then-filter, mutation-aware, what the docs describe) and
+  `enumerate_follows_tree` (a root/child walk over `ax_follows`,
+  positive-only, what the RUNNER uses). Since 2026-08-24 they are pinned
+  to agree on every catalogued project
+  (`enumerate.two_constructions_agree`), which is the evidence for
+  deleting one — the question is which, and the mutation axis is why it
+  is not obvious. The canonical-key half of this is DONE:
+  `string_of_assignment` sorts by artifact kind, so the dedup key is a
+  function of content rather than of build order.
 - [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
   enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
   with its test plan:

@@ -812,9 +812,30 @@ let assignment_of_actions ~(artifacts : artifact_id list)
 
 (** Pretty an assignment as "source=fetched@dev lib=built@dev …" (version
     shown only where the artifact is provided). *)
+(** The assignment's CANONICAL string — the dedup key in
+    [Canary_project_run.scenarios_of], the scenario label the pre/post
+    join matches on, and (2026-08-24) the key a JSON dump must be stable
+    under.
+
+    CANONICAL since 2026-08-24: the pairs are sorted by artifact kind
+    before printing, so the string is a function of the assignment's
+    CONTENT rather than of the order the enumerator happened to build it
+    in. The two enumerators ({!enumerate_product} and
+    {!enumerate_follows_tree}) produce the same assignments in different
+    pair orders, so without this the same world could key two ways —
+    and the key is what dedup compares. [scenario_dir_of] was given the
+    same treatment on 2026-08-19, for the same reason and with the same
+    argument: "sorting by artifact kind makes the name a function of the
+    assignment's CONTENT". The dedup key was simply missed then. *)
 let string_of_assignment (a : assignment) : string =
+  let canonical =
+    List.stable_sort a ~compare:(fun (x, _) (y, _) ->
+        Int.compare
+          (Canary_basic.kind_order (kind_of x))
+          (Canary_basic.kind_order (kind_of y)))
+  in
   String.concat ~sep:" "
-    (List.map a ~f:(fun (id, pl) ->
+    (List.map canonical ~f:(fun (id, pl) ->
          let base = string_of_id id ^ "=" ^ string_of_provision pl.provision in
          if equal_provision pl.provision Absent then base
          else base ^ "@" ^ string_of_version pl.version))
