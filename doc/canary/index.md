@@ -85,7 +85,8 @@ done.
 | [algorithm_explainer.md](design/enumeration/algorithm_explainer.md) | The predecessor of the stage map — the end-to-end walkthrough with z3 as a running example; the run cache (§9) and store pins (§10). Kept for readability; where a stage doc exists it is authoritative |
 | [filters.md](design/enumeration/filters.md) | Stage 2 — the five constraints that prune the product, and the over-generation each one was written against |
 | [scenario.md](design/enumeration/scenario.md) | Stage 0 — the four senses of "scenario" (scenario / pattern / stage / path pattern) |
-| [store_switching.md](design/enumeration/store_switching.md) | Stages 1 + 3 — store pins, the pin as an exclusive LOCK, the three tiers of pin cost |
+| [stage3_identity.md](design/enumeration/stage3_identity.md) | **Stage 3, standalone** — scenario identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state; four measured instances), and run order |
+| [store_switching.md](design/enumeration/store_switching.md) | The opam switch as ONE instance of that principle — what one-version-per-switch costs, the per-version-switch measurement, and the two open questions |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib |
 | [staged_parity.md](design/enumeration/staged_parity.md) | Cross-cutting — `Installed` is a provision, so a staged consumer is a WORLD; build-vs-install parity is a check |
 | [matrix.md](design/enumeration/matrix.md) | Stage 5 — the result matrix: what a row is and what names it |

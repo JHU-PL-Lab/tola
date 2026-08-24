@@ -283,7 +283,7 @@ let scenarios_of ?policy (pr : project_run) :
         (Canary_enumerate.string_of_assignment b))
 
 (** [store_state_key pr a] — the SINGLE-VALUED STORE STATE this assignment
-    requires (2026-08-21, store_switching §6).
+    requires (2026-08-21, stage3_identity.md §3).
 
     An opam switch is [Isolated_store "switch"]: isolated from the system
     and internally single-valued, holding ONE version of a package. So an
@@ -316,7 +316,7 @@ let store_state_key (pr : project_run) (a : Canary_artifact.assignment) :
 
     Why this is not a micro-optimisation. The enumeration's product ranges
     over the lib axis outermost and the binding axis innermost, and the
-    enumerated list has always BEEN the run order (store_switching §4
+    enumerated list has always BEEN the run order (stage3_identity.md §3
     item 2 — a deliberate decision not to have a scheduler). The result is
     that a pinned binding alternates on nearly every row. Measured
     2026-08-20: sqlite performed TEN opam pin operations for ten

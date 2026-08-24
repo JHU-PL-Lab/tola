@@ -224,16 +224,19 @@ A project never hand-writes the pin axis. It declares versions on the
 `<package>.<version>` — e.g. an opam package literally named
 `llvm.19-shared` whose version is not `19-shared`.
 
-**Why pins exist at all**, since it constrains what you may declare: opam
-allows exactly one version of a package per switch — a core solver
-invariant with no escape hatch. A pin is therefore not a preference but
-**store state**, and declaring two of them means the two scenarios cannot
-run at the same time. Declaration is free; the cost is at run time, and
-before declaring a pair you should dry-run the older pin
-(`opam install <pkg>.<v> --show-actions --dry-run`) and see what it
+**What declaring a pin commits you to.** A pin is not a preference, it is
+a required **state of a singleton resource** — opam holds one version of
+a package per switch. So declaring two pins on one artifact declares two
+worlds that **cannot coexist**, and the runner has to serialize and
+verify them: [`stage3_identity.md` §2](stage3_identity.md) is the general
+principle (partition a place, serialize a state), and
+[`store_switching.md`](store_switching.md) is opam's case.
+
+Declaration is free; the cost is at run time. Before declaring a pair,
+dry-run the older pin —
+`opam install <pkg>.<v> --show-actions --dry-run` — and see what it
 drags: one package (fine), collateral rebuilds of other projects'
-packages (a design question), or the compiler (do not). See
-[`store_switching.md`](store_switching.md).
+packages (a design question), or the compiler (do not).
 
 `ps_versions_of` reads it back: a `Fetched` artifact with pins ranges
 over the pins; everything else ranges over the channel list. The

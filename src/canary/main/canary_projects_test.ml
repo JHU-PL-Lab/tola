@@ -832,7 +832,7 @@ let registry_pin : Canary_project_test.pure_test =
       (* SUBSET, not equality (2026-08-21). A registry entry can be
          commented out to mute an expensive project — z3's full run is
          ~30 min because opam rebuilds libz3 on every binding pin flip
-         (store_switching §6). Equality made that a test failure, which
+         (stage3_identity.md §3). Equality made that a test failure, which
          would push someone to edit the pin instead of the registry.
 
          What is still caught: an UNKNOWN name (not in the catalogue) is
@@ -1834,7 +1834,7 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
         && List.for_all (built @ installed) ~f:(fun d ->
                not (String.is_substring d ~substring:".."))) }
 
-(* RUN ORDER GROUPS BY STORE STATE (2026-08-21, store_switching §6).
+(* RUN ORDER GROUPS BY STORE STATE (2026-08-21, stage3_identity.md §3).
 
    An opam switch holds ONE version of a package, so a pinned placement is
    an exclusive lock on that store's state. The enumerated list has always

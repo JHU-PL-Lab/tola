@@ -74,7 +74,9 @@
     So the assertion is the enforcement half of a property the enumeration
     should also exploit: {b order scenarios by the stateful-store state
     they need}. Nothing does that yet — the enumerated list IS the run
-    order. Tracked in [doc/canary/design/enumeration/store_switching.md].
+    order. The general principle (partition a place, serialize a state)
+    is [doc/canary/design/enumeration/stage3_identity.md] §2; opam's
+    instance is [doc/canary/design/enumeration/store_switching.md].
 
     {1 These are CONFIRMATIONS, not derivations (user, 2026-08-20)}
 
