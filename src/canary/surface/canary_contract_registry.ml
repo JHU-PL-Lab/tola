@@ -1,5 +1,6 @@
 (** The contract registry — M2 step 6
-    ([doc/canary/design/contract_registry.md], 2026-08-17).
+    ([doc/canary/design/agreement_registry_audit.md], 2026-08-17; the
+    former contract_registry.md merged into it 2026-08-21).
 
     Producer-first: the BELIEF in one table — one row per contract.
     Consumers (the expectation lowering, the per-project binding

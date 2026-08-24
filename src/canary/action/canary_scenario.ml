@@ -22,8 +22,9 @@
     "scenario") should be used for the constructs in this file; the
     word "scenario" belongs to concrete assignments from the engine.
 
-    See [doc/canary/design/scenario_terms.md] for the terminology
-    split (pattern vs scenario vs stage) and the retirement plan. *)
+    See [doc/canary/design/scenario.md] for the terminology split
+    (pattern vs scenario vs stage vs path pattern); it replaced the
+    retired scenario_terms.md. *)
 
 (** Scenario type — project-agnostic, unified for good and bad.
 

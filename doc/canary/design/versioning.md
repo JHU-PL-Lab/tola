@@ -1,9 +1,11 @@
-# Versioning unification — design + tracker
+# Versioning unification — what landed, what is left
 
-> **Status: design / tracking doc.** Versioning is bigger than a single
-> enumeration axis: it needs a global design, its own test cases, and
-> uniform usage across the enumeration, the store, and the cache. Tracked
-> here rather than inline in [`../status.md`](../status.md).
+**Kind: rationale + one open item.** Rewritten 2026-08-23: the 2026-07-30
+tracker this replaces described pieces A and B as pending, but both had
+landed by 2026-08-12 and the doc had not noticed. That is the failure
+mode the design/ audit was about — a proposal with no way to tell it
+came true. What survives here is the model, the evidence that it is
+built, and the one piece that genuinely is not.
 
 Model reference: [`ssot.md` §4.2.2](ssot.md) (the version axis).
 
@@ -11,76 +13,44 @@ Model reference: [`ssot.md` §4.2.2](ssot.md) (the version axis).
 
 A concrete artifact's **version** is its identity: the release **channel**
 (`Dev | Stable`) plus an **id** — a commit hash for `Dev`, a tag / release
-name for `Stable`. Typed as `Canary_basic.version = { channel; id : string }`.
+name for `Stable`.
 
 Pre-condition (ssot §4.2.2): *same version ⇒ identical artifact* (for
 binaries, given the same tooling) — so version is a sufficient identity key.
 
-The version should flow as **one** identity through:
+## 2. Where it lives, verified 2026-08-23
 
-- **enumeration** — read + print which version each artifact is at.
-- **store / source_repo** — the concrete version of a fetched/built artifact.
-- **cache key / provision** — a version identifies the artifact *resource*
-  (a re-fetch at a different version is a different resource, so it must
-  key the cache).
+| piece | shape in the code | status |
+| --- | --- | --- |
+| the type | `Canary_basic.version = { channel; id : string }` | **landed** |
+| the enumeration's placement | `Canary_artifact.placement = { provision; version : Canary_basic.build_id }`, where `build_id = { channel; id; quality }` | **landed** (2026-08-12, the store-pin work) |
+| a project's concrete version list | the provider declares it — `Lang_pkg.versions : opam_pin list` (`pin_version`), projected into the axes by `versions_of_provider` | **landed** |
+| the source repo | `source_repo.version : Canary_basic.version` (additive, as piece A proposed — the `ref_` strings stayed) | **landed** |
+| the cache key | `"<project>:<step_tag>"` plus a **spec fingerprint** over the realized cmd + expectation (`step_fingerprint`, `backend/canary_local_runner.ml`) | **superseded** — see §3 |
 
-## 2. Where version lives today (as strings)
+The old §6 open questions are answered by that table. `channel` did NOT
+stay a separate axis: `build_id` carries channel *and* id together, an
+unpinned artifact keeps `id = ""` and stays version-ambient, and a pinned
+one is identity-bearing (it reaches `scenario_dir_of`, `ambient_key` and
+assignment dedup). A project declares its versions on the **provider**,
+not on `source_repo` or a dedicated spec field.
 
-| location | form | note |
-|---|---|---|
-| `source_repo.version` / `ref_` (`tool/canary_artifact_source.ml`) | strings | concrete version; **~91 interpolation sites** across z3/llvm (`%{source.version}_%{source.ref_}` in build/cache dirs + opam pkg names) — the bulk of the migration cost |
-| `system_package_spec.version_tag` (`base/canary_store.ml`) | `string option` | PM pin |
-| cache key (`backend/canary_local_runner.ml`) | `"<project>:<step_tag>"` | version **not** in the key — it rides the `output_dir` path |
-| enumeration `placement.version` (`action/canary_enumerate.ml`) | `channel` only | concrete id not yet connected |
+## 3. The one piece that is left
 
-## 3. The three pieces
+Piece C was "put the version id in the cache key". It was not done as
+proposed and does not need to be: the version already rides `output_dir`,
+which IS the scenario dir, and the 2026-08-17 warm-mask fix added a spec
+fingerprint that catches a changed command or expectation.
 
-- **A. `source_repo` → typed version.** *Small* if additive (add a
-  `version : Canary_basic.version` field, keep the strings); *medium-large*
-  to migrate the ~91 string interpolations to accessors.
-- **B. enumeration carries the concrete version.** `placement` / `config` /
-  `run_config` range over `Canary_basic.version` (a project supplies its
-  `{channel; id}` list) instead of the bare channel; render + tests follow.
-- **C. cache key / provision include the version id.** *Small* code
-  (`"<project>:<id>:<step_tag>"`); needs care on cache invalidation
-  (output_dir already carries the version, so it's partly there).
+What is still missing is a different thing, and it has its own note:
+**the cache does not key on the identity of a step's INPUT artifacts.**
+Two independent caches can each be correct by their own rule while the
+artifact is wrong — measured twice (ninja + canary's step marker, on a
+stale `dllz3ml.so`, 2026-08-20). Tracked in
+[`artifact_cache.md`](artifact_cache.md) §5 and
+[`run_model_revisit.md`](run_model_revisit.md); not here.
 
-## 4. Incremental strategy — simple projects first (decision 2026-07-30)
-
-**The enumeration's version is decoupled from z3/llvm's string machinery.**
-The ~91 interpolation sites are about *build paths / package names* — a
-separate concern from the enumeration *axis*. So we don't have to move them
-together:
-
-1. **Do piece B for the simple projects first** — tiny, sqlite, and the
-   Pattern-A projects (ssl / cairo / zarith). Their versions are simple
-   (sqlite = one system version; ssl = 0.6.0 / 0.7.0). Give the enumeration
-   a typed `version` there, with test cases — validating the design on
-   easy cases.
-2. **Leave z3/llvm on the legacy path** — their `source_repo` strings and
-   their `--engine` render stay channel-based (or a thin `{channel; id}`
-   wrap of their existing `version`/`ref_`) until the big migration. **No
-   touching the 91 sites.**
-3. **Then** piece A (migrate `source_repo` strings) and C (cache key), and
-   fold z3/llvm in.
-
-This pays the design cost on simple cases before the z3/llvm migration cost.
-
-## 5. Test cases (to write)
-
-- enumeration prints the concrete version per artifact (`channel@id`).
-- cross-artifact version *mismatch* representable + source-primary prunes
-  (extends the existing `enumerate.version_axis` layer test).
-- (later) cache key distinguishes two versions of the same artifact.
-- (later) `source_repo` round-trips through the typed `version`.
-
-## 6. Open design questions
-
-- Does `channel` stay a **separate axis** (`Dev | Stable`, what the
-  enumeration ranges over) with the concrete id resolved per project, or
-  does the enumeration range over full `{channel; id}` versions directly?
-- `version_tag` (PM pin) vs artifact version — reconcile (**package
-  version ≠ artifact version**, ssot §4.2.2).
-- Where does a project **declare its concrete version list** for the
-  enumeration to range over — `source_repo`, or a dedicated field on the
-  project spec?
+**`version_tag` vs artifact version** stays worth reconciling —
+`system_package_spec.version_tag` is a PM pin and a package version is
+not an artifact version (ssot §4.2.2). Small, unscheduled, and the only
+item this doc still owns.

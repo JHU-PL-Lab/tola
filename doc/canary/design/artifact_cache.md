@@ -1,5 +1,7 @@
 # The artifact cache — caching what was MADE, not what was run
 
+**Kind: proposal.** Nothing here is implemented. **Landed when** a step's cache key includes the identity of its INPUT artifacts, not only its own cmd/expectation fingerprint (`step_fingerprint`, `backend/canary_local_runner.ml`).
+
 > 2026-08-19, opened by the user: "we need to design a good cache system
 > for artifacts, so it can support to run even newly added actions."
 > Design note, nothing implemented. The immediate motivation is that

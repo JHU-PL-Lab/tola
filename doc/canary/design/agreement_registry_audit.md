@@ -1,5 +1,7 @@
 # Tool-Grounded Agreement Catalogue for Cross-Language Binding Checks
 
+**Kind: proposal.** The producer landed (`surface/canary_contract_registry.ml` carries the rows); the catalogue's remaining rungs are open. **Landed when** every agreement in the catalogue resolves to a check that can ground it.
+
 ## Status and Purpose
 
 This document is an intermediate design note for consolidating the checking logic scattered across the cross-language binding project.

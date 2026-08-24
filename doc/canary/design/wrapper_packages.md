@@ -1,5 +1,7 @@
 # Wrapper packages, the conf-free direction, and the Publish generalization
 
+**Kind: rationale + one open decision.** The wrapper packages, the shadow policy and the Publish generalization all landed; §3.1's audit-rung question is handed to another agent.
+
 > 2026-08-17. CANARY-SIDE design: our wrapper/conf-free packages in the
 > local opam repo, the fork layering, the store-mutation consequence,
 > and the zarith matrix + shadow preference. (The opam-side survey of

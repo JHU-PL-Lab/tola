@@ -1,16 +1,24 @@
 # Testing plan — general structure and algorithm behavior
 
-> Written 2026-08-07. Covers what to test beyond the existing
-> `project-test` (53 pure) and `artifact-test` (107 pure+shell).
+**Kind: proposal.** Entirely unstarted as of 2026-08-23 — none of the pins it names exist. **Landed when** `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table.
+
+> Written 2026-08-07; baseline refreshed 2026-08-23. Covers what to test
+> beyond the existing `project-test` (104 pure), `artifact-test` (109
+> pure+shell) and `pm-test` (14). Since it was written, `make
+> canary-post-check` (sqlite + the tiny1 bridge, ~2 min) arrived and
+> covers part of Phase 1 by hand — it runs the real pipeline but asserts
+> nothing programmatic about the verdict table, which is what Phase 1
+> adds.
 
 ## Current test coverage
 
 | Suite | What it covers | Gap |
 |---|---|---|
-| `project-test` | Pure checks: consumes/produces, enumeration shapes, dispatch, provisions, pins | No execution — doesn't run the pipeline |
+| `project-test` (104) | Pure checks: consumes/produces, enumeration shapes, dispatch, provisions, pins, run order | No execution — doesn't run the pipeline |
 | `artifact-test` | Tool primitives (nm, ocamlobjinfo, python import, mutation apply) | No project integration |
 | `pm-test` | PM presence checks | Narrow scope |
-| Actual runs | `canary action sqlite` etc. | Manual, not automated in CI |
+| `make canary-post-check` | sqlite + the tiny1 bridge, run for real | Manual gate before commit; asserts nothing on the verdict table |
+| Actual runs | `canary action <p>` | Manual, not automated in CI |
 
 ## Missing: pipeline integration tests
 

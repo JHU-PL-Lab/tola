@@ -1,5 +1,7 @@
 # Mechanism as a first-class object — the catalogue + the research question
 
+**Kind: rationale + open research.** The catalogue shipped 2026-08-05; the "derive a better mechanism from first principles" half is a research direction, not queued work.
+
 > Created 2026-08-05 (user-directed). Two layers: a settled engineering
 > contract (the mechanism catalogue, shipped) and an OPEN research
 > direction (derive a better binding mechanism — or a better PM — from

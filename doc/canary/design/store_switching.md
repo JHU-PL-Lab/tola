@@ -1,5 +1,7 @@
 # Shared-store version switching — survey + plan
 
+**Kind: rationale + open decisions.** Design A landed (store pins, pin-checked fetch, run order grouped by the lock); the A-vs-B choice for tier-2/3 pins is still open (§5d, §5f).
+
 > 2026-08-12. The opam-switch version-swap problem, generalized beyond ssl.
 > Companion to [`../project/projects.md`](../project/projects.md) (who
 > suffers from it) and [`../project/status_project.md`](../project/status_project.md)

@@ -1,5 +1,7 @@
 # Tiny — how it works today, how we want it to work
 
+**Kind: rationale**, with a stale reframing banner below — read that first.
+
 > **Reframing banner (2026-08-04) — read first.** This doc predates the
 > **tiny-factory / tiny1 / tiny-full** split and the enumerate engine, so it
 > describes one undifferentiated "tiny." Current reality:

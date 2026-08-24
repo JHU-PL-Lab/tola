@@ -1,5 +1,7 @@
 # Diagram system — pipeline + design ideas
 
+**Kind: rationale.** What the diagram pipeline produces today. Remaining hardening is backlog #37, not this doc.
+
 Every `canary action <project>` run writes Mermaid diagrams and an HTML
 viewer alongside the step output. This doc covers the big-to-middle
 picture: how the diagrams are produced and what design ideas the output

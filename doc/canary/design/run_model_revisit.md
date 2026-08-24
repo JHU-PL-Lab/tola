@@ -1,5 +1,7 @@
 # What the reruns taught the model (2026-08-20)
 
+**Kind: proposal.** An ordered change list grounded in the 2026-08-20 reruns. Items land individually; the ones that have are marked in place.
+
 > Opened by the user after filling z3's `pre-10549` cells: *"we need a
 > revisit on the current running and enumeration model after these
 > rerun."* Everything here is grounded in something that happened on

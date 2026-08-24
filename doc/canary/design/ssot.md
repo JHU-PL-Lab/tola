@@ -1,5 +1,7 @@
 # SSOT — Single Source of Truth for Canary IDs
 
+**Kind: reference.** The ID dictionary. Not a design argument and not a to-do list — a rename happens here first, then ripples out.
+
 This file is the canonical catalogue for IDs used in the manuscript
 (`draft.md`), materials (`surface_draft/`), and the canary code. Any
 new occurrence of an ID type listed here should reference this file;

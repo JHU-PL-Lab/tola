@@ -1,5 +1,7 @@
 # How Canary Works
 
+**Kind: rationale.** How the pipeline works today, end to end. Every stage described here exists in the code.
+
 > 2026-08-08; updated 2026-08-16 (repo-model C2: per-repo source pins,
 > channel-level coupling, the 5-scenario 3-way). Walks through the full
 > pipeline — declaration to execution — using z3 as the concrete example.

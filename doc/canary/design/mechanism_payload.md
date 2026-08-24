@@ -1,5 +1,7 @@
 # Mechanism payload — typed binding declaration
 
+**Kind: rationale.** The typed binding declaration as built (steps 1–4 and 6 landed; step 5 is partial — z3/llvm's wheel-bundled Python bindings still need a coupling convention).
+
 > 2026-08-13. M2 steps 4–5 design (tentative — adjust as the code lands).
 > Step 4 = the typed DECLARATION (universal); step 5 = command derivation
 > (tiny only; external projects keep Raw commands — see below).

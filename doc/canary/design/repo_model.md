@@ -1,8 +1,11 @@
 # The repo model — requirements for the 3-way repos in the project spec
 
+**Kind: rationale + open decisions.** The requirements are the user's; the roadmap's A, B, C1, C2 and C3 all LANDED (2026-08-16/17). What is left is the "Open decisions left" section.
+
 > 2026-08-14, user. Design input for the 3-way task (stable / official-latest
 > / forked repos per project) and the repo-provider unification. Requirements
-> from the user; DECIDED points marked. Not yet implemented.
+> from the user; DECIDED points marked. "Not yet implemented" was true
+> when this was written and is NOT any more — see the roadmap at the end.
 
 ## Requirements (user, 2026-08-14)
 
@@ -49,7 +52,7 @@ type source_repo = {
 | contrib layout as config | `Canary_store.distro_base` hardcodes `/home/red/code`; projects hardcode relative paths (`mk_locals`) | two hardcoded layers; no naming scheme; no README |
 | remote host generality | `Git_remote of string` — any URL | ✓ (spec-check's public-forge rule reads the string) |
 
-## Sketch (DECIDED points folded in — not implemented)
+## Sketch (DECIDED points folded in — LANDED 2026-08-16, see the roadmap)
 
 ```ocaml
 type remote = { url : string; host : string }        (* "github.com" | "gitlab.*" | ... *)

@@ -1,5 +1,7 @@
 # Canary — Unified Design
 
+**Kind: rationale.** The design narrative for what is built. Open work is not tracked here — see `../status.md`.
+
 The design narrative: vision, identity model, action graph, workflow,
 design principles. For surface theory see
 [../research/draft.md](../research/draft.md) (manuscript) and

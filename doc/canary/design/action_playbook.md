@@ -1,5 +1,7 @@
 # The action playbook — how an action flows through canary, and the Publish case study
 
+**Kind: how-to.** The procedure for adding an action, with Publish as the worked example. The machinery it describes exists.
+
 > 2026-08-17. Written from the Publish generalization (active plan 2):
 > the "how to add an action" checklist (the orthogonality surface), the
 > Publish worked example, and the refactoring plan the case study

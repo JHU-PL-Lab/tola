@@ -1,5 +1,7 @@
 # The result matrix — what a row is, and what names it
 
+**Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
+
 > 2026-08-19. Opened by the user's observation on the sqlite rows: "ref
 > is not the only world … how do you explain #6?" **Resolved the same
 > day** (§4 option 1, user-chosen): the row now leads with a SETTING
