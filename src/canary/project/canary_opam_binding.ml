@@ -206,7 +206,7 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
             components = []; headers = None } };
     fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
     (* The declared source made runnable via WORKTREE checkouts
-       (2026-08-15, design/enumeration/repo_model.md): the fetch IS the prepare —
+       (2026-08-15, design/enumeration/stage1_project_spec.md): the fetch IS the prepare —
        clone once + a worktree per ref into the contrib tree
        ([Canary_store.contrib_root]), refreshed on demand each run.
        [src] is the SCENARIO's repo (the per-channel dispatch, C1) —

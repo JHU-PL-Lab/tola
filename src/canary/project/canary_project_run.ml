@@ -283,7 +283,7 @@ let scenarios_of ?policy (pr : project_run) :
         (Canary_enumerate.string_of_assignment b))
 
 (** [store_state_key pr a] — the SINGLE-VALUED STORE STATE this assignment
-    requires (2026-08-21, store_switching §5g).
+    requires (2026-08-21, store_switching §6).
 
     An opam switch is [Isolated_store "switch"]: isolated from the system
     and internally single-valued, holding ONE version of a package. So an

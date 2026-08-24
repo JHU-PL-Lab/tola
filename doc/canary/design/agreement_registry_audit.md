@@ -1703,7 +1703,7 @@ absent). Reference world: Cstubs × OCaml × Built.
 |---|---|---|---|
 | `Fetch Source` | the tree is there; a pinned ref is AT its pin (`rev-parse HEAD = <ref>^{commit}`, e2b4d27) | Postcondition | ✓ |
 | `Scan_sources` | the typed-signature JSONs exist (they are c6's inputs, not a belief about source) | Postcondition | ✓ |
-| `Fetch Source` | the tree contains what its repo row declares (the repo-contents invariant, `repo_model.md`) | Postcondition | ✓ |
+| `Fetch Source` | the tree contains what its repo row declares (the repo-contents invariant, `enumeration/stage1_project_spec.md` §4) | Postcondition | ✓ |
 
 **A source tree has no standalone property to check** (user,
 2026-08-18) — and this is a PRINCIPLED absence, not a gap in the fill

@@ -53,7 +53,7 @@ So the column is:
 problem is that one coordinate is promoted to the row's name.
 
 **This gets structurally worse, not better.** The repo model's
-multi-repo principle (`repo_model.md`) says a repo records *what
+multi-repo principle (`stage1_project_spec.md` §4) says a repo records *what
 artifacts* it can contain, and different artifacts may come from
 different repos; `Binding_source` already exists as a distinct artifact
 kind awaiting its first off-tree consumer (the `fetch_binding_source`
@@ -167,7 +167,7 @@ amalgamation URL and numeric id derive from the declared version instead
 of a parallel hardcoded table. It reorders sqlite's rows (the apt world
 joins a ref group), which is why it is on hold with the rest.
 
-Related: `versioning.md` (typed version as artifact identity) is the
+Related: `stage1_project_spec.md` §5 (version as artifact identity) is the
 general form — version ids on Built/Installed provisions, not just
 Fetched pins.
 

@@ -277,7 +277,7 @@ No hurry — all items below are queued for when their forcing function arrives.
   rebased on it; all 5 inline printers killed; `version_printer_ratchet`
   guards against regression. The DEEPER typed unification (version as
   artifact identity across enumeration/store/cache) stays
-  [`design/enumeration/versioning.md`](design/enumeration/versioning.md)'s tracker — not this
+  `design/enumeration/stage1_project_spec.md` §5 — not this
   item.
 - **Tool-routing ratchet burn-down** (guard shipped 2026-08-05, user
   to-do: `harness.tool_routing_ratchet` in `project-test` freezes
@@ -347,3 +347,46 @@ No hurry — all items below are queued for when their forcing function arrives.
     realizations — the double encoding is live on the generic path, and
     `has_build_binding` is exactly the binding-follows-chain information
     (A5 residue (iii)) in boolean disguise. Fold them together.
+
+48. **A general staleness check — docs, comments, and any citation of a
+    name that can be deleted** (2026-08-23, user: *"the test check for doc
+    pin and staleness may be a good idea but it can be a general feature
+    instead of only for doc"*).
+
+    Built and then removed the same day: a pure test read
+    `doc/canary/design/enumeration/*.md`, extracted backticked tokens
+    shaped like a pin name, and failed if one was not a registered test.
+    It worked — it caught two pin names invented from memory
+    (`vocab.artifact_ids`, `surface.split`) and one record field cited as
+    a pin (`source_repo.artifacts`) — but it was one narrow instance of a
+    general problem, wired to one directory, with a hand-maintained
+    exclusion list. Reverted so the general shape can be designed
+    instead. Implementation reference:
+    `git show 70c1cbb -- src/canary/main/canary_projects_test.ml`.
+
+    The general problem: **a reference to a name that can be deleted goes
+    stale silently, and prose cannot notice.** Live instances beyond doc
+    pin citations —
+
+    - **Docs → pins.** What the removed check did.
+    - **Docs → source paths.** Already an ad-hoc shell sweep (it found
+      four docs whose every `../../src/…` link was broken by depth, and
+      `ssot.md` citing a module deleted in A6).
+    - **Source comments → docs.** Comments cite doc paths and section
+      numbers; three pointed at docs deleted in `b822d88` / `9edf15b`,
+      and two still cite `api_surface.md` §13/§15 and
+      `surface_theory.md` §2.5, which exist nowhere.
+    - **Docs → CLI subcommands and flags.** `testing_plan.md` proposes
+      `canary pipeline-test`; nothing asserts a cited subcommand exists,
+      or that a documented flag (`--refs`, `--thin`) is still parsed.
+    - **Docs → project / scenario names.** A doc naming a project that
+      left the registry, or a scenario dir the enumeration no longer
+      produces.
+
+    Shape worth considering: ONE citation checker over a small typed
+    vocabulary of reference kinds (pin name, source path, doc path, CLI
+    verb, project name), fed by a resolver per kind, run as part of
+    `make canary-test` — rather than per-kind greps. The exclusion
+    problem (record fields and package names that look like pin names)
+    is the part that needs real design: a marker convention at the
+    citation site would beat a blacklist.

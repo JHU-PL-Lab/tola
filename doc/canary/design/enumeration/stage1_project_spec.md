@@ -6,12 +6,14 @@ is [`filters.md`](filters.md) (stage 2, which consumes the universe);
 the map is [`README.md`](README.md).
 
 > First per-stage document (2026-08-23, user: *"each stage (layer) should
-> be standalone enough"*). Material moved here from `repo_model.md`
-> (the channel pair), `store_switching.md` (pin declaration),
-> `versioning.md` (where version is declared) and
-> `algorithm_explainer.md` §3 (the worked example). Those docs keep what
-> is not stage 1 — repo lifecycle, the shared-store argument, the
-> version-identity model.
+> be standalone enough"*). It ABSORBED `repo_model.md` and
+> `versioning.md`, which were purged 2026-08-23 (user: *"a record for
+> design and track, which is less interested to read"*) — their live
+> content is here, their open decisions moved to
+> `../../project/status_project.md` §2, and `git show 781f98e` has the
+> originals. It also took pin declaration from `store_switching.md` and
+> the worked example from `algorithm_explainer.md` §3; both keep what is
+> not stage 1.
 
 Stage 1 is **pure declaration**: project facts, no execution and no
 policy. A project states which artifacts exist, how each can be
@@ -147,6 +149,30 @@ preserved**, which is what lets the thin policy's `Subset [Stable]` drop
 the dev repos. The stable repo is listed first; that ordering is the
 canonical pin (§5).
 
+**What a repo provider needs on disk** (the decided lifecycle, 2026-08-15):
+
+- **A repo is DISTRIBUTED.** The local checkout and the remote are
+  modelled separately and may differ — the official repo can have a
+  local fork, and our fork has its own remote.
+- **One repository, a `git worktree` per tracked ref.** Shared objects,
+  no in-place `git checkout` churn, several versions coexisting. So
+  *stable* and *latest* are **descriptive markers that can move**, not
+  fixed identities. Pinned by `repo_model.worktree_paths`.
+- **Refresh is on demand.** A version refreshes when a run or a prepare
+  asks for it; nothing chases nightlies.
+- **The layout is a setting, not a hardcode.**
+  `~/code/contrib/<project>-all/<repo-variant>` is the convention, held
+  as data in the base layer. Directory naming follows the repo's official
+  name.
+- **A fork needs no remote.** `remote : repo_remote option`; `None` is a
+  local-only fork, which `spec-check` reports as a WARNING, not an error
+  — we survey many projects and may never find a bug worth pushing. What
+  is required is the local checkout. Pin: `spec_check.local_fork_warns`.
+- **An inaccessible source does not break checking.** The enumeration and
+  the artifact checks still detect and blame a wrong scenario; the source
+  repo is optional provenance. (GMP's repo is open but hg + tarballs, so
+  gmp dev stays unmodelled.)
+
 **A repo declares what it contains, not the reverse** (user,
 2026-08-15). `source_repo.artifacts` lists the artifact ids a repo can
 provide — `Z3Prover/z3` = [lib; binding OCaml; binding Python],
@@ -154,8 +180,8 @@ provide — `Z3Prover/z3` = [lib; binding OCaml; binding Python],
 not declared: on-tree means the artifact's repo is shared with the
 project's others. An artifact must appear in its provider repo's
 contents — pinned by `repo_model.contents_invariant`. Repo lifecycle
-(worktrees, forks, remotes, refresh) is [`repo_model.md`](repo_model.md);
-only the declaration is here.
+(worktrees, forks, remotes, refresh) is above; the open decisions it
+left are `../../project/status_project.md` §2.
 
 ## 5. Versions — ambient, or identity-bearing
 
@@ -166,6 +192,13 @@ type build_id = { channel : channel; id : string; quality : quality }
 `channel` is `Dev | Stable`. `id` is the concrete version — a tag for
 stable, a commit or ref label for dev — and it is **empty for an
 unpinned artifact**.
+
+The precondition that makes this work is ssot §4.2.2's: *same version ⇒
+identical artifact* (for binaries, given the same tooling) — so a version
+is a sufficient identity key. Note `source_repo` carries a typed
+`version` **beside** its `ref_` string; the strings were left in place
+rather than migrated, so both exist and the typed field is the one the
+axes read.
 
 That empty string is the whole rule:
 
@@ -191,12 +224,23 @@ A project never hand-writes the pin axis. It declares versions on the
 `<package>.<version>` — e.g. an opam package literally named
 `llvm.19-shared` whose version is not `19-shared`.
 
+**Why pins exist at all**, since it constrains what you may declare: opam
+allows exactly one version of a package per switch — a core solver
+invariant with no escape hatch. A pin is therefore not a preference but
+**store state**, and declaring two of them means the two scenarios cannot
+run at the same time. Declaration is free; the cost is at run time, and
+before declaring a pair you should dry-run the older pin
+(`opam install <pkg>.<v> --show-actions --dry-run`) and see what it
+drags: one package (fine), collateral rebuilds of other projects'
+packages (a design question), or the compiler (do not). See
+[`store_switching.md`](store_switching.md).
+
 `ps_versions_of` reads it back: a `Fetched` artifact with pins ranges
 over the pins; everything else ranges over the channel list. The
 downstream half — the pin as an exclusive lock on a single-valued store,
 the pin-checked fetch, the run order — is
-[`store_switching.md`](store_switching.md). The version-as-identity model
-is [`versioning.md`](versioning.md).
+[`store_switching.md`](store_switching.md). The version-as-identity
+model is ssot §4.2.2 plus §5 here.
 
 ## 6. `follows` and `runtime`
 
@@ -260,7 +304,7 @@ their two staged faces), the OCaml binding has **two** (its store pins),
 
 ## 9. The channel pair — why a universe should have two points
 
-*(moved here from `repo_model.md`, 2026-08-19 user framing.)*
+*(2026-08-19 user framing, moved here from the purged `repo_model.md`.)*
 
 Every artifact — the C lib, and each binding at a given (lang ×
 mechanism) — should offer **two** choices, a **stable** and a **latest**.

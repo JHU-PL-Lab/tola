@@ -201,7 +201,7 @@ the pins are shared state: zlib/cairo are single-package downgrades,
 libffi's recompiles zstd's binding, zstd's removes `ocaml-compiler` and
 downgrades 37 packages. Recorded, not started — the measurements and the
 A-vs-B consequences are in
-[`../design/enumeration/store_switching.md` §5](../design/enumeration/store_switching.md), the declaration gap in
+[`../design/enumeration/store_switching.md` §3–5](../design/enumeration/store_switching.md), the declaration gap in
 [`issues.md`](issues.md). Blocks on the canary-switch decision for two
 of the four.
 
@@ -237,12 +237,29 @@ directions):
 
 - [ ] **ONE general rule for the enumeration's special cases** (user,
   2026-08-17 — revisit "a bit later", the SAME topic): the shadowing
-  (gmp prebuilt-shadows-source, active plan 3's policy) and the
-  source-building bypass (z3's Heavy→Thin tier) are two instances of
-  "which special case keeps/omits which world". Prefer ONE general
-  config/policy mechanism over per-case machinery; the audit-rung
-  decision is part of this (see the decision brief,
-  ../design/wrapper_packages.md §3.1).
+  (gmp prebuilt-shadows-source) and the source-building bypass (z3's
+  Heavy→Thin tier) are two instances of "which special case keeps/omits
+  which world". Prefer ONE general config/policy mechanism over per-case
+  machinery. (The audit-rung half of this was settled 2026-08-19: the
+  rung was removed and the shadow is unconditional — see
+  `../design/wrapper_packages.md` §3.)
+- [ ] **Repo-model leftovers** (inherited 2026-08-23 when `repo_model.md`
+  was purged into `../design/enumeration/stage1_project_spec.md` §4;
+  the declared model is built and pinned, these are the decisions it
+  left open):
+  - the fork's LABEL in output — repo name? owner? (`arbipher` today);
+  - the config carrier for the contrib layout — a base-layer setting
+    (data in code) vs a run-config policy field; the user allows either,
+    pick at implementation;
+  - the naming-scheme fallback when a repo has no official name —
+    slugify the remote URL's last segment, or project name + variant?
+  - official sources with no git at all (archive files, PM-handled
+    source): a recognized real case, deferred — every current project
+    has a remote.
+- [ ] **`version_tag` vs artifact version** (inherited 2026-08-23 from
+  `versioning.md`): `system_package_spec.version_tag` is a PM pin, and a
+  package version is not an artifact version (ssot §4.2.2). Small,
+  unscheduled, and nothing depends on it.
 - [ ] **A general SELECTION config** (user, 2026-08-17): the ref
   subset (`--refs`) should fold into ONE selection mechanism — the
   user freely picks which CHOICES to run (channels, refs, scenarios,
@@ -355,8 +372,8 @@ per project, what failed, and how we may help fix it.
 **The shape, corrected.** It was written as "three versions per project"
 (stable, official dev/latest, forked dev with the fix). That counted
 three repos as three points on one axis, which they are not. The right
-shape (see [`../design/enumeration/repo_model.md`](../design/enumeration/repo_model.md), "The
-channel pair"):
+shape (see [`../design/enumeration/stage1_project_spec.md`
+§9](../design/enumeration/stage1_project_spec.md), "The channel pair"):
 
 - every artifact — the C lib, and each binding per (lang × mechanism) —
   offers **two** choices, stable and latest;

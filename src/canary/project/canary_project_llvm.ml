@@ -150,7 +150,7 @@ let llvm_source_dev : source_repo =
        (the 2026-08-13 finding: both declare ref_ = HEAD, ambient identity
        would collide them). The fork's ROLE is a local bug FIX, not a
        third channel — the per-artifact axis is the stable/latest pair
-       (user 2026-08-19, design/enumeration/repo_model.md). *)
+       (user 2026-08-19, design/enumeration/stage1_project_spec.md). *)
     version = Canary_basic.{ channel = Dev; id = "arbipher" };
     ref_ = "HEAD";
     official = false;

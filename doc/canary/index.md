@@ -74,9 +74,9 @@ The biggest cluster, given its own subdirectory 2026-08-23 because nine
 docs all described the enumeration from the *occasion* that produced
 them rather than from a *stage* of the pipeline. **Start at
 [enumeration/README.md](design/enumeration/README.md)** — the stage map:
-stage → the types → the functions → the pins that guard it. A doc there
-citing a pin that no longer exists fails `make canary-test`
-(`docs.cited_pins_exist`).
+stage → the types → the functions → the pins that guard it. Being
+consolidated into one standalone doc per stage, gradually; stage 1 is
+done.
 
 | File | Stage / topic |
 | ---- | ------------- |
@@ -85,9 +85,7 @@ citing a pin that no longer exists fails `make canary-test`
 | [algorithm_explainer.md](design/enumeration/algorithm_explainer.md) | The predecessor of the stage map — the end-to-end walkthrough with z3 as a running example; the run cache (§9) and store pins (§10). Kept for readability; where a stage doc exists it is authoritative |
 | [filters.md](design/enumeration/filters.md) | Stage 2 — the five constraints that prune the product, and the over-generation each one was written against |
 | [scenario.md](design/enumeration/scenario.md) | Stage 0 — the four senses of "scenario" (scenario / pattern / stage / path pattern) |
-| [repo_model.md](design/enumeration/repo_model.md) | Repo lifecycle — worktrees, fork remotes, on-demand refresh, the contrib layout (the channel pair moved to stage1) |
 | [store_switching.md](design/enumeration/store_switching.md) | Stages 1 + 3 — store pins, the pin as an exclusive LOCK, the three tiers of pin cost |
-| [versioning.md](design/enumeration/versioning.md) | Stages 1 + 3 — version as artifact identity; ambient vs identity-bearing |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib |
 | [staged_parity.md](design/enumeration/staged_parity.md) | Cross-cutting — `Installed` is a provision, so a staged consumer is a WORLD; build-vs-install parity is a check |
 | [matrix.md](design/enumeration/matrix.md) | Stage 5 — the result matrix: what a row is and what names it |
@@ -127,6 +125,8 @@ citing a pin that no longer exists fails `make canary-test`
 | ~~contract_registry.md~~ | Merged into `agreement_registry_audit.md` (2026-08-21) |
 | ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md` |
 | ~~scenario_terms.md~~ | Replaced by `enumeration/scenario.md` |
+| ~~enumeration/repo_model.md~~ | Purged 2026-08-23 — live content absorbed into `enumeration/stage1_project_spec.md` §4, open decisions to `project/status_project.md` §2 |
+| ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_project_spec.md` §5 + `ssot.md` §4.2.2 |
 
 ## project/ — live projects, their status, and how to land one
 

@@ -181,7 +181,7 @@ let distro_base : distro -> string = function
   | Wsl -> "/home/red/code"
   | MacOS_local -> "/Users/ex/code"
 
-(* THE contrib root (2026-08-15, design/enumeration/repo_model.md): the shared
+(* THE contrib root (2026-08-15, design/enumeration/stage1_project_spec.md): the shared
    third-party checkout tree — a base-layer SETTING (data in code; the
    user's decision — no config files in contrib, see its README; other
    projects decide their own layout). The convention:

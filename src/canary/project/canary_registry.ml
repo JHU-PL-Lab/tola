@@ -33,7 +33,7 @@ let all_projects : (string * Canary_project_run.project_run) list =
     when its cost outweighs what a run of it buys right now (z3's
     [fetch_binding_ocaml] rebuilds libz3 from source on every binding pin
     flip, so a full run is ~30 min — see
-    doc/canary/design/enumeration/store_switching.md §5g).
+    doc/canary/design/enumeration/store_switching.md §6).
 
     Muting must not be able to hide drift, so the catalogue exists
     separately: pins assert that the active names are a SUBSET of this
