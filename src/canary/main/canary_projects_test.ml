@@ -1853,6 +1853,75 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
 
    Measured on sqlite before/after: ten pin operations of which nine were
    real swaps, down to ten of which TWO are real and the rest no-ops. *)
+(* ── THE PIPELINE IS ONE ASSEMBLY (2026-08-24, emit_stages.md §8 step 2) ──
+
+   [Canary_pipeline] exists because the chain was assembled in
+   [Canary_runner.run_project_spec] and PARTIALLY re-assembled in
+   [Canary_matrix.actions_of]. These two pins guard the move.
+
+   [pipeline.ctx_matches_scenario_dir] is the one with teeth: the runner
+   used to compute the workspace and the per-scenario project name INLINE,
+   and those strings reach output paths and env vars. If [ctx_of] drifts
+   from [scenario_dir_of], every scenario silently writes somewhere
+   else — and the run-cache would serve markers from the old location. *)
+let pipeline_ctx_pin : Canary_project_test.pure_test =
+  { name = "pipeline.ctx_matches_scenario_dir";
+    check =
+      (fun () ->
+        List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            List.for_all (Canary_pipeline.ordered pr) ~f:(fun a ->
+                let ctx = Canary_pipeline.ctx_of pr a in
+                let ws = Canary_project_run.scenario_dir_of ~pr_name:name a in
+                let base = Stdlib.Filename.basename ws in
+                let sanitized =
+                  String.map base ~f:(function
+                    | ':' | '#' | '+' -> '-'
+                    | c -> c)
+                in
+                let ok =
+                  String.equal ctx.Canary_pipeline.sc_workspace ws
+                  && String.equal ctx.Canary_pipeline.sc_project
+                       (name ^ "/" ^ sanitized)
+                  (* born-safe: these reach PYTHONPATH / LD_LIBRARY_PATH.
+                     NOTE the sanitizer is a no-op for every scenario
+                     today — [string_of_id] already emits '-' not ':', so
+                     no basename contains a character it maps. It stays as
+                     the backstop, and THIS clause is the live half of the
+                     claim; falsify by changing the workspace, not by
+                     removing the map. *)
+                  && not
+                       (String.exists ctx.Canary_pipeline.sc_project
+                          ~f:(function ':' | '#' | '+' -> true | _ -> false))
+                in
+                if not ok then
+                  Fmt.pr "  pipeline.ctx: %s → %s / %s@." name
+                    ctx.Canary_pipeline.sc_workspace
+                    ctx.Canary_pipeline.sc_project;
+                ok))) }
+
+(* Stages 1-3 are TOTAL over the catalogue — muted projects included, since
+   a dump of a muted project is exactly when you want one. Stage 1's
+   universe must also have one entry per declared row: [project_spec_of_rows]
+   is a map, and a silent drop there would shrink every later stage. *)
+let pipeline_total_pin : Canary_project_test.pure_test =
+  { name = "pipeline.stages_total_over_catalogue";
+    check =
+      (fun () ->
+        List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            let spec = Canary_pipeline.spec_of pr in
+            let rows = List.length pr.Canary_project_run.pr_artifacts in
+            let declared = List.length spec.Canary_artifact.ps_universe in
+            let enumerated = List.length (Canary_pipeline.enumerated pr) in
+            let ordered = List.length (Canary_pipeline.ordered pr) in
+            let ok =
+              declared = rows && enumerated > 0 && ordered = enumerated
+            in
+            if not ok then
+              Fmt.pr
+                "  pipeline.total: %s rows=%d declared=%d stage2=%d stage3=%d@."
+                name rows declared enumerated ordered;
+            ok)) }
+
 let run_order_groups_state_pin : Canary_project_test.pure_test =
   { name = "run_order.groups_by_store_state";
     check =
@@ -2914,6 +2983,8 @@ let base_tests : Canary_project_test.pure_test list =
       z3_install_prefix_isolated_pin;
       z3_env_guard_paths_pin;
       world_assertion_vocabulary_pin;
+      pipeline_ctx_pin;
+      pipeline_total_pin;
       run_order_groups_state_pin;
       z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;

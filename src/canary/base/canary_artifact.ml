@@ -229,6 +229,7 @@ type artifact_axes = {
           identity-bearing, where an unpinned Fetched stays
           version-ambient. *)
 }
+[@@deriving show]
 
 (** Row constructor: [axes u] = universe only; [axes ~runtime:m u] also
     declares the runtime-edge mode; [axes ~pins:ps u] the store pins. *)
@@ -242,6 +243,7 @@ let axes ?runtime ?follows ?(pins = [])
 type project_spec = {
   ps_universe : (artifact_id * artifact_axes) list;
 }
+[@@deriving show]
 
 (** From a raw [(artifact_id * artifact_axes) list]. *)
 let project_spec_of_universe
@@ -278,5 +280,6 @@ let ps_versions_of (s : project_spec) (id : artifact_id) (pv : provision) :
    Moved from Canary_enumerate — base vocabulary for the scenario IR. *)
 
 type placement = { provision : provision; version : Canary_basic.build_id }
+[@@deriving show]
 
-type assignment = (artifact_id * placement) list
+type assignment = (artifact_id * placement) list [@@deriving show]

@@ -380,15 +380,12 @@ let cell_annotation ?stage
     honest chain comes from the step list). *)
 let actions_of (pr : Canary_project_run.project_run)
     (a : Canary_artifact.assignment) : Canary_basic.action list =
-  let spec =
-    pr.Canary_project_run.pr_runner_spec a ~workspace:"_out/tmp" ()
-  in
-  let steps =
-    Canary_step_builder.derive_steps ~root:"_out" ~project:pr.pr_name
-      ~langs:Canary_lang.[ OCaml; Python ] spec
-  in
-  List.map steps ~f:(fun (s : Canary_step_model.step) -> s.action)
-  |> Stdlib.List.sort_uniq Stdlib.compare
+  (* through {!Canary_pipeline} since 2026-08-24: this used to be a second
+     assembly of the stage-4 pass, with its own workspace and project
+     name. The throwaway workspace is deliberate and now documented at
+     the pipeline — deriving steps APPLIES [pr_runner_spec], which
+     materializes a tree for tiny-full. *)
+  Canary_pipeline.actions_of pr a
 
 (* ── the ROW order (2026-08-18, user): group by the source REF (the
    project's declared repo family order — the source's store pins),

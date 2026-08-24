@@ -1,9 +1,17 @@
 # Proposal — `canary emit`: one dump per pass
 
-**Kind: proposal.** **Landed when** `canary emit <project> --stage N`
-prints the value stage N actually hands to stage N+1, for every stage,
-and the runner and the dump read the same pipeline. The map is
-[`README.md`](README.md).
+**Kind: proposal, partly landed.** **Landed when** `canary emit <project>
+--stage N` prints the value stage N actually hands to stage N+1, for
+every stage, and the runner and the dump read the same pipeline. The map
+is [`README.md`](README.md).
+
+> **Steps 1–4 landed 2026-08-24.** `deriving show` on the stage IRs;
+> `Canary_pipeline` (main/) as the single assembly, with the runner and
+> `Canary_matrix.actions_of` both routed through it; `canary emit
+> <project> --stage <1|2|3|4> [--raw]`. Pins:
+> `pipeline.ctx_matches_scenario_dir`,
+> `pipeline.stages_total_over_catalogue`, both falsified. **Still open:**
+> `--json`, `--why` (§6) and the selection pass (§7).
 
 > 2026-08-24, user: *"is it possible to print every stage's output, so
 > that making the whole pipeline a compiling-pass experience, then

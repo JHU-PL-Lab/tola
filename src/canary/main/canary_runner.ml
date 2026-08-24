@@ -39,7 +39,7 @@ let run_project_spec ?policy (pr : project_run) ~root
      consecutively, so a pinned package is installed once per distinct pin
      instead of once per row. Stable, so the enumeration's order survives
      inside each group. *)
-  let scenarios = scenarios_in_run_order ?policy pr in
+  let scenarios = Canary_pipeline.ordered ?policy pr in
   let baseline =
     try List.find all_good scenarios
     with Not_found -> (match scenarios with a :: _ -> a | [] -> [])
@@ -48,21 +48,14 @@ let run_project_spec ?policy (pr : project_run) ~root
   let results = ref [] in
   List.iter
     (fun a ->
-      let ws = scenario_dir_of ~pr_name:pr.pr_name a in
+      let ctx = Canary_pipeline.ctx_of pr a in
+      let ws = ctx.Canary_pipeline.sc_workspace in
       if Hashtbl.mem seen ws then ()
       else begin
         Hashtbl.add seen ws ();
         let is_bad = not (all_good a) in
-        let safe =
-          String.map (function ':' | '#' | '+' -> '-' | c -> c)
-            (Filename.basename ws)
-        in
-        let project = pr.pr_name ^ "/" ^ safe in
-        let spec = pr.pr_runner_spec a ~workspace:ws () in
-        let steps =
-          Canary_step_builder.derive_steps ~root ~project
-            ~langs:Canary_lang.[ OCaml; Python ] spec
-        in
+        let project = ctx.Canary_pipeline.sc_project in
+        let steps = Canary_pipeline.steps_of ~root pr ~ctx a in
         let status =
           Canary_run_info.run_project ~failfast
             ~run_info:

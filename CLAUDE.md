@@ -13,6 +13,7 @@ dune exec src/bin/canary_main.exe -- action llvm             # 3 scenarios (2026
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived scenarios = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
 dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 scenarios (drops both dev axes)
 dune exec src/bin/canary_main.exe -- action @all           # THE batch: every registry project under the default config — Heavy (z3/llvm) THIN (bypasses the source-built Dev chains), Light FULL; --thin forces thin everywhere; --refs A,B = only the source-repo refs with those pinned ids (any project; the batch never sets it); single-project runs always full
+dune exec src/bin/canary_main.exe -- emit sqlite --stage 3    # ONE PIPELINE PASS (2026-08-24): --stage 1 the declaration, 2 the enumerated worlds, 3 the RUN order (grouped by the store state each scenario locks — NOT the same list as 2 since 2026-08-21), 4 one scenario's realized steps. --raw = the derived `show` form (faithful, diffable); --thin/--refs as elsewhere. Goes through `Canary_pipeline`, never a re-derivation, so a dump cannot disagree with what runs. Design: doc/canary/design/enumeration/emit_stages.md
 dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). ALL of tiny-full/sqlite/z3/llvm are project_run now (the raw variant view retired with A5 phase 5)
 dune exec src/bin/canary_main.exe -- spec-check @all         # STATIC spec-maturity audit (✓/✗/⚠ per project, --json for web status, exit 1 on errors; tiny-full github/opam n/a). Reads only the declared artifact table
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
@@ -115,6 +116,9 @@ project/   THE PROJECT layer (canary_project library, 2026-08-14): the
            concrete instantiation (the 8 specs + tiny's factory + the
            entry modules that NAME projects: registry, CI jobs)
 main/      the RUNNING layer (canary_main library, 2026-08-14):
+           Canary_pipeline (2026-08-24: THE pipeline as named passes —
+           spec_of/enumerated/ordered/ctx_of/steps_of; the runner and
+           the matrix both route through it so there is one assembly),
            Canary_runner (run_project_spec + scenario_run_result),
            batch runner, spec-check, the layer test suite — the shared
            functions the cmd, the tests, and the batch runner consume;

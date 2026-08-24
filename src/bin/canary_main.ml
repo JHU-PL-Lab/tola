@@ -265,6 +265,206 @@ let action_cmd =
       $ disable_contract_arg $ thin_arg $ refs_arg
       $ const ())
 
+(* ── `canary emit` — one dump per pipeline pass (2026-08-24) ──
+   design/enumeration/emit_stages.md. THE rule: --stage N prints the value
+   stage N hands to stage N+1 — not a rendering of it, and not a join with
+   a neighbouring stage. That is what separates this from `spec`, which is
+   deliberately a joined human snapshot.
+
+   Every dump goes through [Canary_pipeline], never a re-derivation, so a
+   dump cannot agree with itself while disagreeing with what runs. *)
+let emit_cmd =
+  let project =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT" ~doc:"Project to dump a pass of.")
+  in
+  let stage =
+    Arg.(
+      value & opt int 2
+      & info [ "stage" ] ~docv:"N"
+          ~doc:
+            "Which pass to print: 1 = the declaration (project_spec), 2 = \
+             the enumerated worlds, 3 = the RUN order (what the runner \
+             iterates — since 2026-08-21 not the same list as 2), 4 = one \
+             scenario's realized steps.")
+  in
+  let raw =
+    Arg.(
+      value & flag
+      & info [ "raw" ]
+          ~doc:
+            "Print the derived [show] form — faithful and diffable, rather \
+             than the compact reading form.")
+  in
+  let thin =
+    Arg.(value & flag & info [ "thin" ] ~doc:"Thin enumeration policy.")
+  in
+  let refs =
+    Arg.(
+      value & opt (some string) None
+      & info [ "refs" ] ~docv:"A,B"
+          ~doc:"Only the source refs with these pinned ids.")
+  in
+  let scenario =
+    Arg.(
+      value & opt (some string) None
+      & info [ "scenario" ] ~docv:"NAME"
+          ~doc:
+            "--stage 4 only: which scenario to realize (its directory \
+             basename). Defaults to the first in run order.")
+  in
+  let run project stage raw thin refs scenario () =
+    let module P = Canary_pipeline in
+    let module EN = Canary_enumerate in
+    match List.assoc_opt project Canary_registry.all_projects with
+    | None ->
+        Fmt.epr "usage: canary emit <%s> --stage <1|2|3|4>@."
+          (String.concat "|" (List.map fst Canary_registry.all_projects));
+        Stdlib.exit 2
+    | Some pr ->
+        let policy =
+          let base =
+            if thin then Some (Canary_project_run.thin_policy ())
+            else if Option.is_some refs then Some (EN.full_policy ()) else None
+          in
+          match (base, refs) with
+          | Some p, Some csv ->
+              Some
+                { p with
+                  EN.config =
+                    { p.EN.config with
+                      EN.refs =
+                        EN.Refs
+                          (String.split_on_char ',' csv |> List.map String.trim)
+                    } }
+          | b, _ -> b
+        in
+        let pp_assignments label (asgs : Canary_artifact.assignment list) =
+          Fmt.pr "@[<v>%s — %d@,@]" label (List.length asgs);
+          List.iter
+            (fun a ->
+              if raw then
+                Fmt.pr "%s@." (Canary_artifact.show_assignment a)
+              else
+                Fmt.pr "  %s@." (EN.string_of_assignment a))
+            asgs
+        in
+        (match stage with
+        | 1 ->
+            let spec = P.spec_of pr in
+            if raw then
+              Fmt.pr "%s@." (Canary_artifact.show_project_spec spec)
+            else begin
+              Fmt.pr "%s — declaration (%d artifacts)@." project
+                (List.length spec.Canary_artifact.ps_universe);
+              List.iter
+                (fun (id, (ax : Canary_artifact.artifact_axes)) ->
+                  let universe =
+                    List.map
+                      (fun (pv, chs) ->
+                        Printf.sprintf "%s@[%s]"
+                          (Canary_artifact.string_of_provision pv)
+                          (String.concat ","
+                             (List.map Canary_basic.string_of_channel chs)))
+                      ax.Canary_artifact.ax_universe
+                    |> String.concat " "
+                  in
+                  let pins =
+                    match ax.Canary_artifact.ax_pins with
+                    | [] -> ""
+                    | ps ->
+                        "  pins=["
+                        ^ String.concat ","
+                            (List.map Canary_basic.string_of_build_id ps)
+                        ^ "]"
+                  in
+                  let follows =
+                    match ax.Canary_artifact.ax_follows with
+                    | None -> ""
+                    | Some f -> "  follows=" ^ Canary_artifact.pretty_id f
+                  in
+                  let runtime =
+                    match ax.Canary_artifact.ax_runtime with
+                    | None -> ""
+                    | Some Canary_store.Lockstep -> "  runtime=lockstep"
+                    | Some Canary_store.Independent -> "  runtime=independent"
+                    | Some (Canary_store.Ambient why) ->
+                        "  runtime=ambient(" ^ why ^ ")"
+                  in
+                  Fmt.pr "  %-26s %s%s%s%s@." (Canary_artifact.pretty_id id)
+                    universe pins follows runtime)
+                spec.Canary_artifact.ps_universe
+            end
+        | 2 -> pp_assignments (project ^ " — enumerated (stage 2)")
+                 (P.enumerated ?policy pr)
+        | 3 ->
+            let ordered = P.ordered ?policy pr in
+            Fmt.pr "%s — run order (stage 3) — %d@." project
+              (List.length ordered);
+            let last = ref None in
+            List.iter
+              (fun a ->
+                let key = Canary_project_run.store_state_key pr a in
+                let shown =
+                  match key with
+                  | [] -> "(locks nothing)"
+                  | ps ->
+                      String.concat " "
+                        (List.map (fun (p, v) -> p ^ "=" ^ v) ps)
+                in
+                if not (Option.equal String.equal (Some shown) !last) then begin
+                  Fmt.pr "  ── store state: %s@." shown;
+                  last := Some shown
+                end;
+                if raw then
+                  Fmt.pr "%s@." (Canary_artifact.show_assignment a)
+                else Fmt.pr "    %s@." (EN.string_of_assignment a))
+              ordered
+        | 4 ->
+            let ordered = P.ordered ?policy pr in
+            let pick =
+              match scenario with
+              | None -> (match ordered with a :: _ -> Some a | [] -> None)
+              | Some name ->
+                  List.find_opt
+                    (fun a ->
+                      String.equal name
+                        (Filename.basename
+                           (Canary_project_run.scenario_dir_of
+                              ~pr_name:pr.pr_name a)))
+                    ordered
+            in
+            (match pick with
+             | None ->
+                 Fmt.epr "no such scenario; run `canary emit %s --stage 3`@."
+                   project;
+                 Stdlib.exit 2
+             | Some a ->
+                 let ctx = P.ctx_of pr a in
+                 Fmt.pr "%s — steps (stage 4)@.  scenario %s@." project
+                   (Filename.basename ctx.P.sc_workspace);
+                 Fmt.pr
+                   "  (deriving steps APPLIES pr_runner_spec — for \
+                    tiny-full that materializes a tree)@.@.";
+                 let steps = P.steps_of ~root:"_out" pr ~ctx a in
+                 List.iter
+                   (fun (s : Canary_step_model.step) ->
+                     Fmt.pr "  %-26s deps=[%s]@." s.Canary_step_model.tag
+                       (String.concat "," s.Canary_step_model.deps))
+                   steps)
+        | n ->
+            Fmt.epr "canary emit: --stage %d is not a pass (use 1..4)@." n;
+            Stdlib.exit 2)
+  in
+  Cmd.v
+    (Cmd.info "emit"
+       ~doc:
+         "Print one pipeline pass's output (the value it hands the next \
+          pass). See design/enumeration/emit_stages.md.")
+    Term.(const run $ project $ stage $ raw $ thin $ refs $ scenario $ const ())
+
 let spec_cmd =
   let project =
     Arg.(
@@ -1651,6 +1851,7 @@ let () =
         artifact_test_cmd;
         project_test_cmd;
         cache_test_cmd;
+        emit_cmd;
         spec_cmd;
         spec_check_cmd;
         mutation_test_cmd;
