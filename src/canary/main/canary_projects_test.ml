@@ -2949,7 +2949,8 @@ let doc_file_exts =
 let doc_not_pins =
   [ "step.deps"; "z3.dev"; "project_run.pr_artifacts";
     "run_config.consumer_lib"; "system_package_spec.version_tag";
-    "binding.ok"; "source.ok" ]
+    "binding.ok"; "source.ok"; "source_repo.artifacts";
+    "prebuilt.system_package" ]
 
 let doc_pin_shaped (s : string) : bool =
   match String.split s ~on:'.' with

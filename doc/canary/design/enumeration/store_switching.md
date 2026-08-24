@@ -182,18 +182,13 @@ assertions too fragile.
 
 Implementation status (updated 2026-08-12):
 
-1. [x] **Pinned Fetched version via provider** — `Lang_pkg.versions :
-   opam_pin list option` declares the installable versions; each
-   `opam_pin = { pin_version; install_name option }` — the standard form
-   is `<package>.<pin_version>`, the `install_name` field is the escape
-   for irregular package names (declaration data; the enumeration just
-   ranges over the pins). `artifact_row` projects them into the axes
-   (mirror of `dep_mode_of_provider` → runtime). `build_id` gained an
-   `id`; a pinned placement is identity-bearing (`scenario_dir_of` +
-   `ambient_key` + assignment dedup). The pin-check verifies the OPAM
-   package version (`opam list --columns=version` — the store's own
-   record; robust where the findlib META version differs from the opam
-   version, e.g. z3.dev's META carries the source version).
+1. [x] **Pinned Fetched version via provider** — how a project DECLARES
+   a pin moved to [`stage1_project_spec.md` §5](stage1_project_spec.md)
+   (`Lang_pkg.versions`, `install_name`, ambient vs identity-bearing).
+   What stays this doc's: the pin-check verifies the OPAM package
+   version (`opam list --columns=version` — the store's own record,
+   robust where the findlib META version differs from the opam version,
+   e.g. z3.dev's META carries the source version).
 2. [x] **Run order as the contract** — the enumerated list IS the run
    order (sequential runner); no explicit signature machinery needed yet.
 3. [x] **Store-pin fetch + world assertion** — `SB.pin_check_post`

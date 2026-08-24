@@ -74,6 +74,12 @@ relationships.
 
 ## 3. What the project declares
 
+> The full account of stage 1 is
+> [`stage1_project_spec.md`](stage1_project_spec.md) — rows, identity,
+> providers and what is derived from them, pins, the channel pair, and
+> what cannot be declared. This section keeps the z3 example because the
+> walkthrough reads better with one concrete world carried through.
+
 A project declares which artifacts exist and at which provisions/versions.
 For z3:
 

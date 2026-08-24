@@ -29,11 +29,12 @@ binaries, given the same tooling) — so version is a sufficient identity key.
 | the cache key | `"<project>:<step_tag>"` plus a **spec fingerprint** over the realized cmd + expectation (`step_fingerprint`, `backend/canary_local_runner.ml`) | **superseded** — see §3 |
 
 The old §6 open questions are answered by that table. `channel` did NOT
-stay a separate axis: `build_id` carries channel *and* id together, an
-unpinned artifact keeps `id = ""` and stays version-ambient, and a pinned
-one is identity-bearing (it reaches `scenario_dir_of`, `ambient_key` and
-assignment dedup). A project declares its versions on the **provider**,
-not on `source_repo` or a dedicated spec field.
+stay a separate axis: `build_id` carries channel *and* id together.
+
+How a project DECLARES a version — on the provider, never hand-written
+into the axis — and what the empty `id` means for scenario identity are
+[`stage1_project_spec.md` §5](stage1_project_spec.md). This doc is the
+MODEL (version as artifact identity) and the one item still open (§3).
 
 ## 3. The one piece that is left
 
