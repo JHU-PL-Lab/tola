@@ -2,18 +2,21 @@
 
 **Kind: rationale + open decisions.** The **opam-specific** case: what
 opam's one-version-per-switch rule costs us, what a per-version switch
-would cost instead, and the two questions still open. The GENERAL principle — how to
-run a scenario that needs exclusive use of a mutated singleton, and how
-to choose between partitioning and serializing it — is
-[`stage3_identity.md` §2](stage3_identity.md).
+would cost instead, and the two questions still open. The GENERAL
+principle — how to run a scenario that needs exclusive use of a mutated
+singleton, and how to choose between partitioning and serializing it — is
+[`../design/enumeration/stage3_identity.md`
+§2](../design/enumeration/stage3_identity.md).
 
 > Narrowed 2026-08-24 (user: *"the remaining part is still an opam
-> store_switching issue, which is a specific problem"*). The general
-> principle and the landed run-order behaviour moved to stage 3; pin
-> DECLARATION moved to [`stage1_project_spec.md` §5](stage1_project_spec.md)
-> on 2026-08-23; the per-project cost table lives in
-> `../../project/issues.md`. `git show 5f5f12c` has the 604-line version
-> and `git show 781f98e` the original.
+> store_switching issue, which is a specific problem"*), then moved here
+> from `design/enumeration/store_switching.md` and renamed: it is one
+> package manager's problem, not a general algorithm principle. The
+> general principle and the landed run-order behaviour went to stage 3;
+> pin DECLARATION to [`../design/enumeration/stage1_project_spec.md`
+> §5](../design/enumeration/stage1_project_spec.md); the per-project cost
+> table is [`issues.md`](issues.md). `git show 5f5f12c` has the 604-line
+> version, `git show 781f98e` the original.
 
 ## 1. The opam constraint, precisely
 
@@ -73,7 +76,7 @@ property of the dependency graph, not of our design. Measured with
 binding pairs fell into three tiers — one package alone (fine),
 collateral rebuilds of other projects' packages (a design question), and
 a whole-switch compiler downgrade (out). The table is in
-`../../project/issues.md`; the rule it produced belongs to landing:
+[`issues.md`](issues.md); the rule it produced belongs to landing:
 **before declaring a binding pair, dry-run the older pin and record its
 tier.**
 

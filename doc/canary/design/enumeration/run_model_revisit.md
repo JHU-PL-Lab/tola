@@ -7,7 +7,7 @@
 > rerun."* Everything here is grounded in something that happened on
 > 2026-08-20, not in a design preference. Companion reading:
 > [`artifact_cache.md`](../artifact_cache.md) (the store proposal these
-> findings keep arriving at), [`matrix.md`](matrix.md) (what a row is),
+> findings keep arriving at), [`stage5_matrix.md`](stage5_matrix.md) (what a row is),
 > [`../project/landing.md` §4](../../project/landing.md) (the checks that
 > do not check).
 

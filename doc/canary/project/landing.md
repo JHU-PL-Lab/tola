@@ -36,7 +36,7 @@ first:
   pin-checked store operation (warm-skip only when the switch provably
   holds the pin) and the probes carry world assertions. ssl is the
   reference shape (2 scenarios × 2 probes). See
-  [`../design/enumeration/store_switching.md`](../design/enumeration/store_switching.md).
+  [`opam_exclusive_store_issue.md`](opam_exclusive_store_issue.md).
 
 Source-built projects are still the expensive ones — z3 ~600 lines, llvm
 ~470 — and A5 made their *shape* identical without yet sharing their

@@ -1450,7 +1450,7 @@ source) are different WORLDS for checking, because different stages exist:
   what differs is which concrete artifact the consumer reads (the
   staged prefix). The staging step's own checks are the
   `Install_lib × Postcondition` family (staged parity — see
-  [`staged_parity.md`](enumeration/staged_parity.md)).
+  [`staged_parity.md`](staged_parity.md)).
 - **Fetched / Vendored / Cached**: the product was given, nothing was
   built — build sites do not exist, and build-time contracts have nothing
   to fire on; probe-side checks (c1/c2/c4 at probe) still apply.
@@ -2112,7 +2112,7 @@ Not designed further yet — a future to-do.
 
 ## D.5 — staged parity
 
-Lives in its own doc, [`staged_parity.md`](enumeration/staged_parity.md): the
+Lives in its own doc, [`staged_parity.md`](staged_parity.md): the
 build→install transform's divergence classes (identity transforms,
 content selection, missing rules, relocation failure, platform
 invariants, accumulation/isolation) and the four checks

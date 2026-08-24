@@ -177,7 +177,7 @@ so no template project can carry one. A field plus threading.
 
 The part that is not small is that an opam pin is shared state. Measured
 costs and the design consequences are in
-[`../design/enumeration/store_switching.md` §3–5](../design/enumeration/store_switching.md); three tiers, per the
+[`opam_exclusive_store_issue.md` §3–5](opam_exclusive_store_issue.md); three tiers, per the
 user's reading:
 
 | tier | projects | pin cost | verdict |

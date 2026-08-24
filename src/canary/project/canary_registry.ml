@@ -7,7 +7,7 @@
     [project_run] type — a module cycle dune rejects. The former [Multi] entry
     kind (ssl's shared-switch variant matrix via [run_project_multi]) retired
     2026-08-12: ssl migrated to the general enumeration with store pins (see
-    doc/canary/design/enumeration/store_switching.md). *)
+    doc/canary/project/opam_exclusive_store_issue.md). *)
 
 (** The registry. [z3_run]/[llvm_run] ignore their distro argument (distro
     detection happens inside [realize] at run time) — [Wsl] is a placeholder.

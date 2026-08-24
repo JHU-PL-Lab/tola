@@ -2,7 +2,7 @@
 
 **Kind: rationale.** Standalone: everything needed to read or write a
 project's declaration, without opening another doc. The stage this feeds
-is [`filters.md`](filters.md) (stage 2, which consumes the universe);
+is [`stage2_filters.md`](stage2_filters.md) (stage 2, which consumes the universe);
 the map is [`README.md`](README.md).
 
 > First per-stage document (2026-08-23, user: *"each stage (layer) should
@@ -11,7 +11,7 @@ the map is [`README.md`](README.md).
 > design and track, which is less interested to read"*) — their live
 > content is here, their open decisions moved to
 > `../../project/status_project.md` §2, and `git show 781f98e` has the
-> originals. It also took pin declaration from `store_switching.md` and
+> originals. It also took pin declaration from `../../project/opam_exclusive_store_issue.md` and
 > the worked example from `algorithm_explainer.md` §3; both keep what is
 > not stage 1.
 
@@ -107,7 +107,7 @@ flat version worked and then didn't:
 the provider-exclusive-rows model): each built version gets its staged
 face as its own row, because the install is a copy-*transform* and its
 divergences are the bug class worth checking. See
-[`staged_parity.md`](staged_parity.md) for what that check is.
+[`../staged_parity.md`](../staged_parity.md) for what that check is.
 
 ## 4. Providers — and the four things derived from them
 
@@ -230,7 +230,7 @@ a package per switch. So declaring two pins on one artifact declares two
 worlds that **cannot coexist**, and the runner has to serialize and
 verify them: [`stage3_identity.md` §2](stage3_identity.md) is the general
 principle (partition a place, serialize a state), and
-[`store_switching.md`](store_switching.md) is opam's case.
+[`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) is opam's case.
 
 Declaration is free; the cost is at run time. Before declaring a pair,
 dry-run the older pin —
@@ -242,7 +242,7 @@ packages (a design question), or the compiler (do not).
 over the pins; everything else ranges over the channel list. The
 downstream half — the pin as an exclusive lock on a single-valued store,
 the pin-checked fetch, the run order — is
-[`store_switching.md`](store_switching.md). The version-as-identity
+[`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md). The version-as-identity
 model is ssot §4.2.2 plus §5 here.
 
 ## 6. `follows` and `runtime`
@@ -256,7 +256,7 @@ coverage: source rows once carried `~follows:a_lib`, which killed the
 phantom refs but also forbade the FORWARD cell — a binding built from a
 dev tree probed against the released lib, which is the world most likely
 to find a bug. Two narrower constraints replaced it; see
-[`filters.md`](filters.md) §3–4 before reaching for `follows`.
+[`stage2_filters.md`](stage2_filters.md) §3–4 before reaching for `follows`.
 
 `~runtime` states the runtime-edge mode (`Lockstep` / `Independent` /
 `Ambient why`) when the provider does not imply one. A self-contained
@@ -336,7 +336,7 @@ More bindings multiply it: OCaml + Python is 2×2×2.
 3. **Prebuilt vs source-built** — expensive, and the only option when the
    ecosystem ships exactly one version (sqlite's amalgamation; z3/llvm's
    HEAD builds). Pick this last: the prebuilt-shadows-source rule
-   ([`filters.md`](filters.md) §5) will collapse a same-version pair
+   ([`stage2_filters.md`](stage2_filters.md) §5) will collapse a same-version pair
    anyway.
 
 Say **channel** for the axis and **fix fork** for the repair repo. Do not

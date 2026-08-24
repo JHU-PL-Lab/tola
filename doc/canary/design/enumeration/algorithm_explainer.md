@@ -394,7 +394,7 @@ identity". Two consequences:
 
 ## 10. Store pins — writing and reading the shared store
 
-(2026-08-12. Design writeup: [`store_switching.md`](store_switching.md).)
+(2026-08-12. Design writeup: [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md).)
 
 Some steps read or mutate a **global mutable store** — the opam switch —
 which every scenario shares. This section is the algorithm-level contract

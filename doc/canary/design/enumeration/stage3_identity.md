@@ -9,7 +9,7 @@ and in what **order** they go. The map is [`README.md`](README.md).
 > in the spec or the later stage doc on how to run on an exclusive
 > scenario e.g. opam-switch or any global mutated singleton resource"*).
 > §2 is that principle, generalized out of
-> [`store_switching.md`](store_switching.md), which stays as the opam
+> [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md), which stays as the opam
 > instance. §3 moved here from that doc's §6.
 
 ## 1. Identity — which assignments are one scenario
@@ -70,7 +70,7 @@ scenario needs, and *check that you hold it* before using it. This is
 right when the resource cannot be cheaply duplicated, or when duplicating
 it would change what is being tested. Opam's one-version-per-switch rule
 is not a directory you can copy; a per-version switch is possible
-(~5 s — see [`store_switching.md`](store_switching.md) §2) but pays a
+(~5 s — see [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) §2) but pays a
 dependency reinstall per switch and changes the world under test.
 
 The findlib case shows the choice is not always about cost: two distinct
@@ -124,12 +124,27 @@ Unsupported -> Stateless
 (artifact, pinned version) pairs an assignment locks, from whichever
 providers declare pins.
 
-The **mechanisms** are not. `Canary_world.Opam_pin` is an opam-shaped
-constructor; `holds_pin_cmd` is an opam command; the no-shared-write
-invariant is one project's hand-written pin rather than a check derived
-from the install rows. Generalizing those is open work, and the honest
-statement is that we have a general vocabulary with opam-specific
-realizations hanging off it. Tracked in `../../project/status_project.md`.
+The **mechanisms** are not:
+
+- `Canary_world.Opam_pin` is an opam-shaped constructor, where the general
+  form is "this resource must be in this state, verified by this command";
+- `Canary_pm_opam.holds_pin_cmd` is an opam command;
+- the no-shared-write invariant is one project's hand-written pin
+  (`z3.install_prefix_isolated`) rather than a check derived from the
+  install rows.
+
+So the honest statement is: **a general vocabulary with PM-specific
+realizations hanging off it.**
+
+> **Future check** (2026-08-24, user — this belongs to the checking agent,
+> recorded here so it is not lost). The property to assert: *for every
+> exclusive resource a project declares, the mechanism enforcing it is
+> derived, not per-PM and not per-project.* Two concrete forms it could
+> take — a world assertion whose resource/state/verify triple is data
+> rather than a constructor per package manager, and a no-shared-write
+> check computed over the install rows of all worlds instead of pinned
+> once for z3. Neither is scheduled; the value of writing it down is that
+> the gap is now a named property rather than a feeling.
 
 ## 3. Run order — group by the state required (LANDED 2026-08-21)
 

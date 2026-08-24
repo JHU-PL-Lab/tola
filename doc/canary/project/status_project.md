@@ -201,7 +201,7 @@ the pins are shared state: zlib/cairo are single-package downgrades,
 libffi's recompiles zstd's binding, zstd's removes `ocaml-compiler` and
 downgrades 37 packages. Recorded, not started — the measurements and the
 A-vs-B consequences are in
-[`../design/enumeration/store_switching.md` §3–5](../design/enumeration/store_switching.md), the declaration gap in
+[`opam_exclusive_store_issue.md` §3–5](opam_exclusive_store_issue.md), the declaration gap in
 [`issues.md`](issues.md). Blocks on the canary-switch decision for two
 of the four.
 

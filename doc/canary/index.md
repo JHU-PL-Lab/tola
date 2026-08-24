@@ -81,16 +81,16 @@ done.
 | File | Stage / topic |
 | ---- | ------------- |
 | [README.md](design/enumeration/README.md) | **The stage map.** Read first; also records the known drift (two dependency relations; mechanism/app-wiring are not config axes) |
-| [stage1_project_spec.md](design/enumeration/stage1_project_spec.md) | **Stage 1, standalone** — what a project declares: rows, artifact identity, the provision × version universe, providers and the four things derived from them, pins, the channel pair, what cannot be declared |
+| [stage0_naming.md](design/enumeration/stage0_naming.md) | **Stage 0** — the four senses of "scenario", the canonical naming scheme, short names, fault tags, the c1..c8 catalogue |
+| [stage1_project_spec.md](design/enumeration/stage1_project_spec.md) | **Stage 1** — what a project declares: rows, artifact identity, the provision × version universe, providers and what is derived from them, versions, repo lifecycle, the channel pair, what cannot be declared |
+| [stage2_filters.md](design/enumeration/stage2_filters.md) | **Stage 2** — the five constraints that prune the product, and the over-generation each was written against |
+| [stage3_identity.md](design/enumeration/stage3_identity.md) | **Stage 3** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
+| [stage5_matrix.md](design/enumeration/stage5_matrix.md) | **Stage 5** — the result matrix: what a row is and what names it |
 | [algorithm_explainer.md](design/enumeration/algorithm_explainer.md) | The predecessor of the stage map — the end-to-end walkthrough with z3 as a running example; the run cache (§9) and store pins (§10). Kept for readability; where a stage doc exists it is authoritative |
-| [filters.md](design/enumeration/filters.md) | Stage 2 — the five constraints that prune the product, and the over-generation each one was written against |
-| [scenario.md](design/enumeration/scenario.md) | Stage 0 — the four senses of "scenario" (scenario / pattern / stage / path pattern) |
-| [stage3_identity.md](design/enumeration/stage3_identity.md) | **Stage 3, standalone** — scenario identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state; four measured instances), and run order |
-| [store_switching.md](design/enumeration/store_switching.md) | The opam switch as ONE instance of that principle — what one-version-per-switch costs, the per-version-switch measurement, and the two open questions |
-| [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib |
-| [staged_parity.md](design/enumeration/staged_parity.md) | Cross-cutting — `Installed` is a provision, so a staged consumer is a WORLD; build-vs-install parity is a check |
-| [matrix.md](design/enumeration/matrix.md) | Stage 5 — the result matrix: what a row is and what names it |
+| [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib; three options with costs |
 | [run_model_revisit.md](design/enumeration/run_model_revisit.md) | *Proposal* — the ordered change list the 2026-08-20 reruns produced |
+
+**Stage 4 (realization) has no doc yet** — it is the one gap.
 
 ### Reference
 
@@ -104,6 +104,7 @@ done.
 | ---- | ----- |
 | [index.md](design/index.md) | **The design narrative** (not the doc map): vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
 | [action_playbook.md](design/action_playbook.md) | *How-to*: adding an action, with Publish as the worked example |
+| [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation. Moved out of `enumeration/` 2026-08-24: not a stage |
 | [diagram.md](design/diagram.md) | The diagram pipeline and the design ideas its output implements |
 | [tiny.md](design/tiny.md) | Tiny — how the witness works. Carries a stale reframing banner; read it first |
 | [mechanism_payload.md](design/mechanism_payload.md) | The typed binding declaration (steps 1–4, 6 landed; step 5 partial) |
@@ -125,17 +126,20 @@ done.
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
 | ~~contract_registry.md~~ | Merged into `agreement_registry_audit.md` (2026-08-21) |
 | ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md` |
-| ~~scenario_terms.md~~ | Replaced by `enumeration/scenario.md` |
+| ~~scenario_terms.md~~ | Replaced by `enumeration/stage0_naming.md` |
 | ~~enumeration/repo_model.md~~ | Purged 2026-08-23 — live content absorbed into `enumeration/stage1_project_spec.md` §4, open decisions to `project/status_project.md` §2 |
 | ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_project_spec.md` §5 + `ssot.md` §4.2.2 |
 
 ## project/ — live projects, their status, and how to land one
 
-Five files, one question each. The layer's home since the 2026-08-12
-reorganization; shrunk to this shape 2026-08-21, when `index.md` +
-`coverage.md` merged into `projects.md`, `store_switching.md` and
-`wrapper_packages.md` moved to `design/` (design principles, not project
-records) and `conf_survey.md` moved to `surveys/` as `conf_mechanism.md`.
+One question each. The layer's home since the 2026-08-12 reorganization;
+shrunk to this shape 2026-08-21, when `index.md` + `coverage.md` merged
+into `projects.md`, `store_switching.md` and `wrapper_packages.md` moved
+to `design/` and `conf_survey.md` to `surveys/`. The store-switching half
+came BACK on 2026-08-24 as `opam_exclusive_store_issue.md`: once the
+general principle was extracted into `design/enumeration/stage3_identity.md`
+§2, what remained was one package manager's problem, which is a project
+concern.
 
 | File                                           | Topic                                                                                                     |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -143,12 +147,14 @@ records) and `conf_survey.md` moved to `surveys/` as `conf_mechanism.md`.
 | [status_project.md](project/status_project.md) | **THE to-do tracker** for this layer — the ordered plan, general to-dos, the mismatch-matrix report milestone |
 | [issues.md](project/issues.md)                 | OPEN per-project issues — a standalone worklist (unresolved findings, declaration gaps, per-project chores)   |
 | [landing.md](project/landing.md)               | **How to land a project** — workflow, data structures, testing harness (the future skill's base)             |
+| [opam_exclusive_store_issue.md](project/opam_exclusive_store_issue.md) | opam's one-version-per-switch problem — what a pin costs, the per-version-switch measurement, and the two open questions |
 | [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4                                     |
 
 Landing a project also reaches into `surveys/` (which library, which
-version pair) and `design/` (store_switching for the pin cost,
-wrapper_packages for a conf-free package, multi_lib for a second C lib)
-— see those tables above.
+version pair) and `design/` (`enumeration/stage1_project_spec.md` for the
+declaration, `wrapper_packages.md` for a conf-free package,
+`enumeration/multi_lib.md` for a second C lib) — see those tables
+above.
 
 ## surveys/ — background research
 

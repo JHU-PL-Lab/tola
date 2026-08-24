@@ -78,7 +78,7 @@ type provider =
               artifact's Fetched provision ranges over more than "whatever
               the PM picks" (opam has no multi-version co-installation — a
               pinned version is store status, not content; see
-              doc/canary/design/enumeration/store_switching.md). [None] =
+              doc/canary/project/opam_exclusive_store_issue.md). [None] =
               version-ambient as before. Opam-first; pip pins
               (`pip install pkg==1.2.3`) are the natural future use. *)
     }

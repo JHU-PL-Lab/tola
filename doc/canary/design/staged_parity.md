@@ -1,9 +1,16 @@
 # Staged parity — build vs install as a checking principle
 
-**Stage:** see [README.md](README.md) (the stage map). **Kind: rationale + to-dos.** §1 records what landed; §4's four boxes are the open work and are also carried by `../project/status_project.md`.
+**Kind: rationale + to-dos.** §1 records what landed; §4's remaining boxes are the open work and are also carried by [`../project/status_project.md`](../project/status_project.md).
 
 **2026-08-18, revised 2026-08-19. A cross-agent brief: what landed, what
 it means, what to track.**
+
+> Moved out of `enumeration/` on 2026-08-24: this is a CHECKING principle,
+> not an enumeration stage. The one stage-1 fact it rests on — `Installed`
+> is a provision, so a staged consumer is its own WORLD — lives in
+> [`enumeration/stage1_project_spec.md` §3](enumeration/stage1_project_spec.md);
+> the isolation half generalized into
+> [`enumeration/stage3_identity.md` §2](enumeration/stage3_identity.md).
 
 ## 1. What landed — the staged consumer is a WORLD
 
@@ -125,7 +132,15 @@ check_post family.
 
 - [ ] The staged-parity checker (4 checks above; completeness derived
       from the declared surface instead of a hand list).
-- [ ] Per-world install prefixes (fix z3's shared `z3-all/install`).
+- [x] **Per-world install prefixes — LANDED 2026-08-19.** z3's worlds no
+      longer share `z3-all/install`; each gets `install-<ref>`, pinned by
+      `z3.install_prefix_isolated` (on RESOLVED paths — the bug spelled
+      two prefixes differently while naming one directory). It turned out
+      to be a correctness property, not hygiene: the shared prefix would
+      have let the fork's staged package answer the pre-10549 world's
+      staged probe and silence a regression xfail. Generalized as one of
+      four exclusive-resource instances in
+      [`enumeration/stage3_identity.md` §2](enumeration/stage3_identity.md).
 - [ ] Platform-invariant fixtures in the framework-test axis (the
       user's "enough platform invariant which is often violated":
       versioned-symbol nm output, install_name, symlink-chain,
