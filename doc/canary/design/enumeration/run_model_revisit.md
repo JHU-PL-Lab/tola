@@ -1,14 +1,14 @@
 # What the reruns taught the model (2026-08-20)
 
-**Kind: proposal.** An ordered change list grounded in the 2026-08-20 reruns. Items land individually; the ones that have are marked in place.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: proposal.** An ordered change list grounded in the 2026-08-20 reruns. Items land individually; the ones that have are marked in place.
 
 > Opened by the user after filling z3's `pre-10549` cells: *"we need a
 > revisit on the current running and enumeration model after these
 > rerun."* Everything here is grounded in something that happened on
 > 2026-08-20, not in a design preference. Companion reading:
-> [`artifact_cache.md`](artifact_cache.md) (the store proposal these
+> [`artifact_cache.md`](../artifact_cache.md) (the store proposal these
 > findings keep arriving at), [`matrix.md`](matrix.md) (what a row is),
-> [`../project/landing.md` §4](../project/landing.md) (the checks that
+> [`../project/landing.md` §4](../../project/landing.md) (the checks that
 > do not check).
 
 ## 0. What happened, briefly
@@ -102,7 +102,7 @@ artifact**. libz3 bumped soname 5.0 → 5.1; nothing in either cache's key
 mentions the soname, the version, or the content of the library the
 binding links against.
 
-This is exactly what [`artifact_cache.md`](artifact_cache.md) §5 proposes
+This is exactly what [`artifact_cache.md`](../artifact_cache.md) §5 proposes
 as step 2 — *a step's fingerprint includes the identity of its INPUT
 artifacts, not only its own command text* — and it is now not a
 hypothetical. The prior evidence for that proposal was sqlite's staging
@@ -195,7 +195,7 @@ piece:
 4. **Warm/cold on Built and Installed placements** (§2) — derived from
    whether the tree's product exists; shown by `spec` and `status`.
 5. **Input-artifact identity in the step fingerprint**
-   ([`artifact_cache.md`](artifact_cache.md) §5 step 2). The real fix for
+   ([`artifact_cache.md`](../artifact_cache.md) §5 step 2). The real fix for
    §3, and the prerequisite for the artifact store.
 6. **A baseline-relative view of ref rows** (§5). Presentation first —
    mark cells identical to the baseline ref — and only consider an

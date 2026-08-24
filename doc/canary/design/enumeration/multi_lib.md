@@ -1,6 +1,6 @@
 # Enumerating a project's DEPENDENCIES — more than one C lib
 
-**Kind: proposal.** **Landed when** `Canary_basic.artifact_kind.Lib` carries a name, so a project can declare more than one C lib with its own universe.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: proposal.** **Landed when** `Canary_basic.artifact_kind.Lib` carries a name, so a project can declare more than one C lib with its own universe.
 
 > 2026-08-19. Opened by the question "how shall we handle and enumerate
 > their dependency" for the four candidate projects. Two of them (mpfr,
@@ -126,7 +126,7 @@ covers checkouts, builds, staging areas and now prebuilts. The provider is
 
 > The full study — discovery API, archive formats, the measured dependency
 > closures, the openssl soname finding, and the to-do list for correct use —
-> is [`../surveys/conda_forge.md`](../surveys/conda_forge.md).
+> is [`../surveys/conda_forge.md`](../../surveys/conda_forge.md).
 
 | lib | apt here | conda-forge linux-64 versions | a pair worth running |
 | --- | --- | --- | --- |

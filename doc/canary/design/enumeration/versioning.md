@@ -1,13 +1,13 @@
 # Versioning unification — what landed, what is left
 
-**Kind: rationale + one open item.** Rewritten 2026-08-23: the 2026-07-30
+**Stage:** see [README.md](README.md) (the stage map). **Kind: rationale + one open item.** Rewritten 2026-08-23: the 2026-07-30
 tracker this replaces described pieces A and B as pending, but both had
 landed by 2026-08-12 and the doc had not noticed. That is the failure
 mode the design/ audit was about — a proposal with no way to tell it
 came true. What survives here is the model, the evidence that it is
 built, and the one piece that genuinely is not.
 
-Model reference: [`ssot.md` §4.2.2](ssot.md) (the version axis).
+Model reference: [`ssot.md` §4.2.2](../ssot.md) (the version axis).
 
 ## 1. The model — version as artifact identity
 
@@ -47,7 +47,7 @@ What is still missing is a different thing, and it has its own note:
 Two independent caches can each be correct by their own rule while the
 artifact is wrong — measured twice (ninja + canary's step marker, on a
 stale `dllz3ml.so`, 2026-08-20). Tracked in
-[`artifact_cache.md`](artifact_cache.md) §5 and
+[`artifact_cache.md`](../artifact_cache.md) §5 and
 [`run_model_revisit.md`](run_model_revisit.md); not here.
 
 **`version_tag` vs artifact version** stays worth reconciling —

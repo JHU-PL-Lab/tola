@@ -1,6 +1,6 @@
 # Scenario naming & classification
 
-**Kind: reference.** The naming scheme. Four senses of "scenario", fixed so the other docs can use them without re-defining.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: reference.** The naming scheme. Four senses of "scenario", fixed so the other docs can use them without re-defining.
 
 > 2026-08-10. Replaces `scenario_terms.md` (retired). Canonical naming scheme,
 > shared expected-outcome reference, and contract catalogue.

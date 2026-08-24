@@ -531,7 +531,7 @@ covered this). **This instance graph already exists**: `Canary_basic.artifact_no
 `Canary_action.make_action_graph` already generate it — including the deploy
 mismatch (`Build_app` pairs each binding with *every* runtime lib). The
 enumerate↔graph merge is done (the seam + `node_of_assignment` + `close_deps`);
-the model is [`algorithm_explainer.md`](algorithm_explainer.md).
+the model is [`algorithm_explainer.md`](enumeration/algorithm_explainer.md).
 
 **Header flavor — payload, not a new kind.** A header's flavor (static vs
 built) changes its position in the graph (part-of-source vs
@@ -632,7 +632,7 @@ SSOT §5.1 ──► draft.md L382 table, tiny variant matrix.
 **Co-providers.** OCaml (`Canary_tiny_scenario.scenario_specs`) is the
 sole producer as of Phase E; the legacy Python harness
 (`scenarios.py`) was archived under
-[`../_legacy_code/tiny_python_harness/`](../_legacy_code/tiny_python_harness/).
+[`../_legacy_code/tiny_python_harness/`](../../_legacy_code/tiny_python_harness/).
 **Status.** stable — 13 Bs rows here (all Mutation-origin) +
 2 concrete good scenarios in §4.1 = 15 concrete scenarios in
 `scenario_specs`.
@@ -662,7 +662,7 @@ Concrete good scenarios (`app_over_binding_ocaml`,
 `origin = None` belongs under the Sc.N it instantiates.
 
 Bad scenarios can arise from several origins (all typed via
-[`Canary_scenario.origin`](../../src/canary/action/canary_scenario.ml)):
+[`Canary_scenario.origin`](../../../src/canary/action/canary_scenario.ml)):
 
 - **`Mutation`** — patch the source or binary of one artifact
   in the chain. All of tiny's 13 Bs entries today.
@@ -755,7 +755,7 @@ project-specific recipe.
 **Synthesis path (§7.2 Phase 3, 2026-07-20).** For tiny, a
 derived cell (Good × artifact × applicable_kind) can now be
 turned into a concrete instance automatically via
-[`Canary_tiny_scenario.recipe_of_derived_cell`](../../src/canary/projects/canary_tiny_scenario.ml)
+[`Canary_tiny_scenario.recipe_of_derived_cell`](../../../src/canary/project/canary_tiny_scenario.ml)
 — given a derived scenario, returns a `tiny_recipe option`
 built from the parametric mutation vocabulary of §5.3.
 Cells whose (target, kind) has an implemented primitive
@@ -766,14 +766,14 @@ visibly empty. After §7.2 Phase 4 (2026-07-20)
 coverage stands at 12 of 20 cells filled after §7.1's
 `Drop_python_attr` primitive landed (2026-07-21); 8 remain
 awaiting App-level primitives + c4 wiring for OCaml. See
-[`algorithm_explainer.md`](algorithm_explainer.md) for
+[`algorithm_explainer.md`](enumeration/algorithm_explainer.md) for
 the derived-vs-hand principle, and
 [`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells)
 for the blocker-primitive breakdown.
 
 ### 5.3 Mutation shapes (parametric vocabulary)
 
-**Flow.** [`Canary_artifact_mutation`](../../src/canary/tool/canary_artifact_mutation.ml)
+**Flow.** [`Canary_artifact_mutation`](../../../src/canary/tool/canary_artifact_mutation.ml)
  ──► per-artifact submodules (Source / Native / Binding) each
 own a `type t` enumerating that artifact's mutations, plus
 matching constructor helpers and an `apply_cmds` shell-command
@@ -822,7 +822,7 @@ shapes); 9 stay as `Patch` (adds + body/signature rewrites).
   §7.1 2026-07-21.
 
 **Tests** (in
-[`canary_artifact_test.ml`](../../src/canary/test/canary_artifact_test.ml),
+[`canary_artifact_test.ml`](../../../src/canary/test/canary_artifact_test.ml),
 `mutation_pure_tests` / `mutation_shell_apply_tests` /
 `mutation_regression_tests`):
 
@@ -847,7 +847,7 @@ the switch table into typed data, keyed on **contract
 bindings**.
 
 **Types** (in
-[`canary_scenario.ml`](../../src/canary/action/canary_scenario.ml)):
+[`canary_scenario.ml`](../../../src/canary/action/canary_scenario.ml)):
 
 ```ocaml
 type firing_site =
@@ -994,10 +994,12 @@ the writeup — no need for a separate alignment section.
   shell carrier, `Canary_basic`) — kept apart post-rename.
 
 **Ownership.** Project owns scenarios semantically (each is tied to
-what it exercises), but `Canary_project.project` does *not* hold a
-`scenarios` field — each project's module keeps concrete ownership.
-See [`canary_project.ml`](../../src/canary/action/canary_project.ml)
-for the layer + concrete-vs-polymorphic rationale.
+what it exercises), and no project bundle holds a `scenarios` field —
+each project's module keeps concrete ownership. (The
+`Canary_project.project` bundle this used to cite was never read by
+anything and was deleted 2026-08-05, A6;
+[`Canary_project_run.project_run`](../../../src/canary/project/canary_project_run.ml)
+is the project identity now.)
 
 **Pattern vs instance.** `Sc.1..Sc.6` patterns live project-agnostic
 in `Canary_scenario.good_scenarios`. Concrete scenarios (`Bs.N`,
@@ -1012,7 +1014,7 @@ Rename chronicle 2026-07-21 (`project_spec → runner_spec`,
 
 Constructors on `Canary_basic.action`. Enumeration + per-action
 metadata are two views of one catalogue and live colocated in
-[`canary_action.ml`](../../src/canary/action/canary_action.ml)
+[`canary_action.ml`](../../../src/canary/action/canary_action.ml)
 (colocated 2026-07-22):
 
 - **Enumeration** — `store_actions ~langs` (which actions run
@@ -1047,7 +1049,7 @@ deps trail. Union across a scenario's `actions` follows
 first-appearance order (no dedup rearrangement), so §4 Good
 scenarios' displayed `A1(...) A2(...) A3(...)` labels stay stable
 across releases. Test spec at
-[`canary_artifact_test.ml`](../../src/canary/test/canary_artifact_test.ml)
+[`canary_artifact_test.ml`](../../../src/canary/test/canary_artifact_test.ml)
 under `scenario_derivation_pure_tests`.
 
 `canary paths` enumerates the 15 structural composition patterns
@@ -1105,12 +1107,12 @@ surface when we next touch action-related code.
 ### 6.6 `runner_spec` — the code-side scenario handoff
 
 **Flow.** Project's per-scenario factory (or per-variant hand-code)
-constructs a [`Canary_step_builder.runner_spec`](../../src/canary/action/canary_step_builder.ml)
+constructs a [`Canary_step_builder.runner_spec`](../../../src/canary/action/canary_step_builder.ml)
 ──► `derive_steps` walks it ──► `step list` ──► one of four
 backends (local runner / GH YAML / Mermaid / HTML).
 
 **Shape** — a record with two kinds of fields (full list at
-[`canary_step_builder.ml:88`](../../src/canary/action/canary_step_builder.ml#L88)):
+[`canary_step_builder.ml:88`](../../../src/canary/action/canary_step_builder.ml#L88)):
 
 - **Action closures** (one `option` field per §6.5 verb): each
   closure has type `~output_dir -> ~variant_key -> string` and
@@ -1138,15 +1140,15 @@ claims exist post-fetch.
 
 | Backend      | File                                                                                | What it does                                               |
 | ------------ | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| local runner | [`backend/canary_local_runner.ml`](../../src/canary/backend/canary_local_runner.ml) | Executes each step in order, honours cache, records status |
-| GH YAML      | [`backend/canary_gh.ml`](../../src/canary/backend/canary_gh.ml)                     | Renders as GitHub Actions job(s)                           |
-| Mermaid      | [`backend/canary_diagram.ml`](../../src/canary/backend/canary_diagram.ml)           | Renders as an action-graph diagram                         |
-| HTML         | [`backend/canary_html.ml`](../../src/canary/backend/canary_html.ml)                 | Renders interactive result viewer                          |
+| local runner | [`backend/canary_local_runner.ml`](../../../src/canary/backend/canary_local_runner.ml) | Executes each step in order, honours cache, records status |
+| GH YAML      | [`backend/canary_gh.ml`](../../../src/canary/backend/canary_gh.ml)                     | Renders as GitHub Actions job(s)                           |
+| Mermaid      | [`backend/canary_diagram.ml`](../../../src/canary/backend/canary_diagram.ml)           | Renders as an action-graph diagram                         |
+| HTML         | [`backend/canary_html.ml`](../../../src/canary/backend/canary_html.ml)                 | Renders interactive result viewer                          |
 
 **Multi-scenario projects.** One `runner_spec` per scenario/variant;
 `run_project_multi` runs each independently. Concrete factories:
 
-- **tiny** — [`Canary_tiny_scenario.runner_spec_of_entry`](../../src/canary/projects/canary_tiny_scenario.ml)
+- **tiny** — [`Canary_tiny_scenario.runner_spec_of_entry`](../../../src/canary/project/canary_tiny_scenario.ml)
   wraps a shared chassis `make_base_runner_spec ~stores` and
   overrides `expectation` from the scenario's recipe (22 scenarios).
 - **z3 / llvm** — `mk_runner_spec ~source` per variant (dev / stable).

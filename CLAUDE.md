@@ -43,7 +43,7 @@ ending a session, also run `make canary-post-check` (sqlite + tiny1 bridge,
 heavier, ~2min).
 ```
 
-See [`doc/canary/design/algorithm_explainer.md`](doc/canary/design/algorithm_explainer.md)
+See [`doc/canary/design/enumeration/algorithm_explainer.md`](doc/canary/design/enumeration/algorithm_explainer.md)
 for the full pipeline walkthrough (project declaration → action catalogue →
 chains → assignments → execution). Current state and open items in
 [`doc/canary/status.md`](doc/canary/status.md).
@@ -224,11 +224,13 @@ reconciling with, not duplicating.
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
 | `doc/canary/index.md`                          | **THE doc index** — every file under `doc/canary/`, grouped by intent. A new doc gets its row there; the rows below are only the ones a coding session hits constantly |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
-| `doc/canary/design/algorithm_explainer.md`     | The pipeline walkthrough (declaration → catalogue → chains → assignments → execution) + the run cache (§9) and store pins (§10). Absorbed the retired `dynamic_enumeration.md` |
+| `doc/canary/design/enumeration/algorithm_explainer.md`     | The pipeline walkthrough (declaration → catalogue → chains → assignments → execution) + the run cache (§9) and store pins (§10). Absorbed the retired `dynamic_enumeration.md` |
 | `doc/canary/design/ssot.md`                    | Project-wide SSOT — canonical ID tables (Ar/Sf/Ag/Sc/scenarios/actions) bridging manuscript ↔ code    |
-| `doc/canary/design/scenario.md`                | Scenario naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
-| `doc/canary/design/store_switching.md`         | Shared-store version switching: one version per package per switch, the pin as an exclusive LOCK (run order groups by it, §5g), the three tiers of pin cost |
-| `doc/canary/design/versioning.md`              | Versioning-unification tracker — typed `version` as artifact identity across enumeration/store/cache; scope (pieces A/B/C), simple-projects-first strategy, test plan, open questions |
+| `doc/canary/design/enumeration/scenario.md`                | Scenario naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
+| `doc/canary/design/enumeration/store_switching.md`         | Shared-store version switching: one version per package per switch, the pin as an exclusive LOCK (run order groups by it, §5g), the three tiers of pin cost |
+| `doc/canary/design/enumeration/README.md`       | **THE stage map** for the enumeration — stage → types → functions → the pins that guard it. Read before changing how scenarios are produced; a doc there citing a dead pin fails `make canary-test` |
+| `doc/canary/design/enumeration/filters.md`      | The five constraints that prune the product (`assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`) and the over-generation each was written against |
+| `doc/canary/design/enumeration/versioning.md`   | Version as artifact identity — what landed and the one item left |
 | `doc/canary/project/projects.md`               | **The project roster** — what exists: dimension model, per-project lib/binding axes + 2×2 status, landing history, candidates |
 | `doc/canary/project/status_project.md`         | **The project layer's SOLO to-do tracker** — the ordered plan, general to-dos, the report milestone |
 | `doc/canary/project/issues.md`                 | OPEN per-project findings, declaration gaps, chores — the standalone worklist |
@@ -396,7 +398,7 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   no build runs, but status reads PASS. Force a fresh run with `rm -rf
   _out/canary/projects/<name>` or a distinct `variant_id`. To coexist (Built vs
   Vendored, dev vs stable) put those axes in `variant_id`. See
-  [`doc/canary/design/algorithm_explainer.md`](doc/canary/design/algorithm_explainer.md) §8.
+  [`doc/canary/design/enumeration/algorithm_explainer.md`](doc/canary/design/enumeration/algorithm_explainer.md) §8.
 - **OCaml LSP stale diagnostics**: Cross-module edits show false errors
   until dune rebuilds. ocamllsp reads compiled `.cmi` files; no
   in-memory cross-module resolution. Ignore during multi-file refactors,

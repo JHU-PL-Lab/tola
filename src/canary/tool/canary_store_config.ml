@@ -50,7 +50,7 @@ type provider =
   | Cached of string
   | Repo of Canary_artifact_source.source_repo
       (** ANY artifact provided from a repo (2026-08-15, the unification —
-          design/repo_model.md): the AXES' provision says WHAT the repo
+          design/enumeration/repo_model.md): the AXES' provision says WHAT the repo
           provides — [Fetched] = the repo ships/fetches the artifact (or
           the project source, for a Source row); [Built] = the artifact is
           BUILT from the repo's source. The old [Source_repo]/[Built_from]
@@ -58,7 +58,7 @@ type provider =
           axes already declare ([Built_from] had zero live uses). *)
   | Repo_axes of Canary_artifact_source.source_repo list
       (** a repo FAMILY covering the channels of one artifact (C1,
-          2026-08-16, design/repo_model.md Roadmap C): the per-channel
+          2026-08-16, design/enumeration/repo_model.md Roadmap C): the per-channel
           repos — official stable + official dev (+ a labeled fork when one
           exists). Each repo's [version] record declares its channel and
           id; [versions_of_provider] projects them into the axes' store
@@ -78,7 +78,7 @@ type provider =
               artifact's Fetched provision ranges over more than "whatever
               the PM picks" (opam has no multi-version co-installation — a
               pinned version is store status, not content; see
-              doc/canary/design/store_switching.md). [None] =
+              doc/canary/design/enumeration/store_switching.md). [None] =
               version-ambient as before. Opam-first; pip pins
               (`pip install pkg==1.2.3`) are the natural future use. *)
     }

@@ -6,7 +6,7 @@ a doc nobody reads.
 
 **Where to start.** [`research/draft.md`](research/draft.md) is the
 manuscript-in-progress and is authoritative for current framing.
-[`design/algorithm_explainer.md`](design/algorithm_explainer.md) walks
+[`design/enumeration/algorithm_explainer.md`](design/enumeration/algorithm_explainer.md) walks
 the pipeline end to end; [`design/ssot.md`](design/ssot.md) is the ID
 dictionary bridging manuscript ↔ code;
 [`project/projects.md`](project/projects.md) is the project roster.
@@ -68,39 +68,54 @@ belongs to a tracker ([`status.md`](status.md), [`backlog.md`](backlog.md),
 [`project/status_project.md`](project/status_project.md)) even when a
 design doc explains it at length.
 
+### enumeration/ — how scenarios are produced
+
+The biggest cluster, given its own subdirectory 2026-08-23 because nine
+docs all described the enumeration from the *occasion* that produced
+them rather than from a *stage* of the pipeline. **Start at
+[enumeration/README.md](design/enumeration/README.md)** — the stage map:
+stage → the types → the functions → the pins that guard it. A doc there
+citing a pin that no longer exists fails `make canary-test`
+(`docs.cited_pins_exist`).
+
+| File | Stage / topic |
+| ---- | ------------- |
+| [README.md](design/enumeration/README.md) | **The stage map.** Read first; also records the known drift (two dependency relations; mechanism/app-wiring are not config axes) |
+| [algorithm_explainer.md](design/enumeration/algorithm_explainer.md) | The pipeline walkthrough, declaration → execution; the run cache (§9) and store pins (§10) |
+| [filters.md](design/enumeration/filters.md) | Stage 2 — the five constraints that prune the product, and the over-generation each one was written against |
+| [scenario.md](design/enumeration/scenario.md) | Stage 0 — the four senses of "scenario" (scenario / pattern / stage / path pattern) |
+| [repo_model.md](design/enumeration/repo_model.md) | Stage 1 — source repos, the channel pair, the fork's separate role |
+| [store_switching.md](design/enumeration/store_switching.md) | Stages 1 + 3 — store pins, the pin as an exclusive LOCK, the three tiers of pin cost |
+| [versioning.md](design/enumeration/versioning.md) | Stages 1 + 3 — version as artifact identity; ambient vs identity-bearing |
+| [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib |
+| [staged_parity.md](design/enumeration/staged_parity.md) | Cross-cutting — `Installed` is a provision, so a staged consumer is a WORLD; build-vs-install parity is a check |
+| [matrix.md](design/enumeration/matrix.md) | Stage 5 — the result matrix: what a row is and what names it |
+| [run_model_revisit.md](design/enumeration/run_model_revisit.md) | *Proposal* — the ordered change list the 2026-08-20 reruns produced |
+
 ### Reference
 
 | File | Topic |
 | ---- | ----- |
 | [ssot.md](design/ssot.md) | **Single source of truth for IDs** — the canonical Ar/Sf/Ag/Sc/scenario/action tables bridging manuscript ↔ code |
-| [scenario.md](design/scenario.md) | The naming scheme — four senses of "scenario" (scenario / pattern / stage / path pattern) |
 
 ### Rationale — how the built thing works
 
 | File | Topic |
 | ---- | ----- |
 | [index.md](design/index.md) | **The design narrative** (not the doc map): vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
-| [algorithm_explainer.md](design/algorithm_explainer.md) | **How canary works** — the pipeline walkthrough (declaration → catalogue → chains → assignments → execution), the run cache (§9), store pins (§10) |
 | [action_playbook.md](design/action_playbook.md) | *How-to*: adding an action, with Publish as the worked example |
-| [matrix.md](design/matrix.md) | The result matrix — what a row is and what names it |
 | [diagram.md](design/diagram.md) | The diagram pipeline and the design ideas its output implements |
 | [tiny.md](design/tiny.md) | Tiny — how the witness works. Carries a stale reframing banner; read it first |
 | [mechanism_payload.md](design/mechanism_payload.md) | The typed binding declaration (steps 1–4, 6 landed; step 5 partial) |
-| [repo_model.md](design/repo_model.md) | The repo model — the 3-way repos, the channel pair, the fork's separate role. Roadmap A/B/C1–C3 all landed |
-| [store_switching.md](design/store_switching.md) | Shared-store version switching — one version per package per switch, the pin as an exclusive LOCK, the three tiers of pin cost. Design A landed; the A-vs-B choice for tier 2/3 is open |
-| [wrapper_packages.md](design/wrapper_packages.md) | Wrapper / conf-free packages, the fork layering, prebuilt-shadows-source, the Publish generalization. §3.1 is an open decision brief |
-| [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a checking principle — completeness, integrity, parity, isolation. §4's four boxes are open |
 | [mechanism.md](design/mechanism.md) | The mechanism catalogue (shipped) + the open research direction behind it |
-| [versioning.md](design/versioning.md) | Version as artifact identity — what landed (the type, the placement, the provider's version list, the typed source repo) and the one item left |
+| [wrapper_packages.md](design/wrapper_packages.md) | Wrapper / conf-free packages, the fork layering, prebuilt-shadows-source (an unconditional filter since 2026-08-19, not a policy), the Publish generalization |
 
 ### Proposal — design for work not done
 
 | File | Falsifier — it landed when … |
 | ---- | ---------------------------- |
 | [artifact_cache.md](design/artifact_cache.md) | … a step's cache key includes the identity of its INPUT artifacts, not only its own cmd/expectation fingerprint |
-| [multi_lib.md](design/multi_lib.md) | … `Canary_basic.artifact_kind.Lib` carries a name, so a project can declare more than one C lib |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
-| [run_model_revisit.md](design/run_model_revisit.md) | … its ordered change list is worked through; items land individually and are marked in place |
 | [agreement_registry_audit.md](design/agreement_registry_audit.md) | … every agreement in the catalogue resolves to a check that can ground it. The producer landed (`surface/canary_contract_registry.ml`); the rungs did not. Absorbed `contract_registry.md` 2026-08-21 |
 
 ### Retired
@@ -110,7 +125,7 @@ design doc explains it at length.
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
 | ~~contract_registry.md~~ | Merged into `agreement_registry_audit.md` (2026-08-21) |
 | ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md` |
-| ~~scenario_terms.md~~ | Replaced by `scenario.md` |
+| ~~scenario_terms.md~~ | Replaced by `enumeration/scenario.md` |
 
 ## project/ — live projects, their status, and how to land one
 

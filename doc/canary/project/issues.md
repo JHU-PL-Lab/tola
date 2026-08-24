@@ -172,12 +172,12 @@ outside sqlite and z3 has both axes.
 The mechanical part is small: ssl declares its binding axis as
 `SC.Lang_pkg { versions = Some [pins] }`, while `Canary_opam_binding`
 hardcodes `versions = None`
-([canary_opam_binding.ml](../../src/canary/project/canary_opam_binding.ml)),
+([canary_opam_binding.ml](../../../src/canary/project/canary_opam_binding.ml)),
 so no template project can carry one. A field plus threading.
 
 The part that is not small is that an opam pin is shared state. Measured
 costs and the design consequences are in
-[`../design/store_switching.md` §5](../design/store_switching.md); three tiers, per the
+[`../design/enumeration/store_switching.md` §5](../design/enumeration/store_switching.md); three tiers, per the
 user's reading:
 
 | tier | projects | pin cost | verdict |

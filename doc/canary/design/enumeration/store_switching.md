@@ -1,15 +1,15 @@
 # Shared-store version switching — survey + plan
 
-**Kind: rationale + open decisions.** Design A landed (store pins, pin-checked fetch, run order grouped by the lock); the A-vs-B choice for tier-2/3 pins is still open (§5d, §5f).
+**Stage:** see [README.md](README.md) (the stage map). **Kind: rationale + open decisions.** Design A landed (store pins, pin-checked fetch, run order grouped by the lock); the A-vs-B choice for tier-2/3 pins is still open (§5d, §5f).
 
 > 2026-08-12. The opam-switch version-swap problem, generalized beyond ssl.
-> Companion to [`../project/projects.md`](../project/projects.md) (who
-> suffers from it) and [`../project/status_project.md`](../project/status_project.md)
+> Companion to [`../project/projects.md`](../../project/projects.md) (who
+> suffers from it) and [`../project/status_project.md`](../../project/status_project.md)
 > (the to-dos it leaves).
 >
 > Moved here from `project/` 2026-08-21: this is a design principle for
 > the general algorithm, not a per-project record. Per-project
-> consequences live in [`../project/issues.md`](../project/issues.md).
+> consequences live in [`../project/issues.md`](../../project/issues.md).
 
 ## 1. The problem, generalized
 
@@ -244,7 +244,7 @@ Implementation status (updated 2026-08-12):
    never builds — the row now probes `<build>/lib/libLLVM.so` directly
    (see ../worklog/worklog_2026_08.md, "llvm dev probe").
 
-Tracked in [`../project/status_project.md`](../project/status_project.md).
+Tracked in [`../project/status_project.md`](../../project/status_project.md).
 
 ---
 

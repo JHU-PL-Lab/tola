@@ -74,7 +74,7 @@
     So the assertion is the enforcement half of a property the enumeration
     should also exploit: {b order scenarios by the stateful-store state
     they need}. Nothing does that yet — the enumerated list IS the run
-    order. Tracked in [doc/canary/design/store_switching.md].
+    order. Tracked in [doc/canary/design/enumeration/store_switching.md].
 
     {1 These are CONFIRMATIONS, not derivations (user, 2026-08-20)}
 
@@ -131,7 +131,7 @@
     the template's [world_check]/[log_grep] pair unwired for vendored
     worlds. Five places to fix, nowhere to test. History and evidence:
     [doc/canary/project/landing.md] §4 and
-    [doc/canary/design/run_model_revisit.md] §3. *)
+    [doc/canary/design/enumeration/run_model_revisit.md] §3. *)
 
 open Base
 

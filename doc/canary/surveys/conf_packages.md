@@ -389,7 +389,7 @@ policy). They are the honest next arc, not the next landing.
   They are the highest-yield targets and the most expensive; they belong
   after the cheap landings have proven the pipeline end to end.
 - Optional-dep combinations (bytesrw's five backends) — see
-  [`../design/multi_lib.md` §2](../design/multi_lib.md).
+  [`../design/enumeration/multi_lib.md` §2](../design/enumeration/multi_lib.md).
 
 ---
 
@@ -687,7 +687,7 @@ sense.
 | conf pkg      | rev | binding                                | gate                                     | verdict                                                                                                                                                                                                                         |
 | ------------- | --- | -------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | conf-cmake    | 102 | (build tool)                           | —                                        | tool axis                                                                                                                                                                                                                       |
-| conf-libev    | 69  | `lwt` and 6 others — **as a `depopt`** | optional                                 | **Blocked: model** — needs the `Absent` provision wired into a universe + a combination policy (`../design/multi_lib.md` §2)                                                                                                    |
+| conf-libev    | 69  | `lwt` and 6 others — **as a `depopt`** | optional                                 | **Blocked: model** — needs the `Absent` provision wired into a universe + a combination policy (`../design/enumeration/multi_lib.md` §2)                                                                                                    |
 | conf-llvm     | 26  | `llvm` — **landed**                    | `Fixed_with_conf`                        | calibration row                                                                                                                                                                                                                 |
 | conf-libclang | 17  | `clangml` (25)                         | **`{< "16"}` — a REAL lib bound** (§G1a) | **Ready\*\*** — the only measured `Bounded_with_conf` whose bound reaches the library. An upper bound, so the interesting world is *new lib, old binding* — the backward direction, which nothing in the registry exercises yet |
 | conf-qt       | 5   | —                                      | version-carrying                         | **Skip** — Qt closure                                                                                                                                                                                                           |

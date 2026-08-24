@@ -25,7 +25,7 @@ Canonical description of tiny's implementation state and
 near-term wish-list. Complements:
 
 - [`ssot.md`](ssot.md) — truth (definitions, scenario tables)
-- [`algorithm_explainer.md`](algorithm_explainer.md) — the derived-vs-hand
+- [`algorithm_explainer.md`](enumeration/algorithm_explainer.md) — the derived-vs-hand
   principle (absorbed from the retired `derived_vs_hardcoded.md`) + the
   enumeration model
 - [`../project/landing.md` §2](../project/landing.md) — three levels of scenario
@@ -101,7 +101,7 @@ Each Bad scenario has a `tiny_recipe`:
 
 ## 3. Factory pipeline — how canary runs a scenario
 
-Source: [`src/canary/project/canary_project_tiny.ml`](../../src/canary/project/canary_project_tiny.ml) §"Scenario factory".
+Source: [`src/canary/project/canary_project_tiny.ml`](../../../src/canary/project/canary_project_tiny.ml) §"Scenario factory".
 
 ```
 entry
@@ -171,7 +171,7 @@ Other mutations (patches) don't adjust stores.
 ### 3.4 Mutation dispatch in workspace prep
 
 `run_prepare` in
-[`canary_tiny_workspace.ml`](../../src/canary/project/canary_tiny_workspace.ml)
+[`canary_tiny_workspace.ml`](../../../src/canary/project/canary_tiny_workspace.ml)
 applies `recipe.mutation` at two points around the sandbox
 build:
 
@@ -234,7 +234,7 @@ canary tiny status            # tree view of last-run PASS/FAIL (from results.js
 non-uniform with other projects; use `tiny run` instead.)
 
 Auto-init: `run_tiny_scenario` in
-[`canary_main.ml`](../../src/bin/canary_main.ml) checks
+[`canary_main.ml`](../../../src/bin/canary_main.ml) checks
 `_cache/<name>/workspace/`. Missing → runs
 `Canary_tiny_baseline.run ()` then
 `Canary_tiny_prepare.run ~name` before invoking canary.
@@ -466,7 +466,7 @@ retired; `Canary_scenario.related_artifacts s` is the sole
 getter, derived from `scenario.actions` via
 `artifacts_of_rule` (per-rule consumes/produces table). Test
 surface: `scenario_derivation_pure_tests` in
-[canary_artifact_test.ml](../../src/canary/test/canary_artifact_test.ml).
+[canary_artifact_test.ml](../../../src/canary/test/canary_artifact_test.ml).
 
 ## 8. Gotchas / rough edges (state-of-code notes)
 

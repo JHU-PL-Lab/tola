@@ -30,13 +30,13 @@ first:
   dispatch` over an action table. The general enumeration computes the
   scenario list; `run_project_run` executes it. tiny-full, sqlite, z3,
   llvm, ssl. See [`../design/ssot.md`](../design/ssot.md) §6.1 and
-  [`../design/algorithm_explainer.md`](../design/algorithm_explainer.md).
+  [`../design/enumeration/algorithm_explainer.md`](../design/enumeration/algorithm_explainer.md).
 - **store pins** — a binding whose provider declares `versions`
   (`Lang_pkg`) enumerates one scenario per pin; the fetch is a
   pin-checked store operation (warm-skip only when the switch provably
   holds the pin) and the probes carry world assertions. ssl is the
   reference shape (2 scenarios × 2 probes). See
-  [`../design/store_switching.md`](../design/store_switching.md).
+  [`../design/enumeration/store_switching.md`](../design/enumeration/store_switching.md).
 
 Source-built projects are still the expensive ones — z3 ~600 lines, llvm
 ~470 — and A5 made their *shape* identical without yet sharing their
@@ -109,7 +109,7 @@ does not fork the factory).
 - **C**: B + the `pr_spec` universe table + `realize ∘ dispatch` (sqlite: ~300 LOC including the from-source build; z3/llvm: the bulk is their build commands, not the scenario machinery).
 
 For scenario mechanics + the derived-vs-hand principle see
-[`design/algorithm_explainer.md`](../design/algorithm_explainer.md).
+[`design/algorithm_explainer.md`](../design/enumeration/algorithm_explainer.md).
 
 ## 3. Sourcing the lib channel pair (rule, user 2026-08-19)
 
@@ -127,7 +127,7 @@ archaeology:
    publishes source only (the common case on Linux). Prebuilt, versioned,
    and extractable; declared `Vendored` at
    `contrib/<project>-all/prebuilt/<tag>/` (see
-   [`../design/multi_lib.md` §6](../design/multi_lib.md)).
+   [`../design/enumeration/multi_lib.md` §6](../design/enumeration/multi_lib.md)).
 
 **Do not reach for an OLD version to manufacture a gap.** An earlier draft
 of this table proposed cairo 1.18.0 vs 1.14.12; that is backwards. The

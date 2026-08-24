@@ -1,6 +1,6 @@
 # The result matrix — what a row is, and what names it
 
-**Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
 
 > 2026-08-19. Opened by the user's observation on the sqlite rows: "ref
 > is not the only world … how do you explain #6?" **Resolved the same
@@ -8,7 +8,7 @@
 > block — one column per artifact, carrying that artifact's placement —
 > and the single `ref` column is gone. §2's analysis is kept because it
 > is the reason the layout changed.
-> Renderer: [`canary_matrix.ml`](../../src/canary/main/canary_matrix.ml);
+> Renderer: [`canary_matrix.ml`](../../../../src/canary/main/canary_matrix.ml);
 > `canary result` writes `docs/canary/projects/matrix.html`.
 
 ## 1. What a row IS

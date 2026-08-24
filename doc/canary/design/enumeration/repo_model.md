@@ -1,6 +1,6 @@
 # The repo model — requirements for the 3-way repos in the project spec
 
-**Kind: rationale + open decisions.** The requirements are the user's; the roadmap's A, B, C1, C2 and C3 all LANDED (2026-08-16/17). What is left is the "Open decisions left" section.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: rationale + open decisions.** The requirements are the user's; the roadmap's A, B, C1, C2 and C3 all LANDED (2026-08-16/17). What is left is the "Open decisions left" section.
 
 > 2026-08-14, user. Design input for the 3-way task (stable / official-latest
 > / forked repos per project) and the repo-provider unification. Requirements

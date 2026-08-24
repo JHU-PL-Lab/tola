@@ -4,7 +4,7 @@
 > costs, and what we measured on this machine. Peer of
 > [`opam.md`](opam.md) — that one surveys the ecosystem we CHECK, this one
 > surveys a channel we CONSUME. The design that uses it is
-> [`../design/multi_lib.md` §6](../design/multi_lib.md); the sourcing rule
+> [`../design/enumeration/multi_lib.md` §6](../design/enumeration/multi_lib.md); the sourcing rule
 > is [`../project/landing.md` §3](../project/landing.md).
 
 ## 1. The role it plays for canary

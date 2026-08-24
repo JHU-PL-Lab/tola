@@ -39,14 +39,14 @@ type source_repo = {
   build_sys_deps : string list;          (* apt packages required to build from source *)
   api_source : Canary_artifact.t option; (* hand-written API/binding spec; None = not yet declared *)
   label : string option;
-      (** the FREE LABEL (2026-08-15, design/repo_model.md Q1): [None] =
+      (** the FREE LABEL (2026-08-15, design/enumeration/repo_model.md Q1): [None] =
           the official repo identity; [Some l] = a repo VARIANT, e.g. our
           fork ([Some "arbipher"]). [ref_]/[official]/stable-latest
           markers are repo PROPERTIES; WHICH repos a run enumerates is
           the algorithm/config's choice, not this field's. *)
   artifacts : Canary_artifact.artifact_id list;
       (** WHAT ARTIFACTS the repo's tree builds (2026-08-16, the
-          multi-repo principle — design/repo_model.md): the modeling
+          multi-repo principle — design/enumeration/repo_model.md): the modeling
           direction is repo → artifacts; on-tree-ness derives from it.
           The SOURCE itself is implicit (it IS the tree, not built from
           it). Generalizes the old per-source [has_build_lib]/
@@ -80,7 +80,7 @@ let local_for distro (repo : source_repo) =
   List.find repo.locals ~f:(fun l ->
       Poly.equal l.distro distro)
 
-(* ── WORKTREE-based source checkouts (2026-08-15, design/repo_model.md) ──
+(* ── WORKTREE-based source checkouts (2026-08-15, design/enumeration/repo_model.md) ──
    One repository (shared objects) + a [git worktree] per tracked ref —
    versions coexist without in-place [git checkout <ref>] churn; the
    stable/latest markers are descriptive and can update, so every run
@@ -173,7 +173,7 @@ let source_fetch_cmd distro (repo : source_repo) ~output_dir ~variant_key =
       match repo.remote with
       | None ->
           (* LOCAL-ONLY repo (a fork without a remote — warning-grade per
-             design/repo_model.md) with no [locals] entry: nothing to
+             design/enumeration/repo_model.md) with no [locals] entry: nothing to
              fetch. Loud, not silent. *)
           [%string
             "echo 'local-only repo %{repo.name} has no remote and no local checkout' >&2; exit 1"]

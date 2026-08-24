@@ -1305,7 +1305,7 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
                 { Canary_project_run.policy = Canary_project_run.Full;
                   refs = EN.Refs [ "latest" ] })) }
 
-(* The repo-model settings (2026-08-15, design/repo_model.md): the
+(* The repo-model settings (2026-08-15, design/enumeration/repo_model.md): the
    contrib-root derivation + the worktree naming scheme (official repo
    name + ref slug; path separators slugged away). *)
 let repo_model_pin : Canary_project_test.pure_test =
@@ -2869,7 +2869,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
              (Canary_basic.Probe_lib)
            > 0) }
 
-let tests : Canary_project_test.pure_test list =
+let base_tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
       (* z3's binding no longer follows the lib (2026-08-19) — the
@@ -2919,4 +2919,95 @@ let tests : Canary_project_test.pure_test list =
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
       matrix_registry_shape_pin ]
+
+(* ── DOC↔CODE ALIGNMENT (2026-08-23, the design/ audit) ──
+
+   The enumeration docs cite the pins that guard each stage
+   (doc/canary/design/enumeration/README.md, the stage map). A doc that
+   names a pin which no longer exists is exactly how these docs went
+   stale before, and prose cannot notice it — so this pin makes it a
+   test failure.
+
+   Scope is deliberately narrow: only the enumeration subdirectory, and
+   only tokens that LOOK like a pin name (lowercase topic.name inside
+   backticks). File names are excluded by extension, and the handful of
+   record fields / package names that share the shape are listed
+   explicitly — a short, visible list beats a clever regex.
+
+   The converse is NOT checked: a pin can exist while the prose around
+   it describes something the code stopped doing. That still needs a
+   reader. *)
+let enum_doc_dir = "doc/canary/design/enumeration"
+
+let doc_file_exts =
+  [ "md"; "ml"; "mli"; "log"; "so"; "ok"; "h"; "c"; "pc"; "cmxa"; "cmake";
+    "py"; "sh"; "json"; "tsv"; "exe"; "html"; "mmd"; "in"; "tpl"; "a" ]
+
+(* Pin-SHAPED tokens that are not pins: OCaml record fields, an opam
+   package, a step field. Grow this list only when a real citation
+   collides — each entry is a false positive we chose to tolerate. *)
+let doc_not_pins =
+  [ "step.deps"; "z3.dev"; "project_run.pr_artifacts";
+    "run_config.consumer_lib"; "system_package_spec.version_tag";
+    "binding.ok"; "source.ok" ]
+
+let doc_pin_shaped (s : string) : bool =
+  match String.split s ~on:'.' with
+  | [ topic; name ] ->
+      let ok_part p =
+        (not (String.is_empty p))
+        && Char.is_lowercase p.[0]
+        && String.for_all p ~f:(fun c ->
+               Char.is_lowercase c || Char.is_digit c || Char.equal c '_')
+      in
+      ok_part topic && ok_part name
+      && (not (List.mem doc_file_exts name ~equal:String.equal))
+      && not (List.mem doc_not_pins s ~equal:String.equal)
+  | _ -> false
+
+(* Tokens between backticks: split on '`' and keep the odd indices. *)
+let doc_backticked (text : string) : string list =
+  String.split text ~on:'`' |> List.filteri ~f:(fun i _ -> i % 2 = 1)
+
+let cited_pins_exist_pin : Canary_project_test.pure_test =
+  { name = "docs.cited_pins_exist";
+    check =
+      (fun () ->
+        let known =
+          "docs.cited_pins_exist"
+          :: List.map
+               (Canary_project_test.all_tests @ base_tests)
+               ~f:(fun (t : Canary_project_test.pure_test) -> t.name)
+        in
+        match Stdlib.Sys.file_exists enum_doc_dir with
+        | false ->
+            Fmt.pr "  docs: %s is missing@." enum_doc_dir;
+            false
+        | true ->
+            let docs =
+              Stdlib.Sys.readdir enum_doc_dir |> Array.to_list
+              |> List.filter ~f:(fun f -> String.is_suffix f ~suffix:".md")
+              |> List.sort ~compare:String.compare
+            in
+            let bad = ref [] in
+            List.iter docs ~f:(fun f ->
+                let text =
+                  Stdlib.In_channel.with_open_text
+                    (Stdlib.Filename.concat enum_doc_dir f)
+                    Stdlib.In_channel.input_all
+                in
+                List.iter (doc_backticked text) ~f:(fun tok ->
+                    if
+                      doc_pin_shaped tok
+                      && not (List.mem known tok ~equal:String.equal)
+                    then bad := (f, tok) :: !bad));
+            let bad = List.dedup_and_sort !bad ~compare:Poly.compare in
+            List.iter bad ~f:(fun (f, tok) ->
+                Fmt.pr "  docs: %s cites %s, which is not a pin@." f tok);
+            (* a non-empty doc set is part of the claim: an empty
+               directory must not pass by vacuity *)
+            (not (List.is_empty docs)) && List.is_empty bad) }
+
+let tests : Canary_project_test.pure_test list =
+  base_tests @ [ cited_pins_exist_pin ]
 

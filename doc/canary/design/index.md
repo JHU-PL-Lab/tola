@@ -20,7 +20,7 @@ that is where a new design note gets its row.
 > `artifact_node` graph (`action/canary_action.ml`: `node_of_assignment` /
 > `close_deps` / `dep_mode`). Detection is forecast-agnostic (`backend/canary_detect.ml`).
 > The §4 `api_source` metadata model has split into `surface` (`base/canary_surface.ml`)
-> + store_config (`tool/`). See [`ssot.md`](ssot.md) and [`algorithm_explainer.md`](algorithm_explainer.md).
+> + store_config (`tool/`). See [`ssot.md`](ssot.md) and [`algorithm_explainer.md`](enumeration/algorithm_explainer.md).
 
 ## 1. Research vision
 
@@ -298,7 +298,7 @@ the implementation path yet.
 ## 8. Related design notes
 
 Every design note has a row in the doc index, [../index.md](../index.md)
-§design — including [algorithm_explainer.md](algorithm_explainer.md),
+§design — including [algorithm_explainer.md](enumeration/algorithm_explainer.md),
 which absorbed the retired `harness_canary_orthogonality.md` (the
 two-engines and store/runner/producer factoring between the standalone
 tiny harness and canary's workspace model, plus the two

@@ -1,6 +1,6 @@
 # Staged parity — build vs install as a checking principle
 
-**Kind: rationale + to-dos.** §1 records what landed; §4's four boxes are the open work and are also carried by `../project/status_project.md`.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: rationale + to-dos.** §1 records what landed; §4's four boxes are the open work and are also carried by `../project/status_project.md`.
 
 **2026-08-18, revised 2026-08-19. A cross-agent brief: what landed, what
 it means, what to track.**

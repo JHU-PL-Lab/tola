@@ -22,7 +22,7 @@
     "scenario") should be used for the constructs in this file; the
     word "scenario" belongs to concrete assignments from the engine.
 
-    See [doc/canary/design/scenario.md] for the terminology split
+    See [doc/canary/design/enumeration/scenario.md] for the terminology split
     (pattern vs scenario vs stage vs path pattern); it replaced the
     retired scenario_terms.md. *)
 

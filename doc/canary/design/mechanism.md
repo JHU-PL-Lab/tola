@@ -10,7 +10,7 @@
 ## The catalogue (shipped 2026-08-05)
 
 Mechanism DETAIL is standalone DATA in ONE file —
-[`base/canary_mechanism.ml`](../../src/canary/base/canary_mechanism.ml):
+[`base/canary_mechanism.ml`](../../../src/canary/base/canary_mechanism.ml):
 per mechanism (cstubs / cext / ctypes / cffi / dynlink), a
 `mechanism_info` record holds its language, discipline, the file forms
 that embody a binding of that mechanism, how it couples to the native lib

@@ -25,7 +25,7 @@ D is a real arc.
 > **Model revisit (2026-08-20)** — the reruns that filled z3's
 > `pre-10549` cells surfaced enough about the running/enumeration model to
 > warrant its own note:
-> [`../design/run_model_revisit.md`](../design/run_model_revisit.md). Its
+> [`../design/enumeration/run_model_revisit.md`](../design/enumeration/run_model_revisit.md). Its
 > ordered change list supersedes nothing here; items A3 and the artifact
 > fingerprint appear in both, now with measured cost attached.
 
@@ -120,7 +120,7 @@ same forward finding on both (same HEAD-ish binding vs apt's 4.8.12); the
 fork's staged world keeps its known ✗ (user: leave it).
 
 **D. More projects, and the dependency question** — design note in
-[`../design/multi_lib.md`](../design/multi_lib.md); the candidate ranking
+[`../design/enumeration/multi_lib.md`](../design/enumeration/multi_lib.md); the candidate ranking
 is now MEASURED, not guessed — see
 [`../surveys/conf_packages.md` §G](../surveys/conf_packages.md) (2026-08-20:
 all six category groups sampled, gates read from opam metadata AND from
@@ -201,7 +201,7 @@ the pins are shared state: zlib/cairo are single-package downgrades,
 libffi's recompiles zstd's binding, zstd's removes `ocaml-compiler` and
 downgrades 37 packages. Recorded, not started — the measurements and the
 A-vs-B consequences are in
-[`../design/store_switching.md` §5](../design/store_switching.md), the declaration gap in
+[`../design/enumeration/store_switching.md` §5](../design/enumeration/store_switching.md), the declaration gap in
 [`issues.md`](issues.md). Blocks on the canary-switch decision for two
 of the four.
 
@@ -355,7 +355,7 @@ per project, what failed, and how we may help fix it.
 **The shape, corrected.** It was written as "three versions per project"
 (stable, official dev/latest, forked dev with the fix). That counted
 three repos as three points on one axis, which they are not. The right
-shape (see [`../design/repo_model.md`](../design/repo_model.md), "The
+shape (see [`../design/enumeration/repo_model.md`](../design/enumeration/repo_model.md), "The
 channel pair"):
 
 - every artifact — the C lib, and each binding per (lang × mechanism) —
