@@ -89,7 +89,7 @@ done.
 | [stage6_report.md](design/enumeration/stage6_report.md) | **Pass 6, report** — the result matrix: what a row is and what names it |
 | [stage5_realize.md](design/enumeration/stage5_realize.md) | **Pass 5, realize** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib; three options with costs |
-| [emit_stages.md](design/enumeration/emit_stages.md) | *Proposal, mostly landed* — `canary emit <project> --stage <pass>`: print the value each pass hands the next. `--json` and `--why` remain |
+| [why_ledger.md](design/enumeration/why_ledger.md) | *Proposal* — `--why`, the per-candidate ledger: which constraint removed a world, or that nothing did. Deliberately postponed; the rest of the `emit` proposal landed and became rationale in `README.md` |
 
 All six stages now have a standalone doc.
 

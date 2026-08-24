@@ -32,13 +32,18 @@ moved into one standalone document per stage, gradually.
 
 Each pass answers to both its name and its index:
 `canary emit <project> --stage select` is `--stage 3`
-([`emit_stages.md`](emit_stages.md)).
+([`why_ledger.md`](why_ledger.md)).
 
 **Every pass has a standalone doc.** The other two files are proposals:
 [`multi_lib.md`](multi_lib.md) (`Lib` carries no name, so a project
-cannot declare a second C lib) and [`emit_stages.md`](emit_stages.md)
-(`canary emit --stage <pass>` — one dump per pass; steps 1–4 and 6
-landed, `--json` and `--why` remain).
+cannot declare a second C lib) and [`why_ledger.md`](why_ledger.md)
+(`--why`, the per-candidate ledger — deliberately postponed).
+
+`emit_stages.md`, the proposal that produced the passes, retired
+2026-08-24: once its steps landed it was code rationale, not a design
+plan, so it moved here (how to look at a pass, layers vs passes, the
+invariants) and into the per-pass docs. Only `--why` was still proposed,
+and that is `why_ledger.md`.
 
 Four docs left rather than being kept: `algorithm_explainer.md` (the
 walkthrough that predated this README — its sections went to the stages
@@ -72,6 +77,84 @@ runner_spec → steps        derive_steps walks the action catalogue
   ▼  stage 5            run_graph → actions.log → matrix / status / html
 verdicts
 ```
+
+## Looking at a pass
+
+Every stage boundary is a **total function over a distinct first-class
+type** — that is why the passes can be printed at all, and it was already
+true before anything was built to exploit it:
+
+```
+canary emit <project> --stage <pass> [--json] [--raw] [--thin] [--refs A,B]
+```
+
+Each pass answers to its NAME or its index. The rule is one line, and it
+is what separates `emit` from `spec`: **`--stage N` prints the value pass
+N hands to pass N+1** — not a rendering of it, and not a join with a
+neighbour. (`spec` is deliberately a joined human snapshot; both are
+useful, for different questions.)
+
+| flag | what it gives |
+| --- | --- |
+| *(default)* | a compact reading form |
+| `--json` | one encoder per pass, for diffing two runs. Keys are canonical |
+| `--raw` | the derived `show` form — faithful, verbose |
+
+Two properties hold by construction, and they are the reason to reach for
+`emit` rather than reasoning about the code:
+
+- **The dump is the value.** Every pass goes through `Canary_pipeline`,
+  which calls the very functions the runner calls. A dump cannot agree
+  with itself while disagreeing with what runs.
+- **`emit` reads the CATALOGUE, not the active set.** Muting a project
+  suppresses running it, not inspecting it — and a muted project (z3) is
+  the richest spec in the tree.
+
+What it shows that nothing else did: pass 2 is what the project HAS and
+pass 3 is what a run ASKED FOR, so "why isn't this running" has two
+different answers. z3 has 16 worlds; `--thin` asks for 1; `--refs latest`
+asks for 5.
+
+## Layers and passes are different axes
+
+The codebase has an organizing axis already, and it is not this one:
+
+- **Layers** (`base/ → surface/ → tool/ → action/ → backend/`, with
+  `project/` and `main/` on top) are a **dependency** discipline — who
+  may reference whom. dune enforces it and it works.
+- **Passes** are a **dataflow** discipline — who hands what to whom.
+
+They genuinely cross. Passes 2 and 5 live in `action/`, but passes 3 and
+4 are in `project/`, above both, because they need a `project_run`.
+Dataflow says 2 → 3 → 4 → 5; layering says `action/` is below
+`project/`. Neither is wrong, and **reorganizing the directories by pass
+would fight a working discipline for a labelling benefit**.
+
+What is worth having instead is one module that names the passes in
+order — `main/canary_pipeline.ml`. Before it, the chain was assembled in
+`Canary_runner.run_project_spec` and *partially re-assembled* in
+`Canary_matrix.actions_of`, which called `derive_steps` with its own
+workspace and project name. Two assemblies of one pipeline is how they
+drift; both route through the module now.
+
+## Invariants the pipeline holds
+
+Short list, each learned from something that went wrong:
+
+- **A dump never re-derives.** If it computed its own answer it could
+  agree with itself and disagree with the runner.
+- **Selection never invents.** Pass 3 only removes, so pass 2 stays the
+  honest inventory (`select.is_a_subset_of_stage2`), and the default
+  selects everything (`select.full_policy_selects_everything`).
+- **Model constraints are not policy.** Pass 2's five constraints have no
+  knob; a world they prune could not exist or was a duplicate. The one
+  time a knob was added — `shadow_filter`'s `Materialize_source` and its
+  `Audit_lib` rung — it was removed as misfiled.
+- **The dedup key is a function of CONTENT.** `string_of_assignment`
+  sorts by artifact kind, so the same world keys one way no matter which
+  construction built it.
+- **Passes 1–4 are pure; pass 5 is not.** Deriving steps applies
+  `pr_runner_spec` — see [`stage5_realize.md`](stage5_realize.md) §9.
 
 ## Stage → code → doc → pins
 

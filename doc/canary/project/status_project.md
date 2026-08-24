@@ -332,7 +332,7 @@ directions):
 - [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
   enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
   with its test plan:
-  [`../design/enumeration/emit_stages.md`](../design/enumeration/emit_stages.md).
+  [`../design/enumeration/why_ledger.md`](../design/enumeration/why_ledger.md).
   Roughly two days; steps 1–3 alone close the fact that **stage 3's run
   order is verified by a pin but cannot be looked at** (`spec` still
   prints enumeration order, which since 2026-08-21 is not what runs). The

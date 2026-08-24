@@ -207,6 +207,50 @@ Four backends consume the same step list: the local runner executes it,
 `canary_gh.ml` renders GH Actions YAML, `canary_diagram.ml` renders
 Mermaid, `canary_html.ml` renders the result page.
 
+## 8. Why a stage-5 dump is an APPLICATION, not a projection
+
+Two of the IRs contain closures and therefore cannot be `deriving show`:
+
+- **`runner_spec`** is a record of command *builders*. It has no printable
+  form of its own — which is fine, because it is an intermediate nobody
+  needs: `emit --stage realize` prints the **step list**, its observable
+  consequence.
+- **`step`** carries `cmd : output_dir:… -> variant_key:… -> string`,
+  `check_pre`, `check_post`.
+
+So a stage-4 dump is an **application**, not a projection: apply `cmd`
+with the scenario's real `output_dir` and print the resulting shell
+string; report `check_pre`/`check_post` as present/absent plus the
+expectation variant. This path already exists —
+`Canary_local_runner.step_fingerprint` realizes the full command outside
+a run in order to fingerprint it, and `runner.marker_stale_on_spec_change`
+depends on that. `emit --stage realize` is that realization, printed instead of hashed.
+
+## 9. `pr_runner_spec` is not pure
+
+Deriving a step list APPLIES `pr_runner_spec`, and that application is
+not pure for every project: tiny-full's realization can call
+`Canary_tiny_workspace.materialize_built_lib`, which does `rm_rf` +
+rebuild. Stages 1-4 are pure; this one is not, and a caller that only
+wants to LOOK at a project — a dump, a matrix cell — has to know it.
+
+Measured 2026-08-24: **the impure branch is unreachable today.**
+tiny-full enumerates one scenario, all Vendored, which dispatches to
+`Base` -> `witness_base_workspace ()`, which is path arithmetic and
+touches nothing. The impure branch is idempotent and writes into tiny's
+own cache rather than the passed workspace, and it returns only if
+tiny-full regains its Built-lib scenarios.
+
+`Canary_pipeline.actions_of` exists for the caller that needs the action
+set and not the commands (the result matrix): it passes a throwaway
+workspace, which the matrix had always done without saying why.
+
+The right fix is the one CLAUDE.md names as missing — materialization as
+an ACTION in the catalogue rather than something that happens while
+building the spec. That is an arc, not a patch; deferred deliberately.
+
+---
+
 ## Pins guarding this stage
 
 | pin | asserts |

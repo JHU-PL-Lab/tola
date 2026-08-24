@@ -5,7 +5,7 @@ the project HAS; this pass narrows them to the ones a particular run
 wants. It changes nothing about what exists. The map is
 [`README.md`](README.md).
 
-> Moved here 2026-08-24 from `emit_stages.md` §7, where the analysis was
+> Moved here 2026-08-24 from `why_ledger.md` §7, where the analysis was
 > written, once the pass landed and earned a stage of its own. The user's
 > question that opened it: *"are the possible config/policy issues either
 > functions from stage 2 to stage 3, or just a stage 3 refinement?"*
