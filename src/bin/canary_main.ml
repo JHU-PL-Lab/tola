@@ -282,13 +282,15 @@ let emit_cmd =
   in
   let stage =
     Arg.(
-      value & opt int 2
+      value & opt string "2"
       & info [ "stage" ] ~docv:"N"
           ~doc:
-            "Which pass to print: 1 = the declaration (project_spec), 2 = \
-             the enumerated worlds, 3 = the RUN order (what the runner \
-             iterates — since 2026-08-21 not the same list as 2), 4 = one \
-             scenario's realized steps.")
+            "Which pass to print. 1 = the declaration (project_spec). 2 = \
+             the worlds the project HAS (invocation-independent: --thin \
+             and --refs do not affect it). 2.5 = the worlds this RUN asked \
+             for (2 through the selection). 3 = the RUN order (2.5 grouped \
+             by the store state each scenario locks — since 2026-08-21 not \
+             the same order as 2.5). 4 = one scenario's realized steps.")
   in
   let raw =
     Arg.(
@@ -318,10 +320,13 @@ let emit_cmd =
   let run project stage raw thin refs scenario () =
     let module P = Canary_pipeline in
     let module EN = Canary_enumerate in
-    match List.assoc_opt project Canary_registry.all_projects with
+    (* the CATALOGUE, not the active set: muting suppresses RUNNING, not
+       inspecting, and a dump of a muted project is exactly when you want
+       one (z3 is muted and is the richest spec we have). *)
+    match List.assoc_opt project Canary_registry.all_specs with
     | None ->
-        Fmt.epr "usage: canary emit <%s> --stage <1|2|3|4>@."
-          (String.concat "|" (List.map fst Canary_registry.all_projects));
+        Fmt.epr "usage: canary emit <%s> --stage <1|2|2.5|3|4>@."
+          (String.concat "|" (List.map fst Canary_registry.all_specs));
         Stdlib.exit 2
     | Some pr ->
         let policy =
@@ -352,7 +357,7 @@ let emit_cmd =
             asgs
         in
         (match stage with
-        | 1 ->
+        | "1" ->
             let spec = P.spec_of pr in
             if raw then
               Fmt.pr "%s@." (Canary_artifact.show_project_spec spec)
@@ -397,9 +402,21 @@ let emit_cmd =
                     universe pins follows runtime)
                 spec.Canary_artifact.ps_universe
             end
-        | 2 -> pp_assignments (project ^ " — enumerated (stage 2)")
-                 (P.enumerated ?policy pr)
-        | 3 ->
+        | "2" ->
+            pp_assignments
+              (project ^ " — worlds the project HAS (stage 2)")
+              (P.worlds pr)
+        | "2.5" ->
+            let all = List.length (P.worlds pr) in
+            let sel = P.enumerated ?policy pr in
+            Fmt.pr "%s — asked for (stage 2.5) — %d of %d@." project
+              (List.length sel) all;
+            List.iter
+              (fun a ->
+                if raw then Fmt.pr "%s@." (Canary_artifact.show_assignment a)
+                else Fmt.pr "  %s@." (EN.string_of_assignment a))
+              sel
+        | "3" ->
             let ordered = P.ordered ?policy pr in
             Fmt.pr "%s — run order (stage 3) — %d@." project
               (List.length ordered);
@@ -422,7 +439,7 @@ let emit_cmd =
                   Fmt.pr "%s@." (Canary_artifact.show_assignment a)
                 else Fmt.pr "    %s@." (EN.string_of_assignment a))
               ordered
-        | 4 ->
+        | "4" ->
             let ordered = P.ordered ?policy pr in
             let pick =
               match scenario with
@@ -455,7 +472,8 @@ let emit_cmd =
                        (String.concat "," s.Canary_step_model.deps))
                    steps)
         | n ->
-            Fmt.epr "canary emit: --stage %d is not a pass (use 1..4)@." n;
+            Fmt.epr
+              "canary emit: --stage %s is not a pass (use 1, 2, 2.5, 3, 4)@." n;
             Stdlib.exit 2)
   in
   Cmd.v

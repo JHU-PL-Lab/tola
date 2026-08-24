@@ -5,13 +5,20 @@
 every stage, and the runner and the dump read the same pipeline. The map
 is [`README.md`](README.md).
 
-> **Steps 1–4 landed 2026-08-24.** `deriving show` on the stage IRs;
+> **Steps 1–4 and 6 landed 2026-08-24.** `deriving show` on the stage IRs;
 > `Canary_pipeline` (main/) as the single assembly, with the runner and
 > `Canary_matrix.actions_of` both routed through it; `canary emit
 > <project> --stage <1|2|3|4> [--raw]`. Pins:
 > `pipeline.ctx_matches_scenario_dir`,
-> `pipeline.stages_total_over_catalogue`, both falsified. **Still open:**
-> `--json`, `--why` (§6) and the selection pass (§7).
+> `pipeline.stages_total_over_catalogue`, both falsified. The selection
+> pass (§7) too: `enumerate = enumerate_worlds ∘ select`, so stage 2 is
+> now invocation-independent and `--stage 2` / `--stage 2.5` show what a
+> project HAS versus what a run ASKED FOR (z3: 16 worlds, thin asks for
+> 1, `--refs latest` asks for 5). Pins
+> `select.thin_post_filter_equals_universe_restriction`,
+> `select.is_a_subset_of_stage2`,
+> `select.full_policy_selects_everything`. **Still open:** `--json` and
+> `--why` (§6).
 
 > 2026-08-24, user: *"is it possible to print every stage's output, so
 > that making the whole pipeline a compiling-pass experience, then
@@ -121,6 +128,22 @@ filesystem carries no character needing escaping in a path or a
 `:`-separated env var. Falsifying it takes breaking the producer AND its
 normalization together — which is the correct difficulty for a claim
 about a scheme.
+
+**Stage 2 has two implementations, and they order pairs differently.**
+`enumerate` (via `enumerate_worlds`) and `enumerate_assignments` (via
+`patterns_of`, which is what `scenarios_of` and therefore the RUNNER use)
+both resolve the config levels. They agree on CONTENT — measured over
+every catalogued project — but produce the pairs of an assignment in
+different orders. That matters more than it sounds, because
+`string_of_assignment` is the dedup key in `scenarios_of` and it is
+order-sensitive. `scenario_dir_of` was given a canonical kind order on
+2026-08-19 for exactly this reason ("an enumeration change silently
+RENAMED every scenario dir, and the dir name is the cache key"); the
+dedup key never was. Two follow-ons: make `string_of_assignment`
+canonical, and reconcile the two enumerators. Found by
+`select.full_policy_selects_everything` failing on llvm the moment
+`Canary_pipeline.worlds` was built on the other entry point — the pin
+working exactly as intended, on its first day.
 
 ## 5. The closure problem, and its answer
 

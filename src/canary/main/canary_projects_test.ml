@@ -1906,6 +1906,104 @@ let pipeline_ctx_pin : Canary_project_test.pure_test =
                     name base;
                 agrees && born_safe))) }
 
+(* ── SELECTION IS A POST-FILTER (2026-08-24, emit_stages.md §7) ──
+
+   The claim the selection pass rests on: restricting each artifact's
+   version universe BEFORE the product (what [run_config]'s
+   [resolve_versions] does) gives the same assignments as filtering the
+   product AFTER it (what [select] does). True because restricting a
+   factor of a product equals filtering the product on that factor — but
+   the product here is followed by five constraints, one of which
+   ([shadow_filter]) is CROSS-assignment, so the argument is not
+   self-evident and is checked instead.
+
+   Thin is the case that matters: it differs from full in exactly one
+   axis, the version level, so this pins the whole equivalence. Run over
+   every catalogued project, muted included. *)
+let select_post_filter_pin : Canary_project_test.pure_test =
+  { name = "select.thin_post_filter_equals_universe_restriction";
+    check =
+      (fun () ->
+        let module EN = Canary_enumerate in
+        let thin = Canary_project_run.thin_policy () in
+        let key asgs =
+          List.map asgs ~f:EN.string_of_assignment
+          |> List.sort ~compare:String.compare
+        in
+        List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            let spec =
+              Canary_project_spec.project_spec_of_rows
+                pr.Canary_project_run.pr_artifacts
+            in
+            let restricted =
+              EN.enumerate ~tag:(fun () -> "") ~policy:thin spec
+            in
+            let post_filtered =
+              EN.enumerate ~tag:(fun () -> "")
+                ~policy:(EN.unselected thin) spec
+              |> EN.select (EN.selection_of_policy thin)
+            in
+            let ok =
+              List.equal String.equal (key restricted) (key post_filtered)
+            in
+            if not ok then
+              Fmt.pr "  select: %s restricted=%d post_filtered=%d@." name
+                (List.length restricted) (List.length post_filtered);
+            ok)) }
+
+(* The DEFAULT run asks for everything: stage 2.5 under the full policy
+   is stage 2 unchanged. Without this, a selection that quietly narrowed
+   by default would shrink every run while every count still "matched" —
+   and stage 2 would stop being the honest inventory it is now printed
+   as. *)
+let select_default_is_identity_pin : Canary_project_test.pure_test =
+  { name = "select.full_policy_selects_everything";
+    check =
+      (fun () ->
+        let module EN = Canary_enumerate in
+        let key asgs =
+          List.map asgs ~f:EN.string_of_assignment
+          |> List.sort ~compare:String.compare
+        in
+        List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            let all = Canary_pipeline.worlds pr in
+            let default = Canary_pipeline.enumerated pr in
+            let ok = List.equal String.equal (key all) (key default) in
+            if not ok then
+              Fmt.pr "  select: %s worlds=%d default-run=%d@." name
+                (List.length all) (List.length default);
+            ok)) }
+
+(* Selection only REMOVES. It can never invent a world, which is what
+   makes stage 2's output the honest "everything this project has". *)
+let select_subset_pin : Canary_project_test.pure_test =
+  { name = "select.is_a_subset_of_stage2";
+    check =
+      (fun () ->
+        let module EN = Canary_enumerate in
+        let thin = Canary_project_run.thin_policy () in
+        List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            let spec =
+              Canary_project_spec.project_spec_of_rows
+                pr.Canary_project_run.pr_artifacts
+            in
+            let all =
+              EN.enumerate ~tag:(fun () -> "") ~policy:(EN.unselected thin) spec
+              |> List.map ~f:EN.string_of_assignment
+            in
+            let selected =
+              EN.enumerate ~tag:(fun () -> "")
+                ~policy:(EN.unselected thin) spec
+              |> EN.select (EN.selection_of_policy thin)
+              |> List.map ~f:EN.string_of_assignment
+            in
+            let ok =
+              List.for_all selected ~f:(fun x ->
+                  List.mem all x ~equal:String.equal)
+            in
+            if not ok then Fmt.pr "  select: %s invented a world@." name;
+            ok)) }
+
 (* Stages 1-3 are TOTAL over the catalogue — muted projects included, since
    a dump of a muted project is exactly when you want one. Stage 1's
    universe must also have one entry per declared row: [project_spec_of_rows]
@@ -2992,6 +3090,9 @@ let base_tests : Canary_project_test.pure_test list =
       world_assertion_vocabulary_pin;
       pipeline_ctx_pin;
       pipeline_total_pin;
+      select_post_filter_pin;
+      select_subset_pin;
+      select_default_is_identity_pin;
       run_order_groups_state_pin;
       z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;

@@ -319,6 +319,14 @@ directions):
 
 **Enhancements** (no hurry — recorded, not scheduled):
 
+- [ ] **`string_of_assignment` is not canonical** (found 2026-08-24 while
+  splitting the selection pass) — it prints an assignment's pairs in list
+  order, and it IS the dedup key in `scenarios_of`. Two enumerators
+  (`enumerate` and `enumerate_assignments`) produce the same content in
+  different orders, so the key can differ for equal worlds.
+  `scenario_dir_of` was given a canonical kind order on 2026-08-19 for
+  exactly this reason; the dedup key never was. Fix: sort by kind there
+  too — then reconcile the two enumerators, which is the larger half.
 - [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
   enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
   with its test plan:

@@ -14,8 +14,10 @@
     pr_artifacts : artifact_row list
       │ spec_of                                            (stage 1)
       ▼ project_spec
-      │ enumerated ?policy                                 (stage 2)
-      ▼ assignment list          — what worlds EXIST
+      │ worlds                                             (stage 2)
+      ▼ assignment list          — what worlds the project HAS
+      │ enumerated ?policy                                 (stage 2.5)
+      ▼ assignment list          — what this RUN asked for
       │ ordered ?policy                                    (stage 3)
       ▼ assignment list          — deduped, grouped by store state
       │ steps_of ~root                                     (stage 4)
@@ -56,12 +58,34 @@ let spec_of (pr : project_run) : Canary_artifact.project_spec =
 
 (* ── stage 2 — enumeration ── *)
 
-(** Which worlds EXIST: the product over (provision × version × mutation)
-    with the five constraints applied. Enumeration order. Pure.
+(** Which worlds the project HAS — the product with the five model
+    constraints applied and NO selection. Invocation-independent: this
+    list does not depend on [--thin] or [--refs], which is what makes a
+    stage-2 dump a fact about the project rather than about today's flags
+    (emit_stages.md §7). Pure. *)
+let worlds (pr : project_run) : Canary_artifact.assignment list =
+  let module EN = Canary_enumerate in
+  (* THROUGH [scenarios_of], deliberately. Stage 2 has two
+     implementations — [enumerate] (via [enumerate_worlds]) and
+     [enumerate_assignments] (via [patterns_of], which is what
+     [scenarios_of] and therefore the RUNNER use). Building [worlds] on
+     the other one made this function a third opinion; the pin
+     [select.full_policy_selects_everything] caught it immediately.
 
-    This IS {!Canary_project_run.scenarios_of}; the alias exists so a
-    reader can see the pass sequence in one file, and so a consumer names
-    the stage rather than the function. *)
+     They agree on content. What differs is the ORDER of the pairs
+     within each assignment, which matters more than it sounds:
+     [string_of_assignment] is the dedup key in [scenarios_of], and it is
+     order-sensitive. [scenario_dir_of] was given a canonical kind order
+     on 2026-08-19 for exactly this reason ("an enumeration change
+     silently RENAMED every scenario dir"); the dedup key never was.
+     Recorded in emit_stages.md §4a. *)
+  scenarios_of ~policy:(EN.unselected (EN.full_policy ())) pr
+
+(** Stage 2.5 — the worlds a RUN asked for: {!worlds} through the
+    selection its policy carries. This IS
+    {!Canary_project_run.scenarios_of}; the alias exists so a reader sees
+    the pass sequence in one file, and so a consumer names the stage
+    rather than the function. Pure. *)
 let enumerated ?policy (pr : project_run) : Canary_artifact.assignment list =
   scenarios_of ?policy pr
 

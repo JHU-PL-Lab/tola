@@ -478,6 +478,64 @@ let ref_filter ~(refs : source_ref_level) (asgs : assignment list) :
       in
       List.filter asgs ~f:keep
 
+(* ── STAGE 2.5 — SELECTION (2026-08-24, emit_stages.md §7) ──
+
+   Three different things have been called "policy", and only one of them
+   is a pass between stage 2 and stage 3:
+
+   - MODEL CONSTRAINTS ({!assignment_ok}, {!binding_couples},
+     {!source_ref_ok}, {!shadow_filter}) say a world cannot exist or is
+     indistinguishable from another. Not policy: turning one off buys
+     wrong or duplicate worlds, not coverage. They stay unconditional
+     inside stage 2.
+   - SELECTION — "run a subset of the worlds that exist, this time" — is
+     THIS. It does not change what exists; it changes what you asked for.
+   - RUN CONFIGURATION (tier, failfast, parallelism) is stage 4 and later.
+
+   Why a pass rather than a stage-3 refinement: selection COMMUTES with
+   all of stage 3 (dedup keys on the pin id and so does {!ref_filter}; a
+   stable sort survives filtering), so correctness does not decide it.
+   Legibility does — stage 2's output becomes invocation-independent, so
+   it is a fact about the PROJECT rather than about today's flags, and
+   "why is this scenario not running" splits into "it does not exist"
+   versus "you did not ask for it". *)
+
+(** What a run asked for, as opposed to what the project has. *)
+type selection = {
+  sel_version : Canary_basic.channel level;
+  sel_refs : source_ref_level;
+}
+
+let select_all : selection = { sel_version = Full; sel_refs = All_refs }
+
+(** Apply a selection to stage 2's output.
+
+    The version half is the post-filter form of what {!run_config}'s
+    [resolve_versions] does by restricting each artifact's universe before
+    the product. The two are equivalent for [Subset] because restricting a
+    factor of a product equals filtering the product on that factor — and
+    that equivalence is CHECKED, not assumed:
+    [select.thin_post_filter_equals_universe_restriction] runs both over
+    every catalogued project.
+
+    [Free] ("one representative — the head of the universe") has no
+    post-filter form that means the same thing, and no policy reaching
+    {!enumerate} uses it on the version axis: [full_policy] and
+    [thin_policy] use [Full] and [Subset]. The slice functions that do use
+    [Free] ({!tiny_slice}, {!general_slice}) build points directly and
+    never pass through here. Treated as "no restriction" so the total
+    function is total. *)
+let select (sel : selection) (asgs : assignment list) : assignment list =
+  let version_ok (a : assignment) =
+    match sel.sel_version with
+    | Full | Free -> true
+    | Subset chs ->
+        List.for_all a ~f:(fun ((_ : artifact_id), (pl : placement)) ->
+            List.mem chs pl.Canary_artifact.version.Canary_basic.channel
+              ~equal:Poly.equal)
+  in
+  asgs |> List.filter ~f:version_ok |> ref_filter ~refs:sel.sel_refs
+
 (** The shadow resolution (2026-08-17, active plan 3): under
     [Shadow_prebuilt], drop an assignment whose artifact has a [Built]
     placement when an OTHERWISE-IDENTICAL assignment carries a prebuilt
@@ -619,8 +677,29 @@ let full_policy () : 'm policy =
     target's version [quality = Bad tag] (A2). A project DECLARES (stage 1),
     canary ENUMERATES (here). [tag] projects the polymorphic mutation to its
     opaque string tag; unused for a positive-only project ([mutations = []]). *)
-let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
-    assignment list =
+(** The SELECTION a policy carries — the two axes that are about what a
+    run asked for rather than about what exists (emit_stages.md §7). The
+    rest of the config ([provision], [version_mode], [mutation]) is not
+    selection: it shapes the product itself. *)
+let selection_of_policy (p : 'm policy) : selection =
+  { sel_version = p.config.version; sel_refs = p.config.refs }
+
+(** The policy with its SELECTION removed — everything a project has,
+    before a run narrows it. Pairs with {!select}: for the policies that
+    actually reach {!enumerate},
+    [enumerate ~policy = select (selection_of_policy policy) ∘
+     enumerate ~policy:(unselected policy)]. Pinned by
+    [select.thin_post_filter_equals_universe_restriction]. *)
+let unselected (p : 'm policy) : 'm policy =
+  { p with config = { p.config with version = Full; refs = All_refs } }
+
+(** STAGE 2 proper — every world the project HAS, before a run narrows
+    it. Invocation-independent: {!enumerate} passes {!unselected}, so the
+    version and refs axes are wide open here and only the model
+    constraints prune. That is what makes a stage-2 dump a fact about the
+    project rather than about today's flags. *)
+let enumerate_worlds ~(tag : 'm -> string) ~(policy : 'm policy)
+    (s : project_spec) : assignment list =
   let assignments =
     run_config ~artifacts:(ps_artifacts s)
       ~all_provisions_of:(ps_provisions_of s)
@@ -656,9 +735,16 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
               | None -> true))
     else assignments
   in
-  assignments
-  |> shadow_filter
-  |> ref_filter ~refs:policy.config.refs
+  assignments |> shadow_filter
+
+(** STAGE 2 then 2.5: the worlds, then the selection a run asked for.
+    Split 2026-08-24 (emit_stages.md §7); the composition is pinned
+    equal to the old single pass by
+    [select.thin_post_filter_equals_universe_restriction]. *)
+let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
+    assignment list =
+  enumerate_worlds ~tag ~policy:(unselected policy) s
+  |> select (selection_of_policy policy)
 
 (** Read a slot's provision off a concrete action set (which action-graph
     verbs a variant runs): [Build_*] ⇒ [Built], [Fetch _] ⇒ [Fetched], else
