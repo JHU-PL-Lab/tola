@@ -275,12 +275,32 @@ is still baked into the action catalogue, so:
   and `assignment_ok`'s "a binding's lib must be provided" has to become
   per-artifact), and a combination POLICY (all-off + each-alone + all-on =
   7 worlds, not 2⁵ = 32).
-- [ ] **D6. ncurses** — the cheapest remaining landing and the one the
-  ranking puts next: `Free_with_conf`, `libncurses-dev` already
-  installed, apt 6.4 → conda-forge 6.6, binding install a clean
-  2-package add. Ships one upstream finding for free (`conf-ncurses`'s
-  `os-family = "ubuntu"` depext line can never fire — opam reports
-  `debian` on Ubuntu, and `lib64ncurses-dev` is not in the archive).
+- [ ] **D6. ncurses** — **STARTED and PAUSED 2026-08-25**: it was the
+  cheapest remaining landing and it is now the specimen for a contract
+  that does not exist. Everything measurable is measured and committed
+  (probe verified green against apt, all three §3b steps free, both
+  channel points prepared, `opam install curses` = 2 packages exactly);
+  what stopped it is that the vendored world **segfaults with a
+  completely clean symbol diff** — apt 6.4 and conda-forge 6.6 agree on
+  soname, on all 463 symbols and on all ten ELF version nodes, and the
+  packagers still divide the implementation into different objects
+  (Debian's one `libtinfo` IS the wide build; conda-forge ships
+  `libtinfo` + `libtinfow`). Design note:
+  [`../design/closure_shape.md`](../design/closure_shape.md); the
+  per-project half, including two corrections to the survey's ncurses
+  row, is in [`issues.md`](issues.md).
+
+  Its falsifier sweep is RUN (§5a, reproduce with
+  `doc/canary/raw/closure_shape_sweep.sh`): cairo/libffi/zlib/zstd are
+  clean on both hazard forms — so the four landed pairs are NOT
+  retroactively in doubt — while sundials turns up 82 instances of the
+  second form (containment: each solver lib statically absorbs the
+  helper objects). Two forms, one instance each, found for free.
+
+  **Resume by** doing `closure_shape.md` §6 steps 2–5, after which D6
+  lands at Level B with the vendored world as a derived `xfail`.
+  Landing it stable-only is the cheap alternative and costs a (correct)
+  `lib_pair` warn plus the finding as a running test.
 
 **The rest of the queue** is described in
 [`projects.md` §4](projects.md), not duplicated here: lwt/libev
@@ -334,6 +354,18 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
      [`landing.md` §3](landing.md). Unlike zarith's (permanent, GMP), this
      `lib_pair` warn is a to-do, and the printed `ar_rationale` is what
      distinguishes the two.
+
+1. [ ] **The closure-shape contract** (2026-08-25) — a consumer records
+   a DEPENDENCY LIST, not just symbols, and two packagers can agree on
+   every symbol, soname and ELF version node while dividing the
+   implementation into different objects. No c1..c8 states it; c4 is the
+   nearest and wrong (its inputs are scalars a provider states about
+   itself). Design + the run falsifier:
+   [`../design/closure_shape.md`](../design/closure_shape.md). Blocks D6
+   at Level B and is the first contract addition since the registry
+   landed. Ships with `Canary_prebuilt.env`, which the same world needs
+   for an unrelated reason (a relocated prebuilt whose data path was
+   compiled in).
 
 **Residue of the 2026-08-17 active plan** — items 2-4 (Publish
 generalization, the shadow mechanism, zarith's binding_decls) landed and

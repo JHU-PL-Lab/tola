@@ -106,6 +106,7 @@ All six stages now have a standalone doc.
 | [action_playbook.md](design/action_playbook.md) | *How-to*: adding an action, with Publish as the worked example |
 | [matrix.md](design/matrix.md) | The result matrix — what a row is and what names it, plus why a `·` cell is not neutral. NOT an enumeration pass: `canary result` reads `actions.log` after a run |
 | [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation. Moved out of `enumeration/` 2026-08-24: not a stage |
+| [closure_shape.md](design/closure_shape.md) | *Proposal* — the agreement no c1..c8 states: a consumer records a DEPENDENCY LIST, not just symbols, and two packagers can agree on every symbol/soname/version-node while dividing the implementation into different objects. Found by ncurses' vendored world segfaulting with a clean symbol diff; falsifier RUN (§5a) |
 | [diagram.md](design/diagram.md) | The diagram pipeline and the design ideas its output implements |
 | [tiny.md](design/tiny.md) | Tiny — how the witness works. Carries a stale reframing banner; read it first |
 | [mechanism_payload.md](design/mechanism_payload.md) | The typed binding declaration (steps 1–4, 6 landed; step 5 partial) |

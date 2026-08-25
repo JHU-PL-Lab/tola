@@ -97,6 +97,60 @@ resolve the `built@dev` pruning, re-pin the count, and delete
 `dispatch` cases and the mismatch-probe row, and correct CLAUDE.md.
 Either way `general_spec` goes.
 
+### Found — ncurses' vendored world segfaults with a clean symbol diff;
+### D6's landing is PAUSED on the contract it needs (2026-08-25)
+
+The instance behind
+[`../design/closure_shape.md`](../design/closure_shape.md). apt 6.4 and
+conda-forge 6.6 agree on the soname (`libncursesw.so.6`), on all 463
+exported symbols (diff empty both ways) and on all ten `NCURSESW6_*` ELF
+version nodes — and the `LD_LIBRARY_PATH` repoint crashes, because the
+packagers divide the implementation differently: Debian's one `libtinfo`
+IS the wide build, conda-forge ships `libtinfo` and `libtinfow` as
+distinct objects. The consumer's link line was frozen in Debian's shape
+(`pkg-config --libs ncursesw` → `-lncursesw -ltinfo`), so in the conda
+world the loader maps conda's narrow tinfo beside the wide one the
+provider's own `libncursesw` pulls. ncurses' globals exist twice.
+
+A second, smaller one in the same world: conda-forge's `libtinfow` has
+its build prefix compiled in as the terminfo path, so the relocated
+prebuilt needs `TERMINFO_DIRS` — `Canary_prebuilt` knows only `libdir_of`.
+
+**What is already done and committed** (nothing here needs redoing):
+
+- `canary/examples/ncurses/ncurses_example.ml` — the probe, verified
+  green against apt: `ncurses resolved: /usr/lib/.../libncursesw.so.6.4`.
+  It uses `newterm "dumb"` over `/dev/null` rather than `initscr()`,
+  which exits on a non-tty and would abort under canary's `| tee`.
+- All three §3b measurements: `conf-ncurses`'s build is `pkg-config
+  ncurses` (no version predicate), `curses` declares a bare
+  `conf-ncurses`, and its `discover.ml` runs no version test. The gate is
+  free at every step.
+- Both channel points prepared: apt 6.4 installed, conda-forge 6.6 at
+  `contrib/ncurses-all/prebuilt/ncurses-6.6/`. `opam install curses` =
+  exactly 2 packages, as the survey predicted.
+
+**Corrections to the survey's ncurses row, both measured:**
+
+- The claimed depext finding is **wrong on the part that matters**.
+  `conf-ncurses`'s `["ncurses-dev"] {os-family = "debian"}` resolves
+  fine — `libncurses-dev` **Provides: ncurses-dev**. The real (smaller)
+  finding is the *other* line: `["lib64ncurses-dev"] {os-family =
+  "ubuntu"}` can never fire, because opam reports `os-family = debian`
+  on Ubuntu (`os-distribution = ubuntu`), and `lib64ncurses-dev` is not
+  in the archive either way. A dead line, not a broken install.
+- The library HAS a version accessor — `curses_version()` returns
+  `"ncurses 6.4.20240113"` — but it lives in libtinfo and `curses` does
+  not bind it (no `version` anywhere in `curses.mli`). So zstd's
+  two-witness form is unavailable here even though the C library offers
+  one; the mapped path is the only witness, as with camlzip/zlib.
+
+**Pickable as:** [`../design/closure_shape.md`](../design/closure_shape.md)
+§6 steps 2–5, after which the vendored world is `xfail[cN]` with a
+derived reason and D6 lands at Level B. Landing it stable-only first is
+possible but takes a (correct) `lib_pair` warn and throws the finding
+away as a running test.
+
 ### Found — the arbipher fork cannot serve a staged consumer, and
 ### `assert_staged = None` let the install claim success anyway (2026-08-19)
 
