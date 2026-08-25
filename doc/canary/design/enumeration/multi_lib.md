@@ -122,6 +122,40 @@ The payoff for sequencing it this way: with 1-3 done, stage 5 is left with
 question, answerable per-project, and one the enumeration can already state
 the answer to.
 
+**Can (1) be lifted without disturbing today's scenarios?** Measured
+2026-08-25: **yes, and it is a one-file change.** `A_lib` is matched as a
+pattern in exactly six places and *all six are in `base/canary_artifact.ml`*
+— its own defining module. The other 132 mentions across the tree are
+`a_lib` used as a **value**, and a value they stay if `a_lib` remains bound.
+The recipe:
+
+```
+| A_lib ""  -> base                 (* in string_of_id / pretty_id *)
+| A_lib n   -> base ^ "-" ^ n
+let a_lib = A_lib ""
+```
+
+`string_of_id` already has this exact shape for the payload-carrying
+constructors (`base ^ "-" ^ refinement`), so the unnamed lib keeps printing
+`lib`, and **every existing id string stays byte-identical** — scenario
+dirs, dedup keys, run-cache markers and pinned expectations all untouched.
+The compatibility guarantee this note owes existing projects is therefore
+available whenever we want it.
+
+**Which is an argument for not doing it yet.** (1) alone is a payload no
+project can pass: every one of them would write `""`, and a distinguished
+empty default is the payload rule inverted — the same sentinel smell the
+2026-08-24 refactor deleted. Nor does (2) rescue it, because (2) cannot
+precede a *real* second lib: with one lib artifact the consumer's build-lib
+is outside the enumeration entirely, which is precisely why `rp_deploy` is a
+bool and not a placement. There is nothing for `rp_build` to point at until
+a project declares two.
+
+So the natural unit is **(1) plus its first consumer in the same landing** —
+mpfr under (A) rather than (B), or a synthetic two-lib tiny case. The news
+from the measurement is that the lift is *not* the expensive part, so there
+is no reason to pre-pay it.
+
 ### 3b. The three options
 
 **(A) Name the lib artifact** — `A_lib of string`, so `a_lib "mpfr"` and
