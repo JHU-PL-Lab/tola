@@ -25,6 +25,64 @@
 
 ## 1. Findings that are real and unresolved
 
+### Found — tiny-full enumerates ONE world where its own docs claim six;
+### the built-lib and dev-binding axes are declared in dead code (2026-08-25)
+
+**What runs.** `canary spec tiny-full` reports *1 enumerated (1 good, 0
+bad)*, and the last run executed 1 scenario. CLAUDE.md line 13 says
+"6 spec-derived scenarios = {lib V:S,B:S,B:D} × {ocaml binding V:S,V:D};
+binding@dev over stable lib = the forward API mismatch (undefined
+`tiny_scale`), c1-predicted xfail". Only the first of those six exists.
+
+**Why.** `tiny_artifact_table` (`canary_project_tiny.ml`) builds every row
+with one universe cell:
+
+```
+~universe:[ (Vendored_at at, [ Stable ]) ]
+```
+
+so the product is 1 by construction. The spec that declares the missing
+axes — lib `Vendored@Stable + Built@{Stable,Dev}`, ocaml binding
+`{Stable,Dev}` — is `tiny_full_general_spec`, reached only through
+`Canary_project_tiny.general_spec`, **which nothing reads**. Its own
+docstring still claims it "is the only producer of tiny-full's scenario
+list". The likely mechanism is the 2026-08-06 merge of `pr_spec` +
+`pr_artifacts` into one fused table: tiny-full's rows were rebuilt from
+`artifacts` × a per-KIND provider map that only knows the Vendored path,
+and the Built/Dev cells did not come across.
+
+**What is downstream of it, and now unreachable:**
+
+- `dispatch`'s `Built_lib of channel` and `Dev_binding of { lib_built }`
+  cases — no assignment can carry a Built lib or a Dev binding.
+- `pr_mismatch_probes` declares the OCaml Cstubs `@Dev` `Forward` probe.
+  It can never fire. **This was tiny-full's whole point** — the in-tree
+  witness that the general path detects a forward API mismatch.
+- The `c1`-predicted `tiny_scale` xfail CLAUDE.md advertises.
+
+**Measured counterfactual** (2026-08-25, experiment reverted): declaring
+the two axes on the live table yields **4** worlds, not 6 —
+lib ∈ {`built@stable`, `vendored@stable`} × ocaml ∈ {`vendored@dev`,
+`vendored@stable`}. Every `lib=built@dev` candidate is pruned, most
+likely by the source-channel coupling (the source row is `vendored@stable`
+and a Built lib follows its source), which is exactly the case
+`tiny_full_general_spec`'s comment says should not arise because tiny's
+Dev is a `-DTINY_DEV` build **flag** rather than a source version.
+
+**Not an unnoticed break — a pinned one.** `("tiny-full", 1)` and
+`~want_count:1` in `canary_projects_test.ml` both encode 1, so the pins
+were moved to match rather than firing. Worth treating as the more
+interesting half of the finding: the ratchet recorded the new number
+instead of contesting it.
+
+**Pickable as:** decide whether tiny-full's general run is meant to carry
+the built-lib/dev-binding axes (the docs say yes, the code says no). If
+yes, move `tiny_full_general_spec`'s cells into `tiny_artifact_table`,
+resolve the `built@dev` pruning, re-pin the count, and delete
+`general_spec`. If no, delete `general_spec` and the unreachable
+`dispatch` cases and the mismatch-probe row, and correct CLAUDE.md.
+Either way `general_spec` goes.
+
 ### Found — the arbipher fork cannot serve a staged consumer, and
 ### `assert_staged = None` let the install claim success anyway (2026-08-19)
 
