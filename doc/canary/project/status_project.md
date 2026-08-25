@@ -201,10 +201,22 @@ is still baked into the action catalogue, so:
   today (`Self_check_in_build`, recorded in [`issues.md`](issues.md)).
   mlmpfr is the more valuable target: its forward mismatch is rejected by
   a check upstream already ships — a naturally occurring xfail.
-- [ ] **D4. Named lib artifacts** (the multi-provider axis) — `Lib` gains
-  an identity so a project can declare several C libs with their own
-  universes. Wide but mechanical; its own arc, with a pin per invariant it
-  touches.
+- [ ] **D4. Named lib artifacts** (the multi-provider axis) — a project
+  declares several C libs with their own universes. **Step 1 of 3 landed
+  2026-08-25**: `A_lib of string option`, one file, every id byte-identical,
+  pinned by `vocab.lib_name_optional`. Two steps remain and BOTH need a
+  real second lib to exist, so they land WITH their first consumer rather
+  than before it:
+  - `rp_build : placement option` beside `rp_run`, so `rp_deploy` is
+    derived (`rp_run <> rp_build`) rather than declared. Cannot precede a
+    second lib: with one lib artifact a consumer's build-lib is outside
+    the enumeration entirely, which is exactly why `rp_deploy` is a bool.
+  - **A role per consumed slot in the action catalogue.**
+    `action_sig.as_consumes : artifact_kind list` is role-typed, so
+    `[Lib; Lib]` is two indistinguishable slots — an action that LINKS one
+    lib and LOADS another is not expressible. This is the wide one and the
+    real blocker; naming does not fix it. Details:
+    [`../design/enumeration/multi_lib.md`](../design/enumeration/multi_lib.md) §3a.
 - [ ] **D5. bytesrw** — after D4. Needs D4 plus two more pieces: optional
   deps as `Absent` placements (the provision exists, no project uses it,
   and `assignment_ok`'s "a binding's lib must be provided" has to become
