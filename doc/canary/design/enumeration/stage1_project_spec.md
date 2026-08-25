@@ -155,6 +155,33 @@ divergences are the bug class worth checking. See
 
 ## 4. Providers — and the four things derived from them
 
+**First, `provision` vs `provider`**, because they sound alike and are
+not the same thing:
+
+| | `provision` | `provider` |
+| --- | --- | --- |
+| is | the **axis value** — `Absent \| Fetched \| Built \| Installed \| Vendored` | the **typed detail** — which apt package, which repo, which pins |
+| granularity | **per placement** — changes per scenario | **per row** — one per artifact, fixed |
+| answers | "in THIS world, how is it obtained?" | "when it is obtained, from where exactly?" |
+| lives in | `base/canary_store.ml` | `tool/canary_store_config.ml` |
+
+So a row has **one provider and many provisions**: sqlite's lib declares
+`Sys_pkg libsqlite3-dev` and a universe of `{Fetched, Built, Installed}`
+— five placements from one provider. The enumeration ranges over the
+provision; the realization needs the provider to build a command.
+
+Two types rather than one because the enumeration needs a small closed
+comparable set — five values, which also go into scenario identity
+(`lib-built-dev` in a directory name) — while the realization needs to
+know *which* package. `provision_of_provider` is what keeps them from
+drifting.
+
+Watch one trap: `Vendored` and `Absent` are constructors in BOTH types.
+`Canary_store.Vendored` is a provision; `Canary_store_config.Vendored of
+string` is a provider carrying a path, and `Cached path` is a third
+spelling that also maps to the `Vendored` provision.
+
+
 ```ocaml
 type provider =
   | Absent
@@ -170,10 +197,17 @@ axis and the detail cannot drift:
 
 | derived | function | what it gives |
 | --- | --- | --- |
-| the coarse provision | `provision_of_provider` | the axis value the universe must agree with |
+| the coarse provision | `provision_of_provider` | the BASELINE axis value (see below) |
 | the runtime edge | `dep_mode_of_provider` | `Ambient` when a lang package bundles its own native lib (`self_contained = true`) |
 | the store pins | `versions_of_provider` | the identity-bearing versions (§5) |
 | the producing action | `providing_action_of` | `Fetch` / `Build_lib` / `Install_lib` / … |
+
+**The provider's provision is a BASELINE, not the whole truth.**
+`provision_of_provider` maps both `Repo` and `Sys_pkg` to `Fetched` — a
+repo enters at the fetch boundary — but a row can declare `Built` in its
+universe, as sqlite's lib does. So the derived value agrees with the
+*baseline* scenario's placement, not with every scenario's, and that is
+literally what the pin asserts: `<project>.providers_match_baseline_provisions`.
 
 That last one is **the arrow** (user, 2026-08-06): an artifact comes from
 its provider *via an action*, and **fetching is the same shape as
