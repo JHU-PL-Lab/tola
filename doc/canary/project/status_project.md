@@ -156,7 +156,7 @@ is now MEASURED, not guessed — see
 all six category groups sampled, gates read from opam metadata AND from
 the conf packages' own build sections, libs cross-checked against apt and
 conda-forge). Short version: one C lib per project is baked into
-`artifact_kind` (`Lib` carries no name), so:
+artifact identity (`A_lib` carries no name), so:
 
 - [x] **D1. zlib / camlzip — LANDED 2026-08-20.** 2 scenarios, both
   green: lib `F:stable` (apt 1.3) and `V:dev` (conda-forge 1.3.2), the

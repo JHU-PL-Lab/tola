@@ -82,7 +82,7 @@ Five passes. Each answers to both its name and its index:
 ([`why_ledger.md`](why_ledger.md)).
 
 **Every pass has a standalone doc.** The other three files are proposals:
-[`multi_lib.md`](multi_lib.md) (`Lib` carries no name, so a project
+[`multi_lib.md`](multi_lib.md) (`A_lib` carries no name, so a project
 cannot declare a second C lib), [`why_ledger.md`](why_ledger.md)
 (`--why`, the per-candidate ledger — deliberately postponed) and
 [`resolve_placements.md`](resolve_placements.md) (nothing resolves a
@@ -279,7 +279,7 @@ Short list, each learned from something that went wrong:
 | doc                                            | what it perturbs                                                                                                     |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [`../staged_parity.md`](../staged_parity.md)         | stage 1 (Installed is a PROVISION, so a staged consumer is a WORLD) and stage 5 (build-vs-install parity is a check) |
-| [`multi_lib.md`](multi_lib.md)                 | stage 0/1 — `Lib` carries no name, so a project cannot declare a second C lib                                        |
+| [`multi_lib.md`](multi_lib.md)                 | stage 0/1 — `A_lib` carries no name, so a project cannot declare a second C lib                                        |
 
 ## What is NOT here
 

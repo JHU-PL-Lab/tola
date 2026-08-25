@@ -103,7 +103,7 @@ Two consequences worth knowing before you declare:
   zarith's binding is `ocaml/Zarith`, its lib is the system gmp. A repo
   providing both (z3's on-tree bindings) makes the second fetch
   idempotent; the repo is already there.
-- **`Lib` carries no name.** One C library per project is baked into the
+- **`A_lib` carries no name.** One C library per project is baked into the
   identity, which is why a project cannot declare a second one. That is
   the open blocker in [`multi_lib.md`](multi_lib.md), and it is a stage-1
   limitation, not a runner one.

@@ -1,6 +1,6 @@
 # Enumerating a project's DEPENDENCIES — more than one C lib
 
-**Stage:** see [README.md](README.md) (the stage map). **Kind: proposal.** **Landed when** `Canary_basic.artifact_kind.Lib` carries a name, so a project can declare more than one C lib with its own universe.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: proposal.** **Landed when** `Canary_artifact.artifact_info`'s `A_lib` carries a name, so a project can declare more than one C lib with its own universe.
 
 > 2026-08-19. Opened by the question "how shall we handle and enumerate
 > their dependency" for the four candidate projects. Two of them (mpfr,
@@ -9,16 +9,31 @@
 
 ## 1. The blocker, precisely
 
-`Canary_basic.artifact_kind` is
+Artifact **identity** is `Canary_artifact.artifact_info`:
 
 ```
-Source | Headers | Lib | Binding of lang | Binding_source of lang | App
+A_source | A_headers | A_lib
+| A_binding of lang * mechanism | A_binding_source of lang | A_app of app_wiring
 ```
 
-`Lib` carries **no name**, so `Canary_artifact.a_lib` is THE lib of a
-project. One C library per project, by construction. The `ext` field that
-distinguishes `binding:ocaml:cstubs` from `binding:ocaml:ctypes` carries a
-*mechanism*, not an identity.
+`A_lib` carries **no payload**, so `Canary_artifact.a_lib` is THE lib of a
+project. One C library per project, by construction.
+
+Two things this phrasing has to keep apart, since the 2026-08-24 refactor
+split them. `Canary_basic.artifact_kind` (`Source | Headers | Lib |
+Binding of lang | …`) is the coarse **role**, reached by `kind_of`; its
+`Lib` is *supposed* to be nameless, the way `Binding of lang` is coarser
+than `A_binding (lang, mechanism)`. The blocker is on the identity type,
+not the role — naming the lib means `A_lib of string` with
+`kind_of (A_lib _) = Lib` unchanged.
+
+That refactor also supplies the **precedent**. Distinguishing
+`binding-ocaml-cstubs` from `binding-ocaml-ctypes` was once a `{kind; ext}`
+record whose `ext` carried a mechanism, not an identity; it is now a
+payload on the constructor, under the rule *a constructor gains a payload
+when the thing it names stops being unique*. A second C lib is the same
+sentence about `A_lib`, so option (A) below is now a smaller and
+better-localized change than it was when this note was written.
 
 Consequences for the candidates:
 
@@ -49,9 +64,11 @@ new axis type.
 
 ## 3. Options for multiple libs
 
-**(A) Name the lib artifact** — `Lib of string`, or a `Lib` id whose `ext`
-carries a name, so `a_lib "mpfr"` and `a_lib "gmp"` are distinct artifacts
-with their own universes, providers and channel pairs.
+**(A) Name the lib artifact** — `A_lib of string`, so `a_lib "mpfr"` and
+`a_lib "gmp"` are distinct artifacts with their own universes, providers and
+channel pairs. (The alternative the note first floated — a name in an `ext`
+side-field — is no longer available and was never right: `ext` is gone, and
+identity belongs on the constructor.)
 - Buys: mpfr's 2×2×2 (mpfr pair × gmp pair × binding pair), bytesrw's
   optional backends, and the recorded multi-provider axis, all at once.
 - Costs: `a_lib` is referenced across `assignment_ok`, `source_is_read`,
@@ -78,10 +95,13 @@ but never varied.
 
 ## 4. Recommendation
 
-1. **Land zlib and lmdb now** on today's machinery. zlib is the more
-   valuable of the two: its source build takes seconds, so it gets a real
-   lib channel pair (apt vs source-built) and becomes the third project
-   with a 2×2 — and the first where BOTH sides of the pair are cheap.
+1. ~~**Land zlib and lmdb now** on today's machinery.~~ **zlib landed**
+   (`canary_project_zlib.ml`, via `Canary_opam_binding.run`) — but with a
+   *different* pair than recommended here. This note expected apt vs
+   source-built, since zlib's source build takes seconds; what it got is
+   apt 1.3 vs conda-forge 1.3.2 `Vendored@Dev`, because §6's prebuilt route
+   landed first and prebuilt-shadows-source applies. zstd rode the same
+   route. **lmdb has not landed.**
 2. **Land mpfr under (B)**, with gmp declared as a depext and a note that
    its stacked pair awaits (A). This also gives the first project whose C
    lib depends on another C lib we already cover, which is worth having as
@@ -96,9 +116,9 @@ Independent of the above, every new project needs the 2×2 minimum (user,
 2026-08-19: "the minimum meaningful requirement for any project, like a
 lower bound"), plus the additives it happens to have:
 
-| requirement | zlib | lmdb | mpfr | bytesrw |
+| requirement | zlib *(landed)* | lmdb | mpfr | bytesrw |
 | --- | --- | --- | --- | --- |
-| lib channel pair | apt vs source-built | apt only → binding pins carry the pair | apt only → binding pins | per backend, needs (A) |
+| lib channel pair | ~~apt vs source-built~~ → apt vs conda-forge prebuilt | apt only → binding pins carry the pair | apt only → binding pins | per backend, needs (A) |
 | binding channel pair | opam camlzip pins | opam lmdb pins | opam mlgmpidl pins | opam bytesrw pins |
 | regression ref (additive) | if a zlib CVE/fix commit is worth pinning | — | — | — |
 | fix fork (additive) | only if we find a bug to fix | — | — | — |
