@@ -329,6 +329,14 @@ directions):
   is not obvious. The canonical-key half of this is DONE:
   `string_of_assignment` sorts by artifact kind, so the dedup key is a
   function of content rather than of build order.
+- [ ] **Passes 2-3 redesign — an open QUESTION, not a plan** (user,
+  2026-08-25: *"a feeling that stage 2 and stage 3 with this can have a
+  redesign, but I am not that hurry"*). The model is two ideas; the
+  machinery carries four accidents around them (two constructions, an
+  unused mutation axis, a config with more knobs than uses, and chain
+  applicability with nowhere to live). Recorded in
+  `../design/enumeration/README.md`. The three items below are the
+  pieces; do them separately, or let them fall out of a redraw.
 - [ ] **Name the applicable-chain set** (found 2026-08-25, from the
   user's "there is another missing part"): `chain_applicable` filters the
   38 universal chains to what a project can run, from the SPEC ALONE —

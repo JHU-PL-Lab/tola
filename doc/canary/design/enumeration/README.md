@@ -271,6 +271,33 @@ backlog #48. Until it exists, this is a convention, not a guarantee — and
 so is the converse, which no check would cover anyway: a pin can exist
 while the prose around it describes something the code stopped doing.
 
+## An open question, recorded
+
+**Passes 2 and 3 may want a redesign** (user, 2026-08-25: *"I have a
+feeling that stage 2 and stage 3 with this can have a redesign, but I am
+not in a hurry"*). Not scheduled, and recorded here so the next person
+does not mistake the current shape for a settled one.
+
+What prompts it: the MODEL is two ideas — the product minus what cannot
+exist, then minus what you did not ask for — but the machinery around
+them accumulated four things that are not part of that model:
+
+- **two constructions** (`enumerate_product`, `enumerate_follows_tree`),
+  pinned equal since 2026-08-24, where one should survive;
+- **a mutation axis** no registry project uses, threaded through every
+  signature that touches `enumerate`;
+- **a config with more knobs than uses** — `level × 3 axes ×
+  version_mode`, where real projects use exactly two combinations (full
+  and thin);
+- **chain applicability with nowhere to live** — a real spec-only
+  derivation that is neither a pass nor a dump, and hides inside
+  `patterns_of`.
+
+Each has a reason in its history and none is a bug. But four accidents
+around two ideas is the shape of something that would come out simpler if
+drawn again, and the chain half is the piece that suggests the redraw
+rather than another patch.
+
 ## Known drift, recorded rather than hidden
 
 - **Two dependency relations.** `step.deps` (what the runner enforces via

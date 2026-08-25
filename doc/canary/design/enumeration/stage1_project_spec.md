@@ -405,6 +405,40 @@ their two staged faces), the OCaml binding has **two** (its store pins),
 5 × 2 = 10, and the Python binding is ambient in every one. Pinned by
 `enumerate.project_spec_sqlite_shape` and `sqlite.provider_rows`.
 
+### What else these four rows determine
+
+The scenario count is the visible consequence. There is a second one, and
+it is easy to miss because it has no pass of its own: **the declaration
+also decides which action CHAINS this project can run.**
+
+`chain_applicable` filters the **38 universal chains** (`canary paths`)
+using the spec alone — no policy, no assignment, no scenario. A chain
+survives when, for every step in it:
+
+- the step's output artifact is **declared**, and
+- declared at a provision the step's version rule needs — `Ambient` wants
+  `Fetched`, `Follows_input` wants `Built` — with **`Vendored` passing
+  through**, since the artifact exists and no action has to produce it;
+- and a `build_binding` step has a **static** binding to build (a
+  `Dynamic_ffi` binding has no build stage, so chains that would build it
+  are not applicable).
+
+`patterns_of` then pairs each surviving chain with each assignment that
+matches it. That pairing is what makes a **scenario** a chain plus
+coordinates — [`stage0_naming.md`](stage0_naming.md) sense 1 — rather
+than coordinates alone.
+
+Read against sqlite's rows above: declaring `Built_from a_source` on the
+lib is what keeps the `build_lib → fetch_source → …` chains applicable,
+and declaring the Python binding as `Cext` (static) is what keeps
+`build_binding_python` ones alive. Drop a provision from a universe and
+chains disappear silently — the scenario count moves, and nothing says
+which shapes of run went with it.
+
+**Nothing prints a project's surviving chains.** `canary paths` shows the
+unfiltered 38. Naming and exposing them is a tracker item
+(`../../project/status_project.md`).
+
 ## 9. The channel pair — why a universe should have two points
 
 *(2026-08-19 user framing, moved here from the purged `repo_model.md`.)*
