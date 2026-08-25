@@ -105,29 +105,38 @@ package manager's problem, not a general algorithm principle).
 
 ## The pipeline
 
-Each pass, with what it takes and what it hands on:
+**Three IRs, five passes** — and the counts deliberately do not match.
 
-| # | pass | in | out | function |
-| --- | --- | --- | --- | --- |
-| 1 | **declare** | `artifact_row list` | `project_spec` | `project_spec_of_rows` |
-| | *(branch)* | `project_spec` | applicable chains | `chain_applicable` over the 38 |
-| 2 | **enumerate** | `project_spec` | `assignment list` — every world the project HAS | `enumerate_product` ∘ 5 constraints |
-| 3 | **select** | `assignment list` | `assignment list` — what this RUN asked for | `select` |
-| 4 | **order** | `assignment list` | `assignment list` — same elements, resequenced | `scenarios_in_run_order` |
-| 5 | **realize** | one `assignment` | `step list` | `realize ∘ dispatch` then `derive_steps` |
+| IR | type | what it is |
+| --- | --- | --- |
+| *(surface)* | `artifact_row list` | the project's own words: what it declares, one row per artifact |
+| **spec** | `project_spec` | the declared universe, fused into one table |
+| **worlds** | `assignment list` | one placement per artifact — a world the project has |
+| **steps** | `step list` | the object code |
+
+Each pass, with the IR it takes and the IR it hands on:
+
+| # | pass | IR | in | out | function |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **declare** | surface → spec | `artifact_row list` | `project_spec` | `project_spec_of_rows` |
+| | *(branch)* | spec → chains | `project_spec` | applicable chains | `chain_applicable` over the 38 |
+| 2 | **enumerate** | spec → worlds | `project_spec` | `assignment list` — every world the project HAS | `enumerate_product` ∘ 5 constraints |
+| 3 | **select** | worlds → worlds | `assignment list` | `assignment list` — what this RUN asked for | `select` |
+| 4 | **order** | worlds → worlds | `assignment list` | `assignment list` — same elements, resequenced | `scenarios_in_run_order` |
+| 5 | **realize** | world → steps | one `assignment` | `step list` | `realize ∘ dispatch` then `derive_steps` |
 
 ```
-artifact_row list
+artifact_row list    (surface)
   ▼  1 declare                      ├──▶ applicable chains (spec alone)
-project_spec
+project_spec         IR: spec
   ▼  2 enumerate     product × 5 constraints
-assignment list      — every world the project HAS
-  ▼  3 select        --thin, --refs
-assignment list      — what this run asked for
-  ▼  4 order         stable sort on store_state_key
-assignment list      — same elements, resequenced
+assignment list      IR: worlds  — every world the project HAS
+  ▼  3 select        --thin, --refs                    ┐ same IR in and out:
+assignment list      IR: worlds  — what this run asked for
+  ▼  4 order         stable sort on store_state_key    ┘ two optimizations
+assignment list      IR: worlds  — same elements, resequenced
   ▼  5 realize       per assignment
-step list  ─────────────────────────────────── the object code
+step list            IR: steps ──────────────────── the object code
   │
   ├──▶ run_graph          execute here          → actions.log → verdicts
   ├──▶ render_gh_step     GitHub Actions YAML
@@ -135,11 +144,27 @@ step list  ───────────────────────
   └──▶ render_steps_data  HTML page
 ```
 
-**Passes 3 and 4 are endomorphisms** — `assignment list → assignment
-list`. 3 removes, 4 reorders, and neither invents. That is what makes
-them cheap to reason about and why `select.is_a_subset_of_stage2` and
+**Passes 3 and 4 are endomorphisms** — `worlds → worlds`. 3 removes, 4
+reorders, and neither invents. That is what makes them cheap to reason
+about and why `select.is_a_subset_of_stage2` and
 `run_order.groups_by_store_state` can each state their whole contract in
 one line.
+
+**Why the docs are named `stageN_`, not by IR** (asked 2026-08-25). The
+suggestion was to name each doc after the data structure it deals in,
+since the pipeline now makes that explicit. It works for three of the
+five and breaks on the other two: passes 3 and 4 share one IR, so
+`stage3_select.md` and `stage4_order.md` would both want to be
+`ir_worlds_*.md`. That is not an accident of naming — it is the same fact
+as the line above, that they are optimizations over a fixed IR.
+
+Compilers keep both vocabularies for exactly this reason: LLVM names its
+IRs (AST, LLVM IR, MachineIR, MC) and names its passes separately
+(mem2reg, GVN, regalloc), because many passes share one IR and a few
+lower between them. So the IR names live in the table above and in each
+pass's header, and the filenames keep the pass index — which is also the
+reading order, the one thing a newcomer needs first and the one thing an
+IR name cannot carry.
 
 **The step list is the object code, and the backends are targets.** Four
 of them consume it, and **executing is one of the four**, not a stage

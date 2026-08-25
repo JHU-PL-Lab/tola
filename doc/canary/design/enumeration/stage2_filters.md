@@ -1,5 +1,7 @@
 # Pass 2 — enumerate: the product, and why it is not the answer
 
+**IR:** **spec** `project_spec` → **worlds** `assignment list`. (IR names: [`README.md`](README.md).)
+
 **Kind: rationale**, plus one **proposal** section at the end
 (*Attribution*, absorbed from `why_ledger.md` 2026-08-25). Pass 2 of
 five. Standalone. Written 2026-08-23

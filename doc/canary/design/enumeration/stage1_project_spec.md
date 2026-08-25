@@ -1,5 +1,7 @@
 # Pass 1 — declare: what a project states (`project_spec`)
 
+**IR:** *(surface)* `artifact_row list` → **spec** `project_spec`. (IR names: [`README.md`](README.md).)
+
 **Kind: rationale.** Pass 1 of five. Standalone: everything needed to
 read or write a project's declaration, without opening another doc. What
 consumes it is [`stage2_filters.md`](stage2_filters.md) (pass 2, the

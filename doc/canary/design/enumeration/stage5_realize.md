@@ -1,5 +1,7 @@
 # Pass 5 — realize: commands, steps, execution
 
+**IR:** one **world** `assignment` → **steps** `step list`, the object code. (IR names: [`README.md`](README.md).)
+
 **Kind: rationale.** Pass 5 of five, the last. Standalone. Pass 4 hands
 over an ordered list of scenarios; this one turns each into a **step
 list** — the pipeline's object code — and then a backend consumes it.

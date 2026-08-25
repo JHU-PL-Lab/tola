@@ -1,5 +1,7 @@
 # Pass 4 — order: identity, exclusive resources, and run order
 
+**IR:** **worlds** → **worlds** — an endomorphism; it resequences, never removes. (IR names: [`README.md`](README.md).)
+
 **Kind: rationale.** Pass 4 of five. Standalone. Pass 3 hands over the
 selected assignments; this one answers three questions before anything
 runs:

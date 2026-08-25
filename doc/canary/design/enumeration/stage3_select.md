@@ -1,5 +1,7 @@
 # Pass 3 — select: what this run asked for
 
+**IR:** **worlds** → **worlds** — an endomorphism; it removes, never invents. (IR names: [`README.md`](README.md).)
+
 **Kind: rationale.** Standalone. Pass 3 of five. Pass 2 says which worlds
 the project HAS; this one narrows them to the ones a particular run
 wants. It changes nothing about what exists. The map is
