@@ -172,7 +172,7 @@ let z3_source_dev : source_repo =
        (the 2026-08-13 finding: both declare ref_ = HEAD, ambient identity
        would collide them). NOTE the fork's ROLE (user, 2026-08-19): it is
        where a local bug FIX lives, not a third channel — the axis per
-       artifact is the stable/latest pair (design/enumeration/stage1_project_spec.md). It is
+       artifact is the stable/latest pair (design/enumeration/stage1_declare_spec.md). It is
        enumerated here because a fix must be run to be believed, not
        because it adds a version. *)
     version = Canary_basic.{ channel = Dev; id = "arbipher" };

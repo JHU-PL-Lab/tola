@@ -8,9 +8,9 @@ it means, what to track.**
 > Moved out of `enumeration/` on 2026-08-24: this is a CHECKING principle,
 > not an enumeration stage. The one stage-1 fact it rests on — `Installed`
 > is a provision, so a staged consumer is its own WORLD — lives in
-> [`enumeration/stage1_project_spec.md` §3](enumeration/stage1_project_spec.md);
+> [`enumeration/stage1_declare_spec.md` §3](enumeration/stage1_declare_spec.md);
 > the isolation half generalized into
-> [`enumeration/stage4_order.md` §2](enumeration/stage4_order.md).
+> [`enumeration/stage4_order_worlds.md` §2](enumeration/stage4_order_worlds.md).
 
 ## 1. What landed — the staged consumer is a WORLD
 
@@ -140,7 +140,7 @@ check_post family.
       have let the fork's staged package answer the pre-10549 world's
       staged probe and silence a regression xfail. Generalized as one of
       four exclusive-resource instances in
-      [`enumeration/stage4_order.md` §2](enumeration/stage4_order.md).
+      [`enumeration/stage4_order_worlds.md` §2](enumeration/stage4_order_worlds.md).
 - [ ] Platform-invariant fixtures in the framework-test axis (the
       user's "enough platform invariant which is often violated":
       versioned-symbol nm output, install_name, symlink-chain,

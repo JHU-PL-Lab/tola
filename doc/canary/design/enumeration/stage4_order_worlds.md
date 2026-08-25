@@ -23,8 +23,8 @@ with the same key are one run.
 
 What is in the key: each artifact's provision, and its version **when the
 version is identity-bearing**. That qualifier is the whole rule, and it
-is declared upstream — see [`stage1_project_spec.md`
-§5](stage1_project_spec.md):
+is declared upstream — see [`stage1_declare_spec.md`
+§5](stage1_declare_spec.md):
 
 - `id = ""` — **version-ambient**. The provider picks (a PM resolves
   whatever it resolves), so the declared version is not part of identity

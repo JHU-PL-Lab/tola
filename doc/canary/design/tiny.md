@@ -25,7 +25,7 @@ Canonical description of tiny's implementation state and
 near-term wish-list. Complements:
 
 - [`ssot.md`](ssot.md) — truth (definitions, scenario tables)
-- [`enumeration/stage5_realize.md`](enumeration/stage5_realize.md) — the derived-vs-hand
+- [`enumeration/stage5_realize_steps.md`](enumeration/stage5_realize_steps.md) — the derived-vs-hand
   principle (absorbed from the retired `derived_vs_hardcoded.md`) + the
   enumeration model
 - [`../project/landing.md` §2](../project/landing.md) — three levels of scenario

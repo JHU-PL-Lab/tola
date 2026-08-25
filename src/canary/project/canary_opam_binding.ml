@@ -206,7 +206,7 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
             components = []; headers = None } };
     fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
     (* The declared source made runnable via WORKTREE checkouts
-       (2026-08-15, design/enumeration/stage1_project_spec.md): the fetch IS the prepare —
+       (2026-08-15, design/enumeration/stage1_declare_spec.md): the fetch IS the prepare —
        clone once + a worktree per ref into the contrib tree
        ([Canary_store.contrib_root]), refreshed on demand each run.
        [src] is the SCENARIO's repo (the per-channel dispatch, C1) —
@@ -448,7 +448,7 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
      wrapper under the same findlib name; a LATER opam probe must verify
      the store holds the STOCK package (the stable repo's version id)
      and self-heal by reinstalling it when not — each scenario lands
-     itself in the right world (enumeration/stage4_order.md §2, in-run
+     itself in the right world (enumeration/stage4_order_worlds.md §2, in-run
      instead of next-run). *)
   let stable_id =
     match

@@ -57,7 +57,7 @@ namespace at a time — installing one clobbers the other. Options:
   EXACTLY the z3 stable/dev dance (opam pin 4.16.0 ↔ publish z3.dev),
   and the machinery exists: pin-checked fetch, world assertions,
   "order is a performance contract, not a correctness one"
-  (enumeration/stage4_order.md §2).
+  (enumeration/stage4_order_worlds.md §2).
 
 The same-name variant is the right default — realism beats coexistence.
 

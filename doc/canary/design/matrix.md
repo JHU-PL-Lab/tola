@@ -60,7 +60,7 @@ So the column is:
 problem is that one coordinate is promoted to the row's name.
 
 **This gets structurally worse, not better.** The repo model's
-multi-repo principle (`stage1_project_spec.md` §4) says a repo records *what
+multi-repo principle (`stage1_declare_spec.md` §4) says a repo records *what
 artifacts* it can contain, and different artifacts may come from
 different repos; `Binding_source` already exists as a distinct artifact
 kind awaiting its first off-tree consumer (the `fetch_binding_source`
@@ -174,7 +174,7 @@ amalgamation URL and numeric id derive from the declared version instead
 of a parallel hardcoded table. It reorders sqlite's rows (the apt world
 joins a ref group), which is why it is on hold with the rest.
 
-Related: `stage1_project_spec.md` §5 (version as artifact identity) is the
+Related: `stage1_declare_spec.md` §5 (version as artifact identity) is the
 general form — version ids on Built/Installed provisions, not just
 Fetched pins.
 
@@ -253,7 +253,7 @@ they are identical — but it says two things about presentation and scale:
   are wrong.** The forward cell is the sharpest case: three rows, one
   finding, no way to see that from the matrix.
 
-Note the relation to [`stage2_filters.md`](enumeration/stage2_filters.md) §4: the
+Note the relation to [`stage2_enumerate_worlds.md`](enumeration/stage2_enumerate_worlds.md) §4: the
 unread-source collapse is the same observation about *inputs* — a ref
 nothing reads produces identical runs, so only the canonical one survives.
 This is the *output* version: a ref that IS read but changes nothing still

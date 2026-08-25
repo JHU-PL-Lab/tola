@@ -27,7 +27,7 @@ runs zarith's own ./configure, which probes GMP via pkg-config — the
 same check conf-gmp performs — so the system GMP dependency is real but
 not declared through opam's conf layer. Same findlib name (zarith), so
 it conflicts with the stock package; scenarios pin-switch between them
-(the z3 stable/dev store-pin dance, stage4_order.md §2).
+(the z3 stable/dev store-pin dance, stage4_order_worlds.md §2).
 """
 url {
   src: "%{CANARY_ZARITH_SRC}%"

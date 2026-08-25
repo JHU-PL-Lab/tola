@@ -263,7 +263,7 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
    `stable lib` gains a sibling `lib pair` that counts admissible points
    on the lib row and warns below two. Ships with a pin per project's
    expected verdict. Cheaper than, and complementary to, the per-candidate
-   ledger ([`../design/enumeration/stage2_filters.md`](../design/enumeration/stage2_filters.md)
+   ledger ([`../design/enumeration/stage2_enumerate_worlds.md`](../design/enumeration/stage2_enumerate_worlds.md)
    *Attribution*):
    this one says the declaration is too thin, that one says which
    constraint ate a world you expected.
@@ -295,7 +295,7 @@ directions):
   rung was removed and the shadow is unconditional — see
   `../design/wrapper_packages.md` §3.)
 - [ ] **Repo-model leftovers** (inherited 2026-08-23 when `repo_model.md`
-  was purged into `../design/enumeration/stage1_project_spec.md` §4;
+  was purged into `../design/enumeration/stage1_declare_spec.md` §4;
   the declared model is built and pinned, these are the decisions it
   left open):
   - the fork's LABEL in output — repo name? owner? (`arbipher` today);
@@ -378,7 +378,7 @@ directions):
 - [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
   enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
   with its test plan:
-  [`../design/enumeration/stage2_filters.md`](../design/enumeration/stage2_filters.md)
+  [`../design/enumeration/stage2_enumerate_worlds.md`](../design/enumeration/stage2_enumerate_worlds.md)
   *Attribution*.
   Roughly two days; steps 1–3 alone close the fact that **stage 3's run
   order is verified by a pin but cannot be looked at** (`spec` still
@@ -477,8 +477,8 @@ per project, what failed, and how we may help fix it.
 **The shape, corrected.** It was written as "three versions per project"
 (stable, official dev/latest, forked dev with the fix). That counted
 three repos as three points on one axis, which they are not. The right
-shape (see [`../design/enumeration/stage1_project_spec.md`
-§9](../design/enumeration/stage1_project_spec.md), "The channel pair"):
+shape (see [`../design/enumeration/stage1_declare_spec.md`
+§9](../design/enumeration/stage1_declare_spec.md), "The channel pair"):
 
 - every artifact — the C lib, and each binding per (lang × mechanism) —
   offers **two** choices, stable and latest;

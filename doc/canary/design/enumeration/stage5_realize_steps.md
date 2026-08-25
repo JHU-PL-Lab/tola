@@ -46,7 +46,7 @@ type action_sig = {
 The version rule encodes propagation: `Build_lib` consumes a `Source`, so
 its output's version IS the source's. That is the same source-primary rule
 stage 2's constraints enforce
-([`stage2_filters.md`](stage2_filters.md) §1, §3) — here it is stated as a
+([`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) §1, §3) — here it is stated as a
 property of the action rather than as a filter over assignments, and the
 two must agree.
 
@@ -65,7 +65,7 @@ from the catalogue is the open cleanup.
 4. run_with_info_status(steps)  →  verdicts
 ```
 
-**1** is stage 3's ([`stage4_order.md`](stage4_order.md) §1) — it
+**1** is stage 3's ([`stage4_order_worlds.md`](stage4_order_worlds.md) §1) — it
 appears here because it is also the cache key, and §4 below depends on
 that.
 

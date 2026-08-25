@@ -82,11 +82,11 @@ done.
 | ---- | ------------- |
 | [README.md](design/enumeration/README.md) | **The stage map.** Read first; also records the known drift (two dependency relations; mechanism/app-wiring are not config axes) |
 | [stage0_naming.md](design/enumeration/stage0_naming.md) | **Stage 0** — the four senses of "scenario", the canonical naming scheme, short names, fault tags, the c1..c8 catalogue |
-| [stage1_project_spec.md](design/enumeration/stage1_project_spec.md) | **Pass 1, declare** — what a project declares: rows, artifact identity, the provision × version universe, providers and what is derived from them, versions, repo lifecycle, the channel pair, what cannot be declared |
-| [stage2_filters.md](design/enumeration/stage2_filters.md) | **Pass 2, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against. Ends with *Attribution*, the `--why` per-candidate-ledger **proposal** (absorbed from `why_ledger.md`) |
-| [stage3_select.md](design/enumeration/stage3_select.md) | **Pass 3, select** — what a RUN asked for. Settles where config/policy sit: model constraints, SELECTION, and run configuration are three different things |
-| [stage4_order.md](design/enumeration/stage4_order.md) | **Pass 4, order** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
-| [stage5_realize.md](design/enumeration/stage5_realize.md) | **Pass 5, realize** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
+| [stage1_declare_spec.md](design/enumeration/stage1_declare_spec.md) | **Pass 1, declare** — what a project declares: rows, artifact identity, the provision × version universe, providers and what is derived from them, versions, repo lifecycle, the channel pair, what cannot be declared |
+| [stage2_enumerate_worlds.md](design/enumeration/stage2_enumerate_worlds.md) | **Pass 2, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against. Ends with *Attribution*, the `--why` per-candidate-ledger **proposal** (absorbed from `why_ledger.md`) |
+| [stage3_select_worlds.md](design/enumeration/stage3_select_worlds.md) | **Pass 3, select** — what a RUN asked for. Settles where config/policy sit: model constraints, SELECTION, and run configuration are three different things |
+| [stage4_order_worlds.md](design/enumeration/stage4_order_worlds.md) | **Pass 4, order** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
+| [stage5_realize_steps.md](design/enumeration/stage5_realize_steps.md) | **Pass 5, realize** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — a second C lib: naming landed 2026-08-25, `rp_build` + a per-slot action role remain; three options with costs |
 | [resolve_placements.md](design/enumeration/resolve_placements.md) | *Proposal* — resolve a placement to a concrete location: why `Installed` carries no path, the three overlapping types (one dead), and the `Vendored`-borrows-`Build_tree` lie |
 
@@ -126,12 +126,12 @@ All six stages now have a standalone doc.
 | ---- | --- |
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
 | ~~contract_registry.md~~ | Merged into `agreement_registry_audit.md` (2026-08-21) |
-| ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage5_realize.md` (2026-08-24) |
+| ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage5_realize_steps.md` (2026-08-24) |
 | ~~enumeration/algorithm_explainer.md~~ | Purged 2026-08-24 — the walkthrough that predated the stage map; its sections went to the stage docs they belonged to |
 | ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `matrix.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |
 | ~~scenario_terms.md~~ | Replaced by `enumeration/stage0_naming.md` |
-| ~~enumeration/repo_model.md~~ | Purged 2026-08-23 — live content absorbed into `enumeration/stage1_project_spec.md` §4, open decisions to `project/status_project.md` §2 |
-| ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_project_spec.md` §5 + `ssot.md` §4.2.2 |
+| ~~enumeration/repo_model.md~~ | Purged 2026-08-23 — live content absorbed into `enumeration/stage1_declare_spec.md` §4, open decisions to `project/status_project.md` §2 |
+| ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_declare_spec.md` §5 + `ssot.md` §4.2.2 |
 
 ## project/ — live projects, their status, and how to land one
 
@@ -140,7 +140,7 @@ shrunk to this shape 2026-08-21, when `index.md` + `coverage.md` merged
 into `projects.md`, `store_switching.md` and `wrapper_packages.md` moved
 to `design/` and `conf_survey.md` to `surveys/`. The store-switching half
 came BACK on 2026-08-24 as `opam_exclusive_store_issue.md`: once the
-general principle was extracted into `design/enumeration/stage4_order.md`
+general principle was extracted into `design/enumeration/stage4_order_worlds.md`
 §2, what remained was one package manager's problem, which is a project
 concern.
 
@@ -154,7 +154,7 @@ concern.
 | [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4                                     |
 
 Landing a project also reaches into `surveys/` (which library, which
-version pair) and `design/` (`enumeration/stage1_project_spec.md` for the
+version pair) and `design/` (`enumeration/stage1_declare_spec.md` for the
 declaration, `wrapper_packages.md` for a conf-free package,
 `enumeration/multi_lib.md` for a second C lib) — see those tables
 above.

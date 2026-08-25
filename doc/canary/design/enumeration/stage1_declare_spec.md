@@ -4,7 +4,7 @@
 
 **Kind: rationale.** Pass 1 of five. Standalone: everything needed to
 read or write a project's declaration, without opening another doc. What
-consumes it is [`stage2_filters.md`](stage2_filters.md) (pass 2, the
+consumes it is [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) (pass 2, the
 product over this universe); the map is [`README.md`](README.md).
 
 > First per-stage document (2026-08-23, user: *"each stage (layer) should
@@ -338,7 +338,7 @@ A project never hand-writes the pin axis. It declares versions on the
 a required **state of a singleton resource** — opam holds one version of
 a package per switch. So declaring two pins on one artifact declares two
 worlds that **cannot coexist**, and the runner has to serialize and
-verify them: [`stage4_order.md` §2](stage4_order.md) is the general
+verify them: [`stage4_order_worlds.md` §2](stage4_order_worlds.md) is the general
 principle (partition a place, serialize a state), and
 [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) is opam's case.
 
@@ -366,7 +366,7 @@ coverage: source rows once carried `~follows:a_lib`, which killed the
 phantom refs but also forbade the FORWARD cell — a binding built from a
 dev tree probed against the released lib, which is the world most likely
 to find a bug. Two narrower constraints replaced it; see
-[`stage2_filters.md`](stage2_filters.md) §3–4 before reaching for `follows`.
+[`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) §3–4 before reaching for `follows`.
 
 `~runtime` states the runtime-edge mode (`Lockstep` / `Independent` /
 `Ambient why`) when the provider does not imply one. A self-contained
@@ -476,7 +476,7 @@ More bindings multiply it: OCaml + Python is 2×2×2.
 3. **Prebuilt vs source-built** — expensive, and the only option when the
    ecosystem ships exactly one version (sqlite's amalgamation; z3/llvm's
    HEAD builds). Pick this last: the prebuilt-shadows-source rule
-   ([`stage2_filters.md`](stage2_filters.md) §5) will collapse a same-version pair
+   ([`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) §5) will collapse a same-version pair
    anyway.
 
 Say **channel** for the axis and **fix fork** for the repair repo. Do not

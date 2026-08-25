@@ -277,7 +277,7 @@ No hurry — all items below are queued for when their forcing function arrives.
   rebased on it; all 5 inline printers killed; `version_printer_ratchet`
   guards against regression. The DEEPER typed unification (version as
   artifact identity across enumeration/store/cache) stays
-  `design/enumeration/stage1_project_spec.md` §5 — not this
+  `design/enumeration/stage1_declare_spec.md` §5 — not this
   item.
 - **Tool-routing ratchet burn-down** (guard shipped 2026-08-05, user
   to-do: `harness.tool_routing_ratchet` in `project-test` freezes

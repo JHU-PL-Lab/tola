@@ -4,7 +4,7 @@
    readiness checklist (the term was "three-version report" until
    2026-08-19; the axis is a per-artifact CHANNEL PAIR — stable + latest —
    and the fork is a fix vehicle, not a third version. See
-   design/enumeration/stage1_project_spec.md). PURELY STATIC: reads only [project_run.pr_artifacts]
+   design/enumeration/stage1_declare_spec.md). PURELY STATIC: reads only [project_run.pr_artifacts]
    (rows: identity, axes, providers) + [pr_wrapper_pkgs]. No enumeration, no
    realization, no filesystem, no shell — runtime facts (a package renamed,
    a remote moved, actual probe results) belong to run status, not here.
@@ -413,7 +413,7 @@ let check_binding_dev_source (pr : Canary_project_run.project_run) : item =
       { item_id = "binding_dev_source"; label; severity = Warn;
         detail = "no Built axis on a binding" }
 
-(* The repo-contents invariant (2026-08-16, design/enumeration/stage1_project_spec.md): a
+(* The repo-contents invariant (2026-08-16, design/enumeration/stage1_declare_spec.md): a
    NON-source artifact whose provider is [Repo r] must appear in
    [r.artifacts] (the source itself is implicit — it IS the tree, not
    something built from it). A [Repo_axes] family provides the artifact

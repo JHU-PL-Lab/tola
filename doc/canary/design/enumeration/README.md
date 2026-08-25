@@ -39,7 +39,7 @@ Four steps, ~45 minutes, and you can stop after any of them:
    scenarios, and the second shows why the run order is not the
    enumeration order.
 3. **The pass whose behaviour you need** — one doc each, below. If you
-   are landing a project, read [pass 1](stage1_project_spec.md) and stop;
+   are landing a project, read [pass 1](stage1_declare_spec.md) and stop;
    it is what you will actually write.
 4. **The vocabulary** ([`stage0_naming.md`](stage0_naming.md)) when a word
    stops being obvious — "scenario" has four senses and they are all in
@@ -66,11 +66,11 @@ moved into one standalone document per stage, gradually.
 | # | pass | doc | state |
 | --- | --- | --- | --- |
 | — | *vocabulary* (not a pass) | [`stage0_naming.md`](stage0_naming.md) | the four senses, the naming scheme, the fault tags |
-| 1 | **declare** | [`stage1_project_spec.md`](stage1_project_spec.md) | what a project states — absorbed `repo_model.md` + `versioning.md` |
-| 2 | **enumerate** | [`stage2_filters.md`](stage2_filters.md) | the product and the five constraints that prune it |
-| 3 | **select** | [`stage3_select.md`](stage3_select.md) | what a RUN asked for — landed 2026-08-24 |
-| 4 | **order** | [`stage4_order.md`](stage4_order.md) | identity, exclusive resources, run order |
-| 5 | **realize** | [`stage5_realize.md`](stage5_realize.md) | commands, steps, execution, the cache |
+| 1 | **declare** | [`stage1_declare_spec.md`](stage1_declare_spec.md) | what a project states — absorbed `repo_model.md` + `versioning.md` |
+| 2 | **enumerate** | [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) | the product and the five constraints that prune it |
+| 3 | **select** | [`stage3_select_worlds.md`](stage3_select_worlds.md) | what a RUN asked for — landed 2026-08-24 |
+| 4 | **order** | [`stage4_order_worlds.md`](stage4_order_worlds.md) | identity, exclusive resources, run order |
+| 5 | **realize** | [`stage5_realize_steps.md`](stage5_realize_steps.md) | commands, steps, execution, the cache |
 
 **Reporting is NOT a pass.** It was numbered 6 until 2026-08-24; the
 matrix is built by `canary result`, which READS `actions.log` after a
@@ -86,14 +86,14 @@ project cannot declare a second C lib) and
 [`resolve_placements.md`](resolve_placements.md) (nothing resolves a
 placement to a concrete location, and three types describe one idea). A
 third, `why_ledger.md`, was absorbed into
-[`stage2_filters.md`](stage2_filters.md) *Attribution* on 2026-08-25 — it
+[`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) *Attribution* on 2026-08-25 — it
 was a proposal about pass 2's constraints and belonged with them.
 
 `emit_stages.md`, the proposal that produced the passes, retired
 2026-08-24: once its steps landed it was code rationale, not a design
 plan, so it moved here (how to look at a pass, layers vs passes, the
 invariants) and into the per-pass docs. Only `--why` was still proposed, and it now
-lives in [`stage2_filters.md`](stage2_filters.md) *Attribution*.
+lives in [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) *Attribution*.
 
 Four docs left rather than being kept: `algorithm_explainer.md` (the
 walkthrough that predated this README — its sections went to the stages
@@ -150,21 +150,32 @@ about and why `select.is_a_subset_of_stage2` and
 `run_order.groups_by_store_state` can each state their whole contract in
 one line.
 
-**Why the docs are named `stageN_`, not by IR** (asked 2026-08-25). The
-suggestion was to name each doc after the data structure it deals in,
-since the pipeline now makes that explicit. It works for three of the
-five and breaks on the other two: passes 3 and 4 share one IR, so
-`stage3_select.md` and `stage4_order.md` would both want to be
-`ir_worlds_*.md`. That is not an accident of naming — it is the same fact
-as the line above, that they are optimizations over a fixed IR.
+**The filename convention is `stage<N>_<verb>_<IR out>.md`** (2026-08-25,
+user: *"put the ir in the name so both the stage index and the ir are
+clear"*):
 
-Compilers keep both vocabularies for exactly this reason: LLVM names its
-IRs (AST, LLVM IR, MachineIR, MC) and names its passes separately
-(mem2reg, GVN, regalloc), because many passes share one IR and a few
-lower between them. So the IR names live in the table above and in each
-pass's header, and the filenames keep the pass index — which is also the
-reading order, the one thing a newcomer needs first and the one thing an
-IR name cannot carry.
+```
+stage0_naming.md            vocabulary — not a pass, so no IR
+stage1_declare_spec.md      surface → spec
+stage2_enumerate_worlds.md  spec    → worlds
+stage3_select_worlds.md     worlds  → worlds
+stage4_order_worlds.md      worlds  → worlds
+stage5_realize_steps.md     world   → steps
+```
+
+A directory listing now says three things. The **index** gives the
+reading order, which no IR name can carry. The **verb** says what the
+pass does. The **suffix** shows where the IR lowers and where it does
+not: `_worlds` three times running makes passes 3 and 4 visibly
+optimizations over a fixed IR rather than lowerings — the endomorphism
+fact above, legible without opening a file.
+
+Naming by IR *alone* was the first suggestion, and it collides exactly
+there: 3 and 4 would both be `ir_worlds_*.md`. Compilers keep both
+vocabularies for this reason — LLVM names its IRs (AST, LLVM IR,
+MachineIR, MC) and its passes separately (mem2reg, GVN, regalloc),
+because many passes share one IR and only a few lower between them.
+Carrying both in one filename beats choosing.
 
 **The step list is the object code, and the backends are targets.** Four
 of them consume it, and **executing is one of the four**, not a stage
@@ -287,17 +298,17 @@ Short list, each learned from something that went wrong:
   sorts by artifact kind, so the same world keys one way no matter which
   construction built it.
 - **Passes 1–4 are pure; pass 5 is not.** Deriving steps applies
-  `pr_runner_spec` — see [`stage5_realize.md`](stage5_realize.md) §9.
+  `pr_runner_spec` — see [`stage5_realize_steps.md`](stage5_realize_steps.md) §9.
 
 ## Stage → code → doc → pins
 
 | stage                   | what happens                                                                                                                                       | code                                                                                                                                                                                                     | doc                                                                                                                                                                                                                                    | pins                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **0. vocabulary**       | the types every stage reuses: `artifact_kind`, `provision`, `channel`, `version`, `build_id`, `artifact_info`, `placement`, `assignment`, `dep_mode` | `base/canary_basic.ml`, `base/canary_store.ml`, `base/canary_artifact.ml`                                                                                                                                | [`../ssot.md`](../ssot.md) (IDs), [`stage0_naming.md`](stage0_naming.md) (the four senses of "scenario")                                                                                                                                         | `vocab.binding_source_off_tree`, `surface.split_keeps_checks_drops_provenance`, `scenario.lower_expectation_agnostic_c1`                                                                                                                                                                                                                                                                                           |
-| **1. declaration**      | a project states which artifacts exist, at which provisions, at which versions, and who provides each                                              | `action/canary_project_spec.ml` (`artifact_row`, `project_spec_of_rows`), `base/canary_artifact.ml` (`axes = {ax_universe; ax_runtime; ax_follows; ax_pins}`), `tool/canary_store_config.ml` (providers) | **[`stage1_project_spec.md`](stage1_project_spec.md)** — THE stage-1 doc, standalone (absorbed `repo_model.md` + `versioning.md`, purged 2026-08-23). Background: [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) what a pin costs, [`multi_lib.md`](multi_lib.md) what cannot be declared | `enumerate.project_spec_sqlite_shape`, `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`, `enumerate.per_provision_versions`, `repo_model.axes_pins`, `repo_model.contents_invariant`, `spec.vendored_prebuilt_pair`, `spec.pm_dep_gate_groups`, `sqlite.provider_rows`, `z3.provider_rows`                                                                                                   |
-| **2. enumeration**      | the product, then the constraints that prune it                                                                                                    | `action/canary_enumerate.ml` (`run_config`, `enumerate_points`, `assignment_of_point`, then `assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`)            | **[`stage2_filters.md`](stage2_filters.md)** — the product and the five constraints                                                                                                                            | `enumerate.config_levels`, `enumerate.subset_intersects_universe`, `enumerate.thin_is_version_subset`, `enumerate.refs_subset`, `enumerate.shadow_policy_drops_same_cell_built`, `enumerate.point_to_assignment_fold`, `enumerate.two_projections_and_filter`, `enumerate.version_axis`, `enumerate.built_from_of_assignment`, `enumerate.mismatch_direction`, `enumerate.deploy_mismatch`, `shadow.policy_ladder` |
-| **3. identity + order** | which assignments are the SAME scenario, and in what order they run                                                                                | `project/canary_project_run.ml` (`scenarios_of`, `scenario_dir_of`, `store_state_key`, `scenarios_in_run_order`)                                                                                         | **[`stage4_order.md`](stage4_order.md)** — THE stage-3 doc, standalone. Background: [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) (the opam instance)                                                                                                  | `run_order.groups_by_store_state`, `matrix.registry_shape`, `z3.install_prefix_isolated`, `z3.env_guard_paths`, `world.one_vocabulary`                                                                                                                                                                                                                                                                                                                                                         |
-| **4. realization**      | assignment → commands → steps; and the parallel node-graph view                                                                                    | `project/*` (`pr_runner_spec = realize ∘ dispatch`), `action/canary_step_builder.ml` (`derive_steps`), `action/canary_action.ml` (`node_of_assignment`, `close_deps`, `execution_plan`)                  | **[`stage5_realize.md`](stage5_realize.md)** — THE stage-4 doc, standalone. [`../action_playbook.md`](../action_playbook.md) to add an action                                                                                                          | `action.node_of_assignment_chain`, `action.close_deps_deploy_mismatch`, `action.execution_plan_topo_and_edges`, `arrow.providing_action_total_and_consistent`, `enumerate.dispatch_coordinate_reads`, `z3.dispatch_reads_source_placement`, `derive.fetch_lib_matches_helper`, `probe_invariant.consumes_eq_artifacts`                                                                                             |
+| **1. declaration**      | a project states which artifacts exist, at which provisions, at which versions, and who provides each                                              | `action/canary_project_spec.ml` (`artifact_row`, `project_spec_of_rows`), `base/canary_artifact.ml` (`axes = {ax_universe; ax_runtime; ax_follows; ax_pins}`), `tool/canary_store_config.ml` (providers) | **[`stage1_declare_spec.md`](stage1_declare_spec.md)** — THE stage-1 doc, standalone (absorbed `repo_model.md` + `versioning.md`, purged 2026-08-23). Background: [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) what a pin costs, [`multi_lib.md`](multi_lib.md) what cannot be declared | `enumerate.project_spec_sqlite_shape`, `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`, `enumerate.per_provision_versions`, `repo_model.axes_pins`, `repo_model.contents_invariant`, `spec.vendored_prebuilt_pair`, `spec.pm_dep_gate_groups`, `sqlite.provider_rows`, `z3.provider_rows`                                                                                                   |
+| **2. enumeration**      | the product, then the constraints that prune it                                                                                                    | `action/canary_enumerate.ml` (`run_config`, `enumerate_points`, `assignment_of_point`, then `assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`)            | **[`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md)** — the product and the five constraints                                                                                                                            | `enumerate.config_levels`, `enumerate.subset_intersects_universe`, `enumerate.thin_is_version_subset`, `enumerate.refs_subset`, `enumerate.shadow_policy_drops_same_cell_built`, `enumerate.point_to_assignment_fold`, `enumerate.two_projections_and_filter`, `enumerate.version_axis`, `enumerate.built_from_of_assignment`, `enumerate.mismatch_direction`, `enumerate.deploy_mismatch`, `shadow.policy_ladder` |
+| **3. identity + order** | which assignments are the SAME scenario, and in what order they run                                                                                | `project/canary_project_run.ml` (`scenarios_of`, `scenario_dir_of`, `store_state_key`, `scenarios_in_run_order`)                                                                                         | **[`stage4_order_worlds.md`](stage4_order_worlds.md)** — THE stage-3 doc, standalone. Background: [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) (the opam instance)                                                                                                  | `run_order.groups_by_store_state`, `matrix.registry_shape`, `z3.install_prefix_isolated`, `z3.env_guard_paths`, `world.one_vocabulary`                                                                                                                                                                                                                                                                                                                                                         |
+| **4. realization**      | assignment → commands → steps; and the parallel node-graph view                                                                                    | `project/*` (`pr_runner_spec = realize ∘ dispatch`), `action/canary_step_builder.ml` (`derive_steps`), `action/canary_action.ml` (`node_of_assignment`, `close_deps`, `execution_plan`)                  | **[`stage5_realize_steps.md`](stage5_realize_steps.md)** — THE stage-4 doc, standalone. [`../action_playbook.md`](../action_playbook.md) to add an action                                                                                                          | `action.node_of_assignment_chain`, `action.close_deps_deploy_mismatch`, `action.execution_plan_topo_and_edges`, `arrow.providing_action_total_and_consistent`, `enumerate.dispatch_coordinate_reads`, `z3.dispatch_reads_source_placement`, `derive.fetch_lib_matches_helper`, `probe_invariant.consumes_eq_artifacts`                                                                                             |
 | *(consumer)* — reporting        | what a row is and what names it                                                                                                                    | `main/canary_matrix.ml`, `backend/canary_status.ml`, `backend/canary_html.ml`                                                                                                                            | [`../matrix.md`](../matrix.md)                                                                                                                                                                                                               | `matrix.row_index`, `matrix.row_order`, `matrix.cell_stage_progression`, `matrix.setting_block_identifies_world`, `matrix.marks_from_log`                                                                                                                                                                                                                                                                          |
 
 **Cross-cutting**, because they are not one stage:
@@ -310,7 +321,7 @@ Short list, each learned from something that went wrong:
 ## What is NOT here
 
 - The **cache** — `../artifact_cache.md` (proposal) and
-  [`stage5_realize.md`](stage5_realize.md) §4 (what exists).
+  [`stage5_realize_steps.md`](stage5_realize_steps.md) §4 (what exists).
 - **Adding an action** — `../action_playbook.md`.
 - The **checking** side (what a probe asserts, which contract fires) —
   `../agreement_registry_audit.md` and `surface/`.

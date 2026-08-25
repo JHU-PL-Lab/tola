@@ -858,7 +858,7 @@ let string_of_assignment (a : assignment) : string =
    constructions that agree on content for every spec we have:
 
    - {!enumerate_product} — product-then-filter, the model the docs
-     describe (design/enumeration/stage2_filters.md). MUTATION-AWARE: it
+     describe (design/enumeration/stage2_enumerate_worlds.md). MUTATION-AWARE: it
      takes [~tag] and folds each point's mutation into its target's
      [quality = Bad tag]. tiny's oracle needs that; the general projects
      do not use it.

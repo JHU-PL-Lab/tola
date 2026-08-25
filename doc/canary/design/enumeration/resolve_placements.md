@@ -126,7 +126,7 @@ which is precisely what z3 computes by hand as
   replacing one project's hand-written pin. That is exactly the *general
   form* [`../staged_parity.md`](../staged_parity.md) §4 asks for and has
   never had — and it is stage 4's *partition a place* principle
-  ([`stage4_order.md`](stage4_order.md) §2) applied where it was first
+  ([`stage4_order_worlds.md`](stage4_order_worlds.md) §2) applied where it was first
   needed.
 - **The location sub-axis item resolves** (`../../project/status_project.md`):
   with a real `Vendored` location and a resolution per placement, the

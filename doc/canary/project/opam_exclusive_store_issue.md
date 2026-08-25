@@ -5,16 +5,16 @@ opam's one-version-per-switch rule costs us, what a per-version switch
 would cost instead, and the two questions still open. The GENERAL
 principle — how to run a scenario that needs exclusive use of a mutated
 singleton, and how to choose between partitioning and serializing it — is
-[`../design/enumeration/stage4_order.md`
-§2](../design/enumeration/stage4_order.md).
+[`../design/enumeration/stage4_order_worlds.md`
+§2](../design/enumeration/stage4_order_worlds.md).
 
 > Narrowed 2026-08-24 (user: *"the remaining part is still an opam
 > store_switching issue, which is a specific problem"*), then moved here
 > from `design/enumeration/store_switching.md` and renamed: it is one
 > package manager's problem, not a general algorithm principle. The
 > general principle and the landed run-order behaviour went to stage 3;
-> pin DECLARATION to [`../design/enumeration/stage1_project_spec.md`
-> §5](../design/enumeration/stage1_project_spec.md); the per-project cost
+> pin DECLARATION to [`../design/enumeration/stage1_declare_spec.md`
+> §5](../design/enumeration/stage1_declare_spec.md); the per-project cost
 > table is [`issues.md`](issues.md). `git show 5f5f12c` has the 604-line
 > version, `git show 781f98e` the original.
 

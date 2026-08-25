@@ -30,7 +30,7 @@ Two pieces of evidence that the tree already knows this:
   2026-08-19 (user: *"I think we remove this feature"*). That was
   recognizing shadowing as model rather than policy — the knob existed
   because it had been misfiled.
-- [`stage2_filters.md`](stage2_filters.md) §6 had already said `ref_filter`
+- [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) §6 had already said `ref_filter`
   is *"a selection, not a semantic constraint — it belongs to the run,
   not to the model"*. The generalization was that the *category* was
   missing, not that one filter was misplaced.
@@ -108,7 +108,7 @@ $ canary emit z3 --stage select --refs latest → 5 of 16
 That is the split's whole point: "why isn't this running" now has two
 different answers — *it does not exist* (a pass-2 constraint) versus
 *you did not ask for it* (pass 3). `--why` will report them separately
-([`stage2_filters.md`](stage2_filters.md) *Attribution*); before the
+([`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) *Attribution*); before the
 split it could only have said "absent".
 
 ### Still open

@@ -34,7 +34,7 @@ let run_project_spec ?policy (pr : project_run) ~root
   let module BH = Base.Hashtbl in
   let all_good = assignment_is_all_good in
   (* RUN order, not enumeration order (2026-08-21,
-     design/enumeration/stage4_order.md §3):
+     design/enumeration/stage4_order_worlds.md §3):
      scenarios needing the same single-valued store state run
      consecutively, so a pinned package is installed once per distinct pin
      instead of once per row. Stable, so the enumeration's order survives

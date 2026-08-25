@@ -72,7 +72,7 @@ free product.
 exist* or is *indistinguishable from another*; the last two say *you did
 not ask for it*. That is the difference between the model and the run,
 and since 2026-08-24 it is also a pass boundary
-([`stage3_select.md`](stage3_select.md)). `ref_filter` is documented here
+([`stage3_select_worlds.md`](stage3_select_worlds.md)). `ref_filter` is documented here
 because it is the same shape of pruning and because it ran here until the
 split; it now runs from `select`.
 
@@ -171,7 +171,7 @@ with no declared/pinned source are unaffected.
 This is a **selection**, not a semantic constraint — it belongs to the
 run, not to the model. That observation became a pass: since 2026-08-24
 `ref_filter` is called from `select`, not from the enumeration proper,
-and `--thin` moved beside it. See [`stage3_select.md`](stage3_select.md).
+and `--thin` moved beside it. See [`stage3_select_worlds.md`](stage3_select_worlds.md).
 Folding BOTH into one general selection mechanism (channels, refs,
 scenarios, actions, …) is still open — `../../project/status_project.md`
 §2.
@@ -281,7 +281,7 @@ Three parts, and only the second carries behavioural risk:
    is the part that could change what is enumerated, so it is the part
    the invariant guards.
 3. **Selection reports separately.** Pass 3 exists
-   ([`stage3_select.md`](stage3_select.md)), so a missing world is either
+   ([`stage3_select_worlds.md`](stage3_select_worlds.md)), so a missing world is either
    *pruned by a constraint* (pass 2) or *not asked for* (pass 3). The
    ledger must say which; before the split it could only say "absent".
 

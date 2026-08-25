@@ -844,7 +844,7 @@ let registry_pin : Canary_project_test.pure_test =
       (* SUBSET, not equality (2026-08-21). A registry entry can be
          commented out to mute an expensive project — z3's full run is
          ~30 min because opam rebuilds libz3 on every binding pin flip
-         (stage4_order.md §3). Equality made that a test failure, which
+         (stage4_order_worlds.md §3). Equality made that a test failure, which
          would push someone to edit the pin instead of the registry.
 
          What is still caught: an UNKNOWN name (not in the catalogue) is
@@ -1317,7 +1317,7 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
                 { Canary_project_run.policy = Canary_project_run.Full;
                   refs = EN.Refs [ "latest" ] })) }
 
-(* The repo-model settings (2026-08-15, design/enumeration/stage1_project_spec.md): the
+(* The repo-model settings (2026-08-15, design/enumeration/stage1_declare_spec.md): the
    contrib-root derivation + the worktree naming scheme (official repo
    name + ref slug; path separators slugged away). *)
 let repo_model_pin : Canary_project_test.pure_test =
@@ -1849,7 +1849,7 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
         && List.for_all (built @ installed) ~f:(fun d ->
                not (String.is_substring d ~substring:".."))) }
 
-(* RUN ORDER GROUPS BY STORE STATE (2026-08-21, stage4_order.md §3).
+(* RUN ORDER GROUPS BY STORE STATE (2026-08-21, stage4_order_worlds.md §3).
 
    An opam switch holds ONE version of a package, so a pinned placement is
    an exclusive lock on that store's state. The enumerated list has always
