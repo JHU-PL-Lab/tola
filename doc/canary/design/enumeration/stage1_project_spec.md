@@ -103,10 +103,14 @@ Two consequences worth knowing before you declare:
   zarith's binding is `ocaml/Zarith`, its lib is the system gmp. A repo
   providing both (z3's on-tree bindings) makes the second fetch
   idempotent; the repo is already there.
-- **`A_lib` carries no name.** One C library per project is baked into the
-  identity, which is why a project cannot declare a second one. That is
-  the open blocker in [`multi_lib.md`](multi_lib.md), and it is a stage-1
-  limitation, not a runner one.
+- **`A_lib` carries an OPTIONAL name** (2026-08-25). `None` = "this
+  project has one lib, naming it would be redundant" — true of all nine —
+  and it still prints plain `lib`, so no id moved. `Some n` names one of
+  several. One C library per project is therefore no longer baked into
+  *identity*; it is still baked into the **action catalogue**, whose
+  `as_consumes : artifact_kind list` cannot say which of two libs a step
+  links and which it loads. See [`multi_lib.md`](multi_lib.md) §3a —
+  what is left is a stage-1-and-4 limitation, not a runner one.
 
 Ids are born-safe (`binding-ocaml-cstubs`, `-` not `:`) because they
 reach `PYTHONPATH` / `LD_LIBRARY_PATH`. The `:` form

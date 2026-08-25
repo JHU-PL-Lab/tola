@@ -1634,9 +1634,46 @@ let binding_source_vocabulary_pin : pure_test =
              Poly.equal s.B.as_action
                (B.Fetch (B.Binding_source L.OCaml)))) }
 
+(* The lib name is OPTIONAL, and the [None] case must stay invisible.
+   2026-08-25: [A_lib] gained a [string option] payload so a project can
+   one day declare two C libs (multi_lib.md §3a step 1). Every project
+   today passes [None] via [a_lib], and the whole point of the widening
+   is that this changes NOTHING observable — ids feed scenario dirs,
+   dedup keys and run-cache markers, so a churned id would silently
+   invalidate every cached run and read as a fresh pass.
+
+   Falsify by printing the name unconditionally ([A_lib n -> base ^ "-"
+   ^ ...] with [None] rendered as anything at all): the first two
+   conjuncts fail. The last one is the forward guarantee — a NAMED lib
+   must be a different artifact from the unnamed one, else declaring two
+   would collapse them into one placement. *)
+let lib_name_optional_pin : pure_test =
+  { name = "vocab.lib_name_optional";
+    check = (fun () ->
+      let unnamed = Canary_artifact.a_lib in
+      let gmp = Canary_artifact.a_lib_named "gmp" in
+      (* 1. the unnamed lib prints exactly as it did before the widening *)
+      String.equal (Canary_artifact.string_of_id unnamed) "lib"
+      && String.equal (Canary_artifact.pretty_id unnamed) "lib"
+      (* 2. …and so does its coarse role, which never carried a name *)
+      && Poly.equal (Canary_artifact.kind_of unnamed) B.Lib
+      && Poly.equal (Canary_artifact.kind_of gmp) B.Lib
+      (* 3. a named lib refines the id with '-', born-safe like the rest *)
+      && String.equal (Canary_artifact.string_of_id gmp) "lib-gmp"
+      && not (String.contains (Canary_artifact.string_of_id gmp) ':')
+      (* 4. the reader tells "not a lib" from "the project's only lib" *)
+      && Option.is_none (Canary_artifact.lib_name_of Canary_artifact.a_source)
+      && Poly.equal (Canary_artifact.lib_name_of unnamed) (Some None)
+      && Poly.equal (Canary_artifact.lib_name_of gmp) (Some (Some "gmp"))
+      (* 5. THE forward guarantee: two libs are two artifacts *)
+      && not (Canary_artifact.equal_artifact_info unnamed gmp)
+      && not
+           (Canary_artifact.equal_artifact_info gmp
+              (Canary_artifact.a_lib_named "mpfr"))) }
+
 let all_tests : pure_test list =
   catalogue_tests
-  @ [ binding_source_vocabulary_pin;
+  @ [ binding_source_vocabulary_pin; lib_name_optional_pin;
       probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;

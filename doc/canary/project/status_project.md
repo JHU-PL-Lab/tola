@@ -155,8 +155,9 @@ is now MEASURED, not guessed — see
 [`../surveys/conf_packages.md` §G](../surveys/conf_packages.md) (2026-08-20:
 all six category groups sampled, gates read from opam metadata AND from
 the conf packages' own build sections, libs cross-checked against apt and
-conda-forge). Short version: one C lib per project is baked into
-artifact identity (`A_lib` carries no name), so:
+conda-forge). Short version: one C lib per project is no longer baked into
+artifact identity (`A_lib` carries an optional name since 2026-08-25) but
+is still baked into the action catalogue, so:
 
 - [x] **D1. zlib / camlzip — LANDED 2026-08-20.** 2 scenarios, both
   green: lib `F:stable` (apt 1.3) and `V:dev` (conda-forge 1.3.2), the

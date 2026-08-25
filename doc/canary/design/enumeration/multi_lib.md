@@ -1,6 +1,6 @@
 # Enumerating a project's DEPENDENCIES — more than one C lib
 
-**Stage:** see [README.md](README.md) (the stage map). **Kind: proposal.** **Landed when** `Canary_artifact.artifact_info`'s `A_lib` carries a name, so a project can declare more than one C lib with its own universe.
+**Stage:** see [README.md](README.md) (the stage map). **Kind: proposal.** **Step 1 landed 2026-08-25** — `A_lib of string option`, so two libs are now two artifacts. **Fully landed when** steps 2 and 3 of §3a follow, which await a project that declares two.
 
 > 2026-08-19. Opened by the question "how shall we handle and enumerate
 > their dependency" for the four candidate projects. Two of them (mpfr,
@@ -16,8 +16,11 @@ A_source | A_headers | A_lib
 | A_binding of lang * mechanism | A_binding_source of lang | A_app of app_wiring
 ```
 
-`A_lib` carries **no payload**, so `Canary_artifact.a_lib` is THE lib of a
-project. One C library per project, by construction.
+~~`A_lib` carries **no payload**, so `Canary_artifact.a_lib` is THE lib of a
+project. One C library per project, by construction.~~ **Since 2026-08-25
+`A_lib` carries `string option`** — see §3a. Two libs are now two artifacts;
+what remains blocked is everything downstream of that, which is where the
+cost always was.
 
 Two things this phrasing has to keep apart, since the 2026-08-24 refactor
 split them. `Canary_basic.artifact_kind` (`Source | Headers | Lib |
@@ -97,8 +100,13 @@ point at, so the second slot has nowhere to resolve.
 
 That decomposes (A) into three changes, all of them **before** stage 5:
 
-1. `A_lib of string` — pass 1. Two rows, two universes. The row list is
-   already keyed by `artifact_info`, so this part is nearly free.
+1. ~~`A_lib of string`~~ — pass 1. **Done 2026-08-25**, as `A_lib of
+   string option`: `None` = "this project has one lib, naming it would be
+   redundant" (true of all nine), `Some n` = which of several. A plain
+   `string` would have forced every project to write `A_lib ""` — a
+   sentinel standing in for "no payload needed", the payload rule inverted
+   and exactly the shape `ext` had before it was deleted. The option types
+   the distinction instead of encoding it in a magic value.
 2. `rp_run` gains a sibling `rp_build : placement option`, and `rp_deploy`
    stops being declared — it becomes *derived*, `rp_run <> rp_build`. A
    bool that encodes a comparison is replaced by the two things compared.
@@ -121,40 +129,6 @@ The payoff for sequencing it this way: with 1-3 done, stage 5 is left with
 "which path goes to `-l` and which to `LD_LIBRARY_PATH`" — a template
 question, answerable per-project, and one the enumeration can already state
 the answer to.
-
-**Can (1) be lifted without disturbing today's scenarios?** Measured
-2026-08-25: **yes, and it is a one-file change.** `A_lib` is matched as a
-pattern in exactly six places and *all six are in `base/canary_artifact.ml`*
-— its own defining module. The other 132 mentions across the tree are
-`a_lib` used as a **value**, and a value they stay if `a_lib` remains bound.
-The recipe:
-
-```
-| A_lib ""  -> base                 (* in string_of_id / pretty_id *)
-| A_lib n   -> base ^ "-" ^ n
-let a_lib = A_lib ""
-```
-
-`string_of_id` already has this exact shape for the payload-carrying
-constructors (`base ^ "-" ^ refinement`), so the unnamed lib keeps printing
-`lib`, and **every existing id string stays byte-identical** — scenario
-dirs, dedup keys, run-cache markers and pinned expectations all untouched.
-The compatibility guarantee this note owes existing projects is therefore
-available whenever we want it.
-
-**Which is an argument for not doing it yet.** (1) alone is a payload no
-project can pass: every one of them would write `""`, and a distinguished
-empty default is the payload rule inverted — the same sentinel smell the
-2026-08-24 refactor deleted. Nor does (2) rescue it, because (2) cannot
-precede a *real* second lib: with one lib artifact the consumer's build-lib
-is outside the enumeration entirely, which is precisely why `rp_deploy` is a
-bool and not a placement. There is nothing for `rp_build` to point at until
-a project declares two.
-
-So the natural unit is **(1) plus its first consumer in the same landing** —
-mpfr under (A) rather than (B), or a synthetic two-lib tiny case. The news
-from the measurement is that the lift is *not* the expensive part, so there
-is no reason to pre-pay it.
 
 ### 3b. The three options
 
@@ -186,6 +160,50 @@ but never varied.
 - Costs: loses the combination question (do two backends coexist?), which
   is the interesting half; and it lies about the project boundary — they
   are one package.
+
+### 3c. Step 1, as landed (2026-08-25)
+
+It was measured before it was done, and the measurement was the reason to
+do it: **`A_lib` is matched as a *pattern* in exactly six places, and all
+six are in `base/canary_artifact.ml` — its own defining module.** The other
+132 mentions across the tree use `a_lib` as a *value*, and a value they
+stayed. One file, clean build of the whole tree on the first try.
+
+`string_of_id` already had the needed shape for payload-carrying
+constructors (`base ^ "-" ^ refinement`), so `A_lib None -> base` keeps the
+unnamed lib printing `lib`:
+
+```
+| A_lib (Some n) -> base ^ "-" ^ n
+| A_source | A_headers | A_lib None | A_binding_source _ -> base
+let a_lib = A_lib None
+let a_lib_named n = A_lib (Some n)
+```
+
+**Nothing observable moved.** All five passes were dumped for all nine
+projects before and after (`emit <p> --stage 1..5 --json`, 40 files) and
+diffed: byte-identical. That matters beyond tidiness — ids feed scenario
+dirs, dedup keys and run-cache markers, so a churned id silently
+invalidates every cached run and the re-run reads as a fresh pass.
+
+Pinned by `vocab.lib_name_optional`, falsified by printing the name
+unconditionally: the pin fails and the stage-2 dedup key moves from
+`lib=built@dev` to `lib-main=built@dev`, which is the invalidation vector
+made visible.
+
+`lib_name_of : artifact_info -> string option option` reads it back. The
+doubled option is deliberate: `None` = not a lib, `Some None` = the
+project's only lib, `Some (Some n)` = the lib called *n*. Collapsing it
+would lose the first distinction.
+
+**Steps 2 and 3 did not follow, and could not.** (2) cannot precede a real
+second lib — with one lib artifact a consumer's build-lib is outside the
+enumeration entirely, which is precisely why `rp_deploy` is a bool and not
+a placement; there is nothing for `rp_build` to point at. (3) has a wide
+blast radius (the catalogue, `consumes_of_action`, `related_artifacts`,
+mutation-target validation, the diagrams) and no consumer at all today. So
+the remaining work is now **one landing, not two**: mpfr under (A) rather
+than (B), or a synthetic two-lib tiny case, carrying steps 2 and 3 with it.
 
 ## 4. Recommendation
 

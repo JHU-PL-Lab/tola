@@ -180,10 +180,10 @@ let string_of_app_wiring = function Direct -> "direct" | Via_helper -> "via_help
 
     {1 Why some constructors carry nothing}
 
-    [A_source], [A_headers] and [A_lib] have no payload, and that is the
-    correct shape rather than an unfinished one: this type is pure
-    IDENTITY, and everything that VARIES about an artifact lives in the
-    structures that use it —
+    [A_source] and [A_headers] have no payload, and that is the correct
+    shape rather than an unfinished one: this type is pure IDENTITY, and
+    everything that VARIES about an artifact lives in the structures that
+    use it —
 
     - {!placement} = [{ provision; version }] — how a scenario obtains it
       and at which version;
@@ -195,17 +195,41 @@ let string_of_app_wiring = function Direct -> "direct" | Via_helper -> "via_help
     of them belongs to its identity.
 
     What a payload-free constructor DOES mean is "one per project". A
-    project has one source, one header set, one lib — which is why there
-    is nothing to tell two of them apart. [A_binding] carries lang ×
+    project has one source and one header set — which is why there is
+    nothing to tell two of them apart. [A_binding] carries lang ×
     mechanism because a project has several bindings; [A_binding_source]
-    carries lang; [A_app] carries wiring.
+    carries lang; [A_app] carries wiring. When a constructor here gains a
+    payload, it is because the thing it names stopped being unique.
 
-    That makes [A_lib] the encoding of a known limitation rather than an
-    oversight: one C library per project is exactly what
-    [doc/canary/design/enumeration/multi_lib.md] is blocked on, and the
-    change it proposes would give [A_lib] a name payload. When a
-    constructor here gains a payload, it is because the thing it names
-    stopped being unique.
+    {1 Why [A_lib] carries [string option] and not [string]}
+
+    A lib is the one artifact whose uniqueness is a fact about today's
+    projects rather than about the model: sqlite has one, mpfr needs two
+    (it requires gmp), bytesrw needs five optional backends. So [A_lib]
+    carries a name — but an OPTIONAL one, and the option is load-bearing.
+
+    [None] is not a placeholder. It says "this project has one lib, and
+    naming it would be redundant" — a true statement about all nine
+    projects that exist, and the reason {!string_of_id} still prints
+    plain [lib] for them (ids feed scenario dirs, dedup keys and
+    run-cache markers, so they must not churn). [Some n] says the project
+    declares more than one and this is which.
+
+    A plain [string] would have forced a distinguished empty value —
+    every project writing [A_lib ""] — which is the payload rule
+    inverted: a sentinel standing in for "no payload needed here". The
+    option types that distinction instead of encoding it in a magic
+    value. Contrast [ext], deleted 2026-08-24, which was exactly such a
+    stand-in.
+
+    Naming the lib is step 1 of three in
+    [doc/canary/design/enumeration/multi_lib.md] §3a. Steps 2 ([rp_build]
+    beside [rp_run], so [rp_deploy] is derived rather than declared) and
+    3 (a role per consumed slot in the action catalogue, so an action can
+    link one lib and load another) still await a project that declares
+    two — neither is expressible while every lib placement is the same
+    placement. Until then every construction site passes [None] via
+    {!a_lib} and nothing observable changes.
 
     Constructors carry an [A_] prefix because this module re-exports
     [artifact_kind]'s constructors unqualified and they would shadow.
@@ -215,7 +239,7 @@ let string_of_app_wiring = function Direct -> "direct" | Via_helper -> "via_help
 type artifact_info =
   | A_source
   | A_headers
-  | A_lib
+  | A_lib of string option
   | A_binding of Canary_lang.lang * Canary_mechanism.mechanism
   | A_binding_source of Canary_lang.lang
   | A_app of app_wiring
@@ -226,20 +250,29 @@ type artifact_info =
 let kind_of : artifact_info -> artifact = function
   | A_source -> Source
   | A_headers -> Headers
-  | A_lib -> Lib
+  | A_lib _ -> Lib
   | A_binding (l, _) -> Binding l
   | A_binding_source l -> Binding_source l
   | A_app _ -> App
 
-(** The refinement, where the kind has one. [None] for source / headers /
-    lib, which are one-per-project by construction. *)
+(** The refinement, where the kind has one. [None] for source / headers,
+    which are one-per-project by construction, and for a lib — whose own
+    refinement is a name, read by {!lib_name_of}. *)
 let mechanism_of : artifact_info -> Canary_mechanism.mechanism option = function
   | A_binding (_, m) -> Some m
-  | A_source | A_headers | A_lib | A_binding_source _ | A_app _ -> None
+  | A_source | A_headers | A_lib _ | A_binding_source _ | A_app _ -> None
 
 let wiring_of : artifact_info -> app_wiring option = function
   | A_app w -> Some w
-  | A_source | A_headers | A_lib | A_binding _ | A_binding_source _ -> None
+  | A_source | A_headers | A_lib _ | A_binding _ | A_binding_source _ -> None
+
+(** The lib's declared name. [Some None] = "a lib, unnamed" (the project
+    has one); [Some (Some n)] = "the lib called [n]"; [None] = not a lib
+    at all. The doubled option is deliberate — collapsing it would lose
+    the difference between "not a lib" and "the project's only lib". *)
+let lib_name_of : artifact_info -> string option option = function
+  | A_lib n -> Some n
+  | A_source | A_headers | A_binding _ | A_binding_source _ | A_app _ -> None
 
 (* [artifact_ext] and [ext_of] lived here from the record era until
    2026-08-24. The view existed because consumers wanted "whatever
@@ -253,7 +286,14 @@ let wiring_of : artifact_info -> app_wiring option = function
 (* smart constructors — THE construction API *)
 let a_source : artifact_info = A_source
 let a_headers : artifact_info = A_headers
-let a_lib : artifact_info = A_lib
+(** THE lib of a single-lib project — every project today. A project that
+    declares two uses {!a_lib_named} for both, never this. *)
+let a_lib : artifact_info = A_lib None
+
+(** A named lib, for a project declaring more than one (mpfr + gmp). The
+    name reaches ids as [lib-<n>], so it must be born-safe: '-' not ':',
+    no path separators. *)
+let a_lib_named (n : string) : artifact_info = A_lib (Some n)
 let a_binding_source (lang : Canary_lang.lang) : artifact_info =
   A_binding_source lang
 
@@ -270,7 +310,10 @@ let string_of_id (id : artifact_info) : string =
   match id with
   | A_binding (_, m) -> base ^ "-" ^ Canary_mechanism.string_of_mechanism m
   | A_app w -> base ^ "-" ^ string_of_app_wiring w
-  | A_source | A_headers | A_lib | A_binding_source _ -> base
+  | A_lib (Some n) -> base ^ "-" ^ n
+  (* [A_lib None] prints plain [lib]: an unnamed lib has no refinement to
+     add, which is what keeps every existing id byte-identical. *)
+  | A_source | A_headers | A_lib None | A_binding_source _ -> base
 
 (* DISPLAY-ONLY pretty form: ':' delimiter. Never use for keys/paths. *)
 let pretty_artifact = function
@@ -286,7 +329,8 @@ let pretty_id (id : artifact_info) : string =
   match id with
   | A_binding (_, m) -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
   | A_app w -> base ^ ":" ^ string_of_app_wiring w
-  | A_source | A_headers | A_lib | A_binding_source _ -> base
+  | A_lib (Some n) -> base ^ ":" ^ n
+  | A_source | A_headers | A_lib None | A_binding_source _ -> base
 
 (* ── project declaration (stage 1 / ssot §4.2) ── *)
 
