@@ -380,20 +380,45 @@ let ps_provisions_of (s : project_spec) (id : artifact_info) : provision list =
   | Some ax -> List.map ax.ax_universe ~f:fst
   | None -> []
 
+let ax_versions_of (ax : artifact_axes) (pv : provision) :
+    Canary_basic.build_id list =
+  (* STORE PINS (2026-08-12): a Fetched artifact with pinned versions
+     ranges over the pins (identity-bearing build_ids) instead of the
+     channel list. Unpinned artifacts keep the ambient rule. *)
+  if equal_provision pv Fetched && not (List.is_empty ax.ax_pins) then
+    ax.ax_pins
+  else
+    match List.Assoc.find ax.ax_universe pv ~equal:equal_provision with
+    | Some cs -> List.map cs ~f:Canary_basic.good
+    | None -> []
+
 let ps_versions_of (s : project_spec) (id : artifact_info) (pv : provision) :
     Canary_basic.build_id list =
   match ps_axes_of s id with
   | None -> []
-  | Some ax -> (
-      (* STORE PINS (2026-08-12): a Fetched artifact with pinned versions
-         ranges over the pins (identity-bearing build_ids) instead of the
-         channel list. Unpinned artifacts keep the ambient rule. *)
-      if equal_provision pv Fetched && not (List.is_empty ax.ax_pins) then
-        ax.ax_pins
-      else
-        match List.Assoc.find ax.ax_universe pv ~equal:equal_provision with
-        | Some cs -> List.map cs ~f:Canary_basic.good
-        | None -> [])
+  | Some ax -> ax_versions_of ax pv
+
+(** Every (provision, version) point the artifact may occupy — the
+    axes read the way pass 2 ranges over them, with [Absent] dropped (it
+    is the artifact NOT being there, not a version of it).
+
+    Exists for the pair audit (`spec-check`'s [lib_pair] / [binding_pair],
+    2026-08-25): "does this artifact have a channel pair" is a question
+    about POINTS, and the two mechanisms that make a point look nothing
+    alike — a second universe cell (apt + a prebuilt) and a second store
+    pin (opam 0.6.0 + 0.7.0, ONE cell on one channel). Counting universe
+    cells or distinct channels gets ssl and sqlite's binding pairs wrong;
+    counting what [ax_versions_of] yields gets them right. *)
+let ax_points (ax : artifact_axes) : (provision * Canary_basic.build_id) list =
+  List.concat_map ax.ax_universe ~f:(fun (pv, _) ->
+      if equal_provision pv Absent then []
+      else List.map (ax_versions_of ax pv) ~f:(fun v -> (pv, v)))
+  |> List.dedup_and_sort ~compare:(fun (p1, v1) (p2, v2) ->
+         String.compare
+           (Canary_store.string_of_provision p1
+           ^ ":" ^ Canary_basic.string_of_build_id v1)
+           (Canary_store.string_of_provision p2
+           ^ ":" ^ Canary_basic.string_of_build_id v2))
 
 (* ── placement & assignment (2026-08-08) ──
    Moved from Canary_enumerate — base vocabulary for the scenario IR. *)

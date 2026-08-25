@@ -1172,7 +1172,7 @@ let spec_check_every_project_pin : Canary_project_test.pure_test =
         List.for_all Canary_registry.all_projects ~f:(fun (name, pr) ->
             let r = Canary_spec_check.check pr in
             String.equal r.project name
-            && List.length r.items = 10
+            && List.length r.items = 12
             && List.for_all r.items ~f:(fun i ->
                    not (String.equal i.item_id "")))) }
 
@@ -1207,10 +1207,15 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
     good
   in
   (* the remaining pattern-A warns (2026-08-13 fulfillment closed the
-     errors): no wrapper pkg, no python binding, no Built binding axis. *)
+     errors): no wrapper pkg, no python binding, no Built binding axis —
+     and, since 2026-08-25, no BINDING PAIR. The last one is the 2×2's
+     other half: the template hardcodes `versions = None` on the opam
+     provider, so a pattern-A project can declare a lib pair (a prebuilt)
+     but has no way to declare a second binding point. That is
+     status_project §1 E, now said by the audit instead of by a note. *)
   let pat_warns =
-    [ "binding_decls"; "binding_dev_source"; "dev_wrapper_package";
-      "python_binding" ]
+    [ "binding_decls"; "binding_dev_source"; "binding_pair";
+      "dev_wrapper_package"; "python_binding" ]
   in
   { name = "spec_check.ratchet_current";
     check =
@@ -1225,9 +1230,15 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
         (* ssl's binding_decls warn CLOSED 2026-08-19: declaring the decl
            gave its package-manager gate a home (spec.pm_dep_gate_groups),
            and closing the warn was the side effect *)
+        (* ssl's lib_pair warn (2026-08-25): openssl HAS an obtainable
+           pair (apt 3.0.13 vs conda-forge 4.0.1 — a major bump, measured
+           in landing.md §3) and ssl declares one lib point. Unlike
+           zarith's, this warn is a to-do, which is the distinction the
+           printed rationale is there to carry. *)
         && want ~errs:[]
              ~warns:
-               [ "binding_dev_source"; "dev_wrapper_package"; "python_binding" ]
+               [ "binding_dev_source"; "dev_wrapper_package"; "lib_pair";
+                 "python_binding" ]
              ~na:[ "raw_build_overrides" ] "ssl"
         (* C2.5 (2026-08-17): zarith's binding Built axis LANDED with the
            2×2 — binding_dev_source went Ok *)
@@ -1236,11 +1247,25 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
         (* active plan 4 (2026-08-17): the binding decl (empty-prefix +
            full watchlist) closed binding_decls — python_binding stays
            (OCaml-only project, expected) *)
-        && want ~errs:[] ~warns:[ "python_binding" ] ~na:[] "zarith"
+        (* zarith's lib_pair warn is PERMANENT and correct: GMP's newest
+           release is three years old and apt already ships it, so the
+           axis has one point as a fact about the world (landing.md §3).
+           The row's rationale says so and the warn prints it. *)
+        && want ~errs:[] ~warns:[ "lib_pair"; "python_binding" ] ~na:[] "zarith"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "cairo"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "libffi"
+        (* zlib/zstd (landed 2026-08-20) join the ratchet here — they had
+           never been pinned. Same shape as cairo/libffi: a prebuilt lib
+           pair, no binding pair. *)
+        && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "zlib"
+        && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "zstd"
+        (* tiny-full warns on BOTH axes — the in-tree witness enumerates
+           one world (issues.md §1), and this is the audit finally saying
+           so. It is exempt from the reporting-oriented checks, not from
+           the 2×2 bar. *)
         && want ~errs:[]
-             ~warns:[ "binding_dev_source"; "dev_wrapper_package" ]
+             ~warns:[ "binding_dev_source"; "binding_pair";
+                      "dev_wrapper_package"; "lib_pair" ]
              ~na:[ "github_remote"; "opam_package";
                "raw_build_overrides" ] "tiny-full") }
 
@@ -1398,6 +1423,105 @@ let local_fork_pin : Canary_project_test.pure_test =
         with
         | Some i -> Poly.equal i.Canary_spec_check.severity Canary_spec_check.Warn
         | None -> false) }
+
+(* THE PAIR CHECKS COUNT POINTS, NOT CELLS OR CHANNELS (2026-08-25).
+
+   Falsification pin for status_project §2 item 0. The item says "counts
+   admissible points on the lib row and warns below two", and there are
+   three plausible readings of "point" that agree on every project except
+   the two that matter:
+
+     universe cells   — ssl's binding is ONE cell → wrongly Warn
+     distinct channels— ssl's two pins are both @stable → wrongly Warn
+     (provision, version) after pin expansion → Ok, which is right
+
+   ssl and sqlite realize their binding pair as two opam store pins, the
+   CHEAPEST way to declare one. A check that cannot see a pin would warn
+   at exactly the projects doing it best. Case (b) is the same row minus
+   the second pin, so a check that ignored pins entirely (always Ok on a
+   Fetched cell) fails here too — both ways to be wrong are covered.
+
+   Nothing else in the suite would catch this: the ratchet pins the
+   CURRENT verdicts, so a wrong reading that was wrong from the start
+   just gets recorded (issues.md §1's "the ratchet recorded the new
+   number instead of contesting it"). *)
+let pair_counts_points_pin : Canary_project_test.pure_test =
+  { name = "spec_check.pair_counts_points";
+    check =
+      (fun () ->
+        let sys_lib linux =
+          Canary_store_config.Fetched
+            (Canary_store_config.Sys_pkg
+               { Canary_store.linux_pkg = linux; macos_pkg = linux;
+                 version_tag = None; locator_hint = None;
+                 behavior = Canary_store.Stateful_global })
+        in
+        let opam_binding versions =
+          Canary_store_config.Fetched
+            (Canary_store_config.Lang_pkg
+               { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+                 package = "p"; self_contained = false; versions })
+        in
+        let pin v =
+          { Canary_store_config.pin_version = v; install_name = None }
+        in
+        let pr ~lib_universe ~binding_universe : Canary_project_run.project_run =
+          { pr_name = "test-pair";
+            pr_artifacts =
+              [ Canary_project_spec.artifact_row
+                  ~artifact:Canary_artifact.a_lib ~universe:lib_universe ();
+                Canary_project_spec.artifact_row
+                  ~artifact:
+                    (Canary_artifact.a_binding Canary_lang.OCaml
+                       Canary_mechanism.Cstubs)
+                  ~universe:binding_universe () ];
+            pr_runner_spec =
+              (fun _a ~workspace:_ () -> Canary_step_builder.empty_runner_spec);
+            pr_mismatch_probes = []; pr_wrapper_pkgs = []; pr_api_source = None;
+            pr_binding_decls = []; pr_raw_build_overrides = [];
+            pr_tier = Canary_project_run.Light }
+        in
+        let sev pr id =
+          match
+            List.find (Canary_spec_check.check pr).Canary_spec_check.items
+              ~f:(fun i -> String.equal i.Canary_spec_check.item_id id)
+          with
+          | Some i -> Some i.Canary_spec_check.severity
+          | None -> None
+        in
+        let one_lib = [ (sys_lib "libfoo-dev", [ Canary_basic.Stable ]) ] in
+        (* (a) TWO STORE PINS, one cell, one channel — the ssl/sqlite
+           shape. Ok is the answer a cell- or channel-count gets wrong. *)
+        let a =
+          pr ~lib_universe:one_lib
+            ~binding_universe:
+              [ (opam_binding (Some [ pin "0.6.0"; pin "0.7.0" ]),
+                 [ Canary_basic.Stable ]) ]
+        in
+        (* (b) the same row with ONE pin — the falsifier for (a): a check
+           that shrugged at Fetched cells would call this a pair too. *)
+        let b =
+          pr ~lib_universe:one_lib
+            ~binding_universe:
+              [ (opam_binding (Some [ pin "0.6.0" ]), [ Canary_basic.Stable ]) ]
+        in
+        (* (c) a two-CELL lib (apt + a prebuilt): the zlib/cairo shape,
+           the other way a pair is declared. *)
+        let c =
+          pr
+            ~lib_universe:
+              (one_lib
+              @ [ (Canary_store_config.Vendored_at "/prebuilt/lib",
+                   [ Canary_basic.Dev ]) ])
+            ~binding_universe:
+              [ (opam_binding None, [ Canary_basic.Stable ]) ]
+        in
+        let open Canary_spec_check in
+        Poly.equal (sev a "binding_pair") (Some Ok)
+        && Poly.equal (sev a "lib_pair") (Some Warn)
+        && Poly.equal (sev b "binding_pair") (Some Warn)
+        && Poly.equal (sev c "lib_pair") (Some Ok)
+        && Poly.equal (sev c "binding_pair") (Some Warn)) }
 
 (* The repo-contents invariant over the LIVE registry (2026-08-16): every
    non-source artifact with a [Repo] provider must appear in that repo's
@@ -3179,6 +3303,7 @@ let base_tests : Canary_project_test.pure_test list =
       registry_pin;
       spec_check_every_project_pin;
       spec_check_ratchet_pin;
+      pair_counts_points_pin;
       batch_tier_pin;
       shadow_policy_ladder_pin;
       repo_model_pin;

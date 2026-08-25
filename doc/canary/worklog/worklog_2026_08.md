@@ -1267,3 +1267,44 @@ from same source).
   row, and the pattern-A trio + ssl + sqlite + tiny-full's
   wrapper/python/built-binding gaps.
 
+- [x] **`spec-check` can see a PAIR, not just a presence** (2026-08-25 —
+  `status_project.md` §2 item 0). Every check in the file was a PRESENCE
+  audit: `check_stable_lib` returns `Ok` on the first admissible stable
+  point, so a row with one universe cell passed. Nothing multiplied
+  anything, so no combination of the checks could notice that the
+  declared rows collectively generate ONE world — `spec-check tiny-full`
+  reported 0 errors while tiny-full enumerated a single scenario
+  (`issues.md` §1). The bar every landing is meant to meet is the 2×2
+  (user, 2026-08-19), and a 2×2 needs a pair on each axis.
+  - Two new checks, `lib pair` and `binding pair`, over one shared
+    helper (`Canary_artifact.ax_points` → `Canary_project_spec.points_of_row`).
+    `Warn` below two points; the row's `ar_rationale` is printed on a
+    warn, which is what tells zarith's permanent single point (GMP's
+    newest is three years old and apt ships it) from an undeclared one.
+  - **The count is over POINTS, and that was the whole design risk.**
+    Measured first (`emit <p> --stage declare --json` over the
+    catalogue): ssl's and sqlite's OCaml binding pairs are two store
+    PINS inside ONE `Fetched@stable` cell. Counting universe cells, or
+    counting distinct channels, calls both unpaired — a check that would
+    have warned at exactly the two projects declaring a pair the
+    cheapest way. `ax_points` expands pins the way pass 2 does
+    (`ax_versions_of`, factored out of `ps_versions_of`).
+  - Asymmetric by design: EVERY declared lib must be paired (each lib is
+    a dependency under test — stays a conjunction when D4 lands a second
+    one), but AT LEAST ONE binding must be (one paired consumer realizes
+    the 2×2's consumer axis; sqlite/z3/llvm each pair OCaml and carry a
+    single-point Python binding). Per-row counts stay in the detail.
+  - Falsified BOTH ways before trusting it (`landing.md` §3c):
+    counting cells instead of points, and a check that never warns —
+    each turned `spec_check.pair_counts_points` AND the ratchet red, the
+    latter naming sqlite's spurious `binding_pair` warn.
+  - The audit now prints `status_project.md` §1 E instead of §1 E
+    recording it by hand: lib pair + no binding pair = cairo, libffi,
+    zlib, zstd; the mirror half = ssl, zarith; both = tiny-full.
+  - Ratchet re-pinned; zlib and zstd JOINED it (landed 2026-08-20, never
+    pinned). New pin `spec_check.pair_counts_points`.
+  - En route: `spec-check` reads `all_specs`, not `all_projects`. Muting
+    a project removes it from the RUN set, not from the audit — the rule
+    its own ratchet pin already stated and `emit` already followed. Before
+    this, `spec-check z3` answered `usage:` while the pin audited z3, so
+    the project with the richest matrix was the one a human could not dump.

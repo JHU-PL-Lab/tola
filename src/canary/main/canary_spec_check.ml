@@ -232,6 +232,129 @@ let check_stable_lib (pr : Canary_project_run.project_run) : item =
             detail =
               "no stable lib source declared (system pkg or vendored/cached archive)" })
 
+(* ── the PAIR checks (2026-08-25, status_project §2 item 0) ──
+
+   [check_stable_lib] above asks whether a stable point EXISTS; every
+   other check in this file is likewise a PRESENCE audit. None of them
+   multiplies anything, so no combination of them can notice that the
+   declared rows collectively generate one world — `spec-check tiny-full`
+   reported 0 errors while tiny-full enumerated a single scenario
+   (issues.md §1). But the stated bar for a landing is the 2×2 minimum
+   (user, 2026-08-19: "the minimum meaningful requirement for any
+   project, like a lower bound"), and a 2×2 needs a PAIR on each axis.
+   These two checks are that question, one per axis.
+
+   THE COUNT IS OVER POINTS. Measured before writing (`emit <p> --stage
+   declare --json` over the registry): ssl's and sqlite's OCaml binding
+   pairs are two store PINS inside ONE `Fetched@stable` cell, so both
+   "≥ 2 universe cells" and "both channels present" call them unpaired
+   and would have shipped a check that warns on the two projects whose
+   pairs are the cheapest to declare. [points_of_row] expands pins the
+   way pass 2 does; nothing else gets this right.
+
+   WARN, NOT ERROR. zarith's lib axis has one point because GMP's newest
+   release is three years old and apt already ships it (landing.md §3) —
+   a fact about the world, not an omission. The row's [ar_rationale] is
+   where that distinction is declared, so a warn prints it: the reader
+   sees whether the thin axis is explained. Making it an Error would
+   flip `spec-check @all` to exit 1 on a project that is as complete as
+   it can be. *)
+
+let pp_points (pts : (Canary_artifact.provision * Canary_basic.build_id) list) :
+    string =
+  String.concat ~sep:", "
+    (List.map pts ~f:(fun (pv, v) ->
+         Printf.sprintf "%s@%s"
+           (Canary_store.string_of_provision pv)
+           (Canary_basic.string_of_build_id v)))
+
+(* the row's declared WHY, appended to a warn — the field exists to tell
+   "the world is like this" from "we did not declare it" *)
+let with_rationale (d : Canary_project_spec.artifact_row) (s : string) : string =
+  match d.Canary_project_spec.ar_rationale with
+  | Some r -> s ^ " — " ^ r
+  | None -> s
+
+let rows_of_kind (pr : Canary_project_run.project_run)
+    (k : Canary_basic.artifact_kind) : Canary_project_spec.artifact_row list =
+  List.filter pr.pr_artifacts ~f:(fun d ->
+      Poly.equal (Canary_artifact.kind_of d.Canary_project_spec.ar_artifact) k)
+
+(* EVERY declared lib must be paired. A project's libs are the
+   dependencies under test — each one's version axis is a question the
+   project exists to ask — so with several libs (D4) this stays a
+   conjunction rather than becoming "at least one". *)
+let check_lib_pair (pr : Canary_project_run.project_run) : item =
+  let label = "lib pair" in
+  let id = "lib_pair" in
+  match rows_of_kind pr Canary_basic.Lib with
+  | [] ->
+      { item_id = id; label; severity = Warn;
+        detail = "no lib row — no axis to pair" }
+  | rows ->
+      let described =
+        List.map rows ~f:(fun d ->
+            let pts = Canary_project_spec.points_of_row d in
+            (d, pts,
+             Printf.sprintf "%s: %d point(s) [%s]"
+               (Canary_artifact.string_of_id d.Canary_project_spec.ar_artifact)
+               (List.length pts) (pp_points pts)))
+      in
+      let thin =
+        List.filter described ~f:(fun (_, pts, _) -> List.length pts < 2)
+      in
+      if List.is_empty thin then
+        { item_id = id; label; severity = Ok;
+          detail =
+            String.concat ~sep:"; "
+              (List.map described ~f:(fun (_, _, s) -> s)) }
+      else
+        { item_id = id; label; severity = Warn;
+          detail =
+            String.concat ~sep:"; "
+              (List.map thin ~f:(fun (d, _, s) ->
+                   with_rationale d (s ^ " — no channel pair"))) }
+
+(* AT LEAST ONE binding must be paired. The 2×2's consumer axis is
+   realized by one paired consumer; a second binding in another language
+   is additive coverage, not a second requirement (sqlite/z3/llvm each
+   pair their OCaml binding and carry a single-point Python one, and
+   §1 E of status_project counts them complete). The per-row counts stay
+   in the detail so the unpaired ones are still visible. *)
+let check_binding_pair (pr : Canary_project_run.project_run) : item =
+  let label = "binding pair" in
+  let id = "binding_pair" in
+  let rows =
+    List.filter pr.pr_artifacts ~f:(fun d ->
+        match Canary_artifact.kind_of d.Canary_project_spec.ar_artifact with
+        | Canary_basic.Binding _ -> true
+        | _ -> false)
+  in
+  match rows with
+  | [] ->
+      { item_id = id; label; severity = Warn;
+        detail = "no binding row — no consumer axis to pair" }
+  | rows ->
+      let described =
+        List.map rows ~f:(fun d ->
+            let pts = Canary_project_spec.points_of_row d in
+            (d, pts,
+             Printf.sprintf "%s: %d [%s]"
+               (Canary_artifact.string_of_id d.Canary_project_spec.ar_artifact)
+               (List.length pts) (pp_points pts)))
+      in
+      let detail =
+        String.concat ~sep:"; " (List.map described ~f:(fun (_, _, s) -> s))
+      in
+      if List.exists described ~f:(fun (_, pts, _) -> List.length pts >= 2) then
+        { item_id = id; label; severity = Ok; detail }
+      else
+        (* one rationale to print: the thinnest row is the whole story
+           when no row is paired *)
+        let d, _, _ = List.hd_exn described in
+        { item_id = id; label; severity = Warn;
+          detail = with_rationale d (detail ^ " — no consumer channel pair") }
+
 let check_opam_package (pr : Canary_project_run.project_run) : item =
   let label = "opam package" in
   if is_in_tree_witness pr then
@@ -472,6 +595,8 @@ let check (pr : Canary_project_run.project_run) : report =
         check_c_api pr;
         check_github_remote pr;
         check_stable_lib pr;
+        check_lib_pair pr;
+        check_binding_pair pr;
         check_opam_package pr;
         check_dev_wrapper_package pr;
         check_python_binding pr;

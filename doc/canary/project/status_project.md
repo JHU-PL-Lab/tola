@@ -260,25 +260,27 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
 
 ### Address first
 
-0. [ ] **`spec-check` checks a stable lib EXISTS, never that a lib PAIR
-   does** — found 2026-08-25 while auditing tiny-full. `check_stable_lib`
-   does a `List.find_map` for the first admissible stable point and
-   returns `Ok` on it; a row with exactly one universe cell passes. But
-   the stated bar for every project is the 2×2 minimum (user, 2026-08-19:
-   "the minimum meaningful requirement for any project, like a lower
-   bound"), which needs a *pair*. So `spec-check tiny-full` reports 0
-   errors while tiny-full enumerates ONE world — see
-   [`issues.md`](issues.md) §1. The gap is general: spec-check is a
-   PRESENCE audit and never multiplies anything, so no combination of its
-   checks can notice that the declared rows collectively generate one
-   world. Cheapest fix with the widest reach of anything in this file:
-   `stable lib` gains a sibling `lib pair` that counts admissible points
-   on the lib row and warns below two. Ships with a pin per project's
-   expected verdict. Cheaper than, and complementary to, the per-candidate
-   ledger ([`../design/enumeration/stage2_enumerate_worlds.md`](../design/enumeration/stage2_enumerate_worlds.md)
-   *Attribution*):
-   this one says the declaration is too thin, that one says which
-   constraint ate a world you expected.
+0. [x] **`spec-check` checks a stable lib EXISTS, never that a lib PAIR
+   does** — DONE 2026-08-25, both halves (`lib pair` + `binding pair`),
+   chronicled in [`../worklog/worklog_2026_08.md`](../worklog/worklog_2026_08.md).
+   The audit now prints §1 E per project instead of §1 E recording it by
+   hand. Still complementary to, not replaced by, the per-candidate ledger
+   ([`../design/enumeration/stage2_enumerate_worlds.md`](../design/enumeration/stage2_enumerate_worlds.md)
+   *Attribution*): this one says the declaration is too thin, that one
+   says which constraint ate a world you expected.
+
+   **What it left open**, now tracked by the tool rather than by prose:
+
+   - **Pattern A cannot declare a binding pair at all** — the template
+     hardcodes `versions = None` on the opam provider, so cairo / libffi
+     / zlib / zstd carry a permanent `binding_pair` warn that is a
+     TEMPLATE gap, not a project one. That is item E below; the warn is
+     now its tracker.
+   - **ssl's lib pair is obtainable and undeclared** — apt 3.0.13 vs
+     conda-forge 4.0.1, a major bump, measured in
+     [`landing.md` §3](landing.md). Unlike zarith's (permanent, GMP), this
+     `lib_pair` warn is a to-do, and the printed `ar_rationale` is what
+     distinguishes the two.
 
 **Residue of the 2026-08-17 active plan** — items 2-4 (Publish
 generalization, the shadow mechanism, zarith's binding_decls) landed and

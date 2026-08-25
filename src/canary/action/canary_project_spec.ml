@@ -63,6 +63,14 @@ let provider_of_row (r : artifact_row) : Canary_store_config.provider option =
   List.find_map r.ar_universe ~f:(fun (spec, _) ->
       Canary_store_config.fetch_provider_of spec)
 
+(** Every (provision, version) point this row declares — [Absent]
+    dropped, store pins expanded. The row-level face of
+    {!Canary_artifact.ax_points}; see there for why the count is over
+    POINTS rather than universe cells or channels. *)
+let points_of_row (r : artifact_row) :
+    (Canary_artifact.provision * Canary_basic.build_id) list =
+  Canary_artifact.ax_points r.ar_axes
+
 let artifact_row ~artifact ~universe ?follows ?runtime ?rationale ()
     : artifact_row =
   let fetch =

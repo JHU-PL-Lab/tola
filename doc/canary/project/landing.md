@@ -66,6 +66,14 @@ command templates.
    - `make canary-test` (pure project-test + artifact-test + pm-test);
      the `registry.entries_enumerate` pin fails if an entry's
      enumeration is empty or the name list drifts;
+   - `canary spec-check <name>` — **the 2×2 bar, checked** (2026-08-25):
+     `lib pair` and `binding pair` warn when an axis has fewer than two
+     admissible points, so §3's sourcing rule has an enforcement point
+     instead of being a rule you remember. Read the warns before the
+     first run: a thin axis is either a fact about the world (declare it
+     in the row's `~rationale`, which the warn prints) or the landing is
+     not done. Adding the project to `spec_check.ratchet_current`'s list
+     is part of landing it — zlib and zstd went four days unpinned;
    - `canary action <name>` — first full run, read
      `_out/canary/projects/<name>/-run/actions.log` on failure;
    - `canary spec <name>` / `canary scenarios <name>` / `canary status
@@ -91,7 +99,7 @@ project's purpose:
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **A. Positive-only**                | `runner_spec` + `api_source` + probe examples that must build/run. No failure prediction.                                                                            | zarith, cairo (system lib works; probe compiles)                                                                                  | The project is a demo that a canary session terminates cleanly on a known-good setup. No version-mismatch or breakage story.                        |
 | **B. A derived failure prediction** | Level A + enough declared **evidence** (watchlists / `api_source`) for the shared lowering to find the break itself. Since A7 you do *not* hand-write the substring. | z3 (`parser_context` missing from the wheel → `xfail[c2]`), llvm (`Opcode.UncondBr` → `xfail[c2]`), ssl (`060_nlv` → `xfail[c2]`) | You want to demonstrate a real version drift on this project. Cheapest way to say "here's an API break canary *computed*".                          |
-| **C. Scenario matrix**              | Level B + a `pr_spec` universe declaring the provision/version axes; the general enumeration produces the scenarios.                                                 | tiny-full (6), sqlite (3), z3 / llvm (2 each)                                                                                     | You want *systematic* coverage across an artifact's provision/version axes. No longer exotic — it is the default shape for a `project_run` project. |
+| **C. Scenario matrix**              | Level B + a `pr_spec` universe declaring the provision/version axes; the general enumeration produces the scenarios.                                                 | tiny-full (1 — its axes are declared in dead code, [`issues.md`](issues.md) §1), sqlite (10), z3 (16), llvm (3)                                                                                     | You want *systematic* coverage across an artifact's provision/version axes. No longer exotic — it is the default shape for a `project_run` project. |
 
 **Do not copy tiny's workspace/prepare/baseline files.**
 `canary_tiny_workspace.ml` + `_prepare.ml` + `_baseline.ml`
@@ -114,7 +122,14 @@ For scenario mechanics + the derived-vs-hand principle see
 ## 3. Sourcing the lib channel pair (rule, user 2026-08-19)
 
 Every project needs a stable/latest pair per artifact (the 2×2 lower
-bound). For the C lib the pair is sourced in a FIXED order — the point is
+bound). Since 2026-08-25 `canary spec-check <name>` CHECKS this — `lib
+pair` / `binding pair`, counting admissible `(provision, version)`
+points per row. Note it counts POINTS, not universe cells or channels:
+ssl and sqlite realize their binding pair as two opam store PINS inside
+one `Fetched@stable` cell, which is the cheapest way to declare one and
+the reading a cell- or channel-count gets wrong.
+
+For the C lib the pair is sourced in a FIXED order — the point is
 to test against what users have and what is coming, never against
 archaeology:
 

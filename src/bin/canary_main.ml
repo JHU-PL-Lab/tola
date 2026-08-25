@@ -663,11 +663,18 @@ let spec_check_cmd =
           ^ "\n")
       else Fmt.pr "%s@." (Canary_spec_check.pp_report r)
     in
+    (* the CATALOGUE, not the active list (2026-08-25): spec-check is a
+       CHECKING command and muting a project removes it from the RUN set,
+       not from the audit — the same rule [spec_check.ratchet_current]
+       already states and `emit` already follows. Before this, `spec-check
+       z3` answered "usage:" while the pin happily audited z3, so the
+       project with the richest matrix was the one a human could not
+       dump. *)
     match proj with
     | Some "@all" | None ->
         let reports =
           List.map (fun (_n, pr) -> Canary_spec_check.check pr)
-            Canary_registry.all_projects
+            Canary_registry.all_specs
         in
         if json then
           print_string
@@ -684,14 +691,14 @@ let spec_check_cmd =
         let bad = List.length (List.filter has_errors reports) in
         if bad > 0 then Stdlib.exit 1
     | Some name -> (
-        match List.assoc_opt name Canary_registry.all_projects with
+        match List.assoc_opt name Canary_registry.all_specs with
         | Some pr ->
             let r = Canary_spec_check.check pr in
             show r;
             if has_errors r then Stdlib.exit 1
         | None ->
             Fmt.epr "usage: canary spec-check <@all|%s>@."
-              (String.concat "|" (List.map fst Canary_registry.all_projects));
+              (String.concat "|" (List.map fst Canary_registry.all_specs));
             Stdlib.exit 2)
   in
   Cmd.v

@@ -75,6 +75,20 @@ were moved to match rather than firing. Worth treating as the more
 interesting half of the finding: the ratchet recorded the new number
 instead of contesting it.
 
+**The audit says it now** (2026-08-25). This finding is what motivated
+`spec-check`'s `lib pair` / `binding pair` checks
+([`status_project.md`](status_project.md) §2 item 0, DONE), and tiny-full
+is the only project that warns on BOTH axes:
+
+```
+⚠  lib pair       lib: 1 point(s) [vendored@stable] — no channel pair
+⚠  binding pair   binding-ocaml-cstubs: 1 [vendored@stable]; … — no consumer channel pair
+```
+
+It is exempt from the reporting-oriented checks (in-tree witness), not
+from the 2×2 bar. The decision below is unchanged — the audit reports
+the gap, it does not choose which way to close it.
+
 **Pickable as:** decide whether tiny-full's general run is meant to carry
 the built-lib/dev-binding axes (the docs say yes, the code says no). If
 yes, move `tiny_full_general_spec`'s cells into `tiny_artifact_table`,
