@@ -397,6 +397,13 @@ directions):
   checkout exists. Pure waste; functional today.
 - [ ] **Docs-mirror cp noise** — skip `.git` in the mirror copy.
 - [ ] **Fetched provision for tiny** — the one provision tiny lacks.
+- [ ] **Location sub-axis** — SUBSUMED 2026-08-25 by
+  [`../design/enumeration/resolve_placements.md`](../design/enumeration/resolve_placements.md),
+  which found why: `location` has no `Vendored` case, so a vendored
+  world's probe is keyed `Build_tree`, and `artifact_status` is a third
+  dead copy of the same idea. Do it there, as step 2 of that proposal.
+  The original statement:
+
 - [ ] **Location sub-axis** — probe locations as a first-class axis.
   **The forcing case arrived (2026-08-19)**: the matrix's single
   `probe_lib` column marks only the step tagged exactly `probe_lib`, so

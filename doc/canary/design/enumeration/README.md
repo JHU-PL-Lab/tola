@@ -81,10 +81,12 @@ Five passes. Each answers to both its name and its index:
 `canary emit <project> --stage select` is `--stage 3`
 ([`why_ledger.md`](why_ledger.md)).
 
-**Every pass has a standalone doc.** The other two files are proposals:
+**Every pass has a standalone doc.** The other three files are proposals:
 [`multi_lib.md`](multi_lib.md) (`Lib` carries no name, so a project
-cannot declare a second C lib) and [`why_ledger.md`](why_ledger.md)
-(`--why`, the per-candidate ledger — deliberately postponed).
+cannot declare a second C lib), [`why_ledger.md`](why_ledger.md)
+(`--why`, the per-candidate ledger — deliberately postponed) and
+[`resolve_placements.md`](resolve_placements.md) (nothing resolves a
+placement to a concrete location, and three types describe one idea).
 
 `emit_stages.md`, the proposal that produced the passes, retired
 2026-08-24: once its steps landed it was code rationale, not a design
