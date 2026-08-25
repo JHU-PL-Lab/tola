@@ -31,14 +31,14 @@ artifact_row ~artifact ~universe ?follows ?runtime ?provider ?rationale ()
 reads. `pr_artifacts` on a `project_run` IS that row list — there is no
 second place a project describes itself.
 
-| field | what it states |
-| --- | --- |
-| `artifact` | the identity (§2) |
-| `universe` | which provisions, and at which channels (§3) |
-| `provider` | where it comes from (§4) — four things are DERIVED from it |
-| `follows` | this artifact's channel is locked to another's (§6) |
-| `runtime` | the runtime-edge mode, when the provider does not imply it (§6) |
-| `rationale` | WHY the universe stops where it does (§7) |
+| field       | what it states                                                  |
+| ----------- | --------------------------------------------------------------- |
+| `artifact`  | the identity (§2)                                               |
+| `universe`  | which provisions, and at which channels (§3)                    |
+| `provider`  | where it comes from (§4) — four things are DERIVED from it      |
+| `follows`   | this artifact's channel is locked to another's (§6)             |
+| `runtime`   | the runtime-edge mode, when the provider does not imply it (§6) |
+| `rationale` | WHY the universe stops where it does (§7)                       |
 
 ## 2. Artifact identity
 
@@ -112,23 +112,27 @@ Ids are born-safe (`binding-ocaml-cstubs`, `-` not `:`) because they
 reach `PYTHONPATH` / `LD_LIBRARY_PATH`. The `:` form
 (`pretty_id`) is display-only — never a key or a path.
 
-## 3. The universe — provisions × channels, per artifact
+## 3. The universe — which provisions, at which channels
 
 ```ocaml
-~universe:[ (Fetched,   [ Stable ]);
-            (Built,     [ Stable; Dev ]);
-            (Installed, [ Stable; Dev ]) ]
+~universe:[ (Fetched (Sys_pkg libsqlite3_dev), [ Stable ]);
+            (Built_from a_source,              [ Stable; Dev ]);
+            (Installed,                        [ Stable; Dev ]) ]
 ```
+
+Each entry names a **provision spec** — the coarse provision plus where
+that particular one comes from (§4). The coarse view below is the
+projection the enumeration ranges over.
 
 A **provision** is how the artifact is obtained:
 
-| provision | meaning |
-| --- | --- |
-| `Absent` | not present in this world (an optional dep that is off) |
-| `Fetched` | a package manager or a repo fetch supplies it |
-| `Built` | canary compiles it from source |
+| provision   | meaning                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `Absent`    | not present in this world (an optional dep that is off)                                     |
+| `Fetched`   | a package manager or a repo fetch supplies it                                               |
+| `Built`     | canary compiles it from source                                                              |
 | `Installed` | canary staged a Built artifact into an install prefix, and the world probes the STAGED copy |
-| `Vendored` | a pre-existing local copy canary only probes (a prepared prebuilt) |
+| `Vendored`  | a pre-existing local copy canary only probes (a prepared prebuilt)                          |
 
 Two properties of this table are load-bearing, and both exist because the
 flat version worked and then didn't:
@@ -153,113 +157,135 @@ face as its own row, because the install is a copy-*transform* and its
 divergences are the bug class worth checking. See
 [`../staged_parity.md`](../staged_parity.md) for what that check is.
 
-## 4. Providers — and the four things derived from them
+## 4. Origins — one declaration per admissible provision
 
-**First, `provision` vs `provider`**, because they sound alike and are
-not the same thing:
-
-| | `provision` | `provider` |
-| --- | --- | --- |
-| is | the **axis value** — `Absent \| Fetched \| Built \| Installed \| Vendored` | the **typed detail** — which apt package, which repo, which pins |
-| granularity | **per placement** — changes per scenario | **per row** — one per artifact, fixed |
-| answers | "in THIS world, how is it obtained?" | "when it is obtained, from where exactly?" |
-| lives in | `base/canary_store.ml` | `tool/canary_store_config.ml` |
-
-So a row has **one provider and many provisions**: sqlite's lib declares
-`Sys_pkg libsqlite3-dev` and a universe of `{Fetched, Built, Installed}`
-— five placements from one provider. The enumeration ranges over the
-provision; the realization needs the provider to build a command.
-
-Two types rather than one because the enumeration needs a small closed
-comparable set — five values, which also go into scenario identity
-(`lib-built-dev` in a directory name) — while the realization needs to
-know *which* package. `provision_of_provider` is what keeps them from
-drifting.
-
-Watch one trap: `Vendored` and `Absent` are constructors in BOTH types.
-`Canary_store.Vendored` is a provision; `Canary_store_config.Vendored of
-string` is a provider carrying a path, and `Cached path` is a third
-spelling that also maps to the `Vendored` provision.
-
+A row states, for each way the artifact can exist, **where that one comes
+from**:
 
 ```ocaml
-type provider =
+type provision_spec =
   | Absent
-  | Vendored of string | Cached of string      (* a local path *)
-  | Repo of source_repo                        (* one repo *)
-  | Repo_axes of source_repo list              (* a repo FAMILY, per channel *)
-  | Sys_pkg of system_package_spec             (* apt / brew *)
-  | Lang_pkg of { lang; pm; package; self_contained; versions }
+  | Fetched of provider          (* a PM, a repo, a repo family *)
+  | Built_from of artifact_info  (* the artifact it compiles from *)
+  | Installed                    (* the staged face of its own Built_from *)
+  | Vendored_at of string        (* a local path that pre-exists the run *)
 ```
 
-A project declares the provider once; canary derives the rest, so the
-axis and the detail cannot drift:
+sqlite's lib, which is the case that forced this:
 
-| derived | function | what it gives |
+```ocaml
+artifact_row ~artifact:a_lib
+  ~universe:
+    [ (Fetched (Sys_pkg libsqlite3_dev), [ Stable ]);
+      (Built_from a_source,              [ Stable; Dev ]);
+      (Installed,                        [ Stable; Dev ]) ]
+  ()
+```
+
+### The axis this encodes
+
+Not external vs internal — `Vendored` is external too, since `canary
+prebuilt` downloads conda-forge tarballs before the run. The question
+each constructor answers is **which action in THIS run produces it**:
+
+| spec | producing action |
+| --- | --- |
+| `Absent` | — |
+| `Vendored_at` | **none** — it pre-exists the run |
+| `Fetched` | `Fetch` |
+| `Built_from` | `Build_*` |
+| `Installed` | `Install_lib` |
+
+Which is exactly what `providing_action_of` computes, and why a Vendored
+artifact has none: the arrow starts outside the run. Where its bytes came
+from is a *preparation* concern — hence `canary prebuilt` being a
+separate command.
+
+### Payloads, by the same rule as §2
+
+Each branch carries what its action needs and nothing more.
+`Installed` carries nothing because it is always the staged face of *this
+artifact's own* `Built_from` — one possibility, so nothing to name.
+`Built_from` carries the artifact it compiles from, and that **deleted a
+hardcode**: `build_deps_of` used to read
+
+```ocaml
+if id = a_lib && declared a_source then [ a_source ] else []
+```
+
+so zarith — whose binding builds from `a_binding_source OCaml`, not the
+lib's source — was a special case. Now the row says it.
+
+### What is derived from it
+
+| derived | from | what it gives |
 | --- | --- | --- |
-| the coarse provision | `provision_of_provider` | the BASELINE axis value (see below) |
-| the runtime edge | `dep_mode_of_provider` | `Ambient` when a lang package bundles its own native lib (`self_contained = true`) |
-| the store pins | `versions_of_provider` | the identity-bearing versions (§5) |
-| the producing action | `providing_action_of` | `Fetch` / `Build_lib` / `Install_lib` / … |
+| the coarse `provision` | `provision_of_spec` | the axis value the enumeration ranges over |
+| the runtime edge | the **Fetched** branch's provider | `Ambient` when a lang package bundles its own native lib |
+| the store pins | the **Fetched** branch's provider | identity-bearing versions (§5) |
+| the producing action | the spec | `Fetch` / `Build_lib` / `Install_lib` / none |
 
-**The provider's provision is a BASELINE, not the whole truth.**
-`provision_of_provider` maps both `Repo` and `Sys_pkg` to `Fetched` — a
-repo enters at the fetch boundary — but a row can declare `Built` in its
-universe, as sqlite's lib does. So the derived value agrees with the
-*baseline* scenario's placement, not with every scenario's, and that is
-literally what the pin asserts: `<project>.providers_match_baseline_provisions`.
+The runtime edge comes from the Fetched branch and there is no ambiguity
+to resolve: `Ambient` means the *package* bundles its own lib, and a
+Built artifact is built here and bundles nothing.
 
-That last one is **the arrow** (user, 2026-08-06): an artifact comes from
-its provider *via an action*, and **fetching is the same shape as
-building**. Building is the case where the provider is itself an
-enumerated artifact (a repo whose checkout is the `Source` the build
-consumes); fetching is the case where the provider sits at the
-enumeration's boundary. `None` — a `Vendored`/`Cached` path — means no
-canary action produces it: the arrow starts outside the run. Pinned
-total and consistent against the inverse (`provision_of_actions`) by
-`arrow.providing_action_total_and_consistent`.
+> **This was two declarations until 2026-08-25.** A row carried a coarse
+> `~universe` AND one `?provider` for the whole artifact, and the two only
+> lined up for one of the provisions — sqlite declared `Sys_pkg
+> libsqlite3-dev` beside `{Fetched, Built, Installed}`, where the package
+> explains only the Fetched case. That needed a special rule ("the
+> provider's provision is a BASELINE, not the whole truth") and a
+> per-project pin to stop the two drifting. Both are gone: there is one
+> declaration, the coarse axis is a projection of it, and
+> `<project>.providers_match_baseline_provisions` retired because the type
+> now does what it watched for.
+>
+> The relationship is the one §2 already has:
+>
+> ```
+> provision_spec  ──provision_of_spec──▶  provision
+> artifact_info   ──kind_of────────────▶  artifact_kind
+> ```
 
-**`Repo` vs `Repo_axes`.** A single `Repo` is one checkout. `Repo_axes`
-is a repo *family* covering one artifact's channels — official stable,
-official dev, plus a labeled fork when one exists. Each repo carries its
-own `version` record, and those project into the pins with the **channel
-preserved**, which is what lets the thin policy's `Subset [Stable]` drop
-the dev repos. The stable repo is listed first; that ordering is the
-canonical pin (§5).
+### The provider, now narrower
+
+`provider` still exists and still names a fetch origin — `Sys_pkg`,
+`Lang_pkg`, `Repo`, `Repo_axes` — but it is reachable only *inside*
+`Fetched`. `provider_of_row` returns `None` for a row that is only built,
+staged or vendored, which is the honest answer where the old model had to
+invent one.
+
+**The `Repo` vs `Repo_axes` distinction is unchanged.** A single `Repo`
+is one checkout; `Repo_axes` is a family covering one artifact's channels
+— official stable, official dev, plus a labeled fork when one exists.
+Each repo carries its own `version`, and those project into the pins with
+the **channel preserved**, which is what lets thin's `Subset [Stable]`
+drop the dev repos.
+
+**A repo declares what it contains, not the reverse** (user, 2026-08-15).
+`source_repo.artifacts` lists the artifact ids a repo can provide —
+`Z3Prover/z3` = [lib; binding OCaml; binding Python], `ocaml/Zarith` =
+[binding OCaml]. On-tree vs off-tree is then DERIVED, not declared: on-tree
+means the artifact's repo is shared with the project's others. An artifact
+must appear in its provider repo's contents — pinned by
+`repo_model.contents_invariant`.
 
 **What a repo provider needs on disk** (the decided lifecycle, 2026-08-15):
 
 - **A repo is DISTRIBUTED.** The local checkout and the remote are
-  modelled separately and may differ — the official repo can have a
-  local fork, and our fork has its own remote.
-- **One repository, a `git worktree` per tracked ref.** Shared objects,
-  no in-place `git checkout` churn, several versions coexisting. So
-  *stable* and *latest* are **descriptive markers that can move**, not
-  fixed identities. Pinned by `repo_model.worktree_paths`.
-- **Refresh is on demand.** A version refreshes when a run or a prepare
-  asks for it; nothing chases nightlies.
-- **The layout is a setting, not a hardcode.**
-  `~/code/contrib/<project>-all/<repo-variant>` is the convention, held
-  as data in the base layer. Directory naming follows the repo's official
-  name.
-- **A fork needs no remote.** `remote : repo_remote option`; `None` is a
-  local-only fork, which `spec-check` reports as a WARNING, not an error
-  — we survey many projects and may never find a bug worth pushing. What
-  is required is the local checkout. Pin: `spec_check.local_fork_warns`.
+  modelled separately and may differ.
+- **One repository, a `git worktree` per tracked ref.** Shared objects, no
+  in-place `git checkout` churn. So *stable* and *latest* are
+  **descriptive markers that can move**, not fixed identities. Pinned by
+  `repo_model.worktree_paths`.
+- **Refresh is on demand.** Nothing chases nightlies.
+- **The layout is a setting.** `~/code/contrib/<project>-all/<repo-variant>`,
+  held as data in the base layer.
+- **A fork needs no remote.** `None` is a local-only fork, which
+  `spec-check` reports as a WARNING — we survey many projects and may
+  never find a bug worth pushing. Pin: `spec_check.local_fork_warns`.
 - **An inaccessible source does not break checking.** The enumeration and
-  the artifact checks still detect and blame a wrong scenario; the source
-  repo is optional provenance. (GMP's repo is open but hg + tarballs, so
-  gmp dev stays unmodelled.)
-
-**A repo declares what it contains, not the reverse** (user,
-2026-08-15). `source_repo.artifacts` lists the artifact ids a repo can
-provide — `Z3Prover/z3` = [lib; binding OCaml; binding Python],
-`ocaml/Zarith` = [binding OCaml]. On-tree vs off-tree is then DERIVED,
-not declared: on-tree means the artifact's repo is shared with the
-project's others. An artifact must appear in its provider repo's
-contents — pinned by `repo_model.contents_invariant`. Repo lifecycle
-(worktrees, forks, remotes, refresh) is above; the open decisions it
-left are `../../project/status_project.md` §2.
+  the artifact checks still detect and blame a wrong scenario.
 
 ## 5. Versions — ambient, or identity-bearing
 
@@ -359,23 +385,19 @@ Four rows produce ten scenarios and the registry's first full 2×2:
 
 ```ocaml
 artifact_row ~artifact:a_source ~follows:a_lib
-  ~universe:[ (Fetched, [ Stable; Dev ]) ]
-  ~provider:(Repo sqlite_source_stable) ();
+  ~universe:[ (Fetched (Repo sqlite_source_stable), [ Stable; Dev ]) ] ();
 
 artifact_row ~artifact:a_lib
-  ~universe:[ (Fetched,   [ Stable ]);        (* apt libsqlite3-dev   *)
-              (Built,     [ Stable; Dev ]);   (* two amalgamations    *)
-              (Installed, [ Stable; Dev ]) ]  (* their staged faces   *)
-  ~provider:(Sys_pkg prebuilt.system_package) ();
+  ~universe:[ (Fetched (Sys_pkg libsqlite3_dev), [ Stable ]);
+              (Built_from a_source,              [ Stable; Dev ]);
+              (Installed,                        [ Stable; Dev ]) ] ();
 
-artifact_row ~artifact:(a_binding OCaml Cstubs)
-  ~runtime:Independent
-  ~universe:[ (Fetched, [ Stable ]) ]
-  ~provider:(Lang_pkg { …; versions = Some [ 5.1.0; 5.4.1 ] }) ();
+artifact_row ~artifact:(a_binding OCaml Cstubs) ~runtime:Independent
+  ~universe:[ (Fetched (Lang_pkg { …; versions = Some [5.1.0; 5.4.1] }),
+               [ Stable ]) ] ();
 
 artifact_row ~artifact:(a_binding Python Cext)
-  ~universe:[ (Fetched, [ Stable ]) ]
-  ~provider:sqlite_python_provider ();
+  ~universe:[ (Fetched sqlite_python_provider, [ Stable ]) ] ();
 ```
 
 Read it as: the lib has **five placements** (one fetched + two built +
@@ -397,10 +419,10 @@ no coverage of its own, and it sits outside the matrix.
 One lib × one binding then gives a 2×2, and each cell is a distinct
 question:
 
-| | binding stable | binding latest |
-| --- | --- | --- |
-| **lib stable** | baseline — both released, must pass | **FORWARD**: the new binding wants API the old lib lacks |
-| **lib latest** | **BACKWARD**: the new lib dropped or renamed what the old binding uses | dev baseline — both HEAD, must pass |
+|                | binding stable                                                         | binding latest                                           |
+| -------------- | ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| **lib stable** | baseline — both released, must pass                                    | **FORWARD**: the new binding wants API the old lib lacks |
+| **lib latest** | **BACKWARD**: the new lib dropped or renamed what the old binding uses | dev baseline — both HEAD, must pass                      |
 
 More bindings multiply it: OCaml + Python is 2×2×2.
 
@@ -439,16 +461,16 @@ Known limits, each with its own note:
 
 ## Pins guarding this stage
 
-| pin | asserts |
-| --- | --- |
-| `enumerate.project_spec_sqlite_shape` | the worked example's rows produce the expected universe |
-| `enumerate.per_artifact_provisions` | each artifact draws from its own provision universe |
-| `enumerate.per_artifact_versions` | …and its own version universe |
-| `enumerate.per_provision_versions` | version is per (artifact × provision), not flat |
+| pin                                           | asserts                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------ |
+| `enumerate.project_spec_sqlite_shape`         | the worked example's rows produce the expected universe                        |
+| `enumerate.per_artifact_provisions`           | each artifact draws from its own provision universe                            |
+| `enumerate.per_artifact_versions`             | …and its own version universe                                                  |
+| `enumerate.per_provision_versions`            | version is per (artifact × provision), not flat                                |
 | `arrow.providing_action_total_and_consistent` | provider → action is total, and inverse-consistent with `provision_of_actions` |
-| `repo_model.axes_pins` | a repo family's per-channel pins reach the axes with the channel preserved |
-| `repo_model.contents_invariant` | every artifact appears in its provider repo's declared contents |
-| `spec.vendored_prebuilt_pair` | a declared prebuilt pair really produces two probe worlds |
-| `spec.pm_dep_gate_groups` | the declared PM gates classify into the expected freedom groups |
-| `sqlite.provider_rows`, `z3.provider_rows` | each project's rows match its baseline provisions |
-| `spec_check.local_fork_warns` | a labeled repo without a remote warns rather than errors |
+| `repo_model.axes_pins`                        | a repo family's per-channel pins reach the axes with the channel preserved     |
+| `repo_model.contents_invariant`               | every artifact appears in its provider repo's declared contents                |
+| `spec.vendored_prebuilt_pair`                 | a declared prebuilt pair really produces two probe worlds                      |
+| `spec.pm_dep_gate_groups`                     | the declared PM gates classify into the expected freedom groups                |
+| `sqlite.provider_rows`, `z3.provider_rows`    | each project's rows match its baseline provisions                              |
+| `spec_check.local_fork_warns`                 | a labeled repo without a remote warns rather than errors                       |

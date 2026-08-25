@@ -494,22 +494,32 @@ let sqlite_artifacts : Canary_project_spec.artifact_row list =
        previously folded into itself (its inner fetch is now a no-op
        guard over the same workspace/src). *)
     artifact_row ~artifact:a_source ~follows:a_lib
-      ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
-      ~provider:(Canary_store_config.Repo sqlite_source_stable) ();
+      ~universe:
+        [ ( Canary_store_config.Fetched
+              (Canary_store_config.Repo sqlite_source_stable),
+            Canary_basic.[ Stable; Dev ] ) ]
+      ();
     artifact_row ~artifact:a_lib
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]);
-                  (Built, Canary_basic.[ Stable; Dev ]);
+      ~universe:[ ( Canary_store_config.Fetched
+                      (Canary_store_config.Sys_pkg prebuilt.system_package),
+                    [ Canary_basic.Stable ] );
+                  (* built from the amalgamation the source row fetches
+                     (2026-08-25: the row now SAYS so — this edge used to
+                     be the hardcode in [build_deps_of]) *)
+                  (Canary_store_config.Built_from a_source,
+                   Canary_basic.[ Stable; Dev ]);
                   (* the installed-consumer worlds (2026-08-18, the
                      provider-exclusive-rows model): the same version
                      axis as Built — each built version gets its staged
                      consumer face as a SEPARATE world *)
-                  (Installed, Canary_basic.[ Stable; Dev ]) ]
-      ~provider:(Canary_store_config.Sys_pkg prebuilt.system_package) ();
+                  (Canary_store_config.Installed,
+                   Canary_basic.[ Stable; Dev ]) ]
+      ();
     artifact_row ~artifact:(a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
       ~runtime:Canary_store.Independent
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:
-        (Canary_store_config.Lang_pkg
+      ~universe:
+        [ ( Canary_store_config.Fetched
+              (Canary_store_config.Lang_pkg
            { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
              package = prebuilt.opam_package; self_contained = false;
              (* THE BINDING'S CHANNEL PAIR (2026-08-19, user — the
@@ -532,11 +542,14 @@ let sqlite_artifacts : Canary_project_spec.artifact_row list =
                  [ { Canary_store_config.pin_version = "5.1.0";
                      install_name = None };
                    { Canary_store_config.pin_version = "5.4.1";
-                     install_name = None } ] })
+                     install_name = None } ] }),
+            [ Canary_basic.Stable ] ) ]
       ();
     artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Cext)
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:sqlite_python_provider () ]
+      ~universe:
+        [ ( Canary_store_config.Fetched sqlite_python_provider,
+            [ Canary_basic.Stable ] ) ]
+      () ]
 
 (* Derived view for the legacy [construct] display — the artifact table is
    the source of truth; this is just [project_spec_of_rows] over it (the

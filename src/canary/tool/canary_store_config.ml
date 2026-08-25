@@ -83,6 +83,112 @@ type provider =
               (`pip install pkg==1.2.3`) are the natural future use. *)
     }
 
+(** ONE declaration per admissible provision (2026-08-25).
+
+    {1 What it replaces, and why}
+
+    A row used to declare a coarse universe AND, separately, one
+    [provider] for the whole artifact — and the two only lined up for one
+    of the provisions. sqlite's lib is the specimen: [Sys_pkg
+    libsqlite3-dev] beside a universe of {Fetched, Built, Installed},
+    where the package explains only the Fetched case. The Built one comes
+    from source and the Installed one from the Built one, and neither has
+    anything to do with apt. That forced a special rule — "the provider's
+    provision is a BASELINE, not the whole truth" — plus a pin per
+    project to stop the two declarations drifting.
+
+    Here each admissible provision states its own origin, so there is
+    nothing to keep in step and no baseline to explain.
+
+    {1 The axis it actually encodes}
+
+    Not external-vs-internal (user, 2026-08-25 — [Vendored] is external
+    too: [canary prebuilt] downloads conda-forge tarballs before the
+    run). The question each constructor answers is {b which action in
+    THIS run produces the artifact}:
+
+    {v
+    Absent      — nothing
+    Vendored    — nothing; it pre-exists the run
+    Fetched     — Fetch
+    Built_from  — Build_*
+    Installed   — Install_lib
+    v}
+
+    Which is exactly what {!producing_action_of} computes, and why a
+    [Vendored] artifact has no producing action: the arrow starts outside
+    the run. Where its bytes came from is a PREPARATION concern, which is
+    why [canary prebuilt] is a separate command.
+
+    {1 Payloads}
+
+    Each branch carries what its action needs, and nothing else — the
+    same rule the artifact identity follows ([Canary_artifact], "a
+    constructor gains a payload when the thing it names stops being
+    unique"):
+
+    - [Installed] carries nothing: it is always the staged face of THIS
+      artifact's own [Built_from], so there is no second possibility to
+      name.
+    - [Built_from] carries the artifact it builds FROM. That deletes a
+      hardcode: [build_deps_of] used to read
+      [if id = a_lib && declared a_source then [a_source]], and zarith
+      (whose binding builds from [a_binding_source OCaml], not the lib's
+      source) needed a per-project escape. Now the row says it. *)
+type provision_spec =
+  | Absent
+  | Fetched of provider
+      (** the PM, repo or repo family a fetch asks. [provider]'s
+          [Vendored]/[Cached]/[Absent] constructors are not reachable
+          here — they are other provisions — but the type is shared
+          rather than split so the 12 existing readers keep working. *)
+  | Built_from of Canary_artifact.artifact_info
+      (** the artifact this one is compiled from *)
+  | Installed
+      (** the staged face of this artifact's own [Built_from] *)
+  | Vendored_at of string  (** a local path that pre-exists the run *)
+
+let provision_of_spec : provision_spec -> Canary_store.provision = function
+  | Absent -> Canary_store.Absent
+  | Fetched _ -> Canary_store.Fetched
+  | Built_from _ -> Canary_store.Built
+  | Installed -> Canary_store.Installed
+  | Vendored_at _ -> Canary_store.Vendored
+
+(** The fetch origin, when this provision has one. [None] for the three
+    that are produced here or pre-exist — and that [None] is the honest
+    answer, where the old model had to invent a provider for them. *)
+let fetch_provider_of : provision_spec -> provider option = function
+  | Fetched p -> Some p
+  | Absent | Built_from _ | Installed | Vendored_at _ -> None
+
+(** The arrow, read off the SPEC (2026-08-25): origin → action →
+    artifact. [None] where no action in this run produces it — [Absent],
+    and [Vendored_at], whose arrow starts outside the run.
+
+    This is [providing_action_of] without the [~provision] parameter,
+    because the spec already carries it. The old signature needed the
+    provision passed IN precisely because the provider could not say
+    which one it explained. *)
+let producing_action_of (k : Canary_basic.artifact_kind) :
+    provision_spec -> Canary_basic.action option = function
+  | Absent | Vendored_at _ -> None
+  | Fetched _ -> Some (Canary_basic.Fetch k)
+  | Built_from _ -> (
+      match k with
+      | Canary_basic.Lib -> Some Canary_basic.Build_lib
+      | Canary_basic.Binding l -> Some (Canary_basic.Build_binding l)
+      | Canary_basic.Headers -> Some Canary_basic.Build_headers
+      | Canary_basic.Source | Canary_basic.Binding_source _
+      | Canary_basic.App ->
+          None)
+  | Installed -> (
+      match k with
+      | Canary_basic.Lib -> Some Canary_basic.Install_lib
+      | Canary_basic.Source | Canary_basic.Headers | Canary_basic.Binding _
+      | Canary_basic.Binding_source _ | Canary_basic.App ->
+          None)
+
 let provision_of_provider : provider -> Canary_store.provision = function
   | Absent -> Canary_store.Absent
   | Vendored _ | Cached _ -> Canary_store.Vendored

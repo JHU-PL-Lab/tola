@@ -146,7 +146,7 @@ let provenance_of (pr : project_run) (id : Canary_artifact.artifact_info) :
   List.find_opt
     (fun d -> Canary_artifact.equal_artifact_info d.Canary_project_spec.ar_artifact id)
     pr.pr_artifacts
-  |> fun d -> Option.bind d (fun d -> d.Canary_project_spec.ar_provider)
+  |> fun d -> Stdlib.Option.bind d Canary_project_spec.provider_of_row
 
 (** The THIN exploration policy (ssot §4.2 config level): version
     [Subset [Stable]] — drop every Dev world, keep the provision axis Full.
@@ -624,17 +624,11 @@ let print_spec ?policy (pr : project_run) : unit =
                     place (baseline "—"): a display-only artifact (e.g. the
                     source behind a self-contained Built lib) has no axis to
                     contradict. *)
-                 let drift =
-                   match Canary_enumerate.placement_of baseline a with
-                   | None -> ""
-                   | Some _ ->
-                       if
-                         Canary_store.equal_provision
-                           (Canary_store_config.provision_of_provider p)
-                           (Canary_enumerate.provision_of baseline a)
-                       then ""
-                       else "   ⚠ provider≠baseline provision"
-                 in
+                 (* the provider≠baseline drift warning retired
+                    2026-08-25: a row declares one origin PER provision
+                    now, so there is no second declaration to disagree
+                    with the axis. *)
+                 let drift = "" in
                  (* the ARROW: provider → action → artifact (fetch and build
                     are the same shape; a vendored copy has no producing
                     action — the provider is the boundary). *)

@@ -215,25 +215,31 @@ let ssl_artifacts : Canary_project_spec.artifact_row list =
        binding worlds; the run's fetch_source clones openssl@3.0.13 once,
        cached thereafter). *)
     Canary_project_spec.artifact_row ~artifact:Canary_artifact.a_source
-      ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:(SC.Repo ssl_source_stable) ();
+      ~universe:
+        [ (SC.Fetched (SC.Repo ssl_source_stable), [ Canary_basic.Stable ]) ]
+      ();
     Canary_project_spec.artifact_row ~artifact:Canary_artifact.a_lib
-      ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:(SC.Sys_pkg libssl_spec) ();
+      ~universe:
+        [ (SC.Fetched (SC.Sys_pkg libssl_spec), [ Canary_basic.Stable ]) ]
+      ();
     Canary_project_spec.artifact_row ~artifact:ssl_binding_art
-      ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:
-        (SC.Lang_pkg
+      ~universe:
+        [ ( SC.Fetched
+              (SC.Lang_pkg
            { lang = Canary_lang.OCaml; pm = Canary_store.Opam; package = "ssl";
              self_contained = false;
              versions =
                Some
                  [ { SC.pin_version = "0.6.0"; install_name = None };
-                   { SC.pin_version = "0.7.0"; install_name = None } ] })
+                   { SC.pin_version = "0.7.0"; install_name = None } ] }),
+            [ Canary_basic.Stable ] ) ]
       ();
     Canary_project_spec.artifact_row
       ~artifact:(Canary_artifact.a_app Canary_artifact.Direct)
-      ~universe:[ (Canary_artifact.Vendored, [ Canary_basic.Stable ]) ] () ]
+      ~universe:
+        [ ( SC.Vendored_at "canary/examples/ssl (in-tree example)",
+            [ Canary_basic.Stable ] ) ]
+      () ]
 
 (* The dispatch: the binding's pinned version id — the only coordinate the
    realization reads. *)

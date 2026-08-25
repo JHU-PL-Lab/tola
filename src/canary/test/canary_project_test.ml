@@ -1,5 +1,26 @@
 open Base
 
+(* ── coarse fixtures (2026-08-25) ──
+   A row now declares an ORIGIN per provision, not a bare provision. The
+   fixtures below test the AXIS shape — how many worlds a universe
+   produces, which chains apply — and have no realization to speak of, so
+   they need a placeholder origin. [ax] fabricates one, and its name says
+   it is about the axis; a real project must state where the artifact
+   actually comes from. *)
+let ax (pv : Canary_store.provision) :
+    Canary_store_config.provision_spec =
+  match pv with
+  | Canary_store.Absent -> Canary_store_config.Absent
+  | Canary_store.Fetched ->
+      Canary_store_config.Fetched
+        (Canary_store_config.Sys_pkg
+           (Canary_store.mk_system_package_spec ~linux_pkg:"fixture"
+              ~macos_pkg:"fixture" ()))
+  | Canary_store.Built -> Canary_store_config.Built_from Canary_artifact.a_source
+  | Canary_store.Installed -> Canary_store_config.Installed
+  | Canary_store.Vendored -> Canary_store_config.Vendored_at "/fixture"
+
+
 (* Project-definition layer tests (design: ssot.md §6.1).
 
    The third testing axis: fast, hermetic, pure tests of the
@@ -820,18 +841,18 @@ let mechanism_chain_shape_pin : pure_test =
       let dynamic_spec =
         Canary_project_spec.project_spec_of_rows
           [ Canary_project_spec.artifact_row ~artifact:EN.a_lib
-              ~universe:[ (EN.Vendored, [ B.Stable ]) ] ();
+              ~universe:[ (ax EN.Vendored, [ B.Stable ]) ] ();
             Canary_project_spec.artifact_row
               ~artifact:(Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Ctypes)
-              ~universe:[ (EN.Vendored, [ B.Stable ]) ] () ]
+              ~universe:[ (ax EN.Vendored, [ B.Stable ]) ] () ]
       in
       let static_spec =
         Canary_project_spec.project_spec_of_rows
           [ Canary_project_spec.artifact_row ~artifact:EN.a_lib
-              ~universe:[ (EN.Vendored, [ B.Stable ]) ] ();
+              ~universe:[ (ax EN.Vendored, [ B.Stable ]) ] ();
             Canary_project_spec.artifact_row
               ~artifact:(Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Cext)
-              ~universe:[ (EN.Vendored, [ B.Stable ]) ] () ]
+              ~universe:[ (ax EN.Vendored, [ B.Stable ]) ] () ]
       in
       (* find a chain containing build_binding_PYTHON (the first build chain
          is OCaml's — the specs declare Python bindings only) *)
@@ -1081,10 +1102,10 @@ let deploy_mismatch_test : pure_test =
       let spec =
         project_spec_of_rows
           [ artifact_row ~artifact:a_lib
-              ~universe:[ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ] ();
+              ~universe:[ (ax Fetched, [ B.Stable ]); (ax Built, [ B.Dev ]) ] ();
             artifact_row ~artifact:ocaml_b
               ~runtime:Canary_store.Independent
-              ~universe:[ (Fetched, [ B.Stable ]) ] () ]
+              ~universe:[ (ax Fetched, [ B.Stable ]) ] () ]
       in
       let asgs = enumerate_follows_tree ~policy:(full_policy ()) spec in
       (* Two independent roots: lib(2) × binding(1) = 2 scenarios *)

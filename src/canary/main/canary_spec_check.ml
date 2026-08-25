@@ -91,7 +91,7 @@ let has_built_axis (d : Canary_project_spec.artifact_row) : bool =
 let source_repo_of (pr : Canary_project_run.project_run) :
     Canary_artifact_source.source_repo option =
   List.find_map pr.pr_artifacts ~f:(fun d ->
-      match d.Canary_project_spec.ar_provider with
+      match Canary_project_spec.provider_of_row d with
       | Some (Canary_store_config.Repo r) -> Some r
       | Some (Canary_store_config.Repo_axes (r :: _)) -> Some r
       | _ -> None)
@@ -103,7 +103,7 @@ let check_dev_source (pr : Canary_project_run.project_run) : item =
   match row_of pr Canary_artifact.a_source with
   | Some d ->
       let detail =
-        match d.Canary_project_spec.ar_provider with
+        match Canary_project_spec.provider_of_row d with
         | Some p -> Canary_store_config.string_of_provider p
         | None -> "source row (no provider declared)"
       in
@@ -206,13 +206,28 @@ let check_stable_lib (pr : Canary_project_run.project_run) : item =
       { item_id = "stable_lib"; label; severity = Warn;
         detail = "no lib row — cannot baseline" }
   | Some d -> (
-      match d.Canary_project_spec.ar_provider with
-      | Some
-          (Canary_store_config.Sys_pkg _ | Canary_store_config.Vendored _
-          | Canary_store_config.Cached _) as p ->
-          { item_id = "stable_lib"; label; severity = Ok;
-            detail = Option.value_map p ~default:"" ~f:Canary_store_config.string_of_provider }
-      | _ ->
+      (* Reads the row's UNIVERSE since 2026-08-25, not a provider. The
+         old form asked whether the lib's provider was
+         [Sys_pkg | Vendored | Cached] — but [Vendored]/[Cached] were
+         never fetch origins, they were provisions wearing a provider's
+         type, which is the mismatch the spec model removed. The question
+         it means to ask is about admissible provisions: does this lib
+         have a stable point that does not require building it here? *)
+      let stable_point =
+        List.find_map d.Canary_project_spec.ar_universe ~f:(fun (spec, _) ->
+            match spec with
+            | Canary_store_config.Fetched (Canary_store_config.Sys_pkg _ as p)
+              ->
+                Some (Canary_store_config.string_of_provider p)
+            | Canary_store_config.Vendored_at at -> Some ("vendored: " ^ at)
+            | Canary_store_config.Fetched _ | Canary_store_config.Absent
+            | Canary_store_config.Built_from _ | Canary_store_config.Installed
+              ->
+                None)
+      in
+      match stable_point with
+      | Some detail -> { item_id = "stable_lib"; label; severity = Ok; detail }
+      | None ->
           { item_id = "stable_lib"; label; severity = Warn;
             detail =
               "no stable lib source declared (system pkg or vendored/cached archive)" })
@@ -226,7 +241,7 @@ let check_opam_package (pr : Canary_project_run.project_run) : item =
     let ocaml_rows = binding_rows pr Canary_lang.OCaml in
     let typed =
       List.find_map ocaml_rows ~f:(fun d ->
-          match d.Canary_project_spec.ar_provider with
+          match Canary_project_spec.provider_of_row d with
           | Some
               (Canary_store_config.Lang_pkg
                 { pm = Canary_store.Opam; package; versions; _ }) ->
@@ -424,7 +439,7 @@ let repo_contents_violations (pr : Canary_project_run.project_run) :
         | Canary_basic.Source | Canary_basic.Binding_source _ -> false
         | _ -> true
       in
-      match d.Canary_project_spec.ar_provider with
+      match Canary_project_spec.provider_of_row d with
       | Some (Canary_store_config.Repo r) when not_source ->
           if
             List.exists r.Canary_artifact_source.artifacts

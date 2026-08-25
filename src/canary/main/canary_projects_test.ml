@@ -1,5 +1,26 @@
 open Base
 
+(* ── coarse fixtures (2026-08-25) ──
+   A row now declares an ORIGIN per provision, not a bare provision. The
+   fixtures below test the AXIS shape — how many worlds a universe
+   produces, which chains apply — and have no realization to speak of, so
+   they need a placeholder origin. [ax] fabricates one, and its name says
+   it is about the axis; a real project must state where the artifact
+   actually comes from. *)
+let ax (pv : Canary_store.provision) :
+    Canary_store_config.provision_spec =
+  match pv with
+  | Canary_store.Absent -> Canary_store_config.Absent
+  | Canary_store.Fetched ->
+      Canary_store_config.Fetched
+        (Canary_store_config.Sys_pkg
+           (Canary_store.mk_system_package_spec ~linux_pkg:"fixture"
+              ~macos_pkg:"fixture" ()))
+  | Canary_store.Built -> Canary_store_config.Built_from Canary_artifact.a_source
+  | Canary_store.Installed -> Canary_store_config.Installed
+  | Canary_store.Vendored -> Canary_store_config.Vendored_at "/fixture"
+
+
 (** Project-spec PIN tests (A5 phases 1–5) — pure, hermetic checks that a
     live project's DECLARED [project_spec] enumerates to exactly its expected
     scenario set. These reference the real project modules, so they live in
@@ -77,6 +98,11 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     ~(dispatch_is_dev : Canary_artifact.assignment -> bool)
     ?(n_worlds = 5) ?(n_dev = 2) ?(n_stable = 3) ?(n_staged = 0)
     ?(n_forward = 0) () : Canary_project_test.pure_test list =
+  (* [artifacts] became unused when
+     [<prefix>.providers_match_baseline_provisions] retired (2026-08-25).
+     Kept in the signature: it is the ROWS, and the next per-project pin
+     that reads a declaration rather than an enumeration wants them. *)
+  ignore artifacts;
   let lib_prov a = Canary_enumerate.provision_of a Canary_artifact.a_lib in
   (* dev variant: the coherent build chain — source@Dev (ANY dev repo —
      latest or the fork), lib Built@Dev (C2: channel-level coupling) *)
@@ -183,30 +209,16 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
                String.equal
                  (source_of a).Canary_artifact_source.version.Canary_basic.id
                  (Canary_enumerate.version_of a Canary_artifact.a_source)
-                   .Canary_basic.id)) };
-    (* the provider table backs the BASELINE provisions — pin the drift
-       check `spec` performs at display time (provider's coarse provision
-       == the enumerated baseline placement, for every artifact the
-       enumeration places), so the declared detail can't contradict the
-       axis. *)
-    { name = prefix ^ ".providers_match_baseline_provisions";
-      check = (fun () ->
-        match enumerate_full spec with
-        | [] -> false
-        | baseline :: _ ->
-            List.for_all artifacts
-              ~f:(fun (d : Canary_project_spec.artifact_row) ->
-                match
-                  ( d.Canary_project_spec.ar_provider,
-                    Canary_enumerate.placement_of baseline d.Canary_project_spec.ar_artifact )
-                with
-                | None, _ -> true (* no provider declared — nothing to check *)
-                | Some _, None ->
-                    true (* display-only — no axis to contradict *)
-                | Some p, Some pl ->
-                    EN.equal_provision
-                      (Canary_store_config.provision_of_provider p)
-                      pl.Canary_artifact.provision)) } ]
+                   .Canary_basic.id)) } ]
+    (* [<prefix>.providers_match_baseline_provisions] RETIRED 2026-08-25.
+
+       It asserted that a row's single provider derived the same coarse
+       provision as the baseline scenario's placement — a drift check
+       between two declarations that had to be kept in step by hand. The
+       spec model removed the second declaration: a row now states one
+       [provision_spec] per admissible provision, the coarse axis is
+       [provision_of_spec] over it, and there is nothing left that could
+       drift. The type does what the pin used to watch for. *)
 
 let built_family a =
   let pv = Canary_enumerate.provision_of a Canary_artifact.a_lib in
@@ -364,7 +376,7 @@ let providing_arrow_pin : Canary_project_test.pure_test =
       in
       List.for_all tables
         ~f:(fun (d : Canary_project_spec.artifact_row) ->
-          match d.Canary_project_spec.ar_provider with
+          match Canary_project_spec.provider_of_row d with
           | None -> true
           | Some p -> (
               let id = d.Canary_project_spec.ar_artifact in
@@ -415,7 +427,7 @@ let providing_arrow_pin : Canary_project_test.pure_test =
          residue (ii), 2026-08-06): the dep_mode value source is the
          provider, not a hand-written annotation. *)
       && List.for_all tables ~f:(fun (d : Canary_project_spec.artifact_row) ->
-             match d.Canary_project_spec.ar_provider with
+             match Canary_project_spec.provider_of_row d with
              | Some p -> (
                  match Canary_store_config.dep_mode_of_provider p with
                  | Some (Canary_store.Ambient _) ->
@@ -1365,8 +1377,11 @@ let local_fork_pin : Canary_project_test.pure_test =
           { pr_name = "test-fork";
             pr_artifacts =
               [ Canary_project_spec.artifact_row ~artifact:Canary_artifact.a_source
-                  ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Dev ]) ]
-                  ~provider:(Canary_store_config.Repo repo) () ];
+                  ~universe:
+                    [ ( Canary_store_config.Fetched
+                          (Canary_store_config.Repo repo),
+                        [ Canary_basic.Dev ] ) ]
+                  () ];
             pr_runner_spec =
               (fun _a ~workspace:_ () ->
                 Canary_step_builder.empty_runner_spec);

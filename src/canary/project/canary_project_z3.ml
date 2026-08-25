@@ -390,7 +390,12 @@ let z3_python_provider =
 let z3_artifacts : Canary_project_spec.artifact_row list =
   let open Canary_project_spec in
   [ artifact_row ~artifact:a_source
-      ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
+      ~universe:
+        [ ( Canary_store_config.Fetched
+              (Canary_store_config.Repo_axes
+                 [ z3_source_stable; z3_source_latest; z3_source_dev;
+                   z3_source_pre_10549 ]),
+            Canary_basic.[ Stable; Dev ] ) ]
       (* C2 (2026-08-16): per-channel repo pins — stable, official dev
          (latest), the arbipher fork, and the pre-10549 ref: one
          identity-bearing scenario per repo.
@@ -403,14 +408,15 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
          The precise rule replaced it in the enumeration
          ({!Canary_enumerate.source_ref_ok}): a world that builds nothing
          from the source keeps only the canonical ref. *)
-      ~provider:
-        (Canary_store_config.Repo_axes
-           [ z3_source_stable; z3_source_latest; z3_source_dev;
-             z3_source_pre_10549 ])
       ();
     artifact_row ~artifact:a_lib
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]);
-                  (Built, [ Canary_basic.Dev ]);
+      ~universe:[ ( Canary_store_config.Fetched
+                      (Canary_store_config.Sys_pkg
+                         (Canary_store.mk_system_package_spec ~linux_pkg:"z3"
+                            ~macos_pkg:"z3" ())),
+                    [ Canary_basic.Stable ] );
+                  (Canary_store_config.Built_from a_source,
+                   [ Canary_basic.Dev ]);
                   (* the installed-consumer worlds (2026-08-19, the
                      provider-exclusive-rows model — the `--installed`
                      realization policy promoted to an ENUMERATION axis):
@@ -418,11 +424,8 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
                      staged consumer face as its own world. The chain
                      builds like Built (the built family) and then stages;
                      the probe reads the install prefix. *)
-                  (Installed, [ Canary_basic.Dev ]) ]
-      ~provider:
-        (Canary_store_config.Sys_pkg
-           (Canary_store.mk_system_package_spec ~linux_pkg:"z3"
-              ~macos_pkg:"z3" ())) ();
+                  (Canary_store_config.Installed, [ Canary_basic.Dev ]) ]
+      ();
     artifact_row ~artifact:(a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
       (* NO [~follows:a_lib] (2026-08-19, user — the mismatch matrix): the
          binding's channel is its OWN axis, so the lib pair × the binding
@@ -431,10 +434,10 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
          cells unrepresentable. What still couples is the binding to the
          SOURCE it is built from ({!Canary_enumerate.binding_couples}) —
          you cannot build a dev binding from the stable tree. *)
-      ~universe:[ (Built, [ Canary_basic.Dev ]);
-                  (Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:
-        (Canary_store_config.Lang_pkg
+      ~universe:[ (Canary_store_config.Built_from a_source,
+                   [ Canary_basic.Dev ]);
+                  ( Canary_store_config.Fetched
+                      (Canary_store_config.Lang_pkg
            { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
              package = "z3"; self_contained = false;
              (* STORE PIN (2026-08-12): the Fetched binding pins the
@@ -445,11 +448,14 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
              versions =
                Some
                  [ { Canary_store_config.pin_version = "4.16.0";
-                     install_name = None } ] })
+                     install_name = None } ] }),
+                    [ Canary_basic.Stable ] ) ]
       ();
     artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Ctypes)
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:z3_python_provider () ]
+      ~universe:
+        [ ( Canary_store_config.Fetched z3_python_provider,
+            [ Canary_basic.Stable ] ) ]
+      () ]
 
 (** ONE derivation of a ref's three paths — checkout, build tree, staging
     prefix (2026-08-19). [z3_table_rows] builds commands from them and

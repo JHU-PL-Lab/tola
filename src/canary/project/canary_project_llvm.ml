@@ -409,24 +409,28 @@ let llvm_python_provider =
 let llvm_artifacts : Canary_project_spec.artifact_row list =
   let open Canary_project_spec in
   [ artifact_row ~artifact:a_source
-      ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
       (* C2 (2026-08-16): the 3-way — stable, official dev (latest), and
          the arbipher fork, as per-channel repo pins: one identity-bearing
          scenario per repo. *)
-      ~provider:
-        (Canary_store_config.Repo_axes
-           [ llvm_source_stable; llvm_source_latest; llvm_source_dev ])
+      ~universe:
+        [ ( Canary_store_config.Fetched
+              (Canary_store_config.Repo_axes
+                 [ llvm_source_stable; llvm_source_latest; llvm_source_dev ]),
+            Canary_basic.[ Stable; Dev ] ) ]
       ();
     artifact_row ~artifact:a_lib
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]);
-                  (Built, [ Canary_basic.Dev ]) ]
-      ~provider:(Canary_store_config.Sys_pkg prebuilt.system_package) ();
+      ~universe:
+        [ ( Canary_store_config.Fetched
+              (Canary_store_config.Sys_pkg prebuilt.system_package),
+            [ Canary_basic.Stable ] );
+          (Canary_store_config.Built_from a_source, [ Canary_basic.Dev ]) ]
+      ();
     artifact_row ~artifact:(a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
       ~follows:a_lib
-      ~universe:[ (Built, [ Canary_basic.Dev ]);
-                  (Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:
-        (Canary_store_config.Lang_pkg
+      ~universe:[ (Canary_store_config.Built_from a_source,
+                   [ Canary_basic.Dev ]);
+                  ( Canary_store_config.Fetched
+                      (Canary_store_config.Lang_pkg
            { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
              package = prebuilt.opam_package; self_contained = false;
              (* STORE PIN (2026-08-12): the stable chain's binding pins the
@@ -437,11 +441,14 @@ let llvm_artifacts : Canary_project_spec.artifact_row list =
              versions =
                Some
                  [ { Canary_store_config.pin_version = "19-shared";
-                     install_name = None } ] })
+                     install_name = None } ] }),
+                    [ Canary_basic.Stable ] ) ]
       ();
     artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Ctypes)
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:llvm_python_provider () ]
+      ~universe:
+        [ ( Canary_store_config.Fetched llvm_python_provider,
+            [ Canary_basic.Stable ] ) ]
+      () ]
 
 let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
   let open Canary_action_templates in

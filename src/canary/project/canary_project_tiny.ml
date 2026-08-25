@@ -103,13 +103,19 @@ let tiny_artifact_table : Canary_project_spec.artifact_row list =
     | _ -> None
   in
   Base.List.map artifacts ~f:(fun id ->
-      let axes = Canary_artifact.axes [ (Canary_artifact.Vendored, [ Canary_basic.Stable ]) ] in
-      { Canary_project_spec.ar_artifact = id;
-        Canary_project_spec.ar_axes = axes;
-        Canary_project_spec.ar_provider = provider_of_kind (Canary_artifact.kind_of id);
-        (* tiny is the in-tree witness: every artifact is vendored from
-           the repo by construction, which is the whole point of it *)
-        Canary_project_spec.ar_rationale = None })
+      (* tiny is the in-tree witness: every artifact is vendored from the
+         repo by construction, which is the whole point of it. The path
+         each one sits at was [provider_of_kind]'s [Vendored] payload and
+         is now the [Vendored_at] the row declares. *)
+      let at =
+        match provider_of_kind (Canary_artifact.kind_of id) with
+        | Some (Canary_store_config.Vendored p) -> p
+        | _ -> "canary/examples/tiny (in-tree witness)"
+      in
+      Canary_project_spec.artifact_row ~artifact:id
+        ~universe:
+          [ (Canary_store_config.Vendored_at at, [ Canary_basic.Stable ]) ]
+        ())
 
 (** tiny-full as a [project_run] the generic runner consumes. Its [pr_runner_spec]
     ASSEMBLES tiny's vendored cached artifacts into a tree (all-good ⇒ the witness

@@ -649,18 +649,25 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
             Canary_basic.Dev)
         d.sources
     in
-    if dev then [ (Fetched, [ Canary_basic.Stable ]); (Built, [ Canary_basic.Dev ]) ]
-    else [ (Fetched, [ Canary_basic.Stable ]) ]
+    let fetched =
+      Canary_store_config.Fetched
+        (Canary_store_config.Lang_pkg
+           { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+             package = d.opam_pkg; self_contained = false; versions = None })
+    in
+    if dev then
+      [ (fetched, [ Canary_basic.Stable ]);
+        (* built from the binding's OWN source when the project declares
+           one (zarith: ocaml/Zarith, not the lib's repo) — the row now
+           says which, where [build_deps_of] used to assume the lib's *)
+        (Canary_store_config.Built_from (source_artifact_of d),
+         [ Canary_basic.Dev ]) ]
+    else [ (fetched, [ Canary_basic.Stable ]) ]
   in
   let binding_row =
     Canary_project_spec.artifact_row
       ~artifact:(a_binding Canary_lang.OCaml d.binding_mechanism)
-      ~universe:binding_universe
-      ~provider:
-        (Canary_store_config.Lang_pkg
-           { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
-             package = d.opam_pkg; self_contained = false; versions = None })
-      ()
+      ~universe:binding_universe ()
   in
   (* the lib row: the system package's Fetched column ONLY — the
      prebuilt-shadows-source rule (2026-08-17): no source-built lib
@@ -672,11 +679,20 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
        built here nor PM-resolved — and is PREPARED before any run
        (`canary prebuilt`), so no scenario depends on the network. *)
     let universe =
+      let sys =
+        Canary_store_config.Fetched
+          (Canary_store_config.Sys_pkg
+             { Canary_store.linux_pkg = d.system_pkg_linux;
+               macos_pkg = d.system_pkg_macos; version_tag = None;
+               locator_hint = None; behavior = Canary_store.Stateful_global })
+      in
       match d.prebuilt_latest with
-      | None -> [ (Fetched, [ Canary_basic.Stable ]) ]
-      | Some _ ->
-          [ (Fetched, [ Canary_basic.Stable ]);
-            (Vendored, [ Canary_basic.Dev ]) ]
+      | None -> [ (sys, [ Canary_basic.Stable ]) ]
+      | Some pb ->
+          [ (sys, [ Canary_basic.Stable ]);
+            ( Canary_store_config.Vendored_at
+                (Canary_prebuilt.libdir_of pb (Canary_basic.detect_distro ())),
+              [ Canary_basic.Dev ] ) ]
     in
     let rationale =
       match d.prebuilt_latest with
@@ -691,13 +707,7 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
              sourcing rule and why this lib has no second point."
             d.system_pkg_linux
     in
-    Canary_project_spec.artifact_row ~artifact:a_lib ~universe ~rationale
-      ~provider:
-        (Canary_store_config.Sys_pkg
-           { Canary_store.linux_pkg = d.system_pkg_linux;
-             macos_pkg = d.system_pkg_macos; version_tag = None;
-             locator_hint = None; behavior = Canary_store.Stateful_global })
-      ()
+    Canary_project_spec.artifact_row ~artifact:a_lib ~universe ~rationale ()
   in
   let source_rows =
     match d.sources with
@@ -715,8 +725,11 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
         in
         [ Canary_project_spec.artifact_row
             ~artifact:(source_artifact_of d)
-            ~universe:[ (Fetched, channels) ]
-            ~provider:(Canary_store_config.Repo_axes sources) () ]
+            ~universe:
+              [ ( Canary_store_config.Fetched
+                    (Canary_store_config.Repo_axes sources),
+                  channels ) ]
+            () ]
   in
   lib_row :: binding_row :: source_rows
 
