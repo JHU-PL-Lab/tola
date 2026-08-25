@@ -104,31 +104,66 @@ package manager's problem, not a general algorithm principle).
 
 ## The pipeline
 
+Each pass, with what it takes and what it hands on:
+
+| # | pass | in | out | function |
+| --- | --- | --- | --- | --- |
+| 1 | **declare** | `artifact_row list` | `project_spec` | `project_spec_of_rows` |
+| | *(branch)* | `project_spec` | applicable chains | `chain_applicable` over the 38 |
+| 2 | **enumerate** | `project_spec` | `assignment list` — every world the project HAS | `enumerate_product` ∘ 5 constraints |
+| 3 | **select** | `assignment list` | `assignment list` — what this RUN asked for | `select` |
+| 4 | **order** | `assignment list` | `assignment list` — same elements, resequenced | `scenarios_in_run_order` |
+| 5 | **realize** | one `assignment` | `step list` | `realize ∘ dispatch` then `derive_steps` |
+
 ```
-project module        declares artifact_rows
-  │                     identity + one ORIGIN per admissible provision
-  ▼  1 declare
-project_spec          artifact × (provision × channels)
+artifact_row list
+  ▼  1 declare                      ├──▶ applicable chains (spec alone)
+project_spec
+  ▼  2 enumerate     product × 5 constraints
+assignment list      — every world the project HAS
+  ▼  3 select        --thin, --refs
+assignment list      — what this run asked for
+  ▼  4 order         stable sort on store_state_key
+assignment list      — same elements, resequenced
+  ▼  5 realize       per assignment
+step list  ─────────────────────────────────── the object code
   │
-  ├──────────────▶    APPLICABLE CHAINS          ← spec alone, no policy
-  │                     38 universal chains, filtered by what this
-  │                     project declares (chain_applicable)
-  │
-  ▼  2 enumerate      the product over provision × version,
-assignment list         each level-resolved PER ARTIFACT,
-  │                     then FIVE constraints prune  ──►  stage2_filters.md
-  │                   paired with the chains that match  ──►  a SCENARIO
-  ▼  3 select         the worlds this run asked for (--thin, --refs)
-selected              ──►  stage3_select.md
-  │
-  ▼  4 order          identity = scenario_dir_of; order = store_state_key
-ordered scenarios     ──►  stage4_order.md
-  │
-  ▼  5 realize        pr_runner_spec = realize ∘ dispatch; derive_steps
-step list → verdicts  ──►  stage5_realize.md
-  │
-  └─ actions.log, read afterwards by `canary result` / `status`
+  ├──▶ run_graph          execute here          → actions.log → verdicts
+  ├──▶ render_gh_step     GitHub Actions YAML
+  ├──▶ mermaid_of_steps   diagram (muted)
+  └──▶ render_steps_data  HTML page
 ```
+
+**Passes 3 and 4 are endomorphisms** — `assignment list → assignment
+list`. 3 removes, 4 reorders, and neither invents. That is what makes
+them cheap to reason about and why `select.is_a_subset_of_stage2` and
+`run_order.groups_by_store_state` can each state their whole contract in
+one line.
+
+**The step list is the object code, and the backends are targets.** Four
+of them consume it, and **executing is one of the four**, not a stage
+above them: `run_graph` runs it here, `render_gh_step` emits CI YAML,
+`mermaid_of_steps` draws it, `render_steps_data` renders the page. So the
+chain is 1–5 and then a fan-out, not 1–6 — numbering the targets would
+imply a sequence where there is a choice.
+
+**Pass 4 is a performance pass, not a correctness one.** The runner runs
+whatever order it is given; ordering only changes how many times a
+single-valued store is re-pinned (measured: sqlite 9 real swaps → 2, and
+z3's `fetch_binding_ocaml` accumulating 344 s in one sampled window
+because six of sixteen rows each rebuilt libz3). It is safe to reorder
+*because* `pin_check_post` re-pins whenever the pin is not held — the
+property is earned by pass 4 §2's verify-or-set discipline, not free.
+
+**Identity is applied twice, at two granularities**, and pass 4 does not
+own the second one. `scenarios_of` dedups on the canonical assignment
+string; the runner's loop dedups again on `scenario_dir_of`, which is
+COARSER because an ambient (unpinned) `Fetched` version is not part of a
+scenario's identity. Both are needed — the second is where
+`Fetched@Stable` and `Fetched@Dev` collapse into one run — but it means
+the coarse collapse happens inside pass 5's loop rather than in the pass
+named for identity. One of the things the open redesign question below
+would tidy.
 
 **A scenario is a chain PLUS coordinates** — which is what
 [`stage0_naming.md`](stage0_naming.md) has always said it is, and the
@@ -291,7 +326,10 @@ them accumulated four things that are not part of that model:
   and thin);
 - **chain applicability with nowhere to live** — a real spec-only
   derivation that is neither a pass nor a dump, and hides inside
-  `patterns_of`.
+  `patterns_of`;
+- **identity applied twice, in two passes** — the canonical-assignment
+  dedup in pass 2 and the coarser `scenario_dir_of` dedup inside pass 5's
+  loop, so the pass named for identity owns neither.
 
 Each has a reason in its history and none is a bug. But four accidents
 around two ideas is the shape of something that would come out simpler if

@@ -1,8 +1,12 @@
 # Pass 5 — realize: commands, steps, execution
 
 **Kind: rationale.** Pass 5 of five, the last. Standalone. Pass 4 hands
-over an ordered list of scenarios; this one turns each into commands,
-runs them, and decides
+over an ordered list of scenarios; this one turns each into a **step
+list** — the pipeline's object code — and then a backend consumes it.
+EXECUTING is one of four backends, not a stage above them: `run_graph`
+runs it here, `render_gh_step` emits GitHub Actions YAML,
+`mermaid_of_steps` draws it, `render_steps_data` renders the page. This
+doc covers making the step list, running it, and deciding
 what happened. The map is [`README.md`](README.md).
 
 > Created 2026-08-24, closing the last stage gap. It ABSORBED
