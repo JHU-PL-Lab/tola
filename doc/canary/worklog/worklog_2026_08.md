@@ -133,6 +133,35 @@ tiny-full agnostic detection from a real 3/24 to an honest, stable **12/24**
 Project-file review recorded in `status.md` §1c (three-tier project-definition
 split; the convergence target).
 
+## 2026-08-23 → 08-25 — the enumeration doc consolidation
+
+Where each doc went, moved out of `design/enumeration/README.md` on
+2026-08-25: the map should say what EXISTS, and a reader arriving to
+understand the enumeration does not need the history of the files.
+
+2026-08-23, user: *"each stage (layer) should be standalone enough."* A
+doc that spans stages is not a component doc, so the material moved into
+one standalone document per pass. Completed 2026-08-25; the naming
+scheme is `stage<N>_<verb>_<IR out>.md`.
+
+- **Absorbed into a pass doc.** `repo_model.md` + `versioning.md` →
+  pass 1 (purged 2026-08-23). `why_ledger.md` → pass 2 *Attribution*
+  (2026-08-25) — it was a proposal about pass 2's constraints.
+- **Retired once landed.** `emit_stages.md`, the proposal that produced
+  the passes: its steps landed, so it became code rationale rather than
+  a design plan and moved into the README (how to look at a pass, layers
+  vs passes, the invariants) and the per-pass docs.
+- **Left the directory rather than being kept.**
+  `algorithm_explainer.md` (the walkthrough that predated the README —
+  its sections went to the passes they belonged to);
+  `run_model_revisit.md` (findings → pass 5 §7 and `../artifact_cache.md`
+  §6, to-dos → the tracker); `staged_parity.md` → `../staged_parity.md`
+  (a checking principle, not a pass); `store_switching.md` →
+  `../../project/opam_exclusive_store_issue.md` (one package manager's
+  problem, not a general algorithm principle); `matrix.md` →
+  `../matrix.md` (reporting reads `actions.log`, so it is a consumer of
+  the pipeline, not a stage in it).
+
 ## 2026-08-04 — convergence + views arc (flushed from status.md 2026-08-05)
 
 One-line-each chronicle of the items that lived in status §A/§F while active:

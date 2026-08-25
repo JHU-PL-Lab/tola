@@ -52,56 +52,10 @@ Four steps, ~45 minutes, and you can stop after any of them:
 `main/canary_pipeline.ml` names them all in order — that one is the
 30-second version of this page.
 
-**What to be skeptical of.** These docs describe an implementation that
-moved under them this week. Where a doc and the code disagree, the code
-is right and the doc is a bug — the pass tables below name the pins for
-each pass, and `canary project-test` is the arbiter.
-
-## Per-stage consolidation — in progress
-
-2026-08-23, user: *"each stage (layer) should be standalone enough."* A
-doc that spans stages is not a component doc, so the material is being
-moved into one standalone document per stage, gradually.
-
-| # | pass | doc | state |
-| --- | --- | --- | --- |
-| — | *vocabulary* (not a pass) | [`stage0_naming.md`](stage0_naming.md) | the four senses, the naming scheme, the fault tags |
-| 1 | **declare** | [`stage1_declare_spec.md`](stage1_declare_spec.md) | what a project states — absorbed `repo_model.md` + `versioning.md` |
-| 2 | **enumerate** | [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) | the product and the five constraints that prune it |
-| 3 | **select** | [`stage3_select_worlds.md`](stage3_select_worlds.md) | what a RUN asked for — landed 2026-08-24 |
-| 4 | **order** | [`stage4_order_worlds.md`](stage4_order_worlds.md) | identity, exclusive resources, run order |
-| 5 | **realize** | [`stage5_realize_steps.md`](stage5_realize_steps.md) | commands, steps, execution, the cache |
-
-**Reporting is NOT a pass.** It was numbered 6 until 2026-08-24; the
-matrix is built by `canary result`, which READS `actions.log` after a
-run, so the pipeline's dataflow ends at pass 5 writing verdicts. The
-matrix doc moved out accordingly: [`../matrix.md`](../matrix.md).
-
-Five passes. Each answers to both its name and its index:
-`canary emit <project> --stage select` is `--stage 3`.
-
-**Every pass has a standalone doc.** The other two files are proposals:
-[`multi_lib.md`](multi_lib.md) (`A_lib` now carries an optional name, but a
-project cannot declare a second C lib) and
-[`resolve_placements.md`](resolve_placements.md) (nothing resolves a
-placement to a concrete location, and three types describe one idea). A
-third, `why_ledger.md`, was absorbed into
-[`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) *Attribution* on 2026-08-25 — it
-was a proposal about pass 2's constraints and belonged with them.
-
-`emit_stages.md`, the proposal that produced the passes, retired
-2026-08-24: once its steps landed it was code rationale, not a design
-plan, so it moved here (how to look at a pass, layers vs passes, the
-invariants) and into the per-pass docs. Only `--why` was still proposed, and it now
-lives in [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) *Attribution*.
-
-Four docs left rather than being kept: `algorithm_explainer.md` (the
-walkthrough that predated this README — its sections went to the stages
-they belonged to), `run_model_revisit.md` (findings to stage 5 §7 and
-`../artifact_cache.md` §6; to-dos to the tracker), `staged_parity.md` →
-`../staged_parity.md` (a checking principle, not a stage), and
-`store_switching.md` → `../../project/opam_exclusive_store_issue.md` (one
-package manager's problem, not a general algorithm principle).
+**What to be skeptical of.** Where a doc and the code disagree, the code
+is right and the doc is a bug. The pass table below names the pins for
+each pass, and `canary project-test` is the arbiter — a claim with no pin
+behind it is the one to distrust first.
 
 ## The pipeline
 
@@ -222,6 +176,35 @@ caller that supplies faults is `tiny_policy` in
 project. So: two axes here, provision and version. The mutation is
 tiny-factory machinery that happens to ride the same product.
 
+## The five passes — doc, code, pins
+
+One row per pass. Everything about a pass is reachable from its row: the
+doc that explains it, the code that is it, and the pins that would fail
+if the two drifted apart.
+
+| # | pass | what happens | doc | code | pins |
+| --- | --- | --- | --- | --- | --- |
+| — | *vocabulary* (not a pass) | the types every pass reuses: `artifact_kind`, `provision`, `channel`, `version`, `build_id`, `artifact_info`, `placement`, `assignment`, `dep_mode` | [`stage0_naming.md`](stage0_naming.md) (the four senses of "scenario"), [`../ssot.md`](../ssot.md) (IDs) | `base/canary_basic.ml`, `base/canary_store.ml`, `base/canary_artifact.ml` | `vocab.binding_source_off_tree`, `vocab.lib_name_optional`, `surface.split_keeps_checks_drops_provenance`, `scenario.lower_expectation_agnostic_c1` |
+| 1 | **declare** | a project states which artifacts exist, at which provisions and versions, and who provides each | [`stage1_declare_spec.md`](stage1_declare_spec.md) | `action/canary_project_spec.ml` (`artifact_row`, `project_spec_of_rows`), `base/canary_artifact.ml` (`artifact_axes`), `tool/canary_store_config.ml` (`provision_spec`) | `enumerate.project_spec_sqlite_shape`, `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`, `enumerate.per_provision_versions`, `repo_model.axes_pins`, `repo_model.contents_invariant`, `spec.vendored_prebuilt_pair`, `spec.pm_dep_gate_groups`, `sqlite.provider_rows`, `z3.provider_rows` |
+| 2 | **enumerate** | the product, then the five constraints that prune it | [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) | `action/canary_enumerate.ml` (`enumerate_product`, then `assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`) | `enumerate.config_levels`, `enumerate.subset_intersects_universe`, `enumerate.shadow_policy_drops_same_cell_built`, `enumerate.point_to_assignment_fold`, `enumerate.two_projections_and_filter`, `enumerate.version_axis`, `enumerate.built_from_of_assignment`, `enumerate.mismatch_direction`, `enumerate.deploy_mismatch`, `shadow.policy_ladder` |
+| 3 | **select** | narrow to what THIS run asked for — `--thin`, `--refs` | [`stage3_select_worlds.md`](stage3_select_worlds.md) | `action/canary_enumerate.ml` (`select`, `selection_of_policy`, `unselected`, `ref_filter`) | `select.is_a_subset_of_stage2`, `select.full_policy_selects_everything`, `select.thin_post_filter_equals_universe_restriction`, `enumerate.thin_is_version_subset`, `enumerate.refs_subset` |
+| 4 | **order** | which assignments are the SAME scenario, and in what order they run | [`stage4_order_worlds.md`](stage4_order_worlds.md) | `project/canary_project_run.ml` (`scenarios_of`, `scenario_dir_of`, `store_state_key`, `scenarios_in_run_order`) | `run_order.groups_by_store_state`, `world.one_vocabulary`, `matrix.registry_shape`, `z3.install_prefix_isolated`, `z3.env_guard_paths` |
+| 5 | **realize** | assignment → commands → steps; then a backend consumes them | [`stage5_realize_steps.md`](stage5_realize_steps.md), [`../action_playbook.md`](../action_playbook.md) to add an action | `project/*` (`pr_runner_spec = realize ∘ dispatch`), `action/canary_step_builder.ml` (`derive_steps`), `action/canary_action.ml` (`node_of_assignment`, `close_deps`, `execution_plan`) | `action.node_of_assignment_chain`, `action.close_deps_deploy_mismatch`, `action.execution_plan_topo_and_edges`, `arrow.providing_action_total_and_consistent`, `enumerate.dispatch_coordinate_reads`, `z3.dispatch_reads_source_placement`, `derive.fetch_lib_matches_helper`, `probe_invariant.consumes_eq_artifacts` |
+| *(consumer)* | reporting | what a row is and what names it — READS `actions.log`, so not a pass | [`../matrix.md`](../matrix.md) | `main/canary_matrix.ml`, `backend/canary_status.ml`, `backend/canary_html.ml` | `matrix.row_index`, `matrix.row_order`, `matrix.cell_stage_progression`, `matrix.setting_block_identifies_world`, `matrix.marks_from_log` |
+
+**Reporting is not a pass.** It was numbered 6 until 2026-08-24; the
+matrix is built by `canary result`, which reads `actions.log` *after* a
+run, so the pipeline's dataflow ends at pass 5 writing verdicts.
+
+**The two proposals** in this directory are not passes either:
+[`multi_lib.md`](multi_lib.md) (a second C lib — naming landed
+2026-08-25, `rp_build` and a per-slot action role remain) and
+[`resolve_placements.md`](resolve_placements.md) (nothing resolves a
+placement to a concrete location, and three types describe one idea).
+[`../staged_parity.md`](../staged_parity.md) is cross-cutting: it
+perturbs pass 1 (Installed is a provision, so a staged consumer is a
+world) and pass 5 (build-vs-install parity is a check).
+
 ## Looking at a pass
 
 Every stage boundary is a **total function over a distinct first-class
@@ -299,24 +282,6 @@ Short list, each learned from something that went wrong:
   construction built it.
 - **Passes 1–4 are pure; pass 5 is not.** Deriving steps applies
   `pr_runner_spec` — see [`stage5_realize_steps.md`](stage5_realize_steps.md) §9.
-
-## Stage → code → doc → pins
-
-| stage                   | what happens                                                                                                                                       | code                                                                                                                                                                                                     | doc                                                                                                                                                                                                                                    | pins                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **0. vocabulary**       | the types every stage reuses: `artifact_kind`, `provision`, `channel`, `version`, `build_id`, `artifact_info`, `placement`, `assignment`, `dep_mode` | `base/canary_basic.ml`, `base/canary_store.ml`, `base/canary_artifact.ml`                                                                                                                                | [`../ssot.md`](../ssot.md) (IDs), [`stage0_naming.md`](stage0_naming.md) (the four senses of "scenario")                                                                                                                                         | `vocab.binding_source_off_tree`, `surface.split_keeps_checks_drops_provenance`, `scenario.lower_expectation_agnostic_c1`                                                                                                                                                                                                                                                                                           |
-| **1. declaration**      | a project states which artifacts exist, at which provisions, at which versions, and who provides each                                              | `action/canary_project_spec.ml` (`artifact_row`, `project_spec_of_rows`), `base/canary_artifact.ml` (`axes = {ax_universe; ax_runtime; ax_follows; ax_pins}`), `tool/canary_store_config.ml` (providers) | **[`stage1_declare_spec.md`](stage1_declare_spec.md)** — THE stage-1 doc, standalone (absorbed `repo_model.md` + `versioning.md`, purged 2026-08-23). Background: [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) what a pin costs, [`multi_lib.md`](multi_lib.md) what cannot be declared | `enumerate.project_spec_sqlite_shape`, `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`, `enumerate.per_provision_versions`, `repo_model.axes_pins`, `repo_model.contents_invariant`, `spec.vendored_prebuilt_pair`, `spec.pm_dep_gate_groups`, `sqlite.provider_rows`, `z3.provider_rows`                                                                                                   |
-| **2. enumeration**      | the product, then the constraints that prune it                                                                                                    | `action/canary_enumerate.ml` (`run_config`, `enumerate_points`, `assignment_of_point`, then `assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`)            | **[`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md)** — the product and the five constraints                                                                                                                            | `enumerate.config_levels`, `enumerate.subset_intersects_universe`, `enumerate.thin_is_version_subset`, `enumerate.refs_subset`, `enumerate.shadow_policy_drops_same_cell_built`, `enumerate.point_to_assignment_fold`, `enumerate.two_projections_and_filter`, `enumerate.version_axis`, `enumerate.built_from_of_assignment`, `enumerate.mismatch_direction`, `enumerate.deploy_mismatch`, `shadow.policy_ladder` |
-| **3. identity + order** | which assignments are the SAME scenario, and in what order they run                                                                                | `project/canary_project_run.ml` (`scenarios_of`, `scenario_dir_of`, `store_state_key`, `scenarios_in_run_order`)                                                                                         | **[`stage4_order_worlds.md`](stage4_order_worlds.md)** — THE stage-3 doc, standalone. Background: [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md) (the opam instance)                                                                                                  | `run_order.groups_by_store_state`, `matrix.registry_shape`, `z3.install_prefix_isolated`, `z3.env_guard_paths`, `world.one_vocabulary`                                                                                                                                                                                                                                                                                                                                                         |
-| **4. realization**      | assignment → commands → steps; and the parallel node-graph view                                                                                    | `project/*` (`pr_runner_spec = realize ∘ dispatch`), `action/canary_step_builder.ml` (`derive_steps`), `action/canary_action.ml` (`node_of_assignment`, `close_deps`, `execution_plan`)                  | **[`stage5_realize_steps.md`](stage5_realize_steps.md)** — THE stage-4 doc, standalone. [`../action_playbook.md`](../action_playbook.md) to add an action                                                                                                          | `action.node_of_assignment_chain`, `action.close_deps_deploy_mismatch`, `action.execution_plan_topo_and_edges`, `arrow.providing_action_total_and_consistent`, `enumerate.dispatch_coordinate_reads`, `z3.dispatch_reads_source_placement`, `derive.fetch_lib_matches_helper`, `probe_invariant.consumes_eq_artifacts`                                                                                             |
-| *(consumer)* — reporting        | what a row is and what names it                                                                                                                    | `main/canary_matrix.ml`, `backend/canary_status.ml`, `backend/canary_html.ml`                                                                                                                            | [`../matrix.md`](../matrix.md)                                                                                                                                                                                                               | `matrix.row_index`, `matrix.row_order`, `matrix.cell_stage_progression`, `matrix.setting_block_identifies_world`, `matrix.marks_from_log`                                                                                                                                                                                                                                                                          |
-
-**Cross-cutting**, because they are not one stage:
-
-| doc                                            | what it perturbs                                                                                                     |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [`../staged_parity.md`](../staged_parity.md)         | stage 1 (Installed is a PROVISION, so a staged consumer is a WORLD) and stage 5 (build-vs-install parity is a check) |
-| [`multi_lib.md`](multi_lib.md)                 | stage 0/1 — naming landed; a second C lib still needs `rp_build` + a slot role                                        |
 
 ## What is NOT here
 
