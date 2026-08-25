@@ -5,10 +5,36 @@ enumerate --why` reports, per candidate the product generated, which
 constraint removed it — or that nothing did. The map is
 [`README.md`](README.md).
 
-> **2026-08-25 — build it.** The trigger below has fired: see *The
-> trigger for building it*. Previously postponed on the grounds that a
-> reader could reason the counts through in chat; that was tested during
-> a sweep and did not hold.
+> **2026-08-25 — build it.** The trigger below has fired. Previously
+> postponed on the grounds that a reader could reason the counts through
+> in chat; that was tested during a sweep and did not hold.
+
+## What it is, in one table
+
+Pass 2 forms a product of candidate worlds and five constraints prune it;
+today you see only the survivors. `--why` reports each candidate's
+**fate** — kept, or dropped and by which constraint.
+
+It is **not** an enhancement of `spec-check`. The two audit different
+objects, and both are STATIC — neither reads a run:
+
+| | `spec-check` | `--why` |
+| --- | --- | --- |
+| object | the **declaration** (pass 1), row by row | the **enumeration** (pass 2→3), candidate by candidate |
+| question | is this project's spec mature — does it declare what a landed project should? | given that declaration, why does the world set have exactly these members? |
+| answer shape | per-row ✓ / ⚠ / ✗ presence marks | per-candidate fate + reason |
+| arithmetic | none — it never multiplies anything | the whole point: `kept + dropped = the product` |
+
+The post-run family is elsewhere entirely — `status`, `result`, `verify`,
+`compat` all read `actions.log` or a probe. `--why` reads neither; it is
+a function of `(project_spec, policy)`, the same inputs as
+`emit <p> --stage 2`.
+
+**The independence is demonstrated, not asserted**: `spec-check
+tiny-full` reports **0 errors** while tiny-full enumerates one world
+where its docs claim six. Every row it needs is present and names a
+provider; what is wrong is that the rows COLLECTIVELY generate one
+world, and a presence audit has no way to notice that.
 
 > Split out of `why_ledger.md` on 2026-08-24, once everything else in
 > that proposal had landed and become rationale. The `emit` command, its
@@ -47,36 +73,32 @@ fates**, per candidate, not just the removals.
 
 **The trigger for building it — FIRED 2026-08-25, and not where this
 note expected.** The prediction was a NEW project whose scenario count
-surprises whoever landed it (ncurses, lmdb, sundials queued). What
-actually happened is that an EXISTING project's count was wrong and
-nobody could see it, during a routine sweep:
+surprises whoever landed it (ncurses, lmdb, sundials queued). Two things
+falsified that, both during a routine sweep. The per-project particulars
+are in [`../../project/issues.md`](../../project/issues.md) §1; what
+belongs here is the general lesson each carries.
 
-- Auditing the counts by hand from the emitted data failed twice. A
-  first product model ignored the pin axis and predicted z3 = 12 against
-  an actual 16; a second look found the pins ARE emitted (as `pins` on
-  the source row: `4.15.2, latest, arbipher, pre-10549`) but nest INSIDE
-  a channel rather than multiplying freely, so the product is not a
-  plain product. The denominator is the hard part, and it is the part
-  the ledger's `kept + dropped = the product` invariant makes explicit.
-- The audit then turned up a live discrepancy: `tiny-full` enumerates
-  **1** world where CLAUDE.md claims 6. Restoring the axes its own dead
-  `general_spec` declares yields **4**, not 6 — every `lib=built@dev`
-  candidate is pruned, and *which constraint removed them is still an
-  inference*, not a fact anyone can read off. Full finding in
-  [`../../project/issues.md`](../../project/issues.md) §1.
+**1. The denominator is the hard part, not the attribution.** This note
+assumed a reader could reason the counts through against a spec. Tried,
+and failed twice on real projects: a first product model ignored the pin
+axis; a second found that pins ARE emitted but nest INSIDE a channel
+rather than multiplying freely, so the product is not a plain product.
+`kept + dropped = the product` is valuable less because it attributes
+drops than because it forces the denominator to be *stated*.
 
-That is the ledger's exact use case, on a project that has been landed
-for weeks: *"I expected 6, I got 4, and I cannot tell you what ate the
-other 2."* The forcing case was never going to be a new landing — a new
-landing has someone's attention on it. It is a project nobody is looking
-at, where a count drifts and the pins record the drift.
+**2. The forcing case is a project nobody is looking at.** A new landing
+has someone's attention on it; a landed project's count can drift for
+weeks. What surfaced was an existing project enumerating far fewer worlds
+than its own documentation claims, with the axes declared in code nothing
+reads — and *which constraint removed the missing candidates is still an
+inference*, which is the ledger's use case verbatim.
 
-**A second thing this argues for.** The pins encoded `("tiny-full", 1)`
-rather than failing, so the ratchet recorded the new number instead of
-contesting it. A count pin cannot distinguish "this project legitimately
-has N worlds" from "this project lost N worlds and someone updated the
-number". A ledger can: kept + dropped = the product, with a reason per
-drop, is a claim about *structure* and does not silently re-baseline.
+**3. Count pins re-baseline; a structural claim does not.** The count in
+question was pinned — at its WRONG value. A count pin cannot distinguish
+"this project legitimately has N worlds" from "this project lost some and
+someone updated the number", because updating the number is how you make
+it pass. `kept + dropped = the product`, with a reason per drop, is a
+claim about structure: there is no number to quietly move.
 
 **What it will need, unchanged:** three of the five constraints are
 already `-> bool` predicates, so attribution is a recorder around them;

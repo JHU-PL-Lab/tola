@@ -248,6 +248,25 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
 
 ### Address first
 
+0. [ ] **`spec-check` checks a stable lib EXISTS, never that a lib PAIR
+   does** — found 2026-08-25 while auditing tiny-full. `check_stable_lib`
+   does a `List.find_map` for the first admissible stable point and
+   returns `Ok` on it; a row with exactly one universe cell passes. But
+   the stated bar for every project is the 2×2 minimum (user, 2026-08-19:
+   "the minimum meaningful requirement for any project, like a lower
+   bound"), which needs a *pair*. So `spec-check tiny-full` reports 0
+   errors while tiny-full enumerates ONE world — see
+   [`issues.md`](issues.md) §1. The gap is general: spec-check is a
+   PRESENCE audit and never multiplies anything, so no combination of its
+   checks can notice that the declared rows collectively generate one
+   world. Cheapest fix with the widest reach of anything in this file:
+   `stable lib` gains a sibling `lib pair` that counts admissible points
+   on the lib row and warns below two. Ships with a pin per project's
+   expected verdict. Cheaper than, and complementary to, the per-candidate
+   ledger ([`../design/enumeration/why_ledger.md`](../design/enumeration/why_ledger.md)):
+   this one says the declaration is too thin, that one says which
+   constraint ate a world you expected.
+
 **Residue of the 2026-08-17 active plan** — items 2-4 (Publish
 generalization, the shadow mechanism, zarith's binding_decls) landed and
 are chronicled in the worklog; this one is what remains:
