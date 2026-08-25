@@ -276,10 +276,9 @@ let check_python_binding (pr : Canary_project_run.project_run) : item =
   | rows ->
       let mechs =
         List.filter_map rows ~f:(fun d ->
-            match Canary_artifact.ext_of d.Canary_project_spec.ar_artifact with
-            | Canary_artifact.Ext_mechanism m ->
-                Some (Canary_mechanism.string_of_mechanism m)
-            | _ -> None)
+            Option.map
+              (Canary_artifact.mechanism_of d.Canary_project_spec.ar_artifact)
+              ~f:Canary_mechanism.string_of_mechanism)
         |> List.dedup_and_sort ~compare:String.compare
       in
       { item_id = "python_binding"; label; severity = Ok;

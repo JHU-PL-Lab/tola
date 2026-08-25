@@ -652,14 +652,14 @@ let print_spec ?policy (pr : project_run) : unit =
                  Fmt.pr "        provider: (undeclared — spec carries no detail)@.");
             (* mechanism detail comes from THE catalogue
                (base/canary_mechanism.ml) — the spec references a mechanism
-               by name (the artifact id's [Ext_mechanism]); no project
-               inlines these facts. *)
-            (match Canary_artifact.ext_of a with
-             | Canary_artifact.Ext_mechanism m ->
+               by name (the identity's own mechanism); no project inlines
+               these facts. *)
+            (match Canary_artifact.mechanism_of a with
+             | Some m ->
                  Fmt.pr "        mechanism: %s@."
                    (Canary_mechanism.one_line_of_info
                       (Canary_mechanism.info_of_mechanism m))
-             | _ -> ());
+             | None -> ());
             List.iter
               (fun (id, ch, dir) ->
                 if Canary_artifact.equal_artifact_info id a then

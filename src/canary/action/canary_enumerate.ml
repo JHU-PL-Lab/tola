@@ -41,7 +41,6 @@ let a_lib = Canary_artifact.a_lib
 let a_binding = Canary_artifact.a_binding
 let a_app = Canary_artifact.a_app
 let kind_of = Canary_artifact.kind_of
-let ext_of = Canary_artifact.ext_of
 
 (* ────────────────────────────────────────────────────────────────────
    Dynamic — used / updated during enumeration.
@@ -775,12 +774,12 @@ let provision_of_actions (acts : Canary_basic.action list) (id : artifact_info) 
          dlopens the lib at runtime, so it is provided (present locally)
          wherever the lang's binding is set up. *)
       let dynamic =
-        match ext_of id with
-        | Ext_mechanism m ->
-            (match Canary_mechanism.discipline_of_mechanism m with
-             | Canary_mechanism.Dynamic_ffi -> true
-             | Canary_mechanism.Static_c_abi -> false)
-        | _ -> false
+        match Canary_artifact.mechanism_of id with
+        | Some m -> (
+            match Canary_mechanism.discipline_of_mechanism m with
+            | Canary_mechanism.Dynamic_ffi -> true
+            | Canary_mechanism.Static_c_abi -> false)
+        | None -> false
       in
       if dynamic then
         (* no Build_binding verb for it; present once the lang binding exists *)
@@ -1104,11 +1103,11 @@ let has_static_binding (s : project_spec) (l : Canary_lang.lang) : bool =
   List.exists (ps_artifacts s) ~f:(fun id ->
       match Canary_artifact.kind_of id with
       | Canary_basic.Binding l' when Poly.equal l l' -> (
-          match Canary_artifact.ext_of id with
-          | Canary_artifact.Ext_mechanism m ->
+          match Canary_artifact.mechanism_of id with
+          | Some m ->
               Poly.equal (Canary_mechanism.discipline_of_mechanism m)
                 Canary_mechanism.Static_c_abi
-          | _ -> false)
+          | None -> false)
       | _ -> false)
 
 (** Which build_ids the spec declares for Fetching [kind] (pins included). *)

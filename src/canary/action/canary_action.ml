@@ -30,7 +30,13 @@ open Canary_basic
     {!Canary.run_graph}. *)
 type artifact_node = {
   a_kind : artifact_kind;
-  ext : Canary_artifact.artifact_ext;  (* M1: a_kind × ext = the precise id *)
+  (* [ext] removed 2026-08-24. It stored the identity's refinement so that
+     a_kind × ext could later become the precise id (the M1 merge), and it
+     was WRITE-ONLY the whole time: [node_tag] reads a_kind / a_name /
+     a_location / built_from / runtime_dep and nothing else, and no other
+     consumer touched it. The precise id is now a type of its own
+     ([Canary_artifact.artifact_info]); if a node ever needs it, it should
+     carry that, not a re-derivable projection. *)
   version : Canary_basic.build_id;  (* M1: typed version; a_name keeps the display suffix *)
   provision : Canary_store.provision;   (* M1: per-edge provider (Built/Fetched/…) *)
   a_name : string;
@@ -41,12 +47,11 @@ type artifact_node = {
 }
 
 (* M1: [~version] + [~provision] required (populated from the producing action —
-   Build_* ⇒ Built, Fetch ⇒ Fetched); [~ext] defaults to none (make_action_graph
-   is coarse-kind). a_kind/a_name kept as display so node_tag stays byte-identical. *)
-let mk_node a_kind a_name ~origin ~location
-    ?(ext = Canary_artifact.Ext_none) ~version ~provision ?built_from
+   Build_* ⇒ Built, Fetch ⇒ Fetched). a_kind/a_name kept as display so
+   node_tag stays byte-identical. *)
+let mk_node a_kind a_name ~origin ~location ~version ~provision ?built_from
     ?runtime_dep () : artifact_node =
-  { a_kind; ext; version; provision; a_name; origin; a_location = location;
+  { a_kind; version; provision; a_name; origin; a_location = location;
     built_from; runtime_dep }
 
 let rec node_tag (n : artifact_node) =
@@ -440,7 +445,7 @@ let node_of_assignment (a : Canary_artifact.assignment) : artifact_node list =
       | [] -> None
     in
     mk_node (Canary_artifact.kind_of id) (Canary_artifact.string_of_id id) ~origin:Build_tree
-      ~location:Build_tree ~ext:(Canary_artifact.ext_of id) ~version:(Canary_enumerate.version_of a id)
+      ~location:Build_tree ~version:(Canary_enumerate.version_of a id)
       ~provision:(Canary_enumerate.provision_of a id) ?built_from ()
   in
   List.map a ~f:(fun (id, _) -> build id)

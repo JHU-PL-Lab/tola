@@ -64,6 +64,22 @@ one-per-project, so they carry nothing.
 `scenario_dir_of`'s naming. Keeping the coarse view as its own type means
 those say what they mean instead of writing `Binding (l, _)` everywhere.
 
+**Why three constructors carry nothing.** `A_source`, `A_headers` and
+`A_lib` have no payload because this type is pure IDENTITY — everything
+that varies lives in the structures that use it: `placement`
+(`{ provision; version }`), `artifact_axes` (the declaration), and
+`assignment` (the pairing). A lib's provision, version, provider and pins
+are all present; none of them is part of what the lib *is*.
+
+A payload-free constructor means **one per project**. There is one
+source, one header set, one lib, so there is nothing to tell two of them
+apart. `A_binding` carries lang × mechanism because a project has several
+bindings. So `A_lib` is the encoding of a known limitation rather than an
+oversight — one C library per project is exactly what
+[`multi_lib.md`](multi_lib.md) is blocked on, and the change it proposes
+gives `A_lib` a name. **A constructor here gains a payload when the thing
+it names stops being unique.**
+
 > **This was a record until 2026-08-24** — `{ kind; ext }`, two fields
 > where the second refined the first and the pairing rule was held only
 > by convention. It let `{ kind = Lib; ext = Ext_mechanism Cstubs }` and
@@ -73,9 +89,12 @@ those say what they mean instead of writing `Binding (l, _)` everywhere.
 > the smart constructor could not produce and nothing downstream could
 > read a wiring out of.
 >
-> An `ext_of` PROJECTION survives for the two consumers that genuinely
-> want "whatever refines this kind" without caring which flavour. As a
-> projection it cannot disagree with the kind; as a field it could.
+> An `ext_of` projection survived the first cut, for consumers that
+> wanted "whatever refines this kind" without caring which flavour. It
+> was removed the same day: once the identity was a sum, four of the five
+> turned out to want only the mechanism (`mechanism_of`), and the fifth
+> was a node field that had never been read. Keeping it would have left
+> the record's shape behind in a type that no longer had it.
 
 Two consequences worth knowing before you declare:
 

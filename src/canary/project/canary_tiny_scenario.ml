@@ -1125,18 +1125,16 @@ let () =
         List.exists s.recipe.mutates ~f:(String.is_prefix ~prefix:pfx)
       in
       if touches "python_cext/" && touches "python_ctypes/" then
-        let exts =
+        let mechs =
           List.filter_map engine_mutations ~f:(fun (aid, id) ->
               if String.equal id s.scenario.id then
-                Some (Canary_artifact.ext_of aid)
+                Canary_artifact.mechanism_of aid
               else None)
         in
-        let has e = List.mem exts e ~equal:Canary_artifact.equal_artifact_ext in
-        if
-          not
-            (has (Canary_artifact.Ext_mechanism Canary_mechanism.Cext)
-            && has (Canary_artifact.Ext_mechanism Canary_mechanism.Ctypes))
-        then
+        let has m =
+          List.mem mechs m ~equal:Canary_mechanism.equal_mechanism
+        in
+        if not (has Canary_mechanism.Cext && has Canary_mechanism.Ctypes) then
           Stdlib.failwith
             (Printf.sprintf
                "tiny engine: %s mutates both Python layers but its engine \

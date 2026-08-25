@@ -150,9 +150,8 @@ let string_of_artifact = function
 (* ── precise artifact identity (ssot §4.2.3) ──
    The coarse [artifact] (= Canary_basic.artifact_kind) can't tell two
    bindings of one lib apart (cext vs ctypes) or two apps apart (direct vs
-   via-helper). The enumeration's identity is the pair (artifact, artifact_ext)
-   — the coarse kind + an [ext] that refines a binding by its mechanism and an
-   app by its wiring. *)
+   via-helper). So the enumeration has its OWN identity type, which carries
+   whatever refines a kind: a binding's mechanism, an app's wiring. *)
 
 (** How an app consumes the library (decision 2, ssot §4.2.3). *)
 type app_wiring = Direct | Via_helper [@@deriving show, eq]
@@ -178,6 +177,35 @@ let string_of_app_wiring = function Direct -> "direct" | Via_helper -> "via_help
     one of those into [Binding (l, _)]: the coarse view stops being a type
     and becomes a wildcard convention. Keeping it as a PROJECTION
     ({!kind_of}) gives both.
+
+    {1 Why some constructors carry nothing}
+
+    [A_source], [A_headers] and [A_lib] have no payload, and that is the
+    correct shape rather than an unfinished one: this type is pure
+    IDENTITY, and everything that VARIES about an artifact lives in the
+    structures that use it —
+
+    - {!placement} = [{ provision; version }] — how a scenario obtains it
+      and at which version;
+    - {!artifact_axes} = [{ ax_universe; ax_runtime; ax_follows; ax_pins }]
+      — what the project declares about it;
+    - {!assignment} = [(artifact_info * placement) list] — the pairing.
+
+    So a lib's provision, version, provider and pins are all present; none
+    of them belongs to its identity.
+
+    What a payload-free constructor DOES mean is "one per project". A
+    project has one source, one header set, one lib — which is why there
+    is nothing to tell two of them apart. [A_binding] carries lang ×
+    mechanism because a project has several bindings; [A_binding_source]
+    carries lang; [A_app] carries wiring.
+
+    That makes [A_lib] the encoding of a known limitation rather than an
+    oversight: one C library per project is exactly what
+    [doc/canary/design/enumeration/multi_lib.md] is blocked on, and the
+    change it proposes would give [A_lib] a name payload. When a
+    constructor here gains a payload, it is because the thing it names
+    stopped being unique.
 
     Constructors carry an [A_] prefix because this module re-exports
     [artifact_kind]'s constructors unqualified and they would shadow.
@@ -213,25 +241,14 @@ let wiring_of : artifact_info -> app_wiring option = function
   | A_app w -> Some w
   | A_source | A_headers | A_lib | A_binding _ | A_binding_source _ -> None
 
-(** The refinement as a VIEW, for consumers that want "whatever refines
-    this kind" without caring which flavour it is (the node graph's tag,
-    the enumeration's mechanism lookup).
-
-    This was the [ext] FIELD until 2026-08-24, and that is the whole
-    difference: as a field it could be set independently of the kind and
-    disagree with it; as a projection it cannot. The illegal states are
-    gone from the identity, and the view that made those consumers
-    convenient is still available. *)
-type artifact_ext =
-  | Ext_none  (** source / headers / lib / binding source *)
-  | Ext_mechanism of Canary_mechanism.mechanism  (** a binding *)
-  | Ext_wiring of app_wiring  (** an app *)
-[@@deriving show, eq]
-
-let ext_of : artifact_info -> artifact_ext = function
-  | A_binding (_, m) -> Ext_mechanism m
-  | A_app w -> Ext_wiring w
-  | A_source | A_headers | A_lib | A_binding_source _ -> Ext_none
+(* [artifact_ext] and [ext_of] lived here from the record era until
+   2026-08-24. The view existed because consumers wanted "whatever
+   refines this kind" without caring which flavour — and once the
+   identity became a sum, every one of them turned out to want something
+   narrower: four wanted only the mechanism ({!mechanism_of}), and the
+   fifth was a node field that was never read. Keeping a projection
+   nobody needed would have left the record's shape behind in a type
+   that no longer had it. *)
 
 (* smart constructors — THE construction API *)
 let a_source : artifact_info = A_source
