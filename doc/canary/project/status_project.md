@@ -329,6 +329,23 @@ directions):
   is not obvious. The canonical-key half of this is DONE:
   `string_of_assignment` sorts by artifact kind, so the dedup key is a
   function of content rather than of build order.
+- [ ] **Name the applicable-chain set** (found 2026-08-25, from the
+  user's "there is another missing part"): `chain_applicable` filters the
+  38 universal chains to what a project can run, from the SPEC ALONE —
+  and it has no name in the pipeline, no pass, and no dump. `canary
+  paths` prints the unfiltered 38; nothing prints a project's survivors.
+  It is the reason a scenario is "a chain plus coordinates" rather than
+  just coordinates. Small: name it, expose it as `emit --stage declare`
+  output or its own view, and pin the count per project the way
+  `matrix.registry_shape` pins scenarios.
+- [ ] **Retire the mutation axis from the general signature** — the
+  enumeration is polymorphic in a mutation that no registry project uses
+  (`mutations = []` in both `full_policy` and `thin_policy`; the only
+  faulted caller is tiny1's `tiny_policy`). It appears in every
+  signature that touches `enumerate` and applies to none of them.
+  Options: keep it (a fault IS a placement quality, which is why it fits)
+  or split tiny's enumeration entry point. Decide when the two
+  constructions are reconciled — same neighbourhood.
 - [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
   enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
   with its test plan:

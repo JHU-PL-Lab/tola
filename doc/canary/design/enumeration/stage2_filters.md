@@ -10,6 +10,36 @@ them exists because a specific over- or under-generation was observed.
 
 Read [`README.md`](README.md) first for where this sits (stage 2).
 
+## Two axes, not three
+
+The product is over **provision × version**, per artifact. A reader of
+the code will also see a mutation axis — `enumerate ~tag ~policy` is
+polymorphic in one, and `'m config` has a `mutation` level — and it is
+tiny-factory machinery, not part of a real project's enumeration:
+`full_policy` and `thin_policy` both carry `mutations = []`, and
+`config.mutation = Free` resolves to the no-fault baseline. The single
+caller that supplies faults is `tiny_policy` in
+`canary_tiny_scenario.ml`, tiny1's oracle. It rides the same product
+because a fault is modelled as a `quality = Bad tag` on a placement —
+which is elegant, and is also why the axis appears in a signature every
+project touches while applying to none of them.
+
+## Before the product: which chains apply
+
+Easy to miss, because it is not a pass and has no dump: `chain_applicable`
+filters the **38 universal chains** (`canary paths`) down to the ones this
+project can run, from the SPEC ALONE — no policy, no assignment. A chain
+survives when every step's output artifact is declared at a provision the
+step's version rule needs (`Ambient → Fetched`, `Follows_input → Built`,
+with `Vendored` passing through since the artifact exists and no action
+produces it), and when a `build_binding` step has a STATIC binding to
+build.
+
+`patterns_of` then pairs each surviving chain with each assignment that
+matches it. That pairing is what makes a **scenario** a chain plus
+coordinates ([`stage0_naming.md`](stage0_naming.md) sense 1) rather than
+just coordinates.
+
 ## The order they run in
 
 ```

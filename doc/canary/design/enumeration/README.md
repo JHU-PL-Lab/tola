@@ -105,27 +105,50 @@ package manager's problem, not a general algorithm principle).
 ## The pipeline
 
 ```
-project module          declares artifact_rows
-  │                        (identity + universe + provider + follows/runtime)
-  ▼  stage 1
-project_spec            ps_universe : artifact × (provision × versions)
+project module        declares artifact_rows
+  │                     identity + one ORIGIN per admissible provision
+  ▼  1 declare
+project_spec          artifact × (provision × channels)
   │
-  ▼  stage 2            enumerate ~tag ~policy
-run_config                 product over provision × version × mutation,
-  │                        each level-resolved PER ARTIFACT
-  ▼                     then FIVE constraints prune it  ──►  filters.md
-assignment list         (artifact_info × placement) list
+  ├──────────────▶    APPLICABLE CHAINS          ← spec alone, no policy
+  │                     38 universal chains, filtered by what this
+  │                     project declares (chain_applicable)
   │
-  ▼  stage 3            scenarios_of → scenarios_in_run_order
-ordered scenarios          identity = scenario_dir_of; order = store_state_key
+  ▼  2 enumerate      the product over provision × version,
+assignment list         each level-resolved PER ARTIFACT,
+  │                     then FIVE constraints prune  ──►  stage2_filters.md
+  │                   paired with the chains that match  ──►  a SCENARIO
+  ▼  3 select         the worlds this run asked for (--thin, --refs)
+selected              ──►  stage3_select.md
   │
-  ▼  stage 4            pr_runner_spec = realize ∘ dispatch
-runner_spec → steps        derive_steps walks the action catalogue
-  │                        (a second, parallel view: node_of_assignment →
-  │                         close_deps → execution_plan)
-  ▼  stage 5            run_graph → actions.log → matrix / status / html
-verdicts
+  ▼  4 order          identity = scenario_dir_of; order = store_state_key
+ordered scenarios     ──►  stage4_order.md
+  │
+  ▼  5 realize        pr_runner_spec = realize ∘ dispatch; derive_steps
+step list → verdicts  ──►  stage5_realize.md
+  │
+  └─ actions.log, read afterwards by `canary result` / `status`
 ```
+
+**A scenario is a chain PLUS coordinates** — which is what
+[`stage0_naming.md`](stage0_naming.md) has always said it is, and the
+chain half is easy to miss because it has no pass of its own. It is
+computed from the SPEC ALONE, before any policy or assignment exists:
+`chain_applicable` keeps the universal chains whose every step this
+project can actually run (the artifact is declared, at a provision that
+the step's version rule needs, and a `build_binding` step needs a STATIC
+binding). `patterns_of` then pairs each surviving chain with each
+assignment it matches. `canary paths` prints the unfiltered 38; nothing
+prints the per-project survivors.
+
+**There is no mutation axis for a real project.** The enumeration is
+polymorphic in a mutation (`enumerate ~tag`), and `config.mutation`
+resolves to the no-fault baseline for every registry project —
+`policy.mutations = []` in `full_policy` and `thin_policy` alike. The one
+caller that supplies faults is `tiny_policy` in
+`canary_tiny_scenario.ml`, which is tiny1's oracle and not a registry
+project. So: two axes here, provision and version. The mutation is
+tiny-factory machinery that happens to ride the same product.
 
 ## Looking at a pass
 
