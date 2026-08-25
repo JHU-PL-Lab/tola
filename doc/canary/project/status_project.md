@@ -189,11 +189,64 @@ is still baked into the action catalogue, so:
   a `clib:` tag, no conf-*), so it tests the no-conf-indirection style.
   Its pair comes from the binding's opam pins. `ocurl` is a second
   Pattern-B specimen (measured: **no conf dependency at all**).
-- [ ] **D3. sundials / sundialsml** — new, and it is the row that PROVES
-  the §G1a finding: its gate reads `conf-sundials {>= "2" & build}`,
-  which a naive reading sends to the wrapper queue, while the conf
-  package's version never reaches its check — so the gate is free and
-  apt 6.4.1 → conda-forge 7.8.0 is the widest pair on the shortlist.
+- [ ] **D3. sundials / sundialsml** — **MEASURED 2026-08-25, and the
+  premise changed. Blocked on a user decision** (the apt install), not on
+  machinery. §G1a still holds: `conf-sundials`'s entire build is
+  `cc -E test.c`, so the binding's `{>= "2" & build}` bound is over opam
+  packaging and never reaches the library — sundials remains the row that
+  proves the finding. What is wrong is the *"Ready — a wide, real pair"*
+  verdict that followed from it, and §3b step 3 of
+  [`landing.md`](landing.md) is exactly the step that catches it:
+
+  1. **sundialsml's own `./configure` reads the library version** —
+     `SUNDIALS_PACKAGE_VERSION` (falling back to `SUNDIALS_VERSION`) out
+     of `sundials/sundials_config.h`. It hard-aborts below 2.5.0
+     (`"sundials >= 2.5.0 required"`) and, more consequentially, maps the
+     version onto a `SUNDIALS_LIB_VERSION` code that drives **472
+     conditional guards** in the C stubs. The binding does not merely
+     *gate* on the lib version, it **compiles differently per version** —
+     a shape no landed project has. `opam show` cannot see any of it.
+  2. **There is no 7.x code path.** The highest guard in `src/` is
+     `>= 600`. `configure` accepts `7.*`/`8.*`/`9.*` syntactically
+     (released tag `v6.1.1p1` already does), so a 7.x lib silently
+     compiles the **6.x** path.
+  3. **6 → 7 is a real API break, measured on both headers.**
+     `SUNContext_Create` is `int (void* comm, SUNContext*)` in apt's
+     6.4.1 and `SUNErrCode (SUNComm comm, SUNContext*)` in conda-forge
+     7.8.0 — and sundialsml calls it as `SUNContext_Create(NULL, &ctx)`.
+     `libsundials_generic` (6.x) is renamed `libsundials_core` (7.x).
+  4. **Not one soname survives the pair.** cvode/cvodes/ida/kinsol/
+     nvecserial go `.so.6 → .so.7`, arkode/idas `.so.5 → .so.6`,
+     sunlinsol* `.so.3 → .so.5`. So the cheap Vendored world zlib and
+     zstd use — repoint `LD_LIBRARY_PATH`, same soname, no rebuild —
+     **does not apply**: the 6.x-built binding cannot load a 7.x lib at
+     all.
+
+  **This makes sundials a BETTER specimen, not a worse one.** Both cross
+  cells are naturally occurring, upstream-shipped mismatches with
+  measured evidence behind them — the property D3b praises mlmpfr for,
+  arriving one row earlier. The honest 2×2 predicts an xfail in each
+  cross cell (deploy: load-time soname failure; forward: build failure on
+  the 6.x path against a 7.x header) rather than the green pair the
+  survey advertised. Declare it by [`landing.md`](landing.md) §3 as
+  measured — do NOT retreat to a conda-forge 6.x to manufacture green,
+  which is §3's rule read backwards.
+
+  **The blocker is the install, and it is the user's call.**
+  `libsundials-dev` is not installed and `apt-get install -s` says
+  **177 new packages** — OpenMPI, PETSc, hypre, gfortran, gdb, LLVM 17,
+  FFTW-MPI, even ROCm/HIP (`libamdhip64-5`). Two orders of magnitude past
+  zstd's single `libzstd-dev`. Measurement so far needed none of it: the
+  `.deb` was read with `dpkg-deb -x` into a scratch dir and the
+  conda-forge 7.8.0 `.conda` is already prepared at
+  `contrib/sundials-all/prebuilt/sundials-7.8.0/`. Running the project
+  does need it.
+
+  **Also settled by the measurement: sundials does NOT need D4.** Its 29
+  shared libraries carry independent sonames, which looks like the
+  multi-lib case — but they ship from ONE package, ONE source and ONE
+  version, so there is one universe, not several. D4 is about libs with
+  *independent* version axes (mpfr + gmp). One lib artifact covers this.
 - [ ] **D3b. mpfr** — two routes, both interesting, neither free:
   `mlgmpidl` uses the `conf-*-paths` conf FAMILY (a different style worth
   studying on its own), while `mlmpfr` uses a bare `conf-mpfr` PLUS a
