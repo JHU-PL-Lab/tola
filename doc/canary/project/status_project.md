@@ -263,7 +263,8 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
    `stable lib` gains a sibling `lib pair` that counts admissible points
    on the lib row and warns below two. Ships with a pin per project's
    expected verdict. Cheaper than, and complementary to, the per-candidate
-   ledger ([`../design/enumeration/why_ledger.md`](../design/enumeration/why_ledger.md)):
+   ledger ([`../design/enumeration/stage2_filters.md`](../design/enumeration/stage2_filters.md)
+   *Attribution*):
    this one says the declaration is too thin, that one says which
    constraint ate a world you expected.
 
@@ -377,7 +378,8 @@ directions):
 - [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
   enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
   with its test plan:
-  [`../design/enumeration/why_ledger.md`](../design/enumeration/why_ledger.md).
+  [`../design/enumeration/stage2_filters.md`](../design/enumeration/stage2_filters.md)
+  *Attribution*.
   Roughly two days; steps 1–3 alone close the fact that **stage 3's run
   order is verified by a pin but cannot be looked at** (`spec` still
   prints enumeration order, which since 2026-08-21 is not what runs). The

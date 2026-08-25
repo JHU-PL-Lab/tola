@@ -106,8 +106,8 @@ $ canary emit z3 --stage select --refs latest → 5 of 16
 That is the split's whole point: "why isn't this running" now has two
 different answers — *it does not exist* (a pass-2 constraint) versus
 *you did not ask for it* (pass 3). `--why` will report them separately
-([`why_ledger.md`](why_ledger.md)); before the split it could only have
-said "absent".
+([`stage2_filters.md`](stage2_filters.md) *Attribution*); before the
+split it could only have said "absent".
 
 ### Still open
 

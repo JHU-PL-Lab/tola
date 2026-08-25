@@ -1,6 +1,8 @@
 # Pass 2 — enumerate: the product, and why it is not the answer
 
-**Kind: rationale.** Pass 2 of five. Standalone. Written 2026-08-23
+**Kind: rationale**, plus one **proposal** section at the end
+(*Attribution*, absorbed from `why_ledger.md` 2026-08-25). Pass 2 of
+five. Standalone. Written 2026-08-23
 because it did not exist: the
 product over (provision × version × mutation) is easy and documented
 (§1 below), but what makes
@@ -183,3 +185,120 @@ assignment is one that could not exist or could not differ; a world that
 exists and breaks is the point of the exercise, and its verdict is an
 expectation, not a filter. The forward cell surviving §2's cost is the
 clearest statement of that principle in the code.
+
+## Attribution — which constraint removed my candidate
+
+**Kind: proposal** (absorbed from `why_ledger.md`, 2026-08-25 — it was
+about these constraints and nothing else). **Landed when** `canary emit
+<project> --stage enumerate --why` reports, per candidate the product
+generated, which constraint removed it — or that nothing did.
+
+Everything above says what each constraint prunes *in general*. What no
+command answers is the particular question: **the world I expected is not
+in the output — which of the six removed it?** Today the survivors are
+visible and the product is not, so a missing world is indistinguishable
+from a world that was never generated.
+
+### It is not an enhancement of `spec-check`
+
+Different objects, and both STATIC — neither reads a run:
+
+| | `spec-check` | `--why` |
+| --- | --- | --- |
+| object | the **declaration** (pass 1), row by row | the **enumeration** (pass 2→3), candidate by candidate |
+| question | is this project's spec mature — does it declare what a landed project should? | given that declaration, why does the world set have exactly these members? |
+| answer shape | per-row ✓ / ⚠ / ✗ presence marks | per-candidate fate + reason |
+| arithmetic | none — it never multiplies anything | the whole point: `kept + dropped = the product` |
+
+The post-run family is elsewhere entirely — `status`, `result`, `verify`
+and `compat` all read `actions.log` or a probe. `--why` reads neither; it
+is a function of `(project_spec, policy)`, the same inputs as
+`emit <p> --stage 2`.
+
+The independence is demonstrated, not asserted: `spec-check tiny-full`
+reports **0 errors** while tiny-full enumerates one world where its own
+docs claim six. Every row it needs is present and names a provider; what
+is wrong is that the rows COLLECTIVELY generate one world, and a presence
+audit has no way to notice that
+([`../../project/issues.md`](../../project/issues.md) §1).
+
+### Build the ledger, not the histogram
+
+*(2026-08-24, user: "if the `why` is the printing version of how code is
+working in some stages, we can also postpone it … but we will need it
+finally. you decide.")* Applying that test honestly splits `--why` in two:
+
+- **The summary** — "8 dropped by `assignment_ok`, 4 by `source_ref_ok`"
+  — is *narration of the algorithm*, derivable by reading §§1–6 above
+  against a spec. The tempting first version, and the less useful one.
+- **The per-candidate ledger** — "the world you expected is absent, and
+  HERE is what removed it" — is an *observation*, computed by the code
+  that runs rather than reasoned about by a reader. This is the half
+  worth building.
+
+And it should carry **both fates**, not just removals. The user's framing
+was *"a tool to inspect why something works AS EXPECTED"* — for a
+checking framework the audit trail of a green run matters as much as the
+diagnosis of a missing one.
+
+### Why now (the trigger fired 2026-08-25)
+
+The prediction was a NEW project whose scenario count surprises whoever
+landed it. Two things falsified that during a routine sweep; the
+per-project particulars are in
+[`../../project/issues.md`](../../project/issues.md) §1, the general
+lessons are these:
+
+1. **The denominator is the hard part, not the attribution.** The premise
+   was that a reader could reason the counts through against a spec.
+   Tried, and failed twice on real projects: one model ignored the pin
+   axis; a second found that pins ARE emitted but nest INSIDE a channel
+   rather than multiplying freely, so the product is not a plain product.
+   `kept + dropped = the product` earns its keep less by attributing
+   drops than by forcing the denominator to be *stated*.
+2. **The forcing case is a project nobody is looking at.** A new landing
+   has someone's attention on it; a landed project's count can drift for
+   weeks — and which constraint removed the missing candidates stays an
+   *inference*, which is this section's use case verbatim.
+3. **Count pins re-baseline; a structural claim does not.** The count in
+   question was pinned, at its wrong value. A count pin cannot separate
+   "legitimately has N worlds" from "lost some and someone updated the
+   number" — updating the number is how you make it pass. `kept +
+   dropped = the product` has no number to quietly move.
+
+### What it needs
+
+Three parts, and only the second carries behavioural risk:
+
+1. **A recorder around the three predicates.** `assignment_ok`,
+   `binding_couples` and `source_ref_ok` are already `-> bool` (§§1, 3,
+   4), so attribution is running them and keeping the verdict per
+   candidate. Free.
+2. **The two list-filters return their drops.** `shadow_filter` and
+   `ref_filter` (§§5, 6) become `list -> kept × (dropped × reason)`. This
+   is the part that could change what is enumerated, so it is the part
+   the invariant guards.
+3. **Selection reports separately.** Pass 3 exists
+   ([`stage3_select.md`](stage3_select.md)), so a missing world is either
+   *pruned by a constraint* (pass 2) or *not asked for* (pass 3). The
+   ledger must say which; before the split it could only say "absent".
+
+### Tests
+
+Structural, in the style of the pins the rest of the `emit` work shipped
+— a golden ledger would churn on every legitimate spec change and get
+blanket-regenerated.
+
+| pin | asserts |
+| --- | --- |
+| `why.accounts_for_every_candidate` | kept + dropped = the product, per catalogued project. Nothing vanishes unexplained |
+| `why.reasons_are_known` | every drop names one of the six constraints — no "other" |
+| `why.kept_equals_stage2` | the ledger's kept set IS `Canary_pipeline.worlds`, so recording cannot alter enumerating |
+
+### What not to do
+
+- **Do not let `--why` change what is enumerated.** The recorder observes
+  the constraints; it must not reorder or short-circuit them. That is
+  what `why.kept_equals_stage2` is for.
+- **Do not ship the histogram first.** It is the narration half; the
+  ledger is the observation half, and the reason to build this at all.

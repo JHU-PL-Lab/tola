@@ -90,8 +90,8 @@ choice, a project ships its whole declared set" made presence-enumeration a
 dead end. The **per-edge version** model (build vs run version = the deploy
 mismatch; ssot §4.2.4) and the finding that the instance graph **already
 exists** (`artifact_node` + `make_action_graph`) remain live *deferred* design
-— see [`dynamic_enumeration.md`](../design/dynamic_enumeration.md) and
-[`versioning.md`](../design/enumeration/versioning.md), tracked in `status.md` §1c.
+— see `dynamic_enumeration.md` (retired → [`enumeration/README.md`](../design/enumeration/README.md)) and
+`versioning.md` (purged 2026-08-23 → [`stage1_project_spec.md`](../design/enumeration/stage1_project_spec.md)), tracked in `status.md` §1c.
 
 ## 2026-08-03/04 — honest-coverage arc (Fix B → 12/24 → naming unification)
 
@@ -735,7 +735,7 @@ lib is a provision (`Installed`) and its consumer face is a scenario.
 sqlite (5 worlds) and z3 (7) both derive their run set from the declared
 spec + the enumeration algorithm — no run flag decides which artifacts a
 scenario consumes. Details + the pin list in
-[`../design/enumeration/staged_parity.md` §1](../design/enumeration/staged_parity.md); the
+`staged_parity.md` §1 (absorbed → [`stage4_order.md`](../design/enumeration/stage4_order.md) + [`stage5_realize.md`](../design/enumeration/stage5_realize.md)); the
 retirement removed `Canary_basic.consumer_lib`,
 `run_config.consumer_lib`, the `--installed` flag, and the
 `?consumer_lib` parameter from `pr_runner_spec` (7 project specs).
@@ -1061,7 +1061,7 @@ from same source).
   arbipher forks, the cold-audit fixes, the verification) is flushed
   to [`../worklog/worklog_2026_08.md`](../worklog/worklog_2026_08.md)
   §2026-08-16; the design lives in
-  [`../design/enumeration/repo_model.md`](../design/enumeration/repo_model.md). Living state:
+  `repo_model.md` (purged 2026-08-23 → [`stage1_project_spec.md`](../design/enumeration/stage1_project_spec.md)). Living state:
   the per-project scenario counts in §1 above; remaining items below
   (the verdict-matrix pin, the Fetched-source-id resolution note).
   Next: Roadmap D — the web viewer.
@@ -1191,7 +1191,7 @@ from same source).
   and a project with two sources gets two labelled source columns. Came
   with the zarith data fix (its repos are the OCaml BINDING's source, not
   the project's) and the per-step cell stage. Details in
-  [`../design/enumeration/matrix.md`](../design/enumeration/matrix.md); pins
+  `matrix.md` (moved → [`../design/matrix.md`](../design/matrix.md)); pins
   `matrix.setting_block_identifies_world` +
   `matrix.cell_stage_progression`.
   **Still open from it**: sqlite cannot print 3.45.1/3.46.1 anywhere —
@@ -1209,7 +1209,7 @@ from same source).
   pin-checked fetch; world assertions). 2 scenarios (0.6.0/0.7.0), each
   probing both apps as different actions; the 2×2's red cell survives as
   scenario@0.6.0's `probe_app_ocaml` xfail[c2]. Survey + design in
-  [`store_switching.md`](../design/enumeration/store_switching.md).
+  `store_switching.md` (purged 2026-08-23 → [`stage3_select.md`](../design/enumeration/stage3_select.md) + [`stage4_order.md`](../design/enumeration/stage4_order.md)).
 - [x] **Shared-store pins for llvm** (2026-08-13) — stable binding pins
   "19-shared" (the standard install name `llvm.19-shared` fits — no
   `install_name` escape needed); pinned fetch + `pin_check_post` + world
@@ -1219,7 +1219,7 @@ from same source).
   llvm-config indirection (see the Fixed entry above). z3 DONE earlier
   the same round (2026-08-12: stable pin "4.16.0" + pinned fetch +
   pin-checked Publish + world assertions). See
-  [`store_switching.md`](../design/enumeration/store_switching.md) §4 item 7.
+  `store_switching.md` (purged 2026-08-23 → [`stage3_select.md`](../design/enumeration/stage3_select.md) + [`stage4_order.md`](../design/enumeration/stage4_order.md)) §4 item 7.
 - [x] **Spec-maturity checker** (2026-08-13, user) — `canary spec-check
   [PROJECT|@all]` (landed 2026-08-13): 8 static checks per project over
   the declared artifact table (`Canary_spec_check`, no realization/run),

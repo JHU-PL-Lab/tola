@@ -83,13 +83,12 @@ done.
 | [README.md](design/enumeration/README.md) | **The stage map.** Read first; also records the known drift (two dependency relations; mechanism/app-wiring are not config axes) |
 | [stage0_naming.md](design/enumeration/stage0_naming.md) | **Stage 0** — the four senses of "scenario", the canonical naming scheme, short names, fault tags, the c1..c8 catalogue |
 | [stage1_project_spec.md](design/enumeration/stage1_project_spec.md) | **Pass 1, declare** — what a project declares: rows, artifact identity, the provision × version universe, providers and what is derived from them, versions, repo lifecycle, the channel pair, what cannot be declared |
-| [stage2_filters.md](design/enumeration/stage2_filters.md) | **Pass 2, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against |
+| [stage2_filters.md](design/enumeration/stage2_filters.md) | **Pass 2, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against. Ends with *Attribution*, the `--why` per-candidate-ledger **proposal** (absorbed from `why_ledger.md`) |
 | [stage3_select.md](design/enumeration/stage3_select.md) | **Pass 3, select** — what a RUN asked for. Settles where config/policy sit: model constraints, SELECTION, and run configuration are three different things |
 | [stage4_order.md](design/enumeration/stage4_order.md) | **Pass 4, order** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
 | [stage5_realize.md](design/enumeration/stage5_realize.md) | **Pass 5, realize** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — a second C lib: naming landed 2026-08-25, `rp_build` + a per-slot action role remain; three options with costs |
 | [resolve_placements.md](design/enumeration/resolve_placements.md) | *Proposal* — resolve a placement to a concrete location: why `Installed` carries no path, the three overlapping types (one dead), and the `Vendored`-borrows-`Build_tree` lie |
-| [why_ledger.md](design/enumeration/why_ledger.md) | *Proposal* — `--why`, the per-candidate ledger: which constraint removed a world, or that nothing did. Deliberately postponed; the rest of the `emit` proposal landed and became rationale in `README.md` |
 
 All six stages now have a standalone doc.
 

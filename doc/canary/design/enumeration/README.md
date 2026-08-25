@@ -78,21 +78,22 @@ run, so the pipeline's dataflow ends at pass 5 writing verdicts. The
 matrix doc moved out accordingly: [`../matrix.md`](../matrix.md).
 
 Five passes. Each answers to both its name and its index:
-`canary emit <project> --stage select` is `--stage 3`
-([`why_ledger.md`](why_ledger.md)).
+`canary emit <project> --stage select` is `--stage 3`.
 
-**Every pass has a standalone doc.** The other three files are proposals:
-[`multi_lib.md`](multi_lib.md) (`A_lib` now carries an optional name, but a project
-cannot declare a second C lib), [`why_ledger.md`](why_ledger.md)
-(`--why`, the per-candidate ledger — deliberately postponed) and
+**Every pass has a standalone doc.** The other two files are proposals:
+[`multi_lib.md`](multi_lib.md) (`A_lib` now carries an optional name, but a
+project cannot declare a second C lib) and
 [`resolve_placements.md`](resolve_placements.md) (nothing resolves a
-placement to a concrete location, and three types describe one idea).
+placement to a concrete location, and three types describe one idea). A
+third, `why_ledger.md`, was absorbed into
+[`stage2_filters.md`](stage2_filters.md) *Attribution* on 2026-08-25 — it
+was a proposal about pass 2's constraints and belonged with them.
 
 `emit_stages.md`, the proposal that produced the passes, retired
 2026-08-24: once its steps landed it was code rationale, not a design
 plan, so it moved here (how to look at a pass, layers vs passes, the
-invariants) and into the per-pass docs. Only `--why` was still proposed,
-and that is `why_ledger.md`.
+invariants) and into the per-pass docs. Only `--why` was still proposed, and it now
+lives in [`stage2_filters.md`](stage2_filters.md) *Attribution*.
 
 Four docs left rather than being kept: `algorithm_explainer.md` (the
 walkthrough that predated this README — its sections went to the stages
