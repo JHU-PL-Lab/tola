@@ -64,6 +64,66 @@ new axis type.
 
 ## 3. Options for multiple libs
 
+### 3a. What already exists, and where
+
+**A third of the representation already exists** (2026-08-25). The
+question "can two libs be represented before the runner?" has a better
+answer than this note assumed, and it changes (A)'s cost.
+
+`Canary_enumerate.runtime_pairing` is already the two-lib structure, built
+at **pass 2** from spec data plus enumeration coordinates, with the runner's
+realization explicitly not consulted:
+
+```
+type runtime_pairing = {
+  rp_consumer : artifact_info;
+  rp_mode     : dep_mode;         (* Ambient | Lockstep | Independent *)
+  rp_run      : placement option; (* the lib the consumer RUNS over *)
+  rp_deploy   : bool;             (* run-lib <> build-lib *)
+}
+```
+
+`dep_mode` is declared per-artifact (`ax_runtime`) and already names the
+relation: `Lockstep` = run provider is the build provider, `Independent` =
+run-lib ranges free of it, `Ambient` = outside the enumeration.
+
+So the **run** lib resolves to a placement. The **build** lib does not — it
+is compressed into `rp_deploy : bool`, a *comparison* stored as a flag,
+inferred by the v1 rule "the run-lib is canary-supplied while the consumer's
+build-lib came from its provider". The type's own comment says it refines
+*when a consumer's build-lib becomes declarable data*. It is a `bool`
+precisely because `A_lib` is unique: there is only one lib placement to
+point at, so the second slot has nowhere to resolve.
+
+That decomposes (A) into three changes, all of them **before** stage 5:
+
+1. `A_lib of string` — pass 1. Two rows, two universes. The row list is
+   already keyed by `artifact_info`, so this part is nearly free.
+2. `rp_run` gains a sibling `rp_build : placement option`, and `rp_deploy`
+   stops being declared — it becomes *derived*, `rp_run <> rp_build`. A
+   bool that encodes a comparison is replaced by the two things compared.
+3. **The action catalogue needs a role per consumed slot**, and this is the
+   one part naming does not fix. `action_sig.as_consumes : artifact_kind
+   list` is *role*-typed, so `Lib` there means "a lib" and `[Lib; Lib]`
+   would be two indistinguishable slots — no way to say which is linked and
+   which is loaded.
+
+On (3), link-vs-load **is** already encoded, but implicitly and across two
+actions: `Build_app` consumes `[Binding lang; Lib]` (link time) and
+`Probe_app` consumes `[App; Lib; Binding lang]` (load time) — the
+divergence `artifacts_of_action`'s docstring calls out. The same nameless
+`Lib` plays both roles, which is why they can never point at different
+placements: within a scenario the assignment maps that one artifact to one
+placement. An action that links against one lib and loads another is the
+case this cannot express, and it is a *slot-role* gap, not a naming one.
+
+The payoff for sequencing it this way: with 1-3 done, stage 5 is left with
+"which path goes to `-l` and which to `LD_LIBRARY_PATH`" — a template
+question, answerable per-project, and one the enumeration can already state
+the answer to.
+
+### 3b. The three options
+
 **(A) Name the lib artifact** — `A_lib of string`, so `a_lib "mpfr"` and
 `a_lib "gmp"` are distinct artifacts with their own universes, providers and
 channel pairs. (The alternative the note first floated — a name in an `ext`
