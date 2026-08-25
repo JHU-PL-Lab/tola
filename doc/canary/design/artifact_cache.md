@@ -46,10 +46,10 @@ is not "the scenario that happened to build it"**. A built libsqlite3 at
 3.46.1 is the same artifact whichever world asked for it. So:
 
 ```
-artifact key = (artifact_id, provision, version, build inputs' identity)
+artifact key = (artifact_info, provision, version, build inputs' identity)
 ```
 
-- `artifact_id` — kind + ext (already the enumeration's vocabulary);
+- `artifact_info` — the enumeration's identity (a sum since 2026-08-24: kind plus whatever refines it);
 - `provision` — Built / Installed / Fetched / Vendored: a staged lib is a
   DIFFERENT artifact from the build tree it came from (that distinction is
   now an enumeration axis, so the cache inherits it for free);

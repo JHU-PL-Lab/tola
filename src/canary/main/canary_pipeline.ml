@@ -167,7 +167,7 @@ let actions_of (pr : project_run) (a : Canary_artifact.assignment) :
    kind) on 2026-08-24 — before that, two runs could encode the same
    world two ways and a diff would show phantom churn. *)
 
-let json_of_placement (id : Canary_artifact.artifact_id)
+let json_of_placement (id : Canary_artifact.artifact_info)
     (pl : Canary_artifact.placement) : Yojson.Basic.t =
   let v = pl.Canary_artifact.version in
   `Assoc

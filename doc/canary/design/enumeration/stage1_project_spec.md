@@ -43,14 +43,39 @@ second place a project describes itself.
 ## 2. Artifact identity
 
 ```ocaml
-type artifact_id = { kind : artifact_kind; ext : artifact_ext }
+type artifact_info =
+  | A_source | A_headers | A_lib
+  | A_binding of lang * mechanism
+  | A_binding_source of lang
+  | A_app of app_wiring
+
+val kind_of : artifact_info -> artifact_kind      (* the coarse role *)
 ```
 
-`kind` is the coarse role — `Source`, `Headers`, `Lib`,
-`Binding of lang`, `Binding_source of lang`, `App`. `ext` refines it
-where one kind can appear more than once in a project: a binding by its
-**mechanism** (`Ext_mechanism Cstubs`), an app by its **wiring**
-(`Ext_wiring`). Sources are `Ext_none`.
+An artifact's identity carries whatever refines it: a binding by its
+**mechanism**, an app by its **wiring**. Source, headers and lib are
+one-per-project, so they carry nothing.
+
+**`artifact_kind` is a separate, coarser type**, projected out by
+`kind_of`. Several consumers want only the role and not the refinement —
+`kind_order` (the matrix's column order), the action catalogue's
+`consumes_of_action` / `produces_of_action` (a `Build_binding l` consumes
+`Lib` whatever the mechanism), `string_of_artifact_kind`,
+`scenario_dir_of`'s naming. Keeping the coarse view as its own type means
+those say what they mean instead of writing `Binding (l, _)` everywhere.
+
+> **This was a record until 2026-08-24** — `{ kind; ext }`, two fields
+> where the second refined the first and the pairing rule was held only
+> by convention. It let `{ kind = Lib; ext = Ext_mechanism Cstubs }` and
+> `{ kind = Binding OCaml; ext = Ext_none }` typecheck, both nonsense.
+> Making it a sum found a live instance immediately: tiny's `id_of_kind`
+> fallback built an `App` with `Ext_none` — an app with no wiring, which
+> the smart constructor could not produce and nothing downstream could
+> read a wiring out of.
+>
+> An `ext_of` PROJECTION survives for the two consumers that genuinely
+> want "whatever refines this kind" without caring which flavour. As a
+> projection it cannot disagree with the kind; as a field it could.
 
 Two consequences worth knowing before you declare:
 

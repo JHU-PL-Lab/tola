@@ -64,10 +64,10 @@ let is_in_tree_witness (pr : Canary_project_run.project_run) : bool =
   String.equal pr.pr_name "tiny-full"
 
 let row_of (pr : Canary_project_run.project_run)
-    (id : Canary_artifact.artifact_id) :
+    (id : Canary_artifact.artifact_info) :
     Canary_project_spec.artifact_row option =
   List.find pr.pr_artifacts ~f:(fun d ->
-      Canary_artifact.equal_artifact_id d.Canary_project_spec.ar_artifact id)
+      Canary_artifact.equal_artifact_info d.Canary_project_spec.ar_artifact id)
 
 let binding_rows (pr : Canary_project_run.project_run)
     (lang : Canary_lang.lang) : Canary_project_spec.artifact_row list =
@@ -348,8 +348,8 @@ let check_raw_build_overrides (pr : Canary_project_run.project_run) : item =
       let overridden =
         List.filter built_bindings ~f:(fun d ->
             let id = d.Canary_project_spec.ar_artifact in
-            match (id.Canary_artifact.kind, id.Canary_artifact.ext) with
-            | Canary_artifact.Binding lang, Canary_artifact.Ext_mechanism mech ->
+            match id with
+            | Canary_artifact.A_binding (lang, mech) ->
                 let templated =
                   match Canary_project_run.binding_decl_of pr id with
                   | Some decl -> (
@@ -429,7 +429,7 @@ let repo_contents_violations (pr : Canary_project_run.project_run) :
       | Some (Canary_store_config.Repo r) when not_source ->
           if
             List.exists r.Canary_artifact_source.artifacts
-              ~f:(Canary_artifact.equal_artifact_id
+              ~f:(Canary_artifact.equal_artifact_info
                     d.Canary_project_spec.ar_artifact)
           then None
           else
@@ -441,7 +441,7 @@ let repo_contents_violations (pr : Canary_project_run.project_run) :
             List.find rs ~f:(fun r ->
                 not
                   (List.exists r.Canary_artifact_source.artifacts
-                     ~f:(Canary_artifact.equal_artifact_id
+                     ~f:(Canary_artifact.equal_artifact_info
                            d.Canary_project_spec.ar_artifact)))
           with
           | Some r ->

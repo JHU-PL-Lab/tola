@@ -26,7 +26,7 @@ A project's binding declaration splits into:
   contents, contract firing rows, which example we probe. Changeable
   as our contracts evolve. (The S1 seam: provenance vs checking
   points — `Canary_surface`'s existing split, applied to the payload.)
-- **Identity** — the mechanism name (`Ext_mechanism` on the artifact).
+- **Identity** — the mechanism name (carried by `A_binding` on the artifact).
   Unchanged: born-safe string, scenario-dir key.
 
 The contracts are stated against the **facts**, not against a mechanism

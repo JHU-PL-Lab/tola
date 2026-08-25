@@ -120,7 +120,7 @@ type t = {
     default, a binding's source when the project says so
     ([source_of_binding]). The enumeration, the artifact table and the
     matrix's setting block all read this one answer. *)
-let source_artifact_of (d : t) : Canary_artifact.artifact_id =
+let source_artifact_of (d : t) : Canary_artifact.artifact_info =
   match d.source_of_binding with
   | None -> Canary_artifact.a_source
   | Some lang -> Canary_artifact.a_binding_source lang

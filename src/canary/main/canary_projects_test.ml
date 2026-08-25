@@ -52,9 +52,9 @@ let enumerate_full (spec : Canary_artifact.project_spec) : Canary_artifact.assig
     ask "the source's pinned ref" must ask the project, not assume
     [a_source]. *)
 let source_artifact_of (pr : Canary_project_run.project_run) :
-    Canary_artifact.artifact_id =
+    Canary_artifact.artifact_info =
   Option.value
-    (List.find (Canary_project_run.artifact_ids pr) ~f:(fun id ->
+    (List.find (Canary_project_run.artifact_infos pr) ~f:(fun id ->
          match Canary_artifact.kind_of id with
          | Canary_basic.Source | Canary_basic.Binding_source _ -> true
          | _ -> false))
@@ -323,7 +323,7 @@ let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
       let oc = Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs in
       let find c a =
         List.find (Canary_enumerate.runtime_pairings_of spec a) ~f:(fun p ->
-            Canary_artifact.equal_artifact_id p.Canary_enumerate.rp_consumer c)
+            Canary_artifact.equal_artifact_info p.Canary_enumerate.rp_consumer c)
       in
       (* 10 since the binding's channel pair (2026-08-19): the lib's 5
          placements (2 built + 2 installed + 1 fetched) × 2 opam pins *)
@@ -513,7 +513,7 @@ let vendored_prebuilt_pin : Canary_project_test.pure_test =
         in
         let rationale_ok (pr : Canary_project_run.project_run) =
           List.exists pr.Canary_project_run.pr_artifacts ~f:(fun r ->
-              Canary_artifact.equal_artifact_id
+              Canary_artifact.equal_artifact_info
                 r.Canary_project_spec.ar_artifact Canary_artifact.a_lib
               && Option.is_some r.Canary_project_spec.ar_rationale)
         in
@@ -2911,7 +2911,7 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
         let declared_ok =
           List.for_all Canary_registry.all_projects ~f:(fun (name, pr) ->
               let kinds =
-                List.map (Canary_project_run.artifact_ids pr)
+                List.map (Canary_project_run.artifact_infos pr)
                   ~f:Canary_artifact.kind_of
               in
               let want =

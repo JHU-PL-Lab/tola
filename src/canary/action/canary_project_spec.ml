@@ -1,7 +1,7 @@
 (** [Canary_project_spec] — the builder layer that wires project declarations
     into enumeration-ready [project_spec]s.
 
-    Artifact identity types ([artifact_id], [artifact_axes], [project_spec],
+    Artifact identity types ([artifact_info], [artifact_axes], [project_spec],
     etc.) live in [Canary_artifact] (base/). This module provides the
     [artifact_row] builder (which knows about [Canary_store_config.provider]
     from tool/) and the build-dependency edges. *)
@@ -13,7 +13,7 @@ open Canary_artifact
     time. Wraps an [artifact_axes] with an optional provider for display.
     [project_spec_of_rows] converts a row list into a [project_spec]. *)
 type artifact_row = {
-  ar_artifact : artifact_id;
+  ar_artifact : artifact_info;
   ar_axes : artifact_axes;
   ar_provider : Canary_store_config.provider option;
   ar_rationale : string option;
@@ -62,6 +62,6 @@ let project_spec_of_rows (rows : artifact_row list) : project_spec =
     Only returns artifacts that exist in [ps_universe] — a lib that
     builds from an undeclared source (e.g. sqlite's self-contained
     amalgamation) has no source build-dep. *)
-let build_deps_of (s : project_spec) (id : artifact_id) : artifact_id list =
+let build_deps_of (s : project_spec) (id : artifact_info) : artifact_info list =
   let declared aid = Option.is_some (ps_axes_of s aid) in
-  if equal_artifact_id id a_lib && declared a_source then [ a_source ] else []
+  if equal_artifact_info id a_lib && declared a_source then [ a_source ] else []

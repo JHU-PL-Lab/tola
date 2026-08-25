@@ -50,7 +50,7 @@
       per-ARTIFACT fact, so it rides the artifact row; only genuinely
       project-level information stays as project fields). Each
       [artifact_decl] = the identity + the typed
-      [Canary_store_config.provider] detail the abstract [artifact_id] +
+      [Canary_store_config.provider] detail the abstract [artifact_info] +
       [placement] can't carry (a vendored PATH, a source_repo, a PM +
       PACKAGE). Structural invariant the two parallel tables lacked: a
       provider can only be declared on a declared artifact. `spec`
@@ -90,7 +90,7 @@ type project_run = {
           installed-consumer experiment retired 2026-08-19 when the
           provision axis absorbed it. *)
   pr_mismatch_probes :
-    (Canary_artifact.artifact_id * Canary_basic.channel
+    (Canary_artifact.artifact_info * Canary_basic.channel
      * Canary_basic.mismatch_direction) list;
   (** Our wrapper package(s) publishing the dev source into a package store
       (the Publish action) — e.g. z3's [(OCaml, "z3.dev")] opam package.
@@ -125,10 +125,10 @@ type project_run = {
     matched by the artifact's mechanism (the decl's identity label).
     [None] for non-binding artifacts and undeclared bindings. *)
 let binding_decl_of (pr : project_run)
-    (id : Canary_artifact.artifact_id) :
+    (id : Canary_artifact.artifact_info) :
     Canary_binding_decl.binding_decl option =
-  match (id.Canary_artifact.kind, id.Canary_artifact.ext) with
-  | Canary_artifact.Binding _, Canary_artifact.Ext_mechanism mech ->
+  match id with
+  | Canary_artifact.A_binding (_, mech) ->
       List.find_opt
         (fun (d : Canary_binding_decl.binding_decl) ->
           Canary_mechanism.equal_mechanism d.mechanism mech)
@@ -136,15 +136,15 @@ let binding_decl_of (pr : project_run)
   | _ -> None
 
 (** The bare artifact identities of the table (display loops, langs). *)
-let artifact_ids (pr : project_run) : Canary_artifact.artifact_id list =
+let artifact_infos (pr : project_run) : Canary_artifact.artifact_info list =
   List.map (fun d -> d.Canary_project_spec.ar_artifact) pr.pr_artifacts
 
 (** Provider lookup over the artifact table ([None] = artifact absent from
     the table OR declared without a provider). *)
-let provenance_of (pr : project_run) (id : Canary_artifact.artifact_id) :
+let provenance_of (pr : project_run) (id : Canary_artifact.artifact_info) :
     Canary_store_config.provider option =
   List.find_opt
-    (fun d -> Canary_artifact.equal_artifact_id d.Canary_project_spec.ar_artifact id)
+    (fun d -> Canary_artifact.equal_artifact_info d.Canary_project_spec.ar_artifact id)
     pr.pr_artifacts
   |> fun d -> Option.bind d (fun d -> d.Canary_project_spec.ar_provider)
 
@@ -308,7 +308,7 @@ let store_state_key (pr : project_run) (a : Canary_artifact.assignment) :
           | "" -> None
           | vid -> Some (Canary_artifact.string_of_id id, vid))
       | _ -> None)
-    (artifact_ids pr)
+    (artifact_infos pr)
   |> List.sort compare
 
 (** [scenarios_in_run_order] — [scenarios_of], grouped so scenarios needing
@@ -392,7 +392,7 @@ let scenario_label ~baseline (a : Canary_artifact.assignment) : string =
   match deltas with [] -> "(baseline)" | _ -> String.concat "  " deltas
 
 (* The binding languages a project's artifacts span. *)
-let langs_of (arts : Canary_artifact.artifact_id list) : Canary_lang.lang list =
+let langs_of (arts : Canary_artifact.artifact_info list) : Canary_lang.lang list =
   List.filter_map
     (fun a ->
       match Canary_artifact.kind_of a with
@@ -599,7 +599,7 @@ let print_spec ?policy (pr : project_run) : unit =
   (* artifacts, grouped, each with its baseline provision@version, the
      project-declared provenance detail, and what it can BUILD (derived from the
      action catalogue: which Build actions consume this kind → what they produce). *)
-  let arts = artifact_ids pr in
+  let arts = artifact_infos pr in
   let langs = langs_of arts in
   let builds_of a = builds_of ~langs a in
   Fmt.pr "@.artifacts (%d), by group [baseline provision@@version + provenance]:@."
@@ -662,7 +662,7 @@ let print_spec ?policy (pr : project_run) : unit =
              | _ -> ());
             List.iter
               (fun (id, ch, dir) ->
-                if Canary_artifact.equal_artifact_id id a then
+                if Canary_artifact.equal_artifact_info id a then
                   Fmt.pr "        mismatch probe: %s variant designed to reveal %s mismatch@."
                     (match ch with
                      | Canary_basic.Dev -> "dev"
@@ -800,7 +800,7 @@ let print_spec ?policy (pr : project_run) : unit =
 
 (* Is artifact [id] DIRECTLY mutated (Bad quality) in scenario [a]? *)
 let artifact_bad_in (a : Canary_artifact.assignment)
-    (id : Canary_artifact.artifact_id) : bool =
+    (id : Canary_artifact.artifact_info) : bool =
   match Canary_enumerate.placement_of a id with
   | Some { version = { quality = Canary_basic.Bad _; _ }; _ } -> true
   | _ -> false
@@ -833,7 +833,7 @@ let print_artifacts ?policy (pr : project_run) : unit =
       let in_grp =
         List.filter
           (fun id -> String.equal (group_of_kind (Canary_artifact.kind_of id)) grp)
-          (artifact_ids pr)
+          (artifact_infos pr)
       in
       if in_grp <> [] then begin
         Fmt.pr "  %s:@." grp;
@@ -846,7 +846,8 @@ let print_artifacts ?policy (pr : project_run) : unit =
                 (fun a ->
                   List.exists
                     (fun (other, (pl : Canary_artifact.placement)) ->
-                      Canary_basic.kind_order other.Canary_artifact.kind < ord
+                      Canary_basic.kind_order (Canary_artifact.kind_of other)
+                      < ord
                       && match pl.version.quality with Canary_basic.Bad _ -> true | _ -> false)
                     a)
                 bads
@@ -896,7 +897,7 @@ let spec_json_t ?policy (pr : project_run) : Yojson.Basic.t =
   let baseline = baseline_of scenarios in
   let all_good = assignment_is_all_good in
   let post = load_scenario_post ~project:pr.pr_name in
-  let langs = langs_of (artifact_ids pr) in
+  let langs = langs_of (artifact_infos pr) in
   let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
   let artifact_json a =
     `Assoc
@@ -945,7 +946,7 @@ let spec_json_t ?policy (pr : project_run) : Yojson.Basic.t =
       ("kind", `String "project_run");
       ( "artifacts",
         `List
-          (List.map artifact_json (artifact_ids pr)) );
+          (List.map artifact_json (artifact_infos pr)) );
       ("scenarios", `List (List.map scenario_json scenarios)) ]
 
 (* (print_spec_variants + spec_variants_json_t — the raw z3/llvm variant

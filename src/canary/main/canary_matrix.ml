@@ -121,7 +121,7 @@ let run_of_scenario ~scenario
     project-local [*_source_for_assignment] dispatches use the same
     data). *)
 let repo_of_source (pr : Canary_project_run.project_run)
-    (a : Canary_artifact.assignment) (src : Canary_artifact.artifact_id) :
+    (a : Canary_artifact.assignment) (src : Canary_artifact.artifact_info) :
     Canary_artifact_source.source_repo option =
   let src_id = (Canary_enumerate.version_of a src).Canary_basic.id in
   let repos =
@@ -179,7 +179,7 @@ let platform_label () : string =
     binding of its lang first (the consumer-of-interest), else the
     first. *)
 let action_artifact (act : Canary_basic.action)
-    (a : Canary_artifact.assignment) : Canary_artifact.artifact_id option =
+    (a : Canary_artifact.assignment) : Canary_artifact.artifact_info option =
   let pick (ks : Canary_basic.artifact_kind list) :
       Canary_basic.artifact_kind option =
     match ks with
@@ -211,7 +211,7 @@ let action_artifact (act : Canary_basic.action)
             Canary_basic.equal_artifact_kind
               (Canary_artifact.kind_of id)
               k
-            && (match (lang, id.Canary_artifact.kind) with
+            && (match (lang, Canary_artifact.kind_of id) with
                 | Some l, Canary_basic.Binding l' -> Poly.equal l l'
                 | None, _ -> true
                 | _ -> false)
@@ -263,7 +263,7 @@ let sys_pkg_version (pkg : string) : string =
     dpkg query — we DO know it), a path provider shows the path's last
     directory. *)
 let fetched_note (pr : Canary_project_run.project_run)
-    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
+    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_info) :
     string =
   let pin =
     (Canary_enumerate.version_of a id).Canary_basic.id
@@ -332,7 +332,7 @@ let stage_provision_of_action (act : Canary_basic.action) :
     build-step cells to [B], and is ignored everywhere else. *)
 let provision_choice ?stage
     (pr : Canary_project_run.project_run)
-    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
+    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_info) :
     string =
   match Canary_enumerate.placement_of a id with
   | None -> ""
@@ -368,7 +368,7 @@ let provision_choice ?stage
     action works on and how/at-what it is provided. *)
 let cell_annotation ?stage
     (pr : Canary_project_run.project_run)
-    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
+    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_info) :
     string =
   let label = kind_label (Canary_artifact.kind_of id) in
   let prov = provision_choice ?stage pr a id in
@@ -403,7 +403,7 @@ let prov_rank = function
 (** One artifact's placement as a sort key: provision strength, then
     the pinned version id. *)
 let placement_key (a : Canary_artifact.assignment)
-    (id : Canary_artifact.artifact_id) : int * string =
+    (id : Canary_artifact.artifact_info) : int * string =
   match Canary_enumerate.placement_of a id with
   | None -> (9, "")
   | Some (pl : Canary_artifact.placement) ->
@@ -416,7 +416,7 @@ let binding_key (a : Canary_artifact.assignment) (l : Canary_lang.lang) :
     int * string =
   match
     List.find_map a ~f:(fun (id, _) ->
-        match id.Canary_artifact.kind with
+        match Canary_artifact.kind_of id with
         | Canary_basic.Binding l' when Poly.equal l l' -> Some id
         | _ -> None)
   with
@@ -557,7 +557,7 @@ let setting_columns_of
      two columns with the same label. One column per artifact kind (+
      lang); the mechanism is a property of the artifact, not a column. *)
   List.concat_map projects ~f:(fun (_, pr) ->
-      List.map (Canary_project_run.artifact_ids pr)
+      List.map (Canary_project_run.artifact_infos pr)
         ~f:Canary_artifact.kind_of)
   |> List.dedup_and_sort ~compare:Stdlib.compare
   |> List.stable_sort ~compare:(fun x y ->

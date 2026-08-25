@@ -366,7 +366,7 @@ let per_artifact_provisions_test : pure_test =
       let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
       let artifacts = EN.[ a_source; a_lib; a_ocaml ] in
       let provisions_of id =
-        if Canary_artifact.equal_artifact_id id Canary_artifact.a_lib then EN.[ Fetched; Built ]
+        if Canary_artifact.equal_artifact_info id Canary_artifact.a_lib then EN.[ Fetched; Built ]
         else EN.[ Fetched ]
       in
       let pts =
@@ -397,7 +397,7 @@ let per_artifact_versions_test : pure_test =
       let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
       let artifacts = EN.[ a_lib; a_ocaml ] in
       let versions_of id _pv =
-        if Canary_artifact.equal_artifact_id id Canary_artifact.a_lib
+        if Canary_artifact.equal_artifact_info id Canary_artifact.a_lib
         then List.map B.two_channels ~f:B.good
         else [ B.good B.Dev ]                        (* binding: Dev only *)
       in
@@ -903,7 +903,7 @@ let dispatch_reads_test : pure_test =
       && Poly.equal (EN.channel_of good a_oc) B.Dev
       && List.is_empty (EN.bad_placements good)
       && (match EN.bad_placements bad with
-          | [ (id, "Bs.4") ] -> Canary_artifact.equal_artifact_id id Canary_artifact.a_lib
+          | [ (id, "Bs.4") ] -> Canary_artifact.equal_artifact_info id Canary_artifact.a_lib
           | _ -> false)) }
 
 (* Mismatch direction (named from the CONSUMER's position): consumer@Dev over
@@ -949,7 +949,7 @@ let built_from_test : pure_test =
       in
       let edges id = EN.built_from_of_assignment ~built_from_kinds a id in
       let one_edge id target =
-        match edges id with [ e ] -> Canary_artifact.equal_artifact_id e target | _ -> false
+        match edges id with [ e ] -> Canary_artifact.equal_artifact_info e target | _ -> false
       in
       one_edge Canary_artifact.a_lib Canary_artifact.a_source           (* Built lib ← Source *)
       && one_edge a_oc Canary_artifact.a_lib                (* Built binding ← Lib *)
@@ -1101,7 +1101,7 @@ let deploy_mismatch_test : pure_test =
         | Some a ->
             let pairs = runtime_pairings_of spec a in
             List.exists pairs ~f:(fun p ->
-                equal_artifact_id p.rp_consumer ocaml_b
+                equal_artifact_info p.rp_consumer ocaml_b
                 && Poly.equal p.rp_mode Canary_store.Independent
                 && p.rp_deploy)
       in
@@ -1594,9 +1594,20 @@ let binding_source_vocabulary_pin : pure_test =
       && String.equal
            (B.string_of_artifact_kind (B.Binding_source L.OCaml))
            "binding_source_ocaml"
-      && Canary_artifact.equal_artifact_id
+      (* the smart constructor agrees with the identity's own shape. This
+         used to compare against a raw { kind; ext } record and so also
+         guarded the pairing (a binding_source must carry Ext_none);
+         since 2026-08-24 that pairing is structural — [artifact_info] is a
+         sum — so what is left to check is the projection. *)
+      && Canary_artifact.equal_artifact_info
            (Canary_artifact.a_binding_source L.OCaml)
-           { kind = B.Binding_source L.OCaml; ext = Canary_artifact.Ext_none }
+           (Canary_artifact.A_binding_source L.OCaml)
+      && Poly.equal
+           (Canary_artifact.kind_of (Canary_artifact.a_binding_source L.OCaml))
+           (B.Binding_source L.OCaml)
+      && Option.is_none
+           (Canary_artifact.mechanism_of
+              (Canary_artifact.a_binding_source L.OCaml))
       (* the catalogue carries the typed row *)
       && List.exists B.action_catalogue ~f:(fun (s : B.action_sig) ->
              Poly.equal s.B.as_action

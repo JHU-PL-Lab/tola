@@ -20,7 +20,7 @@ surface checks manifest, and its wiring state.
 The layering contract:
 
 - **A project spec never inlines mechanism facts.** It references a
-  mechanism by name — an artifact id carries `Ext_mechanism m` — and that
+  mechanism by name — an artifact identity carries it (`A_binding (l, m)`) — and that
   is all. (`spec` prints the per-binding mechanism line by reading the
   catalogue, not the project.)
 - **Base-layer discipline**: descriptive fields are prose/lists here;

@@ -1011,7 +1011,7 @@ let mutation_target_of_spec (s : scenario_spec) :
 
 (** Default precise identity for a binding kind (used only as a fallback when
     the mutated files don't pin a mechanism). *)
-let id_of_kind : Canary_basic.artifact_kind -> Canary_artifact.artifact_id =
+let id_of_kind : Canary_basic.artifact_kind -> Canary_artifact.artifact_info =
   function
   | Canary_basic.Source -> Canary_artifact.a_source
   | Canary_basic.Lib -> a_lib
@@ -1025,14 +1025,21 @@ let id_of_kind : Canary_basic.artifact_kind -> Canary_artifact.artifact_id =
   | Canary_basic.Binding_source l -> Canary_artifact.a_binding_source l
   | Canary_basic.Headers -> Canary_artifact.a_headers
   | Canary_basic.App ->
-      Canary_artifact.{ kind = Canary_basic.App; ext = Ext_none }
+      (* [Direct] is the default wiring, as [Cstubs] is the default
+         mechanism above. This case used to build the raw record
+         { kind = App; ext = Ext_none } — an App with NO wiring, which
+         [a_app] cannot produce and which nothing downstream could have
+         read a wiring out of. The 2026-08-24 sum made it a type error;
+         before that it was a silently meaningless identity that only
+         happened to be harmless because this is a fallback. *)
+      Canary_artifact.a_app Canary_artifact.Direct
 
 (** The precise binding artifact(s) a mutation touches, read off its mutated
     files: [ocaml/] → cstubs, [python_cext/] → cext, [python_ctypes/] →
     ctypes. A mutation on both Python layers (e.g. api_repack_python) yields
     both cext and ctypes. *)
 let binding_ids_of_mutates (mutates : string list) :
-    Canary_artifact.artifact_id list =
+    Canary_artifact.artifact_info list =
   let touches p = List.exists mutates ~f:(String.is_prefix ~prefix:p) in
   List.filter_opt
     [ (if touches "ocaml/" then
@@ -1052,7 +1059,7 @@ let binding_ids_of_mutates (mutates : string list) :
     artifact(s) it touches — source/lib coarse, a binding to its exact
     (lang × mechanism) instance(s). A spec that mutates both Python layers
     yields two points (cext and ctypes). *)
-let engine_mutations : (Canary_artifact.artifact_id * string) list =
+let engine_mutations : (Canary_artifact.artifact_info * string) list =
   List.concat_map all_scenario_specs ~f:(fun s ->
       match mutation_target_of_spec s with
       | Some Canary_basic.Source -> [ (Canary_artifact.a_source, s.scenario.id) ]
@@ -1067,7 +1074,7 @@ let engine_mutations : (Canary_artifact.artifact_id * string) list =
 (** tiny's full artifact set (all [Built]): source, lib, all three binding
     instances (ocaml cstubs, python cext, python ctypes), and both app
     wirings (direct link, via a helper lib). *)
-let engine_artifacts : Canary_artifact.artifact_id list =
+let engine_artifacts : Canary_artifact.artifact_info list =
   Canary_project_spec.
     [ a_source; a_lib;
       a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
@@ -1120,7 +1127,8 @@ let () =
       if touches "python_cext/" && touches "python_ctypes/" then
         let exts =
           List.filter_map engine_mutations ~f:(fun (aid, id) ->
-              if String.equal id s.scenario.id then Some aid.Canary_artifact.ext
+              if String.equal id s.scenario.id then
+                Some (Canary_artifact.ext_of aid)
               else None)
         in
         let has e = List.mem exts e ~equal:Canary_artifact.equal_artifact_ext in
@@ -1182,7 +1190,7 @@ let print_engine_render () : unit =
    ([print_tiny_full]); the good+bad RUN — positive witnesses + the
    enumerated mutation points, algorithm-driven — is [run_tiny_full] below
    (shipped 2026-08-02). status.md §1a. *)
-let tiny_full_artifacts : Canary_artifact.artifact_id list = engine_artifacts
+let tiny_full_artifacts : Canary_artifact.artifact_info list = engine_artifacts
 
 let tiny_full_points : string Canary_enumerate.point list =
   (* A project ships its *whole declared set* of artifacts (the binding list
@@ -1777,13 +1785,13 @@ let () =
    catalogue grouped by the artifact each mutation targets (from
    [engine_mutations]); the tag is the factory scenario id, but the runner
    never interprets it. *)
-let tiny_full_bad_tags_of (aid : Canary_artifact.artifact_id) : string list =
+let tiny_full_bad_tags_of (aid : Canary_artifact.artifact_info) : string list =
   List.filter_map engine_mutations ~f:(fun (a, sid) ->
-      if Canary_artifact.equal_artifact_id a aid then Some sid else None)
+      if Canary_artifact.equal_artifact_info a aid then Some sid else None)
 
 type tiny_full_spec = {
-  tf_artifacts : Canary_artifact.artifact_id list;
-  tf_bad_tags_of : Canary_artifact.artifact_id -> string list;
+  tf_artifacts : Canary_artifact.artifact_info list;
+  tf_bad_tags_of : Canary_artifact.artifact_info -> string list;
 }
 
 let tiny_full_spec : tiny_full_spec =
@@ -1836,7 +1844,7 @@ let tiny_full_assignments (spec : tiny_full_spec) :
      Stable source violates source-primary. Hand-built until that's resolved. *)
   let all_good_built_lib_at channel =
     List.map spec.tf_artifacts ~f:(fun a ->
-        if Canary_artifact.equal_artifact_id a a_lib then
+        if Canary_artifact.equal_artifact_info a a_lib then
           (a, tiny_full_placement ~provision:Canary_artifact.Built ~channel ())
         else (a, tiny_full_placement ()))
   in
@@ -1881,16 +1889,16 @@ let tiny_full_general_spec (spec : tiny_full_spec) :
      build-lib the static per-artifact axis can't express yet). *)
   Canary_artifact.project_spec_of_universe
     (List.filter_map spec.tf_artifacts ~f:(fun a ->
-         if Canary_artifact.equal_artifact_id a Canary_artifact.a_source
+         if Canary_artifact.equal_artifact_info a Canary_artifact.a_source
          then None
-         else if Canary_artifact.equal_artifact_id a a_lib
+         else if Canary_artifact.equal_artifact_info a a_lib
          then
            Some
              ( a,
                Canary_artifact.axes
                  [ (Canary_artifact.Vendored, [ Canary_basic.Stable ]);
                    (Canary_artifact.Built, Canary_basic.[ Stable; Dev ]) ] )
-         else if Canary_artifact.equal_artifact_id a a_oc then
+         else if Canary_artifact.equal_artifact_info a a_oc then
            Some
              ( a,
                Canary_artifact.axes
@@ -1938,7 +1946,7 @@ let tiny_full_combinations (spec : tiny_full_spec) :
     List.map spec.tf_artifacts ~f:(fun a ->
         match
           List.find bads ~f:(fun (aid, _) ->
-              Canary_artifact.equal_artifact_id aid a)
+              Canary_artifact.equal_artifact_info aid a)
         with
         | Some (_, tag) ->
             (a, tiny_full_placement ~quality:(Canary_basic.Bad tag) ())

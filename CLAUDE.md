@@ -168,6 +168,7 @@ reconciling with, not duplicating.
 | `src/canary/base/canary_lang.ml`                    | `type lang = OCaml \| Python \| …`; sibling file so `canary_basic` + `canary_store` can both use it    |
 | `src/canary/base/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `action` (constructor type; was `rule` pre-2026-07-21), `string_of_action`/`action_of_string`, `step_body` (legacy shell carrier), `version`, `filename`, `variant_file` — live vocabulary including output-tree naming |
 | `src/canary/base/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro`, `pm_properties` types (was canary_pm_types)    |
+| `src/canary/base/canary_artifact.ml`                | Artifact IDENTITY: `artifact_info` (a SUM since 2026-08-24 — `A_binding of lang * mechanism`, `A_app of app_wiring`, …; was a `{ kind; ext }` record whose pairing was convention-only), `kind_of` projecting the coarse `artifact_kind`, `ext_of`/`mechanism_of`/`wiring_of` views, the `a_*` smart constructors, `artifact_axes`, `project_spec`, `placement`, `assignment` |
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
 | `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
@@ -295,7 +296,7 @@ only DATA — `pr_spec` is ONE fused table (`ps_universe : artifact ×
 (provision × versions) list`; old accessor names are functions over it),
 `pr_artifacts` THE artifact table (`artifact_decl` rows: identity +
 provider — the old separate `pr_provenance` assoc merged in 2026-08-06;
-`provenance_of`/`artifact_ids` read it),
+`provenance_of`/`artifact_infos` read it),
 `pr_mismatch_probes` a design-intent table (which consumer variants are
 designed forward/backward probes; per-scenario direction is COMPUTED via
 `mismatch_direction_of`). `pr_runner_spec` must be `realize ∘ dispatch`

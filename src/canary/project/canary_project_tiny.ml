@@ -44,7 +44,7 @@ let tiny_binding_decls = TS.tiny_binding_decls
 
 (** tiny-full's declared artifact set (source, lib, the three binding
     instances, both app wirings) — all [Vendored]. *)
-let artifacts : Canary_artifact.artifact_id list = TS.tiny_full_artifacts
+let artifacts : Canary_artifact.artifact_info list = TS.tiny_full_artifacts
 
 (** The mutation-agnostic spec: which artifacts, and the bad-variant catalogue
     (tags) per artifact. *)

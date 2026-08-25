@@ -26,7 +26,7 @@ open Canary_basic
     it needs at runtime ([runtime_dep]). Relocated from base (M1.0, 2026-08-04):
     base never used it — it is action-layer vocabulary, and lives here beside
     [make_action_graph] so it can (M1) merge with the enumerate-layer identity
-    types (`artifact_id` / `build_id`). The graph is materialised by
+    types (`artifact_info` / `build_id`). The graph is materialised by
     {!Canary.run_graph}. *)
 type artifact_node = {
   a_kind : artifact_kind;
@@ -433,7 +433,7 @@ let node_of_assignment (a : Canary_artifact.assignment) : artifact_node list =
     | Headers -> consumes_of_action Build_headers
     | _ -> []
   in
-  let rec build (id : Canary_artifact.artifact_id) : artifact_node =
+  let rec build (id : Canary_artifact.artifact_info) : artifact_node =
     let built_from =
       match Canary_enumerate.built_from_of_assignment ~built_from_kinds a id with
       | dep :: _ -> Some (build dep)   (* seam returns deps present in [a] *)

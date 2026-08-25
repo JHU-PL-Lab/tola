@@ -44,7 +44,7 @@ type source_repo = {
           fork ([Some "arbipher"]). [ref_]/[official]/stable-latest
           markers are repo PROPERTIES; WHICH repos a run enumerates is
           the algorithm/config's choice, not this field's. *)
-  artifacts : Canary_artifact.artifact_id list;
+  artifacts : Canary_artifact.artifact_info list;
       (** WHAT ARTIFACTS the repo's tree builds (2026-08-16, the
           multi-repo principle — design/enumeration/stage1_project_spec.md): the modeling
           direction is repo → artifacts; on-tree-ness derives from it.

@@ -9,12 +9,12 @@ catalogue. The pipeline map is [`README.md`](README.md).
 
 ## The four senses
 
-| Sense                              | Term             | Definition                                                                | Example                                                                                    |
-| ---------------------------------- | ---------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 1. Concrete runnable configuration | **scenario**     | An action chain + version coordinates, produced by the enumeration engine | `fetch_lib → probe_lib` with `{lib@F@Stable}`                                              |
-| 2. Abstract action shape           | **pattern**      | A named collection of actions (Sc.N id), stable manuscript identifier     | `Sc.2.OCaml` = "build OCaml binding"                                                       |
-| 3. Lifecycle stage                 | **stage**        | A single action in the coverage matrix                                    | `build_lib`, `fetch_binding`                                                               |
-| 4. Structural path                 | **path pattern** | Universal action chain from the path table (`canary paths`)               | `fetch_source → build_lib → build_binding`                                                 |
+| Sense                              | Term             | Definition                                                                | Example                                       |
+| ---------------------------------- | ---------------- | ------------------------------------------------------------------------- | --------------------------------------------- |
+| 1. Concrete runnable configuration | **scenario**     | An action chain + version coordinates, produced by the enumeration engine | `fetch_lib → probe_lib` with `{lib@F@Stable}` |
+| 2. Abstract action shape           | **pattern**      | A named collection of actions (Sc.N id), stable manuscript identifier     | `Sc.2.OCaml` = "build OCaml binding"          |
+| 3. Lifecycle stage                 | **stage**        | A single action in the coverage matrix                                    | `build_lib`, `fetch_binding`                  |
+| 4. Structural path                 | **path pattern** | Universal action chain from the path table (`canary paths`)               | `fetch_source → build_lib → build_binding`    |
 
 **Sense 1** is the primary one — `Canary_project_run.run_project_spec` produces scenarios.
 **Sense 2** lives in `canary_scenario.ml` — the `good_scenarios` catalogue.
@@ -33,13 +33,13 @@ Good:  Sc.<primary-stage>.<terminal-action>_on_<dep-artifacts>
 Bad:   Sc.<primary-stage>.<terminal-action>_on_<dep-artifacts>.<fault>_on_<artifact>
 ```
 
-| Component | Meaning | Example |
-|---|---|---|
-| `primary-stage` | First `belongs_to` entry — the pattern's entry point | `Sc.1`, `Sc.2.OCaml` |
-| `terminal-action` | Last action in the chain | `build_lib`, `probe_app` |
-| `dep-artifacts` | Artifacts the terminal action depends on, with provisions | `lib_local`, `lib_local_binding_local` |
-| `fault` | Concise tag for the violated contract | `sym_missing`, `api_drop` |
-| `artifact` | Which artifact the fault targets (short name) | `src`, `lib`, `binding` |
+| Component         | Meaning                                                   | Example                                |
+| ----------------- | --------------------------------------------------------- | -------------------------------------- |
+| `primary-stage`   | First `belongs_to` entry — the pattern's entry point      | `Sc.1`, `Sc.2.OCaml`                   |
+| `terminal-action` | Last action in the chain                                  | `build_lib`, `probe_app`               |
+| `dep-artifacts`   | Artifacts the terminal action depends on, with provisions | `lib_local`, `lib_local_binding_local` |
+| `fault`           | Concise tag for the violated contract                     | `sym_missing`, `api_drop`              |
+| `artifact`        | Which artifact the fault targets (short name)             | `src`, `lib`, `binding`                |
 
 ### Dep ordering
 
@@ -51,27 +51,27 @@ Bad:   Sc.<primary-stage>.<terminal-action>_on_<dep-artifacts>.<fault>_on_<artif
 
 ### Short names
 
-| Full name | Short | Why |
-|---|---|---|
-| `source` | `src` | Clear from context |
-| `lib` | `lib` | Already short |
+| Full name                         | Short     | Why                          |
+| --------------------------------- | --------- | ---------------------------- |
+| `source`                          | `src`     | Clear from context           |
+| `lib`                             | `lib`     | Already short                |
 | `ocaml_binding`, `python_binding` | `binding` | Language implicit from stage |
-| Vendored | `local` | Uniform term |
-| Fetched (PM) | `sys-pm` | System package manager |
-| Built | `built` | Compiled by canary |
+| Vendored                          | `local`   | Uniform term                 |
+| Fetched (PM)                      | `sys-pm`  | System package manager       |
+| Built                             | `built`   | Compiled by canary           |
 
 ### Fault tags (contract ↔ fault)
 
-| Contract | Fault tag | What it detects |
-|---|---|---|
-| c1 | `sym_missing` | Symbol present in binding, absent from lib |
-| c2 | `api_drop` | API surface entry dropped (mli val, Python attr) |
-| c3 | `behavior` | Probe output mismatch (runtime behavior) |
-| c4 | `abi_soname` | SONAME bump breaks dynamic link |
-| c5 | `sym_version` | Versioned symbol floor mismatch |
-| c6 | `type_arity` | Header type/arity mismatch |
-| c7 | `api_repack` | Repackaging breaks API (intra-binding) |
-| c8 | `api_add` | API addition not propagated to binding (dormant) |
+| Contract | Fault tag     | What it detects                                  |
+| -------- | ------------- | ------------------------------------------------ |
+| c1       | `sym_missing` | Symbol present in binding, absent from lib       |
+| c2       | `api_drop`    | API surface entry dropped (mli val, Python attr) |
+| c3       | `behavior`    | Probe output mismatch (runtime behavior)         |
+| c4       | `abi_soname`  | SONAME bump breaks dynamic link                  |
+| c5       | `sym_version` | Versioned symbol floor mismatch                  |
+| c6       | `type_arity`  | Header type/arity mismatch                       |
+| c7       | `api_repack`  | Repackaging breaks API (intra-binding)           |
+| c8       | `api_add`     | API addition not propagated to binding (dormant) |
 
 ### Example names
 
@@ -107,14 +107,14 @@ The mapping from tiny1 recipe step names to canary step tags is the
 
 A scenario's chain is determined by which provisions fire:
 
-| Pattern | Provisions | Chain |
-|---|---|---|
-| Fetch chain | All Fetched | `Fetch S → Fetch L → Fetch B → Probe` |
-| Build chain (follows) | Source Fetched, Lib+Bind Built | `Fetch S → Build L → Build B → Probe` |
-| Build chain (independent) | Lib Built, Bind Fetched | `Build L → Fetch B → Probe` |
-| Mixed provision | Lib Fetched, Bind Built | `Fetch L → Build B → Probe` |
-| No-source build | Lib Built, no source declared | `Build L → Fetch B → Probe` |
-| Deploy mismatch | Bind Fetched over different-version Lib | Same chain, lib@Dev vs binding@Stable |
+| Pattern                   | Provisions                              | Chain                                 |
+| ------------------------- | --------------------------------------- | ------------------------------------- |
+| Fetch chain               | All Fetched                             | `Fetch S → Fetch L → Fetch B → Probe` |
+| Build chain (follows)     | Source Fetched, Lib+Bind Built          | `Fetch S → Build L → Build B → Probe` |
+| Build chain (independent) | Lib Built, Bind Fetched                 | `Build L → Fetch B → Probe`           |
+| Mixed provision           | Lib Fetched, Bind Built                 | `Fetch L → Build B → Probe`           |
+| No-source build           | Lib Built, no source declared           | `Build L → Fetch B → Probe`           |
+| Deploy mismatch           | Bind Fetched over different-version Lib | Same chain, lib@Dev vs binding@Stable |
 
 The `scenario_pattern` type in `canary_enumerate.ml` encodes these.
 
@@ -125,25 +125,25 @@ The `scenario_pattern` type in `canary_enumerate.ml` encodes these.
 
 Bad scenarios come in two flavors:
 
-| | Flavor 1: defect IN one artifact | Flavor 2: mismatch BETWEEN artifacts |
-|---|---|---|
-| Locus | Single artifact missing/adding a field | Two well-formed artifacts that don't fit |
-| Engine | Mutation axis (quality = Bad tag) | Deploy-mismatch (run-lib ≠ build-lib) |
-| Implementation | tiny1's 20 bad scenarios | Machinery built, not yet wired to live run |
-| Canonical name | `<good-name>.<fault>_on_<artifact>` | `<good-name>.deploy_mismatch_on_<consumer>` |
+|                | Flavor 1: defect IN one artifact       | Flavor 2: mismatch BETWEEN artifacts        |
+| -------------- | -------------------------------------- | ------------------------------------------- |
+| Locus          | Single artifact missing/adding a field | Two well-formed artifacts that don't fit    |
+| Engine         | Mutation axis (quality = Bad tag)      | Deploy-mismatch (run-lib ≠ build-lib)       |
+| Implementation | tiny1's 20 bad scenarios               | Machinery built, not yet wired to live run  |
+| Canonical name | `<good-name>.<fault>_on_<artifact>`    | `<good-name>.deploy_mismatch_on_<consumer>` |
 
 ## Contract catalogue (c1..c8)
 
-| Contract | Fault tag | What it checks |
-|---|---|---|
-| c1 | `sym_missing` | C symbols exported by lib vs expected by binding |
-| c2 | `api_drop` | API surface entries (mli vals, Python attrs) present |
-| c3 | `behavior` | Probe output matches expected |
-| c4 | `abi_soname` | Shared library version name matches |
-| c5 | `sym_version` | `@@GLIBC_2.31` annotations |
-| c6 | `type_arity` | C type compatibility |
-| c7 | `api_repack` | Repackaging preserves API |
-| c8 | `api_add` | Repackaging is complete (dormant, blocked on c6+c7) |
+| Contract | Fault tag     | What it checks                                       |
+| -------- | ------------- | ---------------------------------------------------- |
+| c1       | `sym_missing` | C symbols exported by lib vs expected by binding     |
+| c2       | `api_drop`    | API surface entries (mli vals, Python attrs) present |
+| c3       | `behavior`    | Probe output matches expected                        |
+| c4       | `abi_soname`  | Shared library version name matches                  |
+| c5       | `sym_version` | `@@GLIBC_2.31` annotations                           |
+| c6       | `type_arity`  | C type compatibility                                 |
+| c7       | `api_repack`  | Repackaging preserves API                            |
+| c8       | `api_add`     | Repackaging is complete (dormant, blocked on c6+c7)  |
 
 ## Stage coverage (`canary stages`)
 

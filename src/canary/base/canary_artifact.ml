@@ -159,43 +159,101 @@ type app_wiring = Direct | Via_helper [@@deriving show, eq]
 
 let string_of_app_wiring = function Direct -> "direct" | Via_helper -> "via_helper"
 
-(** Per-kind extension distinguishing several artifacts of the same coarse
-    kind: a binding by its mechanism, an app by its wiring. *)
+(** The enumeration's precise artifact identity.
+
+    A SUM since 2026-08-24 (user: the identity carries a payload, so the
+    record was lying). It used to be [{ kind : artifact; ext :
+    artifact_ext }] — two fields where the second refines the first, with
+    the pairing rule held only by convention. That let
+    [{ kind = Lib; ext = Ext_mechanism Cstubs }] and
+    [{ kind = Binding OCaml; ext = Ext_none }] typecheck, both nonsense.
+
+    Why the payload did NOT move into {!Canary_basic.artifact_kind}
+    instead — the other obvious absorption, and the more expensive one:
+    the coarse kind has ~116 mention sites and genuinely
+    mechanism-INDEPENDENT consumers ([kind_order] for the matrix column
+    order, [consumes_of_action]/[produces_of_action] — a [Build_binding l]
+    consumes [Lib] whatever the mechanism — [string_of_artifact_kind],
+    [scenario_dir_of]'s naming). Putting the mechanism there turns every
+    one of those into [Binding (l, _)]: the coarse view stops being a type
+    and becomes a wildcard convention. Keeping it as a PROJECTION
+    ({!kind_of}) gives both.
+
+    Constructors carry an [A_] prefix because this module re-exports
+    [artifact_kind]'s constructors unqualified and they would shadow.
+    Almost nothing needs them: construction goes through the smart
+    constructors below (~268 call sites), and reads go through {!kind_of}
+    / {!mechanism_of} / {!wiring_of}. *)
+type artifact_info =
+  | A_source
+  | A_headers
+  | A_lib
+  | A_binding of Canary_lang.lang * Canary_mechanism.mechanism
+  | A_binding_source of Canary_lang.lang
+  | A_app of app_wiring
+[@@deriving show, eq]
+
+(** The coarse role, projected out. An artifact HAS a kind; several
+    consumers want only that. *)
+let kind_of : artifact_info -> artifact = function
+  | A_source -> Source
+  | A_headers -> Headers
+  | A_lib -> Lib
+  | A_binding (l, _) -> Binding l
+  | A_binding_source l -> Binding_source l
+  | A_app _ -> App
+
+(** The refinement, where the kind has one. [None] for source / headers /
+    lib, which are one-per-project by construction. *)
+let mechanism_of : artifact_info -> Canary_mechanism.mechanism option = function
+  | A_binding (_, m) -> Some m
+  | A_source | A_headers | A_lib | A_binding_source _ | A_app _ -> None
+
+let wiring_of : artifact_info -> app_wiring option = function
+  | A_app w -> Some w
+  | A_source | A_headers | A_lib | A_binding _ | A_binding_source _ -> None
+
+(** The refinement as a VIEW, for consumers that want "whatever refines
+    this kind" without caring which flavour it is (the node graph's tag,
+    the enumeration's mechanism lookup).
+
+    This was the [ext] FIELD until 2026-08-24, and that is the whole
+    difference: as a field it could be set independently of the kind and
+    disagree with it; as a projection it cannot. The illegal states are
+    gone from the identity, and the view that made those consumers
+    convenient is still available. *)
 type artifact_ext =
-  | Ext_none  (** source / headers / lib *)
+  | Ext_none  (** source / headers / lib / binding source *)
   | Ext_mechanism of Canary_mechanism.mechanism  (** a binding *)
   | Ext_wiring of app_wiring  (** an app *)
 [@@deriving show, eq]
 
-(** The enumeration's precise artifact identity — the coarse [kind] plus its
-    [ext] (≡ the (artifact, artifact_ext) pair). [kind_of] projects back to
-    the coarse [Canary_basic.artifact_kind]. *)
-type artifact_id = { kind : artifact; ext : artifact_ext } [@@deriving show, eq]
+let ext_of : artifact_info -> artifact_ext = function
+  | A_binding (_, m) -> Ext_mechanism m
+  | A_app w -> Ext_wiring w
+  | A_source | A_headers | A_lib | A_binding_source _ -> Ext_none
 
-let kind_of (id : artifact_id) : artifact = id.kind
-let ext_of (id : artifact_id) : artifact_ext = id.ext
-
-(* smart constructors *)
-let a_source : artifact_id = { kind = Source; ext = Ext_none }
-let a_headers : artifact_id = { kind = Headers; ext = Ext_none }
-let a_lib : artifact_id = { kind = Lib; ext = Ext_none }
-
-let a_binding_source (lang : Canary_lang.lang) : artifact_id =
-  { kind = Binding_source lang; ext = Ext_none }
+(* smart constructors — THE construction API *)
+let a_source : artifact_info = A_source
+let a_headers : artifact_info = A_headers
+let a_lib : artifact_info = A_lib
+let a_binding_source (lang : Canary_lang.lang) : artifact_info =
+  A_binding_source lang
 
 let a_binding (lang : Canary_lang.lang) (m : Canary_mechanism.mechanism) :
-    artifact_id =
-  { kind = Binding lang; ext = Ext_mechanism m }
+    artifact_info =
+  A_binding (lang, m)
 
-let a_app (w : app_wiring) : artifact_id = { kind = App; ext = Ext_wiring w }
+let a_app (w : app_wiring) : artifact_info = A_app w
 
-(** Canonical born-safe id string: '-' ext delimiter, filesystem/env-var safe. *)
-let string_of_id (id : artifact_id) : string =
-  let base = string_of_artifact id.kind in
-  match id.ext with
-  | Ext_none -> base
-  | Ext_mechanism m -> base ^ "-" ^ Canary_mechanism.string_of_mechanism m
-  | Ext_wiring w -> base ^ "-" ^ string_of_app_wiring w
+(** Canonical born-safe id string: '-' refinement delimiter, safe for
+    filesystem paths and ':'-separated env vars. *)
+let string_of_id (id : artifact_info) : string =
+  let base = string_of_artifact (kind_of id) in
+  match id with
+  | A_binding (_, m) -> base ^ "-" ^ Canary_mechanism.string_of_mechanism m
+  | A_app w -> base ^ "-" ^ string_of_app_wiring w
+  | A_source | A_headers | A_lib | A_binding_source _ -> base
 
 (* DISPLAY-ONLY pretty form: ':' delimiter. Never use for keys/paths. *)
 let pretty_artifact = function
@@ -206,12 +264,12 @@ let pretty_artifact = function
   | Binding_source l -> "binding_source:" ^ Canary_lang.string_of_lang l
   | App -> "app"
 
-let pretty_id (id : artifact_id) : string =
-  let base = pretty_artifact id.kind in
-  match id.ext with
-  | Ext_none -> base
-  | Ext_mechanism m -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
-  | Ext_wiring w -> base ^ ":" ^ string_of_app_wiring w
+let pretty_id (id : artifact_info) : string =
+  let base = pretty_artifact (kind_of id) in
+  match id with
+  | A_binding (_, m) -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
+  | A_app w -> base ^ ":" ^ string_of_app_wiring w
+  | A_source | A_headers | A_lib | A_binding_source _ -> base
 
 (* ── project declaration (stage 1 / ssot §4.2) ── *)
 
@@ -221,7 +279,7 @@ let pretty_id (id : artifact_id) : string =
 type artifact_axes = {
   ax_universe : (provision * Canary_basic.channel list) list;
   ax_runtime : Canary_store.dep_mode option;
-  ax_follows : artifact_id option;
+  ax_follows : artifact_info option;
   ax_pins : Canary_basic.build_id list;
       (** pinned concrete versions for the Fetched provision, PROJECTED
           from the artifact's provider (never hand-declared): a pinned
@@ -241,27 +299,27 @@ let axes ?runtime ?follows ?(pins = [])
     artifacts, each artifact's provision universe (A1), and each artifact's
     version universe. These are *project facts*. *)
 type project_spec = {
-  ps_universe : (artifact_id * artifact_axes) list;
+  ps_universe : (artifact_info * artifact_axes) list;
 }
 [@@deriving show]
 
-(** From a raw [(artifact_id * artifact_axes) list]. *)
+(** From a raw [(artifact_info * artifact_axes) list]. *)
 let project_spec_of_universe
-    (u : (artifact_id * artifact_axes) list) : project_spec =
+    (u : (artifact_info * artifact_axes) list) : project_spec =
   { ps_universe = u }
 
-let ps_artifacts (s : project_spec) : artifact_id list =
+let ps_artifacts (s : project_spec) : artifact_info list =
   List.map s.ps_universe ~f:fst
 
-let ps_axes_of (s : project_spec) (id : artifact_id) : artifact_axes option =
-  List.Assoc.find s.ps_universe id ~equal:equal_artifact_id
+let ps_axes_of (s : project_spec) (id : artifact_info) : artifact_axes option =
+  List.Assoc.find s.ps_universe id ~equal:equal_artifact_info
 
-let ps_provisions_of (s : project_spec) (id : artifact_id) : provision list =
+let ps_provisions_of (s : project_spec) (id : artifact_info) : provision list =
   match ps_axes_of s id with
   | Some ax -> List.map ax.ax_universe ~f:fst
   | None -> []
 
-let ps_versions_of (s : project_spec) (id : artifact_id) (pv : provision) :
+let ps_versions_of (s : project_spec) (id : artifact_info) (pv : provision) :
     Canary_basic.build_id list =
   match ps_axes_of s id with
   | None -> []
@@ -282,4 +340,4 @@ let ps_versions_of (s : project_spec) (id : artifact_id) (pv : provision) :
 type placement = { provision : provision; version : Canary_basic.build_id }
 [@@deriving show]
 
-type assignment = (artifact_id * placement) list [@@deriving show]
+type assignment = (artifact_info * placement) list [@@deriving show]
