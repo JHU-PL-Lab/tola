@@ -278,7 +278,13 @@ as a simple declaration.
    check (pkg-config / version / compile) without going through
    opam install, giving immediate feedback on system readiness.
 
-## Follow-up (2026-08-20) — landing plan for the version-free conf projects
+## Follow-up (2026-08-20) — what makes a conf project cheap to land
+
+> The landing PLAN this section used to carry moved out 2026-08-26: the
+> per-project checklist to [`../project/landing.md`](../project/landing.md)
+> §2b, the exclusions to [`../project/projects.md`](../project/projects.md)
+> §4, and the queue to §4 there. What stays is the criterion (§F1) and
+> the measurements (§G).
 
 > Requested by the user after the conda-forge study: *"landing ocaml
 > projects with a conf-pkg which doesn't specify a system package version
@@ -317,79 +323,14 @@ version-free conf package plus a soname bump (openssl 3→4) means the
 consumer must be rebuilt, not re-pointed. So the criterion picks cheap
 landings; the soname check picks which of them are *point-at-it* cheap.
 
-### F2. What a landing costs, now that we have done four
+### F3. ~~The ranking~~ — superseded
 
-The per-project checklist, in the order that avoids rework (each step's
-"why" is a bug we actually hit):
+This section carried a ranking that §G5 replaced on the same day, and the
+two disagreed (F3 ranked mpfr/libev/python3-dev 3rd-5th; G5 ranks
+sundials/ncurses/pcre). Its rows 1-2 had already degraded to "Landed. See
+§G5". Removed 2026-08-26 — **§G5 is the measurement**, and the queue that
+consumes it lives in [`../project/projects.md`](../project/projects.md) §4.
 
-1. **Declare the artifact table** — rows + universes + providers, with
-   `ar_rationale` on the lib row saying where each point came from *and
-   why the axis stops there* (a one-point axis is usually a fact about the
-   world; without the note a reader cannot tell it from an omission).
-2. **Declare the binding** — `binding_decl` (mechanism, c_api, native,
-   coupling, surface_path) **plus `pm_gate` measured from
-   `opam show <pkg> --field=depends`**, not guessed. Our guess about ssl
-   was wrong; the metadata was right.
-3. **Source the lib pair** — system PM = stable; official prebuilt if one
-   exists (none of our libs publish Linux binaries); else conda-forge's
-   newest, declared `Vendored` at `contrib/<p>-all/prebuilt/<tag>/`.
-4. **Check the closure BEFORE trusting it** — `readelf -d` (NEEDED +
-   RPATH), `ldd -r` (undefined symbols), `dlopen(RTLD_NOW)`. A one-entry
-   closure (zlib, libffi) is trivially safe; a thirteen-entry one (cairo)
-   works only because the system happens to satisfy it.
-5. **Compare sonames across the pair.** Same soname → `LD_LIBRARY_PATH`
-   suffices. Different → the consumer needs a rebuild; schedule it as
-   wrapper work, not as a declaration.
-6. **Point the CONSUMER at the world's lib.** The probe must carry the
-   world's libdir; otherwise the vendored world silently re-tests the
-   system lib and passes for the wrong reason.
-7. **Pin it**: the enumeration count, and — the one with teeth — that the
-   two worlds' realized commands NAME DIFFERENT FILES. cairo proves why:
-   its two versions export identical symbol counts, so a silent fallback
-   is invisible in the verdict.
-8. **Run and verify each world holds its declared version** (a runtime
-   version line, asserted where canary controls the version; observed
-   where it does not).
-
-Roughly: steps 1–3 are declaration (~40 lines for a template project),
-4–5 are measurement (minutes), 6–8 are the parts that were bugs the first
-four times.
-
-### F3. The ranking — measured, not guessed
-
-Data gathered 2026-08-20: the conf constraint from
-`opam show <binding> --field=depends`, apt versions from `apt-cache
-madison`, conda-forge from `api.anaconda.org`.
-
-| #     | lib / binding                             | conf gate                              | apt (stable)   | conda-forge (latest) | pair? | why this rank                                                                                                                                                                      |
-| ----- | ----------------------------------------- | -------------------------------------- | -------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | **zlib / camlzip** — LANDED 2026-08-20 | `conf-zlib`, no constraint | 1.3 | **1.3.2** | ✓ | Landed. See §G5 |
-| **2** | **zstd** — LANDED 2026-08-20 | `conf-zstd` — **floor `>= 1.3.8`**, measured at the conf package (§G1a), not visible in the binding's metadata | 1.5.5 | **1.5.7** | ✓ | Landed. See §G5 |
-| **3** | **mpfr / mlgmpidl**                       | `conf-mpfr-paths` + `conf-gmp-paths`   | (mpfr 4.x)     | to measure           | ?     | The first STACKED dependency (mpfr needs gmp, which we cover). Note the gate is the `-paths` conf FAMILY, not plain `conf-mpfr` — a different conf style worth studying on its own |
-| **4** | **libev / lwt**                           | `conf-libev` as a **depopt**           | 4.33 (single)  | to measure           | —     | The optional-dependency axis (`Absent` provision), which we deferred: needs the per-artifact "mandatory vs optional" rule plus a combination policy                                |
-| **5** | **python3-dev / pyml**                    | `conf-python-3-dev` only `{with-test}` | 3.12 only here | n/a                  | —     | pyml links libpython directly rather than through a conf gate, and this box has one python3-dev. Interesting but not a version-pair candidate without a PPA                        |
-| —     | ncurses, libseccomp, ffmpeg, rdkit, boost | —                                      | —              | —                    | —     | No clean OCaml binding measured, or a heavy closure. Revisit after 1–2                                                                                                             |
-
-**Take 1 and 2 first.** Both are `Free_with_conf` with a real pair, both
-have small dependency closures, and both are same-soname, so the entire
-landing is declaration + the checklist — no wrapper, no rebuild, no model
-change. They also each add something: zlib brings the highest uncovered
-revdep count, zstd is a bytesrw backend.
-
-**3 and 4 each need a model piece first** — the stacked lib (named lib
-artifacts) and the optional dep (`Absent` in a universe + a combination
-policy). They are the honest next arc, not the next landing.
-
-### F4. What this plan does NOT cover
-
-- The `Fixed_with_conf` family (llvm's shape) — needs the no-conf wrapper
-  to move a lib version at all. Different work, tracked with the wrapper.
-- The 6% custom-logic conf packages (§ "Custom logic"): the survey's own
-  observation is that they are where version mismatches actually happen.
-  They are the highest-yield targets and the most expensive; they belong
-  after the cheap landings have proven the pipeline end to end.
-- Optional-dep combinations (bytesrw's five backends) — see
-  [`../design/enumeration/multi_lib.md` §2](../design/enumeration/multi_lib.md).
 
 ---
 
@@ -709,8 +650,8 @@ omitted. "Effective gate" applies §G1a — a packaging-only bound is free.
 
 | rank   | project                                    | conf revdeps   | binding pair            | lib pair (stable → latest)   | effective gate                     | cost                                                                                     |
 | ------ | ------------------------------------------ | -------------- | ----------------------- | ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| **1**  | **zlib / camlzip** — LANDED 2026-08-20 | 56 | camlzip 1.07→1.14 (4) | apt 1.3 → cf **1.3.2** | free | declaration only. Landed with a probe that names the library the loader mapped; the pair also turned out to carry a live ELF symbol-versioning gate (`ZLIB_1.3.1.2`) — see `conda_forge.md` |
-| **2**  | **zstd** — LANDED 2026-08-20 | 13 | `zstd` 0.2→0.4 (3) | apt 1.5.5 → cf **1.5.7** | **`>= 1.3.8`, REAL** | declaration only. **Correction the landing forced**: this row read "no constraint" from the BINDING's bare `conf-zstd` dependency, but conf-zstd's own build is `pkg-config --atleast-version=1.3.8 libzstd` (§G1a mechanism (i)). Both points clear the floor, so it does not bite — but the gate is `tracks_lib = true`, not free. Use the `zstd` binding, not `zstandard` (which pulls the Jane Street core stack) |
+| **1**  | **zlib / camlzip** | 56 | camlzip 1.07→1.14 (4) | apt 1.3 → cf **1.3.2** | free | declaration only. Landed with a probe that names the library the loader mapped; the pair also turned out to carry a live ELF symbol-versioning gate (`ZLIB_1.3.1.2`) — see `conda_forge.md` |
+| **2**  | **zstd** | 13 | `zstd` 0.2→0.4 (3) | apt 1.5.5 → cf **1.5.7** | **`>= 1.3.8`, REAL** | declaration only. **Correction the landing forced**: this row read "no constraint" from the BINDING's bare `conf-zstd` dependency, but conf-zstd's own build is `pkg-config --atleast-version=1.3.8 libzstd` (§G1a mechanism (i)). Both points clear the floor, so it does not bite — but the gate is `tracks_lib = true`, not free. Use the `zstd` binding, not `zstandard` (which pulls the Jane Street core stack) |
 | **3**  | **sundials / sundialsml**                  | 14             | 2.5.0p0→6.1.1p1 (14)    | apt 6.4.1 → cf **7.8.0**     | free at the CONF gate; **not free at the binding's own build** (§3b step 3, measured 2026-08-25) | declaration + the widest version gap in the table — but the gap crosses a break the binding does not implement, so the cross cells are xfails, and `libsundials-dev` is a 177-package install |
 | **4**  | **ncurses / curses**                       | 36             | 1.0.3→1.0.12 (9)        | apt 6.4 → cf **6.6**         | free                               | declaration + a stale-depext finding to report                                           |
 | **5**  | **libpcre / pcre**                         | 34             | 7.1.3→8.0.5 (22)        | apt 8.39 → cf **8.45**       | free                               | declaration; EOL lib, so prefer pcre2 if available                                       |
@@ -724,19 +665,13 @@ omitted. "Effective gate" applies §G1a — a packaging-only bound is free.
 | —      | ppl, glpk                                  | 30 / 6         | —                       | one version each             | free                               | no lib pair exists here                                                                  |
 | —      | readline, mysql8                           | 1 / 11         | **one binding release** | —                            | —                                  | no binding pair exists                                                                   |
 
-**Recommendation, unchanged in shape from §F3 but now with the evidence
-behind it:** take **zlib** and **zstd** first (both pure declaration),
-then **sundials** — because sundials is the row that *proves* §G1a: its
-gate reads `{>= "2" & build}` and a naive reading would send us to build a
-wrapper, while the measurement says the bound never reaches the library
-and apt→conda-forge gives us 6.4.1 → 7.8.0 for free. Landing it converts a
-survey claim into a run.
-
-Two of the rows are worth landing for what they *break*, not for their
-revdeps: **libclang/clangml** (the only real lib bound; an upper bound, so
-it exercises the backward direction) and **mpfr/mlmpfr** (a gate that
-lives in the binding's own build). Both need a model piece first, and both
-are recorded in [`../project/issues.md`](../project/issues.md).
+**This table is a MEASUREMENT, not a queue.** What we decided to do with
+it — the order, what is landed, what is blocked and why — lives in
+[`../project/projects.md`](../project/projects.md) §4 and
+[`../project/status_project.md`](../project/status_project.md) §1 D. Rows
+here are dated facts about the ecosystem and should only change when the
+ecosystem does; before 2026-08-26 they also carried landing verdicts, and
+keeping those in sync cost an edit in three files per landing.
 
 ### G6. What this changes in the code
 

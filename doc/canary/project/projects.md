@@ -149,6 +149,28 @@ Two tiers, picked from the opam survey §3 (revdep rankings) and §2
 [`status_project.md` §1 D](status_project.md). Landed rows are dropped
 from these tables — §2 is the roster.
 
+### The ranking (measured — `conf_packages.md` §G5)
+
+Moved here 2026-08-26 from the survey, which should record what the
+ecosystem looks like, not what we decided to do about it. The measured
+inputs (revdeps, binding pairs, lib pairs, effective gates) stay there and
+are re-derivable; the ordering and status are here.
+
+**Recommendation, unchanged in shape from the survey's retired §F3 but now with the evidence
+behind it:** take **zlib** and **zstd** first (both pure declaration),
+then **sundials** — because sundials is the row that *proves* §G1a: its
+gate reads `{>= "2" & build}` and a naive reading would send us to build a
+wrapper, while the measurement says the bound never reaches the library
+and apt→conda-forge gives us 6.4.1 → 7.8.0 for free. Landing it converts a
+survey claim into a run.
+
+Two of the rows are worth landing for what they *break*, not for their
+revdeps: **libclang/clangml** (the only real lib bound; an upper bound, so
+it exercises the backward direction) and **mpfr/mlmpfr** (a gate that
+lives in the binding's own build). Both need a model piece first, and both
+are recorded in [`../project/issues.md`](../project/issues.md).
+
+
 ### Tier 1 — famous libraries
 
 The native library is the primary artifact and the OCaml binding is one
@@ -178,6 +200,14 @@ Not household names, but the packaging exposes structural cases.
 ### Not queued
 
 Deliberately, each for its own reason:
+
+- **The `Fixed_with_conf` family** (llvm's shape) — needs the no-conf
+  wrapper to move a lib version at all. Different work, tracked with the
+  wrapper.
+- **The custom-logic conf packages** (6%, `conf_packages.md` §"Custom
+  logic") — the survey's own observation is that they are where version
+  mismatches actually happen, so they are the highest-yield targets AND
+  the most expensive. After the cheap landings have proven the pipeline.
 
 - **Pattern D (invisible C stubs)** — `mirage-crypto`, `bigstringaf`,
   43 packages. No leverage until source inspection is in the toolkit.

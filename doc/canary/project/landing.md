@@ -119,6 +119,45 @@ does not fork the factory).
 For scenario mechanics + the derived-vs-hand principle see
 [`design/enumeration/stage5_realize_steps.md`](../design/enumeration/stage5_realize_steps.md).
 
+## 2b. The per-project checklist — what a landing costs
+
+Moved here 2026-08-26 from the conf-* survey, which had grown a landing
+plan inside a measurement. In the order that avoids rework — each step's
+*why* is a bug we actually hit:
+
+1. **Declare the artifact table** — rows + universes + providers, with
+   `ar_rationale` on the lib row saying where each point came from *and
+   why the axis stops there* (a one-point axis is usually a fact about the
+   world; without the note a reader cannot tell it from an omission).
+2. **Declare the binding** — `binding_decl` (mechanism, c_api, native,
+   coupling, surface_path) **plus `pm_gate` measured from
+   `opam show <pkg> --field=depends`**, not guessed. Our guess about ssl
+   was wrong; the metadata was right.
+3. **Source the lib pair** — system PM = stable; official prebuilt if one
+   exists (none of our libs publish Linux binaries); else conda-forge's
+   newest, declared `Vendored` at `contrib/<p>-all/prebuilt/<tag>/`.
+4. **Check the closure BEFORE trusting it** — `readelf -d` (NEEDED +
+   RPATH), `ldd -r` (undefined symbols), `dlopen(RTLD_NOW)`. A one-entry
+   closure (zlib, libffi) is trivially safe; a thirteen-entry one (cairo)
+   works only because the system happens to satisfy it.
+5. **Compare sonames across the pair.** Same soname → `LD_LIBRARY_PATH`
+   suffices. Different → the consumer needs a rebuild; schedule it as
+   wrapper work, not as a declaration.
+6. **Point the CONSUMER at the world's lib.** The probe must carry the
+   world's libdir; otherwise the vendored world silently re-tests the
+   system lib and passes for the wrong reason.
+7. **Pin it**: the enumeration count, and — the one with teeth — that the
+   two worlds' realized commands NAME DIFFERENT FILES. cairo proves why:
+   its two versions export identical symbol counts, so a silent fallback
+   is invisible in the verdict.
+8. **Run and verify each world holds its declared version** (a runtime
+   version line, asserted where canary controls the version; observed
+   where it does not).
+
+Roughly: steps 1–3 are declaration (~40 lines for a template project),
+4–5 are measurement (minutes), 6–8 are the parts that were bugs the first
+four times.
+
 ## 3. Sourcing the lib channel pair (rule, user 2026-08-19)
 
 Every project needs a stable/latest pair per artifact (the 2×2 lower
