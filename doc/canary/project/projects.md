@@ -64,7 +64,7 @@ the failure names the project, so this table cannot drift silently.
 | **libffi** | apt + conda-forge prebuilt | one | 2 | lib half; same gap. First `Dynamic_ffi` project | ✓ / ✓ |
 | **zlib** | apt 1.3 + conda-forge 1.3.2 | one | 2 | lib half; the probe NAMES which libz answered | ✓ / — |
 | **zstd** | apt 1.5.5 + conda-forge 1.5.7 | one | 2 | lib half; two world witnesses (runtime call + mapped path) | ✓ / — |
-| **tiny-full** | Vendored + Built (assembled, no rebuild) | Vendored stable / dev | 1 | the factory's project face — the spec-derived world | ✓ / — |
+| **tiny-full** | Vendored@Stable only | Vendored@Stable only | 1 | **neither half** — every row is `vendored@stable`, so the product is 1 by construction. The Built-lib and Dev-binding axes its docs advertised live in dead code ([issues.md](issues.md) §1); `spec-check` warns on both pairs | ✓ / — |
 | **tiny1** | Built (own C) | 3 bindings | 22 | not a 2×2 — the hand-written mutation **oracle**, 22/22 PASS | ✓ / — |
 
 **Machinery, uniform unless noted.** Every registry entry is a plain
@@ -146,7 +146,7 @@ by `registry.batch_tiers`.
 
 Two tiers, picked from the opam survey §3 (revdep rankings) and §2
 (pattern hot spots); the current queue and its ordering live in
-[`status_project.md` §3 D](status_project.md). Landed rows are dropped
+[`status_project.md` §1 D](status_project.md). Landed rows are dropped
 from these tables — §2 is the roster.
 
 ### Tier 1 — famous libraries
@@ -173,7 +173,7 @@ Not household names, but the packaging exposes structural cases.
 |  13 | **lmdb**            | `lmdb`                        | Direct depexts + a `clib:` tag, **no conf-\*** — the no-indirection style. Its pair comes from opam pins    |
 |  14 | **sundials**        | `sundialsml`                  | Proves §G1a (`conf-sundials {>= "2"}` looks bounded; the version never reaches the check) — but MEASURED 2026-08-25 the pair apt 6.4.1 → cf 7.8.0 crosses an API break the binding does not implement, so its cross cells are xfails, not green. `libsundials-dev` = 177 apt packages. [`status_project.md`](status_project.md) §1 D3 |
 |  15 | **mpfr**            | `mlmpfr` / `mlgmpidl`         | `mlmpfr`'s gate lives in its OWN build (`Self_check_in_build`, which `pm_dep_gate` cannot express) — a naturally-occurring xfail. `mlgmpidl` uses the `conf-*-paths` conf FAMILY |
-|   16 | **ncurses**         | `curses`                      | `Free_with_conf`, apt 6.4 → conda-forge 6.6, binding install is a clean 2-package add. Carries an upstream finding: `conf-ncurses` declares `["lib64ncurses-dev"] {os-family = "ubuntu"}`, but opam reports `os-family = debian` on Ubuntu, so that line can never fire |
+|   16 | **ncurses**         | `curses`                      | **STARTED, PAUSED 2026-08-25.** Measured free at all three §3b steps; probe verified green against apt; `opam install curses` = 2 packages exactly. Paused because the vendored world **segfaults with a clean symbol diff** — the finding is bigger than the landing ([`report_ncurses_libtinfo.md`](report_ncurses_libtinfo.md), [`../design/closure_shape.md`](../design/closure_shape.md)). Also carries a small upstream finding: `conf-ncurses` declares `["lib64ncurses-dev"] {os-family = "ubuntu"}`, but opam reports `os-family = debian` on Ubuntu, so that line can never fire (its sibling `["ncurses-dev"] {os-family = "debian"}` resolves fine — `libncurses-dev` **Provides: ncurses-dev**) |
 
 ### Not queued
 

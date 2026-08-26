@@ -474,17 +474,21 @@ directions):
   Options: keep it (a fault IS a placement quality, which is why it fits)
   or split tiny's enumeration entry point. Decide when the two
   constructions are reconciled — same neighbourhood.
-- [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
-  enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
-  with its test plan:
+- [x] **`canary emit --stage N`** — **LANDED 2026-08-24**, one dump per
+  pipeline pass, routed through `Canary_pipeline` so it can never be a
+  re-derivation. `emit <p> --stage <name|1..5> [--json]` covers all five
+  passes and reads the CATALOGUE, so a muted project still dumps. That
+  closes this item's premise: **stage 3's run order can now be looked
+  at** (`emit --stage order` vs `--stage enumerate` shows the same
+  scenarios in the two orders), where before it was pin-verified and
+  invisible.
+- [ ] **The `--why` half of `emit`** — which of the five constraints
+  dropped a candidate. NOT landed; there is no `--why` flag. Still the
+  debugging payoff and still nearly free, because three of the five are
+  already predicates. Proposal:
   [`../design/enumeration/stage2_enumerate_worlds.md`](../design/enumeration/stage2_enumerate_worlds.md)
-  *Attribution*.
-  Roughly two days; steps 1–3 alone close the fact that **stage 3's run
-  order is verified by a pin but cannot be looked at** (`spec` still
-  prints enumeration order, which since 2026-08-21 is not what runs). The
-  `--why` half — which of the five constraints dropped a candidate — is
-  the debugging payoff and is nearly free, because three of them are
-  already predicates.
+  *Attribution*. Note the CLI help and five source files still cite the
+  purged `why_ledger.md` for it — fix those references when this lands.
 
 - [ ] **Scenario-name clarity** (user, 2026-08-17) —
   `source-fetched-1.14_lib-fetched_ocaml_binding-fetched` doesn't say

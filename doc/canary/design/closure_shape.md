@@ -62,7 +62,7 @@ reads a narrow-layout `cur_term` as if it were wide and dies in
 and the same libraries run green. The two ncurses versions are genuinely
 drop-in compatible; only the name→ABI binding is not. Full report with
 reproducer, backtrace and remediation:
-[`../reports/ncurses_libtinfo_abi_collision.md`](../reports/ncurses_libtinfo_abi_collision.md).
+[`../project/report_ncurses_libtinfo.md`](../project/report_ncurses_libtinfo.md).
 
 ## 2. Why it happens, stated generally
 
