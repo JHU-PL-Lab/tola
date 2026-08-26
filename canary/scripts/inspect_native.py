@@ -6,7 +6,8 @@ Reads `nm` output from stdin; emits compact JSON summary:
 - counts.by_prefix: per-prefix counts
 - versioned_req: map of {GLIBC_2.17: 3} from undefined @VER requirements (L1b)
 - watchlist.{present,missing}: presence check against a fixed name list
-- elf (when --elf): SONAME, NEEDED, RPATH, RUNPATH from readelf -d (L4)
+- elf (when --elf): SONAME, NEEDED, RPATH, RUNPATH (L4) — from readelf -d
+  on ELF, from otool -l on Mach-O (same four fields; see parse_macho)
 
 nm output formats handled:
   Linux (nm -D):  "<addr> T symname"        (defined)
@@ -20,9 +21,74 @@ Usage: nm -D libfoo.so | summarize_native.py --path libfoo.so \\
 import argparse
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
+
+
+def parse_macho(path):
+    """Mach-O's answer to readelf -d, via `otool -l` (L4).
+
+    The SAME four fields, so every consumer of the L4 record keeps
+    working, mapped onto the load commands that carry the same meaning:
+
+      soname   <- LC_ID_DYLIB name       (the install_name a consumer
+                                          records, e.g. @rpath/libz.1.dylib)
+      needed   <- LC_LOAD_DYLIB names
+      rpath    <- LC_RPATH paths
+      runpath  <- []  (ELF splits RPATH/RUNPATH by whether LD_LIBRARY_PATH
+                       may override; Mach-O has one rpath list and
+                       DYLD_LIBRARY_PATH always wins, so the distinction
+                       has no referent — [] states that, rather than
+                       duplicating rpath and implying a second concept.)
+
+    Two EXTRA fields with no ELF counterpart: compatibility_version and
+    current_version from LC_ID_DYLIB. They are the Mach-O version gate —
+    dyld refuses a library whose compatibility_version is below what the
+    consumer recorded — which is the nearest analogue to ELF symbol
+    versioning, at library rather than symbol granularity.
+    """
+    if not os.path.exists(path):
+        return None
+    try:
+        out = subprocess.check_output(
+            ["otool", "-l", path], stderr=subprocess.STDOUT, text=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+    soname, compat, current = None, None, None
+    needed, rpath = [], []
+    # otool -l prints a `cmd LC_x` line, then that command's fields on
+    # following lines; the field we want always follows its own cmd.
+    cmd = None
+    name_re = re.compile(r"^\s*(?:name|path)\s+(\S+)\s+\(offset")
+    ver_re = re.compile(r"^\s*(compatibility|current) version\s+(\S+)")
+    for line in out.splitlines():
+        s = line.strip()
+        if s.startswith("cmd "):
+            cmd = s.split(None, 1)[1]
+            continue
+        m = name_re.match(line)
+        if m:
+            if cmd == "LC_ID_DYLIB":
+                soname = m.group(1)
+            elif cmd in ("LC_LOAD_DYLIB", "LC_LOAD_WEAK_DYLIB",
+                         "LC_REEXPORT_DYLIB"):
+                needed.append(m.group(1))
+            elif cmd == "LC_RPATH":
+                rpath.append(m.group(1))
+            continue
+        m = ver_re.match(line)
+        if m and cmd == "LC_ID_DYLIB":
+            if m.group(1) == "compatibility":
+                compat = m.group(2)
+            else:
+                current = m.group(2)
+
+    return {"format": "macho", "soname": soname, "needed": needed,
+            "rpath": rpath, "runpath": [],
+            "compatibility_version": compat, "current_version": current}
 
 
 def parse_elf(path):
@@ -58,7 +124,15 @@ def parse_elf(path):
         m = runpath_re.search(line)
         if m: runpath.append(m.group(1))
 
-    return {"soname": soname, "needed": needed, "rpath": rpath, "runpath": runpath}
+    return {"format": "elf", "soname": soname, "needed": needed,
+            "rpath": rpath, "runpath": runpath}
+
+
+def parse_abi(path):
+    """L4 metadata for whichever object format this platform uses."""
+    if platform.system() == "Darwin":
+        return parse_macho(path)
+    return parse_elf(path)
 
 
 def parse_nm(lines, strip_leading_underscore=False):
@@ -142,7 +216,7 @@ def main():
             kept = sorted(dset)
         summary["symbols"] = kept
     if args.elf:
-        elf = parse_elf(args.path)
+        elf = parse_abi(args.path)
         if elf:
             summary["elf"] = elf
     json.dump(summary, sys.stdout, indent=2, sort_keys=True)

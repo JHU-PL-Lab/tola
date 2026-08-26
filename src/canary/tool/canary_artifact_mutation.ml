@@ -123,15 +123,39 @@ end
 (* {1 Native-artifact mutations}                                     *)
 (* ================================================================ *)
 
+(** Rewrite a built shared library's own recorded name — the thing a
+    consumer records at link time and dyld/ld.so resolves at load time.
+
+    Two tools for one concept: ELF calls it the SONAME and [patchelf]
+    sets it; Mach-O calls it the install_name and [install_name_tool -id]
+    sets it, conventionally with an [@rpath/] prefix so the consumer's
+    rpath decides where it is found.
+
+    [name] is the caller's, and tiny's are still ELF-shaped
+    ([libtiny.so.2] rather than [libtiny.2.dylib]) — see
+    {!Canary_basic.shared_lib_name} for the two conventions and
+    doc/canary/project/issues.md for tiny's remaining Mach-O port. This
+    function makes the TOOL right; the NAME becomes right when tiny
+    stops spelling its libraries for one platform. *)
+let set_recorded_name_cmd ~(name : string) ~(lib : string) : string =
+  match Canary_basic.detect_distro () with
+  | Canary_store.MacOS_local ->
+      Printf.sprintf "install_name_tool -id '@rpath/%s' '%s' 2>/dev/null || true"
+        name lib
+  | Canary_store.Wsl ->
+      Printf.sprintf "patchelf --set-soname '%s' '%s' 2>/dev/null || true"
+        name lib
+
 module Native = struct
   (** Mutations that apply to native library artifacts (.so /
       .dylib). Binary-level — operate on the built lib, not source.
 
-      - [Soname_bump] — rename a shared object + rewrite its
-        SONAME via [patchelf]. Reference case: tiny
-        [abi_soname_bump] bumps [libtiny.so.1.0] → [libtiny.so.2.0].
-        Also renames the corresponding MAJOR symlink and rewrites
-        the generic symlink. *)
+      - [Soname_bump] — rename a shared object + rewrite the name it
+        records for itself ({!set_recorded_name_cmd}: SONAME via
+        [patchelf] on ELF, install_name via [install_name_tool] on
+        Mach-O). Reference case: tiny [abi_soname_bump] bumps
+        [libtiny.so.1.0] → [libtiny.so.2.0]. Also renames the
+        corresponding MAJOR symlink and rewrites the generic symlink. *)
   type t = Soname_bump of { from_so : string; to_so : string }
 
   let soname_bump ~from_so ~to_so = Soname_bump { from_so; to_so }
@@ -176,9 +200,8 @@ module Native = struct
             new_full lib_path new_major;
           Printf.sprintf "ln -sf '%s' '%s/%s'"
             new_major lib_path generic;
-          Printf.sprintf
-            "patchelf --set-soname '%s' '%s/%s' 2>/dev/null || true"
-            new_major lib_path new_full;
+          set_recorded_name_cmd ~name:new_major
+            ~lib:(Printf.sprintf "%s/%s" lib_path new_full);
         ]
 end
 
@@ -332,8 +355,8 @@ let apply_soname_bump_cmds
       new_full_name lib_dir new_major_name;
     Printf.sprintf "ln -sf '%s' '%s/%s'"
       new_major_name lib_dir generic_name;
-    Printf.sprintf "patchelf --set-soname '%s' '%s/%s' 2>/dev/null || true"
-      new_major_name lib_dir new_full_name;
+    set_recorded_name_cmd ~name:new_major_name
+      ~lib:(Printf.sprintf "%s/%s" lib_dir new_full_name);
   ]
 
 (* ================================================================ *)
