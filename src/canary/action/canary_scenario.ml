@@ -24,7 +24,7 @@
 
     See [doc/canary/design/enumeration/stage0_naming.md] for the split
     (pattern vs scenario vs stage vs path pattern); it replaced the
-    retired scenario_terms.md. *)
+    retired scenario_terms.md, now design/enumeration/stage0_naming.md. *)
 
 (** Scenario type — project-agnostic, unified for good and bad.
 

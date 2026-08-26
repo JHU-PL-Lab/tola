@@ -276,7 +276,7 @@ the framework that scales the witness to
    natural producers (opam, pip, apt, …); includes a methodological
    validation step against tiny.
    `worklog_2026_06.md` (Phase 14/15 mechanics);
-  [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md)
+  [`../design/tiny.md`](../design/tiny.md) (the retired `harness_canary_orthogonality.md`, `git show 6e2dfcb^`)
   (orthogonal factoring); `CLAUDE.md` (orientation map);
 
 ## §6 Miscellaneous (MM) — principles
@@ -298,7 +298,7 @@ the framework that scales the witness to
    conceptual narrative.
     `surface_draft/implementation.md` §2.7 (code map);
     `worklog_2026_06.md` (engine machinery + harness leaks);
-    [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md)
+    [`../design/tiny.md`](../design/tiny.md) (the retired `harness_canary_orthogonality.md`, `git show 6e2dfcb^`)
     (engine boundary cleanness); existing code in
     `src/canary/projects/`, `src/canary/surface/`,
     `canary/examples/tiny/scenarios/`, `canary/scripts/inspect_*`.
@@ -345,7 +345,7 @@ producers).
   ("two independent engines validate the same rules") is honest.
 - Where the boundary leaks today (e.g. `_snapshot_workspace`'s
   RUNPATH-strip and libtiny.so symlink synthesis) is tracked in
-  [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md).
+  [`../design/tiny.md`](../design/tiny.md) (the retired `harness_canary_orthogonality.md`, `git show 6e2dfcb^`).
 - Phase 16's refactor goal: close those leaks.
 
 ## implementation
@@ -357,7 +357,7 @@ producers).
 - Framework-private: hardcoded-grep inspectors
   (`inspect_tiny_typed.py`), workspace-materialisation fixups —
   details in
-  [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md).
+  [`../design/tiny.md`](../design/tiny.md) (the retired `harness_canary_orthogonality.md`, `git show 6e2dfcb^`).
 
 tiny should have packages
 

@@ -366,7 +366,7 @@ perturbation; they assert that the longest-interesting build/link
 chains stay wired in baseline. One scenario (e14) is a
 {i statically-detectable-but-runtime-silent} regression test for
 {c7 cmp_api_repack} — the standard harness records it as
-all-pass because c7 isn't wired into [`run.sh`](../../canary/examples/tiny/scenarios/_harness/run.sh);
+all-pass because c7 isn't wired into [`run.sh`](../../_legacy_code/tiny_python_harness/_harness/run.sh);
 the unit-test layer covers the verdict shape.
 
 ### Harness ↔ canary variant mapping (current as of Phase 15.6, 2026-06-03)
@@ -478,7 +478,7 @@ upstream, rebuild) or artifact-direct (binary surgery).
 
 Each scenario records the concrete file paths it perturbs via the
 `perturbs` field in
-[`scenarios.py`](../../canary/examples/tiny/scenarios/scenarios.py).
+[`scenarios.py`](../../_legacy_code/tiny_python_harness/scenarios.py).
 
 **Table — Chain perturbation sites.** Rows are artifact aliases (see
 [Artifact inventory](#artifact-inventory--aliases--canonical-names)

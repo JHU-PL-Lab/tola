@@ -534,7 +534,7 @@ let check_api_repack
 
 (** [c8 cmp_api_faithfulness] result type. The derived contract:
     "user-facing API is faithful to the underlying C API." By the
-    decomposition in surface_theory.md §2.5:
+    decomposition in surface_draft/implementation.md §2.5:
 
       API-faithfulness ⇐ Type (c6) ∧ Symbol (c1) ∧ API-repacking (c7)
 
@@ -657,7 +657,7 @@ let lag_examples ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
    they're available to anyone consuming the theory layer. *)
 
 (** The eight contracts of surface theory. See
-    [doc/canary/research/surface_theory.md] §2.4 for definitions. *)
+    [doc/canary/research/surface_draft/surface.md] Part C for definitions. *)
 type contract_id = C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8
 
 let string_of_contract_id = function

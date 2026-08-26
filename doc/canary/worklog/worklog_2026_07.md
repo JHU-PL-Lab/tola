@@ -254,7 +254,7 @@ Coverage:
 - [`design/tiny.md`](../design/tiny.md) — what
   shipped (factory shape). Slimmed from an in-progress note
   to a landing reference after retirement.
-- [`design/bad_scenario_flavors.md`](../design/bad_scenario_flavors.md)
+- `design/bad_scenario_flavors.md` (retired; the two shapes map onto [`../design/ssot.md`](../design/ssot.md)'s axes)
   — the flavor-1 (artifact-local defect) vs flavor-2
   (cross-artifact mismatch) split; catalogue completeness as
   next research task; tiny as bug-categorisation foundation.
@@ -269,7 +269,7 @@ Immediate follow-ups (not in this task):
 2. **Grow the flavor-2 catalogue** — cull real-world bugs
    for failure kinds not covered by c1..c8; propose new
    contracts. Foundation is now stable; see
-   [`bad_scenario_flavors.md`](../design/bad_scenario_flavors.md).
+   [`../design/ssot.md`](../design/ssot.md) (which absorbed `bad_scenario_flavors.md`).
 
 ## R2 arc — route tiny through `tool/` (2026-07-09)
 
@@ -397,12 +397,12 @@ current behavior:
      Python source (not yet exported in pip wheel)".
 - `canary action llvm` — dev variant 27/27 + stable /19
   14/14. Compat-failure prediction machinery hand-coded at
-  [`canary_project_llvm.ml:495-512`](../../src/canary/projects/canary_project_llvm.ml#L495-L512)
+  [`canary_project_llvm.ml:495-512`](../../../src/canary/project/canary_project_llvm.ml#L495-L512)
   with `Ocaml_mli` inputs + version_info naming
   `Opcode.UncondBr`. Investigated apparent shape drift
   (only 3 of 14 steps logged today vs full log on
   2026-05-06): confirmed as
-  [`canary_local_runner.ml:302-305`](../../src/canary/backend/canary_local_runner.ml#L302-L305)
+  [`canary_local_runner.ml:302-305`](../../../src/canary/backend/canary_local_runner.ml#L302-L305)
   fast-skip pre-seed. `run_graph` seeds `status = Step_done`
   for any step whose postcondition already passes,
   without emitting a log line; the loop only runs steps

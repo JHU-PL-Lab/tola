@@ -781,7 +781,7 @@ engine boundary) lives in §7 Implementation.
   trace tiny declares (and rejects what tiny says should pass),
   the framework is sound for the rules tiny exercises.
 - Implementation factoring and known leaks tracked in
-  [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md);
+  [`../design/tiny.md`](../design/tiny.md) (the retired `harness_canary_orthogonality.md`, `git show 6e2dfcb^`);
   the manuscript view sits in §7.5.
 
 ## Application to natural producers

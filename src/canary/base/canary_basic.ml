@@ -10,7 +10,7 @@ type compile_mode = Native | Bytecode
 (** Coarse artifact grouping used for action dispatch (action selection in
     {!Canary.store_actions}). Each constructor here corresponds to a
     {i group} of fine-grained artifact roles from the surface-theory
-    vocabulary used in [doc/canary/research/surface_theory.md] §2.1
+    vocabulary used in [doc/canary/research/surface_draft/surface.md] §2.1
     and [doc/canary/research/tiny.md] "Artifact inventory":
 
     - [Source]        — pre-build C sources (no surface; build input for s2).

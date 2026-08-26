@@ -30,7 +30,7 @@ type native_api_kind =
     [.so]/[.dylib] loaded at runtime (absent for static linking).
 
     Cross-reference to the surface-theory vocabulary in
-    [doc/canary/research/surface_theory.md] §2.1:
+    [doc/canary/research/surface_draft/surface.md] §2.1:
 
     - [Headers]     ↔ {i s1 native_header} — syntactic native surface.
                       In tiny: [n3 header_native.h] = [c/include/tiny.h].

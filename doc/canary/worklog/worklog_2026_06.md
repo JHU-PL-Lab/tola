@@ -309,7 +309,7 @@ Tiny variant matrix at end of Phase 14: eight variants.
 
 ### Phase 15.1 (doc + plan refresh — 2026-06-03)
 
-Rewrote [design/harness_canary_orthogonality.md](../design/harness_canary_orthogonality.md)
+Rewrote `design/harness_canary_orthogonality.md` (retired 2026-08; `git show 6e2dfcb^`)
 to lead with the orthogonal vision (stores = artifact providers,
 runners = canary pipeline, producers = harness apply / package
 managers) rather than with the leak workarounds. The synthetic-vs-natural

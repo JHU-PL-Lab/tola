@@ -600,7 +600,7 @@ let c6_predict ~resolve (inputs : inspect_input list) : string list =
   | _ -> []
 
 (** The contract registry. Single source of truth for §2.4 of
-    [surface_theory.md] — adding a contract = adding one entry. *)
+    [doc/canary/research/surface_draft/surface.md] Part C — adding a contract = adding one entry. *)
 let registered_checks : contract_check list = [
   { id = C1; name = "cmp_symbol";            layer = "L0";  status = Wired;
     enabled = true;  predict = c1_predict };

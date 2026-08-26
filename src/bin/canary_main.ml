@@ -266,7 +266,7 @@ let action_cmd =
       $ const ())
 
 (* ── `canary emit` — one dump per pipeline pass (2026-08-24) ──
-   design/enumeration/why_ledger.md. THE rule: --stage N prints the value
+   design/enumeration/stage2_enumerate_worlds.md Attribution. THE rule: --stage N prints the value
    stage N hands to stage N+1 — not a rendering of it, and not a join with
    a neighbouring stage. That is what separates this from `spec`, which is
    deliberately a joined human snapshot.
@@ -516,7 +516,7 @@ let emit_cmd =
     (Cmd.info "emit"
        ~doc:
          "Print one pipeline pass's output (the value it hands the next \
-          pass). See design/enumeration/why_ledger.md.")
+          pass). See design/enumeration/stage2_enumerate_worlds.md Attribution.")
     Term.(
       const run $ project $ stage $ json $ raw $ thin $ refs $ scenario
       $ const ())

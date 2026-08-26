@@ -704,7 +704,7 @@ external raw_beta  : int -> int = "c_beta"
 (* c5 cmp_sym_version — provider's exported @@VER set ⊇ consumer's
    required @VER set?
    Catches the deferred tiny scenario e9 symbol_version_floor and,
-   end-to-end, the glibc/musl version-drift case (surface_theory §4.2). *)
+   end-to-end, the glibc/musl version-drift case (surface_draft/hidden_dep.md §4.2). *)
 let cmp_sym_version_pure_tests =
   [
     { name = "cmp_sym_version.compatible_exact_match";
