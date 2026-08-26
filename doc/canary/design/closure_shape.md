@@ -15,12 +15,12 @@ vendored world is an `xfail[cN]` rather than an undeclared segfault.
 apt 6.4 and conda-forge 6.6, the pair the sourcing rule
 ([`../project/landing.md`](../project/landing.md) §3) picks for ncurses:
 
-| what canary can check | apt 6.4 | conda-forge 6.6 | verdict |
-| --- | --- | --- | --- |
-| soname | `libncursesw.so.6` | `libncursesw.so.6` | same |
-| exported `T` symbols | 463 | 463 | same |
-| symbol NAME set | — | — | **diff empty, both directions** |
-| ELF version nodes | 10 × `NCURSESW6_*` | the same 10 | **identical sets** |
+| what canary can check | apt 6.4            | conda-forge 6.6    | verdict                         |
+| --------------------- | ------------------ | ------------------ | ------------------------------- |
+| soname                | `libncursesw.so.6` | `libncursesw.so.6` | same                            |
+| exported `T` symbols  | 463                | 463                | same                            |
+| symbol NAME set       | —                  | —                  | **diff empty, both directions** |
+| ELF version nodes     | 10 × `NCURSESW6_*` | the same 10        | **identical sets**              |
 
 There is no version skew, no missing symbol, no ABI tag difference, and
 no symbol-version node a consumer could fail to find. c1 (`cmp_symbol`),
@@ -41,19 +41,38 @@ calling init: <prebuilt>/lib/libtinfo.so.6        ← pulled by the CONSUMER's o
 calling init: <prebuilt>/lib/libncursesw.so.6
 ```
 
-Two terminfo implementations in one process. ncurses keeps its terminal
-state in library globals (`cur_term`, `SP`, the terminfo cache), so the
-state exists twice and `newterm` crosses between the copies.
+Two terminfo implementations in one process — and the consequence is
+sharper than "two copies of the state". ELF symbol interposition gives
+the NARROW library's globals to everybody, because the consumer names it
+directly and it therefore precedes the transitively-loaded wide one in
+the link map (`LD_DEBUG=bindings`):
+
+```
+binding file libncursesw.so.6 to libtinfo.so.6: symbol `cur_term'
+binding file libtinfow.so.6   to libtinfo.so.6: symbol `cur_term'
+```
+
+Narrow and wide disagree about the layout of that record (`TERMTYPE` vs
+`TERMTYPE2` — exactly the five-symbol delta between conda's two tinfo
+objects, every one a `termtype2` operation). So the wide `libncursesw`
+reads a narrow-layout `cur_term` as if it were wide and dies in
+`termattrs_sp`, the first function to dereference it.
+
+**Verified by the fix**: point the name `libtinfo.so.6` at the WIDE build
+and the same libraries run green. The two ncurses versions are genuinely
+drop-in compatible; only the name→ABI binding is not. Full report with
+reproducer, backtrace and remediation:
+[`../reports/ncurses_libtinfo_abi_collision.md`](../reports/ncurses_libtinfo_abi_collision.md).
 
 ## 2. Why it happens, stated generally
 
 The two packagers ship the same library in **differently shaped
 closures**:
 
-| | Debian/Ubuntu | conda-forge |
-| --- | --- | --- |
-| `pkg-config --libs ncursesw` | `-lncursesw -ltinfo` | `-lncursesw -ltinfow` |
-| tinfo objects shipped | ONE — `libtinfo` **is** the wide build | TWO — `libtinfo` and `libtinfow`, distinct files (305016 vs 305368 bytes, distinct sonames) |
+|                              | Debian/Ubuntu                          | conda-forge                                                                                 |
+| ---------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `pkg-config --libs ncursesw` | `-lncursesw -ltinfo`                   | `-lncursesw -ltinfow`                                                                       |
+| tinfo objects shipped        | ONE — `libtinfo` **is** the wide build | TWO — `libtinfo` and `libtinfow`, distinct files (305016 vs 305368 bytes, distinct sonames) |
 
 The consumer's link line is **frozen at build time in its provider's
 shape**. `curses`'s `discover.ml` asks pkg-config and writes the answer
@@ -176,14 +195,14 @@ splits it into two genuinely different things:
 - **containment** — ≥80% of the smaller only: a large object statically
   absorbed a small one.
 
-| prebuilt | alt-spelling | containment |
-| --- | --- | --- |
-| cairo 1.18.4 | 0 | 0 |
-| libffi 3.7.0 | 0 | 0 |
-| zlib 1.3.2 | 0 | 0 |
-| zstd 1.5.7 | 0 | 0 |
-| **ncurses 6.6** | **4** | 1 |
-| **sundials 7.8.0** | 0 | **82** |
+| prebuilt           | alt-spelling | containment |
+| ------------------ | ------------ | ----------- |
+| cairo 1.18.4       | 0            | 0           |
+| libffi 3.7.0       | 0            | 0           |
+| zlib 1.3.2         | 0            | 0           |
+| zstd 1.5.7         | 0            | 0           |
+| **ncurses 6.6**    | **4**        | 1           |
+| **sundials 7.8.0** | 0            | **82**      |
 
 ncurses' four are the wide/narrow split, symmetric to the symbol:
 

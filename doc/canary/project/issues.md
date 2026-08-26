@@ -145,6 +145,17 @@ prebuilt needs `TERMINFO_DIRS` — `Canary_prebuilt` knows only `libdir_of`.
   two-witness form is unavailable here even though the C library offers
   one; the mapped path is the only witness, as with camlzip/zlib.
 
+**The bug report is written** (user's call, 2026-08-25: a report rather
+than a fix): [`../reports/ncurses_libtinfo_abi_collision.md`](../reports/ncurses_libtinfo_abi_collision.md)
+— mechanism traced to ELF interposition (the narrow `libtinfo` wins
+`cur_term`/`SP`/`_nc_globals` for every loaded object, and wide code then
+reads a narrow-layout record), backtrace at `termattrs_sp`, and a
+VERIFIED fix: repoint the name at the wide build and the same libraries
+run green. Debian is the recommended fixer — ship `libtinfow.so.6` as an
+alias and emit `-ltinfow`, strictly additive. Prior art checked: the
+symptom is known folklore, the mechanism and the check-defeating property
+are what is new.
+
 **Pickable as:** [`../design/closure_shape.md`](../design/closure_shape.md)
 §6 steps 2–5, after which the vendored world is `xfail[cN]` with a
 derived reason and D6 lands at Level B. Landing it stable-only first is
