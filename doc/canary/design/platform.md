@@ -250,22 +250,65 @@ For the WSL side picking this branch up, in order:
    platform-independent, so a Linux `mutation-test` re-run is the
    confirmation.
 
-## 7. Open
+## 7. The to-do
 
-Tracked in [`../project/issues.md`](../project/issues.md):
+Ordered by what unblocks what. Items marked ⇢ have a home in
+[`../project/issues.md`](../project/issues.md) with the full finding.
 
-- tiny's Mach-O naming port (~40 declarations → `shared_lib_name`);
-- c5 has no Mach-O referent, and whether `compatibility_version` is c5 at
-  library granularity or a new contract;
-- z3's Linux-only system-lib resolution;
-- the per-platform tracked-output split (`matrix_mac.html`, `<p>_mac/`)
-  is a **postponement**, not the design — the real answer is a runner per
-  platform feeding one aggregating viewer, which is the same question the
-  fingerprint answers for the switch and the platform.
+### Next, and small
 
-One more, not yet an issue: `run_config.platform` records the platform
-but consumers still call `Canary_store.platform ()` directly rather than
-reading it off the config they were handed. The two cannot disagree today
-(the CLI sets the override before building any config), but threading the
-config properly is what would make that structural rather than
-circumstantial.
+1. **`spec-check --probe-pm`** *(approved 2026-08-26, not started)*. Every
+   declared `system_package_spec` is a NAME nobody validates:
+   `check_stable_lib` is a presence audit, so a wrong `macos_pkg` stays
+   invisible until `fetch_lib` fails mid-run on that machine. The pieces
+   exist and are unused — each driver has `check_available_cmd`; what is
+   missing is a `Canary_pm` hub and a caller, the same shape as the
+   `installed_version_cmd` gap. Opt-in flag, because `spec-check` is
+   deliberately static and must stay usable offline. It would have
+   reported `llvm@19` (declared, formula exists, **not installed**)
+   immediately, and it is what makes a `--platform=macos` review from the
+   WSL box fully trustworthy rather than half: the cross-render shows the
+   declared names, not whether they are real.
+2. **`brew install llvm@19`** on the mac — llvm's stable lib point does
+   not exist here (this machine has `llvm 22.1.5`), so its pair has one
+   point until then.
+3. **Thread `run_config.platform`.** The field records the platform, but
+   consumers still call `Canary_store.platform ()` rather than reading it
+   off the config they were handed. The two cannot disagree today (the
+   CLI sets the override before any config is built), so this is about
+   making it structural instead of circumstantial.
+
+### The substantial one
+
+4. **tiny's Mach-O naming port** ⇢. `libtiny.so.1` is spelled out in ~40
+   declarations — scenario recipes, the workspace materializer, the c4
+   SONAME fixtures, the `Dlopen` coupling, several pins.
+   `Canary_basic.shared_lib_name` knows both conventions and nothing
+   calls it. Until it does, `canary tiny run` (the 22-scenario oracle)
+   and tiny-full's vendored artifacts are Linux-only. The C library now
+   *links* on macOS — the version script is guarded — so this is naming,
+   not toolchain. Largest remaining piece, and self-contained.
+
+### Decisions, not tasks
+
+5. **c5 on Mach-O** ⇢ — no symbol versioning exists there, but
+   `LC_ID_DYLIB`'s `compatibility_version` is a loader-enforced version
+   floor at LIBRARY granularity. Is that c5 at coarser resolution, or a
+   new contract? The second reading is the more interesting one for the
+   manuscript: the same checking-point exists on both platforms at
+   different resolution, which says something about what a surface theory
+   must be parametric in. The inspector already extracts the field.
+6. **The cross-platform viewer.** The per-platform tracked-output split
+   (`matrix_mac.html`, `<p>_mac/`) is a POSTPONEMENT, not the design.
+   The real answer is a runner per platform feeding one aggregating
+   viewer — the same question the fingerprint answers for the switch and
+   the platform: how does a verdict name the world it was earned in?
+   Landing it means deleting `Canary_basic.platform_suffix` and its two
+   call sites.
+
+### Deliberately not doing
+
+7. **z3** ⇢ — `pkg-config` → `dpkg -L` → `ldconfig -p` over `libz3.so`,
+   in a hand-written cascade rather than through `Pm_lib`. Renaming its
+   loader variable alone would advertise a portability it does not have.
+   It is muted; it gets ported whole or not at all.

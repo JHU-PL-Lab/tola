@@ -68,6 +68,21 @@ before adding anything platform-dependent** — it has the tool sibling
 table, what a project spec may declare per platform (pairs, never
 branches), and the three consumption modes.
 
+**macOS status** (2026-08-26). Canary runs on macOS: `make canary-test`
+is 113 + 109 + 14 green there, `canary mutation-test` 46/46 (that suite is
+NOT in `make canary-test` — run it separately, it had never been run on
+mac and hid two failures). `spec` / `spec-check` / `result` / `emit` /
+`prebuilt` all work; all four conda-forge prebuilts have osx-arm64
+archives at the same version + build number as linux-64. Four classes of
+Linux assumption were fixed and every one FAILED SILENTLY: `sed -i -E`
+(BSD reads `-E` as the backup suffix → the mutation no-ops and exits 0),
+`dpkg-query` in the matrix (versions vanish), `readelf -d` (the L4 record
+goes absent, which reads as "no constraint"), `nm -D` + a bare-prefix
+grep (Mach-O underscores every C symbol). NOT yet running on mac: **tiny**
+(`canary tiny run`, tiny-full's vendored artifacts) — its C lib links now
+but `libtiny.so.1` is spelled out in ~40 declarations; and **z3**,
+deliberately. The to-do is `doc/canary/design/platform.md` §7.
+
 **Post-change verification.** After every edit that touches `src/canary/`, run
 `make canary-test`. This catches regressions in enumeration, compat theory,
 tool assumptions (nm/ocamlobjinfo/python3), and PM presence — 97 + 109 + 14
