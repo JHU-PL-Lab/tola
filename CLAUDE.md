@@ -684,6 +684,16 @@ This file is the serialization layer for cross-machine continuity.
 Local memory and chat context are ephemeral; CLAUDE.md is the durable
 snapshot any fresh session on any machine can reconstruct from.
 
+**Latest pickup note:
+[`doc/canary/worklog/handoff_2026_08_26.md`](doc/canary/worklog/handoff_2026_08_26.md)**
+(mac → WSL). The paper-plan half of the handoff: what the 2026-08-26
+session changed, the ordered plan split into prose (author) / delivery
+(agent-ownable), and the decisions waiting on the user. The macOS port
+has its own checklist in
+[`doc/canary/design/platform.md`](doc/canary/design/platform.md) §6–7.
+A dated pickup note is the right form when work MOVES machines; this
+file stays the durable snapshot.
+
 **Before ending a session**, update this file with current state:
 
 ```
