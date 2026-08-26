@@ -345,14 +345,14 @@ let inspect_bpc2 ~(paths : paths) () =
   capture_json
     (Canary_artifact_lang.python_inspect_pipe_cmd
        ~env:[ "PYTHONPATH", paths.python_cext_pkg ^ "/python_ctypes";
-              "LD_LIBRARY_PATH", paths.c_build ]
+              Canary_basic.ld_path_var (), paths.c_build ]
        ~pkg:"tiny_ctypes" ())
 
 let inspect_bpe2 ~(paths : paths) () =
   capture_json
     (Canary_artifact_lang.python_inspect_pipe_cmd
        ~env:[ "PYTHONPATH", paths.python_cext_pkg ^ "/python_cext";
-              "LD_LIBRARY_PATH", paths.c_build ]
+              Canary_basic.ld_path_var (), paths.c_build ]
        ~pkg:"tiny_cext" ())
 
 let inspect_bpe3 ~(paths : paths) () =

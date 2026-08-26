@@ -62,7 +62,7 @@ let mutation_pure_tests = [
       in
       List.length cmds = 5 };
 
-  { name = "apply_soname_bump_cmds has mv, ln, patchelf"; check = fun () ->
+  { name = "apply_soname_bump_cmds has mv, ln, set-recorded-name"; check = fun () ->
       let cmds =
         Canary_artifact_mutation.apply_soname_bump_cmds
           ~lib_dir:"/l"
@@ -71,9 +71,16 @@ let mutation_pure_tests = [
           ~generic_name:"libx.so"
       in
       let all = String.concat ~sep:"\n" cmds in
+      (* one concept, two tools (2026-08-26): ELF's SONAME via patchelf,
+         Mach-O's install_name via install_name_tool. The pin is that the
+         bump REWRITES THE RECORDED NAME, not which binary does it. *)
+      let rewrites_recorded_name =
+        String.is_substring all ~substring:"patchelf --set-soname"
+        || String.is_substring all ~substring:"install_name_tool -id"
+      in
       String.is_substring all ~substring:"mv "
       && String.is_substring all ~substring:"ln -sf"
-      && String.is_substring all ~substring:"patchelf --set-soname" };
+      && rewrites_recorded_name };
 
   { name = "apply_soname_bump_cmds renames from old_full to new_full"; check = fun () ->
       let cmds =

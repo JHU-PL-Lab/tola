@@ -1374,3 +1374,74 @@ from same source).
     whether or not the prologue is applied — it survived its own
     falsification. Now `test "$OPAMSWITCH" = canary`, which cannot.
     Falsified: dropping the prologue turns `switch.selection` red.
+
+## 2026-08-26 — POPL purged; `plan.md` rewritten against project status
+
+The paper plan had been written in April against four venue milestones
+and five roadmap steps. Both frames had expired. Rewritten (576 → 408
+lines) after a progress review the user asked for; the two purges and
+the one addition are below.
+
+**POPL is gone.** Its submission deadline was Thu 9 Jul 2026 and passed
+without a submission, so everything scheduled against it was fiction:
+the former **M1 milestone** (transformer calculus syntax + typing rules,
+subtyping algorithm + decidability sketch, soundness theorem, one closed
+type contract) and the **§5 POPL venue-gap list** (formal calculus,
+algorithmic subtyping, soundness proof, the type contract closed,
+optional Rocq/Lean mechanization). Also purged: §2.1's full POPL
+schedule and §2.2's POPL-conditional fallback reasoning. Milestone
+numbers are not reused — the list now starts at M2 (OOPSLA R1), which
+is where the plan's own primary always was.
+
+What survived the purge, because it is wanted at OOPSLA too: the
+calculus has to be *sharper*, not *formal* — manuscript §5.7 at
+"applied PL paper" level. That is an M2 item now, not a venue of its
+own.
+
+**The roadmap's shipped design prose is gone too.** Steps 1–7 were all
+delivered (terms 2026-05-15, packaging 2026-05-19, unit-test layer
+2026-05-29, Phases 14/15 comparators 2026-06, the per-contract registry
+and its toggles 2026-06-02). Step 7 in particular carried ~120 lines of
+design prose for a matrix-coverage model built around `script_spec`,
+`run_project_multi` and `canary_project_tiny.ml` — none of which
+survived the A5 generic path. It read as live plan and was not. Replaced
+by one paragraph plus worklog pointers; only the naming convention and
+the genuinely open items were kept.
+
+**What was added, from the user's framing.**
+
+- **§4, the delivery pipeline.** Five stages — theory → checker → world
+  → finding → merged PR — each with a status and an owner. It exists
+  because the project's strength is uneven across them and the roster
+  hides that: stage 3 (the world) is the working part, 10 projects and
+  41 of 42 scenarios run; stage 1's catalogue is 3/20 sections; stage 5
+  is **zero PRs**. The user's correction that prompted it: landing a
+  project is cheap now, so *"the canary runner side is working for
+  landing new projects, but the concrete checking to run, and PR based
+  on the checkers are missing"* — growing the roster adds rows, not
+  claims. The agreement registry (status.md M2 step 6) is therefore
+  **not descopable**, which reverses the reviewer's earlier suggestion
+  to freeze M2 at step 5.
+- **Stage 5's PR candidates, ranked by distance to a filed PR**:
+  `conf-ncurses`'s unfirable `{os-family = "ubuntu"}` line (one line,
+  measured, cheapest first PR), z3 #10549 (fix already upstream — the
+  cleanest "our check agrees with a real repair"), the z3 forward cell
+  (791 vs 705 `Z3_` symbols), sundials 6→7 (a genuine upstream bug, 177
+  apt packages to run).
+- **The author/agent split as an operating rule** — prose is the
+  author's; runs, tables, reproductions and PRs are delegable, and §4's
+  owner column is the split.
+- **The SSOT pipeline proposal** (§7, awaiting the user's
+  confirmation). `ssot.md` is 1209 lines doing three jobs — ID
+  dictionary, enumeration design, open-decision list — and the second
+  now has its own tree under `design/enumeration/`. Proposed: narrow to
+  the bridge (§1–3, §6.1, §8) at ~300 lines, let the prose pass decide
+  the `drift` rows as it hits them, and ratchet the whole thing with a
+  test that every id cited in `draft.md` resolves in `ssot.md` and every
+  code-column symbol exists in the source — so "drift" becomes a
+  failure rather than a label someone types.
+
+**One scheduling finding, recorded at the top of §2**: both remaining
+deadlines are prior-year *estimates*. OOPSLA R1 is ~7 weeks out on that
+estimate and the whole of §3 is scheduled against it, so confirming the
+CFP dates is the first open item.

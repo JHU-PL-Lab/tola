@@ -2401,7 +2401,16 @@ let write_project_output ~dir ~project_name ~variant ~steps
               copy_file ~src:s ~dst:d)
   in
   let docs_projects = "docs/canary/projects" in
-  let docs_dir = [%string "%{docs_projects}/%{project_name}"] in
+  (* per-platform tracked dir (2026-08-26): [zlib] on Linux,
+     [zlib_mac] on macOS. Same reason as the matrix's filename — two
+     machines must not overwrite each other's committed record while the
+     cross-platform aggregating viewer is still an open question. The
+     index scan below then lists both, side by side and unmerged, which
+     is the honest shape of "postponed". See
+     [Canary_basic.platform_suffix]. *)
+  let docs_dir =
+    [%string "%{docs_projects}/%{project_name}%{Canary_basic.platform_suffix ()}"]
+  in
   ignore (Stdlib.Sys.command [%string "mkdir -p \"%{docs_dir}\""]);
   copy_web ~src:dir ~dst:docs_dir;
   let entries = scan_index_entries ~projects_root:docs_projects in

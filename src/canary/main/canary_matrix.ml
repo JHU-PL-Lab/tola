@@ -235,20 +235,34 @@ let kind_label (k : Canary_basic.artifact_kind) : string =
   | Canary_basic.Binding_source _ -> "bind-src"
   | Canary_basic.App -> "app"
 
-(** The live installed version of a system package (memoized dpkg
-    query — the matrix's one runtime read; "" when unknown). *)
+(** The live installed version of a system package (memoized — the
+    matrix's one runtime read; "" when unknown).
+
+    ASK THE PM THIS MACHINE HAS (2026-08-26). This was an unconditional
+    [dpkg-query], which on macOS returns nothing for every package: the
+    fetched-lib cells silently lost their version and rendered as a bare
+    [brew z3] where Linux shows [apt z3.4.8.12]. Version-less is exactly
+    the thing the FETCHED annotation exists to prevent ("we DO know it"),
+    and it fails quietly — no error, just a thinner cell. [brew list
+    --versions] prints "<formula> <version>", so the last field is the
+    answer; an uninstalled formula prints nothing, which is the same ""
+    the dpkg branch yields. *)
 let sys_pkg_versions : (string, string) Hashtbl.t =
   Hashtbl.create (module String)
+
+(* through the PM dispatcher (2026-08-26): this had its own dpkg/brew
+   branches, duplicating what the per-PM drivers already knew. A cell
+   that asks the store a question should ask it the way every other
+   caller does — [Canary_pm.installed_version_cmd] is that hub. *)
+let sys_pkg_version_cmd (pkg : string) : string =
+  Canary_pm.installed_version_cmd (Canary_store.detect_pm ()) ~pkg
 
 let sys_pkg_version (pkg : string) : string =
   match Hashtbl.find sys_pkg_versions pkg with
   | Some v -> v
   | None ->
       let v =
-        let ic =
-          Unix.open_process_in
-            (Printf.sprintf "dpkg-query -W -f='${Version}' %s 2>/dev/null" pkg)
-        in
+        let ic = Unix.open_process_in (sys_pkg_version_cmd pkg) in
         let line = Stdlib.In_channel.input_line ic in
         ignore (Unix.close_process_in ic : Unix.process_status);
         Option.value line ~default:""
@@ -1033,16 +1047,56 @@ td.blank { background: #f6f8fa; }
 </body></html>|}
     (esc generated_at) header body
 
-(* The web file locations (the docs copy is the GH Pages view). *)
-let web_path ~projects_root = projects_root ^ "/matrix.html"
+(* The web file locations (the docs copy is the GH Pages view).
 
-let docs_path = "docs/canary/projects/matrix.html"
+   ONE FILE PER PLATFORM (2026-08-26, user). [docs/] is TRACKED, so a
+   single [matrix.html] makes two machines fight over one committed file:
+   the mac's verdicts would overwrite the WSL box's and each run would
+   read as a wholesale change. The eventual answer is a runner per
+   platform feeding ONE aggregating viewer — a real design question about
+   how a verdict names the world it was earned in (the same question the
+   step fingerprint answers for the switch). This suffix POSTPONES it
+   without letting the two machines corrupt each other's record: Linux
+   keeps [matrix.html] (no churn, every existing link intact), macOS
+   writes [matrix_mac.html] beside it. The suffix itself is
+   [Canary_basic.platform_suffix] — shared with the per-project docs copy
+   in [Canary_diagram], because both name the same tracked tree. *)
+let matrix_filename () : string =
+  "matrix" ^ Canary_basic.platform_suffix () ^ ".html"
+let web_path ~projects_root = projects_root ^ "/" ^ matrix_filename ()
+let docs_path () = "docs/canary/projects/" ^ matrix_filename ()
 
+(** A HYPOTHETICAL RENDER MUST NOT BECOME THE RECORD (2026-08-26, caught
+    by doing it). [--platform] lets one machine render the other's view;
+    the tracked filename is chosen by [platform_suffix], which reads the
+    SELECTED platform — so `--platform=wsl` on the mac wrote
+    [matrix.html], the WSL box's committed record, with a matrix the mac
+    had produced. That is precisely the cross-machine corruption the
+    per-platform filename exists to prevent, arriving through the door
+    the override opened.
+
+    The fix is not a better filename, because there is no honest one: a
+    mac's rendering of the WSL view is neither machine's record. So an
+    overridden run writes the LOCAL copy only (look at it, diff it, dump
+    it) and leaves [docs/] alone, saying so. What lands in the tracked
+    tree stays exactly "what this machine measured about itself". *)
 let write_web ~projects_root (m : t) ~(generated_at : string) : unit =
   let html = render_html m ~generated_at in
-  List.iter [ web_path ~projects_root; docs_path ] ~f:(fun path ->
+  let hypothetical = Canary_store.platform_is_overridden () in
+  let targets =
+    if hypothetical then [ web_path ~projects_root ]
+    else [ web_path ~projects_root; docs_path () ]
+  in
+  List.iter targets ~f:(fun path ->
       let oc = Stdlib.open_out path in
       Stdlib.output_string oc html;
       Stdlib.close_out oc);
-  Fmt.pr "Wrote %s and %s (%d rows)@." (web_path ~projects_root)
-    docs_path (List.length m.rows)
+  if hypothetical then
+    Fmt.pr
+      "Wrote %s (%d rows) — docs/ NOT updated: --platform render of %s is \
+       not this machine's record@."
+      (web_path ~projects_root) (List.length m.rows)
+      (Canary_store.string_of_platform (Canary_store.platform ()))
+  else
+    Fmt.pr "Wrote %s and %s (%d rows)@." (web_path ~projects_root)
+      (docs_path ()) (List.length m.rows)

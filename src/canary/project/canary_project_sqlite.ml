@@ -398,9 +398,7 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
     | Canary_artifact.Installed -> workspace ^ "/install/lib"
     | _ -> workspace ^ "/lib"
   in
-  let probe_env =
-    [ Printf.sprintf "LD_LIBRARY_PATH=$PWD/%s:$LD_LIBRARY_PATH" libdir ]
-  in
+  let probe_env = [ Canary_basic.ld_prepend ("$PWD/" ^ libdir) ] in
   (* THE BINDING PIN (2026-08-19): the scenario's opam version. With two
      pins declared, the switch is shared state the scenarios take turns
      owning — so the fetch must INSTALL this pin, its check_post must

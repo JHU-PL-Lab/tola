@@ -200,6 +200,77 @@ fork's staged world stays RED in `action z3` (the default full run) —
 deliberately, since silencing it would be choosing (a) by default.
 
 
+### Open — tiny still spells its library for ONE object format, so the
+### witness does not run on macOS (2026-08-26, from the Tier 1 port)
+
+**What is fixed.** `canary/examples/tiny/c/CMakeLists.txt` guards the
+version script with `if(NOT APPLE)`, because ld64 rejects the flag
+outright rather than ignoring it —
+
+```
+ld: unknown options: --version-script=.../tiny.map
+```
+
+— so with it unguarded the tiny lib does not LINK on macOS and *every*
+scenario built on it is unreachable, versioned or not. With the guard,
+cmake produces the same shape it does on Linux: `libtiny.1.0.dylib` ←
+`libtiny.1.dylib` ← `libtiny.dylib`, install_name `@rpath/libtiny.1.dylib`,
+`nm -g` showing the three `_tiny_*` symbols.
+
+**What is not.** `libtiny.so.1` is written out in ~40 places — tiny's
+scenario recipes, the workspace materializer, the c4 SONAME fixtures, the
+`Dlopen` coupling, several pins. `Canary_basic.shared_lib_name` exists
+now and knows both conventions (ELF puts the version AFTER the
+extension, Mach-O BEFORE: `libtiny.so.1` vs `libtiny.1.dylib`), but
+nothing calls it yet. Until those declarations go through it:
+
+- `canary tiny run` (tiny1, the 22-scenario oracle) is Linux-only;
+- `tiny-full`'s vendored artifacts cannot be prepared on macOS;
+- `Native.Soname_bump` emits the right TOOL on either platform
+  (`Canary_artifact_mutation.set_recorded_name_cmd` — `patchelf
+  --set-soname` on ELF, `install_name_tool -id @rpath/…` on Mach-O) but
+  is handed an ELF-shaped name, so the macOS path is not yet usable.
+
+This is the largest single remaining piece of the macOS port and it is
+self-contained: give tiny a name-building function, route the ~40 sites
+through it, and decide what the fixtures assert per format.
+
+### Open — c5 (symbol versioning) has no Mach-O referent; the nearest
+### analogue is a FLOOR at library granularity (2026-08-26)
+
+Mach-O has no symbol versioning at all. `tiny.map`, `tiny_sum@@TINY_1.0`,
+the `symbol_version_floor` mutation and the c5 comparator have nothing to
+range over there — that is a fact about the object format, not a gap in
+the witness, and guarding the version script states it.
+
+But the *contract class* does exist on macOS, one level up. `LC_ID_DYLIB`
+carries `compatibility_version`; a consumer records the value it linked
+against, and dyld REFUSES to load a library whose compatibility_version
+is lower. That is the same shape as `symbol_version_floor` — a
+loader-enforced version floor, failing closed — at LIBRARY rather than
+SYMBOL granularity. `inspect_native.py`'s Mach-O L4 branch already
+extracts both `compatibility_version` and `current_version`, so the
+inputs are on hand.
+
+**The decision, not yet taken:** is this a *port* of c5 at a coarser
+granularity, or a NEW contract (c9?) that happens to be the only
+version-floor mechanism one of our two platforms has? The second reading
+is more interesting for the manuscript: the same checking-point exists
+on both platforms with different resolution, which is a statement about
+what a surface theory has to be parametric in. Wiring it needs a
+mutation (bump the provider's compatibility_version, or link the
+consumer against a higher one) and a probe that reads dyld's refusal.
+
+### Known — z3's system-lib resolution is Linux-only, deliberately
+### un-ported (2026-08-26)
+
+z3's FORWARD cell resolves the system libz3 with a `pkg-config` /
+`dpkg -L` / `ldconfig -p` cascade over `libz3.so`, and its probes spell
+`LD_LIBRARY_PATH`. The Tier 1 loader rename skipped all of it on purpose:
+renaming the variable while `dpkg`, `ldconfig` and `.so` remain would
+advertise a portability that cell does not have. z3 is muted; it gets
+ported as a whole (brew's `pkg-config`, `otool`, `.dylib`) or not at all.
+
 ## 2. Declaration gaps
 
 ### Open — z3's `assert_staged` is outside the world vocabulary

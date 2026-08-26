@@ -1137,16 +1137,33 @@ let tiny_binding_realization_pin : Canary_project_test.pure_test =
           ( str (BT.build_binding_of cext ~ctx),
             Some "ls /WS/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /OUT/build_VK.ok" );
           (* probe_binding: dune build+exec / cext runtime probe *)
+          (* the LOADER variable is per-platform (2026-08-26): these
+             asserted [LD_LIBRARY_PATH] literally, which would have made
+             a correct macOS template — dyld reads DYLD_LIBRARY_PATH and
+             ignores the other — read as drift. What the pin is about is
+             that the world's libdir reaches the probe, not what the
+             variable is called here, so it asks [ld_only] the same
+             question the template asks. *)
           ( str (BT.probe_binding_of cstubs ~ctx),
-            Some "(LIBRARY_PATH=$PWD//WS/c/build LD_RUN_PATH=$PWD//WS/c/build dune build --root /WS ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD//WS/c/build /WS/_build/default/ocaml/examples/probe_baseline.exe) > /OUT/probe_VK.log 2>&1" );
+            Some
+              (Printf.sprintf
+                 "(LIBRARY_PATH=$PWD//WS/c/build LD_RUN_PATH=$PWD//WS/c/build dune build --root /WS ocaml/examples/probe_baseline.exe && %s /WS/_build/default/ocaml/examples/probe_baseline.exe) > /OUT/probe_VK.log 2>&1"
+                 (Canary_basic.ld_only "$PWD//WS/c/build")) );
           ( str (BT.probe_binding_of cext ~ctx),
-            Some "LD_LIBRARY_PATH=$PWD//WS/c/build PYTHONPATH=/WS/python_cext python3 /WS/python_cext/examples/probe_baseline.py > /OUT/probe_VK.log 2>&1" );
+            Some
+              (Printf.sprintf
+                 "%s PYTHONPATH=/WS/python_cext python3 /WS/python_cext/examples/probe_baseline.py > /OUT/probe_VK.log 2>&1"
+                 (Canary_basic.ld_only "$PWD//WS/c/build")) );
           (* probe_lib: nm for the declared prefix *)
           ( Some
               (BT.probe_lib_of TS.tiny_native
                  ~lib_path:"/WS/c/build/libtiny.so.1"
                  ~output_dir:"/OUT" ~variant_key:"VK"),
-            Some "nm -D /WS/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /OUT/probe_VK.log 2>&1" );
+            Some
+              (Printf.sprintf
+                 "nm %s /WS/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T %stiny_' > /OUT/probe_VK.log 2>&1"
+                 (Canary_artifact_native.nm_dynamic_flag ())
+                 (Canary_artifact_native.c_symbol_prefix ())) );
           (* user-facing pkg names derive from the surface path *)
           (BT.user_facing_pkg_of Canary_lang.OCaml cstubs, Some "tiny");
           (BT.user_facing_pkg_of Canary_lang.Python cext, Some "tiny_cext");
@@ -1318,7 +1335,8 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         let module EN = Canary_enumerate in
         let ep p =
           Canary_project_run.enumeration_policy_of
-            { Canary_project_run.policy = p; refs = EN.All_refs }
+            { Canary_project_run.platform = Canary_store.platform ();
+              policy = p; refs = EN.All_refs }
         in
         let full_like (p : unit EN.policy option) =
           match p with
@@ -1339,7 +1357,8 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         (* and a refs-narrowed Full is still full in every other axis *)
         && full_like
              (Canary_project_run.enumeration_policy_of
-                { Canary_project_run.policy = Canary_project_run.Full;
+                { Canary_project_run.platform = Canary_store.platform ();
+                  policy = Canary_project_run.Full;
                   refs = EN.Refs [ "latest" ] })) }
 
 (* The repo-model settings (2026-08-15, design/enumeration/stage1_declare_spec.md): the
@@ -1534,8 +1553,12 @@ let pair_counts_points_pin : Canary_project_test.pure_test =
 
    Three properties, and the third is the one with teeth:
 
-   1. the default is an OWN switch, not the ambient one — a person who
-      forgets a flag must not damage [default];
+   1. the default is the MACHINE's default (2026-08-26 evening): the
+      dedicated [canary] switch on the box that has one, ambient on the
+      mac, which does not. What the pin holds is that the shipped default
+      is not an accident — it is whatever [default_opam_switch] decides,
+      so a person who forgets a flag gets the protection their machine
+      was set up with;
    2. selecting none restores the pre-2026-08-26 behaviour EXACTLY (an
       empty prologue, so the emitted shell is byte-identical);
    3. the switch is part of the step fingerprint. A verdict earned in one
@@ -1562,9 +1585,14 @@ let canary_switch_pin : Canary_project_test.pure_test =
           in
           Canary_local_runner.step_fingerprint step
         in
-        (* (1) the shipped default is canary's own switch *)
-        let default_is_own =
-          match saved with Some s -> String.equal s "canary" | None -> false
+        (* (1) the shipped default is the machine's default — and on a
+           box that HAS a dedicated switch, that default is it *)
+        let machine_default = Lazy.force Canary_store.default_opam_switch in
+        let default_is_machine_default =
+          Poly.equal saved machine_default
+          && (match machine_default with
+              | Some s -> String.equal s "canary"
+              | None -> true)
         in
         (* (2) no switch selected => empty prologue, byte-identical shell *)
         Canary_store.opam_switch := None;
@@ -1598,9 +1626,74 @@ let canary_switch_pin : Canary_project_test.pure_test =
         let ran = Canary_pm_test.run_test case in
         let axis_ok = ran.Canary_pm_test.actual_rc = 0 in
         restore ();
-        default_is_own && ambient_prologue && exports && axis_ok
+        default_is_machine_default && ambient_prologue && exports && axis_ok
         && (not (String.equal f_canary f_default))
         && (not (String.equal f_canary f_ambient))) }
+
+(* THE PLATFORM IS ONE VALUE (2026-08-26, user: "the canary config should
+   carry the platform argument").
+
+   Three modules used to sniff the machine independently —
+   [Canary_basic.detect_distro] (uname), [Canary_store.detect_pm] (which
+   brew / which apt-get) and [Canary_artifact_native.is_macos] (uname
+   again) — and they could DISAGREE: [detect_pm] tried brew first, so a
+   Linux box with Linuxbrew answered [Brew] against a [Wsl] distro, and
+   [system_pkg_for_pm] would then pick the macOS package name on Linux.
+
+   Four properties, and the second is the one that closes that hole:
+
+   1. every consumer reports the SAME platform, override included — a
+      [--platform] that reached the package names but not the nm flags
+      would be worse than no override at all;
+   2. the system PM is DERIVED from the platform, not sniffed beside it,
+      so brew-on-Linux cannot be represented;
+   3. the platform-dependent vocabulary actually moves with it (the
+      loader variable and the nm flag are the two that decide whether a
+      probe tests the world it names);
+   4. it is part of the step fingerprint, so a verdict earned on one
+      platform is never served to the other. Falsified by construction:
+      drop the platform from the digest and the two hashes coincide. *)
+let platform_single_source_pin : Canary_project_test.pure_test =
+  { name = "platform.single_source";
+    check =
+      (fun () ->
+        let saved = !Canary_store.platform_override in
+        let restore () = Canary_store.platform_override := saved in
+        let fingerprint_under d =
+          Canary_store.set_platform d;
+          let step : Canary_step_model.step =
+            { tag = "probe"; cache_key = "k"; output_tag = "o"; output_dir = "d";
+              project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
+              deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
+              check_pre = (fun () -> true);
+              check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+              expectation = Canary_step_model.Expect_success; symbol_check = None;
+              disabled_contracts = [] }
+          in
+          Canary_local_runner.step_fingerprint step
+        in
+        (* (1) + (2) + (3), under each platform in turn *)
+        let agrees_under d ~want_pm ~want_ld ~want_nm ~want_macos =
+          Canary_store.set_platform d;
+          Poly.equal (Canary_basic.detect_distro ()) d
+          && Poly.equal (Canary_store.detect_pm ()) want_pm
+          && String.equal (Canary_basic.ld_path_var ()) want_ld
+          && String.equal (Canary_artifact_native.nm_dynamic_flag ()) want_nm
+          && Bool.equal (Canary_artifact_native.is_macos ()) want_macos
+        in
+        let mac =
+          agrees_under Canary_store.MacOS_local ~want_pm:Canary_store.Brew
+            ~want_ld:"DYLD_LIBRARY_PATH" ~want_nm:"-g" ~want_macos:true
+        in
+        let wsl =
+          agrees_under Canary_store.Wsl ~want_pm:Canary_store.Apt
+            ~want_ld:"LD_LIBRARY_PATH" ~want_nm:"-D" ~want_macos:false
+        in
+        (* (4) the fingerprint separates the two *)
+        let f_mac = fingerprint_under Canary_store.MacOS_local in
+        let f_wsl = fingerprint_under Canary_store.Wsl in
+        restore ();
+        mac && wsl && not (String.equal f_mac f_wsl)) }
 
 (* The repo-contents invariant over the LIVE registry (2026-08-16): every
    non-source artifact with a [Repo] provider must appear in that repo's
@@ -3273,8 +3366,19 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           ~equal:String.equal
                       with
                       | Some (Some c) ->
+                          (* the system PM's own name (2026-08-26): the
+                             cell renders whichever PM this machine has,
+                             so a literal "apt" made a correct macOS
+                             render ("lib brew z3.…") read as drift. The
+                             SHAPE is what this pin is about — the cell
+                             names the pm and the package — not which
+                             pm the machine happens to run. *)
+                          let pm =
+                            Canary_store.string_of_pm
+                              (Canary_store.detect_pm ())
+                          in
                           String.is_prefix c.Canary_matrix.provision
-                            ~prefix:"lib apt z3."
+                            ~prefix:[%string "lib %{pm} z3."]
                       | _ -> false)
                       && (match
                             List.Assoc.find fr.Canary_matrix.cells
@@ -3424,7 +3528,8 @@ let base_tests : Canary_project_test.pure_test list =
       z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
-      matrix_registry_shape_pin ]
+      matrix_registry_shape_pin;
+      platform_single_source_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 

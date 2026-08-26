@@ -6,6 +6,7 @@
     "total": 2
   },
   "elf": {
+    "format": "elf",
     "needed": [
       "libc.so.6"
     ],

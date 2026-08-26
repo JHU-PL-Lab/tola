@@ -167,6 +167,13 @@ Steps (each step keeps the suite green before the next):
    statement per contract (invariant as a FALSIFIER, tool-based inputs,
    evidence kind, firing derived from mechanism × provision); the
    per-project binding tables converge onto it and get deleted.
+   **Not descopable for the paper** (user, 2026-08-26): the runner side
+   is working — landing a project is cheap — but what a landing
+   *checks* is still per-project tables, and no PR has been driven off a
+   checker. Growing the roster without this adds rows, not claims. It is
+   stage 2 of [`research/plan.md` §4](research/plan.md)'s delivery
+   pipeline; the catalogue itself is 3 of 20 sections confirmed and
+   resumes at its §2 *Artifact surfaces*.
 7. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
    OCaml probe not predicted); `symbol_orphan`'s build failure has no
    contract. Known in `canary_expected_of` table. (Closes inside

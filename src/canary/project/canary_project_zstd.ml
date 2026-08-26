@@ -168,9 +168,16 @@ let decl : Canary_opam_binding.t =
         { Canary_prebuilt.project = "zstd";
           tag = "zstd-1.5.7";
           version = "1.5.7";
-          url =
-            "https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_7.conda";
-          lib_glob = "lib/libzstd.so.1*";
+          linux =
+            { url =
+                "https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_7.conda";
+              lib_glob = "lib/libzstd.so.1*" };
+          (* same version and build number (_7) as linux-64 *)
+          macos =
+            Some
+              { url =
+                  "https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda";
+                lib_glob = "lib/libzstd.1*.dylib" };
           note =
             "conda-forge 1.5.7 = upstream's newest tag (facebook/zstd \
              publishes no Linux binary); apt ships 1.5.5. Same soname \

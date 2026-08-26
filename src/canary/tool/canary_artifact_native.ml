@@ -20,15 +20,34 @@ open Base
     affects nm flags ([-g] on macOS, [-D] on Linux) and native lib
     filename conventions. *)
 
-(* ── Platform detection ── *)
+(* ── Platform ──
+   THE platform, not a third opinion about it (2026-08-26). This module
+   used to run its own [uname] at LOAD time and keep the string; it now
+   asks the one answer [Canary_store.platform] holds, so a [--platform]
+   override reaches the nm flags too. A function of unit rather than a
+   constant, deliberately: the override is set by the CLI after every
+   module has loaded, and a load-time constant would miss it. *)
+let is_macos () =
+  match Canary_store.platform () with
+  | Canary_store.MacOS_local -> true
+  | Canary_store.Wsl -> false
 
-let platform =
-  let ic = Unix.open_process_in "uname -s 2>/dev/null" in
-  let s = try String.strip (Stdlib.input_line ic) with End_of_file -> "" in
-  ignore (Unix.close_process_in ic);
-  s
+(* ── nm, per object format (2026-08-26) ──
+   Two differences, and both are silent when got wrong: [nm -D] (list the
+   DYNAMIC symbol table) is an ELF notion that macOS's nm rejects, and
+   Mach-O prefixes every C symbol with an underscore, so a grep anchored
+   on the bare name matches nothing on a lib that exports it perfectly.
+   Callers building an nm pipeline by hand should use these rather than
+   re-deriving the pair. (The [--strip-leading-underscore] seen further
+   down is a flag to [inspect_native.py], NOT to nm — macOS nm has no
+   such option.) *)
 
-let is_macos = String.equal platform "Darwin"
+(** The flag that makes nm list a shared library's exported symbols. *)
+let nm_dynamic_flag () : string = if is_macos () then "-g" else "-D"
+
+(** What the object format prepends to a C symbol's name in nm output:
+    ["_"] for Mach-O, nothing for ELF. *)
+let c_symbol_prefix () : string = if is_macos () then "_" else ""
 
 (* ── Kind predicates & existence checks ── *)
 
@@ -52,7 +71,7 @@ let exists_native_lib_or_dylib path =
 (* ── nm-based symbol inspection ── *)
 
 let nm_cmd path =
-  if is_macos then Printf.sprintf "nm -g '%s' 2>/dev/null" path
+  if is_macos () then Printf.sprintf "nm -g '%s' 2>/dev/null" path
   else if is_native_lib path then
     Printf.sprintf "nm -D '%s' 2>/dev/null" path
   else Printf.sprintf "nm '%s' 2>/dev/null" path
@@ -101,7 +120,7 @@ let symbols_undefined ~prefix lines =
    Writes probe.log; exits nonzero if the count is zero.
    Use to verify the lib compiled and exports the expected API surface. *)
 let native_lib_probe_cmd ~lib ~prefix ~output_dir ~variant_key =
-  let nm_flag = if is_macos then "-g" else "-D" in
+  let nm_flag = nm_dynamic_flag () in
   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
   [%string
     {|COUNT=$(nm %{nm_flag} "%{lib}" 2>/dev/null | grep -v ' U ' | grep -c '%{prefix}' || echo 0)
@@ -126,8 +145,8 @@ let inspect_pipe_cmd
     ?(emit_symbols = true)
     ?(elf = true)
     () =
-  let nm_flag = if is_macos then "-g" else "-D" in
-  let strip_flag = if is_macos then "--strip-leading-underscore " else "" in
+  let nm_flag = nm_dynamic_flag () in
+  let strip_flag = if is_macos () then "--strip-leading-underscore " else "" in
   let script = "canary/scripts/inspect_native.py" in
   let prefixes_csv = String.concat ~sep:"," prefixes in
   let watchlist_csv = String.concat ~sep:"," watchlist in

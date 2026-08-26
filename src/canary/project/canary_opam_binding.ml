@@ -193,7 +193,8 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
            \"PREBUILT MISSING: %s — run 'canary prebuilt %s' first\" >&2; \
            exit 1; }"
           (Canary_prebuilt.path_of pb (Canary_basic.detect_distro ()))
-          pb.Canary_prebuilt.lib_glob dir pb.Canary_prebuilt.project
+          (Canary_prebuilt.lib_glob_of pb (Canary_basic.detect_distro ()))
+          dir pb.Canary_prebuilt.project
   in
   {
     Canary_step_builder.empty_runner_spec with
@@ -482,7 +483,12 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
            (* NO cd — the example path is repo-root-relative (the opam
               probe's convention); the build dir enters via -I + the
               loader path (dllzarith.so loads from the build dir). *)
-           let ld = "LD_LIBRARY_PATH=" ^ s ^ ":" in
+           (* trailing ":" kept verbatim from the original (it leaves an
+              empty final element); only the VARIABLE is per-platform —
+              this one is [export]ed rather than inline, which is still
+              fine under SIP because the export happens inside the shell
+              rather than being inherited through it. *)
+           let ld = Canary_basic.ld_only (s ^ ":") in
            Printf.sprintf
              "eval $(opam env) && export %s && \
               ocamlfind ocamlopt -I %s %s/zarith.cmxa %s \
@@ -515,8 +521,13 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
                world_check
                ^ Canary_step_builder.probe_ocaml_env_cmd
                    ~env:
-                     [ Printf.sprintf "LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH"
-                         (Canary_prebuilt.libdir_of pb distro) ]
+                     (Canary_basic.ld_prepend
+                        (Canary_prebuilt.libdir_of pb distro)
+                     (* and make the LOADER name what it resolved, where
+                        the probe cannot (no /proc on macOS) — same
+                        [Log_names] assert, dyld's own trace as the
+                        evidence. Empty on Linux. *)
+                     :: Canary_basic.ld_trace_env ())
                    (* assert the loader OBEYED the repoint, when the probe
                       says which file it resolved (2026-08-20) *)
                    ~log_grep:

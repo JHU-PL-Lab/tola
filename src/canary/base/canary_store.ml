@@ -131,22 +131,6 @@ let is_source_location = function
 (* Placeholder location for universal action-action enumeration (canary paths). *)
 let store = Pm (Sys_pm { pm = Apt })
 
-(* ── System package manager detection and commands ── *)
-
-(* Memoized: the detected PM doesn't change during a run, and [detect_pm] is
-   called at MODULE LOAD by several project specs (`let pm = detect_pm ()`), so
-   without memoization every `canary` invocation spawns `which brew` + `which
-   apt-get` once per spec (~4×) at startup — even for PM-irrelevant commands
-   (`spec`/`paths`/`graph`). This caps it at one probe. (Fully SKIPPING it for
-   PM-irrelevant commands needs deferring runner_spec construction — the pm is
-   baked into store_config data, not a closure — tracked in status.) *)
-let detected_pm =
-  lazy
-    (if Stdlib.Sys.command "which brew > /dev/null 2>&1" = 0 then Brew
-     else if Stdlib.Sys.command "which apt-get > /dev/null 2>&1" = 0 then Apt
-     else Unsupported)
-
-let detect_pm () = Lazy.force detected_pm
 
 let store_behavior_of_pm = function
   | Apt | Brew -> Stateful_global
@@ -190,6 +174,76 @@ let contrib_root : distro -> string = fun d -> distro_base d ^ "/contrib"
 
 let all_distros = [ Wsl; MacOS_local ]
 
+(* ── THE PLATFORM (2026-08-26, user: "the canary config should carry the
+      platform argument") ──────────────────────────────────────────────
+
+   ONE VALUE, SET ONCE, ASKED EVERYWHERE. Before this there were THREE
+   independent detectors — [Canary_basic.detect_distro] (uname),
+   [detect_pm] below (which brew / which apt-get) and
+   [Canary_artifact_native.is_macos] (uname again) — each re-probing on
+   demand, and they could DISAGREE. The concrete hazard was not
+   hypothetical: [detect_pm] tried brew FIRST, so a Linux box with
+   Linuxbrew installed answered [Brew] while the distro answered [Wsl],
+   and [system_pkg_for_pm] would then pick the macOS package name on
+   Linux. A platform is one fact about one machine; deriving the package
+   manager FROM it, rather than sniffing for it separately, makes that
+   class of disagreement unrepresentable.
+
+   [distro] is that fact — it was already the codebase's name for "which
+   machine", carrying the per-machine home in [distro_base]. It is not
+   re-detected per call: the probe runs at most once and the answer is
+   held, so [spec]/[paths]/[graph] pay one [uname] rather than one per
+   consulting site.
+
+   OVERRIDABLE, because the entry point owns it. [set] lets the CLI
+   ([--platform=macos]) or a test fix the value before anything reads it;
+   it is the same shape as the opam-switch selection above and is
+   reported the same way (the run header and actions.log both name it),
+   so a run always says which platform it believed it was on. *)
+
+let platform_of_string = function
+  | "macos" | "macos_local" | "darwin" -> Some MacOS_local
+  | "wsl" | "wsl_ubuntu" | "linux" | "ubuntu" -> Some Wsl
+  | _ -> None
+
+let string_of_platform = function
+  | Wsl -> "wsl_ubuntu"
+  | MacOS_local -> "macos_local"
+
+let detected_platform =
+  lazy
+    (match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
+    | 0 -> MacOS_local
+    | _ -> Wsl)
+
+let platform_override : distro option ref = ref None
+
+(** THE platform this run is about. *)
+let platform () : distro =
+  match !platform_override with
+  | Some d -> d
+  | None -> Lazy.force detected_platform
+
+(** Fix the platform explicitly (CLI / tests). Call before anything reads
+    it — the value is not cached downstream, but a project spec built
+    from the old answer would not be rebuilt. *)
+let set_platform (d : distro) : unit = platform_override := Some d
+
+(** Is the platform an explicit choice rather than what [uname] said? *)
+let platform_is_overridden () : bool = Option.is_some !platform_override
+
+(* ── System package manager, DERIVED from the platform ── *)
+
+(** The system package manager a platform uses. Not a probe: on macOS it
+    is brew, on our Linux it is apt. If the tool is missing that is an
+    environment error to report, not a different platform to infer —
+    inferring is what let Linuxbrew masquerade as macOS. *)
+let system_pm_of_platform = function
+  | MacOS_local -> Brew
+  | Wsl -> Apt
+
+let detect_pm () = system_pm_of_platform (platform ())
+
 (* Source repo and its operations moved to canary_artifact_source.ml *)
 
 (* ── THE OPAM SWITCH CANARY OPERATES IN (2026-08-26, user) ──
@@ -216,9 +270,30 @@ let all_distros = [ Wsl; MacOS_local ]
 
    [None] means "whatever switch is ambient" — the pre-2026-08-26
    behaviour, kept so a person can still point canary at their own switch
-   deliberately. *)
+   deliberately.
 
-let opam_switch : string option ref = ref (Some "canary")
+   WHICH switch is the default is a MACHINE fact, not a framework one
+   (2026-08-26 evening, user: "let's just use the default opam", starting
+   the macOS run). [distro] is already this codebase's proxy for "which
+   machine" — [distro_base] is a per-machine home — so the default
+   follows it: the WSL box has the dedicated [canary] switch built for it
+   and keeps it; the mac has no such switch and runs in whatever is
+   ambient. The three properties the mechanism was pinned on are
+   untouched — an explicit [--switch=NAME] / [CANARY_SWITCH] still wins,
+   the switch is still in the step fingerprint, and the run header still
+   names it, so the per-machine difference is VISIBLE rather than
+   silent. *)
+
+(* One [uname] at startup, like [detected_pm]'s probe. Not shared with
+   [Canary_basic.detect_distro] because that module sits ABOVE this one —
+   the check is two lines and duplicating it beats a layer inversion. *)
+let default_opam_switch : string option Lazy.t =
+  lazy
+    (match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
+    | 0 -> None
+    | _ -> Some "canary")
+
+let opam_switch : string option ref = ref (Lazy.force default_opam_switch)
 
 (** The shell prologue that puts a command in canary's switch. Empty when
     no switch is selected, so the ambient behaviour is byte-identical. *)

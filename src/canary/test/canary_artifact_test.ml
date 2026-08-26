@@ -23,7 +23,7 @@ let first_existing paths =
   List.find paths ~f:Stdlib.Sys.file_exists
 
 let native_lib_fixture () =
-  if Canary_artifact_native.is_macos then
+  if Canary_artifact_native.is_macos () then
     (* macOS 15+: /usr/lib/*.dylib live only in the dyld shared cache, so
        file-existence checks fail. Use a Homebrew-shipped on-disk dylib
        (sqlite mirrors the Linux fixture; falls back to libffi/openssl). *)
@@ -855,7 +855,10 @@ let mutation_pure_tests =
                         ~from_:"tiny_sum" ~to_:"tiny_total")
         in
         List.length cmds = 1
-        && String.is_substring (List.hd_exn cmds) ~substring:"sed -i"
+        (* [perl -i], not [sed -i]: BSD sed reads the [-E] as a backup
+           suffix and drops to basic regex, so the mutation no-ops and
+           still exits 0 (canary_artifact_mutation.ml, top). *)
+        && String.is_substring (List.hd_exn cmds) ~substring:"perl -i"
         && String.is_substring (List.hd_exn cmds) ~substring:"tiny_sum"
         && String.is_substring (List.hd_exn cmds) ~substring:"tiny_total"
         && String.is_substring (List.hd_exn cmds) ~substring:"/tmp/sb/c/src/tiny.c" };
@@ -1149,7 +1152,7 @@ let python_schema_cmd path =
      assert d['counts']['attrs'] > 0, 'no attrs in python fixture'"
 
 let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
-  let prefix = if Canary_artifact_native.is_macos then "_" else "" in
+  let prefix = if Canary_artifact_native.is_macos () then "_" else "" in
   let sum_dir = output_dir ^ "/native_inspect" in
   [
     { name = "native.nm_cmd";

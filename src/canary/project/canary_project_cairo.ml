@@ -103,9 +103,16 @@ let decl : Canary_opam_binding.t = {
       { Canary_prebuilt.project = "cairo";
         tag = "cairo-1.18.4";
         version = "1.18.4";
-        url =
-          "https://conda.anaconda.org/conda-forge/linux-64/cairo-1.18.4-h3394656_0.conda";
-        lib_glob = "lib/libcairo.so*";
+        linux =
+          { url =
+              "https://conda.anaconda.org/conda-forge/linux-64/cairo-1.18.4-h3394656_0.conda";
+            lib_glob = "lib/libcairo.so*" };
+        (* same version and build number (_0) as linux-64 *)
+        macos =
+          Some
+            { url =
+                "https://conda.anaconda.org/conda-forge/osx-arm64/cairo-1.18.4-h6a3b0d2_0.conda";
+              lib_glob = "lib/libcairo*.dylib" };
         note =
           "conda-forge 1.18.4 = upstream's newest (2025-03-08); apt ships \
            1.18.0. cairographics.org publishes source only." };

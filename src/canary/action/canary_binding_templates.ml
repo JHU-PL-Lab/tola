@@ -125,18 +125,27 @@ let probe_binding_of (d : Canary_binding_decl.binding_decl) ~(ctx : ctx)
   | Canary_binding_decl.Stub_archive _ ->
       Some (fun ~output_dir ~variant_key ->
         let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+        (* [LIBRARY_PATH]/[LD_RUN_PATH] are link-time and spelled the
+           same everywhere; only the LOADER path differs per platform
+           ([Canary_basic.ld_only]). *)
         Printf.sprintf
           "(LIBRARY_PATH=%s LD_RUN_PATH=%s dune build --root %s %s \
-           && LD_LIBRARY_PATH=%s %s/_build/default/%s) > %s/%s 2>&1"
+           && %s %s/_build/default/%s) > %s/%s 2>&1"
           ctx.lib_dir ctx.lib_dir ctx.source_root ctx.probe_exe
-          ctx.lib_dir ctx.source_root ctx.probe_exe output_dir probe_log)
+          (Canary_basic.ld_only ctx.lib_dir)
+          ctx.source_root ctx.probe_exe output_dir probe_log)
   | Canary_binding_decl.Compiled_ext _ ->
       Some (fun ~output_dir ~variant_key ->
         let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+        (* the loader repoint must reach python3 itself — on macOS that
+           means a NON-protected interpreter (brew's or opam's), since
+           SIP strips DYLD_* when exec'ing /usr/bin/python3. See the
+           note on [Canary_basic.ld_path_var]. *)
         Printf.sprintf
-          "LD_LIBRARY_PATH=%s PYTHONPATH=%s python3 \
+          "%s PYTHONPATH=%s python3 \
            %s/%s > %s/%s 2>&1"
-          ctx.lib_dir ctx.binding_root ctx.binding_root ctx.probe_script
+          (Canary_basic.ld_only ctx.lib_dir)
+          ctx.binding_root ctx.binding_root ctx.probe_script
           output_dir probe_log)
   | Canary_binding_decl.Dlopen _ -> None
 
@@ -146,8 +155,15 @@ let probe_lib_of (f : Canary_binding_decl.native) ~lib_path
   : output_dir:string -> variant_key:string -> string =
   fun ~output_dir ~variant_key ->
     let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-    Printf.sprintf "nm -D %s | grep -E '^[0-9a-f]+ T %s' > %s/%s 2>&1"
-      lib_path f.prefix output_dir probe_log
+    (* per object format (2026-08-26): [-D] is ELF-only and Mach-O
+       underscores every C symbol, so the anchored grep needs the same
+       prefix nm will print — otherwise a lib exporting the API
+       perfectly reports zero matches. *)
+    Printf.sprintf "nm %s %s | grep -E '^[0-9a-f]+ T %s%s' > %s/%s 2>&1"
+      (Canary_artifact_native.nm_dynamic_flag ())
+      lib_path
+      (Canary_artifact_native.c_symbol_prefix ())
+      f.prefix output_dir probe_log
 
 (** The user-facing package name the binding inspects:
     OCaml — the .mli's module name; Python — the surface's package dir. *)

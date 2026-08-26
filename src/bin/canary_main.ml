@@ -217,7 +217,8 @@ let action_cmd =
     in
     let config =
       if thin then
-        { Canary_project_run.policy = Canary_project_run.Thin;
+        { Canary_project_run.platform = Canary_store.platform ();
+          policy = Canary_project_run.Thin;
           refs = refs_level }
       else { Canary_project_run.default_config with refs = refs_level }
     in
@@ -1911,24 +1912,58 @@ let construct_cmd =
 let set_switch v =
   Canary_store.opam_switch := (if String.equal v "" then None else Some v)
 
+(* THE PLATFORM OVERRIDE (2026-08-26, user: "the canary config should
+   carry the platform argument"). Same shape as [--switch], and for the
+   same reason: it applies to EVERY subcommand, so it is consumed before
+   cmdliner dispatches rather than declared on each of the ~28 commands.
+
+     --platform NAME | --platform=NAME   run AS this platform
+     CANARY_PLATFORM=NAME                same, for Makefile targets
+
+   NAME is macos | wsl (with the obvious aliases). What it is FOR is not
+   pretending to be another machine — the tools do not change — but
+   making the platform an argument the run states rather than a fact it
+   sniffs: dumps (`spec`, `emit`, `spec-check`) can then be rendered for
+   EITHER platform from one machine, which is how a WSL reviewer checks
+   what the mac will do without owning a mac. A bad name is a hard error
+   rather than a silent fall back to detection. *)
+let set_platform v =
+  match Canary_store.platform_of_string (String.lowercase_ascii v) with
+  | Some d -> Canary_store.set_platform d
+  | None ->
+      Fmt.epr "canary: unknown --platform %s (want: macos | wsl)@." v;
+      Stdlib.exit 2
+
 let switch_argv () : string array =
   (match Stdlib.Sys.getenv_opt "CANARY_SWITCH" with
    | Some v -> set_switch v
+   | None -> ());
+  (match Stdlib.Sys.getenv_opt "CANARY_PLATFORM" with
+   | Some v -> set_platform v
    | None -> ());
   let argv = Stdlib.Sys.argv in
   let n = Array.length argv in
   let keep = ref [] in
   let i = ref 0 in
+  let starts_with a p =
+    String.length a >= String.length p
+    && String.equal (String.sub a 0 (String.length p)) p
+  in
   while !i < n do
     let a = argv.(!i) in
-    let is_eq =
-      String.length a >= 9 && String.equal (String.sub a 0 9) "--switch="
-    in
+    let is_eq = starts_with a "--switch=" in
+    let is_plat_eq = starts_with a "--platform=" in
     if String.equal a "--switch" && !i + 1 < n then (
       set_switch argv.(!i + 1);
       i := !i + 2)
     else if is_eq then (
       set_switch (String.sub a 9 (String.length a - 9));
+      Stdlib.incr i)
+    else if String.equal a "--platform" && !i + 1 < n then (
+      set_platform argv.(!i + 1);
+      i := !i + 2)
+    else if is_plat_eq then (
+      set_platform (String.sub a 11 (String.length a - 11));
       Stdlib.incr i)
     else (
       keep := a :: !keep;

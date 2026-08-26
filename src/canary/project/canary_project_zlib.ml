@@ -160,9 +160,19 @@ let decl : Canary_opam_binding.t =
         { Canary_prebuilt.project = "zlib";
           tag = "zlib-1.3.2";
           version = "1.3.2";
-          url =
-            "https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_3.conda";
-          lib_glob = "lib/libz.so.1*";
+          linux =
+            { url =
+                "https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_3.conda";
+              lib_glob = "lib/libz.so.1*" };
+          (* same version, same conda BUILD NUMBER (_3), only the
+             platform hash differs — the pair must be the same second
+             version on both machines or the two runs answer different
+             questions. Mach-O puts the version before the extension. *)
+          macos =
+            Some
+              { url =
+                  "https://conda.anaconda.org/conda-forge/osx-arm64/libzlib-1.3.2-h8088a28_3.conda";
+                lib_glob = "lib/libz.1*.dylib" };
           note =
             "conda-forge libzlib 1.3.2 (upstream publishes source only; \
              apt ships 1.3). Same soname libz.so.1 and a one-entry \
