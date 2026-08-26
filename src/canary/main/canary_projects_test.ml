@@ -1580,7 +1580,25 @@ let canary_switch_pin : Canary_project_test.pure_test =
         let f_default = fingerprint_under (Some "default") in
         let f_ambient = fingerprint_under None in
         restore ();
-        default_is_own && ambient_prologue && exports
+        (* (4) THE TEST AXIS USES THE SAME PROLOGUE (2026-08-26). Both
+           suites' shell cases run through [Canary_pm_test.run_test]; if
+           it stopped applying the prologue the framework tests would go
+           back to certifying the ambient toolchain while runs used
+           canary's. Checked by construction: run_test must compose the
+           prologue with the case's cmd. *)
+        Canary_store.opam_switch := Some "canary";
+        (* the probe must be one only the PROLOGUE can satisfy — `true`
+           succeeds either way, which is how the first version of this
+           check passed its own falsification. Asking the shell what
+           OPAMSWITCH holds cannot. *)
+        let case : Canary_pm_test.test_case =
+          { name = "probe"; cmd = "test \"$OPAMSWITCH\" = canary";
+            expected_rc = 0 }
+        in
+        let ran = Canary_pm_test.run_test case in
+        let axis_ok = ran.Canary_pm_test.actual_rc = 0 in
+        restore ();
+        default_is_own && ambient_prologue && exports && axis_ok
         && (not (String.equal f_canary f_default))
         && (not (String.equal f_canary f_ambient))) }
 

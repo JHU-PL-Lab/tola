@@ -1337,8 +1337,12 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
       else (Fmt.pr "opam not found — skipping ocaml shell tests@."; [])
     in
     let ocaml_stub =
+      (* the gate must ask the switch the tests will RUN in (2026-08-26):
+         checking default and then running in canary would enable tests
+         against a package that is not there *)
       if Stdlib.Sys.command
-           "eval $(opam env) && ocamlfind query zarith > /dev/null 2>&1" = 0
+           (Canary_store.opam_switch_prologue ()
+          ^ "eval $(opam env) && ocamlfind query zarith > /dev/null 2>&1") = 0
       then (Fmt.pr "zarith found — testing stub summary on zarith@.";
             ocaml_stub_shell_tests ~pkg:"zarith" ~output_dir)
       else (Fmt.pr "zarith not installed — skipping stub summary tests@."; [])

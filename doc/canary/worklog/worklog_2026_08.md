@@ -1346,3 +1346,31 @@ from same source).
   folding it in wants a `File_present` constructor and a look at whether
   `check_post` and world assertions should be one thing. Not urgent — it
   has a live guard now.
+
+- [x] **The framework tests target canary's switch** (2026-08-26) — filed
+  and closed the same day. `artifact-test` and `pm-test` were reading the
+  AMBIENT switch while project runs used `canary`, so the axis that exists
+  to catch tool drift was certifying a toolchain nothing under test uses.
+  One choke point again: every shell case in BOTH suites runs through
+  `Canary_pm_test.run_test` (artifact-test's 30 cases are `test_case`s
+  handed to it), so the same prologue applies there. The gate that decides
+  whether the zarith stub tests run was wrapped too — it had been asking
+  `default` whether a package existed and then running the tests in
+  `canary`.
+  - **The falsification found a real hole in the switch mechanism
+    itself.** Pointing the tests at a nonexistent switch printed opam's
+    error and then CARRIED ON: `opam env` writes its error to stderr and
+    exits non-zero, so `$(opam env)` is empty, `eval ""` succeeds, PATH
+    stays ambient, and `artifact-test --switch=no-such-switch` reported
+    "zarith found" with 30/30 PASS against the wrong toolchain. The
+    earlier claim that a bad name was "a loud ERROR, not a silent
+    fallback" was half right: loud, but not fatal. Fixed with one startup
+    validation that refuses (exit 2) with a message naming the fix.
+  - Second trap, measured: `opam var --switch=X prefix` is NOT a validity
+    probe — it merely computes a path and returns 0 for any name. `opam
+    env --switch=X` exits 2. The first version of the check used the
+    former and validated nothing.
+  - Third: the pin's own first version used `cmd = "true"`, which passes
+    whether or not the prologue is applied — it survived its own
+    falsification. Now `test "$OPAMSWITCH" = canary`, which cannot.
+    Falsified: dropping the prologue turns `switch.selection` red.

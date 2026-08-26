@@ -937,3 +937,202 @@ nm -D "$LIB_NATIVE" 2>/dev/null \
 [2026-08-26 03:45:40.855] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
 [2026-08-26 03:45:40.855] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
 [2026-08-26 03:45:40.855] *                          invariant  (ALL OK)
+[2026-08-26 09:41:10.269] *                          variant_start  (source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched)
+[2026-08-26 09:41:10.269] *                          graph_start  (7 steps)
+[2026-08-26 09:41:10.272] fetch_source               marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:10.272] fetch_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:10.272] fetch_binding_ocaml        marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:10.273] probe_binding_ocaml        marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:10.273] probe_binding_ocaml_inspect  marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:10.273] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:10.273] probe_lib_inspect          marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:10.273] fetch_source               check_pre  (pass)
+[2026-08-26 09:41:10.277] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zlib-all/zlib/.git ]; then git clone https://github.com/madler/zlib.git /home/red/code/contrib/zlib-all/zlib; fi && \
+git -C /home/red/code/contrib/zlib-all/zlib fetch -q origin v1.3.1 && \
+if [ ! -d /home/red/code/contrib/zlib-all/zlib-v1.3.1 ]; then git -C /home/red/code/contrib/zlib-all/zlib worktree add -f /home/red/code/contrib/zlib-all/zlib-v1.3.1 v1.3.1; fi && \
+git -C /home/red/code/contrib/zlib-all/zlib-v1.3.1 checkout -q -f v1.3.1 && \
+echo '/home/red/code/contrib/zlib-all/zlib-v1.3.1' > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_source/source_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-26 09:41:10.277] fetch_source               opam_switch  (canary)
+[2026-08-26 09:41:10.862] fetch_source               cmd_log  (fetch_source.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-26 09:41:10.862] fetch_source               detect  (ok, output present)
+[2026-08-26 09:41:10.869] fetch_source               check_post  (pass)
+[2026-08-26 09:41:10.869] fetch_source               done
+[2026-08-26 09:41:10.873] fetch_lib                  check_pre  (pass)
+[2026-08-26 09:41:10.875] fetch_lib                  cmd  (sudo apt-get install -y zlib1g-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_lib/lib_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-26 09:41:10.875] fetch_lib                  opam_switch  (canary)
+[2026-08-26 09:41:11.250] fetch_lib                  cmd_log  (fetch_lib.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-26 09:41:11.250] fetch_lib                  detect  (ok, output present)
+[2026-08-26 09:41:11.250] fetch_lib                  check_post  (pass)
+[2026-08-26 09:41:11.250] fetch_lib                  done
+[2026-08-26 09:41:11.252] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-26 09:41:11.254] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install camlzip -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_binding/ocaml/binding_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-26 09:41:11.254] fetch_binding_ocaml        opam_switch  (canary)
+[2026-08-26 09:41:12.284] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-26 09:41:12.284] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-26 09:41:12.284] fetch_binding_ocaml        check_post  (pass)
+[2026-08-26 09:41:12.285] fetch_binding_ocaml        done
+[2026-08-26 09:41:12.286] probe_binding_ocaml        check_pre  (pass)
+[2026-08-26 09:41:12.288] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package camlzip -linkpkg canary/examples/zlib/zlib_example.ml -o /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example >> /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-26 09:41:12.288] probe_binding_ocaml        opam_switch  (canary)
+[2026-08-26 09:41:12.506] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-26 09:41:12.506] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-26 09:41:12.506] probe_binding_ocaml        check_post  (pass)
+[2026-08-26 09:41:12.506] probe_binding_ocaml        done
+[2026-08-26 09:41:12.508] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-26 09:41:12.510] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zip' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zip' --watchlist 'Zlib,Gzip,Zip' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-26 09:41:12.510] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-08-26 09:41:12.569] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-26 09:41:12.569] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-26 09:41:12.569] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-26 09:41:12.569] probe_binding_ocaml_inspect  done
+[2026-08-26 09:41:12.571] probe_lib                  check_pre  (pass)
+[2026-08-26 09:41:12.573] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libz.so.1* /usr/lib*/libz.so.1* 2>/dev/null \
+        "$(brew --prefix zlib 2>/dev/null)/lib/libz.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'deflate' || echo 0)
+printf 'deflate symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-26 09:41:12.573] probe_lib                  opam_switch  (canary)
+[2026-08-26 09:41:12.622] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-26 09:41:12.622] probe_lib                  detect  (ok, output present)
+[2026-08-26 09:41:12.622] probe_lib                  check_post  (pass)
+[2026-08-26 09:41:12.622] probe_lib                  done
+[2026-08-26 09:41:12.624] probe_lib_inspect          check_pre  (pass)
+[2026-08-26 09:41:12.626] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libz.so.1* /usr/lib*/libz.so.1* 2>/dev/null \
+        "$(brew --prefix zlib 2>/dev/null)/lib/libz.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'deflate,inflate,gz,crc32,adler32' --watchlist 'deflateInit_,deflate,deflateEnd,inflateInit_,inflate,inflateEnd,zlibVersion' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-26 09:41:12.626] probe_lib_inspect          opam_switch  (canary)
+[2026-08-26 09:41:12.682] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-26 09:41:12.682] probe_lib_inspect          detect  (ok, output present)
+[2026-08-26 09:41:12.682] probe_lib_inspect          check_post  (pass)
+[2026-08-26 09:41:12.682] probe_lib_inspect          done
+[2026-08-26 09:41:12.684] *                          graph_end  (7/7 completed)
+[2026-08-26 09:41:12.684] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/all.mmd)
+[2026-08-26 09:41:12.685] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/full.mmd)
+[2026-08-26 09:41:12.685] *                          view  (source (1 steps))
+[2026-08-26 09:41:12.685] *                          view  (lib (3 steps))
+[2026-08-26 09:41:12.685] *                          view  (probes (4 steps))
+[2026-08-26 09:41:12.686] *                          view  (binding_ocaml (3 steps))
+[2026-08-26 09:41:12.687] *                          html  (_out/canary/projects/zlib/-run/result.html)
+[2026-08-26 09:41:12.693] *                          index  (_out/canary/projects/index.html)
+[2026-08-26 09:41:12.693] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-26 09:41:12.693] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-26 09:41:12.693] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-26 09:41:12.693] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-26 09:41:12.693] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-26 09:41:12.693] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-26 09:41:12.693] *                          invariant  (ALL OK)
+[2026-08-26 09:41:12.743] *                          variant_start  (source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched)
+[2026-08-26 09:41:12.743] *                          graph_start  (7 steps)
+[2026-08-26 09:41:12.746] fetch_source               marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:12.746] fetch_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:12.746] fetch_binding_ocaml        marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:12.747] probe_binding_ocaml        marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:12.747] probe_binding_ocaml_inspect  marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:12.747] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:12.747] probe_lib_inspect          marker_stale  (spec changed since the marker — re-running)
+[2026-08-26 09:41:12.747] fetch_source               check_pre  (pass)
+[2026-08-26 09:41:12.752] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zlib-all/zlib/.git ]; then git clone https://github.com/madler/zlib.git /home/red/code/contrib/zlib-all/zlib; fi && \
+git -C /home/red/code/contrib/zlib-all/zlib fetch -q origin v1.3.1 && \
+if [ ! -d /home/red/code/contrib/zlib-all/zlib-v1.3.1 ]; then git -C /home/red/code/contrib/zlib-all/zlib worktree add -f /home/red/code/contrib/zlib-all/zlib-v1.3.1 v1.3.1; fi && \
+git -C /home/red/code/contrib/zlib-all/zlib-v1.3.1 checkout -q -f v1.3.1 && \
+echo '/home/red/code/contrib/zlib-all/zlib-v1.3.1' > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_source/source_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.ok)
+[2026-08-26 09:41:12.752] fetch_source               opam_switch  (canary)
+[2026-08-26 09:41:13.221] fetch_source               cmd_log  (fetch_source.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-26 09:41:13.222] fetch_source               detect  (ok, output present)
+[2026-08-26 09:41:13.227] fetch_source               check_post  (pass)
+[2026-08-26 09:41:13.228] fetch_source               done
+[2026-08-26 09:41:13.231] fetch_lib                  check_pre  (pass)
+[2026-08-26 09:41:13.233] fetch_lib                  cmd  (sudo apt-get install -y zlib1g-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_lib/lib_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.ok)
+[2026-08-26 09:41:13.233] fetch_lib                  opam_switch  (canary)
+[2026-08-26 09:41:13.582] fetch_lib                  cmd_log  (fetch_lib.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-26 09:41:13.582] fetch_lib                  detect  (ok, output present)
+[2026-08-26 09:41:13.582] fetch_lib                  check_post  (pass)
+[2026-08-26 09:41:13.582] fetch_lib                  done
+[2026-08-26 09:41:13.584] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-26 09:41:13.586] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install camlzip -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_binding/ocaml/binding_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.ok)
+[2026-08-26 09:41:13.586] fetch_binding_ocaml        opam_switch  (canary)
+[2026-08-26 09:41:14.530] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-26 09:41:14.530] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-26 09:41:14.530] fetch_binding_ocaml        check_post  (pass)
+[2026-08-26 09:41:14.530] fetch_binding_ocaml        done
+[2026-08-26 09:41:14.532] probe_binding_ocaml        check_pre  (pass)
+[2026-08-26 09:41:14.533] probe_binding_ocaml        cmd  (eval $(opam env)
+export LD_LIBRARY_PATH=/home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib:$LD_LIBRARY_PATH
+ocamlfind ocamlopt -package camlzip -linkpkg canary/examples/zlib/zlib_example.ml -o /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example >> /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && grep -qF "/home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib" /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-26 09:41:14.533] probe_binding_ocaml        opam_switch  (canary)
+[2026-08-26 09:41:14.653] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-26 09:41:14.653] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-26 09:41:14.653] probe_binding_ocaml        check_post  (pass)
+[2026-08-26 09:41:14.653] probe_binding_ocaml        done
+[2026-08-26 09:41:14.655] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-26 09:41:14.657] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zip' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zip' --watchlist 'Zlib,Gzip,Zip' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/inspect_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-08-26 09:41:14.657] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-08-26 09:41:14.711] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-26 09:41:14.711] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-26 09:41:14.711] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-26 09:41:14.711] probe_binding_ocaml_inspect  done
+[2026-08-26 09:41:14.713] probe_lib                  check_pre  (pass)
+[2026-08-26 09:41:14.715] probe_lib                  cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib/libz.so.1* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib — run 'canary prebuilt zlib' first" >&2; exit 1; }
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'deflate' || echo 0)
+printf 'deflate symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-26 09:41:14.715] probe_lib                  opam_switch  (canary)
+[2026-08-26 09:41:14.758] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-26 09:41:14.758] probe_lib                  detect  (ok, output present)
+[2026-08-26 09:41:14.758] probe_lib                  check_post  (pass)
+[2026-08-26 09:41:14.758] probe_lib                  done
+[2026-08-26 09:41:14.760] probe_lib_inspect          check_pre  (pass)
+[2026-08-26 09:41:14.762] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib/libz.so.1* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib — run 'canary prebuilt zlib' first" >&2; exit 1; }
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'deflate,inflate,gz,crc32,adler32' --watchlist 'deflateInit_,deflate,deflateEnd,inflateInit_,inflate,inflateEnd,zlibVersion' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/inspect_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-08-26 09:41:14.762] probe_lib_inspect          opam_switch  (canary)
+[2026-08-26 09:41:14.811] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-26 09:41:14.811] probe_lib_inspect          detect  (ok, output present)
+[2026-08-26 09:41:14.811] probe_lib_inspect          check_post  (pass)
+[2026-08-26 09:41:14.811] probe_lib_inspect          done
+[2026-08-26 09:41:14.813] *                          graph_end  (7/7 completed)
+[2026-08-26 09:41:14.813] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/all.mmd)
+[2026-08-26 09:41:14.813] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/full.mmd)
+[2026-08-26 09:41:14.813] *                          view  (source (1 steps))
+[2026-08-26 09:41:14.813] *                          view  (lib (3 steps))
+[2026-08-26 09:41:14.813] *                          view  (probes (4 steps))
+[2026-08-26 09:41:14.813] *                          view  (binding_ocaml (3 steps))
+[2026-08-26 09:41:14.814] *                          html  (_out/canary/projects/zlib/-run/result.html)
+[2026-08-26 09:41:14.815] *                          index  (_out/canary/projects/index.html)
+[2026-08-26 09:41:14.815] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-26 09:41:14.815] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-26 09:41:14.815] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-26 09:41:14.816] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-26 09:41:14.816] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-26 09:41:14.816] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-26 09:41:14.816] *                          invariant  (ALL OK)

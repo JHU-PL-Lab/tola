@@ -50,7 +50,7 @@ to another. Select with `--switch=NAME` (any subcommand — the flag is
 stripped from argv before cmdliner, which would otherwise reject it),
 `--switch=` for the ambient switch, or `CANARY_SWITCH=NAME`. Every run
 prints `opam switch: <name>` and logs an `opam_switch` event to actions.log.
-Pinned by `switch.selection`.
+The framework tests (`artifact-test`/`pm-test`) go through the same prologue via `Canary_pm_test.run_test`, so both axes test the same switch. An unknown switch name is REFUSED at startup (exit 2) — without that check `eval $(opam env)` no-ops and the run silently continues in the ambient switch. Pinned by `switch.selection`.
 
 **Post-change verification.** After every edit that touches `src/canary/`, run
 `make canary-test`. This catches regressions in enumeration, compat theory,

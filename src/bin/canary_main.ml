@@ -1936,8 +1936,44 @@ let switch_argv () : string array =
   done;
   Array.of_list (List.rev !keep)
 
+(* VALIDATE THE SWITCH ONCE, AT STARTUP (2026-08-26).
+
+   The prologue alone is not enough, and a falsification run showed why:
+   with a bad name, `eval $(opam env)` gets empty stdout (opam writes the
+   error to stderr and exits non-zero), `eval ""` SUCCEEDS, PATH is left
+   ambient — and the command runs happily in whatever switch was already
+   active. The error is printed but nothing stops, so `artifact-test
+   --switch=no-such-switch` reported "zarith found" and 30/30 PASS while
+   testing the wrong toolchain. That is the "a check that did not check"
+   class of landing.md §4, arriving in the switch mechanism itself.
+
+   One check here turns a typo into a refusal instead of a silent
+   fallback, and it costs a single `opam var` per invocation. *)
+let validate_switch () =
+  match !Canary_store.opam_switch with
+  | None -> ()
+  | Some name ->
+      (* `opam env --switch=X` exits 2 on an unknown switch. NOT
+         `opam var --switch=X prefix`, which merely COMPUTES a path and
+         returns 0 for any name at all — measured while writing this. *)
+      let rc =
+        Stdlib.Sys.command
+          (Printf.sprintf "opam env --switch=%s > /dev/null 2>&1"
+             (Stdlib.Filename.quote name))
+      in
+      if rc <> 0 then (
+        Fmt.epr "canary: opam switch %S does not exist.@." name;
+        Fmt.epr
+          "  create it:                 opam switch create %s \
+           ocaml-base-compiler.5.4.1 --no-switch@."
+          name;
+        Fmt.epr "  or pick another:           --switch=NAME@.";
+        Fmt.epr "  or use the ambient one:    --switch=@.";
+        Stdlib.exit 2)
+
 let () =
   let argv = switch_argv () in
+  validate_switch ();
   let doc = "Canary compatibility testing" in
   let info = Cmd.info "canary" ~doc in
   let cmd =

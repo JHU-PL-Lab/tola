@@ -436,42 +436,6 @@ recorded here, reported as-is, NOT special-cased in checker code:
   refuses empty/system paths — canary never global-installs (fetch
   actions are the only intended global-store writes).
 
-### Found — the framework tests watch the WRONG switch (2026-08-26)
-
-`artifact-test` and `pm-test` call `Stdlib.Sys.command` directly — 14
-sites, none through `Canary_local_runner.run_cmd_logged` — so they never
-receive the `OPAMSWITCH` prologue and read whatever switch is **ambient**,
-while every project run uses the `canary` switch.
-
-**Not an isolation hole.** Checked before filing: nothing on the test path
-mutates a store. `canary_project_test`'s `opam install` / `pip install`
-occurrences are the tool-routing ratchet grepping SOURCE for raw
-invocations; `canary_cache_test` only does `rm -rf` / `mkdir -p` on its own
-scratch dirs; artifact-test and pm-test do read-only queries
-(`ocamlfind query`, `nm`, presence checks). `make canary-test` leaks
-nothing into `default`.
-
-**But it points the wrong way.** The framework axis exists to catch tool
-drift — "`nm` silently started emitting an extra column and our parser
-discarded every symbol" (CLAUDE.md, *Two testing axes*). It is currently
-validating `default`'s nm/ocamlfind/ocamlobjinfo, while canary's runs use
-`canary`'s. Today both are OCaml 5.4.1 with near-identical tooling, so it
-cannot bite; the moment the canary switch's compiler moves — which is the
-POINT of having it, since a zstd pin flip downgrades it — the tests would
-be certifying tools nothing uses.
-
-Related: the seeding of `zarith` + `fmt` into the canary switch was done
-believing the tests needed them there. They do not (they read ambient).
-The packages are harmless and become correct if this is fixed.
-
-**Pickable as:** route the test-path `Sys.command` calls through a shared
-wrapper that applies `Canary_store.opam_switch_prologue ()`, so the two
-axes agree on which switch is under test. Small; the prologue function
-already exists and the ambient case is a byte-identical empty string.
-Decide at the same time whether a test run should be able to target a
-switch independently (`--switch` already parses globally).
-
-
 ### Known — CI runs the pre-A5 shape
 
 `ci_jobs` (`canary_run.ml`) derives steps from legacy `runner_spec`

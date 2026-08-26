@@ -15,8 +15,20 @@ type test_case = {
 
 type test_result = { test : test_case; actual_rc : int; output : string }
 
+(* THE SWITCH, FOR THE TEST AXIS TOO (2026-08-26, issues.md).
+
+   This is the one place every shell test runs — pm-test's own cases AND
+   artifact-test's, which are [test_case]s handed here. Before this it
+   used whatever switch was ambient, while project runs used canary's, so
+   the axis that exists to catch TOOL DRIFT ("nm silently started
+   emitting an extra column") was watching a toolchain nothing under test
+   uses. Same prologue as [Canary_local_runner.run_cmd_logged]; empty
+   when no switch is selected, so the ambient case is unchanged. *)
 let run_test (t : test_case) : test_result =
-  let ic = Unix.open_process_in (t.cmd ^ " 2>&1") in
+  let ic =
+    Unix.open_process_in
+      (Canary_store.opam_switch_prologue () ^ t.cmd ^ " 2>&1")
+  in
   let buf = Buffer.create 256 in
   (try
      while true do
