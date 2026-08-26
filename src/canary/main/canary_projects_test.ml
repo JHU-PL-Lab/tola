@@ -1534,8 +1534,12 @@ let pair_counts_points_pin : Canary_project_test.pure_test =
 
    Three properties, and the third is the one with teeth:
 
-   1. the default is an OWN switch, not the ambient one — a person who
-      forgets a flag must not damage [default];
+   1. the default is the MACHINE's default (2026-08-26 evening): the
+      dedicated [canary] switch on the box that has one, ambient on the
+      mac, which does not. What the pin holds is that the shipped default
+      is not an accident — it is whatever [default_opam_switch] decides,
+      so a person who forgets a flag gets the protection their machine
+      was set up with;
    2. selecting none restores the pre-2026-08-26 behaviour EXACTLY (an
       empty prologue, so the emitted shell is byte-identical);
    3. the switch is part of the step fingerprint. A verdict earned in one
@@ -1562,9 +1566,14 @@ let canary_switch_pin : Canary_project_test.pure_test =
           in
           Canary_local_runner.step_fingerprint step
         in
-        (* (1) the shipped default is canary's own switch *)
-        let default_is_own =
-          match saved with Some s -> String.equal s "canary" | None -> false
+        (* (1) the shipped default is the machine's default — and on a
+           box that HAS a dedicated switch, that default is it *)
+        let machine_default = Lazy.force Canary_store.default_opam_switch in
+        let default_is_machine_default =
+          Poly.equal saved machine_default
+          && (match machine_default with
+              | Some s -> String.equal s "canary"
+              | None -> true)
         in
         (* (2) no switch selected => empty prologue, byte-identical shell *)
         Canary_store.opam_switch := None;
@@ -1580,7 +1589,7 @@ let canary_switch_pin : Canary_project_test.pure_test =
         let f_default = fingerprint_under (Some "default") in
         let f_ambient = fingerprint_under None in
         restore ();
-        default_is_own && ambient_prologue && exports
+        default_is_machine_default && ambient_prologue && exports
         && (not (String.equal f_canary f_default))
         && (not (String.equal f_canary f_ambient))) }
 

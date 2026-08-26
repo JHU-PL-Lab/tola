@@ -464,6 +464,15 @@ let _index_row (e : index_entry) =
     (_status_inspect e)
     (html_escape e.source_kind)
 
+(* BOTH matrix links, unconditionally (2026-08-26): the result matrix is
+   one file per platform ([Canary_matrix.matrix_filename] — Linux
+   [matrix.html], macOS [matrix_mac.html]) until a cross-platform
+   aggregating viewer lands. Listing both statically keeps this index
+   BYTE-IDENTICAL whichever machine renders it; making the links
+   conditional on file existence would have the two machines rewrite each
+   other's committed index on every run, which is the churn the
+   per-platform filename exists to avoid. The cost is one dead link until
+   the other platform's first `canary result` is committed. *)
 let render_index ~(entries : index_entry list) ~generated_at =
   (* Group by project, sort variants newest-first within each project. *)
   let by_project =
@@ -526,6 +535,7 @@ let render_index ~(entries : index_entry list) ~generated_at =
   <h1>canary runs</h1>
   <span class="meta">%d runs · %d with failures · generated %s</span>
   <a href="matrix.html" style="font-size: 13px;">result matrix</a>
+  <a href="matrix_mac.html" style="font-size: 13px;">result matrix (mac)</a>
 </header>
 <main>
 %s

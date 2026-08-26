@@ -1033,16 +1033,30 @@ td.blank { background: #f6f8fa; }
 </body></html>|}
     (esc generated_at) header body
 
-(* The web file locations (the docs copy is the GH Pages view). *)
-let web_path ~projects_root = projects_root ^ "/matrix.html"
+(* The web file locations (the docs copy is the GH Pages view).
 
-let docs_path = "docs/canary/projects/matrix.html"
+   ONE FILE PER PLATFORM (2026-08-26, user). [docs/] is TRACKED, so a
+   single [matrix.html] makes two machines fight over one committed file:
+   the mac's verdicts would overwrite the WSL box's and each run would
+   read as a wholesale change. The eventual answer is a runner per
+   platform feeding ONE aggregating viewer — a real design question about
+   how a verdict names the world it was earned in (the same question the
+   step fingerprint answers for the switch). This suffix POSTPONES it
+   without letting the two machines corrupt each other's record: Linux
+   keeps [matrix.html] (no churn, every existing link intact), macOS
+   writes [matrix_mac.html] beside it. The suffix itself is
+   [Canary_basic.platform_suffix] — shared with the per-project docs copy
+   in [Canary_diagram], because both name the same tracked tree. *)
+let matrix_filename () : string =
+  "matrix" ^ Canary_basic.platform_suffix () ^ ".html"
+let web_path ~projects_root = projects_root ^ "/" ^ matrix_filename ()
+let docs_path () = "docs/canary/projects/" ^ matrix_filename ()
 
 let write_web ~projects_root (m : t) ~(generated_at : string) : unit =
   let html = render_html m ~generated_at in
-  List.iter [ web_path ~projects_root; docs_path ] ~f:(fun path ->
+  List.iter [ web_path ~projects_root; docs_path () ] ~f:(fun path ->
       let oc = Stdlib.open_out path in
       Stdlib.output_string oc html;
       Stdlib.close_out oc);
   Fmt.pr "Wrote %s and %s (%d rows)@." (web_path ~projects_root)
-    docs_path (List.length m.rows)
+    (docs_path ()) (List.length m.rows)

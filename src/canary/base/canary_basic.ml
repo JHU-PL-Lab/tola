@@ -139,6 +139,24 @@ let detect_distro () =
   | 0 -> MacOS_local
   | _ -> Wsl
 
+(** The per-platform suffix for TRACKED web output (2026-08-26, user).
+
+    [docs/] is committed, and the run outputs under it are named by
+    project alone — so two machines running the same project write the
+    same tracked files and each run reads as a wholesale change, with the
+    later commit erasing the other platform's record. The eventual answer
+    is a runner per platform feeding ONE aggregating viewer; until then
+    this suffix keeps the two records SEPARATE rather than merged badly:
+    Linux keeps the existing names (no churn, every link intact), macOS
+    writes [<name>_mac] beside them.
+
+    Scope is deliberately the tracked copy only — the local [_out] tree is
+    gitignored and already per-machine, so it stays unsuffixed and the run
+    cache is unaffected. Deleting this function is what landing the
+    aggregator will look like. *)
+let platform_suffix () : string =
+  match detect_distro () with MacOS_local -> "_mac" | Wsl -> ""
+
 let run_step ?guard ?shell ?(env_fields = []) ?(requires = []) ?(produces = [])
     ~name action =
   ({ name; guard; shell; env_fields; requires; produces; action } : step_body)

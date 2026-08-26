@@ -216,9 +216,30 @@ let all_distros = [ Wsl; MacOS_local ]
 
    [None] means "whatever switch is ambient" — the pre-2026-08-26
    behaviour, kept so a person can still point canary at their own switch
-   deliberately. *)
+   deliberately.
 
-let opam_switch : string option ref = ref (Some "canary")
+   WHICH switch is the default is a MACHINE fact, not a framework one
+   (2026-08-26 evening, user: "let's just use the default opam", starting
+   the macOS run). [distro] is already this codebase's proxy for "which
+   machine" — [distro_base] is a per-machine home — so the default
+   follows it: the WSL box has the dedicated [canary] switch built for it
+   and keeps it; the mac has no such switch and runs in whatever is
+   ambient. The three properties the mechanism was pinned on are
+   untouched — an explicit [--switch=NAME] / [CANARY_SWITCH] still wins,
+   the switch is still in the step fingerprint, and the run header still
+   names it, so the per-machine difference is VISIBLE rather than
+   silent. *)
+
+(* One [uname] at startup, like [detected_pm]'s probe. Not shared with
+   [Canary_basic.detect_distro] because that module sits ABOVE this one —
+   the check is two lines and duplicating it beats a layer inversion. *)
+let default_opam_switch : string option Lazy.t =
+  lazy
+    (match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
+    | 0 -> None
+    | _ -> Some "canary")
+
+let opam_switch : string option ref = ref (Lazy.force default_opam_switch)
 
 (** The shell prologue that puts a command in canary's switch. Empty when
     no switch is selected, so the ambient behaviour is byte-identical. *)
