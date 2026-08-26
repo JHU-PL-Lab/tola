@@ -312,3 +312,60 @@ Ordered by what unblocks what. Items marked ⇢ have a home in
    in a hand-written cascade rather than through `Pm_lib`. Renaming its
    loader variable alone would advertise a portability it does not have.
    It is muted; it gets ported whole or not at all.
+
+## 8. Confirming §2b, rather than asserting it (2026-08-26, WSL)
+
+User: *"how about the platform affecting the enumeration? it should be
+agnostic until the runner, but can we confirm that?"*
+
+§2b says passes 1–4 never see the platform. That was a design intent
+written while making the mac run; this section is the measurement.
+
+**The answer is yes**, by two independent routes.
+
+*Empirically, through the CLI.* For all ten catalogued projects (z3
+included — it is muted, not unspecified), `emit <p> --stage
+declare|enumerate|select|order --json` is **byte-identical** under
+`--platform=wsl` and `--platform=macos`. Forty comparisons, no
+differences.
+
+*Mechanically, as a pin.* `platform.enumeration_is_agnostic`
+(`canary project-test`) runs passes 1–4 over both platforms and compares,
+for every project in the CATALOGUE.
+
+**Two vacuity traps had to be closed, and both were real.**
+
+1. *The invariant could hold because nothing reaches anything.* If the
+   override never touched the pipeline, "identical" would be automatic.
+   So the pin also asserts that a realized command DOES change — sqlite's
+   step set carries `probe_lib_apt` on one platform and `probe_lib_brew`
+   on the other. Surveyed once across the roster: **every project's
+   realized commands differ** between the two platforms, which is pass 5
+   doing its job.
+2. *A spec can be FROZEN rather than agnostic.* The registry hands
+   `z3_run`/`llvm_run` a literal `Wsl`, and every `project_run` is built
+   at module initialization — so a declaration that honoured the platform
+   would bake in one answer and then compare equal to itself forever. The
+   pin therefore also REBUILDS the declaration under each platform
+   (argument and ambient override) for the seven projects that expose a
+   builder, which includes every prebuilt-bearing one. sqlite, tiny-full
+   and ssl are eager values with no builder to call and are covered by
+   the weaker check only — the one gap in the confirmation.
+
+**What the pin compares, exactly.** The world set and its order: which
+artifacts exist, at which provisions and versions, which a run selects,
+in what sequence. NOT the realization data hanging off a declaration —
+making a `Vendored_at` payload platform-dependent does not turn it red,
+because `json_declare` reports the provision, not its origin string. That
+is the right scope (an origin string is pass 5's to resolve), but it
+means the claim is *both machines enumerate the same worlds*, not
+*nothing below a declaration mentions a platform*. Falsified by making
+the world set itself vary — dropping the Dev version point on macOS in
+the Pattern-A lib row turns it red.
+
+**One correction to the record.** A first pass at this read
+`emit --stage realize` under both platforms, found zlib's and llvm's
+output identical, and took that for a frozen spec. It is not: that dump
+carries step tags and deps, never command text, so it cannot show a
+command difference at all. sqlite's only "difference" there was its
+PM-keyed step TAG. The command-level survey above is what settles it.

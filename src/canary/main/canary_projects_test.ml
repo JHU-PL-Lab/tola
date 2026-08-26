@@ -1730,6 +1730,131 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         mac && wsl && mapping_ok
         && not (String.equal f_mac f_wsl)) }
 
+(* IS THE ENUMERATION PLATFORM-AGNOSTIC? (2026-08-26, user: "how about
+   the platform affecting the enumeration? it should be agnostic until
+   the runner, but can we confirm that?")
+
+   [platform.md] §2b asserts passes 1–4 never see the platform and only
+   pass 5 + the tool wrappers do. This turns the assertion into a
+   measurement: run each pass under BOTH platforms and compare.
+
+   The trap this pin has to avoid is being vacuous. "Identical under both
+   platforms" is also what you get if the override reaches nothing at
+   all — a spec frozen at module init compares equal to itself. So the
+   pin asserts BOTH directions: passes 1–4 identical, AND a realized
+   command that genuinely changes. Without the second half the first
+   half proves nothing.
+
+   WHAT IS COMPARED, stated exactly, because the first falsification of
+   this pin slipped through it: the snapshot is the WORLD SET and its
+   order — which artifacts exist, at which provisions, at which versions,
+   which of those a run selects, and in what sequence. It is not the
+   realization data hanging off a declaration: making the [Vendored_at]
+   payload platform-dependent does NOT turn this red, because
+   [json_declare] reports the provision, not its origin string. That is
+   the right scope — an origin string is what pass 5 resolves, and pass 5
+   is allowed to know the platform — but it means this pin says "both
+   machines enumerate the same worlds", not "nothing downstream of a
+   declaration mentions a platform".
+
+   Falsified by making the world set itself depend on the platform (drop
+   the Dev version point on macOS in the Pattern-A lib row): red, as it
+   must be. *)
+let platform_enumeration_pin : Canary_project_test.pure_test =
+  { name = "platform.enumeration_is_agnostic";
+    check =
+      (fun () ->
+        let saved = !Canary_store.platform_override in
+        let restore () = Canary_store.platform_override := saved in
+        let under d f = Canary_store.set_platform d; f () in
+        let js x = Yojson.Basic.to_string x in
+        (* passes 1 (declare), 2 (enumerate), 3 (select) and 4 (order),
+           for every CATALOGUED project — a muted one still has a spec,
+           and a spec that reads the platform is a spec that would make
+           the two machines enumerate different worlds and stop being
+           comparable, which is the whole point of running both. *)
+        let snapshot d pr =
+          under d (fun () ->
+              js (Canary_pipeline.json_declare pr)
+              ^ js
+                  (`List
+                    (List.map (Canary_pipeline.worlds pr)
+                       ~f:Canary_pipeline.json_of_assignment))
+              ^ js
+                  (`List
+                    (List.map
+                       (Canary_pipeline.enumerated pr)
+                       ~f:Canary_pipeline.json_of_assignment))
+              ^ js (Canary_pipeline.json_order pr))
+        in
+        let invariant =
+          List.for_all Canary_registry.all_specs ~f:(fun (_n, pr) ->
+              String.equal
+                (snapshot Canary_store.Wsl pr)
+                (snapshot Canary_store.MacOS_local pr))
+        in
+        (* NON-VACUITY: the override must reach pass 5. sqlite is the
+           witness — its lib comes from the system PM, so the realized
+           step set carries [probe_lib_apt] on one platform and
+           [probe_lib_brew] on the other. If this ever holds equal, the
+           override stopped reaching the runner and the invariant above
+           became a tautology.
+
+           [steps_of] is not pure for every project (tiny-full
+           materializes a tree), so the witness is a project whose
+           realization only builds strings. *)
+        let realized d pr =
+          under d (fun () ->
+              let a = List.hd_exn (Canary_pipeline.ordered pr) in
+              let ctx = Canary_pipeline.ctx_of pr a in
+              List.map (Canary_pipeline.steps_of ~root:"_out/canary" pr ~ctx a)
+                ~f:(fun s ->
+                  s.Canary_step_model.tag ^ "\n"
+                  ^ s.Canary_step_model.cmd ~output_dir:"D" ~variant_key:"V")
+              |> String.concat ~sep:"\n")
+        in
+        (* AND THE SPEC REBUILT UNDER EACH PLATFORM. The check above
+           re-runs the passes over one already-constructed [project_run],
+           so it catches a pass that READS the platform — but not a spec
+           that BAKED it in while the module initialized. A frozen spec
+           compares equal to itself, which is the same vacuity trap in a
+           second costume, and the registry makes it concrete: it hands
+           [z3_run]/[llvm_run] a literal [Wsl], so if their declaration
+           honoured that argument nothing above would notice.
+
+           So rebuild the declaration under each platform — argument AND
+           ambient override — and compare. Covers the seven projects that
+           expose a builder, including every prebuilt-bearing one (the
+           tempting place to resolve a machine path). sqlite, tiny-full
+           and ssl are eager values with no builder to call; they are
+           covered by the weaker check only. *)
+        let rebuilt_invariant =
+          let cmp build =
+            String.equal
+              (under Canary_store.Wsl (fun () -> snapshot Canary_store.Wsl (build Canary_store.Wsl)))
+              (under Canary_store.MacOS_local (fun () ->
+                   snapshot Canary_store.MacOS_local (build Canary_store.MacOS_local)))
+          in
+          (* the two that TAKE a distro — the registry's claim that they
+             ignore it, asserted instead of documented *)
+          cmp (fun d -> Canary_project_z3.z3_run d)
+          && cmp (fun d -> Canary_project_llvm.llvm_run d)
+          (* Pattern A: the template builds the whole declaration *)
+          && List.for_all
+               [ Canary_project_zlib.decl; Canary_project_cairo.decl;
+                 Canary_project_libffi.decl; Canary_project_zstd.decl ]
+               ~f:(fun decl -> cmp (fun _ -> Canary_opam_binding.run decl))
+        in
+        let sqlite = Canary_project_sqlite.sqlite_run in
+        let pass5_varies =
+          not
+            (String.equal
+               (realized Canary_store.Wsl sqlite)
+               (realized Canary_store.MacOS_local sqlite))
+        in
+        restore ();
+        invariant && rebuilt_invariant && pass5_varies) }
+
 (* THE MACHINE ROOTS ARE ENTRY CONFIG (2026-08-26, user: "this can be
    almost hardcoded in the entry side once as the config value choice for
    two of my machines. It shouldn't be hardcoded any more").
@@ -3659,7 +3784,8 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_registry_shape_pin;
       platform_single_source_pin;
       run_info_session_pin;
-      machine_roots_pin ]
+      machine_roots_pin;
+      platform_enumeration_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 
