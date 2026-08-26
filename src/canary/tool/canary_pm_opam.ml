@@ -24,8 +24,11 @@ let remove_cmd ~pkg =
 let verify_installed_cmd ~pkg =
   [%string "eval $(opam env) && test -n \"$(opam list %{pkg} --installed --short 2>/dev/null)\""]
 
+(* In the SELECTED switch (2026-08-26) — a presence question about a store
+   has to be asked of the store the run uses. See
+   [Canary_store.sh_in_switch]. *)
 let is_installed ~pkg =
-  Stdlib.Sys.command (verify_installed_cmd ~pkg) = 0
+  Canary_store.sh_in_switch (verify_installed_cmd ~pkg) = 0
 
 let query_version_cmd ~pkg =
   [%string "eval $(opam env) && opam show %{pkg} --field=version 2>/dev/null"]

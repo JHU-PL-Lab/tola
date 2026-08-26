@@ -506,10 +506,14 @@ let check_markers markers ~output_dir ~variant_key =
     therefore only fires when the switch still holds the pin. If another
     scenario switched the store since the marker was written, this fails
     and the fetch re-runs (re-pins). The shell half is
-    [Canary_pm_opam.holds_pin_cmd]. *)
+    [Canary_pm_opam.holds_pin_cmd].
+
+    Run through {!Canary_store.sh_in_switch} (2026-08-26), not bare
+    [Sys.command]: this check asks a STORE what it holds, so it has to ask
+    the store the step used. See that function for the measurement. *)
 let pin_check_post ~pkg ~pin ~marker ~output_dir ~variant_key =
   has_file ~output_dir (Canary_basic.variant_file ~variant_key marker)
-  && Stdlib.Sys.command (Canary_pm_opam.holds_pin_cmd ~pkg ~pin) = 0
+  && Canary_store.sh_in_switch (Canary_pm_opam.holds_pin_cmd ~pkg ~pin) = 0
 
 (** The WORLD ASSERTION for a pinned opam package (2026-08-19): a shell
     prelude a probe prepends, so a drifted switch fails loudly instead of

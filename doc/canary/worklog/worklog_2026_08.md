@@ -1445,3 +1445,49 @@ the genuinely open items were kept.
 deadlines are prior-year *estimates*. OOPSLA R1 is ~7 weeks out on that
 estimate and the whole of §3 is scheduled against it, so confirming the
 CFP dates is the first open item.
+
+## 2026-08-26 (WSL) — the mac merge, and the switch's second choke point
+
+Picked up `f9c431c..d74163f` (the macOS port + `platform.md`) on the WSL
+box and ran [`platform.md` §6](../design/platform.md)'s review list. Both
+conflicts were same-day edits to the same objects: `switch.selection`
+(the mac generalized property (1) to "the machine's default"; our
+property (4) is an independent claim, so both survive) and this worklog.
+
+**The port is clean on Linux.** `make canary-test` 113/109/14,
+`mutation-test` 46/0 — including the regenerated `api_faithful.patch`
+and `perl -i` replacing `sed -i -E`, the two fixtures §6 item 4 asked to
+re-verify here — `tiny run` 22/22, and `--platform=macos spec-check @all`
+renders the mac's view with 0 errors. The fingerprint change showed up
+exactly as predicted, once, as `marker_stale (spec changed since the
+marker)`.
+
+**What the full sqlite matrix found was ours, not the mac's.** Five of
+ten scenarios failed at `fetch_binding_ocaml`, and the command had
+SUCCEEDED — opam's own log says *"already installed (current version is
+5.1.0)"*. `check_post` failed after it.
+
+The switch prologue was applied in `run_cmd_logged`, "the single point
+every step's command goes through" — which is true, and not enough.
+`pin_check_post` and `Canary_pm_opam.is_installed` also shell out, from
+OCaml, outside any step, as bare `Sys.command`. Those inherit the
+process environment, which has no `OPAMSWITCH`, so they answered about
+the AMBIENT switch while the step they were certifying ran in canary's.
+Measured directly: `opam list core --installed --short --columns=version`
+answers `v0.17.2` ambient and *nothing* under `OPAMSWITCH=canary`.
+
+So the five 5.1.0 cells read `5.4.1` out of `default` and went red — and
+the five 5.4.1 cells passed **for the same wrong reason**, because
+`default` happened to hold 5.4.1. The green half was as unfounded as the
+red half; it just looked right. Same class as the bug the switch work
+was written to close (a verdict about a store nobody under test was
+using), one level up.
+
+Fixed with `Canary_store.sh_in_switch` — the prologue belongs to RUNNING
+a command from OCaml, so it lives on the runner, next to the prologue.
+Deliberately NOT folded into the `Canary_pm_opam` command builders:
+those strings are also emitted into step shell that already carries the
+prologue, and changing them would re-run every pinned world for nothing.
+Pinned as `switch.selection` property (5), falsified by dropping the
+prologue (112/113, `[FAIL] switch.selection`). `canary action sqlite` is
+10/10 after it, and the 5.1.0 half now passes for the right reason.

@@ -1625,8 +1625,22 @@ let canary_switch_pin : Canary_project_test.pure_test =
         in
         let ran = Canary_pm_test.run_test case in
         let axis_ok = ran.Canary_pm_test.actual_rc = 0 in
+        (* (5) AND SO DOES OCAML'S OWN SHELL-OUT (2026-08-26). A step's
+           command is not the only thing canary runs: [pin_check_post] and
+           [is_installed] ask a store what it holds, from OCaml, outside
+           any step. Those were bare [Sys.command] and inherited a process
+           environment with no OPAMSWITCH — so on WSL the sqlite pin check
+           read `default` (5.4.1) while the fetch had installed 5.1.0 into
+           `canary`: five scenarios red, and the other five green for the
+           same wrong reason. Same falsification as (4): only the prologue
+           can satisfy this probe. *)
+        Canary_store.opam_switch := Some "canary";
+        let ocaml_side_ok =
+          Canary_store.sh_in_switch "test \"$OPAMSWITCH\" = canary" = 0
+        in
         restore ();
         default_is_machine_default && ambient_prologue && exports && axis_ok
+        && ocaml_side_ok
         && (not (String.equal f_canary f_default))
         && (not (String.equal f_canary f_ambient))) }
 

@@ -305,3 +305,31 @@ let opam_switch_prologue () : string =
 (** How the switch appears in a fingerprint / a run header. *)
 let opam_switch_label () : string =
   match !opam_switch with None -> "(ambient)" | Some s -> s
+
+(** Run a shell command FROM OCAML in the selected switch, and return its
+    exit code.
+
+    THE SECOND CHOKE POINT (2026-08-26). {!opam_switch_prologue} was
+    applied in [run_cmd_logged] only — the point every STEP's command goes
+    through. But canary also shells out from OCaml, outside any step:
+    [pin_check_post] asks whether the switch holds the pin, [is_installed]
+    asks whether a package is there. Those calls are plain [Sys.command],
+    so they inherit the process environment — which has no [OPAMSWITCH] —
+    and answered about the AMBIENT switch while the step they were
+    certifying ran in canary's.
+
+    Measured on WSL (sqlite, 2026-08-26): five scenarios installed
+    [sqlite3.5.1.0] into the [canary] switch, and [pin_check_post] then
+    read [5.4.1] out of [default] and failed the fetch. The other five
+    passed for the same reason — [default] happened to hold [5.4.1] — so
+    the green cells were as wrong as the red ones, they just looked
+    right. That is the same class the switch work exists to close: a
+    verdict about a store nobody under test was using.
+
+    Not folded into the [Canary_pm_opam] command builders on purpose:
+    those strings are also EMITTED into step shell (which already carries
+    the prologue), and changing them would change the step fingerprint and
+    re-run every pinned world for no reason. The prologue belongs to
+    RUNNING a command from OCaml, so it lives on the runner. *)
+let sh_in_switch (cmd : string) : int =
+  Stdlib.Sys.command (opam_switch_prologue () ^ cmd)
