@@ -1706,8 +1706,64 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         (* (4) the fingerprint separates the two *)
         let f_mac = fingerprint_under Canary_store.MacOS_local in
         let f_wsl = fingerprint_under Canary_store.Wsl in
+        (* (5) THE DEFAULT SWITCH IS A FUNCTION OF THE PLATFORM
+           (2026-08-26): the mac has no dedicated switch and runs
+           ambient; the WSL box has [canary] and defaults to it. Pins the
+           MAPPING, which is the falsifiable half — flip either row and
+           this goes red.
+
+           What is NOT pinned, deliberately: that [default_opam_switch]
+           reads [detected_platform] rather than [platform ()], so a
+           `--platform=macos` RENDER cannot repoint the store this
+           machine installs into. That property is real and is why the
+           code is written the way it is, but it is not observable — the
+           lazy is forced at module init, before any override exists, so
+           both spellings memoize the same answer. A test asserting it
+           would pass either way, which is worse than no test. *)
+        let mapping_ok =
+          Poly.equal (Canary_store.default_switch_of Canary_store.MacOS_local) None
+          && Poly.equal
+               (Canary_store.default_switch_of Canary_store.Wsl)
+               (Some "canary")
+        in
         restore ();
-        mac && wsl && not (String.equal f_mac f_wsl)) }
+        mac && wsl && mapping_ok
+        && not (String.equal f_mac f_wsl)) }
+
+(* THE RUN RECORD IS THE SESSION (2026-08-26, user: "the config and driver
+   side is like a session, and no hardcoded is necessary").
+
+   [run_info.json] said `"opam_switch": "default"` on a run whose every
+   actions.log line said `opam_switch (canary)`, and reported the distro
+   from a private fourth [uname] that no override could reach. A record
+   that re-probes the box is describing a different session than the one
+   it belongs to. Pins that [detect_env] READS the two session values. *)
+let run_info_session_pin : Canary_project_test.pure_test =
+  { name = "run_info.records_the_session";
+    check =
+      (fun () ->
+        let saved_sw = !Canary_store.opam_switch in
+        let saved_pl = !Canary_store.platform_override in
+        let restore () =
+          Canary_store.opam_switch := saved_sw;
+          Canary_store.platform_override := saved_pl
+        in
+        (* a session this machine is NOT: an overridden platform and a
+           named switch. Both must survive into the record. *)
+        Canary_store.opam_switch := Some "canary";
+        Canary_store.set_platform Canary_store.MacOS_local;
+        let distro, _pm, switch, _ocaml = Canary_run_info.detect_env () in
+        let ok =
+          String.equal distro
+            (Canary_store.string_of_platform Canary_store.MacOS_local)
+          && String.equal switch "canary"
+        in
+        (* and the ambient selection renders as such rather than as
+           whatever `opam switch show` happens to print *)
+        Canary_store.opam_switch := None;
+        let _, _, ambient, _ = Canary_run_info.detect_env () in
+        restore ();
+        ok && String.equal ambient "(ambient)") }
 
 (* The repo-contents invariant over the LIVE registry (2026-08-16): every
    non-source artifact with a [Repo] provider must appear in that repo's
@@ -3543,7 +3599,8 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
       matrix_registry_shape_pin;
-      platform_single_source_pin ]
+      platform_single_source_pin;
+      run_info_session_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 

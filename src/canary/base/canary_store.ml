@@ -284,14 +284,34 @@ let detect_pm () = system_pm_of_platform (platform ())
    names it, so the per-machine difference is VISIBLE rather than
    silent. *)
 
-(* One [uname] at startup, like [detected_pm]'s probe. Not shared with
-   [Canary_basic.detect_distro] because that module sits ABOVE this one —
-   the check is two lines and duplicating it beats a layer inversion. *)
+(* Which switch a run defaults to, per machine: the box with a dedicated
+   [canary] switch gets it; the mac, which has none, runs ambient.
+
+   READS [detected_platform] (2026-08-26). It used to run its own
+   [uname] — a fourth sniff, seventy lines below the value that had just
+   replaced three of them. The comment justifying the copy cited a layer
+   inversion with [Canary_basic.detect_distro], which is a module ABOVE
+   this one; it does not apply to the lazy defined right here.
+
+   [detected_platform], NOT [platform ()], and the distinction is the
+   point: [--platform=macos] is a RENDERING choice — it says "show me
+   what the mac would do" — and it must not repoint the store this
+   machine installs into. What switch to mutate is a fact about the box;
+   what platform to render is a fact about the request.
+
+   Stated honestly: that distinction is not OBSERVABLE today, so no test
+   pins it. The lazy is forced by [opam_switch] below, at module
+   initialization — before the CLI has parsed anything — so [platform ()]
+   would return the detected value anyway and memoize it. The two spell
+   the same answer, and only one of them stays right if this is ever
+   forced later. [default_switch_of] is the falsifiable half: the mapping
+   itself, pinned in [platform.single_source]. *)
+let default_switch_of : distro -> string option = function
+  | MacOS_local -> None (* no dedicated switch there — run ambient *)
+  | Wsl -> Some "canary"
+
 let default_opam_switch : string option Lazy.t =
-  lazy
-    (match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
-    | 0 -> None
-    | _ -> Some "canary")
+  lazy (default_switch_of (Lazy.force detected_platform))
 
 let opam_switch : string option ref = ref (Lazy.force default_opam_switch)
 

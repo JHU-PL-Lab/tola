@@ -40,23 +40,39 @@ type run_info = {
   extra : (string * string) list;  (* project-specific key-value pairs *)
 }
 
+(* THE RUN RECORD IS THE SESSION, NOT A FRESH PROBE OF THE BOX
+   (2026-08-26, user: "the config and driver side is like a session, and
+   no hardcoded is necessary").
+
+   [run_info.json] answers "what was this run?", so every field has to be
+   the value the run USED. Two of them were re-derived here instead, and
+   both were wrong in the tracked record:
+
+   - [distro] ran a fourth [uname] and answered in a private vocabulary
+     ("linux"/"macos"), so it ignored [--platform] and never matched the
+     header or the per-command [platform] event;
+   - [opam_switch] ran `opam switch show` in the AMBIENT shell. Measured
+     on the sqlite run of 2026-08-26: the file said "default" while every
+     line of its own actions.log said `opam_switch (canary)`. The record
+     contradicted the run it was recording.
+
+   [ocaml_version] is a real probe and stays one — but through the
+   prologue, so it reports the compiler of the switch the steps used
+   rather than whatever is on the ambient PATH. *)
 let detect_env () =
   let chomp s = String.rstrip s in
   let cmd_output cmd =
     try
-      let ic = Unix.open_process_in cmd in
+      let ic = Unix.open_process_in (Canary_store.opam_switch_prologue () ^ cmd) in
       let s = Stdlib.input_line ic in
       ignore (Unix.close_process_in ic);
       chomp s
     with _ -> ""
   in
-  let distro = match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
-    | 0 -> "macos"
-    | _ -> "linux"
-  in
+  let distro = Canary_store.string_of_platform (Canary_store.platform ()) in
   let system_pm = Canary_store.string_of_pm (Canary_store.detect_pm ())
   in
-  let opam_switch = cmd_output "opam switch show 2>/dev/null" in
+  let opam_switch = Canary_store.opam_switch_label () in
   let ocaml_version = cmd_output "ocamlopt -version 2>/dev/null" in
   (distro, system_pm, opam_switch, ocaml_version)
 

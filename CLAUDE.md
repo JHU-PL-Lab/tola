@@ -45,7 +45,15 @@ zstd removes `ocaml-compiler` and recompiles 157 packages — not something to
 do to a working switch. Mechanism: every canary command already begins with
 `eval $(opam env)`, and `opam env` honours `OPAMSWITCH`, so the switch is
 exported once in `run_cmd_logged` (the single point every step's command
-goes through) rather than threaded through all 48 templates. It is also part
+goes through) rather than threaded through all 48 templates. **There are TWO
+such points, not one** (2026-08-26): canary also shells out from OCaml,
+outside any step — `pin_check_post` and `Canary_pm_opam.is_installed` ask a
+store what it holds, and `run_info` records what the run was. Those go
+through `Canary_store.sh_in_switch`; as bare `Sys.command` they inherited a
+process env with no `OPAMSWITCH` and answered about the AMBIENT switch,
+which turned five sqlite scenarios red and passed the other five for the
+same wrong reason. If you add an OCaml-side shell-out that asks about a
+STORE, it goes through `sh_in_switch`. It is also part
 of the step FINGERPRINT, so a verdict earned in one switch is never served
 to another. Select with `--switch=NAME` (any subcommand — the flag is
 stripped from argv before cmdliner, which would otherwise reject it),

@@ -1491,3 +1491,44 @@ prologue, and changing them would re-run every pinned world for nothing.
 Pinned as `switch.selection` property (5), falsified by dropping the
 prologue (112/113, `[FAIL] switch.selection`). `canary action sqlite` is
 10/10 after it, and the 5.1.0 half now passes for the right reason.
+
+### The same audit, applied to the rest of the driver side (2026-08-26)
+
+User, on the finding above: *"overall the config and driver side is like a
+session, and no hardcoded is necessary, unless it's a util or wrapper that
+is only working for a tool in a platform."* Applied to the two sites the
+audit turned up.
+
+**`default_opam_switch` re-sniffed** — a fourth `uname -s | grep Darwin`,
+seventy lines below the value that had just replaced three of them. The
+comment justifying the copy cited a layer inversion with
+`Canary_basic.detect_distro`, a module ABOVE this one; it did not apply to
+the lazy defined right there. Now `default_switch_of (Lazy.force
+detected_platform)`.
+
+`detected_platform`, **not** `platform ()`, and the distinction is the
+point: `--platform=macos` is a RENDERING choice and must not repoint the
+store this machine installs into. *That property is not pinned, and the
+reason is worth recording*: the lazy is forced by `opam_switch` at module
+initialization, before the CLI has parsed anything, so both spellings
+memoize the same answer. A test asserting it passes either way — the
+`cmd = "true"` failure mode from the entry above. What IS pinned is the
+falsifiable half, the mapping `default_switch_of` (`platform.single_source`
+(5); falsified by flipping a row).
+
+**`run_info.detect_env` re-derived two session facts, and both were wrong
+in the tracked record.** `distro` ran its own `uname` and answered in a
+private vocabulary (`"linux"`/`"macos"`), so it could not see `--platform`
+and never matched the header or the per-command `platform` event.
+`opam_switch` ran `opam switch show` in the AMBIENT shell: the sqlite
+`run_info.json` said `"opam_switch": "default"` while every line of its own
+`actions.log` said `opam_switch (canary)`. A record that re-probes the box
+describes a different session than the one it belongs to. Both now read the
+session; `ocaml_version` stays a real probe but runs through the prologue,
+so it reports the compiler of the switch the steps used. Pinned as
+`run_info.records_the_session`, falsified by restoring the `opam switch
+show` call.
+
+Verified after: 114/109/14, `mutation-test` 46/0, and a fresh
+`tiny1/symbol_missing` run whose `run_info.json` reads `wsl_ubuntu` /
+`canary`.
