@@ -23,7 +23,7 @@ let first_existing paths =
   List.find paths ~f:Stdlib.Sys.file_exists
 
 let native_lib_fixture () =
-  if Canary_artifact_native.is_macos then
+  if Canary_artifact_native.is_macos () then
     (* macOS 15+: /usr/lib/*.dylib live only in the dyld shared cache, so
        file-existence checks fail. Use a Homebrew-shipped on-disk dylib
        (sqlite mirrors the Linux fixture; falls back to libffi/openssl). *)
@@ -1152,7 +1152,7 @@ let python_schema_cmd path =
      assert d['counts']['attrs'] > 0, 'no attrs in python fixture'"
 
 let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
-  let prefix = if Canary_artifact_native.is_macos then "_" else "" in
+  let prefix = if Canary_artifact_native.is_macos () then "_" else "" in
   let sum_dir = output_dir ^ "/native_inspect" in
   [
     { name = "native.nm_cmd";

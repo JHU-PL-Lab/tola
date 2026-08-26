@@ -29,6 +29,22 @@ let install_cmd pm ~pkg =
 let system_install_cmd pm (spec : system_package_spec) =
   install_cmd pm ~pkg:(system_pkg_for_pm spec pm)
 
+(** The INSTALLED version of a system package, per PM (2026-08-26).
+
+    The drivers had this on both sides and no dispatcher, so the first
+    caller that needed it — the result matrix's fetched-lib cell —
+    open-coded the dpkg branch and then had to grow a brew branch by
+    hand. A per-PM fact with two implementations and no hub is a fact
+    that will be re-implemented; this is the hub. Empty output means "not
+    installed", uniformly. *)
+let installed_version_cmd pm ~pkg =
+  match pm with
+  | Apt -> Canary_pm_apt.installed_version_cmd ~pkg
+  | Brew -> Canary_pm_brew.installed_version_cmd ~pkg
+  | Opam -> Canary_pm_opam.query_version_cmd ~pkg
+  | Pip -> Canary_pm_pip.query_version_cmd ~pkg
+  | Unsupported -> "echo ''"
+
 (** Verify a system-installed package is present (for post-install
     sanity checks in test/canary_pm_test.ml and tool/canary_toolchain.ml). *)
 let verify_system_install_cmd pm (spec : system_package_spec) =

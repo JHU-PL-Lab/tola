@@ -521,8 +521,13 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
                world_check
                ^ Canary_step_builder.probe_ocaml_env_cmd
                    ~env:
-                     [ Canary_basic.ld_prepend
-                         (Canary_prebuilt.libdir_of pb distro) ]
+                     (Canary_basic.ld_prepend
+                        (Canary_prebuilt.libdir_of pb distro)
+                     (* and make the LOADER name what it resolved, where
+                        the probe cannot (no /proc on macOS) — same
+                        [Log_names] assert, dyld's own trace as the
+                        evidence. Empty on Linux. *)
+                     :: Canary_basic.ld_trace_env ())
                    (* assert the loader OBEYED the repoint, when the probe
                       says which file it resolved (2026-08-20) *)
                    ~log_grep:

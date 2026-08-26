@@ -1335,7 +1335,8 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         let module EN = Canary_enumerate in
         let ep p =
           Canary_project_run.enumeration_policy_of
-            { Canary_project_run.policy = p; refs = EN.All_refs }
+            { Canary_project_run.platform = Canary_store.platform ();
+              policy = p; refs = EN.All_refs }
         in
         let full_like (p : unit EN.policy option) =
           match p with
@@ -1356,7 +1357,8 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         (* and a refs-narrowed Full is still full in every other axis *)
         && full_like
              (Canary_project_run.enumeration_policy_of
-                { Canary_project_run.policy = Canary_project_run.Full;
+                { Canary_project_run.platform = Canary_store.platform ();
+                  policy = Canary_project_run.Full;
                   refs = EN.Refs [ "latest" ] })) }
 
 (* The repo-model settings (2026-08-15, design/enumeration/stage1_declare_spec.md): the
@@ -1609,6 +1611,71 @@ let canary_switch_pin : Canary_project_test.pure_test =
         default_is_machine_default && ambient_prologue && exports
         && (not (String.equal f_canary f_default))
         && (not (String.equal f_canary f_ambient))) }
+
+(* THE PLATFORM IS ONE VALUE (2026-08-26, user: "the canary config should
+   carry the platform argument").
+
+   Three modules used to sniff the machine independently —
+   [Canary_basic.detect_distro] (uname), [Canary_store.detect_pm] (which
+   brew / which apt-get) and [Canary_artifact_native.is_macos] (uname
+   again) — and they could DISAGREE: [detect_pm] tried brew first, so a
+   Linux box with Linuxbrew answered [Brew] against a [Wsl] distro, and
+   [system_pkg_for_pm] would then pick the macOS package name on Linux.
+
+   Four properties, and the second is the one that closes that hole:
+
+   1. every consumer reports the SAME platform, override included — a
+      [--platform] that reached the package names but not the nm flags
+      would be worse than no override at all;
+   2. the system PM is DERIVED from the platform, not sniffed beside it,
+      so brew-on-Linux cannot be represented;
+   3. the platform-dependent vocabulary actually moves with it (the
+      loader variable and the nm flag are the two that decide whether a
+      probe tests the world it names);
+   4. it is part of the step fingerprint, so a verdict earned on one
+      platform is never served to the other. Falsified by construction:
+      drop the platform from the digest and the two hashes coincide. *)
+let platform_single_source_pin : Canary_project_test.pure_test =
+  { name = "platform.single_source";
+    check =
+      (fun () ->
+        let saved = !Canary_store.platform_override in
+        let restore () = Canary_store.platform_override := saved in
+        let fingerprint_under d =
+          Canary_store.set_platform d;
+          let step : Canary_step_model.step =
+            { tag = "probe"; cache_key = "k"; output_tag = "o"; output_dir = "d";
+              project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
+              deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
+              check_pre = (fun () -> true);
+              check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+              expectation = Canary_step_model.Expect_success; symbol_check = None;
+              disabled_contracts = [] }
+          in
+          Canary_local_runner.step_fingerprint step
+        in
+        (* (1) + (2) + (3), under each platform in turn *)
+        let agrees_under d ~want_pm ~want_ld ~want_nm ~want_macos =
+          Canary_store.set_platform d;
+          Poly.equal (Canary_basic.detect_distro ()) d
+          && Poly.equal (Canary_store.detect_pm ()) want_pm
+          && String.equal (Canary_basic.ld_path_var ()) want_ld
+          && String.equal (Canary_artifact_native.nm_dynamic_flag ()) want_nm
+          && Bool.equal (Canary_artifact_native.is_macos ()) want_macos
+        in
+        let mac =
+          agrees_under Canary_store.MacOS_local ~want_pm:Canary_store.Brew
+            ~want_ld:"DYLD_LIBRARY_PATH" ~want_nm:"-g" ~want_macos:true
+        in
+        let wsl =
+          agrees_under Canary_store.Wsl ~want_pm:Canary_store.Apt
+            ~want_ld:"LD_LIBRARY_PATH" ~want_nm:"-D" ~want_macos:false
+        in
+        (* (4) the fingerprint separates the two *)
+        let f_mac = fingerprint_under Canary_store.MacOS_local in
+        let f_wsl = fingerprint_under Canary_store.Wsl in
+        restore ();
+        mac && wsl && not (String.equal f_mac f_wsl)) }
 
 (* The repo-contents invariant over the LIVE registry (2026-08-16): every
    non-source artifact with a [Repo] provider must appear in that repo's
@@ -3443,7 +3510,8 @@ let base_tests : Canary_project_test.pure_test list =
       z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
-      matrix_registry_shape_pin ]
+      matrix_registry_shape_pin;
+      platform_single_source_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 

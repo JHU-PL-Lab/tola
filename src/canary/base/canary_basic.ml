@@ -134,10 +134,15 @@ let string_of_artifact_kind = function
    all moved to doc/_legacy_code/canary_yaml_backend.ml on 2026-06-01 —
    the live pipeline never called any of them. *)
 
-let detect_distro () =
-  match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
-  | 0 -> MacOS_local
-  | _ -> Wsl
+(** The platform this run is about — {!Canary_store.platform}, kept
+    under its historical name because ~20 sites ask for it that way.
+
+    It used to run its own [uname] on EVERY call, which is why the name
+    says "detect": three modules probed the machine independently and
+    could disagree (the Linuxbrew case in [Canary_store]'s platform
+    note). There is now one memoized, CLI-overridable answer; this is a
+    forwarding alias to it, not a second detector. *)
+let detect_distro () = Canary_store.platform ()
 
 (** The per-platform suffix for TRACKED web output (2026-08-26, user).
 
@@ -228,6 +233,32 @@ let ld_prepend (dir : string) : string =
     this world's lib is reachable. *)
 let ld_only (dir : string) : string =
   Printf.sprintf "%s=%s" (ld_path_var ()) dir
+
+(** Environment that makes the LOADER say which file it resolved
+    (2026-08-26) — the evidence a [Log_names] world-check needs.
+
+    On Linux the probe answers this itself: zlib's and zstd's examples
+    read [/proc/self/maps] and print `zlib resolved: <path>`, so the
+    world can assert on the identity of the answering artifact rather
+    than on a version string. macOS has no [/proc], and those examples
+    degrade honestly to "unknown (no /proc/self/maps)" — which fails the
+    assert rather than faking it, but leaves the vendored cell
+    unverifiable.
+
+    dyld will say it instead: [DYLD_PRINT_LIBRARIES=1] prints every
+    library it maps, with full paths, to stderr — which the probe step
+    captures into probe.log alongside everything else. The SAME
+    [Log_names] check then passes over it unchanged, because what it
+    looks for is the world's libdir appearing in the log. Different
+    source of evidence, identical assertion.
+
+    (It is a DYLD_ variable, so the SIP rule applies: fine here, since
+    canary sets it inline on the probe command rather than exporting it
+    through /bin/sh.) *)
+let ld_trace_env () : string list =
+  match detect_distro () with
+  | MacOS_local -> [ "DYLD_PRINT_LIBRARIES=1" ]
+  | Wsl -> []
 
 (** The shared-library extension: [.dylib] (Mach-O) or [.so] (ELF).
     Beware that this is NOT the whole story for a filename — ELF versions

@@ -212,6 +212,12 @@ let run_cmd_logged logger ~tag ~output_dir ~variant_key cmd =
      rather than making a reader reconstruct it from the environment. *)
   logger.log ~tag ~event:"opam_switch"
     ~detail:(Some (Canary_store.opam_switch_label ()));
+  (* AND WHICH PLATFORM IT WAS BUILT FOR (2026-08-26): the same command
+     text means different things per platform — DYLD_ vs LD_, nm -g vs
+     -D, brew vs apt — so a log line without it cannot be replayed or
+     compared against the other machine's. *)
+  logger.log ~tag ~event:"platform"
+    ~detail:(Some (Canary_store.string_of_platform (Canary_store.platform ())));
   let out_log = Canary_basic.variant_file ~variant_key (tag ^ ".out.log") in
   let out_path = output_dir ^ "/" ^ out_log in
   let rc_path = output_dir ^ "/." ^ out_log ^ ".rc" in
@@ -327,10 +333,20 @@ let step_fingerprint (step : step) : string =
      change would be exactly the stale-hit class the fingerprint exists
      to close (landing.md §4: a cache entry that does not encode the
      identity of what it ran is a lie). *)
+  (* SO IS THE PLATFORM (2026-08-26). Much of the difference IS in [cmd]
+     already (DYLD_ vs LD_, nm -g vs -D), so most cross-platform pairs
+     would separate anyway — but not all: a step whose command is
+     byte-identical on both (an opam install, a dune build) still earned
+     its verdict against a different loader, a different libc and a
+     different object format. Naming the platform in the digest makes
+     that independent of how much of it the command happens to spell.
+     Matters most under [--platform], where the command text changes
+     while the machine does not. *)
   Stdlib.Digest.to_hex
     (Stdlib.Digest.string
        (cmd ^ "\x00" ^ expectation_form step.expectation ^ "\x00"
-      ^ Canary_store.opam_switch_label ()))
+      ^ Canary_store.opam_switch_label () ^ "\x00"
+      ^ Canary_store.string_of_platform (Canary_store.platform ())))
 
 (* The marker's CONTENT records how the expectation was met: "xfail" = a
    confirmed expected failure, "" (or "ok") = plain success — so a warm run

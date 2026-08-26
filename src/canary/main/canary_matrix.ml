@@ -250,14 +250,12 @@ let kind_label (k : Canary_basic.artifact_kind) : string =
 let sys_pkg_versions : (string, string) Hashtbl.t =
   Hashtbl.create (module String)
 
+(* through the PM dispatcher (2026-08-26): this had its own dpkg/brew
+   branches, duplicating what the per-PM drivers already knew. A cell
+   that asks the store a question should ask it the way every other
+   caller does — [Canary_pm.installed_version_cmd] is that hub. *)
 let sys_pkg_version_cmd (pkg : string) : string =
-  match Canary_store.detect_pm () with
-  | Canary_store.Brew ->
-      Printf.sprintf
-        "brew list --versions %s 2>/dev/null | head -1 | awk '{print $NF}'" pkg
-  | Canary_store.Apt | Canary_store.Opam | Canary_store.Pip
-  | Canary_store.Unsupported ->
-      Printf.sprintf "dpkg-query -W -f='${Version}' %s 2>/dev/null" pkg
+  Canary_pm.installed_version_cmd (Canary_store.detect_pm ()) ~pkg
 
 let sys_pkg_version (pkg : string) : string =
   match Hashtbl.find sys_pkg_versions pkg with
@@ -1068,11 +1066,37 @@ let matrix_filename () : string =
 let web_path ~projects_root = projects_root ^ "/" ^ matrix_filename ()
 let docs_path () = "docs/canary/projects/" ^ matrix_filename ()
 
+(** A HYPOTHETICAL RENDER MUST NOT BECOME THE RECORD (2026-08-26, caught
+    by doing it). [--platform] lets one machine render the other's view;
+    the tracked filename is chosen by [platform_suffix], which reads the
+    SELECTED platform — so `--platform=wsl` on the mac wrote
+    [matrix.html], the WSL box's committed record, with a matrix the mac
+    had produced. That is precisely the cross-machine corruption the
+    per-platform filename exists to prevent, arriving through the door
+    the override opened.
+
+    The fix is not a better filename, because there is no honest one: a
+    mac's rendering of the WSL view is neither machine's record. So an
+    overridden run writes the LOCAL copy only (look at it, diff it, dump
+    it) and leaves [docs/] alone, saying so. What lands in the tracked
+    tree stays exactly "what this machine measured about itself". *)
 let write_web ~projects_root (m : t) ~(generated_at : string) : unit =
   let html = render_html m ~generated_at in
-  List.iter [ web_path ~projects_root; docs_path () ] ~f:(fun path ->
+  let hypothetical = Canary_store.platform_is_overridden () in
+  let targets =
+    if hypothetical then [ web_path ~projects_root ]
+    else [ web_path ~projects_root; docs_path () ]
+  in
+  List.iter targets ~f:(fun path ->
       let oc = Stdlib.open_out path in
       Stdlib.output_string oc html;
       Stdlib.close_out oc);
-  Fmt.pr "Wrote %s and %s (%d rows)@." (web_path ~projects_root)
-    (docs_path ()) (List.length m.rows)
+  if hypothetical then
+    Fmt.pr
+      "Wrote %s (%d rows) — docs/ NOT updated: --platform render of %s is \
+       not this machine's record@."
+      (web_path ~projects_root) (List.length m.rows)
+      (Canary_store.string_of_platform (Canary_store.platform ()))
+  else
+    Fmt.pr "Wrote %s and %s (%d rows)@." (web_path ~projects_root)
+      (docs_path ()) (List.length m.rows)

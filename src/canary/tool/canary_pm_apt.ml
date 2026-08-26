@@ -18,6 +18,12 @@ let verify_installed_cmd ~pkg = [%string "dpkg -s %{pkg}"]
 let is_installed ~pkg =
   Stdlib.Sys.command ([%string "%{verify_installed_cmd ~pkg} >/dev/null 2>&1"]) = 0
 
+(** The version actually INSTALLED. (Brew's sibling is
+    [Canary_pm_brew.installed_version_cmd]; see the note there on why the
+    two were split from one [query_version_cmd] name.) *)
+let installed_version_cmd ~pkg =
+  [%string "dpkg-query -W -f='${Version}' %{pkg} 2>/dev/null"]
+
 let query_version_cmd ~pkg =
   [%string "dpkg -s %{pkg} 2>/dev/null | grep '^Version:' | cut -d' ' -f2"]
 

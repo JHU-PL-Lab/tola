@@ -33,6 +33,7 @@ dune exec src/bin/canary_main.exe -- result [<project>] [--md|--json]        # T
 dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
 dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
 dune exec src/bin/canary_main.exe -- action zlib --switch=default  # OVERRIDE the switch (see below); --switch= means the AMBIENT one
+dune exec src/bin/canary_main.exe -- --platform=wsl result zlib --md  # RENDER AS the other platform (macos|wsl); see doc/canary/design/platform.md
 make canary                                                  # run canary via Makefile shorthand
 	make canary-test                                             # post-change verification (project-test + artifact-test + pm-test)
 
@@ -51,6 +52,21 @@ stripped from argv before cmdliner, which would otherwise reject it),
 `--switch=` for the ambient switch, or `CANARY_SWITCH=NAME`. Every run
 prints `opam switch: <name>` and logs an `opam_switch` event to actions.log.
 Pinned by `switch.selection`.
+
+**The PLATFORM is one value, carried not sniffed** (2026-08-26).
+`Canary_store.platform ()` is THE answer — detected once, overridable
+with `--platform=macos|wsl` (any subcommand; stripped from argv before
+cmdliner) or `CANARY_PLATFORM`, carried on `run_config.platform`, printed
+in the run header, logged per command, and part of the step fingerprint.
+The system PM is DERIVED from it (`system_pm_of_platform`), which is what
+stops a Linux box with Linuxbrew from picking macOS package names. Passes
+1–4 of the enumeration never see it; only pass 5 (realize) and the tool
+wrappers do. The override lets one machine render the other's view —
+`canary --platform=macos result` on WSL is the cheapest way to review mac
+work. **Read [`doc/canary/design/platform.md`](doc/canary/design/platform.md)
+before adding anything platform-dependent** — it has the tool sibling
+table, what a project spec may declare per platform (pairs, never
+branches), and the three consumption modes.
 
 **Post-change verification.** After every edit that touches `src/canary/`, run
 `make canary-test`. This catches regressions in enumeration, compat theory,
@@ -311,7 +327,7 @@ reconciling with, not duplicating.
 | `doc/canary/research/draft.md`                 | **Manuscript-in-progress** (was `surface.md`, renamed 2026-08). Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM); backbone (rules / traces / worlds), PL notation, implementation slots. **Authoritative** for current framing. |
 | `doc/canary/research/surface_draft/`           | **Materials collection** (split 2026-06-04, surface_theory.md removed). Older drafts split across `main.md`, `surface.md`, `principle.md`, `implementation.md` (§2.7 pointers, may be stale), `package.md`, `versioning.md`, `notation.md`. Mine for content; not authoritative. |
 | `doc/canary/research/tiny.md`                  | Witness (current): minimal C lib + 3 bindings + 13-variant canary matrix + harness scenario table + findings |
-| `doc/canary/research/plan.md`                  | Paper venues + milestones + working roadmap (steps 1-5; step 1+2 done)                                |
+| `doc/canary/research/plan.md`                  | Paper venues + milestones + **§4 the delivery pipeline** (theory → checker → world → finding → merged PR; status + owner per stage) + the open roadmap. Rewritten 2026-08-26: POPL purged, roadmap steps 1-7 compressed to their open items |
 | `doc/canary/ops/install_targets.md`            | Z3 vs LLVM cmake install patterns; informs TODO #40                                                    |
 | `doc/canary/ops/llvm_build.md`                 | LLVM source build steps, smoke test, opam install notes                                                |
 | `doc/canary/backlog.md`                        | Lower-priority TODOs; api-compat group + new project spec group (see line below for current set)       |

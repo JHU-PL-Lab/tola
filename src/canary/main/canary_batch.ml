@@ -52,6 +52,16 @@ let run_one ?(config = Canary_project_run.default_config)
      packages as it runs; the reader must be able to see which store
      that happened in without reconstructing it from the env. *)
   Fmt.pr "@.  opam switch: %s@." (Canary_store.opam_switch_label ());
+  (* AND THE PLATFORM (2026-08-26). Which platform a run believed it was
+     on decides the loader variable, the nm flags, the package names and
+     the prebuilt archive — every verdict is relative to it, so a run
+     that does not say it leaves its own results unreadable. Marked when
+     it is an explicit [--platform] choice rather than what uname said,
+     because that is the case where a reader would otherwise be
+     surprised. *)
+  Fmt.pr "  platform: %s%s@."
+    (Canary_store.string_of_platform (Canary_store.platform ()))
+    (if Canary_store.platform_is_overridden () then " (--platform)" else "");
   Fmt.pr "@.%s — generic project run (enumerate → runner_spec → run)@."
     pr.Canary_project_run.pr_name;
   let results =
@@ -72,7 +82,8 @@ let run ?(force_thin = false) ~root ~failfast
     (fun (name, pr) ->
       let config =
         if force_thin then
-          { Canary_project_run.policy = Canary_project_run.Thin;
+          { Canary_project_run.platform = Canary_store.platform ();
+            policy = Canary_project_run.Thin;
             refs = Canary_enumerate.All_refs }
         else Canary_project_run.batch_config pr
       in

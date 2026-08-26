@@ -204,6 +204,21 @@ let string_of_run_policy = function
     mutable global state: the config flows down the call chain — the CLI
     / batch set its [policy] value, consumers respect the variant. *)
 type run_config = {
+  platform : Canary_store.distro;
+      (** WHICH MACHINE this run is about (2026-08-26, user: "the canary
+          config should carry the platform argument"). Every verdict is
+          relative to it — it decides the loader variable, the nm flags,
+          the system package names, the prebuilt archive and the contrib
+          root — so it belongs in the immutable settings a run consumes,
+          beside the policy, rather than being re-sniffed by whichever
+          function needs it.
+
+          Its VALUE comes from [Canary_store.platform ()], which is the
+          one detected-or-overridden answer; this field records what the
+          config was built with so a config can be passed around, logged
+          and compared. The two cannot disagree unless someone calls
+          [set_platform] after building a config, which the CLI does not
+          (the override is consumed before cmdliner dispatches). *)
   policy : run_policy;
   refs : Canary_enumerate.source_ref_level;
       (** which source-repo refs the run enumerates (2026-08-17, the z3
@@ -218,7 +233,8 @@ type run_config = {
 }
 
 let default_config : run_config =
-  { policy = Full; refs = Canary_enumerate.All_refs }
+  { platform = Canary_store.platform ();
+    policy = Full; refs = Canary_enumerate.All_refs }
 
 (** The mapping to the enumeration policy — the ONE place the run layer
     touches [Canary_enumerate.policy]. [Full] = [None] (the full default
@@ -252,7 +268,8 @@ let batch_policy (pr : project_run) : run_policy =
   | Light -> Full
 
 let batch_config (pr : project_run) : run_config =
-  { policy = batch_policy pr; refs = Canary_enumerate.All_refs }
+  { platform = Canary_store.platform ();
+    policy = batch_policy pr; refs = Canary_enumerate.All_refs }
 
 (** Pattern-annotated scenarios: each assignment paired with its action
     chain. The chain IS the pattern — the ordered list of actions from
