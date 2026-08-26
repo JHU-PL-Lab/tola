@@ -458,12 +458,12 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
   let local = Canary_artifact_source.local_for distro source in
   let root =
     match local with
-    | Some l -> l.path
+    | Some l -> Canary_artifact_source.path_of l
     | None -> Printf.sprintf "_out/canary/projects/llvm/%s_%s/src" ver_str ref_
   in
   let build =
     match local with
-    | Some l -> l.build_path
+    | Some l -> Canary_artifact_source.build_path_of l
     | None -> Printf.sprintf "_out/canary/projects/llvm/%s_%s/build" ver_str ref_
   in
   let url =
@@ -485,7 +485,7 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Source; ar_needs = None;
         ar_template = Source_fetch
                 { name; ver_str; ref_; url;
-                  local = Option.map local ~f:(fun l -> l.path) } };
+                  local = Option.map local ~f:Canary_artifact_source.path_of } };
       { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
         ar_template = Fetch_lib { linux_pkg = "llvm-19-dev"; macos_pkg = "llvm@19" } };
       { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml); ar_needs = None;
@@ -517,7 +517,7 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Source; ar_needs = None;
         ar_template = Source_fetch
                 { name; ver_str; ref_; url;
-                  local = Option.map local ~f:(fun l -> l.path) } };
+                  local = Option.map local ~f:Canary_artifact_source.path_of } };
       { ar_action = Canary_basic.Scan_sources; ar_needs = None;
         ar_template = Scan_source { root; hdr_file = "llvm/include/llvm-c/Core.h" } };
       { ar_action = Canary_basic.Build_headers; ar_needs = None;

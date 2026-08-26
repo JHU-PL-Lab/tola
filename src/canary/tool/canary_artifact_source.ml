@@ -16,10 +16,22 @@ type repo_remote =
 (* The source-vcs abstraction (2026-08-16, user): canary is not hardcoded
    to git — each variant has its corresponding fetch action + tool. *)
 
+(* RELATIVE TO THE MACHINE ROOT, RESOLVED WHEN ASKED (2026-08-26). These
+   used to be two absolute strings, computed by [mk_locals] at MODULE
+   INITIALIZATION — every [source_repo] is a top-level [let], so opening
+   canary baked "/home/red/code/..." and "/Users/ex/code/..." into the
+   binary before any entry could have a say. That is why the roots could
+   not be configured: by the time [let () = ...] ran, the paths were
+   already fixed.
+
+   Now the row carries what it actually knows — a path relative to a
+   machine root, and the build dir relative to that — and [path_of] /
+   [build_path_of] resolve against the entry's declared roots at the
+   moment a caller needs a string. *)
 type local_path = {
   distro : Canary_store.distro;
-  path : string;        (* source checkout root *)
-  build_path : string;  (* associated build dir — source of truth for this checkout *)
+  rel_path : string;    (* source checkout root, relative to the machine root *)
+  build_dir : string;   (* associated build dir, relative to the checkout *)
 }
 
 type source_repo = {
@@ -54,10 +66,9 @@ type source_repo = {
 }
 
 (* Generate local_path entries for all distros from a relative path.
-   e.g., mk_locals "contrib/z3-all/z3" = [
-     { distro = Wsl; path = "/home/red/code/contrib/z3-all/z3" };
-     { distro = MacOS_local; path = "/Users/ex/code/contrib/z3-all/z3" };
-   ]
+   e.g., mk_locals "contrib/z3-all/z3" = one row per machine, each
+   holding the RELATIVE path; [path_of] resolves it against that
+   machine's declared root when a caller asks.
 
    TODO (build-path convention, 2026-07-23) — source layout:
      source : ~/code/contrib/<project>-all/<project>          (checkout)
@@ -71,9 +82,14 @@ type source_repo = {
    use opam binaries and never build a native lib. *)
 let mk_locals ?(build_dir = "../build") rel_path =
   List.map Canary_store.all_distros ~f:(fun distro ->
-      let path = Canary_store.distro_base distro ^ "/" ^ rel_path in
-      let build_path = path ^ "/" ^ build_dir in
-      { distro; path; build_path })
+      { distro; rel_path; build_dir })
+
+(** The checkout root, resolved against the machine's declared root. *)
+let path_of (l : local_path) : string =
+  Canary_store.distro_base l.distro ^ "/" ^ l.rel_path
+
+(** The build dir that belongs to this checkout. *)
+let build_path_of (l : local_path) : string = path_of l ^ "/" ^ l.build_dir
 
 (* Find the local checkout for a distro, if any *)
 let local_for distro (repo : source_repo) =
@@ -156,7 +172,7 @@ echo '%{main}' > %{output_dir}/%{ok}|}]
    otherwise will need to clone *)
 let source_root distro (repo : source_repo) =
   match local_for distro repo with
-  | Some l -> Some l.path
+  | Some l -> Some (path_of l)
   | None -> None
 
 (* Generate the fetch_source shell command.
@@ -168,7 +184,8 @@ let source_fetch_cmd distro (repo : source_repo) ~output_dir ~variant_key =
   let ok = Canary_basic.variant_file ~variant_key "source.ok" in
   match local_for distro repo with
   | Some l ->
-      [%string "test -d %{l.path} && echo '%{l.path}' > %{output_dir}/%{ok}"]
+      let p = path_of l in
+      [%string "test -d %{p} && echo '%{p}' > %{output_dir}/%{ok}"]
   | None -> (
       match repo.remote with
       | None ->
@@ -218,7 +235,8 @@ let version_cache_tag distro (repo : source_repo) =
       | Some l ->
           let ic =
             Unix.open_process_in
-              [%string "git -C %{l.path} rev-parse --short=6 HEAD 2>/dev/null"]
+              (let p = path_of l in
+               [%string "git -C %{p} rev-parse --short=6 HEAD 2>/dev/null"])
           in
           let result =
             try Some (String.strip (Stdlib.input_line ic)) with End_of_file -> None
@@ -247,7 +265,7 @@ let source_check_post ~output_dir ~variant_key =
    "<kind>:<url>" *)
 let source_desc distro (repo : source_repo) =
   match local_for distro repo with
-  | Some l -> "local:" ^ l.path
+  | Some l -> "local:" ^ path_of l
   | None -> (
       match repo.remote with
       | Some (Git url) -> "git:" ^ url

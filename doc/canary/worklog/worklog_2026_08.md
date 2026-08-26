@@ -1532,3 +1532,47 @@ show` call.
 Verified after: 114/109/14, `mutation-test` 46/0, and a fresh
 `tiny1/symbol_missing` run whose `run_info.json` reads `wsl_ubuntu` /
 `canary`.
+
+### The machine roots move to the entry (2026-08-26)
+
+User, on the two absolute paths left in `distro_base`: *"this can be
+almost hardcoded in the entry side once as the config value choice for two
+of my machines. It shouldn't be hardcoded any more."*
+
+`distro_base` was the literals; it is now a lookup into a table
+`src/bin/canary_main.ml` declares (`Canary_store.set_machine_roots`),
+beside `--switch` and `--platform`. Both machines stay declared — a root
+read from `$HOME` can only answer for the box you are on, and
+`--platform=macos` has to render the other one. Undeclared raises rather
+than guessing: a fabricated root would send a build somewhere real and
+wrong.
+
+**Why it could not be configured before, which is the actual finding.**
+Every `source_repo` is a top-level `let`, and `mk_locals` resolved BOTH
+absolute paths inside it — so opening canary baked `/home/red/code/...`
+and `/Users/ex/code/...` into the binary at MODULE INITIALIZATION, before
+`let () = ...` could set anything. The same shape appeared twice more in
+the Pattern-A template: `runner_spec`'s lib-`resolve` snippet (a value,
+now a function — both call sites were already
+`fun ~output_dir ~variant_key ->` closures) and the artifact table's
+`Vendored_at (libdir_of pb (detect_distro ()))`.
+
+So the fix is not the lookup, it is that **nothing resolves a machine root
+while modules initialize**. `local_path` carries `rel_path`/`build_dir`
+with `path_of`/`build_path_of` resolving on demand; `Canary_prebuilt`
+gained `rel_path_of`/`rel_libdir_of` and a declaration now holds the
+machine-independent form. A path is resolved where a command is built —
+pass 5 — which is where `platform.md` §2b already said paths belong.
+
+Pinned as `machine_roots.declared_at_entry`: both machines resolve,
+undeclared raises, and a project declaration builds with the table EMPTY.
+Falsifying (3) by restoring the resolved `libdir_of` in the artifact table
+kills the binary at startup with `distro_base`'s message — louder than a
+red pin, and the pin's comment now says so, since it only covers the paths
+module init does not take.
+
+Verified: 115/109/14, `mutation-test` 46/0, `tiny run` 22/22,
+`spec-check @all` 0 errors, and `canary action zlib` 2/2 with the probe
+reporting `zlib resolved:
+/home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib/libz.so.1.3.2` —
+resolved from the declared table at command-build time.

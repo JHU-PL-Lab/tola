@@ -469,12 +469,12 @@ let z3_paths ~(source : Canary_artifact_source.source_repo) ~distro :
   let local = Canary_artifact_source.local_for distro source in
   let root =
     match local with
-    | Some l -> l.Canary_artifact_source.path
+    | Some l -> Canary_artifact_source.path_of l
     | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/src" ver_str ref_
   in
   let build =
     match local with
-    | Some l -> l.Canary_artifact_source.build_path
+    | Some l -> Canary_artifact_source.build_path_of l
     | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/build" ver_str ref_
   in
   (* PER-REF staging (the user's scheme): <project>-all/install-<ref>,
@@ -543,7 +543,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
     [ { ar_action = Canary_basic.Fetch Canary_basic.Source; ar_needs = None;
         ar_template = Source_fetch
                 { name; ver_str; ref_; url;
-                  local = Option.map local ~f:(fun l -> l.path) } };
+                  local = Option.map local ~f:Canary_artifact_source.path_of } };
       { ar_action = Canary_basic.Scan_sources; ar_needs = None;
         ar_template = Scan_source { root; hdr_file = "src/api/z3.h" } };
       { ar_action = Canary_basic.Build_headers; ar_needs = None;

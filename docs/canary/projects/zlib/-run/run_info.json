@@ -3,10 +3,10 @@
   "version": "scenario",
   "ref": "",
   "source": "prebuilt",
-  "distro": "linux",
+  "distro": "wsl_ubuntu",
   "system_pm": "apt",
-  "opam_switch": "default",
+  "opam_switch": "canary",
   "ocaml_version": "5.4.1",
-  "timestamp": "2026-08-26 09:41:12.743",
+  "timestamp": "2026-08-26 17:36:02.631",
   "actions": ["fetch_source", "fetch_lib", "fetch_binding_ocaml", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "probe_lib", "probe_lib_inspect"]
 }

@@ -161,9 +161,44 @@ let system_pkg_for_pm spec pm =
 
 type distro = Wsl | MacOS_local
 
-let distro_base : distro -> string = function
-  | Wsl -> "/home/red/code"
-  | MacOS_local -> "/Users/ex/code"
+(* THE MACHINE ROOTS ARE CONFIG, DECLARED ONCE AT THE ENTRY (2026-08-26,
+   user: "this can be almost hardcoded in the entry side once as the
+   config value choice for two of my machines. It shouldn't be hardcoded
+   any more").
+
+   These two absolute paths are the only facts canary holds about the
+   boxes it runs on, and they are legitimately near-constant — but they
+   are the USER's configuration, not the store layer's knowledge, and a
+   base-layer function spelling them out is a fact each caller inherits
+   without being able to state it. The table now lives at the entry
+   ([src/bin/canary_main.ml], [Canary_store.set_machine_roots]) beside
+   [--switch] and [--platform], and this is the lookup.
+
+   BOTH machines stay declared, not just this one: [--platform=macos]
+   renders the mac's paths from the WSL box, and a root derived from
+   [$HOME] could only ever answer for the machine you are on.
+
+   Unset is a HARD failure rather than a guess. Nothing resolves a root
+   at module-initialization time any more — see [mk_locals] in
+   [Canary_artifact_source], which used to bake both absolute paths into
+   every [source_repo] at load — so by the time anything asks, the entry
+   has run. If this raises, an entry point linked canary without
+   declaring its machines, and inventing a path there would produce a
+   wrong one silently. *)
+let machine_roots : (distro * string) list ref = ref []
+
+let set_machine_roots (roots : (distro * string) list) : unit =
+  machine_roots := roots
+
+let distro_base (d : distro) : string =
+  match List.Assoc.find !machine_roots ~equal:Poly.equal d with
+  | Some root -> root
+  | None ->
+      let name = match d with Wsl -> "wsl" | MacOS_local -> "macos" in
+      failwith
+        ("canary: no machine root declared for " ^ name
+       ^ " — the entry must call Canary_store.set_machine_roots (see \
+          src/bin/canary_main.ml)")
 
 (* THE contrib root (2026-08-15, design/enumeration/stage1_declare_spec.md): the shared
    third-party checkout tree — a base-layer SETTING (data in code; the

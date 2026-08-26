@@ -2006,7 +2006,30 @@ let validate_switch () =
         Fmt.epr "  or use the ambient one:    --switch=@.";
         Stdlib.exit 2)
 
+(* THE MACHINES (2026-08-26, user: "this can be almost hardcoded in the
+   entry side once as the config value choice for two of my machines. It
+   shouldn't be hardcoded any more").
+
+   The two boxes canary runs on, and the ONE place their roots are
+   written. Everything below a machine root is relative and derived:
+   [contrib_root] is [<root>/contrib], a source checkout is
+   [<contrib_root>/<project>-all/<repo>], and a [local_path] row carries
+   only its relative part until someone asks for a string.
+
+   BOTH rows are declared, not just this machine's, because
+   [--platform=macos] renders the mac's paths from the WSL box — a root
+   read from [$HOME] could only answer for the box you are sitting at.
+   Adding a third machine is one row here.
+
+   Set FIRST, before argv is even scanned: nothing resolves a root at
+   module-initialization time any more, but the flags parsed on the next
+   line can select which machine we answer as. *)
+let machines : (Canary_store.distro * string) list =
+  [ (Canary_store.Wsl, "/home/red/code");
+    (Canary_store.MacOS_local, "/Users/ex/code") ]
+
 let () =
+  Canary_store.set_machine_roots machines;
   let argv = switch_argv () in
   validate_switch ();
   let doc = "Canary compatibility testing" in

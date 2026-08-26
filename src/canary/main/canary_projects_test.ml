@@ -1730,6 +1730,64 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         mac && wsl && mapping_ok
         && not (String.equal f_mac f_wsl)) }
 
+(* THE MACHINE ROOTS ARE ENTRY CONFIG (2026-08-26, user: "this can be
+   almost hardcoded in the entry side once as the config value choice for
+   two of my machines. It shouldn't be hardcoded any more").
+
+   [distro_base] used to BE the two absolute paths. It is now a lookup
+   into a table the entry declares, which is only possible because
+   nothing resolves a root while modules initialize — the property (3)
+   below is what makes the whole arrangement work, and it is the one that
+   will silently regress: the natural way to write a project declaration
+   is to call [libdir_of pb (detect_distro ())] in it, which puts an
+   absolute path in a top-level [let] and re-freezes the paths at load. *)
+let machine_roots_pin : Canary_project_test.pure_test =
+  { name = "machine_roots.declared_at_entry";
+    check =
+      (fun () ->
+        let saved = !Canary_store.machine_roots in
+        let restore () = Canary_store.machine_roots := saved in
+        (* (1) the lookup answers for BOTH machines — the cross-render
+           needs the other one, which no $HOME could supply *)
+        Canary_store.set_machine_roots
+          [ (Canary_store.Wsl, "/w"); (Canary_store.MacOS_local, "/m") ];
+        let resolves =
+          String.equal (Canary_store.distro_base Canary_store.Wsl) "/w"
+          && String.equal (Canary_store.distro_base Canary_store.MacOS_local) "/m"
+          && String.equal (Canary_store.contrib_root Canary_store.Wsl) "/w/contrib"
+        in
+        (* (2) undeclared is a FAILURE, not a guess — a fabricated root
+           would send a build somewhere real and wrong *)
+        Canary_store.machine_roots := [];
+        let refuses =
+          try
+            ignore (Canary_store.distro_base Canary_store.Wsl : string);
+            false
+          with _ -> true
+        in
+        (* (3) A DECLARATION NEEDS NO ROOT. Built with the table empty:
+           if any part of stating what a project HAS reaches for a machine
+           path, this raises — which is exactly what happened at module
+           init before the paths were made relative. zlib is the witness
+           because it declares a prebuilt (a Vendored lib whose libdir is
+           the tempting place to resolve).
+
+           How the regression actually shows up, measured by putting
+           [libdir_of pb (detect_distro ())] back into the artifact table:
+           for a spec that is a top-level [let] the binary dies at
+           STARTUP, before any test runs, with [distro_base]'s message
+           naming the fix — louder than a red pin. This claim covers the
+           case that death does not: a root reached for on a path that
+           module init happens not to take. *)
+        let declares_without_roots =
+          try
+            let pr = Canary_opam_binding.run Canary_project_zlib.decl in
+            not (List.is_empty pr.Canary_project_run.pr_artifacts)
+          with _ -> false
+        in
+        restore ();
+        resolves && refuses && declares_without_roots) }
+
 (* THE RUN RECORD IS THE SESSION (2026-08-26, user: "the config and driver
    side is like a session, and no hardcoded is necessary").
 
@@ -2756,7 +2814,7 @@ let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
                      Option.map
                        (Canary_artifact_source.local_for distro repo)
                        ~f:(fun l ->
-                         normalize l.Canary_artifact_source.build_path))))
+                         normalize (Canary_artifact_source.build_path_of l)))))
            = List.length
                (List.filter_map repos ~f:(fun repo ->
                     Canary_artifact_source.local_for distro repo))) }
@@ -3600,7 +3658,8 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_setting_block_pin;
       matrix_registry_shape_pin;
       platform_single_source_pin;
-      run_info_session_pin ]
+      run_info_session_pin;
+      machine_roots_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 

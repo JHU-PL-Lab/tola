@@ -86,10 +86,16 @@ let lib_glob_of (d : t) (distro : Canary_store.distro) : string =
     shape as the per-ref build (`build-<ref>`) and staging
     (`install-<ref>`) dirs, so one convention covers checkouts, builds,
     staging areas and prebuilts. *)
+(* RELATIVE to the machine root — the machine-independent half (2026-08-26).
+   A DECLARATION may hold this (it is true on every machine); only a
+   command needs the resolved form. *)
+let rel_path_of (d : t) : string =
+  Printf.sprintf "contrib/%s-all/prebuilt/%s" d.project d.tag
+
+let rel_libdir_of (d : t) : string = rel_path_of d ^ "/lib"
+
 let path_of (d : t) (distro : Canary_store.distro) : string =
-  Printf.sprintf "%s/%s-all/prebuilt/%s"
-    (Canary_store.contrib_root distro)
-    d.project d.tag
+  Canary_store.distro_base distro ^ "/" ^ rel_path_of d
 
 (** The lib directory a consumer points at (LD_LIBRARY_PATH, -L). *)
 let libdir_of (d : t) (distro : Canary_store.distro) : string =

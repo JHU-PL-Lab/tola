@@ -175,7 +175,14 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
      differ too — a Vendored world that silently resolved the system lib
      would be the stable world wearing another name (the same class as
      the staged-probe lie the Installed axis had to fix). *)
-  let resolve =
+  (* A FUNCTION, not a value (2026-08-26): the [Some pb] branch reads a
+     machine root, and [runner_spec] is a top-level [let] in every
+     Pattern-A spec — as a value this resolved paths at MODULE INIT,
+     before the entry could declare the machines. Both call sites are
+     already [fun ~output_dir ~variant_key ->] closures, so deferring
+     costs nothing and moves the resolution to where the command is
+     built. *)
+  let resolve () =
     match vendored_lib with
     | None -> lib_resolve d.lib
     | Some pb ->
@@ -243,7 +250,7 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
           fun ~output_dir ~variant_key ->
             let probe = Canary_artifact_native.native_lib_probe_cmd
               ~lib:"$LIB_NATIVE" ~prefix:d.native_probe_prefix ~output_dir ~variant_key in
-            Printf.sprintf "%s\n%s" resolve probe ) ];
+            Printf.sprintf "%s\n%s" (resolve ()) probe ) ];
     (* NOTE: [runner_spec_for] REBUILDS probe_binding per scenario (the
        world-check + the vendored env), so this entry is the
        assignment-less default only — do not put per-world logic here, it
@@ -266,7 +273,7 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
               ~prefixes:d.native_inspect_prefixes
               ~watchlist:d.native_watchlist
               ~output_dir ~variant_key () in
-            Printf.sprintf "%s\n%s" resolve sum)
+            Printf.sprintf "%s\n%s" (resolve ()) sum)
       | Probe_binding (_), _ ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.inspect_opam_pkg_cmd
@@ -701,8 +708,13 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
       | None -> [ (sys, [ Canary_basic.Stable ]) ]
       | Some pb ->
           [ (sys, [ Canary_basic.Stable ]);
+            (* the machine-INDEPENDENT location (2026-08-26): a
+               declaration is read on both machines and is built at
+               module-init time, before any root is known. The resolved
+               path belongs to the commands, which build it from the
+               scenario's distro. *)
             ( Canary_store_config.Vendored_at
-                (Canary_prebuilt.libdir_of pb (Canary_basic.detect_distro ())),
+                ("<machine>/" ^ Canary_prebuilt.rel_libdir_of pb),
               [ Canary_basic.Dev ] ) ]
     in
     let rationale =
