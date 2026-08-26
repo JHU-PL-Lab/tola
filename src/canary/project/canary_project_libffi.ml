@@ -110,9 +110,16 @@ let decl : Canary_opam_binding.t =
         { Canary_prebuilt.project = "libffi";
           tag = "libffi-3.7.0";
           version = "3.7.0";
-          url =
-            "https://conda.anaconda.org/conda-forge/linux-64/libffi-3.7.0-h3435931_0.conda";
-          lib_glob = "lib/libffi.so*";
+          linux =
+            { url =
+                "https://conda.anaconda.org/conda-forge/linux-64/libffi-3.7.0-h3435931_0.conda";
+              lib_glob = "lib/libffi.so*" };
+          (* same version and build number (_0) as linux-64 *)
+          macos =
+            Some
+              { url =
+                  "https://conda.anaconda.org/conda-forge/osx-arm64/libffi-3.7.0-hcf2aa1b_0.conda";
+                lib_glob = "lib/libffi*.dylib" };
           note =
             "conda-forge 3.7.0 (upstream 3.8.0 publishes no Linux binary; \
              apt ships 3.4.6). Same soname (libffi.so.8) as apt's, so the \

@@ -2412,11 +2412,11 @@ let make_base_runner_spec
             Printf.sprintf
               "python3 canary/scripts/inspect_binding.py --kind stub \
                --path %s --prefix tiny_ > %s/%s && \
-               LD_LIBRARY_PATH=%s PYTHONPATH=%s \
+               %s PYTHONPATH=%s \
                python3 canary/scripts/inspect_python.py --pkg tiny_cext \
                --watchlist '%s' > %s/%s"
               cext_so_glob output_dir stub_file
-              abs_lib_dir python_cext_root
+              (Canary_basic.ld_only abs_lib_dir) python_cext_root
               attrs_watchlist_csv output_dir attrs_file)
       | Probe_binding Canary_lang.OCaml ->
           Some (fun ~output_dir ~variant_key ->
@@ -2438,10 +2438,11 @@ let make_base_runner_spec
             let watchlist_csv =
               String.concat ~sep:"," tiny_python_module_watchlist in
             Printf.sprintf
-              "LD_LIBRARY_PATH=%s PYTHONPATH=%s \
+              "%s PYTHONPATH=%s \
                python3 canary/scripts/inspect_python.py --pkg tiny_cext \
                --watchlist '%s' > %s/%s"
-              abs_lib_dir python_cext_root watchlist_csv output_dir out_file)
+              (Canary_basic.ld_only abs_lib_dir)
+              python_cext_root watchlist_csv output_dir out_file)
       | _ -> None);
 
     (* Diagram labels: bind the canary kinds to the canonical names tiny uses. *)

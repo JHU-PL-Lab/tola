@@ -157,6 +157,98 @@ let detect_distro () =
 let platform_suffix () : string =
   match detect_distro () with MacOS_local -> "_mac" | Wsl -> ""
 
+(* ── THE DYNAMIC LOADER, PER PLATFORM (2026-08-26) ──────────────────
+
+   Canary's central mechanism for realizing a lib placement is to point
+   the loader at the world's libdir and run the SAME consumer against it
+   — the Vendored cell of every channel pair, sqlite's staged probe, z3's
+   cross cells. That mechanism is spelled [LD_LIBRARY_PATH] throughout,
+   which macOS's dyld does not read at all: the variable would be
+   accepted, ignored, and the probe would resolve the AMBIENT system lib
+   and pass. Passing for the wrong reason is the exact failure this
+   framework is built to catch, and it would be reported as a green cell.
+
+   ONE MEASURED SUBTLETY, because it decides whether a rename is even
+   enough (checked 2026-08-26, not assumed). macOS SIP strips every
+   DYLD_* variable from the environment when a PROTECTED binary is
+   exec'd — and /bin/sh is protected, so a variable EXPORTED around
+   canary's [Sys.command] never reaches the probe:
+
+     DYLD_LIBRARY_PATH=/x sh -c 'echo $DYLD_LIBRARY_PATH'   →  (empty)
+
+   What survives is an assignment made INSIDE the command, to a target
+   that is not itself protected:
+
+     sh -c 'DYLD_LIBRARY_PATH=/x <homebrew binary>'         →  /x
+     sh -c 'DYLD_LIBRARY_PATH=/x /usr/bin/python3'          →  (empty)
+
+   Canary already uses the inline form everywhere ([VAR=… cmd], not
+   [export VAR]), so the rename IS enough — but the second line is a live
+   trap for python probes: they must run brew's or opam's python3, never
+   /usr/bin/python3, or the repoint evaporates silently. That is a PATH
+   fact, not something these helpers can enforce; the world's
+   [Log_names] check is what catches it, by requiring the probe to report
+   a library inside the world's own libdir.
+
+   AND THE REPOINT ITSELF WORKS, which was the open question — Mach-O
+   records a dependency as a full path (or [@rpath/…]), not a bare
+   soname, so it was not obvious that an environment variable could
+   override one. Measured with a C program linked against brew's zlib
+   and run against the conda-forge prebuilt:
+
+     otool -L  → /opt/homebrew/opt/zlib/lib/libz.1.dylib
+     DYLD_LIBRARY_PATH=<prebuilt>/lib DYLD_PRINT_LIBRARIES=1 ./zt
+               → …/prebuilt/zlib-1.3.2/lib/libz.1.3.2.dylib
+
+   dyld searches DYLD_LIBRARY_PATH by LEAF NAME and it wins over the
+   recorded path, exactly as [LD_LIBRARY_PATH] wins over an ELF soname.
+   So the Vendored cell — a lib channel pair realized by pointing the
+   loader at a second copy, with no rebuild — is a real cell here too,
+   and the rename is the whole of what it needed.
+
+   Note what is NOT renamed: [LIBRARY_PATH] (link time, clang and gcc
+   both) and [CAML_LD_LIBRARY_PATH] (OCaml's own, dlls under the switch)
+   are spelled identically on both platforms. *)
+
+(** The loader's search-path variable for this platform. *)
+let ld_path_var () : string =
+  match detect_distro () with
+  | MacOS_local -> "DYLD_LIBRARY_PATH"
+  | Wsl -> "LD_LIBRARY_PATH"
+
+(** [ld_prepend dir] — put [dir] FIRST on the loader path, keeping what
+    the environment already had. The prevailing idiom: a world's libdir
+    must win over the system copy, but nothing else should be dropped. *)
+let ld_prepend (dir : string) : string =
+  let v = ld_path_var () in
+  Printf.sprintf "%s=%s:$%s" v dir v
+
+(** [ld_only dir] — the loader path set to exactly [dir], discarding
+    whatever was inherited. Used where the point of the step is that ONLY
+    this world's lib is reachable. *)
+let ld_only (dir : string) : string =
+  Printf.sprintf "%s=%s" (ld_path_var ()) dir
+
+(** The shared-library extension: [.dylib] (Mach-O) or [.so] (ELF).
+    Beware that this is NOT the whole story for a filename — ELF versions
+    a library as [libfoo.so.1.2] (extension, then version) while Mach-O
+    writes [libfoo.1.2.dylib] (version, then extension) — so a name is
+    built by {!shared_lib_name}, not by concatenating this. *)
+let dylib_ext () : string =
+  match detect_distro () with MacOS_local -> ".dylib" | Wsl -> ".so"
+
+(** [shared_lib_name ~stem ?version ()] — the platform's filename for a
+    shared library: [shared_lib_name ~stem:"tiny" ~version:"1" ()] is
+    [libtiny.so.1] on ELF and [libtiny.1.dylib] on Mach-O. The two
+    conventions put the version on OPPOSITE sides of the extension,
+    which is why callers must not build these by hand. *)
+let shared_lib_name ~(stem : string) ?(version = "") () : string =
+  match (detect_distro (), version) with
+  | MacOS_local, "" -> Printf.sprintf "lib%s.dylib" stem
+  | MacOS_local, v -> Printf.sprintf "lib%s.%s.dylib" stem v
+  | Wsl, "" -> Printf.sprintf "lib%s.so" stem
+  | Wsl, v -> Printf.sprintf "lib%s.so.%s" stem v
+
 let run_step ?guard ?shell ?(env_fields = []) ?(requires = []) ?(produces = [])
     ~name action =
   ({ name; guard; shell; env_fields; requires; produces; action } : step_body)

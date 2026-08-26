@@ -1137,16 +1137,33 @@ let tiny_binding_realization_pin : Canary_project_test.pure_test =
           ( str (BT.build_binding_of cext ~ctx),
             Some "ls /WS/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /OUT/build_VK.ok" );
           (* probe_binding: dune build+exec / cext runtime probe *)
+          (* the LOADER variable is per-platform (2026-08-26): these
+             asserted [LD_LIBRARY_PATH] literally, which would have made
+             a correct macOS template — dyld reads DYLD_LIBRARY_PATH and
+             ignores the other — read as drift. What the pin is about is
+             that the world's libdir reaches the probe, not what the
+             variable is called here, so it asks [ld_only] the same
+             question the template asks. *)
           ( str (BT.probe_binding_of cstubs ~ctx),
-            Some "(LIBRARY_PATH=$PWD//WS/c/build LD_RUN_PATH=$PWD//WS/c/build dune build --root /WS ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD//WS/c/build /WS/_build/default/ocaml/examples/probe_baseline.exe) > /OUT/probe_VK.log 2>&1" );
+            Some
+              (Printf.sprintf
+                 "(LIBRARY_PATH=$PWD//WS/c/build LD_RUN_PATH=$PWD//WS/c/build dune build --root /WS ocaml/examples/probe_baseline.exe && %s /WS/_build/default/ocaml/examples/probe_baseline.exe) > /OUT/probe_VK.log 2>&1"
+                 (Canary_basic.ld_only "$PWD//WS/c/build")) );
           ( str (BT.probe_binding_of cext ~ctx),
-            Some "LD_LIBRARY_PATH=$PWD//WS/c/build PYTHONPATH=/WS/python_cext python3 /WS/python_cext/examples/probe_baseline.py > /OUT/probe_VK.log 2>&1" );
+            Some
+              (Printf.sprintf
+                 "%s PYTHONPATH=/WS/python_cext python3 /WS/python_cext/examples/probe_baseline.py > /OUT/probe_VK.log 2>&1"
+                 (Canary_basic.ld_only "$PWD//WS/c/build")) );
           (* probe_lib: nm for the declared prefix *)
           ( Some
               (BT.probe_lib_of TS.tiny_native
                  ~lib_path:"/WS/c/build/libtiny.so.1"
                  ~output_dir:"/OUT" ~variant_key:"VK"),
-            Some "nm -D /WS/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /OUT/probe_VK.log 2>&1" );
+            Some
+              (Printf.sprintf
+                 "nm %s /WS/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T %stiny_' > /OUT/probe_VK.log 2>&1"
+                 (Canary_artifact_native.nm_dynamic_flag ())
+                 (Canary_artifact_native.c_symbol_prefix ())) );
           (* user-facing pkg names derive from the surface path *)
           (BT.user_facing_pkg_of Canary_lang.OCaml cstubs, Some "tiny");
           (BT.user_facing_pkg_of Canary_lang.Python cext, Some "tiny_cext");
