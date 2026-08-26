@@ -206,6 +206,12 @@ let tail_lines ~n path =
    the hour by running zstd. *)
 let run_cmd_logged logger ~tag ~output_dir ~variant_key cmd =
   logger.log ~tag ~event:"cmd" ~detail:(Some cmd);
+  (* WHICH STORE THIS MUTATED (2026-08-26). The prologue is added below,
+     after the [cmd] event, so the logged command does not show it — and
+     actions.log is what gets attached to an issue. Record it explicitly
+     rather than making a reader reconstruct it from the environment. *)
+  logger.log ~tag ~event:"opam_switch"
+    ~detail:(Some (Canary_store.opam_switch_label ()));
   let out_log = Canary_basic.variant_file ~variant_key (tag ^ ".out.log") in
   let out_path = output_dir ^ "/" ^ out_log in
   let rc_path = output_dir ^ "/." ^ out_log ^ ".rc" in
@@ -213,8 +219,13 @@ let run_cmd_logged logger ~tag ~output_dir ~variant_key cmd =
      shows progress while the evidence lands on disk *)
   let wrapped =
     Printf.sprintf
-      "rm -f %s\n{ (\n%s\n)\n  echo $? > %s\n} 2>&1 | tee %s\nexit $(cat %s \
+      "%srm -f %s\n{ (\n%s\n)\n  echo $? > %s\n} 2>&1 | tee %s\nexit $(cat %s \
        2>/dev/null || echo 1)"
+      (* THE SWITCH (2026-08-26): exported here rather than threaded
+         through 48 command templates, because every one of them already
+         runs [eval $(opam env)] and opam env honours OPAMSWITCH. Outside
+         the inner subshell so it applies to the whole group. *)
+      (Canary_store.opam_switch_prologue ())
       (Stdlib.Filename.quote rc_path) cmd (Stdlib.Filename.quote rc_path)
       (Stdlib.Filename.quote out_path) (Stdlib.Filename.quote rc_path)
   in
@@ -310,8 +321,16 @@ let expectation_form (e : step_expectation) : string =
     plus the expectation form. MD5 (drift detection, not security). *)
 let step_fingerprint (step : step) : string =
   let cmd = step.cmd ~output_dir:step.output_dir ~variant_key:step.variant_id in
+  (* THE SWITCH IS PART OF THE WORLD (2026-08-26). The prologue is added
+     at execution, so it is not in [cmd] — but a verdict earned in one
+     switch says nothing about another, and serving it across a switch
+     change would be exactly the stale-hit class the fingerprint exists
+     to close (landing.md §4: a cache entry that does not encode the
+     identity of what it ran is a lie). *)
   Stdlib.Digest.to_hex
-    (Stdlib.Digest.string (cmd ^ "\x00" ^ expectation_form step.expectation))
+    (Stdlib.Digest.string
+       (cmd ^ "\x00" ^ expectation_form step.expectation ^ "\x00"
+      ^ Canary_store.opam_switch_label ()))
 
 (* The marker's CONTENT records how the expectation was met: "xfail" = a
    confirmed expected failure, "" (or "ok") = plain success — so a warm run

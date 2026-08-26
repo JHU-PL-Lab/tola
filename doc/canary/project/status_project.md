@@ -318,8 +318,12 @@ libffi's recompiles zstd's binding, zstd's removes `ocaml-compiler` and
 downgrades 37 packages. Recorded, not started — the measurements and the
 A-vs-B consequences are in
 [`opam_exclusive_store_issue.md` §3–5](opam_exclusive_store_issue.md), the declaration gap in
-[`issues.md`](issues.md). Blocks on the canary-switch decision for two
-of the four.
+[`issues.md`](issues.md). ~~Blocks on the canary-switch decision for two
+of the four.~~ **UNBLOCKED 2026-08-26**: canary runs in its own switch, so
+libffi's 3 collateral recompiles and zstd's 157 are no longer a reason not
+to declare the axis. What remains is the template gap itself
+(`versions = None`), which `spec-check`'s `binding_pair` warn now tracks
+per project.
 
 **Also queued, unchanged**: llvm's 2×2 (needs the same two probe
 realizations z3 grew, complicated by llvm-config indirection); widening
@@ -533,6 +537,14 @@ directions):
   pinned checkouts — a HEAD-ref upstream that MOVED (latest/fork) is
   the remaining warm-mask case, only detectable by re-fetching
   (network), which `--cold` would force.
+- [x] **A dedicated opam switch — DONE 2026-08-26.** Canary defaults to
+  its own switch (`canary`, OCaml 5.4.1, seeded minimal: dune, ocamlfind,
+  zarith, fmt). `--switch=NAME` / `--switch=` / `CANARY_SWITCH` override;
+  the run header and `actions.log` both name it; it is part of the step
+  fingerprint so a verdict cannot cross switches. Pinned by
+  `switch.selection`, falsified by dropping the label from the digest.
+  **This unblocks item E below** — a zstd binding-pin flip recompiling 157
+  packages is acceptable in a switch nobody works in.
 - [ ] **Opam-templating gotchas as TEST CASES** — the Publish case
   study's live-learned details (the `<name>/<name>.<version>/` dir
   convention; `opam config subst` appends `.in` itself; `%{VAR}%`

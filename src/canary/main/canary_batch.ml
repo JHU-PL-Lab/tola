@@ -48,6 +48,10 @@ let verdict_lines (pr : Canary_project_run.project_run)
 let run_one ?(config = Canary_project_run.default_config)
     (pr : Canary_project_run.project_run) ~root ~failfast :
     Canary_runner.scenario_run_result list =
+  (* NAME THE SWITCH (2026-08-26). Canary installs and uninstalls opam
+     packages as it runs; the reader must be able to see which store
+     that happened in without reconstructing it from the env. *)
+  Fmt.pr "@.  opam switch: %s@." (Canary_store.opam_switch_label ());
   Fmt.pr "@.%s — generic project run (enumerate → runner_spec → run)@."
     pr.Canary_project_run.pr_name;
   let results =

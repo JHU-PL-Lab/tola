@@ -1523,6 +1523,67 @@ let pair_counts_points_pin : Canary_project_test.pure_test =
         && Poly.equal (sev c "lib_pair") (Some Ok)
         && Poly.equal (sev c "binding_pair") (Some Warn)) }
 
+(* THE CANARY SWITCH (2026-08-26, user: "prepare another ocaml switch for
+   all the canary experimenting").
+
+   Canary installs and uninstalls opam packages as it runs, and a binding
+   channel pair is realized by flipping a pin — which for zstd removes
+   [ocaml-compiler] and recompiles 157 packages. Doing that to a person's
+   working switch is why the binding axis sat blocked; canary therefore
+   defaults to a switch of its own.
+
+   Three properties, and the third is the one with teeth:
+
+   1. the default is an OWN switch, not the ambient one — a person who
+      forgets a flag must not damage [default];
+   2. selecting none restores the pre-2026-08-26 behaviour EXACTLY (an
+      empty prologue, so the emitted shell is byte-identical);
+   3. the switch is part of the step fingerprint. A verdict earned in one
+      switch says nothing about another, and serving it across a switch
+      change is precisely the stale-hit class the fingerprint exists to
+      close (landing.md §4). Falsified by construction: if the label were
+      dropped from the digest the two hashes below would coincide. *)
+let canary_switch_pin : Canary_project_test.pure_test =
+  { name = "switch.selection";
+    check =
+      (fun () ->
+        let saved = !Canary_store.opam_switch in
+        let restore () = Canary_store.opam_switch := saved in
+        let fingerprint_under sw =
+          Canary_store.opam_switch := sw;
+          let step : Canary_step_model.step =
+            { tag = "probe"; cache_key = "k"; output_tag = "o"; output_dir = "d";
+              project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
+              deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
+              check_pre = (fun () -> true);
+              check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+              expectation = Canary_step_model.Expect_success; symbol_check = None;
+              disabled_contracts = [] }
+          in
+          Canary_local_runner.step_fingerprint step
+        in
+        (* (1) the shipped default is canary's own switch *)
+        let default_is_own =
+          match saved with Some s -> String.equal s "canary" | None -> false
+        in
+        (* (2) no switch selected => empty prologue, byte-identical shell *)
+        Canary_store.opam_switch := None;
+        let ambient_prologue = String.equal (Canary_store.opam_switch_prologue ()) "" in
+        (* and a selected one exports it *)
+        Canary_store.opam_switch := Some "canary";
+        let exports =
+          String.is_substring (Canary_store.opam_switch_prologue ())
+            ~substring:"OPAMSWITCH"
+        in
+        (* (3) the fingerprint separates the two worlds *)
+        let f_canary = fingerprint_under (Some "canary") in
+        let f_default = fingerprint_under (Some "default") in
+        let f_ambient = fingerprint_under None in
+        restore ();
+        default_is_own && ambient_prologue && exports
+        && (not (String.equal f_canary f_default))
+        && (not (String.equal f_canary f_ambient))) }
+
 (* The repo-contents invariant over the LIVE registry (2026-08-16): every
    non-source artifact with a [Repo] provider must appear in that repo's
    [artifacts] contents (the multi-repo principle — repo → artifacts). *)
@@ -3304,6 +3365,7 @@ let base_tests : Canary_project_test.pure_test list =
       spec_check_every_project_pin;
       spec_check_ratchet_pin;
       pair_counts_points_pin;
+      canary_switch_pin;
       batch_tier_pin;
       shadow_policy_ladder_pin;
       repo_model_pin;

@@ -1893,7 +1893,51 @@ let construct_cmd =
 
 (* ── Main ── *)
 
+(* THE SWITCH OVERRIDE (2026-08-26). Canary defaults to its own opam
+   switch (Canary_store.opam_switch) so that a pin flip cannot damage the
+   switch a person works in. The selection applies to EVERY subcommand,
+   so it is handled before cmdliner dispatches rather than declared on
+   each of the ~28 commands:
+
+     --switch NAME | --switch=NAME   run in NAME
+     --switch=                       run in the ambient switch (pre-2026-08-26)
+     CANARY_SWITCH=NAME              same, for Makefile targets
+
+   The flag is REMOVED from argv before cmdliner sees it — cmdliner
+   rejects unknown options, so a pre-scan alone is not enough (it sets
+   the ref and then the run dies on "unknown option"). An unknown NAME is
+   an opam error at the first command, never a silent fallback to the
+   wrong store. *)
+let set_switch v =
+  Canary_store.opam_switch := (if String.equal v "" then None else Some v)
+
+let switch_argv () : string array =
+  (match Stdlib.Sys.getenv_opt "CANARY_SWITCH" with
+   | Some v -> set_switch v
+   | None -> ());
+  let argv = Stdlib.Sys.argv in
+  let n = Array.length argv in
+  let keep = ref [] in
+  let i = ref 0 in
+  while !i < n do
+    let a = argv.(!i) in
+    let is_eq =
+      String.length a >= 9 && String.equal (String.sub a 0 9) "--switch="
+    in
+    if String.equal a "--switch" && !i + 1 < n then (
+      set_switch argv.(!i + 1);
+      i := !i + 2)
+    else if is_eq then (
+      set_switch (String.sub a 9 (String.length a - 9));
+      Stdlib.incr i)
+    else (
+      keep := a :: !keep;
+      Stdlib.incr i)
+  done;
+  Array.of_list (List.rev !keep)
+
 let () =
+  let argv = switch_argv () in
   let doc = "Canary compatibility testing" in
   let info = Cmd.info "canary" ~doc in
   let cmd =
@@ -1928,4 +1972,4 @@ let () =
         prebuilt_cmd;
       ]
   in
-  Stdlib.exit (Cmd.eval cmd)
+  Stdlib.exit (Cmd.eval ~argv cmd)

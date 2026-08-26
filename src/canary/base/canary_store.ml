@@ -191,3 +191,42 @@ let contrib_root : distro -> string = fun d -> distro_base d ^ "/contrib"
 let all_distros = [ Wsl; MacOS_local ]
 
 (* Source repo and its operations moved to canary_artifact_source.ml *)
+
+(* ── THE OPAM SWITCH CANARY OPERATES IN (2026-08-26, user) ──
+
+   Canary mutates the opam store as a matter of course: every
+   [fetch_binding] installs a package, and a binding channel pair is
+   realized by FLIPPING a pin, which opam can only do by uninstalling the
+   other version (one version per switch — see
+   project/opam_exclusive_store_issue.md). Measured, that is destructive
+   in proportion to the package: zlib/cairo cost one downgrade, libffi
+   two plus three recompiles, and zstd removes [ocaml-compiler] and
+   recompiles 157 packages. Doing that to the switch a person WORKS in is
+   not acceptable, which is why the binding axis on the template projects
+   sat blocked (project/status_project.md §1 E).
+
+   So canary targets a switch of its own. The mechanism is deliberately
+   the smallest one that works: every shell command canary runs already
+   begins with [eval $(opam env)], and [opam env] honours OPAMSWITCH — so
+   exporting it once, in the one place every command is executed
+   ([Canary_local_runner.run_cmd_logged]), redirects all of them without
+   touching a single command template. A name that does not exist is an
+   opam ERROR rather than a silent fallback, which is the failure mode we
+   want.
+
+   [None] means "whatever switch is ambient" — the pre-2026-08-26
+   behaviour, kept so a person can still point canary at their own switch
+   deliberately. *)
+
+let opam_switch : string option ref = ref (Some "canary")
+
+(** The shell prologue that puts a command in canary's switch. Empty when
+    no switch is selected, so the ambient behaviour is byte-identical. *)
+let opam_switch_prologue () : string =
+  match !opam_switch with
+  | None -> ""
+  | Some s -> Printf.sprintf "export OPAMSWITCH=%s\n" (Stdlib.Filename.quote s)
+
+(** How the switch appears in a fingerprint / a run header. *)
+let opam_switch_label () : string =
+  match !opam_switch with None -> "(ambient)" | Some s -> s

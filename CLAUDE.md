@@ -32,8 +32,25 @@ dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # p
 dune exec src/bin/canary_main.exe -- result [<project>] [--md|--json]        # THE result table: rows = project × scenario, columns = actions, cells = last-run verdicts (pure read); also refreshes docs/canary/projects/matrix.html (linked from the index)
 dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
 dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
+dune exec src/bin/canary_main.exe -- action zlib --switch=default  # OVERRIDE the switch (see below); --switch= means the AMBIENT one
 make canary                                                  # run canary via Makefile shorthand
 	make canary-test                                             # post-change verification (project-test + artifact-test + pm-test)
+
+**Canary runs in its OWN opam switch** (`canary`, created 2026-08-26, OCaml
+5.4.1 — the same compiler `default` runs, so package resolution matches the
+measurements taken there). Canary installs/uninstalls opam packages as it
+runs, and a binding channel pair is realized by FLIPPING A PIN, which for
+zstd removes `ocaml-compiler` and recompiles 157 packages — not something to
+do to a working switch. Mechanism: every canary command already begins with
+`eval $(opam env)`, and `opam env` honours `OPAMSWITCH`, so the switch is
+exported once in `run_cmd_logged` (the single point every step's command
+goes through) rather than threaded through all 48 templates. It is also part
+of the step FINGERPRINT, so a verdict earned in one switch is never served
+to another. Select with `--switch=NAME` (any subcommand — the flag is
+stripped from argv before cmdliner, which would otherwise reject it),
+`--switch=` for the ambient switch, or `CANARY_SWITCH=NAME`. Every run
+prints `opam switch: <name>` and logs an `opam_switch` event to actions.log.
+Pinned by `switch.selection`.
 
 **Post-change verification.** After every edit that touches `src/canary/`, run
 `make canary-test`. This catches regressions in enumeration, compat theory,
@@ -482,6 +499,11 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   ocamlfind loads the opam version while `-I` adds build tree `.cmi`
   files. For build tree probes, use `-package zarith` (dep only) +
   explicit `z3ml.cmxa`, not `-package z3`.
+- **`opam switch create` SETS the new switch as current.** Creating the
+  canary switch silently made it ambient, and the next `dune build` failed
+  with "Library core not found" — dune was looking for tola's own deps in a
+  switch that had four packages. Not a canary bug and not obvious from the
+  error. Use `--no-switch`, or `opam switch set default` right after.
 - **opam sandbox is active on WSL**: `wrap-build-commands` is set
   globally to `[sandbox.sh "build"]` even on WSL — bwrap IS active.
   The switch-level `opam option wrap-build-commands` returns `[]` but
