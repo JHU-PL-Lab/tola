@@ -23,6 +23,50 @@
 open Base
 
 (* ================================================================ *)
+(* {1 Portable in-place editing}                                     *)
+(*                                                                    *)
+(* Every textual mutation below used to be [sed -i -E]. That is GNU   *)
+(* form, and on BSD/macOS sed it fails in the WORST possible way —    *)
+(* measured 2026-08-26, not inferred:                                 *)
+(*                                                                    *)
+(*   1. [-i] takes the backup SUFFIX as its argument there, so [-i    *)
+(*      -E] means "back up to <file>-E" and the [-E] never reaches    *)
+(*      the parser: the pattern is then read as BASIC regex, where    *)
+(*      [(val|external|let)] is a literal and the alternation never   *)
+(*      matches;                                                      *)
+(*   2. [\b] is a GNU extension with no BSD equivalent, so the        *)
+(*      word-boundary rename silently matches nothing;                *)
+(*   3. sed EXITS 0 through both. The mutation is a no-op, the step   *)
+(*      records success, and a bad-artifact scenario quietly becomes  *)
+(*      a good one — a false PASS on the very cell that exists to     *)
+(*      produce a failure. It also litters a [<file>-E] backup that   *)
+(*      the [diff -r] regress oracle then reports as an extra file.   *)
+(*                                                                    *)
+(* [perl -i] is the one in-place editor whose FLAGS and REGEX DIALECT *)
+(* are identical on both platforms (perl owns both, rather than       *)
+(* deferring to the OS): [-i] with no suffix leaves no backup, [\b]   *)
+(* and POSIX classes both work, and [...] is sed's inclusive range    *)
+(* with sed's "never end on the start line" rule. perl is present by  *)
+(* default on macOS and is an Ubuntu essential, so this adds no       *)
+(* dependency the framework did not already have.                     *)
+(*                                                                    *)
+(* The patch files under canary/examples/tiny/scenarios/patches/ stay *)
+(* the ORACLE: [mut.regress.*] applies each patch and each mutation   *)
+(* to clean trees and [diff -r]s them, so any dialect drift between   *)
+(* the two forms is a test failure, not a silent divergence.          *)
+(* ================================================================ *)
+
+(** In-place substitution ([perl -pe]): the whole file is rewritten,
+    each line passed through [script]. *)
+let perl_subst ~(script : string) ~(path : string) : string =
+  Printf.sprintf "perl -i -pe '%s' '%s'" script path
+
+(** In-place line FILTER ([perl -ne]): only what [script] prints
+    survives. The sed idiom [/re/d] becomes [print unless /re/]. *)
+let perl_filter ~(script : string) ~(path : string) : string =
+  Printf.sprintf "perl -i -ne '%s' '%s'" script path
+
+(* ================================================================ *)
 (* {1 Source-artifact mutations}                                     *)
 (* ================================================================ *)
 
@@ -58,18 +102,21 @@ module Source = struct
       one-by-one and check each rc. *)
   let apply_cmds ~sandbox = function
     | Rename_c_symbol { file; from_; to_ } ->
-        (* Word-boundary sed. Note: \b works in GNU sed; keep the
-           replacement simple. *)
-        [ Printf.sprintf
-            "sed -i -E 's/\\b%s\\b/%s/g' '%s/%s'"
-            from_ to_ sandbox file ]
+        (* Word-boundary rename. [\b] is why this cannot be sed: it is
+           a GNU extension, and BSD sed matches nothing while exiting
+           0 (see the portability note at the top). *)
+        [ perl_subst
+            ~script:(Printf.sprintf "s/\\b%s\\b/%s/g" from_ to_)
+            ~path:(Printf.sprintf "%s/%s" sandbox file) ]
     | Rename_version_tag { file; from_; to_ } ->
         (* Version tag rename: match at start-of-line followed by
            whitespace + brace. Distinct enough from C-symbol rename
-           to warrant its own primitive. *)
-        [ Printf.sprintf
-            "sed -i -E 's/^%s[[:space:]]*\\{/%s {/' '%s/%s'"
-            from_ to_ sandbox file ]
+           to warrant its own primitive. The POSIX class is kept
+           verbatim from the sed form — perl understands it, so the
+           pattern did not have to be re-derived. *)
+        [ perl_subst
+            ~script:(Printf.sprintf "s/^%s[[:space:]]*\\{/%s {/" from_ to_)
+            ~path:(Printf.sprintf "%s/%s" sandbox file) ]
 end
 
 (* ================================================================ *)
@@ -175,17 +222,31 @@ module Binding = struct
            with `val`, `external`, `let`, or the file's structural
            keywords. Simpler: single-line for now — matches the
            existing api_complete.patch shape. *)
-        [ Printf.sprintf
-            "sed -i -E '/^[[:space:]]*(val|external|let)[[:space:]]+%s([[:space:]]|:|=)/d' '%s/%s'"
-            name sandbox file ]
+        [ perl_filter
+            ~script:
+              (Printf.sprintf
+                 "print unless \
+                  /^[[:space:]]*(val|external|let)[[:space:]]+%s([[:space:]]|:|=)/"
+                 name)
+            ~path:(Printf.sprintf "%s/%s" sandbox file) ]
     | Drop_python_attr { file; name } ->
         (* Delete from `def <name>(` through the first blank line.
            Matches the api_complete_python.patch shape byte-for-byte
            on the tiny fixture. Range end pattern is a whitespace-only
-           line, so trailing-space blank lines match too. *)
-        [ Printf.sprintf
-            "sed -i -E '/^def[[:space:]]+%s[[:space:]]*\\(/,/^[[:space:]]*$/d' '%s/%s'"
-            name sandbox file ]
+           line, so trailing-space blank lines match too.
+
+           [...] not [..]: perl's three-dot range, like sed's [/a/,/b/],
+           refuses to end on the line that STARTED it. (No tiny fixture
+           separates them — a `def` line is never blank — but the two
+           operators are not interchangeable and the sed semantics are
+           what the patch oracle encodes.) *)
+        [ perl_filter
+            ~script:
+              (Printf.sprintf
+                 "print unless /^def[[:space:]]+%s[[:space:]]*\\(/ ... \
+                  /^[[:space:]]*$/"
+                 name)
+            ~path:(Printf.sprintf "%s/%s" sandbox file) ]
 end
 
 (* ================================================================ *)

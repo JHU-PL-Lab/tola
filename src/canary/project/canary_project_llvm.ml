@@ -138,12 +138,14 @@ let llvm_source_dev : source_repo =
   {
     name = "llvm";
     remote = Some (Git "https://github.com/arbipher/llvm-project.git");
-    locals =
-      [
-        { distro = Wsl;
-          path = "/home/red/code/contrib/llvm-all/llvm-project";
-          build_path = "/home/red/code/contrib/llvm-all/build" };
-      ];
+    (* [mk_locals], not a hand-written [Wsl] row (2026-08-26): llvm was
+       the ONE spec still spelling its checkout out for a single machine,
+       so on macOS [local_for] found nothing and the source step had no
+       local path at all — while the checkout it wanted was sitting at
+       the very path [mk_locals] derives. The relative path is the same
+       <contrib>/<project>-all/<repo> convention every other spec uses;
+       both distros now come out of [distro_base]. *)
+    locals = mk_locals "contrib/llvm-all/llvm-project";
     (* C2 (2026-08-16): [id = "arbipher"] — identity-bearing, a marker-style
        id like "latest" (the fork tracks HEAD; the FORK ITSELF is the
        identity). Official-dev and forked-dev must be DISTINCT scenarios
@@ -168,13 +170,9 @@ let llvm_source_stable : source_repo =
     name = "llvm";
     remote = Some (Git "https://github.com/llvm/llvm-project.git");
     (* Reuse the same local checkout as dev — fetch_source is a no-op (test -d).
-       We don't build from it (has_build_lib=false, has_build_binding=false). *)
-    locals =
-      [
-        { distro = Wsl;
-          path = "/home/red/code/contrib/llvm-all/llvm-project";
-          build_path = "/home/red/code/contrib/llvm-all/build" };
-      ];
+       We don't build from it (has_build_lib=false, has_build_binding=false).
+       Via [mk_locals] since 2026-08-26, same as dev above. *)
+    locals = mk_locals "contrib/llvm-all/llvm-project";
     version = Canary_basic.{ channel = Stable; id = "19" };
     ref_ = "llvmorg-19.1.7";
     official = true;

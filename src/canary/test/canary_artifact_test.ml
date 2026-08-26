@@ -855,7 +855,10 @@ let mutation_pure_tests =
                         ~from_:"tiny_sum" ~to_:"tiny_total")
         in
         List.length cmds = 1
-        && String.is_substring (List.hd_exn cmds) ~substring:"sed -i"
+        (* [perl -i], not [sed -i]: BSD sed reads the [-E] as a backup
+           suffix and drops to basic regex, so the mutation no-ops and
+           still exits 0 (canary_artifact_mutation.ml, top). *)
+        && String.is_substring (List.hd_exn cmds) ~substring:"perl -i"
         && String.is_substring (List.hd_exn cmds) ~substring:"tiny_sum"
         && String.is_substring (List.hd_exn cmds) ~substring:"tiny_total"
         && String.is_substring (List.hd_exn cmds) ~substring:"/tmp/sb/c/src/tiny.c" };

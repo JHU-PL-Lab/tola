@@ -144,8 +144,17 @@ let derive_fetch_lib_test : pure_test =
         SB.fetch_lib_cmd (Canary_store.detect_pm ()) sys
           ~output_dir:"OUT" ~variant_key:"vk"
       in
+      (* the package name is the PM's, not Linux's (2026-08-26): this
+         asserted [libsqlite3-dev] literally, which made a correct macOS
+         derivation — brew's [sqlite] — read as a failure. Ask
+         [system_pkg_for_pm] the same question [fetch_lib_cmd] asks, so
+         the check is "the declared spec's name for THIS pm reaches the
+         command" on either platform. *)
+      let expected_pkg =
+        Canary_store.system_pkg_for_pm sys (Canary_store.detect_pm ())
+      in
       String.equal derived direct
-      && String.is_substring derived ~substring:"libsqlite3-dev") }
+      && String.is_substring derived ~substring:expected_pkg) }
 
 (* surface_of_api keeps the watchlists and drops the provenance. *)
 let surface_split_test : pure_test =

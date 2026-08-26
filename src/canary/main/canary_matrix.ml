@@ -235,20 +235,36 @@ let kind_label (k : Canary_basic.artifact_kind) : string =
   | Canary_basic.Binding_source _ -> "bind-src"
   | Canary_basic.App -> "app"
 
-(** The live installed version of a system package (memoized dpkg
-    query — the matrix's one runtime read; "" when unknown). *)
+(** The live installed version of a system package (memoized — the
+    matrix's one runtime read; "" when unknown).
+
+    ASK THE PM THIS MACHINE HAS (2026-08-26). This was an unconditional
+    [dpkg-query], which on macOS returns nothing for every package: the
+    fetched-lib cells silently lost their version and rendered as a bare
+    [brew z3] where Linux shows [apt z3.4.8.12]. Version-less is exactly
+    the thing the FETCHED annotation exists to prevent ("we DO know it"),
+    and it fails quietly — no error, just a thinner cell. [brew list
+    --versions] prints "<formula> <version>", so the last field is the
+    answer; an uninstalled formula prints nothing, which is the same ""
+    the dpkg branch yields. *)
 let sys_pkg_versions : (string, string) Hashtbl.t =
   Hashtbl.create (module String)
+
+let sys_pkg_version_cmd (pkg : string) : string =
+  match Canary_store.detect_pm () with
+  | Canary_store.Brew ->
+      Printf.sprintf
+        "brew list --versions %s 2>/dev/null | head -1 | awk '{print $NF}'" pkg
+  | Canary_store.Apt | Canary_store.Opam | Canary_store.Pip
+  | Canary_store.Unsupported ->
+      Printf.sprintf "dpkg-query -W -f='${Version}' %s 2>/dev/null" pkg
 
 let sys_pkg_version (pkg : string) : string =
   match Hashtbl.find sys_pkg_versions pkg with
   | Some v -> v
   | None ->
       let v =
-        let ic =
-          Unix.open_process_in
-            (Printf.sprintf "dpkg-query -W -f='${Version}' %s 2>/dev/null" pkg)
-        in
+        let ic = Unix.open_process_in (sys_pkg_version_cmd pkg) in
         let line = Stdlib.In_channel.input_line ic in
         ignore (Unix.close_process_in ic : Unix.process_status);
         Option.value line ~default:""

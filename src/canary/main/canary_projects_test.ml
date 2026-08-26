@@ -3264,8 +3264,19 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           ~equal:String.equal
                       with
                       | Some (Some c) ->
+                          (* the system PM's own name (2026-08-26): the
+                             cell renders whichever PM this machine has,
+                             so a literal "apt" made a correct macOS
+                             render ("lib brew z3.…") read as drift. The
+                             SHAPE is what this pin is about — the cell
+                             names the pm and the package — not which
+                             pm the machine happens to run. *)
+                          let pm =
+                            Canary_store.string_of_pm
+                              (Canary_store.detect_pm ())
+                          in
                           String.is_prefix c.Canary_matrix.provision
-                            ~prefix:"lib apt z3."
+                            ~prefix:[%string "lib %{pm} z3."]
                       | _ -> false)
                       && (match
                             List.Assoc.find fr.Canary_matrix.cells
