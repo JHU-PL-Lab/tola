@@ -36,7 +36,7 @@ near-term wish-list. Complements:
 - [`status.md`](../status.md) — rolling backlog
 - [`worklog_2026_07.md`](../worklog/worklog_2026_07.md) —
   Task 1.5 / 1.6 arcs
-- [`research/tiny.md`](../research/tiny.md) — manuscript
+- [`research/tiny.md`](../research/surface_draft/tiny.md) — manuscript
   witness (paper audience)
 
 ## 1. What tiny is

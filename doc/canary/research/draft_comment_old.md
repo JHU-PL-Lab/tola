@@ -219,7 +219,7 @@ ctypes)
 In the real-world, not all native lib are created on the fly. Whether such 
 agreements are kept or broken, will be discuss in the next subsection.
 
-sync-ing with [`tiny.md`](tiny.md)
+sync-ing with [`tiny.md`](surface_draft/tiny.md)
 
 Anatomy absorbed into §2
 (touchstone); §4 focuses on witness role + perturbation matrix

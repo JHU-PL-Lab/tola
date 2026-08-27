@@ -1576,3 +1576,85 @@ Verified: 115/109/14, `mutation-test` 46/0, `tiny run` 22/22,
 reporting `zlib resolved:
 /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib/libz.so.1.3.2` —
 resolved from the declared table at command-build time.
+
+## 2026-08-27 — GH CI recovered as a real backend
+
+User: *"we don't touch the GH CI running for a long while and I think we
+shall recover it. In general, GH CI is a backend of the canary runner."*
+That framing is the fix: `Canary_gh` is one of four consumers of a
+`step list`, so a CI job should be the SAME steps the local runner
+executes — and it was not.
+
+**What four months of not running hid.** The checked-in `canary_ci.yml`
+dates from 05-06; regenerating it changes 486 lines. `ci_jobs` builds
+from per-project `*_ci_spec` values — a second assembly of the pipeline,
+maintained by hand — and sqlite's had lost its binding half:
+`sqlite_ci_spec` passes an assignment naming only `a_lib`, so no binding
+row realizes and the job that once ran `fetch_binding` + two probes
+emitted `fetch_lib` + `probe_lib`. Nobody noticed because nobody
+regenerated. Meanwhile the workflow was still triggering on every push
+and failing all five jobs at their `*_summary` step, ~25 minutes a time.
+
+**`Canary_ci`** renders jobs from `Canary_pipeline.steps_of`: one job per
+scenario, the binding half back by construction. `canary ci --min` writes
+`canary_min.yml` — sqlite + cairo, the all-`Fetched` world of each,
+ubuntu-latest, `workflow_dispatch` first.
+
+**A scenario maps onto a job better than onto a local run.** Pass 4
+exists because scenarios share exclusive state on one machine (a switch,
+an install prefix, a build tree) and must be serialized. A GH job gets a
+fresh runner, so the constraint evaporates — the enumeration's hardest
+scheduling problem is free here.
+
+### Adopting the z3 fork's shape
+
+The precedent is `contrib/canary/` in the z3 fork (2026-04): every job
+exists twice, as `backend_yaml/` and as `backend_shell/` (a bash script
+that emulates `$GITHUB_ENV` with a temp file), plus a
+`.github/actions/canary-test-setup` composite action. The retired
+`canary.ci.*.cmd` / `.local` Makefile pairs are the same idea.
+
+- **`.github/actions/canary-setup`** — setup as a composite action, so a
+  generated job is nothing but canary's own steps. Two fixes that infra
+  needed and ours lacked: `opam-disable-sandboxing`, and `apt-get update`
+  before the generated `fetch_lib`'s plain `apt-get install`.
+- **A shell twin per job** (`_out/canary/ci/<job>.sh`, gitignored) — the
+  same steps, runnable without pushing. A CI job you can only run by
+  pushing is a job you debug by pushing.
+
+Two things the twin taught immediately, both now in the code:
+
+- **Render it under THIS machine's roots, not CI's.** Run under CI roots
+  it clones cairo into the repo — 250MB, the first time it ran. The YAML
+  wants `$GITHUB_WORKSPACE`; the twin wants the laptop's contrib tree.
+  Same steps, each under the configuration true where it runs. Possible
+  only because paths resolve when the command text is built, which is
+  also why the override has to wrap the RENDERING: wrapping job
+  construction left all five machine-root lines in the YAML, resolved
+  after the roots were restored.
+- **No `set -u`.** GitHub runs `bash -e`; a probe does
+  `export LD_LIBRARY_PATH=…:$LD_LIBRARY_PATH`, which `-u` aborts on.
+
+### What the first run found
+
+cairo GREEN end to end on the first try — including
+`probe_binding_ocaml_inspect` and `probe_lib_inspect`, the helper-script
+steps where all five legacy jobs fail. sqlite failed, usefully:
+
+```
+WORLD MISMATCH: switch has sqlite3 ^[[01;35m5.1.0^[[0m,
+                scenario declares sqlite3 5.1.0
+```
+
+The switch held exactly the pin. `ocaml/setup-ocaml@v3` exports
+`OPAMCOLOR=always`; opam wrapped the version in ANSI escapes and the
+equality test could never pass. Fixed with `--color=never` in both twins
+of that query — `Canary_world`'s `Opam_pin` shell and
+`Canary_pm_opam.version_of_cmd`, which `pin_check_post` compares the same
+way, so a colourised local environment would have broken it here too.
+Verified by re-running the sqlite twin locally: green end to end.
+
+The general rule, now in CLAUDE.md's gotchas beside the cmake instance:
+**an assertion that compares tool OUTPUT must state the format it wants**,
+because the environment will otherwise choose one. Only CI could find
+this — nothing sets `OPAMCOLOR` on either of our machines.

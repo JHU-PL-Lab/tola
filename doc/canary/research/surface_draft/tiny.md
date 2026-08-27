@@ -2,7 +2,7 @@
 
 A minimal C library (two functions, one global) with hand-written
 OCaml and Python bindings. Designed to instantiate every contract in
-§2.4 of [`surface_draft/surface.md`](surface_draft/surface.md) on the smallest
+§2.4 of [`surface_draft/surface.md`](surface.md) on the smallest
 possible target, and to give twelve deliberately-broken (or
 positive-coverage) variants so each failure mode is reproducible in
 isolation. The Phase 3 `prepare` flow makes each variant's
@@ -16,8 +16,8 @@ by eye. Z3/LLVM/sqlite are too big for that; `tiny` is not.
 This doc is the single source of truth for the example — design
 rationale, file-level spec, build instructions, per-scenario detail,
 and coverage. For the abstract surface-role / contract framework,
-read [`surface.md`](draft.md) (manuscript) or
-[`surface_draft/`](surface_draft/) (materials). For the contract-by-
+read [`surface.md`](../draft.md) (manuscript) or
+[`surface_draft/`](./) (materials). For the contract-by-
 contract status (canary core vs. tiny), see
 `surface_draft/implementation.md` §2.7.
 
@@ -366,7 +366,7 @@ perturbation; they assert that the longest-interesting build/link
 chains stay wired in baseline. One scenario (e14) is a
 {i statically-detectable-but-runtime-silent} regression test for
 {c7 cmp_api_repack} — the standard harness records it as
-all-pass because c7 isn't wired into [`run.sh`](../../_legacy_code/tiny_python_harness/_harness/run.sh);
+all-pass because c7 isn't wired into [`run.sh`](../../../_legacy_code/tiny_python_harness/_harness/run.sh);
 the unit-test layer covers the verdict shape.
 
 ### Harness ↔ canary variant mapping (current as of Phase 15.6, 2026-06-03)
@@ -462,7 +462,7 @@ failure rather than silently breaking only the apps.
 The build/link chain from C source down to a running app is a
 sequence of *perturbable artifacts*. Each artifact is a place where
 tiny can inject a fault and observe how the failure propagates. The
-[`canary action`](../design/index.md) story is the dual: it
+[`canary action`](../../design/index.md) story is the dual: it
 enumerates the real-world physical choices at each artifact (apt vs.
 opam, version A vs. B, system lib vs. wheel-bundled). `tiny` is the
 *ideal-coverage* counterpart — it enumerates the possible breakages
@@ -478,7 +478,7 @@ upstream, rebuild) or artifact-direct (binary surgery).
 
 Each scenario records the concrete file paths it perturbs via the
 `perturbs` field in
-[`scenarios.py`](../../_legacy_code/tiny_python_harness/scenarios.py).
+[`scenarios.py`](../../../_legacy_code/tiny_python_harness/scenarios.py).
 
 **Table — Chain perturbation sites.** Rows are artifact aliases (see
 [Artifact inventory](#artifact-inventory--aliases--canonical-names)
@@ -1018,7 +1018,7 @@ own concern; what the binding artifact *is* is the contract.
   `canary action tiny` runs the same pipeline as `canary action
   z3` — 12 steps (6 main + 6 inspect) producing JSON shapes
   byte-equivalent to what `make scenarios-cached` produces for
-  every artifact (n4, bo4, bo7, bpe2, bpe3). See [`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
+  every artifact (n4, bo4, bo7, bpe2, bpe3). See [`phase4_2026_05.md`](../../worklog/phase4_2026_05.md).
 - **Rust binding.** Open question — worth including for the
   cross-binding agreement sub-component (§2.2). Deferred until the
   OCaml + Python scenario set has been reviewed.

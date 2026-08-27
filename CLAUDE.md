@@ -588,6 +588,17 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   compat test hex-encodes subprocess stderr — ANSI codes corrupt it. Fix:
   `cmake_runner.ml`'s `make_env` always injects `NO_COLOR=1`; never call
   `Unix.open_process_full` with `Unix.environment ()` directly in the runner.
+- **opam colour breaks the world assertion — invisible until CI**
+  (2026-08-27). `ocaml/setup-ocaml@v3` exports `OPAMCOLOR=always`, so
+  `opam list --columns=version` answers `^[[01;35m5.1.0^[[0m` and the pin
+  check compares that against `5.1.0` forever: *"WORLD MISMATCH: switch
+  has sqlite3 5.1.0, scenario declares sqlite3 5.1.0"*. Fixed with
+  `--color=never` in BOTH twins of that query — `Canary_world`'s
+  `Opam_pin` shell and `Canary_pm_opam.version_of_cmd` (what
+  `pin_check_post` compares). General rule, and the second instance of it
+  in this file: **an assertion that compares tool OUTPUT must state the
+  format it wants**, because the environment will otherwise choose one.
+  Nothing sets `OPAMCOLOR` locally, so only CI could find this.
 - **NEVER use sed or python on OCaml source.** Use the `Edit` tool exclusively.
   sed cannot distinguish match-case scope, `let`/`in` boundaries, or which
   `| _ -> None` is the intended anchor.  Append commands match multiple

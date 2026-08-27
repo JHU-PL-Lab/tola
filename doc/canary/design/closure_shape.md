@@ -107,7 +107,7 @@ the declared runtime properties on `native_api` — `soname`, `c_runtime`,
 is a relation between the consumer's recorded `NEEDED` list and the
 provider's file layout; neither side is a property of one artifact. It
 reads two artifacts, which by
-[`agreement_registry_audit.md`](agreement_registry_audit.md)'s axis makes
+[`agreement_registry_audit.md`](agreement_registry.md)'s axis makes
 it a **Meeting** contract, like c1 — but over the dependency list rather
 than the symbol list.
 

@@ -7,8 +7,8 @@ a doc nobody reads.
 **Where to start.** [`research/draft.md`](research/draft.md) is the
 manuscript-in-progress and is authoritative for current framing.
 [`design/enumeration/README.md`](design/enumeration/README.md) walks
-the pipeline end to end; [`design/ssot.md`](design/ssot.md) is the ID
-dictionary bridging manuscript ↔ code;
+the pipeline end to end; the vocabulary lives in
+[`design/enumeration/stage0_naming.md`](design/enumeration/stage0_naming.md);
 [`project/projects.md`](project/projects.md) is the project roster.
 Live status, gaps and gotchas are in `CLAUDE.md` at the repo root.
 
@@ -26,9 +26,9 @@ The work is organised around four aligned views of the same problem:
 | #   | Pillar       | Question it answers                                                                          | Lives in                                                      |
 | --- | ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | 1   | **Theory**   | What are the surfaces, contracts, and what counts as a violation?                            | [`draft.md`](research/draft.md) §1 + materials in `surface_draft/` |
-| 2   | **Witness**  | Is there a minimal artifact that instantiates every surface and every contract reproducibly? | [`tiny.md`](research/tiny.md)                                          |
+| 2   | **Witness**  | Is there a minimal artifact that instantiates every surface and every contract reproducibly? | [`tiny.md`](research/surface_draft/tiny.md)                                          |
 | 3   | **Coverage** | Which contracts does canary check, with which inspector + comparator?                        | [`surface_draft/implementation.md`](research/surface_draft/implementation.md) §2.7 |
-| 4   | **Plan**     | What changes — to canary, to tiny, to docs — close the remaining coverage gaps?              | [`plan.md`](research/plan.md)                                          |
+| 4   | **Plan**     | What changes — to canary, to tiny, to docs — close the remaining coverage gaps?              | [`plan.md`](plan.md)                                          |
 
 The alignment is *load-bearing*: every contract named in Theory
 appears in Witness as at least one scenario, in Coverage as a row
@@ -38,9 +38,9 @@ closing its gap.
 | File                                                  | Topic                                                                                                                                                                                                                |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [draft.md](research/draft.md)                     | **Manuscript-in-progress.** Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM). Backbone framing (**rules / traces / worlds**), PL notation, implementation slots. The authoritative current framing.                                                                                                       |
-| [surface_draft/](research/surface_draft/)             | **Materials collection** (split 2026-06-04). `main.md` (header + §5 related work + §6 calculus + appendix); `surface.md` (Parts A, B, §2.4 contracts, §4 hidden deps); `principle.md` (P1–P6); `implementation.md` (§2.7 + §2.5 + §2.6); `package.md` (§3); `versioning.md` (§2.8). Mine for content; not authoritative.       |
-| [tiny.md](research/tiny.md)                           | Witness. Minimal C lib + 3 bindings + downstream helper; 13-variant matrix exercising every active contract. The doc to read alongside the code.                                                                     |
-| [plan.md](research/plan.md)                           | Venues + milestones + roadmap, and **§4 the delivery pipeline** (theory → checker → world → finding → merged PR, with a status and an owner per stage). OOPSLA primary, PLDI optional; POPL purged 2026-08-26. Open `[ ]` items only; chronicled work lives in `worklog/`. |
+| [surface_draft/](research/surface_draft/)             | **Materials collection** (split 2026-06-04; roster refreshed 2026-08-27). `surface.md` (theory primitives, syntactic/semantic, the gap); `surface_why.md` (what tools check, descriptive-not-prescriptive); `principle.md` (P1–P6); `versioning.md` (intrinsic vs extrinsic); `hidden_dep.md` (undeclared NEEDED, glibc/musl); `package.md` (provider matrix, co-providers); `on_agreement_contract_boundary.md` (why *agreement*; boundary ≠ surface); `notation.md` + `future_impl.md` (parked PL scaffold + typed calculus); `implementation.md` (§2.7 inspector coverage); `ids.md` (the retired ssot's tables); `tiny.md` (the witness). Mine for content; not authoritative. Fates per file are recorded in `draft.md`'s header |
+| [tiny.md](research/surface_draft/tiny.md)                           | Witness. Minimal C lib + 3 bindings + downstream helper; 13-variant matrix exercising every active contract. The doc to read alongside the code.                                                                     |
+| [plan.md](plan.md)                           | Venues + milestones + roadmap, and **§4 the delivery pipeline** (theory → checker → world → finding → merged PR, with a status and an owner per stage). OOPSLA primary, PLDI optional; POPL purged 2026-08-26. Open `[ ]` items only; chronicled work lives in `worklog/`. |
 | [literature.md](research/literature.md)               | Companion bibliography. Compiler correctness, type-preserving compilation, linking calculi, ELF semantics, FFI semantics, ABI tooling — each entry with an "Inherits / Departs" note tying it back to surface theory. |
 
 Packaging lives in [`surface_draft/package.md`](research/surface_draft/package.md)
@@ -96,7 +96,7 @@ All six stages now have a standalone doc.
 
 | File | Topic |
 | ---- | ----- |
-| [ssot.md](design/ssot.md) | **Single source of truth for IDs** — the canonical Ar/Sf/Ag/Sc/scenario/action tables bridging manuscript ↔ code |
+| [ssot.md](design/ssot.md) | **Retired 2026-08-27 — redirect stub only.** It was a third hand-maintained copy of facts owned elsewhere, so every row drifted; the measurement that ended it found the drift was the file's own. The stub maps each old section to its new home, because the source cites it in 33 places |
 
 ### Rationale — how the built thing works
 
@@ -122,7 +122,7 @@ All six stages now have a standalone doc.
 | [artifact_cache.md](design/artifact_cache.md) | … a step's cache key includes the identity of its INPUT artifacts, not only its own cmd/expectation fingerprint |
 | [step_identity.md](design/step_identity.md) | … a step tag is (action × location KIND) alone — `tag_of_probe_lib_location` called unconditionally, and no tag anywhere containing a PM name |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
-| [agreement_registry_audit.md](design/agreement_registry_audit.md) | … every agreement in the catalogue resolves to a check that can ground it. The producer landed (`surface/canary_contract_registry.ml`); the rungs did not. Absorbed `contract_registry.md` 2026-08-21 |
+| [agreement_registry_audit.md](design/agreement_registry.md) | … every agreement in the catalogue resolves to a check that can ground it. The producer landed (`surface/canary_contract_registry.ml`); the rungs did not. Absorbed `contract_registry.md` 2026-08-21 |
 
 ### Retired
 
@@ -135,7 +135,8 @@ All six stages now have a standalone doc.
 | ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `matrix.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |
 | ~~scenario_terms.md~~ | Replaced by `enumeration/stage0_naming.md` |
 | ~~enumeration/repo_model.md~~ | Purged 2026-08-23 — live content absorbed into `enumeration/stage1_declare_spec.md` §4, open decisions to `project/status_project.md` §2 |
-| ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_declare_spec.md` §5 + `ssot.md` §4.2.2 |
+| ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_declare_spec.md` §5 + `enumeration/stage1_declare_spec.md` |
+| ~~ssot.md~~ | Retired 2026-08-27 — §4.2.x to `enumeration/`, §6.1 to `enumeration/stage0_naming.md`, §6.5/§6.6 to the action catalogue + `stage5`, the Ar/Sf/Ag/Sc/Bs tables to `research/surface_draft/ids.md`. A redirect stub remains for the 33 code citations |
 
 ## project/ — live projects, their status, and how to land one
 

@@ -37,12 +37,12 @@ binding (`tiny_ctypes`-style) would normally rely on a system
 libtiny, but a co-provider model would bundle libtiny inside the
 Python wheel. `tiny` deliberately *doesn't* exercise co-providers —
 packaging is sibling, not foundational, and we want the witness to
-isolate the surface contracts (see [`tiny.md`](../tiny.md) on why
+isolate the surface contracts (see [`tiny.md`](tiny.md) on why
 packaging stays out of scope).
 
 #### 3.2 Status
 
 The provider-matrix angle is deferred work — the model is sketched
 above but not used in canary's per-action checks today. See
-[`plan.md`](../plan.md) (roadmap step 2) for the rationale and the
+[`plan.md`](../../plan.md) (roadmap step 2) for the rationale and the
 deferral plan.

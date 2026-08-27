@@ -102,7 +102,7 @@ This grounds the abstract roles in a real project.
 | **s6** | `runtime_trace`  | `z3_example.ml` / `probe.py` execution against `libz3.so` | (same)                                | (same)                                                     |
 
 For the concrete `tiny` instantiation of each role across all three
-bindings, see [`tiny.md`](../tiny.md).
+bindings, see [`tiny.md`](tiny.md).
 
 ### 2.2 The language side has internal structure
 
@@ -146,6 +146,6 @@ A **surface** is the interface an artifact presents at its boundary
 native side to one surface of the language side and asserting they
 must agree. Surface theory's job is to enumerate the contracts, say
 *which* pair of surfaces each one aligns, and provide a mechanical
-check. The running concrete witness is `tiny` ([`tiny.md`](../tiny.md));
+check. The running concrete witness is `tiny` ([`tiny.md`](tiny.md));
 the Z3 instantiation in §2.1 grounds the abstract roles in a
 real-world target.

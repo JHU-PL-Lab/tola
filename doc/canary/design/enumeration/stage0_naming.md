@@ -155,3 +155,69 @@ Lifecycle stages from the action catalogue. Per-project marks:
 
 Currently driven by `canary_scenario_coverage.ml`. To be replumbed through
 the enumeration engine (F5).
+
+## Term ↔ code
+
+*Moved here 2026-08-27 from the retired `design/ssot.md` §6.1, which
+the source cites in eight places. It is the vocabulary map, so it
+belongs with the rest of the vocabulary.*
+
+Canonical name-to-code map. If a term isn't in this table, add a
+row before using it in code or writeup. Term names are shared with
+the writeup — no need for a separate alignment section.
+
+| Level        | Term                       | Meaning                                                                                                                                                         | Code                                                                                                                                                                             |
+| ------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Top**      | **project**                | System under test + coverage config bundle. Owns scenarios + contract bindings.                                                                                 | `Canary_project_run.project_run` (`projects/`) — A6 2026-08-05: the never-read `Canary_project.project` bundle was deleted; z3/llvm's identity stays their variant list until A5 |
+| Middle       | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario`                                                                                                                                                       |
+| Below-middle | **runner_spec**            | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario.                                         | `Canary_step_builder.runner_spec`                                                                                                                                                |
+| Below-middle | **action_graph**           | Actions-plus-pools schema (declared actions + the artifact-node pools produced by applying them).                                                               | `Canary_action.action_graph`                                                                                                                                                     |
+| Low          | **step**                   | Concrete instantiation of an action: cmdline + env + expectation. Runtime unit consumed by the four backends.                                                   | `Canary_step_model.step`                                                                                                                                                         |
+| Low (legacy) | **step_body**              | Shell-command record used by the retired YAML backend + `canary_toolchain`'s `verify_*_step` helpers (zero live consumers). Kept as placeholder.                | `Canary_basic.step_body`                                                                                                                                                         |
+| Action verb  | **action**                 | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue.                                                                               | `Canary_basic.action`                                                                                                                                                            |
+
+...
+| Attribute of action   | **stage**                  | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings.                                                          | (doc-only)                           |
+| Attribute of artifact | **artifact_status**        | Lifecycle state (`Built \| Installed_state \| Packed \| Fetched`). Complement to `location`. (Dormant; its `Installed` was renamed `Installed_state` 2026-08-18 to free the name for the *provision*, which is the live axis.) | `Canary_store.artifact_status`       |
+| Theory                | **rule**                   | *What an action is for* — operational semantics / invariants. Doc-only concept; no code counterpart.                                                            | —                                    |
+
+**Same-word-different-level pitfalls.**
+
+- **project** (top) vs the historical **project_spec** (renamed to
+  **runner_spec** 2026-07-21). One `project` produces many
+  `runner_spec`s — one per scenario/variant.
+- **scenario** ≡ **variant** ≡ **world** — same taxonomy position; tiny calls
+  them scenarios (22 concrete), z3/llvm historically called them variants (2-3
+  each), and the 2026-08-05 enumeration printing briefly said "world" (one
+  enumerated flat assignment). **Unified 2026-08-05: the display term is
+  `scenario`, everywhere** (`spec`/`status`/`action` output). "variant"
+  survives only in code identifiers (`variant_id`/`variant_key`/
+  `variant_file` — a scenario's cache/filename key) and `print_spec_variants`
+  internals; renaming those is a queued mechanical sweep (status §E), not a
+  display concern.
+  `Canary_run_info.run_project_multi` consumes both under the same
+  `variants` list.
+- **action** (verb, code) vs **rule** (theory, doc-only) — freed by
+  the 2026-07-21 rename. Pre-rename, `rule` was overloaded.
+- **stage** (pipeline phase, doc-only) vs **artifact_status**
+  (lifecycle state, code) — pre-rename, `stage` was overloaded.
+- **step** (runtime, `Canary_step_model`) vs **step_body** (legacy
+  shell carrier, `Canary_basic`) — kept apart post-rename.
+
+**Ownership.** Project owns scenarios semantically (each is tied to
+what it exercises), and no project bundle holds a `scenarios` field —
+each project's module keeps concrete ownership. (The
+`Canary_project.project` bundle this used to cite was never read by
+anything and was deleted 2026-08-05, A6;
+[`Canary_project_run.project_run`](../../../../src/canary/project/canary_project_run.ml)
+is the project identity now.)
+
+**Pattern vs instance.** `Sc.1..Sc.6` patterns live project-agnostic
+in `Canary_scenario.good_scenarios`. Concrete scenarios (`Bs.N`,
+project variants) live under their owning project's module.
+
+Rename chronicle 2026-07-21 (`project_spec → runner_spec`,
+`rule → action`, `action_rule → action_graph`, `action_step → step`,
+`step → step_body`, `stage → artifact_status`) captured in
+[`worklog_2026_07.md`](../../worklog/worklog_2026_07.md).
+

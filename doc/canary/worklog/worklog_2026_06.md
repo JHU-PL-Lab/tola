@@ -1,7 +1,7 @@
 # Worklog — 2026-06 (Phases 14a through 15.7)
 
 This worklog absorbs the per-phase chronicle that previously lived inline
-in [research/plan.md §6 Step 7 / Phase 14 / Phase 15](../research/plan.md).
+in [research/plan.md §6 Step 7 / Phase 14 / Phase 15](../plan.md).
 Each entry describes what shipped, why, and where it landed. plan.md
 itself now keeps only the forward-looking sections (Step 7 framing,
 Phase 16 sketch, Phase 17+ sketch) and points here for the chronicle.

@@ -162,7 +162,7 @@ Steps (each step keeps the suite green before the next):
    2026-08-15). Remaining: the raw-override warning; delete
    `mi_artifact_shape` prose.
 6. [ ] **Contract registry unification** — design in
-   [`agreement_registry_audit.md`](design/agreement_registry_audit.md)
+   [`agreement_registry_audit.md`](design/agreement_registry.md)
    (2026-08-17, merged 2026-08-21): one
    statement per contract (invariant as a FALSIFIER, tool-based inputs,
    evidence kind, firing derived from mechanism × provision); the
@@ -171,7 +171,7 @@ Steps (each step keeps the suite green before the next):
    is working — landing a project is cheap — but what a landing
    *checks* is still per-project tables, and no PR has been driven off a
    checker. Growing the roster without this adds rows, not claims. It is
-   stage 2 of [`research/plan.md` §4](research/plan.md)'s delivery
+   stage 2 of [`research/plan.md` §4](plan.md)'s delivery
    pipeline; the catalogue itself is 3 of 20 sections confirmed and
    resumes at its §2 *Artifact surfaces*.
 7. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump

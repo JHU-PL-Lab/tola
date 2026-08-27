@@ -507,11 +507,35 @@ recorded here, reported as-is, NOT special-cased in checker code:
   refuses empty/system paths — canary never global-installs (fetch
   actions are the only intended global-store writes).
 
-### Known — CI runs the pre-A5 shape
+### Known — CI runs the pre-A5 shape (superseded for 2 projects, 2026-08-27)
 
 `ci_jobs` (`canary_run.ml`) derives steps from legacy `runner_spec`
-values — one chain per project, not the enumerated scenario set. Realign
-with the registry when CI grows scenario coverage.
+values — one chain per project, not the enumerated scenario set.
+
+**Now partly closed.** `Canary_ci` renders jobs from
+`Canary_pipeline.steps_of` (one job per scenario, the same steps the
+local runner executes) and `canary ci --min` writes `canary_min.yml` for
+sqlite + cairo. What the legacy path cost, found while recovering CI:
+`sqlite_ci_spec` passes an assignment naming only `a_lib`, so no binding
+row realizes and its generated job had silently lost `fetch_binding` plus
+both probes. Migrating the remaining projects is what closes this.
+
+### Open — the pre-A5 workflow fails at every `*_summary` step
+
+`canary_ci.yml`'s five jobs have all failed on every push since at least
+2026-08-26, each at its `*_summary` step (`probe_lib_summary`,
+`probe_binding_pkg_summary`). NOT the inspectors themselves: the
+pipeline-rendered cairo job runs `probe_lib_inspect` and
+`probe_binding_ocaml_inspect` green on the same runner image, so the
+helper scripts and python work there. The fault is in the legacy spec's
+summary steps — stale paths are the first suspect (the audit already
+flagged `contrib/canary/opam-local-repo` vs the real
+`canary/templates/opam-local-repo`).
+
+The workflow is `workflow_dispatch`-only as of 2026-08-27 so it stops
+burning ~25 minutes a push to fail the same way; it is kept because it is
+the record of what once passed. Diagnose it or migrate its jobs to
+`Canary_ci` — the second is probably cheaper.
 
 
 ## 3. Per-project chores

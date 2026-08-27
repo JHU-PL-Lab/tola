@@ -1,22 +1,22 @@
 # Paper plan & working roadmap
 
 **Kind: plan.** Venues, milestones, and the open roadmap. Open `[ ]`
-items only — everything chronicled lives in [`../worklog/`](../worklog/).
+items only — everything chronicled lives in [`../worklog/`](worklog/).
 
 > **Rewritten 2026-08-26.** Two changes. (1) **POPL is purged** — its
 > 9 Jul 2026 deadline passed without a submission, so the formal-calculus
 > milestone (former M1) and the POPL venue-gap list are history; they are
-> chronicled in [`worklog_2026_08.md`](../worklog/worklog_2026_08.md).
+> chronicled in [`worklog_2026_08.md`](worklog/worklog_2026_08.md).
 > (2) The rest is re-stated against **project status** rather than against
 > the April milestones: the empirical count that M2 asked for is met, the
 > gaps that remain are *depth*, *concrete checking*, and *delivery*.
 > §6's shipped design prose (steps 1–7, written before the A5 generic
 > path) was compressed to its open items for the same reason.
 
-Companion to [`draft.md`](draft.md) (manuscript) +
-[`surface_draft/`](surface_draft/) (materials) for theory,
-[`tiny.md`](tiny.md) (witness), and
-[`../project/status_project.md`](../project/status_project.md) (the
+Companion to [`draft.md`](research/draft.md) (manuscript) +
+[`surface_draft/`](research/surface_draft/) (materials) for theory,
+[`tiny.md`](research/surface_draft/tiny.md) (witness), and
+[`../project/status_project.md`](project/status_project.md) (the
 project layer's tracker — the empirical half of everything below).
 
 ## Quick map
@@ -89,13 +89,13 @@ M2. Items cross-link to §4 (pipeline stage) and §7 (roadmap).
 The one to plan around. Everything else is opportunistic.
 
 Theory / writing (**author**):
-- [ ] Full draft of [`draft.md`](draft.md) plus intro, related work,
+- [ ] Full draft of [`draft.md`](research/draft.md) plus intro, related work,
       evaluation, and conclusion as a single OOPSLA submission. The
       spine exists; §5 (CC) and §7 (Impl) are still roadmap bullets, and
       §5.6's own note says the real-project sections cannot be written
       honestly until the specs are lifted through the post-A5 framework.
 - [ ] Related work against linking calculi, manifest contracts, and ABI
-      tooling. Notes in [`literature.md`](literature.md).
+      tooling. Notes in [`literature.md`](research/literature.md).
 - [ ] Coverage / blame story (§4 stage 4) lifted into a contribution
       rather than a status table.
 - [ ] Manuscript §5.7 (typed calculus) formalised to "applied PL paper"
@@ -109,22 +109,22 @@ Tool / empirical (**agent-ownable**):
 - [ ] **Concrete checking** — the agreement registry (§4 stage 2). The
       runner side lands projects fine; what a landing *checks* is still
       per-project tables plus c1..c8. This is
-      [`../status.md`](../status.md) M2 step 6 and its catalogue is
-      [`agreement_registry_audit.md`](../design/agreement_registry_audit.md)
+      [`../status.md`](status.md) M2 step 6 and its catalogue is
+      [`agreement_registry_audit.md`](design/agreement_registry.md)
       (3 of 20 outline sections confirmed; resume at §2 *Artifact
       surfaces*). **Not descopable** (user, 2026-08-26).
 - [ ] **Depth, not count** — the library count M2 originally asked for
       (3 → 5–8) is **met**: ten registry projects plus tiny1. The honest
       gap is the 2×2: two projects have the full matrix (sqlite —
       narrow; z3), one is collapse-only, six are half.
-      [`../project/projects.md` §2](../project/projects.md).
+      [`../project/projects.md` §2](project/projects.md).
 - [ ] **At least one merged or filed upstream PR** (§4 stage 5). Zero
       today. This is the single largest hole in the pipeline claim.
 - [ ] macOS local testing green — at minimum `canary artifact-test` on a
       Mac. Note the repo now lives on one (`/Users/…`), while the run
       history and CLAUDE.md's paths are still the Linux/WSL box.
 - [ ] CI runs the post-A5 shape (today it runs one chain per project,
-      not the enumerated set) — [`../project/issues.md`](../project/issues.md).
+      not the enumerated set) — [`../project/issues.md`](project/issues.md).
 
 ### M3 — PLDI 2027 (~mid-Nov 2026) — **stretch, ~11 weeks**
 
@@ -133,7 +133,7 @@ story matures fast. Scope in §6.
 
 - [ ] Benchmark corpus: 30+ packages mined across apt/opam/pip with
       known breakages. The measured conf-* survey
-      ([`../surveys/conf_packages.md`](../surveys/conf_packages.md) §G)
+      ([`../surveys/conf_packages.md`](surveys/conf_packages.md) §G)
       is the mining machinery — it already ranks candidates from opam
       metadata, apt, and conda-forge.
 - [ ] Concrete static-inference algorithm with a complexity statement.
@@ -194,7 +194,7 @@ judgement, `agent` needs runs and tables.
      no 7.x guard exists. A genuine upstream bug; the most valuable and
      the most expensive (177 apt packages to run it).
 - **Stage 4 is what the report milestone is for** —
-  [`../project/status_project.md` §3](../project/status_project.md).
+  [`../project/status_project.md` §3](project/status_project.md).
   A narrative over the matrix ("your HEAD binding broke against your
   released lib; here is the failing check; here is the fork with the
   fix passing it"), not a dump of run artifacts.
@@ -214,9 +214,9 @@ What has landed (`[x]`) and what a reviewer will look for (`[ ]`).
 
 Foundational theory, tiny witness, and the prepare/confirm flow landed
 pre-June 2026 — chronicled in
-[`worklog_2026_05.md`](../worklog/worklog_2026_05.md) Session 8. The
-model lives in [`draft.md`](draft.md) + [`surface_draft/`](surface_draft/);
-the witness in [`tiny.md`](tiny.md).
+[`worklog_2026_05.md`](worklog/worklog_2026_05.md) Session 8. The
+model lives in [`draft.md`](research/draft.md) + [`surface_draft/`](research/surface_draft/);
+the witness in [`tiny.md`](research/surface_draft/tiny.md).
 
 - [x] Surface roles, contract catalogue c1..c8, tiny as the witness that
       each fires.
@@ -250,7 +250,7 @@ the witness in [`tiny.md`](tiny.md).
 - [ ] **tiny-full's declared axes** — it advertises six worlds and
       enumerates one; the Built-lib and Dev-binding axes are in dead
       code. Restore or delete —
-      [`../project/issues.md`](../project/issues.md) §1. As the
+      [`../project/issues.md`](project/issues.md) §1. As the
       witness-scaled-to-a-project, it is cited by the paper.
 - [ ] **Comparator closures** — see §7.
 
@@ -259,7 +259,7 @@ the witness in [`tiny.md`](tiny.md).
 - [ ] **Related work** — linking calculi (Cardelli's units,
       Flatt–Felleisen, MixML), manifest contracts, ABI tools
       (`abigail`, `abi-compliance-checker`), SemVer literature. Notes in
-      [`literature.md`](literature.md).
+      [`literature.md`](research/literature.md).
 - [ ] **Evaluation section** — the matrix as evidence: what was checked,
       what fired, what was fixed. Depends on §4 stages 4–5.
 - [ ] **Full paper draft.**
@@ -270,7 +270,7 @@ the witness in [`tiny.md`](tiny.md).
 2. SymbolVersion wired end-to-end on a real version-drift case. Partly
    there: c5 fires on tiny's `lib_symbol_version_broken`, and zlib
    1.3.2's `ZLIB_1.3.1.2` / `ZLIB_1.3.2` nodes are the measured natural
-   case ([`../surveys/conda_forge.md`](../surveys/conda_forge.md)) —
+   case ([`../surveys/conda_forge.md`](surveys/conda_forge.md)) —
    unlanded.
 3. Benchmark suite: 30+ packages across apt/opam/pip with a quantified
    breakage corpus.
@@ -291,9 +291,9 @@ packaging deferred cleanly (2026-05-19), the unit-test layer seeded
 was then superseded by the A5 generic path — its prose described
 `script_spec` / `run_project_multi` / `canary_project_tiny.ml`, none of
 which exist now. History:
-[`worklog_2026_05.md`](../worklog/worklog_2026_05.md) Session 8,
-[`worklog_2026_06.md`](../worklog/worklog_2026_06.md),
-[`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
+[`worklog_2026_05.md`](worklog/worklog_2026_05.md) Session 8,
+[`worklog_2026_06.md`](worklog/worklog_2026_06.md),
+[`phase4_2026_05.md`](worklog/phase4_2026_05.md).
 
 **Naming convention** (live — the code and docs follow it):
 
@@ -319,10 +319,10 @@ which exist now. History:
 **The SSOT pipeline** (M2, author decision — proposed 2026-08-26,
 awaiting confirmation)
 
-[`ssot.md`](../design/ssot.md) is 1209 lines doing three jobs: the ID
+[`ssot.md`](design/ssot.md) is 1209 lines doing three jobs: the ID
 dictionary (§1–3, §6.1), enumeration *design* (§4.2.x), and an
 open-decision list (the `drift` rows). The second job now has its own
-tree — [`design/enumeration/`](../design/enumeration/) with a doc per
+tree — [`design/enumeration/`](design/enumeration/) with a doc per
 pass — so the design half is duplicated, and a prose session pays for
 all three. Proposed shape:
 
@@ -346,14 +346,14 @@ all three. Proposed shape:
 **Checking (§4 stage 2)**
 
 - [ ] **Agreement catalogue** — resume at
-      [`agreement_registry_audit.md`](../design/agreement_registry_audit.md)
+      [`agreement_registry_audit.md`](design/agreement_registry.md)
       §2 *Artifact surfaces*; 17 of 20 sections open. The per-project
       contract-binding tables converge onto it and get deleted
-      ([`../status.md`](../status.md) M2 steps 6–7).
+      ([`../status.md`](status.md) M2 steps 6–7).
 - [ ] **Closure-shape contract** — no c1..c8 states it, and ncurses is
       the specimen: two packagers agree on every symbol, soname and ELF
       version node and still segfault.
-      [`closure_shape.md`](../design/closure_shape.md). First contract
+      [`closure_shape.md`](design/closure_shape.md). First contract
       addition since the registry landed.
 - [ ] **Real AST inspectors for `bpc1` / `bpe1`** — ctypes `argtypes`
       parse and cext `PyMethodDef` parse; today's stand-ins are grep.
@@ -367,14 +367,14 @@ all three. Proposed shape:
 
 - [ ] **First upstream PR** — the `conf-ncurses` `os-family` line.
 - [ ] **The report** — the narrative over the matrix
-      ([`../project/status_project.md` §3](../project/status_project.md)).
+      ([`../project/status_project.md` §3](project/status_project.md)).
 - [ ] **Run coverage and age** printed by `result` / `status`, so
       `41/42` is accounted rather than reconstructed by hand.
 
 **Project-spec hygiene** (long-standing, absorbs the old #18/#19/#25/#26/#40)
 
 - [ ] Real `cmake --install` instead of the `cp` fake in z3 / llvm
-      `install_lib` — see [`../ops/install_targets.md`](../ops/install_targets.md).
+      `install_lib` — see [`../ops/install_targets.md`](ops/install_targets.md).
 - [ ] z3's `build_z3_ocaml_bindings` PHONY guard
       (`test -f z3ml.cmxa || ninja …`) so a cache rebuild doesn't
       trigger a full z3 rebuild.
@@ -385,7 +385,7 @@ all three. Proposed shape:
 
 **Docs**
 
-- [ ] Regenerate [`tiny.md`](tiny.md) — it is tiny1-era; rewrite for the
+- [ ] Regenerate [`tiny.md`](research/surface_draft/tiny.md) — it is tiny1-era; rewrite for the
       tiny-factory / tiny1 / tiny-full split with canonical naming. The
       paper cites it as the witness.
 - [ ] After each c\* / contract change, flip the corresponding ✓/✗ in
