@@ -21,18 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: ocaml/setup-ocaml@v3
+      - uses: ./.github/actions/canary-setup
         with:
-          ocaml-compiler: "5.4"
-      - name: Add canary opam repo
-        run: |
-          eval $(opam env)
-          opam repo add canary-local \
-            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
-            --rank=1 2>/dev/null \
-            || opam repo set-url canary-local \
-            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
-          opam update canary-local
+          ocaml-version: "5.4"
 
       - name: fetch_source
         run: |
@@ -53,7 +44,7 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/ocaml"
           eval $(opam env)
-          INSTALLED=$(opam list sqlite3 --installed --short --columns=version 2>/dev/null)
+          INSTALLED=$(opam list sqlite3 --installed --short --columns=version --color=never 2>/dev/null)
           test "$INSTALLED" = "5.1.0" || { echo "WORLD MISMATCH: switch has sqlite3 $INSTALLED, scenario declares sqlite3 5.1.0"; exit 1; }
           eval $(opam env)
           export LD_LIBRARY_PATH=$PWD/_out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/lib:$LD_LIBRARY_PATH
@@ -80,18 +71,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: ocaml/setup-ocaml@v3
+      - uses: ./.github/actions/canary-setup
         with:
-          ocaml-compiler: "5.4"
-      - name: Add canary opam repo
-        run: |
-          eval $(opam env)
-          opam repo add canary-local \
-            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
-            --rank=1 2>/dev/null \
-            || opam repo set-url canary-local \
-            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
-          opam update canary-local
+          ocaml-version: "5.4"
 
       - name: fetch_source
         run: |

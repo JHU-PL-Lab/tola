@@ -1094,8 +1094,24 @@ let ci_cmd =
         | Some pr -> [ (n, pr) ]
         | None -> Fmt.epr "canary ci --min: unknown project %s@." n; []
       in
-      write_workflow out "canary_min.yml"
-        (Canary_ci.render_minimal (pick "sqlite" @ pick "cairo"))
+      let yaml, shells =
+        Canary_ci.render_minimal (pick "sqlite" @ pick "cairo")
+      in
+      write_workflow out "canary_min.yml" yaml;
+      (* the shell twins live in _out (generated, gitignored): they are a
+         debugging aid for running a CI job locally, not a tracked
+         artifact. *)
+      let sh_dir = "_out/canary/ci" in
+      ignore (Stdlib.Sys.command (Fmt.str "mkdir -p %s" sh_dir) : int);
+      List.iter
+        (fun (id, body) ->
+          let path = sh_dir ^ "/" ^ id ^ ".sh" in
+          let oc = Stdlib.open_out path in
+          Stdlib.output_string oc body;
+          Stdlib.close_out oc;
+          ignore (Stdlib.Sys.command (Fmt.str "chmod +x %s" path) : int);
+          Fmt.pr "Wrote %s@." path)
+        shells
     else begin
       let distro = detect_distro () in
       Canary_project_z3.render_opam_in ~tola_root:".";

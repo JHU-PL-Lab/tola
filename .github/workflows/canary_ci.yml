@@ -1,18 +1,15 @@
 name: Canary CI
 
+# MANUAL ONLY, 2026-08-27. This workflow is the PRE-A5 shape: five jobs
+# built from per-project *_ci_spec values that the pipeline left behind,
+# and it has failed on every push since at least 08-26 — all five jobs at
+# their *_summary step. It was still triggering automatically and burning
+# ~25 minutes a push to fail the same way each time.
+#
+# Its replacement is canary_min.yml, rendered from the live pipeline
+# (Canary_ci). Left here, runnable on demand, because it is the record of
+# what once passed and the summary-step failure is still undiagnosed.
 on:
-  push:
-    paths:
-      - 'canary/**'
-      - 'src/canary/**'
-      - 'src/bin/canary_main.ml'
-      - '.github/workflows/canary_ci.yml'
-  pull_request:
-    paths:
-      - 'canary/**'
-      - 'src/canary/**'
-      - 'src/bin/canary_main.ml'
-      - '.github/workflows/canary_ci.yml'
   workflow_dispatch:
 
 jobs:

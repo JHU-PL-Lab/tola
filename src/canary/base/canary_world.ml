@@ -169,11 +169,24 @@ let pre_shell (ws : t list) : string =
   String.concat ~sep:""
     (List.filter_map ws ~f:(function
       | Opam_pin { pkg; version } ->
+          (* --color=never (2026-08-27). The first GH CI run of the
+             recovered workflow failed here with
+
+               WORLD MISMATCH: switch has sqlite3 ^[[01;35m5.1.0^[[0m,
+                               scenario declares sqlite3 5.1.0
+
+             The switch held exactly the pin; [ocaml/setup-ocaml@v3]
+             exports OPAMCOLOR=always, so opam wrapped the version in
+             ANSI escapes and the string compare could never succeed.
+             Same class as the cmake-colour trap in CLAUDE.md's gotchas:
+             an assertion that compares tool OUTPUT has to say what
+             format it wants, because the environment will otherwise
+             decide. Locally invisible — nothing sets OPAMCOLOR here. *)
           Some
             (Printf.sprintf
                "eval $(opam env)\n\
                 INSTALLED=$(opam list %s --installed --short \
-                --columns=version 2>/dev/null)\n\
+                --columns=version --color=never 2>/dev/null)\n\
                 test \"$INSTALLED\" = \"%s\" || { echo \"WORLD MISMATCH: \
                 switch has %s $INSTALLED, scenario declares %s %s\"; exit \
                 1; }\n"

@@ -41,7 +41,13 @@ let query_version_cmd ~pkg =
    from the opam version — e.g. z3.dev's META carries the source version
    while opam reports "dev"). *)
 let version_of_cmd ~pkg =
-  [%string "eval $(opam env) && opam list %{pkg} --installed --short --columns=version 2>/dev/null"]
+  (* --color=never: the same trap the world assertion hit on CI
+     (OPAMCOLOR=always wraps the version in ANSI escapes, so an equality
+     test on it can never pass). This is the OCaml-side twin of that
+     query — [pin_check_post] compares its output the same way. *)
+  [%string
+    "eval $(opam env) && opam list %{pkg} --installed --short \
+     --columns=version --color=never 2>/dev/null"]
 
 (* A shell test: the switch holds exactly [pin] for [pkg]. *)
 let holds_pin_cmd ~pkg ~pin =

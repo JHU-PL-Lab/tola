@@ -1,0 +1,63 @@
+name: "canary setup"
+description: >
+  Shared setup for every canary job: OCaml/opam, system build deps, base
+  opam packages, and the canary-local opam repo. Factored out of the
+  generated workflow so the per-job YAML is nothing but canary's own
+  steps.
+inputs:
+  ocaml-version:
+    description: "OCaml compiler for setup-ocaml. Match the switch the local verdicts came from."
+    required: false
+    default: "5.4"
+  opam-packages:
+    description: "Base opam packages every canary probe needs."
+    required: false
+    default: "ocamlfind"
+runs:
+  using: "composite"
+  steps:
+    - uses: ocaml/setup-ocaml@v3
+      with:
+        ocaml-compiler: ${{ inputs.ocaml-version }}
+        # opam's bwrap sandbox is not usable on a runner, and a canary
+        # step installs packages as its actual work — the z3 fork's
+        # canary infra needs this too.
+        opam-disable-sandboxing: true
+
+    # apt-get install WITHOUT a preceding update fails on a runner whose
+    # package index has aged out; the generated fetch_lib steps are plain
+    # `apt-get install`, so the index is refreshed once, here.
+    - name: Refresh the apt index
+      if: runner.os == 'Linux'
+      shell: bash
+      run: sudo apt-get update
+
+    - name: Install system build dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends m4 pkg-config
+
+    - name: Install system build dependencies (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: brew install pkg-config
+
+    # The local repo carries canary's own opam packages (z3.dev,
+    # llvm.*-shared). Harmless for projects that do not use them, and one
+    # less step in every generated job.
+    - name: Add the canary opam repo
+      shell: bash
+      run: |
+        eval $(opam env)
+        opam repo add canary-local \
+          "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+          --rank=1 2>/dev/null \
+          || opam repo set-url canary-local \
+          "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+        opam update canary-local
+
+    - name: Install base opam packages
+      shell: bash
+      run: |
+        eval $(opam env)
+        opam install -y ${{ inputs.opam-packages }}
