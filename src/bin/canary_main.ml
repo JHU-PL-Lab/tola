@@ -1072,15 +1072,40 @@ let ci_cmd =
           ~doc:
             "Output directory for generated YAML (default: .github/workflows)")
   in
-  let run out () =
-    let distro = detect_distro () in
-    Canary_project_z3.render_opam_in ~tola_root:".";
-    write_workflow out "canary_ci.yml"
-      (Canary_run.render_ci ~root:"_out" distro)
+  (* THE MINIMAL UBUNTU WORKFLOW (2026-08-27) — the recovery starts here.
+     Rendered from the LIVE pipeline (Canary_ci) rather than from the
+     legacy per-project *_ci_spec values, which is what let the sqlite job
+     lose its binding half unnoticed. Separate file, so recovering CI
+     cannot clobber the 5-job canary_ci.yml while it is still the record
+     of what once passed. *)
+  let min_flag =
+    Arg.(
+      value & flag
+      & info [ "min" ]
+          ~doc:
+            "Write canary_min.yml instead: the minimal ubuntu workflow \
+             (sqlite + cairo, all-Fetched world each), rendered from the \
+             live pipeline.")
+  in
+  let run out min () =
+    if min then
+      let pick n =
+        match List.assoc_opt n Canary_registry.all_specs with
+        | Some pr -> [ (n, pr) ]
+        | None -> Fmt.epr "canary ci --min: unknown project %s@." n; []
+      in
+      write_workflow out "canary_min.yml"
+        (Canary_ci.render_minimal (pick "sqlite" @ pick "cairo"))
+    else begin
+      let distro = detect_distro () in
+      Canary_project_z3.render_opam_in ~tola_root:".";
+      write_workflow out "canary_ci.yml"
+        (Canary_run.render_ci ~root:"_out" distro)
+    end
   in
   Cmd.v
     (Cmd.info "ci" ~doc:"Generate GH Actions workflow YAML")
-    Term.(const run $ out $ const ())
+    Term.(const run $ out $ min_flag $ const ())
 
 let debug_ci_cmd =
   let out =

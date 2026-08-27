@@ -1,0 +1,157 @@
+name: Canary — minimal (ubuntu)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'canary/**'
+      - 'src/canary/**'
+      - 'src/bin/canary_main.ml'
+      - '.github/workflows/canary_min.yml'
+  pull_request:
+    paths:
+      - 'canary/**'
+      - 'src/canary/**'
+      - 'src/bin/canary_main.ml'
+      - '.github/workflows/canary_min.yml'
+
+jobs:
+  sqlite:
+    name: sqlite — source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.4"
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_source
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_source"
+          mkdir -p _out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/src && curl -sL https://sqlite.org/2023/sqlite-amalgamation-3430200.zip -o _out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/src/a.zip && (cd _out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/src && unzip -oq a.zip) && echo 'ok' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.ok
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_lib"
+          sudo apt-get install -y libsqlite3-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding/ocaml"
+          eval $(opam env) && opam install sqlite3.5.1.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.ok
+
+      - name: probe_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/ocaml"
+          eval $(opam env)
+          INSTALLED=$(opam list sqlite3 --installed --short --columns=version 2>/dev/null)
+          test "$INSTALLED" = "5.1.0" || { echo "WORLD MISMATCH: switch has sqlite3 $INSTALLED, scenario declares sqlite3 5.1.0"; exit 1; }
+          eval $(opam env)
+          export LD_LIBRARY_PATH=$PWD/_out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/lib:$LD_LIBRARY_PATH
+          ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/ocaml/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/ocaml/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.log
+          exit $RC
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_lib"
+          LIB=$(pkg-config --variable=libdir sqlite3 2>/dev/null)/libsqlite3.so
+          test -f "$LIB" || LIB=$(pkg-config --variable=libdir sqlite3 2>/dev/null)/libsqlite3.so.dylib
+          test -f "$LIB" || LIB=$(dpkg -L libsqlite3-dev 2>/dev/null | grep '/libsqlite3.so' | head -1)
+          test -f "$LIB" || LIB=$(ldconfig -p 2>/dev/null | grep 'libsqlite3.so' | awk '{print $NF}' | head -1)
+          test -f "$LIB"
+          COUNT=$(nm -D "$LIB" 2>/dev/null | grep -v ' U ' | grep -c 'sqlite3_' || echo 0)
+          printf 'sqlite3_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.log
+          test "$COUNT" -gt 0
+
+
+  cairo:
+    name: cairo — source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.4"
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_source
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_source"
+          if [ ! -d $GITHUB_WORKSPACE/contrib/cairo-all/cairo/.git ]; then git clone https://gitlab.freedesktop.org/cairo/cairo.git $GITHUB_WORKSPACE/contrib/cairo-all/cairo; fi && \
+          git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo fetch -q origin 1.18.0 && \
+          if [ ! -d $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 ]; then git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo worktree add -f $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 1.18.0; fi && \
+          git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 checkout -q -f 1.18.0 && \
+          echo '$GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0' > $GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_source/source_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_lib"
+          sudo apt-get install -y libcairo2-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_lib/lib_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_binding/ocaml"
+          eval $(opam env) && opam install cairo2 -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_binding/ocaml/binding_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: probe_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml"
+          eval $(opam env)
+          ocamlfind ocamlopt -package cairo2 -linkpkg canary/examples/cairo/cairo_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example > $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example >> $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log
+          exit $RC
+
+      - name: probe_binding_ocaml_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'cairo2' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/inspect_ocaml.py --path 'cairo2' --watchlist 'Cairo' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_binding/ocaml/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libcairo.so* /usr/lib*/libcairo.so* 2>/dev/null \
+                  "$(brew --prefix cairo 2>/dev/null)/lib/libcairo.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'cairo_' || echo 0)
+          printf 'cairo_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_lib/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libcairo.so* /usr/lib*/libcairo.so* 2>/dev/null \
+                  "$(brew --prefix cairo 2>/dev/null)/lib/libcairo.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'cairo_' --watchlist 'cairo_create,cairo_destroy,cairo_paint,cairo_move_to,cairo_line_to,cairo_stroke,cairo_image_surface_create,cairo_surface_destroy' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_lib/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json
+
