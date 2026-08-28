@@ -25,11 +25,6 @@ jobs:
         with:
           ocaml-version: "5.4"
 
-      - name: fetch_source
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_source"
-          mkdir -p _out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/src && curl -sL https://sqlite.org/2023/sqlite-amalgamation-3430200.zip -o _out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/src/a.zip && (cd _out/canary/projects/sqlite/source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched/src && unzip -oq a.zip) && echo 'ok' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.ok
-
       - name: fetch_lib
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_lib"
@@ -74,15 +69,6 @@ jobs:
       - uses: ./.github/actions/canary-setup
         with:
           ocaml-version: "5.4"
-
-      - name: fetch_source
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_source"
-          if [ ! -d $GITHUB_WORKSPACE/contrib/cairo-all/cairo/.git ]; then git clone --filter=blob:none https://gitlab.freedesktop.org/cairo/cairo.git $GITHUB_WORKSPACE/contrib/cairo-all/cairo; fi && \
-          git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo fetch -q origin 1.18.0 && \
-          if [ ! -d $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 ]; then git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo worktree add -f $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 1.18.0; fi && \
-          git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 checkout -q -f 1.18.0 && \
-          echo '$GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0' > $GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_source/source_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.ok
 
       - name: fetch_lib
         run: |
