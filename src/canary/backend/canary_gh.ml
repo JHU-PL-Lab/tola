@@ -65,9 +65,19 @@ let render_gh_step ~project (step : step) =
   in
   let render_failure_check ~contains_any =
     let id = sanitize_id step.tag in
+    (* the VARIANT-KEYED log the step actually writes (2026-08-28). The
+       grep used a bare "probe.log", which only existed back when CI ran
+       one chain per project with an empty variant key. A
+       pipeline-rendered job has a real key, so every expected-failure
+       verify was grepping a file that does not exist and reporting
+       "expected message not found" — ssl's app probe, which fails
+       correctly and was marked red for it. *)
+    let probe_log =
+      Canary_basic.variant_file ~variant_key:step.variant_id "probe.log"
+    in
     let grep_check =
       List.map contains_any ~f:(fun pat ->
-          [%string {|grep -qF '%{pat}' "%{out}/probe.log" 2>/dev/null|}])
+          [%string {|grep -qF '%{pat}' "%{out}/%{probe_log}" 2>/dev/null|}])
       |> String.concat ~sep:" \\\n          || "
     in
     let verify_body =
@@ -88,7 +98,7 @@ if %{grep_check}; then
   echo "PASS: expected failure confirmed"
 else
   echo "FAIL: expected message not found in probe.log"
-  cat "%{out}/probe.log" || true
+  cat "%{out}/%{probe_log}" || true
   exit 1
 fi|}]
     in
@@ -128,6 +138,24 @@ fi|}]
                 ~variant_key:step.variant_id rel in
             project_dir ^ "/" ^ vk_rel
       in
+      (* AN EMPTY PREDICTION IS AMBIGUOUS (2026-08-28). It means either
+         "nothing is predicted to fail" or "the cached inspection was not
+         there to resolve" — and the two want opposite renderings. llvm's
+         binding probe fails for real (Opcode.UncondBr is absent at
+         llvm.19) but its summaries are not on the generating machine, so
+         a rule that read empty as "good artifact" emitted a must-succeed
+         step and CI went red on a known xfail.
+
+         So: track whether any input went unresolved. Empty AND fully
+         resolved means the artifact really is good; empty because a file
+         was missing falls back to the oracle rendering, which accepts
+         any failure. *)
+      let unresolved = ref false in
+      let resolve rel =
+        let p = resolve rel in
+        if not (Stdlib.Sys.file_exists p) then unresolved := true;
+        p
+      in
       let derived =
         Canary_compat_run.predicted_contains_any_v2
           ~disabled:step.disabled_contracts ~resolve inputs
@@ -150,8 +178,8 @@ fi|}]
          still means "fail, signature unknown", because the project
          DECLARED the failure. *)
       (match exp with
-       | Canary_step_model.Expect_compat_derived _ when List.is_empty derived
-         ->
+       | Canary_step_model.Expect_compat_derived _
+         when List.is_empty derived && not !unresolved ->
            [ [%string {|      - name: %{step.tag}
 %{run_block full_cmd}|}] ]
            @ sym_check_step

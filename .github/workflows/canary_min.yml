@@ -443,12 +443,12 @@ jobs:
             echo "FAIL: expected failure but step succeeded"
             exit 1
           fi
-          if grep -qF 'Ssl.native_library_version' "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe.log" 2>/dev/null \
-                    || grep -qF 'native_library_version' "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe.log" 2>/dev/null; then
+          if grep -qF 'Ssl.native_library_version' "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log" 2>/dev/null \
+                    || grep -qF 'native_library_version' "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log" 2>/dev/null; then
             echo "PASS: expected failure confirmed"
           else
             echo "FAIL: expected message not found in probe.log"
-            cat "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe.log" || true
+            cat "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log" || true
             exit 1
           fi
 
@@ -495,6 +495,8 @@ jobs:
           eval $(opam env) && opam install llvm.19-shared -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/llvm/fetch_binding/ocaml/binding_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.ok
 
       - name: probe_binding_ocaml
+        id: probe_binding_ocaml
+        continue-on-error: true
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml"
           eval $(opam env)
@@ -505,6 +507,14 @@ jobs:
           RC=$?
           cat $GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml/probe_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.log
           exit $RC
+
+      - name: probe_binding_ocaml (verify)
+        run: |
+          if [ "${{ steps.probe_binding_ocaml.outcome }}" = "success" ]; then
+            echo "FAIL: expected failure but step succeeded"
+            exit 1
+          fi
+          echo "PASS: expected failure confirmed (no specific predicted strings)"
 
       - name: probe_lib
         run: |

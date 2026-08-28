@@ -1776,7 +1776,22 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
         (not (has_verify derived_empty))
         && has_verify oracle_empty
         (* and a plain success is never a failure check *)
-        && not (has_verify (rendered Canary_step_model.Expect_success))) }
+        && not (has_verify (rendered Canary_step_model.Expect_success))
+        (* THE VERIFY MUST GREP THE LOG THE STEP WRITES (2026-08-28).
+           It grepped a bare "probe.log", which existed only while CI ran
+           one chain per project with an EMPTY variant key. A
+           pipeline-rendered job has a real key, so every expected-failure
+           verify grepped a file that does not exist and reported
+           "expected message not found" — ssl's app probe, red for
+           failing exactly as predicted. *)
+        && (let with_strings =
+              rendered
+                (Canary_step_model.Expect_failure
+                   { contains_any = [ "boom" ]; version_info = None })
+            in
+            String.is_substring with_strings
+              ~substring:(Canary_basic.variant_file ~variant_key:"v" "probe.log")
+            && not (String.is_substring with_strings ~substring:"/probe.log\""))) }
 
 (* PREPARE ONCE, ENSURE PER WORLD (2026-08-28, user: "in one canary run
    ... we can assume the stable/latest is fixed ... the first request
