@@ -379,6 +379,112 @@ jobs:
             > $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_lib/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json
 
 
+  ssl:
+    name: ssl — source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/canary-setup
+        with:
+          ocaml-version: "5.4"
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_lib"
+          sudo apt-get install -y libssl-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/ocaml"
+          eval $(opam env) && opam install ssl.0.6.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok
+
+      - name: fetch_binding_ocaml_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/ocaml"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'ssl' 2>/dev/null)
+          test -n "$PKG_DIR"
+          python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
+            --watchlist 'Ssl,Ssl.init,Ssl.native_library_version' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json && mv $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/ocaml/inspect_nlv_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json && eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'ssl' 2>/dev/null)
+          test -n "$PKG_DIR"
+          python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
+            --watchlist 'Ssl,Ssl.init,Ssl.create_context' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json
+
+      - name: probe_binding_ocaml
+        id: probe_binding_ocaml
+        continue-on-error: true
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ocaml"
+          eval $(opam env)
+          INSTALLED=$(opam list ssl --installed --short --columns=version --color=never 2>/dev/null)
+          test "$INSTALLED" = "0.6.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.6.0"; exit 1; }
+          eval $(opam env)
+          ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_core.ml -o $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core >> $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
+          exit $RC
+
+      - name: probe_binding_ocaml (verify)
+        run: |
+          if [ "${{ steps.probe_binding_ocaml.outcome }}" = "success" ]; then
+            echo "FAIL: expected failure but step succeeded"
+            exit 1
+          fi
+          echo "PASS: expected failure confirmed (no specific predicted strings)"
+
+      - name: probe_app_ocaml
+        id: probe_app_ocaml
+        continue-on-error: true
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml"
+          eval $(opam env)
+          INSTALLED=$(opam list ssl --installed --short --columns=version --color=never 2>/dev/null)
+          test "$INSTALLED" = "0.6.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.6.0"; exit 1; }
+          eval $(opam env)
+          ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_nlv.ml -o $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/ssl_app_nlv > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/ssl_app_nlv >> $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
+          exit $RC
+
+      - name: probe_app_ocaml (verify)
+        run: |
+          if [ "${{ steps.probe_app_ocaml.outcome }}" = "success" ]; then
+            echo "FAIL: expected failure but step succeeded"
+            exit 1
+          fi
+          if grep -qF 'Ssl.native_library_version' "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe.log" 2>/dev/null \
+                    || grep -qF 'native_library_version' "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe.log" 2>/dev/null; then
+            echo "PASS: expected failure confirmed"
+          else
+            echo "FAIL: expected message not found in probe.log"
+            cat "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_app_ocaml/probe.log" || true
+            exit 1
+          fi
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+                  "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+          printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+                  "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json
+
+
   llvm:
     name: llvm — source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched
     runs-on: ubuntu-latest

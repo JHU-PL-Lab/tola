@@ -63,19 +63,46 @@ let generation_root = "_out"
     points) and still keeps sqlite's Built and Installed lib placements,
     six worlds where a first recovery wants one.
 
-    STRICTLY [Fetched], which costs one project: ssl's worlds carry
-    [app-direct=vendored@stable], an in-tree example that a runner
-    already has after checkout — free, and excluded anyway. Loosening to
-    "nothing Built or Installed" would admit it and also admit cairo's
-    [lib-vendored-dev], a conda-forge prebuilt that needs [canary
-    prebuilt] before a job can use it. Telling those apart means reading
-    the declared ORIGIN ([Vendored_at] in-tree vs under a machine root),
-    which the assignment alone does not carry. Seven green jobs beat a
-    fragile eighth; ssl waits for the origin to be visible here. *)
-let all_fetched (a : Canary_artifact.assignment) : bool =
-  List.for_all a ~f:(fun (_id, pl) ->
+    [Vendored] counts too WHEN THE ARTIFACT IS IN-TREE (2026-08-28).
+    A runner has the repository after `checkout`, so an in-tree example
+    costs nothing — ssl's `app-direct` and tiny-full's whole artifact
+    table are of that kind, and excluding them cost two projects. What
+    must stay excluded is the OTHER `Vendored`: a conda-forge prebuilt
+    (cairo/zlib/zstd/libffi's dev lib point) lives under a machine root
+    and needs `canary prebuilt` before a job can use it.
+
+    IN-TREE IS NOT ENOUGH FOR tiny-full, though its artifacts qualify.
+    Its `pr_runner_spec` MATERIALIZES a workspace while steps are being
+    derived (`Canary_tiny_workspace.witness_base_workspace` — the
+    impurity `Canary_pipeline`'s header states), so the emitted commands
+    point at `_out/canary/tiny/scenarios/_cache/…/workspace/`: a tree the
+    GENERATOR built, gitignored, and absent on a runner. The witness
+    cannot go to CI until materialization is a STEP rather than a
+    generation-time side effect — the same "prepare as a dispatched
+    action" item already tracked in status.md.
+
+    The two are told apart by the declared ORIGIN, not by the provision —
+    which is why this reads the ROWS (`pr_artifacts`, where
+    `Vendored_at <origin>` survives) rather than the assignment or the
+    derived `ax_universe`, both of which keep only the coarse provision.
+    The marker is the `<machine>/` prefix that `Canary_opam_binding`
+    writes for a prebuilt's libdir; an in-tree origin is repo-relative. *)
+let vendored_in_tree (pr : Canary_project_run.project_run)
+    (id : Canary_artifact.artifact_info) : bool =
+  List.exists pr.Canary_project_run.pr_artifacts ~f:(fun row ->
+      Canary_artifact.equal_artifact_info row.Canary_project_spec.ar_artifact id
+      && List.exists row.Canary_project_spec.ar_universe ~f:(fun (spec, _) ->
+             match spec with
+             | Canary_store_config.Vendored_at at ->
+                 not (String.is_prefix at ~prefix:"<machine>/")
+             | _ -> false))
+
+let all_fetched (pr : Canary_project_run.project_run)
+    (a : Canary_artifact.assignment) : bool =
+  List.for_all a ~f:(fun (id, pl) ->
       match pl.Canary_artifact.provision with
       | Canary_store.Fetched -> true
+      | Canary_store.Vendored -> vendored_in_tree pr id
       | _ -> false)
 
 (** One job from one scenario. [project] carries the per-scenario name so
@@ -130,7 +157,7 @@ let with_ci_machine_roots (f : unit -> 'a) : 'a =
 let minimal_jobs (projects : (string * Canary_project_run.project_run) list) :
     Canary_gh.job_spec list =
   List.filter_map projects ~f:(fun (name, pr) ->
-      match List.filter (Canary_pipeline.ordered pr) ~f:all_fetched with
+      match List.filter (Canary_pipeline.ordered pr) ~f:(all_fetched pr) with
       | [] -> None
       | a :: _ -> Some (job_of_scenario ~name ~pr a))
 
