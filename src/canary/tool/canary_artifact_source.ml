@@ -137,9 +137,25 @@ let worktree_ensure_cmd ?(marker = "source.ok") ~project ~(repo : source_repo)
       (* the worktree shape: clone once, worktree-add once, then refresh
          on demand (fetch the ref into the shared repo; re-pin the
          worktree to it). NOTE: a worktree's .git is a FILE (gitdir
-         pointer), so existence is tested on the directory, not on .git. *)
+         pointer), so existence is tested on the directory, not on .git.
+
+         --filter=blob:none, NOT --depth 1 (2026-08-27). Measured on
+         cairo: full .git 106M / 9.8s, partial 44M / 8.3s, shallow 34M /
+         4.5s — shallow is the cheapest and it is the one we cannot use.
+         A shallow fetch of a second ref does not create the local ref,
+         so the very next line fails:
+
+           git fetch --depth 1 origin 1.18.0   # ok
+           git worktree add -f <wt> 1.18.0     # fatal: invalid reference
+
+         which is the whole worktree-per-ref model — z3 keeps three refs
+         in one repo and `--refs latest,pre-10549` is a regression
+         experiment over two of them. A partial clone serves any ref
+         (+1.1s and +4M for the second one) because it withholds blobs,
+         not history. The rule: our constraint is MANY REFS, not one, and
+         depth optimises for the opposite case. *)
       [%string
-        {|if [ ! -d %{main}/.git ]; then git clone %{url} %{main}; fi && \
+        {|if [ ! -d %{main}/.git ]; then git clone --filter=blob:none %{url} %{main}; fi && \
 git -C %{main} fetch -q origin %{ref_} && \
 if [ ! -d %{wt} ]; then git -C %{main} worktree add -f %{wt} %{ref_}; fi && \
 git -C %{wt} checkout -q -f %{ref_} && \
@@ -204,7 +220,7 @@ let source_fetch_cmd distro (repo : source_repo) ~output_dir ~variant_key =
             [%string "_out/canary/projects/%{repo.name}/%{ver_str}_%{ref_}/src"]
           in
           [%string
-            "if [ -d %{clone_dir}/.git ]; then cd %{clone_dir} && git fetch && git checkout %{ref_}; else git clone %{url} %{clone_dir} && cd %{clone_dir} && git checkout %{ref_}; fi && echo '%{clone_dir}' > %{output_dir}/%{ok}"]
+            "if [ -d %{clone_dir}/.git ]; then cd %{clone_dir} && git fetch && git checkout %{ref_}; else git clone --filter=blob:none %{url} %{clone_dir} && cd %{clone_dir} && git checkout %{ref_}; fi && echo '%{clone_dir}' > %{output_dir}/%{ok}"]
       | Some (Hg url) ->
           let ref_ = repo.ref_ in
           let ver_str = Canary_basic.string_of_version repo.version in

@@ -78,7 +78,7 @@ jobs:
       - name: fetch_source
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/cairo/fetch_source"
-          if [ ! -d $GITHUB_WORKSPACE/contrib/cairo-all/cairo/.git ]; then git clone https://gitlab.freedesktop.org/cairo/cairo.git $GITHUB_WORKSPACE/contrib/cairo-all/cairo; fi && \
+          if [ ! -d $GITHUB_WORKSPACE/contrib/cairo-all/cairo/.git ]; then git clone --filter=blob:none https://gitlab.freedesktop.org/cairo/cairo.git $GITHUB_WORKSPACE/contrib/cairo-all/cairo; fi && \
           git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo fetch -q origin 1.18.0 && \
           if [ ! -d $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 ]; then git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo worktree add -f $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 1.18.0; fi && \
           git -C $GITHUB_WORKSPACE/contrib/cairo-all/cairo-1.18.0 checkout -q -f 1.18.0 && \

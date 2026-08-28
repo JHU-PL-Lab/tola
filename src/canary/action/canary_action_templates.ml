@@ -211,7 +211,7 @@ let realize_template (tpl : action_template) : runner_spec =
                            in
                            Printf.sprintf
                              "if [ -d %s/.git ]; then cd %s && git fetch && git checkout %s; \
-                              else git clone %s %s && cd %s && git checkout %s; fi && echo '%s' > %s/%s"
+                              else git clone --filter=blob:none %s %s && cd %s && git checkout %s; fi && echo '%s' > %s/%s"
                              clone_dir clone_dir ref_ url clone_dir clone_dir ref_ clone_dir
                              output_dir ok);
                   check_post =
