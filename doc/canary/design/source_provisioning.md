@@ -414,14 +414,30 @@ each job has one world and a cold workspace — the dominant CI cost is a
 cold opam switch (§3b), which no presence test can avoid and which wants
 caching in the composite action instead.
 
-The other fetch kinds are not converted yet. The predicates they need
-already exist and are unused as command prologues:
-`Canary_pm_{apt,brew,pip}.verify_installed_cmd`,
-`Canary_pm_opam.holds_pin_cmd`, `Canary_prebuilt.is_prepared` — the same
-"present and unused" shape `platform.md` §7 noted for
-`check_available_cmd`. Note that opam is already half-covered by a
-different route: its fetch is pin-checked, so the run cache warm-skips it
-when the switch provably holds the pin.
+**The other fetch kinds are deliberately NOT converted** (measured
+2026-08-28, after asking whether to finish them):
+
+| kind | redundant cost per extra world | state |
+| --- | --- | --- |
+| git source | 1.1s | converted — and the cold-clone path is the expensive one on CI |
+| apt / brew | **0.40s** (`apt-get install` already satisfied) | not converted |
+| opam pin | ~0s when the pin is held | already covered by another route: the fetch is pin-checked, so the run cache warm-skips it when the switch provably holds the pin. A real pin FLIP (~5.2s) is work, not waste |
+| conda-forge prebuilt | ~0s | `Canary_prebuilt.is_prepared` + the `prebuilt` subcommand already prepare out of band |
+| curl archive | ~0s | sqlite's `build_lib` already carries a `test -d … ||` guard inline |
+
+0.40s per world is below the run's own variance, so converting apt/brew
+would be optimising noise — and it carries a trap the git case does not.
+
+**If it is ever done, it must be version-aware.** The obvious guard is
+`verify_installed_cmd` (does the package exist?), and that is the wrong
+predicate: a world declaring a system lib at version X would be satisfied
+by an installed version Y, which is precisely the class of false pass
+canary exists to catch — the same shape as the staged-probe lie and the
+z3 cross cells. The right predicate is `Canary_pm.installed_version_cmd`
+compared against the declared version, i.e. the apt analogue of
+`holds_pin_cmd`. Cheap to write, easy to get wrong, and worth ~4s on a
+ten-world run — which is the whole argument for leaving it alone until
+something else makes it worth the care.
 
 ### Still future work
 
