@@ -160,6 +160,61 @@ both to draw and to derive) is still the right end state and still what
 status §A wants — but it is now an independent piece of work rather than
 this section's prerequisite.
 
+### 4b. Why this is decided in pass 5, and where it belongs
+
+2026-08-28, user: *"instead of checking the demand afterward, can we solve
+this issue in the scenario generation stage? if there is no use of the
+code, we don't need to even generate that `Fetch`?"*
+
+Right, and the knowledge is already there. `Canary_enumerate.source_is_read`
+answers exactly that question from the assignment alone — is the lib
+`Built`/`Installed`, or is any binding `Built` from this source? — with no
+realization involved. Pass 2 uses it today only to collapse the ref axis,
+and `source_ref_ok`'s comment concedes the rest: *"A world where nothing
+is built from a source still fetches it."*
+
+**What blocks acting on it there is that pass 5 does not know its world.**
+
+```ocaml
+derive_steps ~root ~project ?cache_project ?langs (spec : runner_spec)
+```
+
+`derive_steps` receives COMMANDS, not an assignment, and emits a `Fetch`
+step whenever the spec wires one — it never consults a provision. So
+marking an unread source `Absent` in the enumeration would change the
+world's identity and still emit the fetch.
+
+Three ways to close it:
+
+| | approach | cost |
+| --- | --- | --- |
+| **a** | each project's dispatch declines to wire `fetch_source` when the source is `Absent` | per-project, repeated in every spec, and forgettable in the next one |
+| **b** | thread the assignment into `derive_steps`, gate steps on provisions | a layering change, and the same threading demand-driven derivation needs anyway |
+| **c** | *(current)* decide from the step list + the typed catalogue | 12 lines, no threading — but a pass-5 answer to a pass-2 question |
+
+**(b) is the right home**, and it pays for more than this fetch: an
+unread source marked `Absent` also makes the scenario NAME honest. cairo's
+world advertises `source-fetched-1.18.0` for a source it never opens,
+which is the complaint [`step_identity.md`](step_identity.md) makes about
+`probe_lib_apt` — a name that says something the thing is not.
+
+Two costs to enter deliberately:
+
+- **Scenario ids change, and the id is the cache key.** The comment above
+  `scenario_dir_of` records the last time an enumeration change renamed
+  every dir: *"every warm marker orphaned, every project re-run cold, with
+  nothing in the diff pointing at it."* The consolation is that the
+  renamed worlds are exactly the cheap all-`Fetched` ones — the expensive
+  built worlds read their source and keep their names.
+- **`z3.dispatch_reads_source_placement`** asserts the dispatched checkout
+  matches `version_of a a_source` for EVERY assignment, including the
+  non-building baseline. An `Absent` source there needs that pin revisited
+  rather than deleted.
+
+Until (b) lands, (c) is not wrong so much as misplaced: it gets the right
+answer from a relation that is pinned, one pass later than the question
+was asked.
+
 ### 4a. What pruning costs, and the choice inside it
 
 Cloning cairo proves something true: *cairo's declared source is
