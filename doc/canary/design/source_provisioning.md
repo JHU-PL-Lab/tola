@@ -133,12 +133,32 @@ connectivity check is muted. So the heavy fix is also the merge that
 status §A already wants: **one dependency relation, used both to draw and
 to derive.**
 
-**Recommendation: write the quick fix as the demand rule.** Prune by
-backward reachability from the terminal checks — the same semantics the
-heavy fix would give — so the heavy version becomes "move this rule from
-a post-filter into the derivation", with a pin already guarding the
-behaviour. Doing the quick fix as an ad-hoc special case for
-`fetch_source` would be the version that has to be undone.
+**Landed 2026-08-28, and NOT as the backward-reachability closure this
+section first recommended.** That version — classify every step as an
+"obligation", close over `step.deps` both ways — was built and then
+replaced, for two reasons the user's question surfaced:
+
+- *"Obligation" was a category invented to make the closure terminate*,
+  not vocabulary this model has. It needed `Publish` bolted on by hand
+  the moment it met zarith's pack step.
+- **It pruned on `step.deps`** — the relation we already know has drifted
+  from the node graph, and the reason the diagram check is muted. A
+  missing edge there silently becomes a deleted step.
+
+What shipped is one question per fetch, asked of the TYPED catalogue:
+
+> **drop a `Fetch k` when no step in this world consumes `k`.**
+
+`consumes_of_action` / `produces_of_action` are declared and pinned
+(`consumes_produces.*` in `canary project-test`), so the rule rests on
+the relation that is tested rather than the one that drifted. It touches
+only fetches, so it cannot reach a pack, a build or an install, and the
+`Publish` exemption disappeared with it.
+
+The heavy fix (demand-driven derivation, one dependency relation used
+both to draw and to derive) is still the right end state and still what
+status §A wants — but it is now an independent piece of work rather than
+this section's prerequisite.
 
 ### 4a. What pruning costs, and the choice inside it
 

@@ -1736,11 +1736,12 @@ let platform_single_source_pin : Canary_project_test.pure_test =
 
      Declaration makes an action available; dependency makes it necessary.
 
-   [derive_steps] used to realize every action a project declared, so
-   cairo's all-Fetched world cloned a repository whose tree no later step
-   read — most of a 3-minute CI job spent on an artifact nobody consumed.
-   [prune_to_demand] keeps a step only if it asserts something, is an
-   ancestor of something that does, or is that thing's evidence.
+   [derive_steps] realizes every action a project declares, so cairo's
+   all-Fetched world cloned a repository whose tree no later step read.
+   [drop_unread_fetches] asks one question per fetch — does any step in
+   this world CONSUME what it produces? — against the typed catalogue
+   ([consumes_of_action], pinned by [consumes_produces.*]), not against
+   [step.deps].
 
    The pin is the PAIR, because either half alone is satisfiable by a
    broken rule: prune everything and cairo passes; prune nothing and

@@ -561,10 +561,12 @@ Two readings, and they want different fixes:
 - the world should not pack at all — the pack belongs to a *Packed*
   binding provision, which this world does not declare.
 
-Not decided here. The prune keeps the step for now because `Publish`
-carries a `pin_check_post` — it asserts the store holds what it published,
-so dropping it would delete a check rather than remove waste
-(`prune_to_demand`, `canary_step_builder.ml`).
+Not decided here, and nothing acts on it: `drop_unread_fetches`
+(`canary_step_builder.ml`) only removes FETCHES, so a pack is never in
+its reach. The finding stands on its own — this world publishes something
+no check in it consumes — rather than as a consequence of how steps are
+pruned. (An earlier closure-based prune did delete the step, which is how
+the finding surfaced; it was replaced 2026-08-28.)
 
 ## 3. Per-project chores
 
