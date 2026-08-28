@@ -61,7 +61,17 @@ let generation_root = "_out"
 
     Deliberately not [--thin]: thin is a VERSION policy (drop the dev
     points) and still keeps sqlite's Built and Installed lib placements,
-    six worlds where a first recovery wants one. *)
+    six worlds where a first recovery wants one.
+
+    STRICTLY [Fetched], which costs one project: ssl's worlds carry
+    [app-direct=vendored@stable], an in-tree example that a runner
+    already has after checkout — free, and excluded anyway. Loosening to
+    "nothing Built or Installed" would admit it and also admit cairo's
+    [lib-vendored-dev], a conda-forge prebuilt that needs [canary
+    prebuilt] before a job can use it. Telling those apart means reading
+    the declared ORIGIN ([Vendored_at] in-tree vs under a machine root),
+    which the assignment alone does not carry. Seven green jobs beat a
+    fragile eighth; ssl waits for the origin to be visible here. *)
 let all_fetched (a : Canary_artifact.assignment) : bool =
   List.for_all a ~f:(fun (_id, pl) ->
       match pl.Canary_artifact.provision with

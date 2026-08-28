@@ -123,3 +123,307 @@ jobs:
             | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'cairo_' --watchlist 'cairo_create,cairo_destroy,cairo_paint,cairo_move_to,cairo_line_to,cairo_stroke,cairo_image_surface_create,cairo_surface_destroy' \
             > $GITHUB_WORKSPACE/_out/canary/projects/cairo/probe_lib/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json
 
+
+  zarith:
+    name: zarith — lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/canary-setup
+        with:
+          ocaml-version: "5.4"
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_lib"
+          sudo apt-get install -y libgmp-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_lib/lib_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_binding/ocaml"
+          eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_binding/ocaml/binding_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.ok
+
+      - name: probe_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml"
+          eval $(opam env)
+          INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+          test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+          eval $(opam env)
+          ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+          exit $RC
+
+      - name: probe_binding_ocaml_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+                  "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+          printf '__gmp symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+                  "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json
+
+
+  libffi:
+    name: libffi — source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/canary-setup
+        with:
+          ocaml-version: "5.4"
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/libffi/fetch_lib"
+          sudo apt-get install -y libffi-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/libffi/fetch_lib/lib_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/libffi/fetch_binding/ocaml"
+          eval $(opam env) && opam install ctypes-foreign -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/libffi/fetch_binding/ocaml/binding_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: probe_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml"
+          eval $(opam env)
+          ocamlfind ocamlopt -package ctypes-foreign -linkpkg canary/examples/libffi/libffi_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example > $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example >> $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log
+          exit $RC
+
+      - name: probe_binding_ocaml_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'ctypes-foreign' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/inspect_ocaml.py --path 'ctypes-foreign' --watchlist 'Foreign,Ctypes_foreign_basis' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_binding/ocaml/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+                  "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ffi_' || echo 0)
+          printf 'ffi_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_lib/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+                  "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ffi_' --watchlist 'ffi_prep_cif,ffi_call,ffi_prep_closure_loc,ffi_closure_alloc,ffi_closure_free' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/libffi/probe_lib/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json
+
+
+  zlib:
+    name: zlib — source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/canary-setup
+        with:
+          ocaml-version: "5.4"
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zlib/fetch_lib"
+          sudo apt-get install -y zlib1g-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zlib/fetch_lib/lib_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zlib/fetch_binding/ocaml"
+          eval $(opam env) && opam install camlzip -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zlib/fetch_binding/ocaml/binding_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: probe_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml"
+          eval $(opam env)
+          ocamlfind ocamlopt -package camlzip -linkpkg canary/examples/zlib/zlib_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example > $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example >> $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log
+          exit $RC
+
+      - name: probe_binding_ocaml_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'zip' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/inspect_ocaml.py --path 'zip' --watchlist 'Zlib,Gzip,Zip' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_binding/ocaml/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libz.so.1* /usr/lib*/libz.so.1* 2>/dev/null \
+                  "$(brew --prefix zlib 2>/dev/null)/lib/libz.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'deflate' || echo 0)
+          printf 'deflate symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_lib/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libz.so.1* /usr/lib*/libz.so.1* 2>/dev/null \
+                  "$(brew --prefix zlib 2>/dev/null)/lib/libz.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'deflate,inflate,gz,crc32,adler32' --watchlist 'deflateInit_,deflate,deflateEnd,inflateInit_,inflate,inflateEnd,zlibVersion' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zlib/probe_lib/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json
+
+
+  zstd:
+    name: zstd — source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/canary-setup
+        with:
+          ocaml-version: "5.4"
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zstd/fetch_lib"
+          sudo apt-get install -y libzstd-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zstd/fetch_lib/lib_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zstd/fetch_binding/ocaml"
+          eval $(opam env) && opam install zstd -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zstd/fetch_binding/ocaml/binding_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.ok
+
+      - name: probe_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml"
+          eval $(opam env)
+          ocamlfind ocamlopt -package zstd -linkpkg canary/examples/zstd/zstd_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml/zstd_example > $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml/zstd_example >> $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log
+          exit $RC
+
+      - name: probe_binding_ocaml_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'zstd' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/inspect_ocaml.py --path 'zstd' --watchlist 'Zstd' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_binding/ocaml/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libzstd.so.1* /usr/lib*/libzstd.so.1* 2>/dev/null \
+                  "$(brew --prefix zstd 2>/dev/null)/lib/libzstd.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ZSTD_' || echo 0)
+          printf 'ZSTD_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_lib/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_inspect
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_lib"
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libzstd.so.1* /usr/lib*/libzstd.so.1* 2>/dev/null \
+                  "$(brew --prefix zstd 2>/dev/null)/lib/libzstd.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ZSTD_,ZDICT_' --watchlist 'ZSTD_compress,ZSTD_decompress,ZSTD_compressBound,ZSTD_getFrameContentSize,ZSTD_isError,ZSTD_getErrorName,ZSTD_versionNumber' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zstd/probe_lib/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json
+
+
+  llvm:
+    name: llvm — source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/canary-setup
+        with:
+          ocaml-version: "5.4"
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/fetch_lib"
+          sudo apt-get install -y llvm-19-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/llvm/fetch_lib/lib_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.ok
+
+      - name: fetch_binding_ocaml
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/fetch_binding/ocaml"
+          eval $(opam env) && opam install llvm.19-shared -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/llvm/fetch_binding/ocaml/binding_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.ok
+
+      - name: probe_binding_ocaml
+        id: probe_binding_ocaml
+        continue-on-error: true
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml"
+          eval $(opam env)
+          INSTALLED=$(opam list llvm --installed --short --columns=version --color=never 2>/dev/null)
+          test "$INSTALLED" = "19-shared" || { echo "WORLD MISMATCH: switch has llvm $INSTALLED, scenario declares llvm 19-shared"; exit 1; }
+          eval $(opam env)
+          ocamlfind ocamlopt -package llvm -linkpkg canary/examples/llvm/llvm_example_dev.ml -o $GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev > $GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml/probe_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev >> $GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml/probe_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_binding/ocaml/probe_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.log
+          exit $RC
+
+      - name: probe_binding_ocaml (verify)
+        run: |
+          if [ "${{ steps.probe_binding_ocaml.outcome }}" = "success" ]; then
+            echo "FAIL: expected failure but step succeeded"
+            exit 1
+          fi
+          echo "PASS: expected failure confirmed (no specific predicted strings)"
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_lib"
+          LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
+          test -x "$LLVM_CONFIG"
+          "$LLVM_CONFIG" --version > $GITHUB_WORKSPACE/_out/canary/projects/llvm/probe_lib/probe_source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched.log 2>&1
+

@@ -1094,8 +1094,19 @@ let ci_cmd =
         | Some pr -> [ (n, pr) ]
         | None -> Fmt.epr "canary ci --min: unknown project %s@." n; []
       in
+      (* THE PIPELINE-RENDERED SET (2026-08-28). Started as sqlite +
+         cairo to prove the shape; now every project whose cheapest world
+         is reachable on a runner, which is what retires the pre-A5
+         canary_ci.yml one job at a time.
+
+         z3 is OUT deliberately: it is muted locally because a full run
+         rebuilds libz3 on every binding pin flip (~30 min), and a CI job
+         would do the same on a cold runner. llvm is IN — its all-Fetched
+         world is apt llvm-19-dev plus an opam binding, no source build. *)
       let yaml, shells =
-        Canary_ci.render_minimal (pick "sqlite" @ pick "cairo")
+        Canary_ci.render_minimal
+          (pick "sqlite" @ pick "cairo" @ pick "zarith" @ pick "libffi"
+         @ pick "zlib" @ pick "zstd" @ pick "ssl" @ pick "llvm")
       in
       write_workflow out "canary_min.yml" yaml;
       (* the shell twins live in _out (generated, gitignored): they are a
