@@ -275,7 +275,8 @@ Ordered by what unblocks what. Items marked ⇢ have a home in
    `git ls-remote --exit-code <url> <ref>` answers it in 1.1s and 0 bytes
    (measured 2026-08-27). It belongs here rather than in a run: a world
    that does not build from its source no longer fetches it at all
-   ([`source_provisioning.md`](source_provisioning.md) §4a), so
+   ([`enumeration/stage5_realize_steps.md`](enumeration/stage5_realize_steps.md)
+   §3b), so
    obtainability became a claim about the DECLARATION — which is what
    `spec-check` is for.
 2. **`brew install llvm@19`** on the mac — llvm's stable lib point does

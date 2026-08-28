@@ -1779,8 +1779,8 @@ let source_refresh_scope_pin : Canary_project_test.pure_test =
             && String.is_substring cmd ~substring:"if [ ! -e \"$SENTINEL\" ]"
         | _ -> false) }
 
-(* DEMAND, NOT DECLARATION (2026-08-27, [design/source_provisioning.md]
-   §4 and the user's audit of it).
+(* DEMAND, NOT DECLARATION ([design/enumeration/stage5_realize_steps.md]
+   §3b).
 
      Declaration makes an action available; dependency makes it necessary.
 

@@ -350,8 +350,8 @@ rather than another patch.
   `runner_spec` — commands — not the assignment, so a step cannot be
   gated on a provision. That is why "don't realize a fetch nothing
   consumes" is decided from the step list and the typed catalogue
-  ([`../source_provisioning.md`](../source_provisioning.md) §4b) rather
-  than at enumeration, where `source_is_read` already answers the same
+  ([`stage5_realize_steps.md`](stage5_realize_steps.md) §3b) rather than
+  at enumeration, where `source_is_read` already answers the same
   question. Threading the assignment through is the same missing thread
   as the two relations above: it is what demand-driven derivation needs,
   and it is what would let an unread source be `Absent` in the world

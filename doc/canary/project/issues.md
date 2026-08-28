@@ -540,7 +540,8 @@ the record of what once passed. Diagnose it or migrate its jobs to
 
 ### Found — zarith packs a binding nothing probes (2026-08-27)
 
-Surfaced by the demand rule ([`../design/source_provisioning.md`](../design/source_provisioning.md) §4).
+Surfaced by the demand rule
+([`../design/enumeration/stage5_realize_steps.md`](../design/enumeration/stage5_realize_steps.md) §3b).
 In `lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master`,
 zarith builds the binding, **packs it into the canary-local opam repo**,
 and then probes the BUILD TREE:
@@ -570,11 +571,21 @@ the finding surfaced; it was replaced 2026-08-28.)
 
 ### Open — CI pays for a cold opam switch on every job (2026-08-28)
 
-Measured per-step on the cairo job
-([`../design/source_provisioning.md`](../design/source_provisioning.md)
-§3b): `canary-setup` 40–55s and `fetch_binding_ocaml` ~40s, both cold
-opam, out of a 108s job. Everything else — the source clone at 11.6s, the
-apt install at ~6s, the probes at seconds — is noise beside them.
+Per-step spans, cairo job, `ubuntu-latest`:
+
+| step | |
+| --- | --- |
+| `canary-setup` (setup-ocaml + apt + `opam install ocamlfind`) | 40–55s |
+| `fetch_binding_ocaml` (`opam install cairo2`) | ~40s |
+| `fetch_source` (partial clone, when a world needs one) | 11.6s |
+| `fetch_lib` (`apt-get install`) | ~6s |
+| probes + inspects | seconds |
+| **job total** | ~108s |
+
+Opam dominates; the source clone never did. A second consequence worth
+keeping: a workflow's FIRST run is much slower than its later ones
+because `setup-ocaml` is building its cache — a gap large enough to swamp
+anything inferred from two runs.
 
 So the CI work worth doing is caching **opam**, in
 `.github/actions/canary-setup`: `setup-ocaml`'s own cache plus the

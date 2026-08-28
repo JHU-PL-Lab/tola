@@ -128,11 +128,72 @@ world cloned a repository whose tree no later step read.
 `consumes_produces.*`) rather than of `step.deps`.
 
 Only fetches, because a `Fetch` is the only action class with no inputs —
-every other row of the catalogue consumes something, so it is always
-attached. Why the question is answered here rather than at enumeration,
-where `source_is_read` already asks it: [the README's *Known
-drift*](README.md) and
-[`../source_provisioning.md`](../source_provisioning.md) §4b.
+`(Fetch Source, [], [Source])` against `(Build_lib, [Source], [Lib])`,
+`(Probe_lib, [Lib], [])`. Everything else consumes something and is
+therefore always attached to the graph; a fetch is the only node that can
+be orphaned. Its input is really the world's *ambient store*, the same
+fact seen from the other side. Why the question is answered here rather
+than at enumeration, where `source_is_read` already asks it: [the README's
+*Known drift*](README.md).
+
+A declared source row stays declared — `spec-check` still reports it, and
+whether its ref resolves is a question about the DECLARATION, tracked
+with `spec-check --probe-pm` in [`../platform.md`](../platform.md) §7.
+
+Pinned by `derive.steps_are_demanded` as a pair: cairo's world must lose
+`fetch_source` while keeping its probes; every sqlite world with
+`build_lib` must keep it. Either half alone is satisfiable by a broken
+rule.
+
+## 3c. A fetch prepares once and ensures per world
+
+The checkout a fetch produces is SHARED (no scenario in its path —
+[pass 1](stage1_declare_spec.md)) but its marker is per-world, so N worlds
+at one ref each ran a full fetch to converge on a tree that was already
+right. The emitted command separates the question by who is asking:
+
+| half | question | scope | guard |
+| --- | --- | --- | --- |
+| clone / fetch / worktree add | *has the ref moved?* | the **run** | sentinel `<main>-refreshed-$CANARY_RUN_ID` |
+| checkout + marker | *is this world's tree here?* | the **world** | none; it is cheap |
+
+`CANARY_RUN_ID` is a process-lifetime stamp (`Canary_store.run_id`)
+exported into every step's shell beside `OPAMSWITCH`. A process IS a run:
+`canary action <p>` executes every world of a project in one, a GH job
+runs exactly one — which is the scope in which `latest` is fixed.
+
+```
+first world in a run   0.317s     consults the remote
+next world, same run   0.004s     sentinel hit, no network
+first world, new run   0.278s     refreshes again
+```
+
+A moving ref still refreshes once per run, so refresh-on-demand is
+preserved rather than traded for speed; stale sentinels are swept before
+a new one is written. On CI the variable is unset and the workspace cold,
+so the remote half runs — what a fresh runner needs.
+
+Pinned by `source.refresh_is_run_scoped`, a SHAPE check: the clone must
+sit INSIDE the guard and the marker write OUTSIDE it. Swap either and a
+world re-fetches, or stops recording its own evidence.
+
+**The other fetch kinds are deliberately not converted:**
+
+| kind | redundant cost per extra world | state |
+| --- | --- | --- |
+| git source | 1.1s | converted |
+| apt / brew | **0.40s** | not converted |
+| opam pin | ~0s when the pin is held | covered elsewhere — the fetch is pin-checked, so the run cache warm-skips it; a real pin flip (~5.2s) is work, not waste |
+| conda-forge prebuilt | ~0s | `Canary_prebuilt.is_prepared` + the `prebuilt` subcommand, out of band |
+| curl archive | ~0s | sqlite's `build_lib` carries a `test -d … \|\|` guard inline |
+
+0.40s is below a run's own variance, so converting apt/brew would be
+optimising noise — and it carries a trap the git case does not. The
+obvious guard, `verify_installed_cmd`, asks whether the package EXISTS: a
+world declaring version X would be satisfied by installed version Y,
+which is the false pass canary exists to catch. The right predicate is
+`Canary_pm.installed_version_cmd` against the declared version — the apt
+analogue of `holds_pin_cmd`.
 
 ## 4. The run cache
 

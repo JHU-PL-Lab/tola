@@ -516,13 +516,65 @@ Known limits, each with its own note:
 | `spec_check.local_fork_warns`                 | a labeled repo without a remote warns rather than errors                       |
 
 
-## Where a declared repo is obtained, and what that costs
+## What a declared repo becomes
 
-A row declares a repo and a ref; what it costs to turn that into a tree —
-partial clone rather than shallow (history, not refs), one shared checkout
-plus a worktree per ref, the remote consulted once per run, and why the
-sources are not git submodules — is
-[`../source_provisioning.md`](../source_provisioning.md). Declaring the
-repo is this pass; a world that consumes it is
-[pass 2](stage2_enumerate_worlds.md)'s `source_is_read`; realizing the
-fetch is [pass 5](stage5_realize_steps.md) §3b.
+A row declares a remote and a ref. `worktree_ensure_cmd` turns that into
+**one checkout per repo plus one `git worktree` per ref**:
+
+```
+<contrib_root>/<project>-all/<repo>          the clone — shared objects
+<contrib_root>/<project>-all/<repo>-<ref>    a worktree per tracked ref
+```
+
+Neither path contains a scenario, so **every world shares them**. That is
+what makes z3's three refs (`latest` / `arbipher` / `pre-10549`) one repo
+rather than three clones, and `--refs latest,pre-10549` a regression pair.
+On CI the machine root is `$GITHUB_WORKSPACE`, so a job starts cold and
+the same commands clone into the runner's workspace.
+
+### Why not git submodules
+
+1. **It would delete an action canary tests.** `fetch_source` is in the
+   action catalogue with a `check_post`, an expectation and graph edges.
+   Provisioning is the subject — `Fetched | Built | Installed | Vendored`
+   — so obtaining a source is *a step that can fail*, not a
+   precondition. A submodule makes it ambient.
+2. **One submodule pins one SHA; a repo here carries several refs.** As
+   submodules, z3's three are three submodules of one upstream, or a
+   pointer mutated per scenario.
+3. **CI gets slower.** `actions/checkout` resolves submodules at job
+   start, before it knows which scenario runs — the sqlite job, whose
+   source is a curl'd amalgamation, would pay for llvm-project.
+4. **It reverses a standing decision** (`~/.claude/CLAUDE.md`): shared
+   third-party checkouts live in ONE contrib tree, *"no submodules, no
+   copies"*, so projects share one source tree and one warm build cache.
+
+### Partial clone, not shallow
+
+```
+git clone --filter=blob:none <url> <main>
+```
+
+Measured on cairo:
+
+| shape | `.git` | clone | second ref via `worktree add` |
+| --- | --- | --- | --- |
+| full | 106M | 9.8s | works |
+| `--filter=blob:none` | 44M | 8.3s | works — +1.1s, +4M |
+| `--depth 1` | 34M | 4.5s | works, with an explicit refspec |
+
+Shallow is cheapest and unusable: it truncates history — inside a
+`--depth 1` worktree `git log --oneline | wc -l` is **1** — and the
+source-BUILT projects are the ones that ask, z3 and LLVM deriving version
+information from git metadata. Partial clone withholds blobs, not
+history. (Shallow *can* serve several refs, given
+`+refs/tags/X:refs/tags/X` rather than a bare `git fetch origin X`, which
+only updates `FETCH_HEAD`. History is the objection, not refs.)
+
+The checked-out tree is 71M of cairo's 177M and identical under all three
+shapes, so clone shape cannot fix a checkout that was not needed — that
+is [pass 5](stage5_realize_steps.md) §3b's job.
+
+**Declaring the repo is this pass.** Whether a world reads it is
+[pass 2](stage2_enumerate_worlds.md)'s `source_is_read`; obtaining it is
+[pass 5](stage5_realize_steps.md) §3b.

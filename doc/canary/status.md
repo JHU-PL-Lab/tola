@@ -214,6 +214,36 @@ project-level status (bugs, issues, todo, candidates) lives in
 reorganization; the roster + landing mechanics in
 [`project/projects.md`](project/projects.md) + [`project/landing.md`](project/landing.md).
 
+### Source provisioning — what is still open (2026-08-28)
+
+The built behaviour is [pass 1](design/enumeration/stage1_declare_spec.md)
+(what a declared repo becomes, why not submodules, partial-vs-shallow)
+and [pass 5](design/enumeration/stage5_realize_steps.md) §3b–3c (an
+unread fetch is not realized; a fetch prepares once and ensures per
+world). What is NOT done:
+
+- **Pass 5 receives commands, not the world.** `derive_steps` takes a
+  `runner_spec`, so a step cannot be gated on a provision — which is why
+  "don't realize a fetch nothing consumes" is decided from the step list
+  a pass after `source_is_read` already asks the same question at
+  enumeration. Threading the assignment through is what demand-driven
+  derivation needs, and it is the same missing thread as the two
+  dependency relations above. Costs, measured: the scenario id is the
+  cache key, so renamed worlds re-run cold (happily the cheap
+  all-`Fetched` ones), and `z3.dispatch_reads_source_placement` asserts
+  over every assignment including the non-building baseline. Recorded in
+  [`design/enumeration/README.md`](design/enumeration/README.md) *Known
+  drift*.
+- **`prepare` as a dispatched action** rather than a guard inside the
+  fetch command — the structural half of the same gap, and what
+  `worktree_ensure_cmd`'s comment has always said it should be.
+- **Caching opam on CI** — the measured dominant cost of a job
+  ([`project/issues.md`](project/issues.md) §2). Caching the contrib tree
+  is a distant second and should be keyed by repository, not (repo, ref).
+- **Validating a declared source ref without fetching it** —
+  `git ls-remote`, 1.1s, filed beside `spec-check --probe-pm` in
+  [`design/platform.md`](design/platform.md) §7.
+
 ### Design directions (pending more cases)
 
 - **Checks as actions — `[Pre; Action; Post]`** (user, 2026-08-18,
