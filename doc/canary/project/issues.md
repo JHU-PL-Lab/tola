@@ -568,6 +568,26 @@ no check in it consumes — rather than as a consequence of how steps are
 pruned. (An earlier closure-based prune did delete the step, which is how
 the finding surfaced; it was replaced 2026-08-28.)
 
+### Open — CI pays for a cold opam switch on every job (2026-08-28)
+
+Measured per-step on the cairo job
+([`../design/source_provisioning.md`](../design/source_provisioning.md)
+§3b): `canary-setup` 40–55s and `fetch_binding_ocaml` ~40s, both cold
+opam, out of a 108s job. Everything else — the source clone at 11.6s, the
+apt install at ~6s, the probes at seconds — is noise beside them.
+
+So the CI work worth doing is caching **opam**, in
+`.github/actions/canary-setup`: `setup-ocaml`'s own cache plus the
+binding install. The z3 fork's canary infra caches ccache from the same
+place, so the shape is known.
+
+Explicitly LOWER priority, though it looks related: caching the contrib
+source tree. It is 11.6s, and the demand rule already removed the fetch
+entirely from the worlds that paid it. If it is done, key it on the
+REPOSITORY rather than (repo, ref) — one repo holds every ref we track
+and the worktrees share its objects, so a per-ref key shards exactly what
+the worktree model exists to share.
+
 ## 3. Per-project chores
 
 - [ ] **Spec-check warning-reconsideration pass** — zarith's

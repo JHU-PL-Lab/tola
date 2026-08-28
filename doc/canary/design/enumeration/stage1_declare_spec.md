@@ -514,3 +514,15 @@ Known limits, each with its own note:
 | `spec.pm_dep_gate_groups`                     | the declared PM gates classify into the expected freedom groups                |
 | `sqlite.provider_rows`, `z3.provider_rows`    | each project's rows match its baseline provisions                              |
 | `spec_check.local_fork_warns`                 | a labeled repo without a remote warns rather than errors                       |
+
+
+## Where a declared repo is obtained, and what that costs
+
+A row declares a repo and a ref; what it costs to turn that into a tree —
+partial clone rather than shallow (history, not refs), one shared checkout
+plus a worktree per ref, the remote consulted once per run, and why the
+sources are not git submodules — is
+[`../source_provisioning.md`](../source_provisioning.md). Declaring the
+repo is this pass; a world that consumes it is
+[pass 2](stage2_enumerate_worlds.md)'s `source_is_read`; realizing the
+fetch is [pass 5](stage5_realize_steps.md) §3b.

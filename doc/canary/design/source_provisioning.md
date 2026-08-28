@@ -1,11 +1,15 @@
 # Getting the source — what a CI run pays for, and why not submodules
 
-**Kind: proposal.** **Landed when** a world realizes no step that nothing
-in it depends on — the rule uniform over actions, not special-cased to
-`fetch_source` — so `canary emit cairo --stage realize` shows no
-`fetch_source` and cairo's CI job stops cloning. The declared source row
-stays declared, and whether its ref resolves becomes a `spec-check`
-probe.
+**Kind: rationale.** How canary obtains source, and what that costs.
+Everything described here exists.
+
+It opened as a proposal on 2026-08-27 and its falsifier — *a world
+realizes no fetch nothing in it consumes* — was satisfied on 2026-08-28,
+so the kind changed with it. A cross-pass topic rather than a stage:
+declaring a repo is pass 1, realizing a fetch is pass 5, and the
+interesting facts live in between. Same shape as
+[`staged_parity.md`](staged_parity.md), which left `enumeration/` for the
+same reason. **Open work is NOT here** — §7 says where it went.
 
 > 2026-08-27, user: *"since canary is testing for more projects and each
 > project need to be cloned during the GH CI steps, shall we clone the
@@ -446,3 +450,18 @@ command. The structural split — `prepare` as its own dispatched action,
 run once per repo per run — remains what `worktree_ensure_cmd`'s comment
 has always said it should be: *"The fetch step IS the prepare … prepare as
 a dynamically dispatched action is future work."*
+
+
+## 7. Where the open items went
+
+This file explains; the trackers own. What was still open when the kind
+changed, and where it lives now:
+
+| item | now tracked in |
+| --- | --- |
+| Pass 5 does not receive the world, so the unread-fetch question is answered a pass late (§4b) | [`enumeration/README.md`](enumeration/README.md) *Known drift* — it belongs with the two-dependency-relations entry, being the same missing thread |
+| `opam` caching in the CI composite action — the measured dominant cost (§3b) | [`../project/issues.md`](../project/issues.md) §2, CI |
+| Caching the contrib tree on CI, keyed by repository (§5) | same, and explicitly lower priority than the opam cache |
+| Verifying a declared source ref exists without fetching it (§4a's `ls-remote`) | [`platform.md`](platform.md) §7 item 1, beside `spec-check --probe-pm` — the same shape and the same second |
+| `prepare` as a dispatched action rather than a guard inside the fetch (§6) | the enumeration *Known drift* entry above; it is the structural half of the same gap |
+| A version-aware apt/brew guard, if ever wanted (§6) | nowhere, deliberately — §6 records the measurement that says not to and the trap that says how, which is what a future reader needs |

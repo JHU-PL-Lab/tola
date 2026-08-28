@@ -346,6 +346,20 @@ rather than another patch.
   its real deps — but the drawn diagram under-connects, so the
   connectivity invariant is muted behind `CANARY_DIAGRAM_CONN=1`.
   Reconciling them into ONE relation is tracked in `../../status.md` §A.
+- **Pass 5 does not receive the world.** `derive_steps` takes a
+  `runner_spec` — commands — not the assignment, so a step cannot be
+  gated on a provision. That is why "don't realize a fetch nothing
+  consumes" is decided from the step list and the typed catalogue
+  ([`../source_provisioning.md`](../source_provisioning.md) §4b) rather
+  than at enumeration, where `source_is_read` already answers the same
+  question. Threading the assignment through is the same missing thread
+  as the two relations above: it is what demand-driven derivation needs,
+  and it is what would let an unread source be `Absent` in the world
+  instead of merely unrealized in the steps. Costs, measured: the
+  scenario id is the cache key, so the renamed worlds re-run cold —
+  happily the cheap all-`Fetched` ones — and
+  `z3.dispatch_reads_source_placement` asserts over every assignment
+  including the non-building baseline.
 - **The mechanism / app-wiring axes are not config axes.** They are
   ranged via the artifact-identity set (each `a_binding lang mech` is its
   own enumerated artifact). A dedicated `config` axis for them is open —

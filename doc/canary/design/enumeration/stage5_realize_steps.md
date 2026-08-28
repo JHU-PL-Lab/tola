@@ -118,6 +118,22 @@ Pins on the graph side: `action.node_of_assignment_chain`,
 `action.close_deps_deploy_mismatch`,
 `action.execution_plan_topo_and_edges`.
 
+## 3b. A fetch is not realized when nothing consumes it
+
+`derive_steps` walks the catalogue and realizes what a project DECLARES,
+which for a fetch is not always what the world NEEDS: cairo's all-`Fetched`
+world cloned a repository whose tree no later step read.
+`drop_unread_fetches` drops a `Fetch k` when no step in the world consumes
+`k`, asked of the typed catalogue (`consumes_of_action`, pinned by
+`consumes_produces.*`) rather than of `step.deps`.
+
+Only fetches, because a `Fetch` is the only action class with no inputs —
+every other row of the catalogue consumes something, so it is always
+attached. Why the question is answered here rather than at enumeration,
+where `source_is_read` already asks it: [the README's *Known
+drift*](README.md) and
+[`../source_provisioning.md`](../source_provisioning.md) §4b.
+
 ## 4. The run cache
 
 Two levels, and the reason the second is safe is subtler than it looks.
