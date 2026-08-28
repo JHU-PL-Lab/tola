@@ -1,8 +1,11 @@
 # Getting the source — what a CI run pays for, and why not submodules
 
-**Kind: proposal.** **Landed when** a world realizes no `fetch_source`
-step that nothing in that world depends on — `canary emit cairo --stage
-realize` shows no `fetch_source`, and cairo's CI job stops cloning.
+**Kind: proposal.** **Landed when** a world realizes no step that nothing
+in it depends on — the rule uniform over actions, not special-cased to
+`fetch_source` — so `canary emit cairo --stage realize` shows no
+`fetch_source` and cairo's CI job stops cloning. The declared source row
+stays declared, and whether its ref resolves becomes a `spec-check`
+probe.
 
 > 2026-08-27, user: *"since canary is testing for more projects and each
 > project need to be cloned during the GH CI steps, shall we clone the
@@ -69,13 +72,15 @@ realizes a source it never uses, and that the fetch was a full clone.
 
 ### 3a. Clone shape — measured on cairo (2026-08-27)
 
-| shape | `.git` | clone | second ref via `worktree add` |
-| --- | --- | --- | --- |
-| full (what we did) | 106M | 9.8s | works |
-| `--filter=blob:none` | 44M | 8.3s | **works** — +1.1s, +4M |
-| `--depth 1` | 34M | 4.5s | **fails** |
+| shape                | `.git` | clone | second ref via `worktree add` |
+| -------------------- | ------ | ----- | ----------------------------- |
+| full (what we did)   | 106M   | 9.8s  | works                         |
+| `--filter=blob:none` | 44M    | 8.3s  | **works** — +1.1s, +4M        |
+| `--depth 1`          | 34M    | 4.5s  | **fails**                     |
 
-`--depth 1` is the cheapest and the one we cannot use:
+`--depth 1` is the cheapest, and we still do not use it — but **not for
+the reason first given here.** The original text claimed shallow clones
+cannot serve a second ref, on the strength of one failed command:
 
 ```console
 $ git fetch --depth 1 origin 1.18.0     # ok
@@ -83,10 +88,24 @@ $ git worktree add -f <wt> 1.18.0
 fatal: invalid reference: 1.18.0
 ```
 
-A shallow fetch does not create the local ref, so worktree-per-ref — the
-model z3's regression pair depends on — breaks. **Our constraint is many
-refs, not one commit; depth optimises for the opposite case.** Partial
-clone withholds blobs, not history, so it serves any ref on demand.
+That is a REFSPEC failure, not a shallowness one — a bare `git fetch
+origin <ref>` updates `FETCH_HEAD` without creating a local ref. Spell
+the refspec and shallow handles multiple refs fine (audit §3, verified
+2026-08-27):
+
+```console
+$ git fetch --depth 1 origin +refs/tags/1.18.0:refs/tags/1.18.0
+$ git worktree add -f <wt> 1.18.0       # works; .git 38M
+```
+
+**The real objection is history, and the same test shows it:** inside
+that worktree `git log --oneline | wc -l` is **1**. A shallow tree
+answers questions about history wrongly rather than refusing them, and
+our source-BUILT projects are exactly the ones that ask — z3 and LLVM
+derive version information from git metadata, and CLAUDE.md already
+records a cmake-vs-git failure in the z3 checkout. Partial clone
+withholds blobs, not history, so every such query still gets the true
+answer.
 
 **Landed 2026-08-27**: all three canary clone sites now pass
 `--filter=blob:none` (`canary_artifact_source.ml` ×2,
@@ -129,24 +148,55 @@ worlds are all `Fetched` — never exercises its source row at all, while
 `spec-check` still reports the row as declared. That is a real coverage
 loss, not a free win.
 
-| option | keeps the claim | cost per world |
-| --- | --- | --- |
-| **a1** prune unconditionally | no | 0 |
-| **a2** prune on CI only | on one machine | 0 on CI — but CI stops being the same steps as local, which is the property the CI backend was just rebuilt to have |
-| **a3** prune the clone, keep a remote check (`git ls-remote --exit-code <url> <ref>`) | yes | **1.1s, 0 bytes** (measured) |
+| option                                                                                | keeps the claim | cost per world                                                                                                      |
+| ------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **a1** prune unconditionally                                                          | no              | 0                                                                                                                   |
+| **a2** prune on CI only                                                               | on one machine  | 0 on CI — but CI stops being the same steps as local, which is the property the CI backend was just rebuilt to have |
+| **a3** prune the clone, keep a remote check (`git ls-remote --exit-code <url> <ref>`) | yes             | **1.1s, 0 bytes** (measured)                                                                                        |
 
-a3 is the interesting one: it separates *the tree is here* from *the
-source is obtainable*, which are two different claims that a full clone
-happens to answer at once. It needs a cheap action (a reachability probe,
-not a fetch) — small, but it IS a new action in the catalogue, so it
-wants the user's call.
+**Revised recommendation: a1, and move the ref check to `spec-check`**
+(2026-08-27, after the audit below — §§6, 7, 8).
 
-**Recommendation: a3 for worlds with no dependents, a1 if we decide the
-obtainability claim belongs to `spec-check` rather than to a run.**
+The earlier recommendation here was a3: keep the claim by adding a cheap
+reachability action for worlds with no dependents. Three things are wrong
+with it, and the audit names all three.
+
+- **It is the special case this document argues against.** §4's own rule
+  is that pruning applies uniformly to every action; a bespoke action
+  existing only to keep one claim alive after pruning re-introduces
+  exactly the shape §4 says would have to be undone.
+- **It puts a network call in every case.** 1.1s is cheap once and not
+  cheap per world per run, and it buys nothing the world under test
+  claims: a world says *the lib comes from apt*, and whether the source
+  ref resolves is a property of the DECLARATION, not of that world.
+- **It over-claimed.** `ls-remote` establishes that a declared ref
+  resolves on the remote. It does not establish that the repository is
+  obtainable, complete, or buildable — which is what "keeps the claim"
+  implied.
+
+The audit's principle settles it:
+
+> **Declaration makes an action available; dependency makes it
+> necessary.**
+
+The source row stays declared, nothing in that world depends on it, so it
+does not run — a1. The obtainability question is about the declaration,
+so it belongs where declarations are checked: an opt-in `spec-check`
+probe, the same shape and the same second as the already-planned
+`spec-check --probe-pm` (`platform.md` §7 item 1). That is what §5 below
+said all along; §4a contradicted it and §4a was wrong.
+
+The a3 row stays in the table because the DISTINCTION it draws is real
+and worth keeping — *the tree is here* and *the ref resolves* are two
+claims a full clone answers at once — it is the placement that was
+wrong.
 
 ## 5. Not in scope here, but adjacent
 
-- **Cache the contrib tree on CI** keyed on (repo, ref). The composite
+- **Cache the contrib tree on CI** keyed on the REPOSITORY, not on
+  (repo, ref) — audit §10. One repo holds every ref we track and the
+  worktrees share its objects, so a per-ref key would shard the very
+  thing the worktree model exists to share. The composite
   action `.github/actions/canary-setup` is the natural home; the z3
   fork's canary infra caches ccache the same way. Worth doing after §4 —
   §4 removes the fetch entirely for the worlds that pay most.
@@ -154,3 +204,39 @@ obtainability claim belongs to `spec-check` rather than to a run.**
   (`platform.md` §7 item 1) wants to validate declared package NAMES;
   validating a declared source ref is the same shape and the same one
   second.
+
+=== audit
+
+My recommendations, based only on the proposal as written, are:
+
+1. **Do not use Git submodules.** Keep source acquisition inside Canary’s own execution model so fetching remains observable, testable, and tied to the specific case being run.
+
+2. **Keep `--filter=blob:none` as the default clone optimization.** It reduces transfer/storage cost while preserving repository history semantics better than shallow clones.
+
+3. **Do not treat `--depth 1` as fundamentally incompatible with multiple refs.** Multiple shallow refs are possible. The stronger reason to avoid shallow clones is that truncated history can affect builds that inspect Git metadata or history.
+
+4. **Make execution demand-driven in semantics.** A declared source repository should make `fetch_source` available, but should not automatically cause it to run. Execute only actions transitively required by the case’s terminal checks or obligations.
+
+5. **Use backward reachability as the semantic rule.** The immediate implementation can derive candidate steps and prune unused ones afterward. A later implementation can construct the graph directly from demand. Both should have the same observable result.
+
+6. **Avoid a special case for `fetch_source`.** The rule should apply uniformly to all actions: unused provisioning, build, install, or fetch steps should disappear from the execution plan.
+
+7. **Separate spec validation from case execution where appropriate.** If you still want to verify that a declared Git ref exists even when no executed step consumes its source tree, a lightweight check such as `git ls-remote` fits better as a spec-validation probe than as a mandatory action in every case.
+
+8. **Describe `ls-remote` narrowly.** It verifies that the declared remote ref resolves; it does not establish that the repository is fully obtainable or buildable.
+
+9. **Optimize CI in this order: eliminate, reduce, reuse.**
+
+   * Eliminate unnecessary source fetches.
+   * Reduce the cost of necessary fetches with partial clone.
+   * Then add CI caching for source repositories that are genuinely needed.
+
+10. **If CI caching is added later, consider caching by repository rather than strictly by `(repo, ref)`.** A shared repository containing multiple refs preserves the advantage of Git object sharing and worktrees.
+
+The main architectural principle I would keep is:
+
+> **Declaration makes an action available; dependency makes it necessary.**
+
+And for the quick-versus-heavy implementation choice:
+
+> **Backward reachability should define the semantics; demand-driven graph construction can later optimize the implementation.**
