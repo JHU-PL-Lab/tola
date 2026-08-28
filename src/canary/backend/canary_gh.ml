@@ -38,6 +38,14 @@ let render_gh_step ~project (step : step) =
     match step.symbol_check with
     | None -> []
     | Some sc ->
+        (* the PLATFORM's flag, not a literal (2026-08-28): [nm -D] is
+           Linux's; macOS wants [nm -g]. Hardcoding it made every rendered
+           symbol check Linux-only by construction, which the ubuntu-only
+           workflow could never reveal. Baked at render time on purpose —
+           the workflow is rendered FOR a platform, so a macOS job renders
+           under [--platform=macos] and gets [-g] the same way it gets
+           brew and DYLD_LIBRARY_PATH. *)
+        let nm_flag = Canary_artifact_native.nm_dynamic_flag () in
         let checks =
           List.map sc.required ~f:(fun e ->
               let pat =
@@ -46,7 +54,7 @@ let render_gh_step ~project (step : step) =
                 | Some v -> [%string "%{e.sym_name}@@%{v}"]
               in
               [%string
-                {|nm -D '%{sc.provided_lib}' 2>/dev/null | grep -qF '%{pat}' || { echo "FAIL: required symbol missing: %{pat}"; exit 1; }|}])
+                {|nm %{nm_flag} '%{sc.provided_lib}' 2>/dev/null | grep -qF '%{pat}' || { echo "FAIL: required symbol missing: %{pat}"; exit 1; }|}])
           @ List.map sc.missing ~f:(fun e ->
               let pat =
                 match e.sym_version with
@@ -54,7 +62,7 @@ let render_gh_step ~project (step : step) =
                 | Some v -> [%string "%{e.sym_name}@@%{v}"]
               in
               [%string
-                {|nm -D '%{sc.provided_lib}' 2>/dev/null | grep -qF '%{pat}' && { echo "FAIL: symbol present but should be missing: %{pat}"; exit 1; } || true|}])
+                {|nm %{nm_flag} '%{sc.provided_lib}' 2>/dev/null | grep -qF '%{pat}' && { echo "FAIL: symbol present but should be missing: %{pat}"; exit 1; } || true|}])
         in
         let body =
           String.concat ~sep:"\n" checks
