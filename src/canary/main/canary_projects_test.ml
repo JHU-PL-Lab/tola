@@ -1732,6 +1732,52 @@ let platform_single_source_pin : Canary_project_test.pure_test =
 
 
 
+
+(* THE GH RENDERING MUST AGREE WITH THE EXPECTATION'S POLARITY
+   (2026-08-28).
+
+   [Expect_compat_derived] computes its own polarity — a prediction means
+   the step must fail, NO prediction means the artifact is good and the
+   step must SUCCEED. The GH backend rendered it like the ORACLE variant
+   ([Expect_compat_failure]), which always expects a failure, so a step
+   the local runner expects to pass became a continue-on-error + verify
+   pair asserting the opposite. ssl's first CI job said so:
+
+     FAIL: expected failure but step succeeded
+
+   on [probe_binding_ocaml], whose red cell locally is not there at all —
+   it sits on [probe_app_ocaml]. A CI backend that disagrees with the
+   runner about WHICH step is red is worse than one that does not run. *)
+let gh_derived_polarity_pin : Canary_project_test.pure_test =
+  { name = "gh.derived_expectation_polarity";
+    check =
+      (fun () ->
+        let step_with exp : Canary_step_model.step =
+          { tag = "probe_binding_ocaml"; cache_key = "k"; output_tag = "probe_binding_ocaml";
+            output_dir = "d"; project_dir = "p"; variant_id = "v";
+            action = Canary_basic.Probe_binding Canary_lang.OCaml; deps = [];
+            cmd = (fun ~output_dir:_ ~variant_key:_ -> "run it");
+            check_pre = (fun () -> true);
+            check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+            expectation = exp; symbol_check = None; disabled_contracts = [] }
+        in
+        let rendered exp =
+          String.concat ~sep:"\n"
+            (Canary_gh.render_gh_step ~project:"x" (step_with exp))
+        in
+        let has_verify r = String.is_substring r ~substring:"(verify)" in
+        (* no prediction: DERIVED must render as a plain step, the ORACLE
+           must still assert a failure — the project declared one *)
+        let derived_empty =
+          rendered (Canary_step_model.Expect_compat_derived { inputs = []; version_info = None })
+        and oracle_empty =
+          rendered (Canary_step_model.Expect_compat_failure { inputs = []; version_info = None })
+        in
+        (not (has_verify derived_empty))
+        && has_verify oracle_empty
+        (* and a plain success is never a failure check *)
+        && not (has_verify (rendered Canary_step_model.Expect_success))) }
+
 (* PREPARE ONCE, ENSURE PER WORLD (2026-08-28, user: "in one canary run
    ... we can assume the stable/latest is fixed ... the first request
    check the local then asked the remote").
@@ -3891,7 +3937,8 @@ let base_tests : Canary_project_test.pure_test list =
       machine_roots_pin;
       platform_enumeration_pin;
       demand_prune_pin;
-      source_refresh_scope_pin ]
+      source_refresh_scope_pin;
+      gh_derived_polarity_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 

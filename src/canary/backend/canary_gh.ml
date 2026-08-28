@@ -109,7 +109,7 @@ fi|}]
 %{run_block full_cmd}|}] ]
       @ sym_check_step
   | Expect_compat_failure { inputs; version_info = _ }
-  | Expect_compat_derived { inputs; version_info = _ } ->
+  | Expect_compat_derived { inputs; version_info = _ } as exp ->
       (* Resolve predictions at YAML-generation time using locally-cached
          summaries. When cache is empty (fresh CI runner), the fallback in
          render_failure_check accepts any failure with non-empty probe.log.
@@ -132,7 +132,30 @@ fi|}]
         Canary_compat_run.predicted_contains_any_v2
           ~disabled:step.disabled_contracts ~resolve inputs
       in
-      render_failure_check ~contains_any:derived
+      (* THE DERIVED VARIANT DECIDES ITS OWN POLARITY (2026-08-28).
+         [Expect_compat_derived] means "canary computes whether to expect
+         a failure by inspecting the artifacts": a prediction means the
+         step must fail with that signature, NO prediction means the
+         artifact is good and the step must SUCCEED
+         ([Canary_step_model]). Rendering it like the oracle variant
+         asserted "must fail" for a step the local runner expects to
+         pass — which is exactly what ssl's first CI job reported:
+
+           FAIL: expected failure but step succeeded
+
+         Locally ssl's red cell sits on [probe_app_ocaml] (xfail[c2],
+         the app using a symbol 0.6.0 lacks) while [probe_binding_ocaml]
+         passes; the backend made both expected failures. The oracle
+         variant keeps the old behaviour — an empty prediction there
+         still means "fail, signature unknown", because the project
+         DECLARED the failure. *)
+      (match exp with
+       | Canary_step_model.Expect_compat_derived _ when List.is_empty derived
+         ->
+           [ [%string {|      - name: %{step.tag}
+%{run_block full_cmd}|}] ]
+           @ sym_check_step
+       | _ -> render_failure_check ~contains_any:derived)
   | Expect_failure { contains_any; version_info = _ } ->
       render_failure_check ~contains_any
 
