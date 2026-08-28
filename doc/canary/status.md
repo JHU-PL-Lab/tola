@@ -58,11 +58,12 @@
 
 - **GH CI is alive again** (2026-08-27, extended 08-28). It had not run
   successfully since April and was failing every push. `canary_min.yml`
-  now runs **seven projects green on `ubuntu-latest`** — sqlite, cairo,
-  zarith, libffi, zlib, zstd, llvm, the all-`Fetched` world of each,
+  now runs **eight projects green on `ubuntu-latest`** — sqlite, cairo,
+  zarith, libffi, zlib, zstd, ssl, llvm, the cheapest world of each,
   45–199s per job — rendered from the LIVE pipeline (`Canary_ci` over
   `Canary_pipeline.steps_of`) rather than from the per-project
-  `*_ci_spec` values that had drifted. A `.github/actions/canary-setup`
+  `*_ci_spec` values that had drifted. Two red cells reproduce there:
+  llvm's `Opcode.UncondBr` and ssl's c2 on `probe_app_ocaml`. A `.github/actions/canary-setup`
   composite action carries the shared setup, and each job also renders as
   a shell twin under `_out/canary/ci/<job>.sh` so a CI job can be
   debugged without pushing. The pre-A5 `canary_ci.yml` (5 jobs, all red

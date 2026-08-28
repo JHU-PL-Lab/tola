@@ -1658,3 +1658,51 @@ The general rule, now in CLAUDE.md's gotchas beside the cmake instance:
 **an assertion that compares tool OUTPUT must state the format it wants**,
 because the environment will otherwise choose one. Only CI could find
 this — nothing sets `OPAMCOLOR` on either of our machines.
+
+## 2026-08-28 — the GH backend's three latent bugs, found by running it
+
+Extending the pipeline-rendered workflow past the projects that happen to
+be all-green surfaced three defects in `canary_gh.ml`, all present since
+it was written and all invisible until real jobs were rendered. They are
+worth recording together because they share a shape: **the backend
+disagreed with the runner about what a step's verdict means**, which is
+the one thing a CI backend must not do.
+
+1. **A derived expectation was rendered like the oracle.**
+   `Expect_compat_derived` computes its own polarity — a prediction means
+   the step must fail, no prediction means the artifact is good and the
+   step must SUCCEED. The backend rendered it identically to
+   `Expect_compat_failure`, which always expects a failure. ssl's
+   `probe_binding_ocaml`, green locally, was emitted as an expected
+   failure and CI reported *"FAIL: expected failure but step succeeded"*
+   on a step whose red cell is not there at all — it is on
+   `probe_app_ocaml`.
+
+2. **An empty prediction is ambiguous, and the first fix guessed wrong.**
+   Empty means either "nothing is predicted to fail" or "the cached
+   inspection was not there to resolve". Reading it as the first is right
+   for ssl and wrong for llvm, whose `Opcode.UncondBr` failure is real
+   but whose summaries are not on the generating machine — so a known
+   xfail became a must-succeed step and a green job went red. The
+   resolver now records whether any input went unresolved; only
+   empty-AND-resolved means the artifact is good.
+
+3. **The verify grepped a log that does not exist.** It looked for a bare
+   `probe.log`, a name that only existed while CI ran one chain per
+   project with an EMPTY variant key. A pipeline-rendered job has a real
+   key, so the step writes `probe_<scenario>.log` and every
+   expected-failure verify grepped the wrong path, reporting *"expected
+   message not found"* for a step that had failed exactly as predicted.
+
+Pinned by `gh.derived_expectation_polarity` (both polarities, plus the
+log path). Note the log-path claim first pointed at the branch that emits
+a polarity-only body with no grep in it, and therefore asserted nothing —
+the same wrong-branch mistake as two earlier pins this month.
+
+**Residual weakness, stated rather than fixed.** Predictions are resolved
+at YAML-GENERATION time from the generating machine's cached inspections.
+When those are absent the check degrades from "fails with this signature"
+to "fails somehow" — which is why llvm's CI verdict reads *"expected
+failure confirmed (no specific predicted strings)"* while ssl's is checked
+by signature. A CI verdict is therefore only as sharp as the local record
+of the machine that rendered the workflow.
