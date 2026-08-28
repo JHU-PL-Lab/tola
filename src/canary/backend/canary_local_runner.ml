@@ -231,7 +231,7 @@ let run_cmd_logged logger ~tag ~output_dir ~variant_key cmd =
          through 48 command templates, because every one of them already
          runs [eval $(opam env)] and opam env honours OPAMSWITCH. Outside
          the inner subshell so it applies to the whole group. *)
-      (Canary_store.opam_switch_prologue ())
+      (Canary_store.opam_switch_prologue () ^ Canary_store.run_id_prologue ())
       (Stdlib.Filename.quote rc_path) cmd (Stdlib.Filename.quote rc_path)
       (Stdlib.Filename.quote out_path) (Stdlib.Filename.quote rc_path)
   in

@@ -1731,6 +1731,54 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         && not (String.equal f_mac f_wsl)) }
 
 
+
+(* PREPARE ONCE, ENSURE PER WORLD (2026-08-28, user: "in one canary run
+   ... we can assume the stable/latest is fixed ... the first request
+   check the local then asked the remote").
+
+   The checkout is SHARED — [<contrib>/<project>-all/<repo>] carries no
+   scenario — but the marker is per-world, so N worlds at one ref used to
+   run N `git fetch`es to converge on a tree that was already right
+   (1.1s each, measured on cairo). The remote half is now guarded by a
+   sentinel stamped with [$CANARY_RUN_ID]; the local half is not.
+
+   Measured on the emitted shell: 0.317s cold, 0.004s for the next world
+   in the same run, 0.278s again under a new run id — so a moving ref
+   still refreshes once per run rather than never.
+
+   This pin is a SHAPE check and says so: it asserts where the guard sits,
+   not that the second invocation is fast. What makes it more than
+   decoration is the polarity — the clone must be INSIDE the guard and the
+   marker write OUTSIDE it. Swap either and a world either re-fetches or
+   never records its own evidence. *)
+let source_refresh_scope_pin : Canary_project_test.pure_test =
+  { name = "source.refresh_is_run_scoped";
+    check =
+      (fun () ->
+        let cmd =
+          Canary_artifact_source.worktree_ensure_cmd ~project:"p"
+            ~repo:
+              { Canary_artifact_source.name = "r";
+                remote = Some (Canary_artifact_source.Git "https://example/r.git");
+                locals = Canary_artifact_source.mk_locals "contrib/r-all/r";
+                version = Canary_basic.{ channel = Stable; id = "1" };
+                ref_ = "v1"; official = true; build_sys_deps = [];
+                api_source = None; label = None; artifacts = [] }
+            ~ref_:"v1" ~output_dir:"OUT" ~variant_key:"" ()
+        in
+        let idx sub = String.substr_index cmd ~pattern:sub in
+        match (idx "CANARY_RUN_ID", idx "git clone", idx "> OUT/") with
+        | Some run_id, Some clone, Some marker ->
+            (* the guard is stamped with the run, and the clone sits
+               inside it *)
+            run_id < clone
+            (* the marker — this world's own evidence — is written after
+               and outside the guarded block, so every world records it
+               whether or not it did the remote work *)
+            && clone < marker
+            && String.is_substring cmd ~substring:"if [ ! -e \"$SENTINEL\" ]"
+        | _ -> false) }
+
 (* DEMAND, NOT DECLARATION (2026-08-27, [design/source_provisioning.md]
    §4 and the user's audit of it).
 
@@ -3842,7 +3890,8 @@ let base_tests : Canary_project_test.pure_test list =
       run_info_session_pin;
       machine_roots_pin;
       platform_enumeration_pin;
-      demand_prune_pin ]
+      demand_prune_pin;
+      source_refresh_scope_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 

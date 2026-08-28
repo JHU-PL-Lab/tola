@@ -154,9 +154,42 @@ let worktree_ensure_cmd ?(marker = "source.ok") ~project ~(repo : source_repo)
          (+1.1s and +4M for the second one) because it withholds blobs,
          not history. The rule: our constraint is MANY REFS, not one, and
          depth optimises for the opposite case. *)
+      (* PREPARE ONCE, ENSURE PER WORLD (2026-08-28, user: "in one canary
+         run we can assume the stable/latest is fixed ... the first
+         request check the local then asked the remote").
+
+         N worlds sharing a ref used to run this whole thing N times —
+         the checkout is shared ([<contrib>/<project>-all/<repo>] carries
+         no scenario), but the marker is per-world, so every world paid
+         another `git fetch` (1.1s measured on cairo) to converge on a
+         tree that was already right.
+
+         Split by WHO the question is for:
+
+         - the REMOTE half (clone / fetch / worktree add) answers "has the
+           ref moved?", which is a question about the run — [latest] is
+           fixed within one — so it runs once, guarded by a sentinel
+           stamped with [$CANARY_RUN_ID];
+         - the LOCAL half (checkout + marker) answers "is this world's
+           tree here?", which is per world, and is cheap.
+
+         Across runs the sentinel name changes, so a moving ref still
+         refreshes exactly once per run — the refresh-on-demand intent of
+         the worktree model is preserved, not traded away for speed. The
+         stale sentinels of previous runs are swept before the new one is
+         written, so contrib does not accumulate them.
+
+         On CI [$CANARY_RUN_ID] is unset: the sentinel is a fixed name in
+         a workspace that is always cold, so the remote half runs, which
+         is what a fresh runner needs. *)
       [%string
-        {|if [ ! -d %{main}/.git ]; then git clone --filter=blob:none %{url} %{main}; fi && \
-git -C %{main} fetch -q origin %{ref_} && \
+        {|SENTINEL=%{main}-refreshed-${CANARY_RUN_ID:-none}
+if [ ! -e "$SENTINEL" ]; then \
+  { if [ ! -d %{main}/.git ]; then git clone --filter=blob:none %{url} %{main}; fi && \
+    git -C %{main} fetch -q origin %{ref_} && \
+    if [ ! -d %{wt} ]; then git -C %{main} worktree add -f %{wt} %{ref_}; fi ; } && \
+  rm -f %{main}-refreshed-* && touch "$SENTINEL" ; \
+fi && \
 if [ ! -d %{wt} ]; then git -C %{main} worktree add -f %{wt} %{ref_}; fi && \
 git -C %{wt} checkout -q -f %{ref_} && \
 echo '%{wt}' > %{output_dir}/%{ok}|}]

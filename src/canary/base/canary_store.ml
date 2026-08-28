@@ -361,6 +361,32 @@ let opam_switch_prologue () : string =
 let opam_switch_label () : string =
   match !opam_switch with None -> "(ambient)" | Some s -> s
 
+(** THIS RUN's identity (2026-08-28).
+
+    A process is a run: [canary action <p>] executes every world of a
+    project in one process, and a GH job runs exactly one. So a
+    process-lifetime stamp is precisely the scope in which "stable/latest
+    is fixed" holds (user, 2026-08-28) — which is what lets a fetch
+    consult the remote once and let the other worlds find the result
+    already there.
+
+    Exported into every step's shell beside the switch, for the same
+    reason: it is one fact the commands need and threading it through the
+    templates would be 48 edits. Absent on CI (nothing exports it there),
+    where each job has a cold workspace and must do the full fetch
+    anyway — so the guard reads as "not yet done" and the cold path
+    runs. *)
+let run_id : string Lazy.t =
+  lazy
+    (let t = Unix.localtime (Unix.time ()) in
+     Printf.sprintf "%04d%02d%02d-%02d%02d%02d-%d" (t.Unix.tm_year + 1900)
+       (t.Unix.tm_mon + 1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min
+       t.Unix.tm_sec (Unix.getpid ()))
+
+let run_id_prologue () : string =
+  Printf.sprintf "export CANARY_RUN_ID=%s\n"
+    (Stdlib.Filename.quote (Lazy.force run_id))
+
 (** Run a shell command FROM OCAML in the selected switch, and return its
     exit code.
 

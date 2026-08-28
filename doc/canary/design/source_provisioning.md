@@ -349,3 +349,84 @@ The main architectural principle I would keep is:
 And for the quick-versus-heavy implementation choice:
 
 > **Backward reachability should define the semantics; demand-driven graph construction can later optimize the implementation.**
+
+## 6. Prepare once, ensure per world (landed 2026-08-28)
+
+User: *"In one canary run e.g. `dune canary` or `launch a GH CI`, we can
+assume the stable/latest is fixed. So I suggest a local testing … the
+first request check the local then asked the remote."*
+
+### The asymmetry it fixes
+
+A fetch is unlike every other action in two ways, and they compound:
+
+- **It is the only action class with no inputs.** The pinned catalogue has
+  `(Fetch Source, [], [Source])` and `(Fetch Lib, [], [Lib])`; every other
+  row consumes something. That is why a fetch can be orphaned (§4) — and
+  why its *input* is really the world's ambient store.
+- **Its product lives outside the world.** A build writes into
+  `<workspace>/`; a fetch writes to the shared store —
+  `<contrib_root>/<project>-all/<repo>[-<ref>]`, an apt/brew system store,
+  an opam switch, a pip venv. No scenario appears in any of those paths.
+
+But **the marker is per-world**, so N worlds at one ref each ran the whole
+fetch to converge on a tree that was already right.
+
+### The split
+
+`worktree_ensure_cmd` now separates the question by who is asking:
+
+| half | question | scope | guard |
+| --- | --- | --- | --- |
+| remote — clone / fetch / worktree add | *has the ref moved?* | the RUN (`latest` is fixed within one) | sentinel `<main>-refreshed-$CANARY_RUN_ID` |
+| local — checkout + marker | *is this world's tree here?* | the world | none; it is cheap |
+
+`CANARY_RUN_ID` is a process-lifetime stamp exported into every step's
+shell beside `OPAMSWITCH` (`Canary_store.run_id`) — a process *is* a run:
+`canary action <p>` executes every world of a project in one, and a GH job
+runs exactly one.
+
+Measured on the emitted shell:
+
+```
+first world in a run   0.317s      (consults the remote)
+next world, same run   0.004s      (sentinel hit — no network)
+first world, new run   0.278s      (refreshes again)
+```
+
+So the refresh-on-demand intent of the worktree model is **preserved, not
+traded for speed**: a moving ref still updates once per run. Across runs
+the sentinel name changes; stale sentinels are swept before the new one is
+written. On CI `$CANARY_RUN_ID` is unset and the workspace is always cold,
+so the remote half runs — which is what a fresh runner needs.
+
+Pinned as `source.refresh_is_run_scoped`, and the pin says what it is: a
+SHAPE check on the emitted command. Its polarity is the part that matters
+— the clone must be INSIDE the guard, the marker write OUTSIDE it. Swap
+either and a world re-fetches, or stops recording its own evidence.
+
+### What this is worth, honestly
+
+~1.1s per world beyond the first for git (cairo), ~1–2s for an
+already-satisfied apt install, ~5.2s for an already-satisfied `opam
+install`. For a 10-world local run, tens of seconds. **Zero on CI**, where
+each job has one world and a cold workspace — the dominant CI cost is a
+cold opam switch (§3b), which no presence test can avoid and which wants
+caching in the composite action instead.
+
+The other fetch kinds are not converted yet. The predicates they need
+already exist and are unused as command prologues:
+`Canary_pm_{apt,brew,pip}.verify_installed_cmd`,
+`Canary_pm_opam.holds_pin_cmd`, `Canary_prebuilt.is_prepared` — the same
+"present and unused" shape `platform.md` §7 noted for
+`check_available_cmd`. Note that opam is already half-covered by a
+different route: its fetch is pin-checked, so the run cache warm-skips it
+when the switch provably holds the pin.
+
+### Still future work
+
+This implements the SEMANTICS of prepare-vs-fetch as a guard inside one
+command. The structural split — `prepare` as its own dispatched action,
+run once per repo per run — remains what `worktree_ensure_cmd`'s comment
+has always said it should be: *"The fetch step IS the prepare … prepare as
+a dynamically dispatched action is future work."*
