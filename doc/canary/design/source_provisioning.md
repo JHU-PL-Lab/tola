@@ -191,10 +191,44 @@ and worth keeping — *the tree is here* and *the ref resolves* are two
 claims a full clone answers at once — it is the placement that was
 wrong.
 
+### 3b. What a CI job actually costs — measured on the runner
+
+Local clone timings are a poor guide to CI, and so was my first reading
+of the CI ones. Per-step spans from the cairo job (2026-08-28):
+
+| step | run with the clone | run after pruning it |
+| --- | --- | --- |
+| `canary-setup` (setup-ocaml + apt + `opam install ocamlfind`) | ~40s | ~55s |
+| `fetch_source` (partial clone of cairo) | **11.6s** | — (pruned) |
+| `fetch_lib` (`apt-get install libcairo2-dev`) | ~6s | ~5s |
+| `fetch_binding_ocaml` (`opam install cairo2`) | ~47s | ~40s |
+| probes + inspects | seconds | seconds |
+| **job total** | **108s** | **107s** |
+
+**The source clone was never the bottleneck; opam is.** Removing the
+clone entirely moved the total by about a second — less than the variance
+between two runs of the same workflow (`canary-setup` alone differed by
+15s). The two dominant costs are both opam: provisioning the switch and
+installing the binding.
+
+A correction worth recording, because it was stated confidently and
+wrongly: the first workflow run took 321s and the next 108s, and that 3×
+was attributed here to partial clone. It was not — at 11.6s the clone
+could not account for 213s. The first run was simply the first with
+`ocaml-compiler: 5.4`, so `setup-ocaml` built its cache; every run since
+has hit it. Two runs are not a measurement, and "the change I just made"
+is not an explanation.
+
+So the ordering in audit §9 — eliminate, reduce, reuse — still holds, but
+the target moves: after §4 eliminates the fetches nobody needs, the
+reuse worth having is an **opam** cache (setup-ocaml's, plus the binding
+install), not a source-repository cache.
+
 ## 5. Not in scope here, but adjacent
 
 - **Cache the contrib tree on CI** keyed on the REPOSITORY, not on
-  (repo, ref) — audit §10. One repo holds every ref we track and the
+  (repo, ref) — audit §10. Lower priority than it looked before §3b: the
+  clone is 11.6s of a 108s job, so cache opam first. One repo holds every ref we track and the
   worktrees share its objects, so a per-ref key would shard the very
   thing the worktree model exists to share. The composite
   action `.github/actions/canary-setup` is the natural home; the z3
