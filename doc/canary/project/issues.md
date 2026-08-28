@@ -534,8 +534,23 @@ flagged `contrib/canary/opam-local-repo` vs the real
 
 The workflow is `workflow_dispatch`-only as of 2026-08-27 so it stops
 burning ~25 minutes a push to fail the same way; it is kept because it is
-the record of what once passed. Diagnose it or migrate its jobs to
-`Canary_ci` — the second is probably cheaper.
+the record of what once passed.
+
+**Migration is most of the way done** (2026-08-28): three of its five
+jobs — sqlite, zarith, llvm-19 — now have green pipeline-rendered twins
+in `canary_min.yml`, alongside four projects it never covered. What is
+left is the reason to keep the file at all:
+
+- **ssl** — its worlds carry `app-direct=vendored@stable`, and
+  `Canary_ci`'s selector takes strictly-`Fetched` worlds. Admitting it
+  needs the declared ORIGIN visible in the selector, to tell an in-tree
+  example from a conda-forge prebuilt that needs preparing first (see the
+  comment on `all_fetched`).
+- **z3** — deliberately out. A pin flip rebuilds libz3 (~30 min) on a
+  cold runner, the same reason it is muted locally.
+
+Once those two are answered, `canary_ci.yml` and the `*_ci_spec` values
+it renders from can go, and this entry closes with them.
 
 
 ### Found — zarith packs a binding nothing probes (2026-08-27)
