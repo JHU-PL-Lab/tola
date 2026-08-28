@@ -538,6 +538,34 @@ the record of what once passed. Diagnose it or migrate its jobs to
 `Canary_ci` — the second is probably cheaper.
 
 
+### Found — zarith packs a binding nothing probes (2026-08-27)
+
+Surfaced by the demand rule ([`../design/source_provisioning.md`](../design/source_provisioning.md) §4).
+In `lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master`,
+zarith builds the binding, **packs it into the canary-local opam repo**,
+and then probes the BUILD TREE:
+
+```
+ocamlfind ocamlopt -I <build> <build>/zarith.cmxa <example>   # not -package zarith
+```
+
+So `probe_binding_ocaml` depends on `build_binding_ocaml`, nothing depends
+on `pack_binding_ocaml`, and the publish's result is never consumed by a
+check in that world. `step.deps` is right; the world is the odd part.
+
+Two readings, and they want different fixes:
+
+- the world should probe the PACKED package (`-package zarith` with the
+  world's libdir first on the loader path) — then the publish is under
+  test and the dependency edge appears on its own; or
+- the world should not pack at all — the pack belongs to a *Packed*
+  binding provision, which this world does not declare.
+
+Not decided here. The prune keeps the step for now because `Publish`
+carries a `pin_check_post` — it asserts the store holds what it published,
+so dropping it would delete a check rather than remove waste
+(`prune_to_demand`, `canary_step_builder.ml`).
+
 ## 3. Per-project chores
 
 - [ ] **Spec-check warning-reconsideration pass** — zarith's

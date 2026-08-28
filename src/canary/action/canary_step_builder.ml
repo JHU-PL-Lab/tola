@@ -779,6 +779,97 @@ let check_api_consistency (spec : runner_spec) =
         if not any_source_dir then
           failwith "api_source: runner_spec has build_binding but no binding_api declares source_dir"
 
+(* ── DEMAND: what a world actually owes ─────────────────────────────────
+
+   2026-08-27, from [design/source_provisioning.md] §4 and the user's
+   audit of it. THE RULE:
+
+     Declaration makes an action AVAILABLE; dependency makes it NECESSARY.
+
+   [derive_steps] walks the action catalogue and filters by what the
+   project CAN do, so a world realizes every action its spec declares —
+   including ones nothing in that world consumes. Measured on cairo's
+   all-Fetched world: [fetch_source] with no dependents, cloning a
+   repository whose tree no later step reads. On CI that was most of a
+   3-minute job.
+
+   So: keep a step only if the world owes it.
+
+   - OBLIGATIONS are the steps that ASSERT something — the criterion is
+     whether the step's postcondition checks anything BEYOND its own
+     marker. Probes check an artifact. [Scan_sources] checks the source
+     against the api_source claims. [Publish] checks that the store
+     provably holds what it published ([pin_check_post]). A [Fetch]'s
+     postcondition is "the marker exists", i.e. the command ran — it
+     asserts nothing about the world, which is why it is the kind of step
+     that can be owed and never needed.
+
+     Publish earns its place here empirically, not by taste: zarith's
+     built-binding world packs the binding and then probes the BUILD TREE
+     (`ocamlfind -I <build> <build>/zarith.cmxa`, not `-package zarith`),
+     so nothing depends on the pack and a probes-only rule deletes it.
+     Dropping it would remove the only check that the publish worked —
+     a check, not waste. That the world packs something it never probes
+     is a real finding, filed in project/issues.md; the rule should
+     surface it, not silently act on it.
+   - ANCESTORS of an obligation are necessary: that is what a dependency
+     means.
+   - DESCENDANTS of an obligation are its evidence ([probe_lib_inspect]
+     and friends hang off the probe they summarise). Taken from the
+     obligations only, NOT from ancestors — a step hanging off a fetch
+     leads nowhere by itself and is exactly what this prunes.
+
+   Deliberately uniform over actions rather than special-cased to
+   [fetch_source] (audit §6): a build or an install nothing consumes is
+   the same waste and should vanish the same way.
+
+   The escape hatch is the absence of obligations: a world with no probe
+   at all keeps everything, because "nothing is owed" is then a statement
+   about the spec, not about the world, and silently emitting zero steps
+   would be a worse answer than an honest one. *)
+let prune_to_demand (steps : step list) : step list =
+  let is_obligation (s : step) =
+    match s.action with
+    | Probe_lib | Probe_binding _ | Probe_app _ | Scan_sources
+    | Publish _ -> true
+    | _ -> false
+  in
+  let obligations = List.filter steps ~f:is_obligation in
+  if List.is_empty obligations then steps
+  else begin
+    let by_tag = Hashtbl.create (module String) in
+    List.iter steps ~f:(fun s -> Hashtbl.set by_tag ~key:s.tag ~data:s);
+    let keep = Hashtbl.create (module String) in
+    let rec up (s : step) =
+      if not (Hashtbl.mem keep s.tag) then begin
+        Hashtbl.set keep ~key:s.tag ~data:true;
+        List.iter s.deps ~f:(fun d ->
+            match Hashtbl.find by_tag d with Some p -> up p | None -> ())
+      end
+    in
+    List.iter obligations ~f:up;
+    (* evidence: anything transitively depending on an obligation *)
+    let rec settle () =
+      let added =
+        List.fold steps ~init:false ~f:(fun acc s ->
+            if Hashtbl.mem keep s.tag then acc
+            else if
+              List.exists s.deps ~f:(fun d ->
+                  match Hashtbl.find by_tag d with
+                  | Some p -> Hashtbl.mem keep p.tag && is_obligation p
+                  | None -> false)
+            then begin
+              Hashtbl.set keep ~key:s.tag ~data:true;
+              true
+            end
+            else acc)
+      in
+      if added then settle ()
+    in
+    settle ();
+    List.filter steps ~f:(fun s -> Hashtbl.mem keep s.tag)
+  end
+
 let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang.[ OCaml ]) (spec : runner_spec) : step list =
   check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
@@ -1021,6 +1112,8 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                   (output_dir_for ~root ~project ~tag:dep))
       in
       { s with check_pre })
+  |> prune_to_demand
+
 
 
 

@@ -1730,6 +1730,61 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         mac && wsl && mapping_ok
         && not (String.equal f_mac f_wsl)) }
 
+
+(* DEMAND, NOT DECLARATION (2026-08-27, [design/source_provisioning.md]
+   §4 and the user's audit of it).
+
+     Declaration makes an action available; dependency makes it necessary.
+
+   [derive_steps] used to realize every action a project declared, so
+   cairo's all-Fetched world cloned a repository whose tree no later step
+   read — most of a 3-minute CI job spent on an artifact nobody consumed.
+   [prune_to_demand] keeps a step only if it asserts something, is an
+   ancestor of something that does, or is that thing's evidence.
+
+   The pin is the PAIR, because either half alone is satisfiable by a
+   broken rule: prune everything and cairo passes; prune nothing and
+   sqlite passes. Only both together say the rule is about demand. *)
+let demand_prune_pin : Canary_project_test.pure_test =
+  { name = "derive.steps_are_demanded";
+    check =
+      (fun () ->
+        let tags_of pr a =
+          let ctx = Canary_pipeline.ctx_of pr a in
+          List.map
+            (Canary_pipeline.steps_of ~root:"_out/canary" pr ~ctx a)
+            ~f:(fun s -> s.Canary_step_model.tag)
+        in
+        let has ts t = List.mem ts t ~equal:String.equal in
+        (* (1) cairo's world is all-Fetched: nothing consumes the source,
+           so no fetch_source — and the checks themselves survive, which
+           is what says the rule pruned rather than emptied. *)
+        let cairo_ok =
+          match Canary_pipeline.ordered Canary_project_cairo.cairo_run with
+          | [] -> false
+          | a :: _ ->
+              let ts = tags_of Canary_project_cairo.cairo_run a in
+              (not (has ts "fetch_source"))
+              && has ts "probe_lib"
+              && has ts "probe_binding_ocaml"
+              (* evidence hanging off a probe is kept, not pruned as a
+                 leaf with no dependents of its own *)
+              && has ts "probe_lib_inspect"
+        (* (2) sqlite has a world whose lib is BUILT from that source, and
+           there the very same rule must KEEP the fetch — build_lib
+           depends on it. A rule that drops it fails here. *)
+        and sqlite_ok =
+          let pr = Canary_project_sqlite.sqlite_run in
+          let built =
+            List.filter_map (Canary_pipeline.ordered pr) ~f:(fun a ->
+                let ts = tags_of pr a in
+                if has ts "build_lib" then Some ts else None)
+          in
+          (not (List.is_empty built))
+          && List.for_all built ~f:(fun ts -> has ts "fetch_source")
+        in
+        cairo_ok && sqlite_ok) }
+
 (* IS THE ENUMERATION PLATFORM-AGNOSTIC? (2026-08-26, user: "how about
    the platform affecting the enumeration? it should be agnostic until
    the runner, but can we confirm that?")
@@ -3785,7 +3840,8 @@ let base_tests : Canary_project_test.pure_test list =
       platform_single_source_pin;
       run_info_session_pin;
       machine_roots_pin;
-      platform_enumeration_pin ]
+      platform_enumeration_pin;
+      demand_prune_pin ]
 
 let tests : Canary_project_test.pure_test list = base_tests
 
