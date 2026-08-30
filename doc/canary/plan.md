@@ -373,8 +373,9 @@ all three. Proposed shape:
 
 **Project-spec hygiene** (long-standing, absorbs the old #18/#19/#25/#26/#40)
 
-- [ ] Real `cmake --install` instead of the `cp` fake in z3 / llvm
-      `install_lib` — see [`../ops/install_targets.md`](ops/install_targets.md).
+- [x] Real `cmake --install` instead of the `cp` fake in z3 / llvm
+      `install_lib` — DONE (backlog #40); see
+      [`ops/install_targets.md`](ops/install_targets.md).
 - [ ] z3's `build_z3_ocaml_bindings` PHONY guard
       (`test -f z3ml.cmxa || ninja …`) so a cache rebuild doesn't
       trigger a full z3 rebuild.

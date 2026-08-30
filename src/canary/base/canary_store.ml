@@ -55,11 +55,15 @@ type pm_info =
   | Lang_pm of { lang : Canary_lang.lang; pm : package_manager }
 
 (* Location: objective "where does this artifact live right now".
-   Build_tree: raw build output. Staged: cmake --install'd (TODO #25).
+   Build_tree: raw build output. Staged: cmake --install'd into a prefix.
    Pm: in a package manager — see pm_info for the sub-kind. *)
 type location =
   | Build_tree
-  | Staged  (** cmake --install'd into a prefix — see TODO #25 *)
+  | Staged
+      (** cmake --install'd into a prefix. Real since 2026-08-17/19 (the
+          old TODO #25/#40): z3 stages per ref and asserts completeness,
+          llvm installs the LLVM component. See
+          doc/canary/ops/install_targets.md. *)
   | Pm of pm_info
 
 (* Artifact status — the lifecycle state of an artifact (explicit

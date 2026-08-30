@@ -14,6 +14,11 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 11. **tqdm-style progress display** — redirect verbose build output
     (cmake/ninja) to a log file, show a `\r`-overwriting single-line
     status on tty. `run_cmd_logged` already has the logging layer.
+    *Half done (verified 2026-08-30):* every step's output already lands
+    in `<tag>.out.log` — `run_step` wraps the command in `… 2>&1 | tee`,
+    deliberately mirroring to the terminal so a long build shows
+    progress. What is left is only the `\r` single-line rendering, i.e.
+    replacing the mirror, not adding the capture.
 
 13b. **Driver mode: read `run_info.json`** — allow `canary action --from
     run_info.json` to replay or reconfigure a run. Enables reproducibility.
@@ -133,6 +138,18 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     natural seam; the remaining local bind is `detect_pm ()` inside
     `mk_runner_spec` bodies.
 
+    *2026-08-30 — the stated blocker is gone; half the item is done.* The
+    PM is no longer sniffed at derivation time: `detect_pm () =
+    system_pm_of_platform (platform ())`, and the platform is one carried
+    session value, overridable with `--platform=macos|wsl` or
+    `CANARY_PLATFORM` (see `design/platform.md`). So rendering a macOS
+    view from a Linux host already works, and no `~target_pm` parameter
+    is needed — the session value beat the threaded parameter.
+    **What remains** is the follow-on half, untouched: OS-conditional
+    steps in `canary_gh.ml` (`if: runner.os == 'Linux'` guards) and a
+    matrix strategy (ubuntu × macos, OCaml version axis). Re-scope
+    against `Canary_ci`, not the retired `*_ci_spec` path.
+
 37. **Bundled mermaid.js for the HTML viewer** — `backend/canary_html.ml`
     loads mermaid from a CDN, so a run's `result.html` needs network access
     to render. Add a `--bundle-mermaid` flag that inlines the library for
@@ -166,17 +183,32 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     stays small and manually curated; revisit when #40 (real cmake --install) adds
     another follow-up shape or when conditional execution is needed for CI.
 
-40. **Replace fake `install_lib` with real `cmake --install`** — z3 and
-    llvm's `install_lib` scripts currently copy build artifacts with `cp`
-    (fake install). Replace with `cmake --install --prefix $PREFIX` to
-    actually exercise cmake's install-time transformations: RPATH rewriting,
-    versioned symlink creation, `pkg-config`/`FindPackage` config file
-    generation. The `probe_lib Staged` step then tests the installed artifact
-    rather than a hand-copied one, giving the install step real diagnostic
-    value. See `doc/canary/ops/install_targets.md` for z3 vs LLVM cmake
-    install patterns (z3 needs `ocamlfind install` separately; LLVM uses
-    `LLVM_OCAML_INSTALL_PATH`). Prerequisite: a fixed `$PREFIX` convention
-    per project run, likely `$build/../install`.
+    *2026-08-30: that trigger has fired.* #40 shipped and did add the
+    shape — `install_lib` → `probe_lib_staged` is a fourth ad-hoc
+    parent-emits-follow-up case, and it is gated on a provision
+    (`ar_needs`), which the other three are not. So the general dispatch
+    model now has four instances and one of them already carries a
+    condition. Worth re-scoping against `ar_needs` before designing.
+
+40. **Replace fake `install_lib` with real `cmake --install`** — **DONE**
+    (z3 2026-08-17/19, llvm earlier; verified 2026-08-30). Both projects
+    install for real, through typed templates rather than `cp`:
+    z3 `Cmake_install { prefix; assert_staged }` gated `ar_needs = Some
+    Installed` at `<project>-all/install-<ref>` (per ref, never shared);
+    llvm `Cmake_install_component { component = "LLVM" }` at
+    `<build>/../install`, firing under the default `Built` rule.
+    `emit llvm --stage realize` on a dev scenario shows `install_lib` →
+    `probe_lib_staged`. The `$PREFIX` convention landed as predicted, and
+    `cmake_install_cmd` additionally refuses an empty prefix at run time
+    so no caller can fall through to `/usr/local`.
+
+    The install-time transformations this was for (RPATH rewriting,
+    versioned symlinks, config-file generation) are now exercised, and the
+    first finding came straight out of them — see the arbipher-fork entry
+    in `project/issues.md` §1. Remaining install work is tracked there
+    (`Open — install inspection gaps`), not here.
+    Reference: `doc/canary/ops/install_targets.md`. (The same entry
+    subsumes the old #25, which never had its own line in this file.)
 
 45. **z3-solver pip wheel is a co-provider (bundles its own libz3.so)** —
     `z3-solver` is not a pure Python binding that depends on a separately
@@ -376,6 +408,12 @@ No hurry — all items below are queued for when their forcing function arrives.
       numbers; three pointed at docs deleted in `b822d88` / `9edf15b`,
       and two still cite `api_surface.md` §13/§15 and
       `surface_theory.md` §2.5, which exist nowhere.
+      *Counted 2026-08-30:* **~16 live citations of `status §A`/`§B`/`§C`
+      (plus `status.md §1a`/`§1b`) across `src/canary/`** — status.md has
+      had no lettered sections since it was reorganised, so every one of
+      them resolves to nothing. They are spread over ten files, which
+      makes this the largest single instance and a good first target for
+      whatever resolver gets built.
     - **Docs → CLI subcommands and flags.** `testing_plan.md` proposes
       `canary pipeline-test`; nothing asserts a cited subcommand exists,
       or that a documented flag (`--refs`, `--thin`) is still parsed.

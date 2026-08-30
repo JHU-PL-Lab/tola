@@ -64,8 +64,9 @@ let ninja_build_cmd ?(ninja_exec = "ninja") ?target ~build () =
     workspace lives outside the tola dune-project. *)
 (* REAL install: the build system's own install step ("cmake --install
    <build> --prefix <prefix>") — applies the install-time transformations
-   (config files, versioned symlinks, RPATH handling) a hand `cp` skips
-   (TODO #40 / status §B build-config divergence). Caller owns the
+   (config files, versioned symlinks, RPATH handling) a hand `cp` skips.
+   This is what closed the old TODO #25/#40; the remaining install work
+   is project/issues.md "Open — install inspection gaps". Caller owns the
    idempotence guard.
 
    SAFETY (user, 2026-08-06): a prefix is REQUIRED (labelled, no default)

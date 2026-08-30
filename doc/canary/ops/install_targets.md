@@ -1,110 +1,83 @@
-# Install Target Survey: Z3 and LLVM
+# Install targets — what a project's `cmake --install` actually does
 
-Last updated: 2026-04-16. Informs TODO #25 (model `cmake --install` as canary action slot).
+Reference for landing a source-built project. Surveyed 2026-04-16 from Z3
+and LLVM; re-verified 2026-08-30. Everything it proposed is now built, so
+what survives here is the part that still constrains a spec.
 
-## Three canonical patterns
+## The work it informed is done
+
+The old TODOs #25 ("model `cmake --install` as an action slot") and #40
+("replace the `cp` fake") are both shipped. `install_lib` is a real
+install in both projects:
+
+| project | template | fires when | prefix |
+| --- | --- | --- | --- |
+| z3 | `Cmake_install { assert_staged }` | `ar_needs = Some Installed` | `<project>-all/install-<ref>` (per ref) |
+| llvm | `Cmake_install_component { component = "LLVM" }` | default rule (`Built`) | `<build>/../install` |
+
+The `install_strategy` union this doc originally proposed — one strategy
+per project — was **not** adopted and should not be revived. Install is a
+per-**action-row** template (`Canary_action_templates.action_template`),
+which is what lets z3 gate staging on the `Installed` provision while
+llvm's fires in every Built world. One project can need both shapes; a
+per-project union cannot express that.
+
+Prefix safety is enforced in `cmake_install_cmd`: a prefix is a required
+labelled argument, and the emitted shell refuses an empty expansion, so
+no caller can fall back to `CMAKE_INSTALL_PREFIX = /usr/local`.
+
+## Three discovery patterns
 
 | Pattern | Representative | Discovery tool | OCaml install | Rpath |
-|---------|---------------|----------------|---------------|-------|
-| **pkg-config** | Z3 | `z3.pc` + `Z3Config.cmake` | Manual (`ocamlfind`) | Build-time `$ORIGIN` |
-| **llvm-config** | LLVM | `llvm-config` binary | cmake `install()` automated | `$CAMLORIGIN/../..` (relocatable) |
-| **cmake config only** | many C++ libs | `*Config.cmake` only | N/A | Standard cmake rpath |
+| --- | --- | --- | --- | --- |
+| **pkg-config** | Z3 | `z3.pc` + `Z3Config.cmake` | see below | build-time `$ORIGIN` |
+| **llvm-config** | LLVM | `llvm-config` binary | cmake `install()` | `$CAMLORIGIN/../..` (relocatable) |
+| **cmake config only** | many C++ libs | `*Config.cmake` only | n/a | standard cmake rpath |
 
----
+## Z3 — the OCaml install is REF-DEPENDENT
 
-## Z3
+This doc used to state flatly that `src/api/ml/CMakeLists.txt` has no
+`install()` calls, so the OCaml package must be installed separately with
+`ocamlfind`. That is no longer a fact about Z3; it is an axis, and it is
+the axis canary tests:
 
-### cmake install output
-- `libz3.so` → `$PREFIX/lib/`
-- `z3.h`, `z3_api.h`, ... → `$PREFIX/include/`
-- `z3.pc` → `$PREFIX/lib/pkgconfig/`
-- `Z3Config.cmake`, `Z3ConfigVersion.cmake` → `$PREFIX/lib/cmake/z3/`
+| ref | `install()` in `src/api/ml/` | canary |
+| --- | --- | --- |
+| official `latest` (post-#10549, `93c609d`) | present | `assert_staged` passes |
+| official `pre-10549` | absent | `assert_staged` fails → declared xfail |
+| `arbipher` fork | absent (verified at `1d8c50eb`) | `official = false`, so unasserted |
 
-Discovery: **dual** — pkg-config + CMake config module. No llvm-config-style tool.
+`assert_staged = ["lib/ocaml/z3/META"; "lib/ocaml/z3/z3ml.cmxa"]` is what
+encodes it. The two open questions this raises — the fork cannot serve a
+staged consumer, and `assert_staged` lives outside the world vocabulary —
+are tracked in [`../project/issues.md`](../project/issues.md).
 
-### OCaml binding — NOT cmake-installed
-`src/api/ml/CMakeLists.txt` has no `install()` calls. cmake builds:
-- `z3ml.{cma,cmxa,cmxs}`, `libz3ml.a`, `dllz3ml.so`, `META`
+## LLVM — the install layout *is* the rpath
 
-but does not install them. The PM or user must run `ocamlfind install z3 META ...`.
+`llvm.cmxa` carries `-L$CAMLORIGIN/../.. -Wl,-rpath,$CAMLORIGIN/../..`,
+where `$CAMLORIGIN` is the directory of the `.cmxa` at link time. So the
+rpath is correct only when the install layout is `$PREFIX/lib/ocaml/llvm/`
+for the cmxa and `$PREFIX/lib/` for `libLLVM.so` — which the build tree
+and a normal `cmake --install` both satisfy, and opam's flat `lib/llvm/`
+does not. `LLVM_OCAML_INSTALL_PATH` overrides the destination if needed.
 
-Rpath in `dllz3ml.so`: set at build via `-dllpath "$ORIGIN/../libz3.so"` (hardcoded
-relative to the stub's location at build time — breaks if moved).
+`llvm.dev-shared` bypasses `cmake --install` and copies into the flat
+layout, so it must compensate in META — see
+[`llvm_build.md`](llvm_build.md).
 
-### Canary implication
-`install_lib` = `cmake --install --prefix $PREFIX`
-`install_binding` = separate `ocamlfind install z3` step (not cmake)
+## Failure modes at the install boundary
 
----
+1. **Wrong prefix** — cmake installs to `/usr/local/` while the conf-\*
+   package probes `/usr/lib/llvm-N/`.
+2. **Rpath baked to the build tree** — `$ORIGIN` / `$CAMLORIGIN` correct
+   at build, wrong after install if the layout changes.
+3. **The binding is not installed by the same command as the lib** — see
+   the Z3 table above; whether it is depends on the ref.
+4. **`llvm-config` not on PATH** — conf-llvm probes fail quietly and fall
+   back to the wrong version. Handled by `llvm_config_cmd ~locator_hint
+   ~macos_pkg`.
+5. **META `directory` field** — if the installed META says
+   `directory = "subdir"`, ocamlfind expects the archives there; it must
+   match the actual layout.
 
-## LLVM
-
-### cmake install output
-- `libLLVM.so` → `$PREFIX/lib/`
-- Headers → `$PREFIX/include/llvm/`
-- `LLVMConfig.cmake` → `$PREFIX/lib/cmake/llvm/`
-- OCaml bindings → `$LLVM_OCAML_INSTALL_PATH/llvm/` (default: `$(ocamlfind query destdir)/llvm/`)
-- OCaml META → `$LLVM_OCAML_INSTALL_PATH/META.llvm`
-- `llvm-config` binary → `$PREFIX/bin/`
-
-Discovery: **llvm-config** + CMake config. No pkg-config.
-
-The `conf-llvm-{static,shared}` opam packages run `configure.sh` which probes
-`llvm-config-N` / `llvm-config` and stores the path as the `config` variable.
-
-### OCaml binding — cmake-automated
-`bindings/ocaml/CMakeLists.txt` uses `add_ocaml_library()` which calls `install()`.
-`LLVM_OCAML_INSTALL_PATH` defaults to `${OCAML_STDLIB_PATH}` (from `ocamlfind query destdir`).
-
-Rpath in `llvm.cmxa` (embedded as Extra C options):
-```
--L$CAMLORIGIN/../.. -Wl,-rpath,$CAMLORIGIN/../..
-```
-`$CAMLORIGIN` = directory of the `.cmxa` at link time. In the build tree
-(`build/lib/ocaml/llvm/`), `$CAMLORIGIN/../..` = `build/lib/` ✓. After
-`cmake --install` to a system prefix (`/usr/lib/llvm-19/`):
-`/usr/lib/llvm-19/lib/ocaml/llvm/` → `$CAMLORIGIN/../..` = `/usr/lib/llvm-19/lib/` ✓.
-
-**The rpath works correctly only when the install layout matches:
-`$PREFIX/lib/ocaml/llvm/` for the cmxa + `$PREFIX/lib/` for libLLVM.so.**
-
-Our `llvm.dev-shared` bypasses `cmake --install` and copies artifacts into opam's
-flat `lib/llvm/` layout, breaking the `$CAMLORIGIN/../..` path → requires `linkopts`
-workaround in META.
-
-### Canary implication
-`install_lib` + `install_binding` = single `cmake --install --prefix $PREFIX`
-(LLVM cmake install handles both together)
-
-The `$PREFIX` must satisfy `$PREFIX/lib/ocaml/llvm/` for the cmxa for rpath to work.
-Setting `LLVM_OCAML_INSTALL_PATH` explicitly overrides the default if needed.
-
----
-
-## Candidate choices for canary project spec
-
-```ocaml
-type install_strategy =
-  | Cmake_install of { prefix : string; components : string list option }
-    (* Single cmake --install handles lib + binding (LLVM) *)
-  | Cmake_install_lib_then_ocamlfind of { prefix : string; pkg : string }
-    (* cmake --install for lib; separate ocamlfind install for binding (Z3) *)
-  | Ocamlfind_install_only of { pkg : string }
-    (* No cmake install; direct ocamlfind from build tree (current llvm.dev-shared) *)
-```
-
-The `Cmake_install` path requires the prefix layout to match what the project's
-cmake expects (LLVM: `$PREFIX/lib/ocaml/<name>/`). The `Cmake_install_lib_then_ocamlfind`
-path is more portable but requires knowing the binding file list.
-
----
-
-## Common failure modes at the install boundary
-
-1. **Wrong prefix** — cmake installs to `/usr/local/` but conf-* probes `/usr/lib/llvm-N/`
-2. **Rpath baked to build tree** — `$ORIGIN`/`$CAMLORIGIN` paths correct at build,
-   wrong after install if layout changes (Z3 stub, LLVM in opam flat layout)
-3. **OCaml binding not installed by cmake** (Z3) — PM must know to run `ocamlfind install`
-4. **`llvm-config` not on PATH** — conf-llvm probes fail silently, falls back to wrong version
-5. **META `directory` field** — if cmake installs a META with `directory = "subdir"`,
-   ocamlfind expects archives in that subdirectory (must match actual install layout)
+(2) and (5) are also CLAUDE.md gotchas — they have bitten more than once.

@@ -351,8 +351,8 @@ reconciling with, not duplicating.
 | `doc/canary/research/surface_draft/`           | **Materials collection** (split 2026-06-04, surface_theory.md removed). Older drafts split across `main.md`, `surface.md`, `principle.md`, `implementation.md` (§2.7 pointers, may be stale), `package.md`, `versioning.md`, `notation.md`. Mine for content; not authoritative. |
 | `doc/canary/research/tiny.md`                  | Witness (current): minimal C lib + 3 bindings + 13-variant canary matrix + harness scenario table + findings |
 | `doc/canary/research/plan.md`                  | Paper venues + milestones + **§4 the delivery pipeline** (theory → checker → world → finding → merged PR; status + owner per stage) + the open roadmap. Rewritten 2026-08-26: POPL purged, roadmap steps 1-7 compressed to their open items |
-| `doc/canary/ops/install_targets.md`            | Z3 vs LLVM cmake install patterns; informs TODO #40                                                    |
-| `doc/canary/ops/llvm_build.md`                 | LLVM source build steps, smoke test, opam install notes                                                |
+| `doc/canary/ops/install_targets.md`            | What `cmake --install` does per project — discovery patterns, rpath/layout coupling, failure modes (TODO #25/#40 both DONE) |
+| `doc/canary/ops/llvm_build.md`                 | The MANUAL LLVM build that seeds canary's build tree — same dir, different configure                   |
 | `doc/canary/backlog.md`                        | Lower-priority TODOs; api-compat group + new project spec group (see line below for current set)       |
 
 ### Architecture in one paragraph

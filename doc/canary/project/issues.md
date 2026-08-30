@@ -507,6 +507,31 @@ recorded here, reported as-is, NOT special-cased in checker code:
   refuses empty/system paths — canary never global-installs (fetch
   actions are the only intended global-store writes).
 
+### Open — llvm's build configuration is not declared, so a cold run is
+### a different build from the measured one (2026-08-30)
+
+llvm's `Cmake_configure` row passes four flags — `-G Ninja
+-DLLVM_ENABLE_BINDINGS=ON -DLLVM_BUILD_LLVM_DYLIB=ON
+-DLLVM_TARGETS_TO_BUILD=X86` — and says nothing about the compiler, the
+linker, or a compiler launcher. The tuned configuration (clang-23, mold,
+sccache, `OPTIMIZED_TABLEGEN`, `PARALLEL_LINK_JOBS=8`) exists only in
+[`../ops/llvm_build.md`](../ops/llvm_build.md), as a recipe a human runs.
+
+The two write to the **same directory**: `mk_locals
+"contrib/llvm-all/llvm-project"` takes the default `build_dir = "../build"`,
+resolving to `<machine root>/contrib/llvm-all/build`. So on a WARM tree
+canary's configure inherits the cached `CMAKE_C_COMPILER` /
+`LLVM_USE_LINKER` / `CMAKE_*_COMPILER_LAUNCHER` and the doc's ~8 min
+holds; on a COLD tree canary configures with the system defaults and it
+does not. Nothing declares that dependency and nothing detects it — the
+run is merely slow, which is the worst way for it to fail.
+
+Two shapes to choose between: declare the build configuration in the spec
+(accepting that a machine-specific toolchain choice becomes spec data —
+the platform *pairs, never branches* rule then applies), or declare the
+warm build tree as a PREREQUISITE and check for it. Same question for z3,
+whose build flags ARE declared but whose toolchain is equally ambient.
+
 ### Known — CI runs the pre-A5 shape (superseded for 2 projects, 2026-08-27)
 
 `ci_jobs` (`canary_run.ml`) derives steps from legacy `runner_spec`
@@ -541,16 +566,16 @@ jobs — sqlite, zarith, llvm-19 — now have green pipeline-rendered twins
 in `canary_min.yml`, alongside four projects it never covered. What is
 left is the reason to keep the file at all:
 
-- **ssl** — its worlds carry `app-direct=vendored@stable`, and
-  `Canary_ci`'s selector takes strictly-`Fetched` worlds. Admitting it
-  needs the declared ORIGIN visible in the selector, to tell an in-tree
-  example from a conda-forge prebuilt that needs preparing first (see the
-  comment on `all_fetched`).
+- ~~**ssl**~~ — CLOSED 2026-08-28. `all_fetched` now reads the declared
+  ORIGIN (`Vendored_at` in `pr_artifacts`) and admits an in-tree vendored
+  world, which is what an example checked into the repo is; ssl is job 7
+  of the eight in `canary_min.yml`.
 - **z3** — deliberately out. A pin flip rebuilds libz3 (~30 min) on a
   cold runner, the same reason it is muted locally.
 
-Once those two are answered, `canary_ci.yml` and the `*_ci_spec` values
-it renders from can go, and this entry closes with them.
+Only z3 is left, and it is a decision rather than a gap — so
+`canary_ci.yml` and the `*_ci_spec` values it renders from can go
+whenever someone confirms nothing else reads them.
 
 
 ### Found — zarith packs a binding nothing probes (2026-08-27)
@@ -626,6 +651,17 @@ the worktree model exists to share.
 - [ ] **Build-step store-hazard audit** — the z3 self-check shadowing
   class; audit other build steps' store reads (env_guard
   generalization).
+
+- [ ] **llvm's two `probe_lib` steps write one log** — llvm's dev rows
+  declare three `Probe_lib` templates: a `Raw` `llvm-config --version`
+  probe, a build-tree `nm` probe, and the staged one. Only the staged one
+  is renamed (`probe_lib_staged`, by its location); the other two are
+  both `Build_tree`, so both write `probe_<variant>.log` into the same
+  `probe_lib/` dir and the second clobbers the first. Read off the code
+  (both paths reach `variant_file "probe.log"` in
+  `native_lib_probe_cmd`), not yet observed on a run — the dev chain is
+  an hours-long cold build. `emit llvm --stage realize --scenario
+  source-fetched-latest_lib-built-dev_…` shows the duplicate step names.
 
 **Pending (user, 2026-08-17 — AFTER active plans 3&4)**:
 

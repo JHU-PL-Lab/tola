@@ -186,8 +186,8 @@ retrieval to avoid re-discovering the same friction.
 
 | File                                                       | Topic                                                                                         |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [llvm_build.md](ops/llvm_build.md)                         | LLVM source build steps, smoke test, opam install notes                                       |
-| [install_targets.md](ops/install_targets.md)               | Z3 vs LLVM cmake install patterns                                                             |
+| [llvm_build.md](ops/llvm_build.md)                         | The MANUAL LLVM build that seeds canary's build tree (they share a dir, and configure differently) |
+| [install_targets.md](ops/install_targets.md)               | What a project's `cmake --install` does — discovery patterns, the rpath/layout coupling, failure modes |
 | [opam_packaging.md](ops/opam_packaging.md)                 | opam packaging patterns for canary                                                            |
 | [python_binding_gotchas.md](ops/python_binding_gotchas.md) | Lessons from sqlite/z3/llvm Python integration (pip env, version axes, deprecated APIs, etc.) |
 
