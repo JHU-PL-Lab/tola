@@ -2,6 +2,18 @@
 
 **Kind: proposal.** The producer landed (`surface/canary_contract_registry.ml` carries the rows); the catalogue's remaining rungs are open. **Landed when** every agreement in the catalogue resolves to a check that can ground it.
 
+> **Where an agreement gets EVALUATED is an open question this catalogue
+> inherits** (2026-08-30):
+> [`check_evaluation.md`](check_evaluation.md). Canary's checks are OCaml
+> closures on a step, so they cannot cross into a backend that only emits
+> YAML — the GH backend renders `check_pre`/`check_post` zero times, and a
+> green CI job today means only "every command exited 0". If an agreement
+> is to be checkable wherever a world runs, the catalogue's natural
+> projection is onto CHECK ACTIONS ([`../status.md`](../status.md),
+> `[Pre; Action; Post]`), and the IR question — does a check action carry
+> its implementation or its meaning? — is worth settling here rather than
+> after.
+
 ## Status and Purpose
 
 This document is an intermediate design note for consolidating the checking logic scattered across the cross-language binding project.

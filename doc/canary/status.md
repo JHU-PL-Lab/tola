@@ -271,6 +271,18 @@ world). What is NOT done:
   invariant. The smoke probe / staged-parity / decl-comparison cells
   are the natural first Check actions.
 
+  **Why this also matters to CI** (2026-08-30):
+  [`design/check_evaluation.md`](design/check_evaluation.md). The GH
+  backend renders `check_pre`/`check_post` ZERO times, because a closure
+  cannot cross the compiler/interpreter boundary — so a green CI job means
+  only "every command exited 0", and the sqlite pin failure (command
+  succeeds, `check_post` fails) would be invisible there. That doc also
+  records what is cheap (`check_post` is already file tests plus one shell
+  command) versus what is not (expectation evaluation parses `inspect.json`
+  and drives the comparators), and the one constraint on doing it: a
+  check's predicate and its rendering must come from the SAME constructor,
+  never two hand-written forms.
+
 
 - **Action/artifact property unification** — `build_deps_of`, `ax_follows`, `ax_runtime`,
   `c_runtime`/`cxx_abi`, probe location all sit at the action↔artifact boundary.

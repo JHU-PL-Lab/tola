@@ -120,6 +120,7 @@ All six stages now have a standalone doc.
 | File | Falsifier — it landed when … |
 | ---- | ---------------------------- |
 | [artifact_cache.md](design/artifact_cache.md) | … a step's cache key includes the identity of its INPUT artifacts, not only its own cmd/expectation fingerprint |
+| [check_evaluation.md](design/check_evaluation.md) | … `canary_gh.ml` holds no verdict logic — a check is an action the runner interprets and every backend merely renders. Records the live finding that CI evaluates NO `check_pre`/`check_post`, so a green job means only "every command exited 0" |
 | [step_identity.md](design/step_identity.md) | … a step tag is (action × location KIND) alone — `tag_of_probe_lib_location` called unconditionally, and no tag anywhere containing a PM name |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
 | [agreement_registry_audit.md](design/agreement_registry.md) | … every agreement in the catalogue resolves to a check that can ground it. The producer landed (`surface/canary_contract_registry.ml`); the rungs did not. Absorbed `contract_registry.md` 2026-08-21 |
@@ -185,7 +186,6 @@ retrieval to avoid re-discovering the same friction.
 
 | File                                                       | Topic                                                                                         |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [ci_gh.md](ops/ci_gh.md)                                   | GH Actions backend implementation, Z3 quirks, sccache + opam sandbox                          |
 | [llvm_build.md](ops/llvm_build.md)                         | LLVM source build steps, smoke test, opam install notes                                       |
 | [install_targets.md](ops/install_targets.md)               | Z3 vs LLVM cmake install patterns                                                             |
 | [opam_packaging.md](ops/opam_packaging.md)                 | opam packaging patterns for canary                                                            |
