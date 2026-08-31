@@ -1,0 +1,81 @@
+opam-version: "2.0"
+synopsis: "Torch bindings for OCaml — canary-local, with the dune staging fix"
+description: """
+CANARY-LOCAL PACKAGE. Byte-for-byte the upstream torch.v0.17.0 opam file
+plus two lines: a one-hunk patch to src/wrapper/dune, and avoid-version.
+
+WHY IT EXISTS. torch.v0.17.0 does not build with dune 3.23.1. Its
+src/wrapper/dune declares
+
+  (foreign_stubs (language cxx) (names torch_api))
+
+while torch_api.cpp line 944 does `#include "torch_api_generated.cpp"` —
+a .cpp included as a header. dune stages the listed .cpp and every .h
+(torch_api.h and torch_api_generated.h both land in
+_build/default/src/wrapper/) but not the unlisted .cpp, so the compile
+dies with
+
+  torch_api.cpp:944:10: fatal error: torch_api_generated.cpp:
+                        No such file or directory
+
+The package declares (lang dune 3.11); the staging rule changed under it.
+opam's own post-message blames a missing system libtorch, which is a red
+herring — libtorch 2.1.2 was installed and its -isystem flags are in the
+failing command line. Measured 2026-08-30 on OCaml 5.4.1 / dune 3.23.1;
+with the patch, `dune build -p torch` exits 0 with an empty log.
+
+The upstream fix is the patch below, unchanged. This package exists so
+canary has a torch that BUILDS, next to the stock package it keeps as a
+declared xfail — the finding stays visible as a world rather than being
+patched away.
+
+NOT A CHANNEL PAIR. This is the same upstream version, differently
+packaged. It does not answer "does today's binding work with tomorrow's
+lib"; torch's version axis genuinely has one point (see the binding row's
+rationale in canary_project_torch.ml).
+"""
+maintainer: "weng@cs.jhu.edu"
+authors: "Jane Street Group, LLC"
+license: "MIT"
+homepage: "https://github.com/janestreet/torch"
+bug-reports: "https://github.com/janestreet/torch/issues"
+dev-repo: "git+https://github.com/janestreet/torch.git"
+depends: [
+  "ocaml" {>= "5.1.0"}
+  "base" {>= "v0.17" & < "v0.18~"}
+  "core" {>= "v0.17" & < "v0.18~"}
+  "core_unix" {>= "v0.17" & < "v0.18~"}
+  "ppx_bench" {>= "v0.17" & < "v0.18~"}
+  "ppx_inline_test" {>= "v0.17" & < "v0.18~"}
+  "ppx_jane" {>= "v0.17" & < "v0.18~"}
+  "ppx_string" {>= "v0.17" & < "v0.18~"}
+  "stdio" {>= "v0.17" & < "v0.18~"}
+  "ctypes" {>= "0.18.0"}
+  "ctypes-foreign"
+  "dune" {>= "3.11.0"}
+  "dune-configurator"
+  "ocaml-compiler-libs" {>= "v0.11.0"}
+  "libtorch" {with-test}
+]
+depopts: ["libtorch"]
+# KEPT VERBATIM from upstream, and it is the point: this is the
+# solver-enforced gate (project_pytorch.md §0b). It is why the 2.2.1 lib
+# world must place libtorch OUTSIDE opam — `opam install torch
+# libtorch.2.2.1` answers "No solution found", measured.
+conflicts: [
+  "libtorch" {< "2.1.0" | >= "2.2.0"}
+]
+available: arch != "arm32" & arch != "x86_32"
+# the solver must never reach for this package on its own — canary always
+# asks for it by explicit version pin
+flags: [avoid-version]
+patches: ["dune-extra-deps.patch"]
+extra-files: [["dune-extra-deps.patch" "md5=a5c1db69fd603914d507e937cfb6b2bd"]]
+build: ["dune" "build" "-p" "torch" "-j" jobs]
+url {
+  src: "https://github.com/janestreet/torch/archive/refs/tags/v0.17.0.tar.gz"
+  checksum: [
+    "md5=8e189f338b454bbefc4965d827f5a0cc"
+    "sha512=f96155624705bc500734d5dbb18255436c1e4646f89ddc0c47260d79003543126c68e206267b3487bdf25c4f7168ab694ba89b661304c4735c159a91630f97cd"
+  ]
+}

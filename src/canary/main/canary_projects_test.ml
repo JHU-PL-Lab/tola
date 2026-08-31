@@ -3829,7 +3829,13 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         let expected =
           [ ("sqlite", 10); ("z3", 16); ("llvm", 3); ("tiny-full", 1);
             ("zarith", 2); ("cairo", 2); ("libffi", 2); ("zlib", 2);
-            ("zstd", 2); ("ssl", 2) ]
+            ("zstd", 2); ("ssl", 2);
+            (* torch's 2 are the binding's two PACKAGING points at one
+               upstream version — the stock package (a declared build
+               xfail: it does not build with dune 3.23.1) and the
+               canary-local patched one. Not a channel pair; the lib axis
+               is the one still to grow (2026-08-30 landing). *)
+            ("torch", 2) ]
         in
         let catalogued_ok =
           List.for_all Canary_registry.catalogue ~f:(fun n ->

@@ -1,0 +1,10 @@
+--- a/src/wrapper/dune
++++ b/src/wrapper/dune
+@@ -2,6 +2,7 @@
+  (foreign_stubs
+   (language cxx)
+   (names torch_api)
++  (extra_deps torch_api_generated.cpp)
+   (flags
+    -std=c++17
+    -fPIC

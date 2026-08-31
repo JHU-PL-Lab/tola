@@ -43,7 +43,7 @@ Two consequences:
 
 ## 2. The roster
 
-Ten projects on the registry (`Canary_registry.all_specs`), plus tiny1's
+Eleven projects on the registry (`Canary_registry.all_specs`), plus tiny1's
 factory. `2×2` is the coverage lower bound the user set (2026-08-19): a
 channel pair on BOTH the lib and the binding, giving two baselines plus
 the FORWARD (new binding, old lib) and BACKWARD (new lib, old binding)
@@ -64,6 +64,7 @@ the failure names the project, so this table cannot drift silently.
 | **libffi** | apt + conda-forge prebuilt | one | 2 | lib half; same gap. First `Dynamic_ffi` project | ✓ / ✓ |
 | **zlib** | apt 1.3 + conda-forge 1.3.2 | one | 2 | lib half; the probe NAMES which libz answered | ✓ / — |
 | **zstd** | apt 1.5.5 + conda-forge 1.5.7 | one | 2 | lib half; two world witnesses (runtime call + mapped path) | ✓ / — |
+| **torch** | opam `libtorch` 2.1.2 only — the registry's first lib whose stable point is opam, not the system PM | opam `torch` v0.17.0, stock vs canary-patched | 2 | **neither half** — the binding's VERSION axis has one point (on OCaml 5.4.1, v0.16 and the 0.x series need `base/core < v0.17`); the two scenarios are packagings, not channels. The lib's 2.2.1 point is named and unrealized ([issues.md](issues.md)) | ✓ / — |
 | **tiny-full** | Vendored@Stable only | Vendored@Stable only | 1 | **neither half** — every row is `vendored@stable`, so the product is 1 by construction. The Built-lib and Dev-binding axes its docs advertised live in dead code ([issues.md](issues.md) §1); `spec-check` warns on both pairs | ✓ / — |
 | **tiny1** | Built (own C) | 3 bindings | 22 | not a 2×2 — the hand-written mutation **oracle**, 22/22 PASS | ✓ / — |
 

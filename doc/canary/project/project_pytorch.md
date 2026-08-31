@@ -1,10 +1,51 @@
 # PyTorch — the plan (candidate #4)
 
-**Kind: plan.** Re-measured 2026-08-26; the cost premises below the fold
-were wrong and are corrected here. The candidate-queue entry is
+**Kind: plan, PARTLY LANDED.** The candidate-queue entry is
 [`projects.md`](projects.md) §4 Tier 1 #4. Split out of
 `design/new_project.md` 2026-08-05; moved here in the 2026-08-12
-`doc/canary/project/` reorganization.
+`doc/canary/project/` reorganization. Re-measured 2026-08-26, and again
+2026-08-30 while landing it.
+
+## Landed 2026-08-30 — step 1, and what it cost the plan
+
+`canary action torch` runs two green-and-xfail scenarios;
+`canary_project_torch.ml` carries the full record. Read that file's
+header before this document — where they disagree, the code was measured
+and this was not. In brief:
+
+- **§0's "1 package" was measured in the DEFAULT switch, by dry-run.** In
+  the canary switch `opam install torch` is **70 packages** (the Jane
+  Street v0.17 stack is not there).
+- **Step 1's binding pair is impossible, not expensive.** The plan said
+  "measure the flip; if it is tier 3, declare the lib axis only". The
+  flip does not exist: on OCaml 5.4.1, `torch.v0.16.0` and the whole 0.x
+  series need `base/core < v0.17` → `ocaml < 4.12.0`, and opam answers
+  *No solution found*. The lib axis is declared alone, per the plan's own
+  instruction.
+- **§0b's solver gate is real and harder than written** — on 5.4.1 opam
+  cannot even back off to an older torch, so `opam install torch
+  libtorch.2.2.1` is a flat refusal.
+- **§0c's demangling call was right.** 87,877 mangled symbols inspected
+  with no demangler; what it cost was mangled PREFIXES (`_ZN2at`, not
+  `at::`) and a watchlist of argument-free entry points, since a mangled
+  name encodes the signature.
+- **A finding the plan could not have predicted**: `torch.v0.17.0` does
+  not build with dune 3.23.1 (a one-line `extra_deps` fix, PR-ready — see
+  [`issues.md`](issues.md) §3). The binding row therefore carries the
+  stock package as a declared build xfail beside a canary-local patched
+  package.
+- **macOS, for whoever ports it**: opam's `libtorch` has **no arm64
+  package at all** (macOS stops at `2.0.0+macos-x86_64`), while upstream
+  publishes `libtorch-macos-arm64-2.2.1.zip` (55 MB) and no arm64 2.1.2.
+  So on Apple Silicon the `Fetched@2.1.2` world cannot exist and only the
+  Vendored 2.2.1 world can — a platform-dependent *universe*, which pass 1
+  cannot express today.
+
+**Still open**: step 2 (the Vendored 2.2.1 cell — the project's real
+point), then steps 3–4 (pip, the multi-PM sweep). Step 2 needs `.zip`
+support in `Canary_prebuilt` and a binding REBUILD between lib worlds
+rather than a repoint, because torch compiles its shim against whichever
+libtorch is present.
 
 ---
 

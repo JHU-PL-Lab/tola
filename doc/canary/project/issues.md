@@ -200,6 +200,35 @@ fork's staged world stays RED in `action z3` (the default full run) —
 deliberately, since silencing it would be choosing (a) by default.
 
 
+### Found — `status` matches inspect files by SUBSTRING, so a variant key
+### that is a prefix of another reads its neighbour's evidence (2026-08-30)
+
+`canary_status.ml` selects a scenario's evidence files with
+`String.is_substring f ~substring:vk` (two sites). torch is the first
+project whose two variant keys stand in a prefix relation —
+`…binding-fetched-v0.17.0` and `…binding-fetched-v0.17.0-canary1` — and
+the shorter one therefore matches BOTH files. Measured on torch's first
+run:
+
+```
+  ✗  …binding-fetched-v0.17.0            probe_lib_inspect  watchlist 12/12
+  ✓  …binding-fetched-v0.17.0-canary1    probe_lib_inspect  watchlist 6/6
+```
+
+The watchlist has six entries. Both JSONs on disk are correct and
+identical (`present: [6 symbols], missing: []`); the 12 is one row
+reading two files. The binding row shows the same doubling as
+`MISSING Torch,Torch`.
+
+It is a REPORTING fault, not a run fault — the steps ran against the
+right worlds and wrote the right evidence — but it is the bad kind:
+it inflates a count, so it reads as more coverage rather than as an
+error. Two ways to fix: match on the exact variant-key field the
+filename encodes (`Canary_basic.variant_file` already builds it, so the
+reader can parse rather than search), or forbid prefix-related variant
+keys in the born-safe pin. The first is right; the second would ban a
+legitimate naming (stock vs patched at one version).
+
 ### Open — tiny still spells its library for ONE object format, so the
 ### witness does not run on macOS (2026-08-26, from the Tier 1 port)
 
@@ -674,6 +703,23 @@ the worktree model exists to share.
 
 - [ ] **Upstream z3 PR** — POST_BUILD self-check env isolation
   (2-line CMake patch); per user, AFTER the 3-way repo work.
+
+- [ ] **Upstream torch PR — one line, and it is ready** (2026-08-30, found
+  by landing torch). `torch.v0.17.0` does not build with dune 3.23.1:
+  `src/wrapper/dune` declares `(foreign_stubs (language cxx) (names
+  torch_api))` while `torch_api.cpp:944` does `#include
+  "torch_api_generated.cpp"`, and dune stages the listed `.cpp` and every
+  `.h` but not the unlisted `.cpp` — verified by listing
+  `_build/default/src/wrapper/`, which holds `torch_api.h` and
+  `torch_api_generated.h` and not `torch_api_generated.cpp`. The package
+  declares `(lang dune 3.11)`. Note opam's post-message blames a missing
+  system libtorch, which is a red herring — libtorch 2.1.2 was installed
+  and its `-isystem` flags are in the failing command. Fix is
+  `(extra_deps torch_api_generated.cpp)`; with it `dune build -p torch`
+  exits 0 with an empty log. The patch is already carried verbatim at
+  `canary/templates/opam-local-repo/packages/torch/torch.v0.17.0-canary1/
+  files/dune-extra-deps.patch`, so the PR is a copy. This is the second
+  "Real-world PRs" candidate and the cheaper of the two.
 
 - [ ] **spec-check warns fulfillment** — the ratchet-tracked ⚠ set,
   updated 2026-08-25 when `lib_pair`/`binding_pair` landed: llvm's

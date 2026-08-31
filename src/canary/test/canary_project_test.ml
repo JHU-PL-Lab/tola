@@ -1296,7 +1296,14 @@ let tool_routing_ratchet_test : pure_test =
              ("canary_project_llvm.ml", 1);
              (* 3 -> 2 (2026-08-17): the conf-* refactor removed one
                 mention — the shell goes through [SB.fetch_binding_cmd] *)
-             ("canary_project_z3.ml", 2) ]);
+             ("canary_project_z3.ml", 2);
+             (* all 5 are COMMENTS quoting the opam commands that were
+                MEASURED while landing torch (the dry-runs that establish
+                the one-point binding axis and the solver-enforced gate) —
+                evidence, not shell. The lib fetch goes through
+                [Canary_pm_opam.install_cmd], the binding through
+                [SB.fetch_binding_cmd]. *)
+             ("canary_project_torch.ml", 5) ]);
           ("nm -D",
            [ ("canary_tiny_workspace.ml", 2);
              ("canary_tiny_scenario.ml", 1) ]);

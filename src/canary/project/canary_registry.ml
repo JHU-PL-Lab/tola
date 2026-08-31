@@ -25,6 +25,7 @@ let all_projects : (string * Canary_project_run.project_run) list =
     ("zlib", Canary_project_zlib.zlib_run);
     ("zstd", Canary_project_zstd.zstd_run);
     ("ssl", Canary_project_ssl.ssl_run);
+    ("torch", Canary_project_torch.torch_run);
   ]
 
 (** Every project canary KNOWS, whether or not it is currently active
@@ -52,6 +53,7 @@ let all_specs : (string * Canary_project_run.project_run) list =
     ("zlib", Canary_project_zlib.zlib_run);
     ("zstd", Canary_project_zstd.zstd_run);
     ("ssl", Canary_project_ssl.ssl_run);
+    ("torch", Canary_project_torch.torch_run);
   ]
 
 let catalogue : string list = List.map fst all_specs
