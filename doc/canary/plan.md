@@ -353,7 +353,7 @@ all three. Proposed shape:
 - [ ] **Closure-shape contract** — no c1..c8 states it, and ncurses is
       the specimen: two packagers agree on every symbol, soname and ELF
       version node and still segfault.
-      [`closure_shape.md`](design/closure_shape.md). First contract
+      [`agreement_registry.md`](design/agreement_registry.md) §6. First contract
       addition since the registry landed.
 - [ ] **Real AST inspectors for `bpc1` / `bpe1`** — ctypes `argtypes`
       parse and cext `PyMethodDef` parse; today's stand-ins are grep.
