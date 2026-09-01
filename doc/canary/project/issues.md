@@ -215,7 +215,33 @@ Tensor _cslt_sparse_mm(const Tensor & compressed_A, …); // {"schema": "aten::_
 
 3066 operators in 2.2.1, 3096 in 2.3.1, 3101 in 2.13.0.
 
-**It predicts the two failures we measured, precisely, by name:**
+**How well does it actually predict?** Measured properly (the first
+write-up of this said "predicts by name", which over-claimed — that was
+grep for two functions already known to break). A BLIND diff of the
+2.1.2 and 2.2.1 manifests, comparing signatures by operator name:
+
+| stage | candidates |
+| --- | ---: |
+| `nm -D` over `libtorch_cpu.so` (what torch declares today) | 87,877 mangled symbols |
+| manifest diff, signature changed | **68** of 2041 common ops |
+| ∩ operators the shim wraps | 62 — barely narrower; the shim wraps 2598 of ~2600 ops, so the consumer side does not discriminate |
+| after removing ONE benign widening (`IntArrayRef`→`SymIntArrayRef`, `int64_t`→`c10::SymInt`, both implicit conversions) | **4**, with the real break first |
+
+The 4 are `_cslt_sparse_mm` (the actual failure), `floor_divide_out`
+(`const Tensor&` → `const Scalar&`, a genuine change), and
+`mkldnn_reorder_conv2d_weight{,_out}` (a third widening spelling the
+filter did not cover — `OptionalIntArrayRef`).
+
+So it is a **candidate generator, not a predictor** — but a very good
+one: four typed candidates instead of 87,877 opaque strings, and the
+right answer among them. Going from 4 to 1 needs real C++
+type-compatibility reasoning, which is exactly c6, and exactly what
+backlog #44 is about. The finding therefore STRENGTHENS #44 rather than
+replacing it: the manifest supplies parsed, typed inputs for free (no
+libclang, no preprocessor, no include graph), leaving the subtyping
+judgement to run over four signature pairs instead of a translation unit.
+
+**The two failures, as the manifest records them:**
 
 | break | manifest says |
 | --- | --- |
