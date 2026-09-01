@@ -811,8 +811,8 @@ let source_fetch_local_pin : pure_test =
 let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_matches_tiny_convention";
     check = (fun () ->
-      let module CC = Canary_contract in
-      let template = Canary_contract_run.inputs_of_contract in
+      let module CC = Canary_agreement in
+      let template = Canary_agreement_run.inputs_of_contract in
       let eq c l expected =
         Poly.equal (template c l) expected
       in
@@ -1146,7 +1146,7 @@ let agnostic_expectation_test : pure_test =
   { name = "scenario.lower_expectation_agnostic_c1";
     check = (fun () ->
       let module CS = Canary_scenario in
-      let module CC = Canary_contract in
+      let module CC = Canary_agreement in
       let module SM = Canary_step_model in
       let bindings =
         CS.[ { contract = CC.C1; lang = ocaml;
@@ -1339,35 +1339,35 @@ let tool_routing_ratchet_test : pure_test =
    role, tags), every registered check is referenced exactly once,
    the fault-tag mapping matches scenario.md's catalogue, and the
    firing derivation follows mechanism × provision. *)
-let contract_registry_complete_pin : pure_test =
+let agreement_registry_complete_pin : pure_test =
   { name = "contracts.registry_complete";
     check =
       (fun () ->
-        let module CR = Canary_contract_registry in
-        let ids = Canary_contract.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
-        let rows = CR.contract_registry in
+        let module CR = Canary_agreement_registry in
+        let ids = Canary_agreement.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
+        let rows = CR.agreement_registry in
         (* one row per id, non-empty invariant, exactly one tag *)
         let rows_ok =
           List.for_all ids ~f:(fun id ->
               match List.filter rows ~f:(fun r ->
-                  Poly.equal r.CR.cr_check.Canary_contract.id id) with
+                  Poly.equal r.CR.ag_check.Canary_agreement.id id) with
               | [ r ] ->
-                  (not (String.is_empty r.CR.cr_invariant))
-                  && List.length r.CR.cr_fault_tags = 1
+                  (not (String.is_empty r.CR.ag_invariant))
+                  && List.length r.CR.ag_fault_tags = 1
               | _ -> false)
         in
         (* every registered check referenced exactly once *)
         let checks_ok =
-          List.for_all Canary_contract_run.registered_checks
+          List.for_all Canary_agreement_run.registered_checks
             ~f:(fun ck ->
               List.count rows ~f:(fun r ->
-                  Poly.equal r.CR.cr_check.Canary_contract.id ck.id)
+                  Poly.equal r.CR.ag_check.Canary_agreement.id ck.id)
               = 1)
-          && List.length rows = List.length Canary_contract_run.registered_checks
+          && List.length rows = List.length Canary_agreement_run.registered_checks
         in
         (* the tag mapping (scenario.md's catalogue) *)
         let tag id =
-          match CR.row_of id with r -> List.hd_exn r.CR.cr_fault_tags
+          match CR.row_of id with r -> List.hd_exn r.CR.ag_fault_tags
         in
         let tags_ok =
           String.equal (tag C1) "sym_missing"
@@ -1380,7 +1380,7 @@ let contract_registry_complete_pin : pure_test =
           && String.equal (tag C8) "api_add"
         in
         (* the roles (design §4) *)
-        let role_is r exp = Poly.equal r.CR.cr_role exp in
+        let role_is r exp = Poly.equal r.CR.ag_role exp in
         let roles_ok =
           role_is (CR.row_of C1) CR.Surface
           && role_is (CR.row_of C2) CR.Surface
@@ -1394,7 +1394,7 @@ let contract_registry_complete_pin : pure_test =
         (* the expectation forms: inspection-derived for the surface
            + meeting contracts, behavior-grep for the trace contracts,
            placeholder while blocked *)
-        let source_is r exp = Poly.equal r.CR.cr_source exp in
+        let source_is r exp = Poly.equal r.CR.ag_source exp in
         let sources_ok =
           source_is (CR.row_of C1) CR.Inspection
           && source_is (CR.row_of C2) CR.Inspection
@@ -1407,12 +1407,12 @@ let contract_registry_complete_pin : pure_test =
         in
         rows_ok && checks_ok && tags_ok && roles_ok && sources_ok) }
 
-let contract_registry_firing_pin : pure_test =
+let agreement_registry_firing_pin : pure_test =
   { name = "contracts.firing_defaults";
     check =
       (fun () ->
-        let module CR = Canary_contract_registry in
-        let f = (CR.row_of C1).CR.cr_firing in
+        let module CR = Canary_agreement_registry in
+        let f = (CR.row_of C1).CR.ag_firing in
         let eq got want = Poly.equal got want in
         (* Static + Built → build_lib + build + probe (C1 carries the
            lib-only cell); Static + Fetched → probe; Dynamic → probe —
@@ -1428,16 +1428,16 @@ let contract_registry_firing_pin : pure_test =
                  Canary_store.Built)
              [ Canary_basic.Probe_binding Canary_lang.Python ]
         && (* behavior fires at probe in every world *)
-        eq ((CR.row_of C3).CR.cr_firing Canary_mechanism.Cstubs
+        eq ((CR.row_of C3).CR.ag_firing Canary_mechanism.Cstubs
               Canary_lang.OCaml Canary_store.Built)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]
         && (* c4/c5 also gain the Build_lib cell in Built worlds *)
-        eq ((CR.row_of C4).CR.cr_firing Canary_mechanism.Cstubs
+        eq ((CR.row_of C4).CR.ag_firing Canary_mechanism.Cstubs
               Canary_lang.OCaml Canary_store.Built)
              [ Canary_basic.Build_lib;
                Canary_basic.Build_binding Canary_lang.OCaml;
                Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && eq ((CR.row_of C4).CR.cr_firing Canary_mechanism.Cstubs
+        && eq ((CR.row_of C4).CR.ag_firing Canary_mechanism.Cstubs
                  Canary_lang.OCaml Canary_store.Fetched)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]) }
 
@@ -1446,8 +1446,8 @@ let contract_registry_firing_pin : pure_test =
    row's predict and must yield the expected failure substrings. A
    new contract lands WITH its fixture; a changed predict breaks
    this pin. *)
-let contract_fixture_tests : pure_test list =
-  let module CR = Canary_contract_registry in
+let agreement_fixture_tests : pure_test list =
+  let module CR = Canary_agreement_registry in
   let tmp_root = "_out/canary/test/contract-fixtures" in
   let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
   let execute (_id, (fx : CR.fixture)) : bool =
@@ -1460,25 +1460,25 @@ let contract_fixture_tests : pure_test list =
         Stdlib.close_out oc);
     let predict =
       Option.value fx.CR.fx_predict
-        ~default:(CR.row_of _id).cr_check.Canary_contract.predict
+        ~default:(CR.row_of _id).ag_check.Canary_agreement.predict
     in
     let got = predict ~resolve fx.CR.fx_inputs in
     List.for_all fx.CR.fx_expect ~f:(fun s ->
         List.mem got s ~equal:String.equal)
   in
   let covered =
-    List.map CR.contract_fixtures ~f:fst
+    List.map CR.agreement_fixtures ~f:fst
     |> List.dedup_and_sort ~compare:(fun a b ->
-           String.compare (Canary_contract.string_of_contract_id a)
-             (Canary_contract.string_of_contract_id b))
+           String.compare (Canary_agreement.string_of_agreement_id a)
+             (Canary_agreement.string_of_agreement_id b))
   in
   [ { name = "contracts.fixtures_execute";
-      check = (fun () -> List.for_all CR.contract_fixtures ~f:execute) };
+      check = (fun () -> List.for_all CR.agreement_fixtures ~f:execute) };
     (* the visible coverage set: C1, C2 + C4/C5's LIB-ONLY cells
        (their pair cells, C3/C7 blocked, C6 pend their fixtures) *)
     { name = "contracts.fixtures_complete";
       check = (fun () ->
-          Poly.equal covered Canary_contract.[ C1; C2; C4; C5 ]) } ]
+          Poly.equal covered Canary_agreement.[ C1; C2; C4; C5 ]) } ]
 
 (* The matrix's mark extraction (2026-08-17, the result table): a
    synthetic actions.log (variant_start-scoped verdict events) drives
@@ -1550,7 +1550,7 @@ let marker_stale_on_spec_change_pin : pure_test =
           check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
           expectation = Canary_step_model.Expect_success;
           symbol_check = None;
-          disabled_contracts = [] }
+          disabled_agreements = [] }
       in
       let s1 = mk_step "echo build v1" in
       let marker = Canary_local_runner.verdict_marker s1 in
@@ -1694,7 +1694,7 @@ let lib_name_optional_pin : pure_test =
    agreement_registry.md. Doc/code drift is then a test failure rather
    than something noticed later. *)
 let agreement_bridge_pins : pure_test list =
-  let module CR = Canary_contract_registry in
+  let module CR = Canary_agreement_registry in
   let doc = "doc/canary/design/agreement_registry.md" in
   [ { name = "agreements.slugs_unique_and_named";
       check =
@@ -1706,14 +1706,14 @@ let agreement_bridge_pins : pure_test list =
                  (not (String.is_empty e.CR.e_slug))
                  && (not (String.is_empty e.CR.e_claim))
                  && String.is_prefix e.CR.e_doc ~prefix:"\xc2\xa7")) };
-    { name = "agreements.every_contract_has_an_entry";
+    { name = "agreements.every_agreement_has_an_entry";
       check =
         (fun () ->
           (* the eight implemented rows + at least the four §6 proposals *)
-          List.length CR.contract_registry = 8
+          List.length CR.agreement_registry = 8
           && List.length CR.proposed_agreements >= 4
           && List.length CR.all_agreements
-             = List.length CR.contract_registry
+             = List.length CR.agreement_registry
                + List.length CR.proposed_agreements) };
     (* the harness proper: the doc anchors resolve *)
     { name = "agreements.doc_anchors_exist";
@@ -1758,11 +1758,11 @@ let all_tests : pure_test list =
       deploy_mismatch_test;
       agnostic_expectation_test; execution_plan_test;
       tool_routing_ratchet_test;
-      contract_registry_complete_pin; contract_registry_firing_pin;
+      agreement_registry_complete_pin; agreement_registry_firing_pin;
       matrix_marks_from_log_pin;
       marker_stale_on_spec_change_pin;
       source_fetch_pinned_ref_check_post_pin ]
-  @ contract_fixture_tests
+  @ agreement_fixture_tests
   @ agreement_bridge_pins
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see

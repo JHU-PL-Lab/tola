@@ -403,7 +403,7 @@ let verdict_is_xfail (path : string) : bool =
 
 (** The contract ids a marker's xfail line names ("xfail c2" → ["c2"]);
     [] for a plain / non-xfail / absent marker. *)
-let verdict_xfail_contracts (path : string) : string list =
+let verdict_xfail_agreements (path : string) : string list =
   try
     Stdlib.In_channel.with_open_text path (fun ic ->
         match Stdlib.In_channel.input_line ic with
@@ -425,7 +425,7 @@ let xfail_id_suffix (ids : string list) : string =
     read display layers use (`action`'s xfail list → scenarios.tsv → `spec`;
     warm and cold runs alike, since the marker is the persistence). *)
 let step_xfail_contracts (step : step) : string list =
-  verdict_xfail_contracts (verdict_marker step)
+  verdict_xfail_agreements (verdict_marker step)
 
 (* Run a single action step; returns its [step_status] ([Step_done_xfail] =
    passed via a confirmed expected failure).
@@ -528,37 +528,37 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
         in
         (* A7 phase 1 (was plan.md Step 6c): per-contract prediction — one
            [compat_predicted] event per FIRED contract row ("c1 cmp_symbol:
-           3 substring(s)") + one [contract_skipped] per disabled/stubbed
+           3 substring(s)") + one [agreement_skipped] per disabled/stubbed
            entry, instead of a single collapsed count. Returns the fired
            rows; [flat_predictions] is the substring union the expectation
            check greps for (identical to the old
            [predicted_contains_any_v2] result). *)
         let derived_predictions inputs =
           let fired =
-            Canary_contract_run.predicted_by_contract_v2
-              ~disabled:step.disabled_contracts ~resolve:resolve_input inputs
+            Canary_agreement_run.predicted_by_agreement_v2
+              ~disabled:step.disabled_agreements ~resolve:resolve_input inputs
           in
           List.iter fired
-            ~f:(fun ((c : Canary_contract.contract_check), subs) ->
+            ~f:(fun ((c : Canary_agreement.agreement_check), subs) ->
               log ~event:"compat_predicted"
                 ~detail:(Some (Printf.sprintf "%s %s: %d substring(s)"
-                                 (Canary_contract.string_of_contract_id c.id)
+                                 (Canary_agreement.string_of_agreement_id c.id)
                                  c.name (List.length subs))));
           if List.is_empty fired then
             log ~event:"compat_predicted" ~detail:(Some "no contract fired");
           (* the c1 coverage WARNING (2026-08-17): a passing c1 whose
              consumer surface covers a small fraction of the provider's
              may be out-of-date — a note, never a failure *)
-          (match Canary_contract_run.c1_lag_note ~resolve:resolve_input inputs with
+          (match Canary_agreement_run.c1_lag_note ~resolve:resolve_input inputs with
            | Some note -> log ~event:"compat_note" ~detail:(Some note)
            | None -> ());
           List.iter
-            (Canary_contract_run.skipped_checks
-               ~disabled:step.disabled_contracts ())
-            ~f:(fun ((c : Canary_contract.contract_check), reason) ->
-              log ~event:"contract_skipped"
+            (Canary_agreement_run.skipped_checks
+               ~disabled:step.disabled_agreements ())
+            ~f:(fun ((c : Canary_agreement.agreement_check), reason) ->
+              log ~event:"agreement_skipped"
                 ~detail:(Some (Printf.sprintf "%s %s: %s"
-                                 (Canary_contract.string_of_contract_id c.id)
+                                 (Canary_agreement.string_of_agreement_id c.id)
                                  c.name reason)));
           fired
         in
@@ -572,9 +572,9 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
            confirmed expected failure. *)
         let confirming_contracts fired =
           List.filter_map fired
-            ~f:(fun ((c : Canary_contract.contract_check), subs) ->
+            ~f:(fun ((c : Canary_agreement.agreement_check), subs) ->
               if output_contains_any ~output_dir:out subs then
-                Some (Canary_contract.string_of_contract_id c.id)
+                Some (Canary_agreement.string_of_agreement_id c.id)
               else None)
         in
         let expectation_ok = match step.expectation with

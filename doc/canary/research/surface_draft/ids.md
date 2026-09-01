@@ -20,7 +20,7 @@ rather than moved:
 **Read the status columns as history, not fact.** Every `Ar.` and `Sf.`
 row below is marked `drift`, but the drift was *this file's*: the
 manuscript's five surface roles (`Sf.1` native_header … `Sf.5`
-binding_lib) and the code's `canary_contract_registry.ml` already
+binding_lib) and the code's `canary_agreement_registry.ml` already
 agreed with each other, and only this table lagged. The live surface
 numbering is the draft's. What is still worth having here is the
 **`Ag.X` ↔ `C1..C8` mapping** and the **`Bs.N` catalogue**.
@@ -81,20 +81,20 @@ variants (one surface aggregates several inspect kinds).
 
 ## 3. Agreements (`Ag.X`)
 
-**Flow.** `canary_compat.ml: contract_id` (C1..C8) + manuscript §3
+**Flow.** `canary_compat.ml: agreement_id` (C1..C8) + manuscript §3
 catalogue (Ag.1..Ag.7) ──► SSOT §3 ──► draft.md §3 prose;
 `Expect_compat_failure` predicate derivation.
-**Co-providers.** code's `contract_id` and manuscript's `Ag.X` are
+**Co-providers.** code's `agreement_id` and manuscript's `Ag.X` are
 parallel hand-curated lists. C8 (API-faithfulness) currently has
 no manuscript Ag.
 
 Status: **drift** — manuscript Ag.1..Ag.7 (7 agreements); code
-`contract_id = C1..C8` (8 contracts).
+`agreement_id = C1..C8` (8 contracts).
 
 **Decision needed:** add `Ag.8` to the manuscript or fold C8 into an
 existing Ag.
 
-| ID   | Manuscript name  | Code `contract_id`          | OCaml fn (`canary_compat.ml`) | Status |
+| ID   | Manuscript name  | Code `agreement_id`          | OCaml fn (`canary_compat.ml`) | Status |
 | ---- | ---------------- | --------------------------- | ----------------------------- | ------ |
 | Ag.1 | Symbol           | C1 (`cmp_symbol`)           | `check_c_compat`              | drift  |
 | Ag.2 | API-completeness | C2                          | (see compat.ml)               | drift  |
@@ -430,8 +430,8 @@ type firing = {                (* record shape, not 3-tuple, for future fields *
   source : expectation_source;
 }
 
-type contract_binding = {
-  contract : contract_id;
+type agreement_binding = {
+  contract : agreement_id;
   lang     : Canary_lang.lang;
   firings  : firing list;
 }
@@ -460,7 +460,7 @@ throughout, llvm/z3 populate it.
 
 **Per-project data** — a project supplies its own
 bindings table. Tiny's lives in
-`canary_tiny_scenario.ml:tiny_contract_bindings`; c1-c7
+`canary_tiny_scenario.ml:tiny_agreement_bindings`; c1-c7
 wired for the relevant langs, c4-OCaml and c8-OCaml as
 Placeholder. `expectation_of_entry` becomes a pure lookup
 over this table.

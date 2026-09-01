@@ -369,10 +369,10 @@ let llvm_cmake_flags =
     Python probe: no (C2, Python) binding — lookup falls through to
     Expect_success. Matches the "llvmlite bundles its own libLLVM"
     override without needing an explicit loc_filter. *)
-let llvm_stable_contract_bindings
-  : Canary_scenario.contract_binding list
+let llvm_stable_agreement_bindings
+  : Canary_scenario.agreement_binding list
   =
-  let module CC = Canary_contract in
+  let module CC = Canary_agreement in
   let module CS = Canary_scenario in
   [
     { contract = CC.C2; lang = Canary_lang.OCaml;
@@ -602,7 +602,7 @@ let realize (a : Canary_artifact.assignment) : Canary_step_builder.runner_spec =
   { spec with
     expectation = (fun action loc ->
         Canary_scenario.lower_expectation_agnostic
-          ~bindings:llvm_stable_contract_bindings ~langs:[ Canary_lang.OCaml ] action loc);
+          ~bindings:llvm_stable_agreement_bindings ~langs:[ Canary_lang.OCaml ] action loc);
     (* stable chain: pin-checked fetch (the warm-skip only fires when the
        switch provably holds "19-shared") — the fetch cmd itself is the
        existing standard llvm.19-shared row. *)
@@ -643,7 +643,7 @@ let realize (a : Canary_artifact.assignment) : Canary_step_builder.runner_spec =
     the fetched 19 binding) is PROBE CODE vs the BINDING — not a
     binding↔native-lib channel pairing, and the OCaml binding isn't an
     enumerated axis. It stays declared where consumed
-    ([llvm_stable_contract_bindings] → Expect_compat_failure → xfail; the
+    ([llvm_stable_agreement_bindings] → Expect_compat_failure → xfail; the
     dev chain's [has_manifest=false] keeps it Expect_success there). Unlike
     z3's scenario-invariant wheel demo, this one is chain-LOCAL (fires only
     in the stable chain) — but the discriminating axis is the binding's

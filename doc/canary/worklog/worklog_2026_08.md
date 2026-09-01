@@ -1676,7 +1676,7 @@ three ends are hand-maintained prose. The half nobody designated as the
 bridge (§4.2.x, §6.1 — code-owned) stayed current; the designated half
 did not.
 
-And the drift was *this file's own*. `canary_contract_registry.ml:58`
+And the drift was *this file's own*. `canary_agreement_registry.ml:58`
 and the draft's surface-role table already agreed on `Sf.1`
 native_header … `Sf.5` binding_lib; only ssot still carried the older
 four-way aggregation, marking all five rows `drift`. The bridge was
@@ -1706,7 +1706,7 @@ because 33 source citations name it by section; the stub maps each old
 section to its new home so the repoint is mechanical. It also records
 why the file must not come back: where the code owns a fact, the doc
 should be a *generated fragment* with a check that diffs it, never a
-third hand-maintained copy. `canary_contract_registry.ml` already holds
+third hand-maintained copy. `canary_agreement_registry.ml` already holds
 the data to generate the one bridge worth having — `Ag.X` ↔ `C1..C8`.
 
 **The manuscript restarted.** `draft.md` (873 lines, largely spine and

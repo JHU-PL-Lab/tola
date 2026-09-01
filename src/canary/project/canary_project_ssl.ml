@@ -33,7 +33,7 @@
    A7 phase 4 (2026-08-05): the red cell is DERIVED, not hand-written —
    each app DECLARES what it requires ([app.requires]); the fetch steps
    INSPECT the installed binding's .mli against those watchlists
-   (evidence); [ssl_contract_bindings] (c2, TWO firings) + the one
+   (evidence); [ssl_agreement_bindings] (c2, TWO firings) + the one
    framework lowering turn "requirement missing from evidence" into a
    must-fail prediction at the probe. The old four per-variant
    [Expect_failure]/[Expect_success] closures are retired. *)
@@ -73,8 +73,8 @@ let app_nlv =
     - [At_probe_app OCaml] (nlv app): evidence = the mli inspect attached
       to the FETCH LIB step, watchlisted with [app_nlv.requires] —
       native_library_version missing at 0.6.0 → the derived must-fail. *)
-let ssl_contract_bindings : Canary_scenario.contract_binding list =
-  let module CC = Canary_contract in
+let ssl_agreement_bindings : Canary_scenario.agreement_binding list =
+  let module CC = Canary_agreement in
   let module CS = Canary_scenario in
   [ { contract = CC.C2; lang = Canary_lang.OCaml;
       firings =
@@ -368,7 +368,7 @@ let realize (a : Canary_artifact.assignment) : SB.runner_spec =
         | _ -> None);
     expectation =
       Canary_scenario.lower_expectation_agnostic
-        ~bindings:ssl_contract_bindings ~langs:[ Canary_lang.OCaml ];
+        ~bindings:ssl_agreement_bindings ~langs:[ Canary_lang.OCaml ];
   }
 
 let ssl_run : Canary_project_run.project_run =
@@ -456,7 +456,7 @@ test "$INSTALLED_SSL" = "%{version}" || { echo "WORLD MISMATCH: switch has ssl $
          outcomes are derived from evidence per variant. *)
       expectation =
         Canary_scenario.lower_expectation_agnostic
-          ~bindings:ssl_contract_bindings ~langs:[ Canary_lang.OCaml ];
+          ~bindings:ssl_agreement_bindings ~langs:[ Canary_lang.OCaml ];
     }
   in
   (name, spec)

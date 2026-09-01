@@ -229,11 +229,11 @@ type runner_spec = {
   (** Per-project list of surface-theory contracts this project opts out
       of. Empty by default; populate when a contract gives systematic
       false positives on the project's idiomatic patterns. Threaded
-      through to {!Canary_contract_run.predicted_contains_any_v2} via
+      through to {!Canary_agreement_run.predicted_contains_any_v2} via
       its [?disabled] argument. Layered with the CLI's
       [--disable-contract] flag — both contribute to the per-run
       disabled set. *)
-  disabled_contracts : Canary_contract.contract_id list;
+  disabled_agreements : Canary_agreement.agreement_id list;
   (** World-identity assertions: per-(action, location) claims that the
       step must satisfy for it to pass — the positive-polarity
       counterpart to [expectation]. Empty list = no assertions.
@@ -270,7 +270,7 @@ let empty_runner_spec = {
   inspect_note = None;
   inspect = (fun _ _ -> None);
   artifact_name = (fun _ -> None);
-  disabled_contracts = [];
+  disabled_agreements = [];
   asserts = [];
 }
 
@@ -567,7 +567,7 @@ let out_of ~root ~project ~tag =
 
 let mk_step ~root ~project ~cache_project ~tag ?output_tag ~action ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None)
-    ?(disabled_contracts = []) ~check_post () =
+    ?(disabled_agreements = []) ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
   let output_dir = output_dir_for ~root ~project ~tag:output_tag in
   let project_dir = project_dir_of ~root ~project in
@@ -583,7 +583,7 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~action ~deps ~cmd
     variant_id;
     action; deps;
     expectation; symbol_check;
-    disabled_contracts;
+    disabled_agreements;
     check_pre = (fun () ->
       List.for_all deps ~f:(fun dep ->
           let out = output_dir_for ~root ~project ~tag:dep in
@@ -839,7 +839,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
     in
     let expectation = spec.expectation action None in
     let symbol_check = spec.symbol_check action in
-    mk_step ~root ~project ~cache_project ~tag ~action ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts ()
+    mk_step ~root ~project ~cache_project ~tag ~action ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements ()
   in
   (* Optional follow-up step that writes a summary file for an artifact.
      Writes into the PARENT's output_dir (alongside probe.log) rather than
@@ -859,7 +859,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
       ~output_tag:parent_tag ~action
       ~deps:[ parent_tag ]
       ~cmd:inspect_cmd ~check_post ~expectation:Expect_success
-      ~symbol_check:None ~disabled_contracts:spec.disabled_contracts ()
+      ~symbol_check:None ~disabled_agreements:spec.disabled_agreements ()
   in
   (* A summary attached to a parent step: (tag suffix, filename, command).
      OCaml bindings get two: mli (semantic) and stub (C-symbol consumer). *)
@@ -965,7 +965,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
       ~output_tag:fetch_tag ~action:(Fetch Source)
       ~deps:[ fetch_tag ]
       ~cmd:scan_cmd ~check_post ~expectation:Expect_success
-      ~symbol_check:None ~disabled_contracts:spec.disabled_contracts ()
+      ~symbol_check:None ~disabled_agreements:spec.disabled_agreements ()
   in
   let raw_steps = List.concat_map (store_actions ~langs) ~f:(fun action ->
       let tag = string_of_action action in
@@ -1002,7 +1002,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                       (cmd ~output_dir ~variant_key)
                 in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
-                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
         | Probe_binding lang ->
             Hashtbl.set seen ~key:tag ~data:true;
@@ -1034,7 +1034,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                       (cmd ~output_dir ~variant_key)
                 in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
-                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
         | _ ->
             match script_of_action spec action with
@@ -1077,7 +1077,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
 
 
 (* Moved from bin 2026-08-10 *)
-let with_cli_disabled (cli_disabled : Canary_contract.contract_id list)
+let with_cli_disabled (cli_disabled : Canary_agreement.agreement_id list)
     (spec : runner_spec) : runner_spec =
   if List.is_empty cli_disabled then spec
-  else { spec with disabled_contracts = spec.disabled_contracts @ cli_disabled }
+  else { spec with disabled_agreements = spec.disabled_agreements @ cli_disabled }

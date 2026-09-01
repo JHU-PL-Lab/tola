@@ -61,7 +61,7 @@ let is_verdict = function
    details (" [c2]" / " [c2,c5]") — extracted so the mark itself can name
    the contract ("xfail[c2]"). "" when the detail carries none (an
    unattributed xfail, or a pre-phase-2 log line). *)
-let contract_suffix (detail : string option) : string =
+let agreement_suffix (detail : string option) : string =
   match detail with
   | None -> ""
   | Some d -> (
@@ -81,7 +81,7 @@ let mark event detail =
   | "done" -> (
       match detail with
       | Some d when String.is_substring d ~substring:"expected failure" ->
-          "xfail" ^ contract_suffix detail
+          "xfail" ^ agreement_suffix detail
       | _ -> "✓")
   | "failed" -> "✗"
   | "unexpected_success" -> "✗"
@@ -90,7 +90,7 @@ let mark event detail =
          verdict marker's flavor tells which pass. *)
       match detail with
       | Some d when String.is_substring d ~substring:"prior xfail" ->
-          "xfail" ^ contract_suffix detail
+          "xfail" ^ agreement_suffix detail
       | Some d when String.is_substring d ~substring:"prior success" -> "✓"
       | _ -> "·")
   | "blocked" -> "⊘"

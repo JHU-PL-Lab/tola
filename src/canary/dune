@@ -32,7 +32,7 @@
 ;                      data, no theory of its own. canary_lang is its
 ;                      own file so canary_store and canary_basic can
 ;                      both depend on it without a cycle.
-;   contract/ Layer 1 — THE AGREEMENT LAYER (was surface/, renamed
+;   agreement/ Layer 1 — THE AGREEMENT LAYER (was surface/, renamed
 ;                      2026-09-01): what canary BELIEVES and how it is
 ;                      falsified — the registry of agreements
 ;                      (canary_contract_registry), the c1..c8 comparators

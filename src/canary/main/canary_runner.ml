@@ -21,7 +21,7 @@ type scenario_run_result = {
   r_result_verdict : string;         (** "PASS" or "FAIL" *)
   r_result_culprits : string list;   (** failed step tags, empty on PASS *)
   r_result_xfails : (string * string list) list;
-      (** [(step_tag, [contract_id])] for confirmed expected failures *)
+      (** [(step_tag, [agreement_id])] for confirmed expected failures *)
 }
 
 (** Run a project through the full pipeline: enumerate → runner_spec →

@@ -68,7 +68,7 @@ type tiny_recipe = {
   mutates : string list;
   mutation : mutation option;
   expected : (string * outcome) list;
-  violates : Canary_contract.contract_id list;
+  violates : Canary_agreement.agreement_id list;
 }
 
 (** Pairing of concept ([Canary_scenario.scenario]) + implementation
@@ -176,7 +176,7 @@ let actions_of_parents (parents : string list) : Canary_basic.action list =
       if List.mem acc r ~equal:Poly.equal then acc else acc @ [ r ])
 
 let scenario_specs : scenario_spec list =
-  let open Canary_contract in
+  let open Canary_agreement in
   let open Canary_scenario in
   let mk ~id ~name ~description ~mutates ~concrete_pert
          ~scenario_pert ~expected ~violates =
@@ -676,8 +676,8 @@ let matches_derived_cell
     Positioned before [recipe_of_derived_cell] so the synthesis
     guard there can consult
     {!Canary_scenario.binding_has_live_firing}. *)
-let tiny_contract_bindings : Canary_scenario.contract_binding list =
-  let module CC = Canary_contract in
+let tiny_agreement_bindings : Canary_scenario.agreement_binding list =
+  let module CC = Canary_agreement in
   let module CS = Canary_scenario in
   [
     (* c1 — symbol set. Fires at Probe_binding: stub link (Python
@@ -689,7 +689,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_contract_run.inputs_of_contract CC.C1 Canary_lang.OCaml;
+              Canary_agreement_run.inputs_of_contract CC.C1 Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
@@ -699,7 +699,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_contract_run.inputs_of_contract CC.C1 Canary_lang.Python;
+              Canary_agreement_run.inputs_of_contract CC.C1 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -713,7 +713,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_contract_run.inputs_of_contract CC.C2 Canary_lang.OCaml;
+              Canary_agreement_run.inputs_of_contract CC.C2 Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
@@ -723,7 +723,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_contract_run.inputs_of_contract CC.C2 Canary_lang.Python;
+              Canary_agreement_run.inputs_of_contract CC.C2 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -760,7 +760,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_contract_run.inputs_of_contract CC.C4 Canary_lang.Python;
+              Canary_agreement_run.inputs_of_contract CC.C4 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -784,7 +784,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_contract_run.inputs_of_contract CC.C5 Canary_lang.Python;
+              Canary_agreement_run.inputs_of_contract CC.C5 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -796,7 +796,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
     { contract = CC.C6; lang = Canary_lang.OCaml;
       firings =
         (let c6_inputs =
-           Canary_contract_run.inputs_of_contract CC.C6 Canary_lang.OCaml in
+           Canary_agreement_run.inputs_of_contract CC.C6 Canary_lang.OCaml in
          [
            { site = CS.At_build_binding Canary_lang.OCaml;
              loc_filter = CS.Any;
@@ -820,7 +820,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
       ]};
 
     (* c8 — API faithfulness. Blocked on c6+c7 per SSOT §3.4
-       contract_status (Blocked [C6; C7]). Placeholder here so the
+       agreement_status (Blocked [C6; C7]). Placeholder here so the
        shape commits; today's api_faithful Bs enters as
        Expect_success. *)
     { contract = CC.C8; lang = Canary_lang.OCaml;
@@ -857,7 +857,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_source (Source.rename_c_symbol
              ~file ~from_:"tiny_sum" ~to_:"tiny_total"));
            expected = [];
-           violates = [ Canary_contract.C1 ];
+           violates = [ Canary_agreement.C1 ];
          }
      | Source, On_behavior ->
          (* No parametric behavior-change primitive. behavior_silent
@@ -872,7 +872,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
             libtiny.so.2.0. Mirrors Bs.4 (abi_soname_bump).
             Skips when c4 has no live firing for any of this
             cell's languages — the C4/OCaml binding is a
-            Placeholder today (see tiny_contract_bindings), so
+            Placeholder today (see tiny_agreement_bindings), so
             Sc.2/4/6.OCaml Lib cells synthesize None until the
             placeholder is wired. Sc.1 (langs = [OCaml; Python])
             and Sc.*.Python still synthesize because C4/Python
@@ -880,14 +880,14 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
          let langs = Canary_scenario.langs_of_scenario cell in
          let live = List.exists langs ~f:(fun l ->
            Canary_scenario.binding_has_live_firing
-             tiny_contract_bindings Canary_contract.C4 l) in
+             tiny_agreement_bindings Canary_agreement.C4 l) in
          if live then
            Some {
              mutates = [ "c/build/libtiny.so.1.0" ];
              mutation = Some (Of_native (Native.soname_bump
                ~from_so:"libtiny.so.1.0" ~to_so:"libtiny.so.2.0"));
              expected = [];
-             violates = [ Canary_contract.C4 ];
+             violates = [ Canary_agreement.C4 ];
            }
          else None
      | Binding Canary_lang.OCaml, On_artifact (Binding Canary_lang.OCaml) ->
@@ -899,7 +899,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_binding (Binding.drop_ocaml_val
              ~file ~name:"sum"));
            expected = [];
-           violates = [ Canary_contract.C2 ];
+           violates = [ Canary_agreement.C2 ];
          }
      | Binding Canary_lang.Python, On_artifact (Binding Canary_lang.Python) ->
          (* Drop a top-level def from tiny_cext/__init__.py. Default:
@@ -913,7 +913,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_binding (Binding.drop_python_attr
              ~file ~name:"sum"));
            expected = [];
-           violates = [ Canary_contract.C2 ];
+           violates = [ Canary_agreement.C2 ];
          }
      | Binding Canary_lang.Python, _ -> None
      | App, _ ->
@@ -1258,7 +1258,7 @@ let () =
 
 (* Startup validator — a scenario that claims [manifest = Possible _]
    (expected to fire at probe) must have at least one live firing in
-   [tiny_contract_bindings] for one of its violates × langs. Catches
+   [tiny_agreement_bindings] for one of its violates × langs. Catches
    the shape "you wired a Bs entry expecting failure detection, but
    every contract you listed is a Placeholder for the relevant
    languages" — the mutation would apply, expectation_of_entry would
@@ -1272,7 +1272,7 @@ let () =
     let langs = CS.langs_of_scenario entry.scenario in
     List.exists entry.recipe.violates ~f:(fun c ->
       List.exists langs ~f:(fun l ->
-        CS.binding_has_live_firing tiny_contract_bindings c l))
+        CS.binding_has_live_firing tiny_agreement_bindings c l))
   in
   let offenders =
     List.filter all_scenario_specs ~f:(fun entry ->
@@ -1282,7 +1282,7 @@ let () =
   if not (List.is_empty offenders) then
     Stdlib.failwith
       (Printf.sprintf
-         "tiny_contract_bindings validator: %d scenario(s) claim \
+         "tiny_agreement_bindings validator: %d scenario(s) claim \
           manifest=Possible but no live firing exists in the \
           bindings table for any of their (violates × langs) — \
           probe would silently emit Expect_success. \
@@ -1375,8 +1375,8 @@ let canary_expected_of (entry : scenario_spec) : canary_expected =
      c7 api_repack    c8 api_add *)
 
 (** Concise fault tag for a contract. *)
-let fault_tag_of_contract : Canary_contract.contract_id -> string = function
-  | Canary_contract.C1 -> "sym_missing"
+let fault_tag_of_contract : Canary_agreement.agreement_id -> string = function
+  | Canary_agreement.C1 -> "sym_missing"
   | C2 -> "api_drop"
   | C3 -> "behavior"
   | C4 -> "abi_soname"
@@ -1511,9 +1511,9 @@ let iter_scenario_specs
     ~f:(fun i spec -> f ~index:(i + 1) ~total:n ~spec)
 
 (** Compact contract label — ["c1"..."c8"] via
-    {!Canary_contract.string_of_contract_id}, or ["gap"] for [Detector_gap]. *)
+    {!Canary_agreement.string_of_agreement_id}, or ["gap"] for [Detector_gap]. *)
 let detector_short = function
-  | Canary_scenario.Wired c -> Canary_contract.string_of_contract_id c
+  | Canary_scenario.Wired c -> Canary_agreement.string_of_agreement_id c
   | Canary_scenario.Detector_gap -> "gap"
 
 (** 1-based index of an artifact in a scenario's [related_artifacts], or
@@ -1689,14 +1689,14 @@ let name_of_string (n : string) : string =
 
 (** Human-readable contract label used by the Python harness's JSON
     output ("Symbol", "Type", "ABI", …). Distinct from
-    [Canary_contract.string_of_contract_id] which emits "c1".."c8".
+    [Canary_agreement.string_of_agreement_id] which emits "c1".."c8".
     Used by [print_expected] to preserve the JSON shape. *)
 (** Human-readable contract label — ["Symbol"], ["ABI"], ["Type"], …
-    Distinct from {!Canary_contract.string_of_contract_id} (["c1"..."c8"]).
+    Distinct from {!Canary_agreement.string_of_agreement_id} (["c1"..."c8"]).
     Used by tiny's [confirm_ill.json] and [tiny expected] output for legacy
     parity with the Python harness. *)
 let violates_label = function
-  | Canary_contract.C1 -> "Symbol"
+  | Canary_agreement.C1 -> "Symbol"
   | C2 -> "API-completeness"
   | C3 -> "Behavior"
   | C4 -> "ABI"
@@ -2522,7 +2522,7 @@ let expectation_of_entry (entry : scenario_spec)
     fun _ _ -> SM.Expect_success
   else
     let bindings =
-      Base.List.filter tiny_contract_bindings ~f:(fun (b : CS.contract_binding) ->
+      Base.List.filter tiny_agreement_bindings ~f:(fun (b : CS.agreement_binding) ->
           Base.List.mem entry.recipe.violates b.CS.contract
             ~equal:Base.Poly.equal)
     in
@@ -2549,7 +2549,7 @@ let tiny_expectation_agnostic
     Canary_step_model.step_expectation
   =
   Canary_scenario.lower_expectation_agnostic
-    ~bindings:tiny_contract_bindings
+    ~bindings:tiny_agreement_bindings
     ~langs:Canary_lang.[ OCaml; Python ]
 
 (** Derive tiny_stores adjustments from the recipe's concrete

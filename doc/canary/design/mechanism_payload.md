@@ -160,7 +160,7 @@ Analysis-side declarations (unchanged, already separate):
 | `build_app`, `probe_app` | consumer shape | Partly — via probe_decl |
 | `probe_lib` | location + project lib path | Partly — location template; path stays |
 | `expectation` | contracts | Already absorbed (lowering) |
-| `disabled_contracts` | policy | No |
+| `disabled_agreements` | policy | No |
 
 ## Template / Raw fallback / harness warning
 

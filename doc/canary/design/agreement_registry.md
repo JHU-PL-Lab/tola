@@ -1,6 +1,6 @@
 # Tool-Grounded Agreement Catalogue for Cross-Language Binding Checks
 
-**Kind: proposal.** The producer landed (`contract/canary_contract_registry.ml` carries the rows); the catalogue's remaining rungs are open. **Landed when** every agreement in the catalogue resolves to a check that can ground it.
+**Kind: proposal.** The producer landed (`agreement/canary_agreement_registry.ml` carries the rows); the catalogue's remaining rungs are open. **Landed when** every agreement in the catalogue resolves to a check that can ground it.
 
 > **Where an agreement gets EVALUATED is an open question this catalogue
 > inherits** (2026-08-30):
@@ -1515,7 +1515,7 @@ a stable **slug** and the **section that defines it**:
 { pp_slug = "denotation_across_worlds"; pp_doc = "§6.3"; … }  (* proposed *)
 ```
 
-`Canary_contract_registry.all_agreements` unions both into one list, so
+`Canary_agreement_registry.all_agreements` unions both into one list, so
 there is a single place that answers *what does canary believe, and
 where is it written down*. The slug is the name that survives the
 `c1..c8` renaming settle (§0), so citations do not rot when the ids go.
@@ -1625,13 +1625,13 @@ The inspection tools themselves already exist in the project and have their own 
 ## A.1 — Producer-first, two-agent-safe
 
 
-The registry is a NEW additive module — `contract/canary_contract_registry.ml` —
+The registry is a NEW additive module — `agreement/canary_agreement_registry.ml` —
 that consumes nothing from `project/` or `main/`. It assembles the belief
 from theory pieces that already exist:
 
-- comparators + the `contract_check` proto-row (`id/name/layer/status/
-  enabled/predict`) — `contract/canary_contract.ml`
-- the predict closures + `registered_checks` — `contract/canary_contract_run.ml`
+- comparators + the `agreement_check` proto-row (`id/name/layer/status/
+  enabled/predict`) — `agreement/canary_agreement.ml`
+- the predict closures + `registered_checks` — `agreement/canary_agreement_run.ml`
 - the input template (`inputs_of_contract ?mechanism contract lang`) — M2
   step 2, same file
 - the fault tags — `scenario.md`'s catalogue + `canary_expected_of`
@@ -1646,7 +1646,7 @@ here — so the producer side can land while project work continues.
 ## A.2 — The row
 
 
-Extending the existing `contract_check`, one row per contract states the
+Extending the existing `agreement_check`, one row per contract states the
 whole belief:
 
 ```ocaml
@@ -1662,8 +1662,8 @@ type source =
                        staged-parity at Install_lib, freshness *)
   | Placeholder     (* Expect_success until wired (missing-ness visible) *)
 
-type contract_row = {
-  row_check   : Canary_contract.contract_check;
+type agreement_row = {
+  row_check   : Canary_agreement.agreement_check;
       (* id, name, layer, status, enabled, predict — already exists *)
   invariant   : string;
       (* the one-sentence agreement, phrased as a FALSIFIER (§5); the
@@ -1674,7 +1674,7 @@ type contract_row = {
          already implies the cell's subject (one artifact vs a pair)
          and its evidence flavor. *)
   inputs      : Canary_mechanism.mechanism -> Canary_lang.lang ->
-                Canary_contract.inspect_input list;
+                Canary_agreement.inspect_input list;
       (* the step-2 template — WHAT files the check reads, derived from
          the binding_decl (coupling products, surface_path) *)
   firing      : Canary_mechanism.mechanism -> Canary_lang.lang ->
@@ -1701,7 +1701,7 @@ type contract_row = {
          mapping becomes data on the row, not a synced-by-hand table *)
 }
 
-let contract_registry : contract_row list = [ ... c1 .. c8 ... ]
+let contract_registry : agreement_row list = [ ... c1 .. c8 ... ]
 ```
 
 `firing` is THE new piece. Everything else is consolidation.
@@ -1794,7 +1794,7 @@ artifact (the binary C lib) at `Build_lib`, all sharing one shape:
 | c5 @ build_lib | a declared version tag is absent from `versioned_exports` | `@@VER` vs the decl |
 
 Their closures (`c1_decl_predict`, `c4_decl_predict`,
-`c5_decl_predict` in `canary_contract_run.ml`) are **decl-comparison**
+`c5_decl_predict` in `canary_agreement_run.ml`) are **decl-comparison**
 predicts: they read ONE artifact's inspected surface and compare it
 against the project's DECLARED facts (`binding_decl`), with no
 consumer involved.
@@ -2183,7 +2183,7 @@ only the cmd strings.
 2. Switch `lower_expectation_agnostic` to derive firings from the
    registry; pin the derived firings equal to the hand-written tables
    (tiny first — richest case — then z3/llvm/sqlite).
-3. Delete the per-project `*_contract_bindings`; the tiny oracle
+3. Delete the per-project `*_agreement_bindings`; the tiny oracle
    combinator (`expectation_of_entry`) consumes the registry.
 4. Close the gaps inside the registry: c4/OCaml's Placeholder
    prediction, `symbol_orphan`'s build failure (a new id), statuses

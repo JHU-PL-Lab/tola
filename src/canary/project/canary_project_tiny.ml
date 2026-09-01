@@ -26,7 +26,7 @@ module TS = Canary_tiny_scenario
 (* Project identity IS [tiny_full_run] below (SSOT §6.1 top level; A6: the
    never-read [Canary_project.project] bundle was deleted 2026-08-05). The
    contract firing table stays where it is consumed:
-   [TS.tiny_contract_bindings] → [tiny_expectation_agnostic]. *)
+   [TS.tiny_agreement_bindings] → [tiny_expectation_agnostic]. *)
 
 (* ── the declarative project surface ── *)
 
@@ -283,7 +283,7 @@ let project_run_of_tiny1 ~(name : string) : project_run =
 (* ── tiny1 run helpers (moved from bin 2026-08-10) ── *)
 
 let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
-    ~cache_path ~(cli_disabled : Canary_contract.contract_id list) ~name () =
+    ~cache_path ~(cli_disabled : Canary_agreement.agreement_id list) ~name () =
   let name = TS.name_of_string name in
   let workspace =
     match workspace_override with
@@ -300,8 +300,8 @@ let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
   in
   let mutated_stores = TS.stores_of_workspace ~workspace_root:workspace () in
   let spec = TS.runner_spec_of_name ~mutated_stores name in
-  let spec = { spec with Canary_step_builder.disabled_contracts =
-      spec.Canary_step_builder.disabled_contracts @ cli_disabled } in
+  let spec = { spec with Canary_step_builder.disabled_agreements =
+      spec.Canary_step_builder.disabled_agreements @ cli_disabled } in
   let spec =
     if agnostic then
       { spec with Canary_step_builder.expectation = expectation_agnostic }

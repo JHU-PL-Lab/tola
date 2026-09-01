@@ -148,14 +148,16 @@ let action_cmd =
             "Path to step cache JSON for global skip (e.g. \
              doc/canary/step_cache.json)")
   in
-  let disable_contract_arg =
+  let disable_agreement_arg =
     Arg.(
       value & opt string ""
-      & info [ "disable-contract" ] ~docv:"CSV"
+      & info [ "disable-agreement"; "disable-contract" ] ~docv:"CSV"
           ~doc:
-            "Comma-separated surface-theory contracts to skip for this run, \
-             e.g. \"c4,c5\". Layered on top of each project's \
-             runner_spec.disabled_contracts and the registry's enabled flag.")
+            "Comma-separated agreements to skip for this run, e.g. \
+             \"c4,c5\" (the c1..c8 ids are provisional — see the \
+             catalogue's §0). Layered on top of each project's \
+             runner_spec.disabled_agreements and the registry's enabled \
+             flag. [--disable-contract] is kept as an alias.")
   in
   let thin_arg =
     Arg.(
@@ -198,13 +200,13 @@ let action_cmd =
      — one derive_steps + run_graph, no multi-variant. *)
   (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
      the flag stays parsed so existing invocations don't break. *)
-  let run project _quick failfast cache_path disable_contract_csv thin refs () =
+  let run project _quick failfast cache_path disable_agreement_csv thin refs () =
     let root = "_out" in
-    let cli_disabled = Canary_contract.contract_ids_of_csv disable_contract_csv in
+    let cli_disabled = Canary_agreement.agreement_ids_of_csv disable_agreement_csv in
     if cli_disabled <> [] then
-      Fmt.pr "[disable-contract] skipping: %s@."
+      Fmt.pr "[disable-agreement] skipping: %s@."
         (String.concat ", "
-           (List.map Canary_contract.string_of_contract_id cli_disabled));
+           (List.map Canary_agreement.string_of_agreement_id cli_disabled));
     (* the run config: --thin sets the policy variant, --refs
        narrows the source-repo set (orthogonal; the batch sets its own
        per-project config tier-based inside [Canary_batch.run]). *)
@@ -263,7 +265,7 @@ let action_cmd =
     (Cmd.info "action" ~doc:"Run the action graph")
     Term.(
       const run $ project $ quick $ failfast $ cache_path_arg
-      $ disable_contract_arg $ thin_arg $ refs_arg
+      $ disable_agreement_arg $ thin_arg $ refs_arg
       $ const ())
 
 (* ── `canary emit` — one dump per pipeline pass (2026-08-24) ──
@@ -1307,7 +1309,7 @@ let compat_cmd =
   let run project variant stub_path lib_path () =
     let rc =
       match (stub_path, lib_path) with
-      | Some s, Some l -> Canary_contract_run.run ~stub_path:s ~lib_path:l
+      | Some s, Some l -> Canary_agreement_run.run ~stub_path:s ~lib_path:l
       | _ -> (
           match project with
           | None ->
@@ -1317,7 +1319,7 @@ let compat_cmd =
               2
           | Some p ->
               let root = Stdlib.Sys.getcwd () in
-              Canary_contract_run.run_for_project ~root ~project:p ~variant)
+              Canary_agreement_run.run_for_project ~root ~project:p ~variant)
     in
     Stdlib.exit rc
   in
@@ -1343,7 +1345,7 @@ let verify_cmd =
   in
   let run project variant () =
     let root = Stdlib.Sys.getcwd () in
-    Stdlib.exit (Canary_contract_run.verify_for_project ~root ~project ~variant)
+    Stdlib.exit (Canary_agreement_run.verify_for_project ~root ~project ~variant)
   in
   Cmd.v
     (Cmd.info "verify"

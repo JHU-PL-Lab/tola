@@ -334,15 +334,15 @@ let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
    PREDICTED compat finding (the stub's undefined C symbols vs the
    lib's exports — the tiny-full precedent), not a raw FAIL. The other
    cells keep Expect_success. *)
-let opam_binding_contract_bindings : Canary_scenario.contract_binding list =
-  let module CC = Canary_contract in
+let opam_binding_agreement_bindings : Canary_scenario.agreement_binding list =
+  let module CC = Canary_agreement in
   let module CS = Canary_scenario in
   [ { contract = CC.C1; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = Canary_contract_run.inputs_of_contract CC.C1 Canary_lang.OCaml;
+            inputs = Canary_agreement_run.inputs_of_contract CC.C1 Canary_lang.OCaml;
             version_info = None;
           }};
       ]} ]
@@ -640,7 +640,7 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
     expectation =
       (if bind_built then
          Canary_scenario.lower_expectation_agnostic
-           ~bindings:opam_binding_contract_bindings
+           ~bindings:opam_binding_agreement_bindings
            ~langs:[ Canary_lang.OCaml ]
        else base.Canary_step_builder.expectation);
   }

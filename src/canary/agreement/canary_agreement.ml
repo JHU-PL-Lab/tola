@@ -1,4 +1,4 @@
-(** [Canary_contract] — pure surface-theory comparators (surface/).
+(** [Canary_agreement] — pure surface-theory comparators (surface/).
 
     The theoretical half of the compat machinery: input types and the
     c1..c8 comparator functions. Pure; the only I/O is reading a JSON
@@ -14,7 +14,7 @@
       [check_sym_version], [check_type], [check_api_repack],
       [check_api_faithfulness]
 
-    The companion {!Canary_contract_run} module (same dir) carries the
+    The companion {!Canary_agreement_run} module (same dir) carries the
     action-graph integration half: [predicted_contains_any_v2] (the
     ADT-to-substring derivation that consumes [inspect_input] declared
     above) + the CLI commands [run] / [run_for_project] /
@@ -70,7 +70,7 @@ let get_string_list j name =
 
     Unified on 2026-06-01 (Phase 4): previously this type lived twice,
     as [Canary.compat_inspect_input] (paths : string list) on the
-    declaration side and as [Canary_contract_run.typed_input] (single
+    declaration side and as [Canary_agreement_run.typed_input] (single
     string) after resolution, with a manual 20-line translation in
     [Canary_action] and [Canary_gh]. Constructors map to surface
     roles:
@@ -652,22 +652,22 @@ let lag_examples ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
    turns [inspect_input list] into expected failure substrings.
 
    The concrete predicate implementations + registered list live in
-   {!Canary_contract_run} (which has the dispatch entry
+   {!Canary_agreement_run} (which has the dispatch entry
    [predicted_contains_any_v2]). This file defines only the types so
    they're available to anyone consuming the theory layer. *)
 
 (** The eight contracts of surface theory. See
     [doc/canary/research/surface_draft/surface.md] Part C for definitions. *)
-type contract_id = C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8
+type agreement_id = C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8
 
-let string_of_contract_id = function
+let string_of_agreement_id = function
   | C1 -> "c1" | C2 -> "c2" | C3 -> "c3" | C4 -> "c4"
   | C5 -> "c5" | C6 -> "c6" | C7 -> "c7" | C8 -> "c8"
 
 (** Parse a string like ["c5"] back into a contract id. Accepts
     upper- or lower-case prefix; rejects anything else. Used by the
     CLI [--disable-contract] flag parser and by deserialisers. *)
-let contract_id_of_string s =
+let agreement_id_of_string s =
   match String.lowercase s with
   | "c1" -> Some C1 | "c2" -> Some C2 | "c3" -> Some C3 | "c4" -> Some C4
   | "c5" -> Some C5 | "c6" -> Some C6 | "c7" -> Some C7 | "c8" -> Some C8
@@ -676,12 +676,12 @@ let contract_id_of_string s =
 (** Parse a comma-separated list like ["c4,c5"]. Silently drops
     anything that doesn't parse; the caller can re-validate the input
     if it cares about reporting unknown ids. *)
-let contract_ids_of_csv s =
+let agreement_ids_of_csv s =
   s
   |> String.split ~on:','
   |> List.filter_map ~f:(fun part ->
        let part = String.strip part in
-       if String.is_empty part then None else contract_id_of_string part)
+       if String.is_empty part then None else agreement_id_of_string part)
 
 (** Wiring status of a contract within canary's action graph.
 
@@ -694,34 +694,34 @@ let contract_ids_of_csv s =
     - [Blocked deps] — depends on these contracts being implemented
       first (e.g. c8 ⇐ [c6; c7]).
     - [Stubbed] — placeholder; the predict closure returns []. *)
-type contract_status =
+type agreement_status =
   | Wired
   | Inspect_only
   | Comparator_only
-  | Blocked of contract_id list
+  | Blocked of agreement_id list
   | Stubbed
 
-(** Human label for a wiring status (the runner's [contract_skipped]
+(** Human label for a wiring status (the runner's [agreement_skipped]
     events name WHY a registry-disabled contract didn't fire). *)
-let string_of_contract_status = function
+let string_of_agreement_status = function
   | Wired -> "wired"
   | Inspect_only -> "inspect-only"
   | Comparator_only -> "comparator-only"
   | Blocked [] -> "blocked"
   | Blocked deps ->
       "blocked on "
-      ^ String.concat ~sep:"," (List.map deps ~f:string_of_contract_id)
+      ^ String.concat ~sep:"," (List.map deps ~f:string_of_agreement_id)
   | Stubbed -> "stubbed"
 
 (** One entry in the contract registry. [predict] consumes the same
-    [inspect_input list + ~resolve] that {!Canary_contract_run}'s top-
+    [inspect_input list + ~resolve] that {!Canary_agreement_run}'s top-
     level dispatcher does, and returns the substrings this contract
     predicts the probe.log will contain on failure. *)
-type contract_check = {
-  id        : contract_id;
+type agreement_check = {
+  id        : agreement_id;
   name      : string;        (* "cmp_symbol", "cmp_api_completeness", … *)
   layer     : string;        (* "L0", "L1b", "L3", "L4", … *)
-  status    : contract_status;
+  status    : agreement_status;
   enabled   : bool;
   predict   : resolve:(string -> string) -> inspect_input list -> string list;
 }

@@ -711,13 +711,13 @@ New vocabulary in `canary_scenario.ml` (project-agnostic):
   `From_behavior_grep { contains_any }` (assert log contains
   substring) | `Placeholder { reason : string }` (shape
   committed, content TBD; emits Expect_success at runtime).
-- `contract_binding` — a per-(contract, lang) declaration of
+- `agreement_binding` — a per-(contract, lang) declaration of
   `firings : (firing_site * expectation_source) list`. One
   contract can fire at multiple sites (c6 fires at both
   Build_binding and Probe_binding).
 
-Data half in `canary_tiny_scenario.ml`: `tiny_contract_bindings :
-contract_binding list` populated with all currently-wired
+Data half in `canary_tiny_scenario.ml`: `tiny_agreement_bindings :
+agreement_binding list` populated with all currently-wired
 tiny contracts (c1/c2/c3/c4/c5/c6/c7). c4-OCaml and c8-OCaml
 enter as `Placeholder` bindings with the reason string
 documenting the SSOT-level question that's still open. Both
@@ -731,7 +731,7 @@ Rewrite of `expectation_of_entry` (~40 LOC → ~40 LOC):
   the binding table).
 - Delete `is_expect_failure_contract` (subsumed).
 - New body iterates `violates × scenario_langs`, looks up
-  each pair in `tiny_contract_bindings`, filters `firings`
+  each pair in `tiny_agreement_bindings`, filters `firings`
   by `firing_site_of_rule rule`, picks the highest-priority
   source (Artifact > BehaviorGrep > Placeholder-skip).
 - Falls through to `Expect_success` in the same cases as
@@ -750,7 +750,7 @@ branches did.
 used to hand-check `List.mem langs Python` — mirroring the
 fact that `compat_inputs_of_contract ~lang:OCaml C4`
 returned None. Now consults `Canary_scenario.binding_has_live_firing
-tiny_contract_bindings C4 lang`: skips synthesis when the
+tiny_agreement_bindings C4 lang`: skips synthesis when the
 lang has no live firing for c4 (Placeholder counts as
 non-live). Same output (OCaml Lib cells stay empty), but
 the *reason* is now data — when c4-OCaml gets wired later,
@@ -770,7 +770,7 @@ offenders; validator loads clean.
 **Code net**:
 - `canary_scenario.ml`: +80 LOC (types + `firing_site_of_rule` +
   `binding_has_live_firing`)
-- `canary_tiny_scenario.ml`: +140 LOC (`tiny_contract_bindings`
+- `canary_tiny_scenario.ml`: +140 LOC (`tiny_agreement_bindings`
   data) - 60 LOC (deleted `compat_inputs_of_contract` +
   `is_expect_failure_contract`) + 15 LOC net for the rewritten
   `expectation_of_entry` + guard change + validator.
@@ -798,7 +798,7 @@ offenders; validator loads clean.
 3. z3/llvm/sqlite still hand-code `Expect_compat_failure` inline
    (their variants don't go through tiny's lowering). Task 2's
    project-hookable factory would let them supply their own
-   `<project>_contract_bindings` table; the shape is now proven.
+   `<project>_agreement_bindings` table; the shape is now proven.
 
 ### Task 2 Phase A shipped — lowering lifted (2026-07-21)
 
@@ -817,7 +817,7 @@ the original ~230):
 - **C** — `version_info` in bindings (extend `From_artifact` or
   add per-binding field). ✅ shipped 2026-07-21 (C1: per-source
   `version_info` on both `From_artifact` and `From_behavior_grep`).
-- **D** — llvm migration (declare `llvm_stable_contract_bindings`,
+- **D** — llvm migration (declare `llvm_stable_agreement_bindings`,
   replace inline `Expect_compat_failure`).
 - **E** — z3 migration (same shape, Python variant).
 - **F** — sqlite migration (empty bindings; sanity that the
@@ -830,7 +830,7 @@ Byte-preserving: same source ordering (Artifact > Grep >
 Placeholder-skip), same fallthrough to `Expect_success`, same
 handling of `has_manifest = false`. Tiny's `expectation_of_entry`
 shrinks from ~40 lines to 6 (thin wrapper that pulls fields
-out of a `scenario_spec` and passes them + `tiny_contract_bindings`).
+out of a `scenario_spec` and passes them + `tiny_agreement_bindings`).
 
 Verified: tiny run 21/22 PASS unchanged, artifact-test 101/101.
 `canary_scenario.ml` gains a `Canary_step_model` dependency
@@ -907,7 +907,7 @@ pre-migration, captured after user OK):
 positive-only case fits the pattern without code changes.
 Verified by re-inspection of `canary_project_sqlite.ml:60`.
 
-**Phase E — z3 (one binding)**. New `z3_contract_bindings` at
+**Phase E — z3 (one binding)**. New `z3_agreement_bindings` at
 module scope declares one binding:
   { contract = C2; lang = Python;
     firings = [{
@@ -931,7 +931,7 @@ identically. `diff -u` on done-lines (timestamps stripped)
 returns empty — byte-parity with baseline.
 
 **Phase D — llvm (one binding)**. New
-`llvm_stable_contract_bindings` at module scope declares one
+`llvm_stable_agreement_bindings` at module scope declares one
 binding (C2 for OCaml at At_probe_binding OCaml, loc_filter Any).
 Inputs bag intentionally merges C_stub + Native_lib + Ocaml_mli
 even though the binding is keyed on C2 — the runner's
@@ -974,7 +974,7 @@ predictions. Follow-ups (not part of Task 2):
    over all matching From_artifact firings.
 2. The higher-level `project`/`project_definition` type (naming
    pressure noted in the "rename project_spec" discussion) is
-   now a natural next step — the per-project contract_bindings +
+   now a natural next step — the per-project agreement_bindings +
    scenario_specs + workspace materializer + shell chassis form
    the components of a `project`, distinct from the runner-facing
    `Canary_step_builder.project_spec`. Deferred until a real
@@ -1000,7 +1000,7 @@ bidirectional reference.
 type 'scenario_spec project = {
   name : string;
   scenarios : 'scenario_spec list;
-  contract_bindings : Canary_scenario.contract_binding list;
+  agreement_bindings : Canary_scenario.agreement_binding list;
 }
 ```
 
@@ -1020,7 +1020,7 @@ at the bottom of `canary_tiny_scenario.ml`:
 let tiny_project = {
   name = "tiny";
   scenarios = all_scenario_specs;
-  contract_bindings = tiny_contract_bindings;
+  agreement_bindings = tiny_agreement_bindings;
 }
 ```
 
@@ -1079,7 +1079,7 @@ and `scenarios` field):
 ```ocaml
 type project = {
   name : string;
-  contract_bindings : contract_binding list;
+  agreement_bindings : agreement_binding list;
 }
 ```
 
@@ -1103,7 +1103,7 @@ layer dependency from `action/` to `tool/`).
 ```ocaml
 let tiny_project : Canary_project.project = {
   name = "tiny";
-  contract_bindings = tiny_contract_bindings;
+  agreement_bindings = tiny_agreement_bindings;
 }
 ```
 

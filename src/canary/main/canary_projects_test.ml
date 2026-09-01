@@ -277,13 +277,13 @@ let z3_lowering_derived : Canary_project_test.pure_test =
     check = (fun () ->
       let lower =
         Canary_scenario.lower_expectation_agnostic
-          ~bindings:Canary_project_z3.z3_contract_bindings
+          ~bindings:Canary_project_z3.z3_agreement_bindings
           ~langs:[ Canary_lang.Python ]
       in
       (match lower (B.Probe_binding Canary_lang.Python) pip_loc with
        | Canary_step_model.Expect_compat_derived { inputs; _ } ->
            List.exists inputs ~f:(function
-             | Canary_contract.Python_attrs _ -> true
+             | Canary_agreement.Python_attrs _ -> true
              | _ -> false)
        | _ -> false)
       && sm_is_success (lower (B.Probe_binding Canary_lang.OCaml) None)
@@ -300,21 +300,21 @@ let llvm_lowering_derived : Canary_project_test.pure_test =
     check = (fun () ->
       let lower =
         Canary_scenario.lower_expectation_agnostic
-          ~bindings:Canary_project_llvm.llvm_stable_contract_bindings
+          ~bindings:Canary_project_llvm.llvm_stable_agreement_bindings
           ~langs:[ Canary_lang.OCaml ]
       in
       (match lower (B.Probe_binding Canary_lang.OCaml) None with
        | Canary_step_model.Expect_compat_derived { inputs; _ } ->
            let has p = List.exists inputs ~f:p in
-           has (function Canary_contract.C_stub _ -> true | _ -> false)
-           && has (function Canary_contract.Native_lib _ -> true | _ -> false)
-           && has (function Canary_contract.Ocaml_mli _ -> true | _ -> false)
+           has (function Canary_agreement.C_stub _ -> true | _ -> false)
+           && has (function Canary_agreement.Native_lib _ -> true | _ -> false)
+           && has (function Canary_agreement.Ocaml_mli _ -> true | _ -> false)
            (* dev-chain exemption: pack/build-tree path FIRST per input *)
            && List.for_all inputs ~f:(function
-                | Canary_contract.C_stub (p :: _)
-                | Canary_contract.Ocaml_mli (p :: _) ->
+                | Canary_agreement.C_stub (p :: _)
+                | Canary_agreement.Ocaml_mli (p :: _) ->
                     String.is_prefix p ~prefix:"pack_binding_ocaml/"
-                | Canary_contract.Native_lib (p :: _) ->
+                | Canary_agreement.Native_lib (p :: _) ->
                     String.is_prefix p ~prefix:"probe_lib/"
                 | _ -> true)
        | _ -> false)
@@ -999,7 +999,7 @@ let tiny1_bridge : Canary_project_test.pure_test =
       in
       (* ── Part B: oracle covered by agnostic across all 22 scenarios ── *)
       let agnostic = CS.lower_expectation_agnostic
-          ~bindings:TS.tiny_contract_bindings
+          ~bindings:TS.tiny_agreement_bindings
           ~langs:Canary_lang.[ OCaml; Python ]
       in
       let ok_entry (entry : TS.scenario_spec) =
@@ -1581,7 +1581,7 @@ let canary_switch_pin : Canary_project_test.pure_test =
               check_pre = (fun () -> true);
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
-              disabled_contracts = [] }
+              disabled_agreements = [] }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -1682,7 +1682,7 @@ let platform_single_source_pin : Canary_project_test.pure_test =
               check_pre = (fun () -> true);
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
-              disabled_contracts = [] }
+              disabled_agreements = [] }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -1759,7 +1759,7 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
             cmd = (fun ~output_dir:_ ~variant_key:_ -> "run it");
             check_pre = (fun () -> true);
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
-            expectation = exp; symbol_check = None; disabled_contracts = [] }
+            expectation = exp; symbol_check = None; disabled_agreements = [] }
         in
         let rendered exp =
           String.concat ~sep:"\n"
@@ -2250,9 +2250,9 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
           String.equal
             (Canary_basic.step_dir_of_tag binding_tag)
             "build_binding/ocaml"
-          && (match Canary_contract_run.inputs_of_contract Canary_contract.C1 Canary_lang.OCaml with
-              | [ Canary_contract.C_stub [ stub_rel ];
-                  Canary_contract.Native_lib [ lib_rel ] ] ->
+          && (match Canary_agreement_run.inputs_of_contract Canary_agreement.C1 Canary_lang.OCaml with
+              | [ Canary_agreement.C_stub [ stub_rel ];
+                  Canary_agreement.Native_lib [ lib_rel ] ] ->
                   String.is_prefix stub_rel ~prefix:(binding_tag ^ "/")
                   && String.equal lib_rel "build_lib/inspect.json"
               | _ -> false)

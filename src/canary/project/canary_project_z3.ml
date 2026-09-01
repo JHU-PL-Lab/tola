@@ -360,8 +360,8 @@ let render_opam_in ~tola_root =
     Only one contract wired: c2 for Python at Probe_binding Python.
     OCaml probes fall through to Expect_success (no OCaml compat
     failure declared for z3 today). *)
-let z3_contract_bindings : Canary_scenario.contract_binding list =
-  let module CC = Canary_contract in
+let z3_agreement_bindings : Canary_scenario.agreement_binding list =
+  let module CC = Canary_agreement in
   let module CS = Canary_scenario in
   [
     { contract = CC.C2; lang = Canary_lang.Python;
@@ -939,7 +939,7 @@ let realize a =
                            lacks z3ml.a (the raw build tree has it)" } }
         | _ ->
             Canary_scenario.lower_expectation_agnostic
-              ~bindings:z3_contract_bindings ~langs:[ Canary_lang.Python ]
+              ~bindings:z3_agreement_bindings ~langs:[ Canary_lang.Python ]
               action loc);
     (* stable chain: the pinned binding fetch (was ambient pre-install —
        unmodeled global state; now an explicit pin operation) + the
@@ -1044,7 +1044,7 @@ let realize a =
     binding↔native-lib channel pairing, and it is SCENARIO-INVARIANT (the
     wheel is Fetched@Stable everywhere, so the xfail fires in every world —
     the Ambient-edge finding). It stays declared where it is consumed:
-    [z3_contract_bindings] → [lower_expectation_agnostic] →
+    [z3_agreement_bindings] → [lower_expectation_agnostic] →
     Expect_compat_derived → xfail [c2] in `action`/`status`/`spec` (A7
     phases 2+3). Folding probe-level roles into the design-intent table is
     A7 residue. *)

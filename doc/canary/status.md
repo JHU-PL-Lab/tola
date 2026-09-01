@@ -125,7 +125,7 @@ Steps (each step keeps the suite green before the next):
    The contract×mechanism bridge (`inputs_of_contract`) stays in surface/
    with the contracts it feeds. No behavior change.
 2. [x] **Mechanism input template** (2026-08-12) — `inputs_of_contract
-   (contract, lang)` in `contract/canary_contract_run.ml` produces the
+   (contract, lang)` in `agreement/canary_agreement_run.ml` produces the
    input KINDS + standard inspect paths (tiny's convention). tiny's binding
    table now calls it; `inputs_template_pin` locks the template equal to the
    former hand-written rows (no behavior change). Deviating layouts (z3's

@@ -206,7 +206,7 @@ order (also in [`src/canary/dune`](src/canary/dune)):
 ```
 base/      vocabulary — types every other layer uses (incl. API-surface
            claim types and output-tree naming conventions)
-contract/  THE AGREEMENT LAYER (was surface/, 2026-09-01) — the agreement
+agreement/ THE AGREEMENT LAYER (was surface/, 2026-09-01) — the agreement
            registry + c1..c8 comparators/predicts; a check is an agreement
            beyond a tool's direct result, so tool wrappers stay in tool/
 tool/      real-world wrappers — PM drivers, inspector drivers, build cmds,
@@ -233,7 +233,7 @@ main/      the RUNNING layer (canary_main library, 2026-08-14):
            in TEST code only
 ```
 
-`base/`→`contract/`→`tool/`→`action/`→`backend/` is the dependency
+`base/`→`agreement/`→`tool/`→`action/`→`backend/` is the dependency
 order; `project/`, `main/` and `test/` consume the upper layers.
 Dependency direction: canary_lib ← canary_project ← canary_main
 (never the reverse).
@@ -278,9 +278,9 @@ reconciling with, not duplicating.
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
 | `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
-| `src/canary/contract/canary_contract_registry.ml`   | **THE AGREEMENT REGISTRY** — one row per agreement (invariant as falsifier, the artifact surfaces it reads, firing over the action catalogue, expectation source, fault tags) + the counterexample fixtures + the belief matrix. Design: `doc/canary/design/agreement_registry.md` |
-| `src/canary/contract/canary_contract.ml`            | Pure theory (was `canary_compat.ml`): `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) + registry vocabulary (`contract_id`, `contract_status`, `contract_check`) |
-| `src/canary/contract/canary_contract_run.ml`        | Drives the contract (was `canary_compat_run.ml`): cached-summary lookup + per-contract predict closures (`c1_predict`, …) + `registered_checks` list + `predicted_contains_any_v2 ~resolve` (4-line iterator over the registry) + CLI run/verify |
+| `src/canary/agreement/canary_agreement_registry.ml` | **THE AGREEMENT REGISTRY** — one row per agreement (invariant as falsifier, the artifact surfaces it reads, firing over the action catalogue, expectation source, fault tags) + the counterexample fixtures + the belief matrix. Design: `doc/canary/design/agreement_registry.md` |
+| `src/canary/agreement/canary_agreement.ml`            | Pure theory (was `canary_compat.ml`): `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) + registry vocabulary (`agreement_id`, `agreement_status`, `agreement_check`) |
+| `src/canary/agreement/canary_agreement_run.ml`        | Drives the contract (was `canary_compat_run.ml`): cached-summary lookup + per-contract predict closures (`c1_predict`, …) + `registered_checks` list + `predicted_contains_any_v2 ~resolve` (4-line iterator over the registry) + CLI run/verify |
 | `src/canary/tool/canary_toolchain.ml`               | OCaml toolchain types, opam packaging helpers, `pip_install_cmd` / `python_probe_only_cmd`             |
 | `src/canary/tool/canary_build_cmd.ml`               | Generic build-tool primitives: `cmake_configure_cmd`, `ninja_build_cmd`, `dune_build_cmd`, `with_marker` |
 | `src/canary/tool/canary_store_config.ml`            | `provision_spec` — ONE origin per admissible provision (`Fetched of provider` \| `Built_from of artifact_info` \| `Installed` \| `Vendored_at` \| `Absent`; 2026-08-25, replacing the coarse-universe + separate-provider pair) + `provision_of_spec` / `producing_action_of` / `fetch_provider_of`; `provider` (the fetch origins) + `store_config` + `binding_store` / `lib_store` + `binding_pm` |
@@ -295,11 +295,11 @@ reconciling with, not duplicating.
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
 | `src/canary/action/canary_binding_templates.ml`     | M2 step 4 realization: `binding_decl` × ctx → build_binding/probe_binding/probe_lib/user_facing_pkg cmd builders (tiny consumes it; pinned byte-equal to the former hand-written literals) |
 | `src/canary/action/canary_step_builder.ml`          | `runner_spec` (was `project_spec` pre-2026-07-21), `derive_steps`, shared command templates, check_post compositors — the step list builder |
-| `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `contract_binding`); `lower_expectation_agnostic` — THE one expectation lowering since A7 (the oracle variant retired; tiny1 composes it as a factory combinator); `derive_scenarios`; `related_artifacts_of_actions`. |
+| `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `agreement_binding`); `lower_expectation_agnostic` — THE one expectation lowering since A7 (the oracle variant retired; tiny1 composes it as a factory combinator); `derive_scenarios`; `related_artifacts_of_actions`. |
 | ~~`canary_scenario_util.ml`~~ (deleted 2026-08-05)  | Folded back into `canary_tiny_scenario.ml` — the "project-agnostic scenario helpers" never gained a second consumer. |
 | `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **abstract-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
 | `src/canary/action/canary_enumerate.ml`             | The `(provision × version × mutation)` enumeration algorithm (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. Ranges over `artifact` (= `Canary_basic.artifact_kind`); `placement` (per-artifact provision + version), `run_config`/`level`/`config`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
-| ~~`canary_project.ml`~~ (deleted 2026-08-05, A6)    | The `Canary_project.project` bundle was never read by anything — `Canary_project_run.project_run` IS the project identity (§6.1 top) for generic projects; contract bindings live where consumed (`*_contract_bindings` → expectation lowering). |
+| ~~`canary_project.ml`~~ (deleted 2026-08-05, A6)    | The `Canary_project.project` bundle was never read by anything — `Canary_project_run.project_run` IS the project identity (§6.1 top) for generic projects; contract bindings live where consumed (`*_agreement_bindings` → expectation lowering). |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
 | `src/canary/backend/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
 | `src/canary/backend/canary_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
@@ -316,9 +316,9 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_project_zarith.ml`      | zarith project via `Canary_opam_binding` (conf-* + opam binding); Level A                                 |
 | `src/canary/project/canary_project_torch.ml`       | torch project (2026-08-30). NOT Pattern A — the registry's first lib whose stable point is **opam** (`libtorch.2.1.2+linux-x86_64`, an unzipped upstream binary), first `Cpp_api`, and first mangled-C++ surface (87,877 symbols; prefixes must be Itanium-spelled — `_ZN2at`, not `at::`). 2 scenarios = the binding's two PACKAGINGS at one version: stock `torch.v0.17.0` (a declared build xfail — it does not build with dune 3.23.1) and the canary-local `v0.17.0-canary1` carrying the one-line upstream fix. The version axis genuinely has one point (on OCaml 5.4.1, v0.16 and the 0.x series need `base/core < v0.17`). The lib's 2.2.1 point is named and unrealized |
 | `src/canary/project/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
-| `src/canary/project/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_contract_bindings` (Task 2 Phase D 2026-07-21). |
-| `src/canary/project/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_contract_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |
-| `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_contract_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
+| `src/canary/project/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_agreement_bindings` (Task 2 Phase D 2026-07-21). |
+| `src/canary/project/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_agreement_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |
+| `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_agreement_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
 | `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage5_realize_steps.md` §2). |
@@ -370,7 +370,7 @@ like `fetch_source → build_lib → build_binding`. A project provides a
 `runner_spec` (`action/canary_step_builder.ml` — shell commands per
 action) plus an `api_source` (declarative provider/consumer surface
 — header paths, symbol prefixes, watchlists) plus (optionally) a
-`<project>_contract_bindings` list feeding
+`<project>_agreement_bindings` list feeding
 `Canary_scenario.lower_expectation` for per-firing failure predictions.
 `derive_steps` walks the catalogue, filters by project capabilities,
 attaches per-artifact summaries (mli, stub, native, python), and emits
@@ -382,7 +382,7 @@ renders GH Actions YAML; `backend/canary_diagram.ml` renders Mermaid;
 `actions.log`. Probe expectations come from `Expect_success` |
 `Expect_failure { contains_any }` | `Expect_compat_failure { inputs;
 version_info }` — the compat-failure inputs are read at runtime by
-`contract/canary_contract_run.ml`'s `predicted_contains_any_v2 ~resolve`
+`agreement/canary_agreement_run.ml`'s `predicted_contains_any_v2 ~resolve`
 which iterates the registered contracts over the inputs bag to compute
 predicted failure substrings (L0 C-symbol diff + L3 watchlist-missing
 etc.). The top-level project identity is `Canary_project_run.project_run`

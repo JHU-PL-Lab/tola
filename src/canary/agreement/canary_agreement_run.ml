@@ -1,7 +1,7 @@
-(** [Canary_contract_run] — drives the surface-theory compat contract over
+(** [Canary_agreement_run] — drives the surface-theory compat contract over
     the action graph's cached artifacts (surface/, next to the contract).
 
-    Companion to {!Canary_contract}: that module is the pure theory (types
+    Companion to {!Canary_agreement}: that module is the pure theory (types
     and c1..c8 comparators); this module locates the cached inspector
     JSONs in [_out/canary/projects/<project>/<step>/], hands them to the
     pure comparators, and derives the expected failure substrings the
@@ -20,7 +20,7 @@
     - Reporting: [print_result]. *)
 
 open Base
-open Canary_contract
+open Canary_agreement
 
 
 (* ── Reporting ── *)
@@ -329,8 +329,8 @@ let predicted_contains_any
    [predicted_contains_any_v2] is a 4-line iterator over the registry;
    adding a new c* = one more registry entry + one predict function.
 
-   The types live in {!Canary_contract} so consumers can name
-   [contract_id] / [contract_status] without opening this file. *)
+   The types live in {!Canary_agreement} so consumers can name
+   [agreement_id] / [agreement_status] without opening this file. *)
 
 let pick_existing ~resolve paths =
   List.find_map paths ~f:(fun rel ->
@@ -424,10 +424,10 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
         | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
-      let prov = Canary_contract.load_versioned_symbols pp in
-      let cons = Canary_contract.load_versioned_symbols cp in
+      let prov = Canary_agreement.load_versioned_symbols pp in
+      let cons = Canary_agreement.load_versioned_symbols cp in
       let consumer_required = List.map cons.req_counts ~f:fst in
-      (match Canary_contract.check_sym_version
+      (match Canary_agreement.check_sym_version
                ~provider_versioned_exports:prov.exports
                ~consumer_required_versions:consumer_required with
        | Sym_version_missing { missing_versions } -> missing_versions
@@ -451,9 +451,9 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
       ~f:(function Abi_surface ps -> pick_existing ~resolve ps | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
-      let prov = Canary_contract.load_abi_surface pp in
-      let cons = Canary_contract.load_abi_surface cp in
-      (match Canary_contract.check_abi
+      let prov = Canary_agreement.load_abi_surface pp in
+      let cons = Canary_agreement.load_abi_surface cp in
+      (match Canary_agreement.check_abi
                ~provider_soname:prov.soname
                ~consumer_needed:cons.needed with
        | Abi_mismatch _ ->
@@ -587,8 +587,8 @@ let c6_predict ~resolve (inputs : inspect_input list) : string list =
                  | _ -> None) in
   match header_path, stub_path with
   | Some hp, Some sp ->
-      let h = Canary_contract.load_typed_signatures hp in
-      let s = Canary_contract.load_typed_signatures sp in
+      let h = Canary_agreement.load_typed_signatures hp in
+      let s = Canary_agreement.load_typed_signatures sp in
       List.filter_map h.functions ~f:(fun (name, h_sig) ->
         match List.Assoc.find s.functions name ~equal:String.equal with
         | None -> None
@@ -601,7 +601,7 @@ let c6_predict ~resolve (inputs : inspect_input list) : string list =
 
 (** The contract registry. Single source of truth for §2.4 of
     [doc/canary/research/surface_draft/surface.md] Part C — adding a contract = adding one entry. *)
-let registered_checks : contract_check list = [
+let registered_checks : agreement_check list = [
   { id = C1; name = "cmp_symbol";            layer = "L0";  status = Wired;
     enabled = true;  predict = c1_predict };
   { id = C2; name = "cmp_api_completeness";  layer = "L3";  status = Wired;
@@ -639,11 +639,11 @@ let registered_checks : contract_check list = [
     [resolve] turns a per-input relative path (e.g.
     [pack_binding_ocaml/inspect_stub.json]) into an absolute path. The
     runner picks the first input path whose resolved form exists on
-    disk, then hands it to the pure comparators in {!Canary_contract}.
+    disk, then hands it to the pure comparators in {!Canary_agreement}.
 
     [?disabled] is the per-call list of contracts to skip on top of
     the registry's own [enabled] flag. Typical sources:
-    - per-project: [runner_spec.disabled_contracts]
+    - per-project: [runner_spec.disabled_agreements]
     - per-CLI: the [--disable-contract c5,c4] flag on canary action / compat / verify
     A contract fires iff its registry [enabled] is true AND its id is
     not in [disabled].
@@ -661,8 +661,8 @@ let registered_checks : contract_check list = [
     its flatten; keeping the grouping lets the runner log and report
     per-contract firings instead of one collapsed count (the status-§2
     "per-step contract outcome" seed). *)
-let predicted_by_contract_v2 ?(disabled = []) ~resolve
-    (inputs : inspect_input list) : (contract_check * string list) list =
+let predicted_by_agreement_v2 ?(disabled = []) ~resolve
+    (inputs : inspect_input list) : (agreement_check * string list) list =
   List.filter_map registered_checks ~f:(fun c ->
     if c.enabled && not (List.mem disabled c.id ~equal:Poly.equal) then
       match c.predict ~resolve inputs with
@@ -670,12 +670,12 @@ let predicted_by_contract_v2 ?(disabled = []) ~resolve
       | subs -> Some (c, List.dedup_and_sort ~compare:String.compare subs)
     else None)
 
-(** The registry rows a [predicted_by_contract_v2] call does NOT consult,
+(** The registry rows a [predicted_by_agreement_v2] call does NOT consult,
     each with its human reason — the per-call [?disabled] override (a
-    project's [disabled_contracts] / --disable-contract) vs the registry's
+    project's [disabled_agreements] / --disable-contract) vs the registry's
     own [enabled] flag (status names why). For the runner's
-    [contract_skipped] events. *)
-let skipped_checks ?(disabled = []) () : (contract_check * string) list =
+    [agreement_skipped] events. *)
+let skipped_checks ?(disabled = []) () : (agreement_check * string) list =
   List.filter_map registered_checks ~f:(fun c ->
     if List.mem disabled c.id ~equal:Poly.equal then
       Some (c, "disabled per call")
@@ -683,13 +683,13 @@ let skipped_checks ?(disabled = []) () : (contract_check * string) list =
       Some
         ( c,
           "disabled in registry ("
-          ^ Canary_contract.string_of_contract_status c.status
+          ^ Canary_agreement.string_of_agreement_status c.status
           ^ ")" )
     else None)
 
 let predicted_contains_any_v2 ?(disabled = []) ~resolve
     (inputs : inspect_input list) : string list =
-  predicted_by_contract_v2 ~disabled ~resolve inputs
+  predicted_by_agreement_v2 ~disabled ~resolve inputs
   |> List.concat_map ~f:snd
   |> List.dedup_and_sort ~compare:String.compare
 
@@ -865,9 +865,9 @@ let verify_for_project ~root ~project ~variant =
    Mechanism refinement (dynamic bindings have no stub input) comes
    with the mechanism axis (M2 step 3). *)
 
-let inputs_of_contract ?mechanism (c : Canary_contract.contract_id)
-    (l : Canary_lang.lang) : Canary_contract.inspect_input list =
-  let open Canary_contract in
+let inputs_of_contract ?mechanism (c : Canary_agreement.agreement_id)
+    (l : Canary_lang.lang) : Canary_agreement.inspect_input list =
+  let open Canary_agreement in
   (* mechanism defaults to the language's default (static for OCaml/Python
      today) — current callers unchanged; a dynamic binding (ctypes/dynlink)
      has NO stub input (it dlopens at runtime). *)

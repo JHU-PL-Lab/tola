@@ -110,7 +110,7 @@ recorded `cmd_fail (exit 1)` and the reason vanished with the scrollback.
 as xfail"). It is explained, reproducible and c1-shaped. Derived, not
 hardcoded: the predicted substrings come from the symbol evidence, not a
 literal in the spec. The condition is WORLD-shaped (lib Fetched × binding
-Built), which `contract_binding`'s `loc_filter` cannot express — so either
+Built), which `agreement_binding`'s `loc_filter` cannot express — so either
 it rides z3's expectation closure (like the pre-10549 xfails) or `firing`
 grows a world predicate. Prefer the closure first, and record the
 `firing`-predicate idea as the generalization if a second project wants it.

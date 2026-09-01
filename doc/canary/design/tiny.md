@@ -94,7 +94,7 @@ Each Bad scenario has a `tiny_recipe`:
 - `mutation : concrete_pert option` — either
   `C_patch <name>` / `Ml_patch <name>` (a diff to apply
   under `scenarios/patches/`) or `Soname_bump { from_so; to_so }`
-- `violates : contract_id list` — which surface-theory
+- `violates : agreement_id list` — which surface-theory
   contracts (c1..c8) the scenario is designed to trigger
 - `expected : (step * outcome) list` — per-step Ok/Fail/Pass/Skip
   prediction, kept as documentation
@@ -354,12 +354,12 @@ through `tool/` 2026-07-09; SSOT §6.6 `runner_spec` doc
 structural expectation lowering (2026-07-21). All 8 gaps
 sit on one of two remaining positions (`app` and OCaml
 `lib`), each blocked by a **Placeholder binding** in
-`tiny_contract_bindings` (SSOT §5.4) that would need to
+`tiny_agreement_bindings` (SSOT §5.4) that would need to
 become live before its cells synthesize:
 
 | Blocker                          | Empty cells                                                                       | Placeholder to wire                                                                                                                                                                                                                                                                                                                        |
 | -------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **c4 for OCaml**                 | Sc.2.OCaml.A1, Sc.4.OCaml.A2, Sc.6.OCaml.A2 (3 cells — `lib`)                     | `tiny_contract_bindings` entry for `(C4, OCaml)` is currently `Placeholder { reason = "OCaml ABI-analogue: packed .a NEEDED vs libtiny.so SONAME. Awaiting SSOT §? — decide whether tiny's OCaml store convention rebuilds fresh (current: c4 silent) or caches the packed .a" }`. Wire → 3 `Lib` cells auto-synthesize (guard reads the binding table). |
+| **c4 for OCaml**                 | Sc.2.OCaml.A1, Sc.4.OCaml.A2, Sc.6.OCaml.A2 (3 cells — `lib`)                     | `tiny_agreement_bindings` entry for `(C4, OCaml)` is currently `Placeholder { reason = "OCaml ABI-analogue: packed .a NEEDED vs libtiny.so SONAME. Awaiting SSOT §? — decide whether tiny's OCaml store convention rebuilds fresh (current: c4 silent) or caches the packed .a" }`. Wire → 3 `Lib` cells auto-synthesize (guard reads the binding table). |
 | **App-level mutation primitive** | Sc.3.OCaml.A2, Sc.4.OCaml.A3, Sc.5.OCaml.A2, Sc.6.OCaml.A3, Sc.4.Python.A3 (5 cells — `app`) | Two-step: (1) add an `App.<constructor>` in `canary_artifact_mutation.ml` (mimic downstream import breakage — one primitive per language). (2) Add `At_build_app lang` / `At_probe_app lang` firing sites for whichever contracts the App primitive triggers. Then the synthesis table's `App, _` case can emit a recipe.                     |
 
 **Shipped 2026-07-21:**
@@ -367,7 +367,7 @@ become live before its cells synthesize:
   with `api_complete_python.patch` verified. Filled Sc.4.Python.A1;
   net coverage 11/20 → 12/20.
 - **Structural expectation lowering.** Contract firing sites and
-  source-of-observation are typed data in `tiny_contract_bindings`
+  source-of-observation are typed data in `tiny_agreement_bindings`
   (SSOT §5.4). `expectation_of_entry` is a pure lookup. Adding a
   new contract wiring is a data row, not a code branch. c4-OCaml
   and c8-OCaml enter as `Placeholder` (visible-TODO); the synthesis
@@ -454,7 +454,7 @@ Phases A-F completed 2026-07-21 (chronicle in
 
 Every hand-coded `Expect_compat_failure` in project specs
 now flows through `Canary_scenario.lower_expectation` over a
-per-project `<name>_contract_bindings` table. Original 5-phase
+per-project `<name>_agreement_bindings` table. Original 5-phase
 plan (~230 LOC) landed as ~85 LOC after the earlier structural
 rewrite absorbed the switch table.
 

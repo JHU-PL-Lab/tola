@@ -87,7 +87,7 @@ type manifest =
     this mutation today; the mutation constructs a bad
     artifact that no comparator observes. *)
 type detector =
-  | Wired of Canary_contract.contract_id
+  | Wired of Canary_agreement.agreement_id
   | Detector_gap
 
 type mutation = {
@@ -179,7 +179,7 @@ let firing_site_of_action : Canary_basic.action -> firing_site option =
     context through to the emitted [step_expectation]:
 
     - [From_artifact { inputs; version_info }] — the contract's
-      [predict] closure (in {!Canary_contract_run}) reads the cached
+      [predict] closure (in {!Canary_agreement_run}) reads the cached
       inspect JSONs listed in [inputs] and emits predicted failure
       substrings. Static source, dynamic check (grep of probe.log /
       build.log).
@@ -194,7 +194,7 @@ let firing_site_of_action : Canary_basic.action -> firing_site option =
       attempts to declare a scenario that would rely on it. *)
 type expectation_source =
   | From_artifact of {
-      inputs : Canary_contract.inspect_input list;
+      inputs : Canary_agreement.inspect_input list;
       version_info : Canary_step_model.version_info option;
     }
   | From_behavior_grep of {
@@ -242,7 +242,7 @@ let loc_filter_passes (f : loc_filter)
     ([site]), which locations it applies to ([loc_filter]), and how
     the observation is sourced ([source]).
 
-    A [contract_binding] may carry multiple firings for the same
+    A [agreement_binding] may carry multiple firings for the same
     site with different [loc_filter]s — the lowering picks the
     first firing whose filter matches the runtime [loc]. Design
     order in a binding matters: put more specific filters (e.g.
@@ -262,8 +262,8 @@ type firing = {
     failure observation shows up. [firings] is a list because one
     contract can fire at multiple sites; empty means "this contract is
     silent for this language". *)
-type contract_binding = {
-  contract : Canary_contract.contract_id;
+type agreement_binding = {
+  contract : Canary_agreement.agreement_id;
   lang     : Canary_lang.lang;
   firings  : firing list;
 }
@@ -274,8 +274,8 @@ type contract_binding = {
     a recipe for a given (contract, lang) will actually detect
     a mutation, rather than silently emit Expect_success. *)
 let binding_has_live_firing
-    (bindings : contract_binding list)
-    (contract : Canary_contract.contract_id)
+    (bindings : agreement_binding list)
+    (contract : Canary_agreement.agreement_id)
     (lang : Canary_lang.lang)
   : bool
   =
@@ -304,7 +304,7 @@ let binding_has_live_firing
     since A7 phase 3): derives the expectation from the project's [bindings]
     table + the (action, loc) ALONE, by UNIONing every contract's
     [From_artifact] inputs at the matching firing site and letting the compat
-    runner ([predicted_by_contract_v2]) DISCOVER which contract actually
+    runner ([predicted_by_agreement_v2]) DISCOVER which contract actually
     breaks by inspecting the materialized artifacts. Nobody tells it which
     contract fires — the same way a real project works (status §1a P2b).
 
@@ -320,7 +320,7 @@ let binding_has_live_firing
     test). Generalising past statically-inspectable contracts (c3 behaviour,
     c6 grep-type) is the follow-up. *)
 let lower_expectation_agnostic
-    ~(bindings : contract_binding list)
+    ~(bindings : agreement_binding list)
     ~(langs : Canary_lang.lang list)
   : Canary_basic.action -> Canary_store.location option ->
     Canary_step_model.step_expectation
