@@ -200,6 +200,51 @@ fork's staged world stays RED in `action z3` (the default full run) —
 deliberately, since silencing it would be choosing (a) by default.
 
 
+### Found — libtorch SHIPS a typed API manifest, and it predicts both
+### observed breaks by name (2026-09-01)
+
+Looking for an alternative to `Descriptions.yaml` turned up something
+better. Every libtorch prebuilt contains
+`include/ATen/RegistrationDeclarations.h` — a generated header listing
+every registered ATen operator with its full C++ signature AND a JSON
+blob per line:
+
+```
+Tensor _cslt_sparse_mm(const Tensor & compressed_A, …); // {"schema": "aten::_cslt_sparse_mm(Tensor compressed_A, …) -> Tensor", "dispatch": "True", "default": "False"}
+```
+
+3066 operators in 2.2.1, 3096 in 2.3.1, 3101 in 2.13.0.
+
+**It predicts the two failures we measured, precisely, by name:**
+
+| break | manifest says |
+| --- | --- |
+| official v0.17.0 × 2.2.1, "argument 4" | `_cslt_sparse_mm` 2.1.2: `(compressed_A, dense_B, bias, transpose_result)` → 2.2.1: `(…, bias, alpha, out_dtype, transpose_result)`. Two parameters INSERTED before the last, so argument 4 went from `bool` to `const optional<Tensor>&` — exactly what gcc complained about |
+| fork × 2.13.0, "cannot bind non-const lvalue ref" | `rrelu_with_noise_out` 2.3.1: `const Tensor & noise` → 2.13.0: `at::Tensor & noise` — the const dropped |
+
+**Why this matters beyond torch.** Today torch's compat surface is `nm`
+over 87,877 mangled symbols, and its expectation is a hand-written
+`Expect_failure` substring. This file makes the same failure *derivable*:
+diff two versions' manifests, get a named operator with a typed signature
+change, and the expectation becomes `Expect_compat_derived` — computed
+from the artifact rather than asserted by a person. That is the c6 (type
+contract) shape with real inputs, on a real project.
+
+It also bears on **backlog #44** ("L2 — typed signatures via clang AST"),
+which is deprioritized because the proper clang path drags preprocessor
+and include handling. For libtorch none of that is needed: the library
+ships its own declaration manifest, already parsed and already carrying
+the schema. A `RegistrationDeclarations.h` inspector is a much cheaper
+route to a typed C surface than libclang, for any library that ships one.
+
+Worth checking whether other C++ libraries do the same before treating
+it as torch-specific.
+
+**Not** a route to regenerating the binding, though — see below. The
+manifest has names and C++ types but not the `dynamic_type` / `method_of`
+fields `gen.ml` reads, so it would need a new parser; and it is a
+checking oracle, which is the cheaper and more useful half anyway.
+
 ### Found — every ocaml-torch upper bound is REAL, and lifting one needs
 ### a PyTorch source build (2026-09-01)
 
@@ -226,12 +271,17 @@ consumes *"the Descriptions.yaml file that gets generated when building
 PyTorch from source"*, and measured: none of the three prebuilt zips
 (2.2.1, 2.3.1, 2.13.0) ships **any** `.yaml` at all. So lifting a bound
 means producing that file, which means a PyTorch source build — the
-expensive path `project_pytorch.md` originally hoped to avoid. Worth
-checking before committing to it: whether `gen.ml` can be fed
-`aten/src/ATen/native/native_functions.yaml` fetched from the pytorch
-repo at the matching tag, since that is a source file rather than a build
-product. If it can, the whole "track current libtorch" story costs a
-download instead of a build.
+expensive path `project_pytorch.md` originally hoped to avoid.
+
+The obvious shortcut does NOT work, checked 2026-09-01: fetching
+`aten/src/ATen/native/native_functions.yaml` from the pytorch repo at the
+matching tag gives entries shaped
+`- func: abs(Tensor self) -> Tensor` with `variants:` / `dispatch:`,
+while `gen.ml` reads `operator_name`, `overload_name`, `method_of`,
+`dynamic_type` and per-argument `type`. Those are the DERIVED schema
+PyTorch's codegen emits, not the source one — different vocabulary, not
+just a different file name. The manifest above is the nearest shipped
+substitute and would need a new parser.
 
 The contrast with the fork's own metadata is worth keeping: upstream's
 window is right, while the fork's `[2.3.0, 2.4.0)` is NOT a measured
