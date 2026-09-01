@@ -1099,19 +1099,204 @@ Path rules, version selection, ABI-related selection, and shadowing should be di
 
 # 6. Dependency-Closure Agreements
 
-**Status: pending.**
+**Status: drafted 2026-09-01, pending review.** Written from a confirmed
+instance rather than from design — see §6.1. Absorbs
+[`closure_shape.md`](closure_shape.md) and Appendix D.2.
 
-This section should distinguish at least:
+## 6.0 The three views of a dependency
+
+A dependency exists in three forms, and every agreement in this family is
+a disagreement between two of them:
+
+| view | what it is | observed by |
+|---|---|---|
+| **declared** | what the project/packaging says is needed | `pkg-config --libs`, opam `depends`, depexts, the `pm_dep_gate` |
+| **recorded** | what the built artifact froze into itself | `readelf -d` (`NEEDED`, `RPATH`/`RUNPATH`), `.cmxa` linkopts, wheel metadata |
+| **resolved** | what the loader actually bound, in this world | `LD_DEBUG=libs,bindings`, `ldd`, the run itself |
+
+The recorded view is the pivotal one: it is **frozen at build time in
+the provider's shape**, and it is what travels when an artifact is
+deployed into a different world.
+
+## 6.1 The instance that made this section (ncurses, 2026-08-25)
+
+Two providers of one library — apt 6.4 and conda-forge 6.6 — agree on
+soname, on all 463 exported symbols, and on every ELF version node.
+`c1`, `c4`, `c5` pass, correctly. **The vendored world segfaults.**
+
+The cause is a difference no existing agreement reads: the two packagers
+**divide the same implementation into different objects**. Debian ships
+one tinfo (`libtinfo` *is* the wide build); conda-forge ships two
+(`libtinfo` narrow, `libtinfow` wide). A consumer built in the Debian
+world records `libtinfo.so.6` as a direct `NEEDED` — correct there —
+and in the conda world that name resolves to the *narrow* object, which
+then sits beside the wide one the provider's own `libncursesw` pulls
+transitively. Two implementations of one library in one process; ELF
+interposition gives the narrow one's globals to everybody; narrow and
+wide disagree about `cur_term`'s layout; the wide code dereferences a
+narrow record and dies.
+
+Note what distinguishes this from a missing dependency: **every name
+resolves.** Nothing is absent. Full report, with reproducer and
+remediation: [`../project/report_ncurses_libtinfo.md`](../project/report_ncurses_libtinfo.md).
+
+The general statement:
+
+> A consumer records a set of library DEPENDENCIES, not just a set of
+> symbols. Two providers can agree on every symbol, soname and version
+> node and still disagree about how the implementation is DIVIDED into
+> objects — and a consumer built against one division is not deployable
+> onto the other.
+
+## 6.2 The agreements
+
+Falsifier-phrased, in the order a check should try them:
+
+| agreement | falsifier | reads |
+|---|---|---|
+| **closure satisfiable** | a name in the consumer's recorded `NEEDED` has no provider in this world | recorded vs the world's objects |
+| **closure shape** | two objects in the resolved closure are alternative spellings of ONE implementation, or one statically absorbs another | the shipped objects' surfaces |
+| **interposition winner** *(candidate)* | the definition that wins for a shared symbol is not the one the consumer was built against | resolved (`LD_DEBUG=bindings`) |
+
+The second is the ncurses agreement. It reads TWO artifacts — the
+consumer's recorded dependency list and the provider's file layout — so
+it is not `c4`: `c4`'s inputs (`soname`, `c_runtime`, `cxx_abi`) are
+scalars a provider states about ITSELF.
+
+## 6.3 What the artifacts alone can tell us (measured 2026-09-01)
+
+The question worth settling before designing the check: is the hazard
+visible in the artifacts, or only in their provision? Measured on the
+two conda objects:
 
 ```text
-declared dependencies
-artifact-recorded dependencies
-runtime-resolved dependencies
+WIDE minus NARROW   NCURSESW6_* × 10 version nodes
+                    _nc_copy_termtype2  _nc_export_termtype2  _nc_fallback2
+                    _nc_free_termtype2  _nc_read_entry2       (all TERMTYPE2 ops)
+NARROW minus WIDE   NCURSES6_*  × 11 version nodes
+sonames             libtinfo.so.6  vs  libtinfow.so.6   (305016 vs 305368 bytes)
+both define         cur_term  SP  _nc_globals  _nc_prescreen  ttytype
 ```
 
-The existing document already identifies important hidden-dependency cases including transitive `NEEDED`, runtime `dlopen`, symbol interposition, and weak/default symbol resolution.
+Three independent STATIC signals, all `nm -D` / `readelf`:
 
-These should eventually become concrete agreement rows grounded in observable tool results.
+1. **the same mutable globals defined twice** in one closure — this IS
+   the interposition surface, and it is the most direct evidence of the
+   hazard;
+2. **disjoint symbol-version namespaces** (`NCURSESW6_*` vs
+   `NCURSES6_*`) — two objects versioning under different namespaces are
+   declaring different ABI lineages;
+3. **a near-total symbol overlap** with a small, semantically pointed
+   delta (five `TERMTYPE2` operations).
+
+What the artifacts do NOT carry:
+
+* that `TERMTYPE` and `TERMTYPE2` are two layouts of the SAME record —
+  a header-level (Sf.1) fact, and the reason the mismatch is fatal
+  rather than merely different;
+* that the two objects are **alternative spellings of one
+  implementation**. Nothing in ELF says "these are the same library
+  packaged twice".
+
+So: **the difference is artifact-visible; the sameness is not.**
+
+This improves on the sweep's detector. `closure_shape.md` §5a used
+symbol-set overlap ≥80%, which false-fired on cairo. Signals (1)+(2)
+together are far sharper — *two objects in one closure define the same
+globals AND carry disjoint version namespaces* — they fire on ncurses,
+do not fire on cairo, and need no declaration. The declared
+alternative-spelling fact (`native_api`, beside `soname`) therefore
+becomes a CONVENIENCE that names which spellings are alternatives, not a
+precondition for detecting the hazard.
+
+## 6.4 Blame — and why this case extends §10
+
+The report's verdict: *"The crash needs both halves; neither party is
+broken alone… It is the interaction that fails."* The consumer did the
+correct thing — it asked pkg-config and used the answer. Both libraries
+are correct. The versions are genuinely drop-in compatible: pointing the
+name `libtinfo.so.6` at the wide build makes the same binaries run
+green, with no rebuild.
+
+Which means **blame attaches to neither artifact**. The fault is in the
+name→ABI binding, a property of the PACKAGING, and §10's
+consumer-vs-provider direction rule cannot express it. This family needs
+a third blame target:
+
+```text
+the consumer   (forward: it asked for too much)
+the provider   (backward: it dropped or changed something)
+the PAIRING    (both artifacts correct; the packaging conventions
+                disagree about how one implementation is named/divided)
+```
+
+Canary's own job here is not to fix upstream — the report is already
+addressed to Debian, whose additive fix is to ship `libtinfow.so.6` as
+an alias and emit `-ltinfow` in `ncursesw.pc`. Canary's job is to
+PREDICT the crash: the world becomes `xfail[cN]` with a derived reason
+instead of an undeclared segfault.
+
+## 6.5 The second form, and the method lesson
+
+The sweep (`../raw/closure_shape_sweep.sh`, run before any code) found
+the hazard is not an ncurses peculiarity, and that it has two forms:
+
+| form | signature | instance |
+|---|---|---|
+| **alternative spelling** | overlap covers ≥80% of BOTH sides — one implementation, two names | ncurses (4 pairs) |
+| **containment** | ≥80% of the smaller only — a large object statically absorbed a small one | sundials (82) |
+
+cairo, libffi, zlib and zstd score zero on both, so the landed pairs are
+not retroactively in doubt — the check they passed was narrower than we
+thought, and they pass the wider one too.
+
+**The method lesson, worth stating as a rule**: the first, coarser
+detector fired on cairo — *it would have "confirmed" the proposal for
+the wrong reason*. A threshold heuristic is for FINDING candidates; a
+declaration (or a sharp structural signal like §6.3's) is what a
+contract READS. This is §0.3's falsification discipline applied to the
+detector itself.
+
+## 6.6 Hidden dependencies (from Appendix D.2)
+
+The wider family this section owns — things `nm` on one artifact does
+not reveal:
+
+* **transitive `NEEDED`** — a dependency of a dependency that must be
+  present at load; note `DT_RUNPATH` does NOT apply transitively (unlike
+  `DT_RPATH`), so a lib that works standalone can fail as a dependency;
+* **`dlopen`'d plugins** — resolved by name at run time, invisible to
+  static inspection (this is exactly what the ctypes/cffi mechanisms
+  ARE, so the binding side has the same shape);
+* **symbol interposition** — another loaded object providing the same
+  symbol first; the ncurses case is interposition doing precisely what
+  it is specified to do;
+* **weak symbols and default version resolution** — which definition
+  wins when several exist.
+
+These are the natural home for the interposition-shim RECORDER (observe
+what is actually requested and resolved at load), which produces
+evidence for the **resolved** view of §6.0 without itself issuing a
+verdict (§10.3).
+
+## 6.7 Open steps
+
+1. ~~sweep the existing pairs~~ — done 2026-08-25, not falsified (§6.5).
+2. Declare the alternative-spelling fact on `native_api` beside
+   `soname`; give ncurses its `libtinfo`/`libtinfow` row. Now a
+   convenience rather than a precondition (§6.3).
+3. Add the contract row — falsifier from §6.2, firing at
+   `Probe_binding` over a non-`Fetched` lib provision, `source =
+   Inspection`, covering both forms; prefer §6.3's structural predicate
+   over the 80% heuristic.
+4. `Canary_prebuilt.env` — the same world first failed differently:
+   conda's `libtinfow` has its build prefix compiled in for terminfo
+   data, so a prebuilt may need env beyond the library path
+   (`TERMINFO_DIRS`). The declaration should carry it rather than each
+   realization inventing it. (§7 territory: it is a relocation failure,
+   which is why it belongs to the transformation family.)
+5. ncurses' vendored world becomes `xfail[cN]`, and D6 lands at Level B
+   instead of positive-only.
 
 ---
 
@@ -1933,8 +2118,8 @@ only the cmd strings.
 
 | draft | intended destination |
 |---|---|
-| D.1 the lib's path family | §5 Resolution (search/selection) + §6 Dependency closure (what is recorded vs resolved) |
-| D.2 the lib's hidden dependencies | §6 Dependency closure |
+| D.1 the lib's path family | §5 Resolution (search/selection); its recorded-vs-resolved half now has §6.0's vocabulary |
+| ~~D.2 the lib's hidden dependencies~~ | **PLACED 2026-09-01** — folded into §6.6 |
 | D.3 per-mechanism lifecycles (cstubs / cext / ctypes / dynlink) | §2.4, §2.5, §2.6 — as the artifact chains those sections enumerate |
 | D.4 the header as a carried type oracle | §2.3 + §2.7 (a surface-correspondence projection), with the provider-side DWARF note |
 | D.5 staged parity | §7 Transformation and packaging preservation |

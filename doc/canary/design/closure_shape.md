@@ -6,6 +6,15 @@ this provider without loading two implementations of one library"*, it
 fires at `Probe_binding` over a `Vendored`/`Installed` lib, and ncurses'
 vendored world is an `xfail[cN]` rather than an undeclared segfault.
 
+> **Absorbed 2026-09-01** into
+> [`agreement_registry.md`](agreement_registry.md) §6 (Dependency-Closure
+> Agreements), which carries the agreements, the blame reading, and the
+> open steps. This note keeps the measurement, the reproducer and the
+> sweep. One finding was added there and not here: the two objects are
+> distinguishable from the ARTIFACTS alone (disjoint symbol-version
+> namespaces + the same globals defined twice), which is a sharper
+> detector than §5a's 80% overlap and does not need the declared fact.
+>
 > 2026-08-25, found while landing ncurses (D6, the queue's *cheapest
 > remaining landing*). The lib pair passes every check canary has and the
 > deploy still crashes. That gap is the note.
