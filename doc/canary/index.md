@@ -155,6 +155,7 @@ concern.
 | [projects.md](project/projects.md)             | **The roster** — the dimension model, per-project coverage + 2×2 status, landing history, candidate portfolio |
 | [status_project.md](project/status_project.md) | **THE to-do tracker** for this layer — the ordered plan, general to-dos, the mismatch-matrix report milestone |
 | [issues.md](project/issues.md)                 | OPEN per-project issues — a standalone worklist (unresolved findings, declaration gaps, per-project chores)   |
+| [issues_torch.md](project/issues_torch.md)               | **torch's findings** — four problems of four kinds (packaging / provisioning / drift / caching), plus THE RECIPE: `Declarations.yaml` from a pip wheel via `torchgen`, no PyTorch source build |
 | [landing.md](project/landing.md)               | **How to land a project** — workflow, data structures, testing harness (the future skill's base)             |
 | [opam_exclusive_store_issue.md](project/opam_exclusive_store_issue.md) | opam's one-version-per-switch problem — what a pin costs, the per-version-switch measurement, and the two open questions |
 | [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4                                     |
