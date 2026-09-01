@@ -25,6 +25,158 @@
 
 open Base
 
+(* ── MOVED HERE 2026-09-01 (step B: one file to edit) ──
+   The table and everything derived from it left
+   [canary_agreement_run.ml], which now holds only the predicate
+   IMPLEMENTATIONS. The registry is therefore the DEFINITION rather
+   than a view over one, and adding an agreement means editing this
+   file. Dependency direction: registry -> run -> agreement, no cycle. *)
+
+(** The contract registry. Single source of truth for §2.4 of
+    [doc/canary/research/surface_draft/surface.md] Part C — adding a contract = adding one entry. *)
+let registered_checks : Canary_agreement.agreement_check list =
+  let open Canary_agreement in
+  [
+  { id = C1; name = "cmp_symbol";            layer = "L0";  status = Wired;
+    enabled = true;  predict = Canary_agreement_run.c1_predict };
+  { id = C2; name = "cmp_api_completeness";  layer = "L3";  status = Wired;
+    enabled = true;  predict = Canary_agreement_run.c2_predict };
+  { id = C3; name = "cmp_behavior";          layer = "dyn"; status = Blocked [];
+    enabled = false; predict = Canary_agreement_run.c3_predict };
+  { id = C4; name = "cmp_abi";               layer = "L4";  status = Wired;
+    enabled = true;  predict = Canary_agreement_run.c4_predict };
+  { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Wired;
+    enabled = true;  predict = Canary_agreement_run.c5_predict };
+  { id = C6; name = "cmp_type";              layer = "L2";  status = Wired;
+    enabled = true;  predict = Canary_agreement_run.c6_predict };
+  (* c7 api_sound_repack — Contract that the binding's user-facing
+     layer is a sound repacking of its stub-facing layer. Same check
+     shape as c3 (probe-assertion refutation), different Contract
+     (binding-layer bug vs native-layer bug). The probe IS the
+     binding-side test; predict returns []. The variant declaration
+     attributes the failure to c7 — canary doesn't disambiguate at
+     the detection layer. See
+     [Canary_tiny_scenario.make_binding_repack_broken_runner_spec]
+     for the demo against harness scenario [api_repack] (e5). *)
+  { id = C7; name = "api_sound_repack";      layer = "dyn"; status = Stubbed;
+    enabled = false; predict = Canary_agreement_run.c7_predict };
+  (* c8 disabled — no Contract for canary to maintain. Each binding
+     is independent; cross-binding consistency isn't a canary-side
+     agreement to check. Probes happen to assert the same constants
+     across languages by project convention, not by a Contract.
+     Candidate for removal in a future registry cleanup. *)
+  { id = C8; name = "cmp_api_faithfulness";  layer = "n/a"; status = Stubbed;
+    enabled = false; predict = Canary_agreement_run.c8_predict };
+]
+
+(** Derive expected failure substrings from declared inspector inputs.
+
+    [resolve] turns a per-input relative path (e.g.
+    [pack_binding_ocaml/inspect_stub.json]) into an absolute path. The
+    runner picks the first input path whose resolved form exists on
+    disk, then hands it to the pure comparators in {!Canary_agreement}.
+
+    [?disabled] is the per-call list of contracts to skip on top of
+    the registry's own [enabled] flag. Typical sources:
+    - per-project: [runner_spec.disabled_agreements]
+    - per-CLI: the [--disable-contract c5,c4] flag on canary action / compat / verify
+    A contract fires iff its registry [enabled] is true AND its id is
+    not in [disabled].
+
+    Phase 12 (2026-06-02): the four L0/L1b/L3/L4 sections of this
+    function moved into per-contract predict closures registered in
+    [registered_checks]. The body is now a flat iterator over the
+    registry. Behaviour is unchanged with default [?disabled = []] —
+    c1, c2, c5 fire as before; c4 returns [].
+
+    Phase 13 (2026-06-02): per-call [?disabled] override added. *)
+(** Per-contract form (A7 phase 1): the registry rows that FIRED — each
+    enabled, not-disabled contract whose [predict] returned substrings —
+    paired with its (deduped) substrings. {!predicted_contains_any_v2} is
+    its flatten; keeping the grouping lets the runner log and report
+    per-contract firings instead of one collapsed count (the status-§2
+    "per-step contract outcome" seed). *)
+let predicted_by_agreement_v2 ?(disabled = []) ~resolve
+    (inputs : Canary_agreement.inspect_input list) :
+    (Canary_agreement.agreement_check * string list) list =
+  let open Canary_agreement in
+  List.filter_map registered_checks ~f:(fun c ->
+    if c.enabled && not (List.mem disabled c.id ~equal:Poly.equal) then
+      match c.predict ~resolve inputs with
+      | [] -> None
+      | subs -> Some (c, List.dedup_and_sort ~compare:String.compare subs)
+    else None)
+
+(** The registry rows a [predicted_by_agreement_v2] call does NOT consult,
+    each with its human reason — the per-call [?disabled] override (a
+    project's [disabled_agreements] / --disable-contract) vs the registry's
+    own [enabled] flag (status names why). For the runner's
+    [agreement_skipped] events. *)
+let skipped_checks ?(disabled = []) () :
+    (Canary_agreement.agreement_check * string) list =
+  let open Canary_agreement in
+  List.filter_map registered_checks ~f:(fun c ->
+    if List.mem disabled c.id ~equal:Poly.equal then
+      Some (c, "disabled per call")
+    else if not c.enabled then
+      Some
+        ( c,
+          "disabled in registry ("
+          ^ Canary_agreement.string_of_agreement_status c.status
+          ^ ")" )
+    else None)
+
+let predicted_contains_any_v2 ?(disabled = []) ~resolve
+    (inputs : Canary_agreement.inspect_input list) : string list =
+  predicted_by_agreement_v2 ~disabled ~resolve inputs
+  |> List.concat_map ~f:snd
+  |> List.dedup_and_sort ~compare:String.compare
+
+
+let inputs_of_agreement ?mechanism (c : Canary_agreement.agreement_id)
+    (l : Canary_lang.lang) : Canary_agreement.inspect_input list =
+  let open Canary_agreement in
+  (* mechanism defaults to the language's default (static for OCaml/Python
+     today) — current callers unchanged; a dynamic binding (ctypes/dynlink)
+     has NO stub input (it dlopens at runtime). *)
+  let m =
+    Option.value mechanism
+      ~default:
+        (Option.value (Canary_mechanism.default_mechanism_of_lang l)
+           ~default:Canary_mechanism.Cstubs)
+  in
+  let is_dynamic =
+    Poly.equal (Canary_mechanism.discipline_of_mechanism m)
+      Canary_mechanism.Dynamic_ffi
+  in
+  let tag action = Canary_basic.string_of_action action in
+  let build_binding_tag = tag (Canary_basic.Build_binding l) in
+  let build_lib_tag = tag Canary_basic.Build_lib in
+  match c, l with
+  | C1, (Canary_lang.OCaml | Canary_lang.Python) when not is_dynamic ->
+      [ C_stub [ build_binding_tag ^ "/inspect.json" ];
+        Native_lib [ build_lib_tag ^ "/inspect.json" ] ]
+  | C1, (Canary_lang.OCaml | Canary_lang.Python) ->
+      (* dynamic: no compiled stub to inspect — the runtime fallback
+         (probe.log presence) catches missing-symbol failures *)
+      []
+  | C2, Canary_lang.OCaml ->
+      [ Ocaml_mli [ build_binding_tag ^ "/inspect_mli.json" ] ]
+  | C2, Canary_lang.Python ->
+      [ Python_attrs [ build_binding_tag ^ "/inspect_attrs.json" ] ]
+  | C4, Canary_lang.Python when not is_dynamic ->
+      [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
+        Abi_surface [ build_binding_tag ^ "/inspect.json" ] ]
+  | C5, Canary_lang.Python when not is_dynamic ->
+      [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
+        Versioned_req [ build_binding_tag ^ "/inspect.json" ] ]
+  | C6, Canary_lang.OCaml when not is_dynamic ->
+      [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
+        Typed_binding_stub
+          [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
+  | _ -> []  (* placeholder / unwired / behavior-grep / dynamic — no inputs *)
+
+
 (** The three LOGICAL roles — the artifact-relationship axis of
     checking (design §4). Methods (inspections, strict-flag builds,
     shim recorders, probes, decl-derived programs, upstream suites)
@@ -57,7 +209,7 @@ type agreement_row = {
           [agreements.doc_anchors_exist] fails when it drifts. *)
   ag_check     : Canary_agreement.agreement_check;
       (** id / name / layer / status / enabled / predict — the
-          existing pipeline ([Canary_agreement_run.registered_checks]) *)
+          existing pipeline ([registered_checks]) *)
   ag_invariant : string;
       (** the one-sentence agreement, falsifier-phrased (design §5);
           the reconciliation point for ssot's Ag.X ↔ C1..C8 drift *)
@@ -77,7 +229,7 @@ type agreement_row = {
           the expectation is produced. *)
   ag_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_agreement.inspect_input list;
-      (** the step-2 template ([Canary_agreement_run.inputs_of_contract]) *)
+      (** the step-2 template ([inputs_of_agreement]) *)
   ag_firing    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_store.provision -> Canary_basic.action list;
       (** WHERE it fires — over the ACTION CATALOGUE
@@ -140,7 +292,7 @@ let firing_probe_only (_ : Canary_mechanism.mechanism)
 
 let check_of (id : Canary_agreement.agreement_id) :
     Canary_agreement.agreement_check =
-  List.find Canary_agreement_run.registered_checks
+  List.find registered_checks
     ~f:(fun ck -> Poly.equal ck.Canary_agreement.id id)
   |> Option.value_exn
        ~message:
@@ -157,7 +309,7 @@ let row ~slug ~doc ~invariant ~reads ~role ~firing ~source ~tags
     ag_role = role;
     ag_inputs =
       (fun m l ->
-        Canary_agreement_run.inputs_of_contract ~mechanism:m id l);
+        inputs_of_agreement ~mechanism:m id l);
     ag_firing = firing;
     ag_source = source;
     ag_fault_tags = tags }

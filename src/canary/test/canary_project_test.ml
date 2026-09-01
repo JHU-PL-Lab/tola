@@ -812,7 +812,7 @@ let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_matches_tiny_convention";
     check = (fun () ->
       let module CC = Canary_agreement in
-      let template = Canary_agreement_run.inputs_of_contract in
+      let template = Canary_agreement_registry.inputs_of_agreement in
       let eq c l expected =
         Poly.equal (template c l) expected
       in
@@ -1358,12 +1358,12 @@ let agreement_registry_complete_pin : pure_test =
         in
         (* every registered check referenced exactly once *)
         let checks_ok =
-          List.for_all Canary_agreement_run.registered_checks
+          List.for_all Canary_agreement_registry.registered_checks
             ~f:(fun ck ->
               List.count rows ~f:(fun r ->
                   Poly.equal r.CR.ag_check.Canary_agreement.id ck.id)
               = 1)
-          && List.length rows = List.length Canary_agreement_run.registered_checks
+          && List.length rows = List.length Canary_agreement_registry.registered_checks
         in
         (* the tag mapping (scenario.md's catalogue) *)
         let tag id =

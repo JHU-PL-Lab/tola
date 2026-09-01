@@ -229,7 +229,7 @@ type runner_spec = {
   (** Per-project list of surface-theory contracts this project opts out
       of. Empty by default; populate when a contract gives systematic
       false positives on the project's idiomatic patterns. Threaded
-      through to {!Canary_agreement_run.predicted_contains_any_v2} via
+      through to {!Canary_agreement_registry.predicted_contains_any_v2} via
       its [?disabled] argument. Layered with the CLI's
       [--disable-contract] flag — both contribute to the per-run
       disabled set. *)

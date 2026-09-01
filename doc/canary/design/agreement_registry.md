@@ -1625,9 +1625,19 @@ The inspection tools themselves already exist in the project and have their own 
 ## A.1 — Producer-first, two-agent-safe
 
 
-The registry is a NEW additive module — `agreement/canary_agreement_registry.ml` —
-that consumes nothing from `project/` or `main/`. It assembles the belief
-from theory pieces that already exist:
+The registry is `agreement/canary_agreement_registry.ml`, which consumes
+nothing from `project/` or `main/`.
+
+**As of 2026-09-01 it is the DEFINITION, not a view over one** (step B of
+the centralization plan): the `registered_checks` table and everything
+derived from it — `predicted_by_agreement_v2`, `skipped_checks`,
+`predicted_contains_any_v2`, `inputs_of_agreement` — moved here out of
+`canary_agreement_run.ml`, which now holds only the predicate
+IMPLEMENTATIONS (`c1_predict`, …, the decl-comparison predicts, the
+loaders, the CLI). Dependency direction is registry → run → agreement,
+with no cycle, and **adding an agreement means editing one file**.
+
+It assembles the belief from theory pieces that already exist:
 
 - comparators + the `agreement_check` proto-row (`id/name/layer/status/
   enabled/predict`) — `agreement/canary_agreement.ml`

@@ -2250,7 +2250,7 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
           String.equal
             (Canary_basic.step_dir_of_tag binding_tag)
             "build_binding/ocaml"
-          && (match Canary_agreement_run.inputs_of_contract Canary_agreement.C1 Canary_lang.OCaml with
+          && (match Canary_agreement_registry.inputs_of_agreement Canary_agreement.C1 Canary_lang.OCaml with
               | [ Canary_agreement.C_stub [ stub_rel ];
                   Canary_agreement.Native_lib [ lib_rel ] ] ->
                   String.is_prefix stub_rel ~prefix:(binding_tag ^ "/")

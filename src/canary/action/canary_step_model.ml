@@ -54,7 +54,7 @@ type symbol_check = {
                                        fail; the expected failure
                                        substrings are {i derived} at
                                        run time by
-                                       {!Canary_agreement_run.predicted_contains_any_v2}
+                                       {!Canary_agreement_registry.predicted_contains_any_v2}
                                        from the cached inspector JSONs
                                        of [inputs]. Use when the
                                        surface delta between provider

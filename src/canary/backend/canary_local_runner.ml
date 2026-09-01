@@ -535,7 +535,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
            [predicted_contains_any_v2] result). *)
         let derived_predictions inputs =
           let fired =
-            Canary_agreement_run.predicted_by_agreement_v2
+            Canary_agreement_registry.predicted_by_agreement_v2
               ~disabled:step.disabled_agreements ~resolve:resolve_input inputs
           in
           List.iter fired
@@ -553,7 +553,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
            | Some note -> log ~event:"compat_note" ~detail:(Some note)
            | None -> ());
           List.iter
-            (Canary_agreement_run.skipped_checks
+            (Canary_agreement_registry.skipped_checks
                ~disabled:step.disabled_agreements ())
             ~f:(fun ((c : Canary_agreement.agreement_check), reason) ->
               log ~event:"agreement_skipped"

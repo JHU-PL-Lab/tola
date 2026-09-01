@@ -278,9 +278,9 @@ reconciling with, not duplicating.
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
 | `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
-| `src/canary/agreement/canary_agreement_registry.ml` | **THE AGREEMENT REGISTRY** — one row per agreement (invariant as falsifier, the artifact surfaces it reads, firing over the action catalogue, expectation source, fault tags) + the counterexample fixtures + the belief matrix. Design: `doc/canary/design/agreement_registry.md` |
+| `src/canary/agreement/canary_agreement_registry.ml` | **THE AGREEMENT REGISTRY — one file to edit** (step B, 2026-09-01): the `registered_checks` table + everything derived from it (`predicted_contains_any_v2` / `predicted_by_agreement_v2` / `skipped_checks`, `inputs_of_agreement`) — one row per agreement (invariant as falsifier, the artifact surfaces it reads, firing over the action catalogue, expectation source, fault tags) + the counterexample fixtures + the belief matrix. Design: `doc/canary/design/agreement_registry.md` |
 | `src/canary/agreement/canary_agreement.ml`            | Pure theory (was `canary_compat.ml`): `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) + registry vocabulary (`agreement_id`, `agreement_status`, `agreement_check`) |
-| `src/canary/agreement/canary_agreement_run.ml`        | Drives the contract (was `canary_compat_run.ml`): cached-summary lookup + per-contract predict closures (`c1_predict`, …) + `registered_checks` list + `predicted_contains_any_v2 ~resolve` (4-line iterator over the registry) + CLI run/verify |
+| `src/canary/agreement/canary_agreement_run.ml`      | The predicate IMPLEMENTATIONS (was `canary_compat_run.ml`): cached-summary lookup + per-agreement predict closures (`c1_predict`, …, plus the decl-comparison predicts) + CLI run/verify. The TABLE and its iterators moved to the registry 2026-09-01, so this file holds no agreement list |
 | `src/canary/tool/canary_toolchain.ml`               | OCaml toolchain types, opam packaging helpers, `pip_install_cmd` / `python_probe_only_cmd`             |
 | `src/canary/tool/canary_build_cmd.ml`               | Generic build-tool primitives: `cmake_configure_cmd`, `ninja_build_cmd`, `dune_build_cmd`, `with_marker` |
 | `src/canary/tool/canary_store_config.ml`            | `provision_spec` — ONE origin per admissible provision (`Fetched of provider` \| `Built_from of artifact_info` \| `Installed` \| `Vendored_at` \| `Absent`; 2026-08-25, replacing the coarse-universe + separate-provider pair) + `provision_of_spec` / `producing_action_of` / `fetch_provider_of`; `provider` (the fetch origins) + `store_config` + `binding_store` / `lib_store` + `binding_pm` |
@@ -382,7 +382,7 @@ renders GH Actions YAML; `backend/canary_diagram.ml` renders Mermaid;
 `actions.log`. Probe expectations come from `Expect_success` |
 `Expect_failure { contains_any }` | `Expect_compat_failure { inputs;
 version_info }` — the compat-failure inputs are read at runtime by
-`agreement/canary_agreement_run.ml`'s `predicted_contains_any_v2 ~resolve`
+`agreement/canary_agreement_registry.ml`'s `predicted_contains_any_v2 ~resolve`
 which iterates the registered contracts over the inputs bag to compute
 predicted failure substrings (L0 C-symbol diff + L3 watchlist-missing
 etc.). The top-level project identity is `Canary_project_run.project_run`
