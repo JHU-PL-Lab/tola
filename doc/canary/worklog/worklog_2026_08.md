@@ -1659,6 +1659,87 @@ The general rule, now in CLAUDE.md's gotchas beside the cmake instance:
 because the environment will otherwise choose one. Only CI could find
 this — nothing sets `OPAMCOLOR` on either of our machines.
 
+## 2026-08-27 — the SSOT retired, and the manuscript restarted as a skeleton
+
+**The measurement that ended it.** `ssot.md` claimed to be the bridge
+between manuscript and code. The source cites it **33 times** — §4.2.x
+23, §6.1 8, §5 and §6 once each — and **§1–§3, the `Ar`/`Sf`/`Ag`
+dictionary the file existed for, zero.** The id families say the same
+thing: `Sc.` appears 134 times in `src/` and `Bs.` 75 — both are real
+data, the scenario names the runner uses — while `Ar.` and `Ag.` appear
+**0** times, and those are the two families the manuscript leaned on
+hardest (21 and 50 citations in `draft.md`).
+
+The rule behind the asymmetry: a row stays true when it has **one
+origin and the other ends are projections**; a row drifts when all
+three ends are hand-maintained prose. The half nobody designated as the
+bridge (§4.2.x, §6.1 — code-owned) stayed current; the designated half
+did not.
+
+And the drift was *this file's own*. `canary_contract_registry.ml:58`
+and the draft's surface-role table already agreed on `Sf.1`
+native_header … `Sf.5` binding_lib; only ssot still carried the older
+four-way aggregation, marking all five rows `drift`. The bridge was
+behind both banks.
+
+**The ratchet proposed in `plan.md` §7 checked the wrong property.**
+"Every `Ar.\d` / `Sf.\d` cited in `draft.md` resolves in `ssot.md`"
+would have gone green on all of the above: of ~135 id citations across
+25 distinct ids, exactly **one** failed to resolve (`Ar.5`). The ids
+resolved and denoted different things eleven lines apart —
+`draft.md` L223 said native_source = `Ar.1`, L253 said `Ar.0`, ssot
+said `Ar.0` = native_source but `Ar.1` = native_lib. The check that
+bites is **binding**, not existence.
+
+**What happened to it.**
+
+| ssot section | fate |
+| --- | --- |
+| §1 `Ar`, §2 `Sf`, §3 `Ag`, §4.1, §5 `Bs.1..13`, §7 | → `research/surface_draft/ids.md`. §5 came because `design/tiny.md` *points at* that table rather than carrying it |
+| §6.1 term ↔ code | → `design/enumeration/stage0_naming.md` — code-facing vocabulary belongs with the vocabulary, not in the paper's materials |
+| §4.2.x | dropped — `design/enumeration/` owns it, one doc per pass |
+| §6.5, §6.6 | dropped — `canary_action.ml` + `stage5_realize_steps.md` |
+| §8 downstream usage | dropped — obsolete once it stopped being a bridge |
+
+`design/ssot.md` survives as a **27-line redirect stub**, kept only
+because 33 source citations name it by section; the stub maps each old
+section to its new home so the repoint is mechanical. It also records
+why the file must not come back: where the code owns a fact, the doc
+should be a *generated fragment* with a check that diffs it, never a
+third hand-maintained copy. `canary_contract_registry.ml` already holds
+the data to generate the one bridge worth having — `Ag.X` ↔ `C1..C8`.
+
+**The manuscript restarted.** `draft.md` (873 lines, largely spine and
+roadmap bullets, containing the sentence *"What's needed to write this
+section honestly"*) retired to `draft_old.md`; `draft_comment.md` to
+`draft_comment_old.md`. The new `draft.md` is a bullet skeleton, one
+level deep, where **every bullet is a claim rather than a topic** — a
+topic can be filled a hundred ways, so filling it is invention.
+
+Settled while building it: the claim is bug-finding along two axes —
+the framework multiplies the **worlds** a binding is deployed into, the
+agreement registry multiplies the **checks** applied inside each world,
+beyond "the command exited 0". The word **complete** was purged as too
+dangerous a term to carry, and *practical* took its place in the title.
+Tiny was demoted from a pillar to apparatus. Two questions are parked
+open in the file: §2a (why this is not a trivial combination) and §4's
+reconciliation of the surface narrative with the registry narrative
+into one set of terms — the registry says *realized surface* where the
+draft and code say *semantic*.
+
+All three source docs were read for topics with a fate recorded per
+file, and the skeleton carries a **"Not in this draft — reviewed and
+left out"** section so the next pass does not re-discover them.
+
+**Link repair.** Moving `plan.md` to `doc/canary/`, `tiny.md` into
+`surface_draft/`, and renaming `agreement_registry_audit.md` had left
+**70 broken relative links**. All repaired by resolving each target to
+its unique new location; the tree checks clean.
+
+**Provenance note.** This pass landed inside commit `62561b6a`, whose
+message describes the CI recovery and the OPAMCOLOR trap — the doc work
+has no commit of its own. This entry is its record.
+
 ## 2026-08-28 — the GH backend's three latent bugs, found by running it
 
 Extending the pipeline-rendered workflow past the projects that happen to
