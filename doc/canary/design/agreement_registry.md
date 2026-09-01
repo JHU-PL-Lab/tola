@@ -64,6 +64,7 @@ an unconfirmed section — the outline stays the review spine.
 * [ ] **8. Behavioral agreements**
 * [ ] **9. Project- and version-derived agreement discovery**
 * [ ] **10. Blame and result interpretation**
+* [x] **10a. The doc/code bridge and its harness**
 * [ ] **11. Mapping the catalogue back to actions and the registry**
 
 Current discussion should resume from **§2: Artifact surfaces**.
@@ -1497,6 +1498,54 @@ blame statement fixed in advance:
   from a source repo, lib from a package), the row must record which
   artifact's version the oracle assumed, or blame lands on the wrong
   side (§2.3, §5).
+
+---
+
+# 10a. The doc/code bridge — and the harness that keeps it honest
+
+**Landed 2026-09-01.** The catalogue is not only something the code is
+cited BY; it is meant to guide the code, so the two must be checkably
+aligned (user).
+
+**The bridge.** Every agreement — implemented or merely stated — carries
+a stable **slug** and the **section that defines it**:
+
+```ocaml
+{ cr_slug = "soname_denotes_needed"; cr_doc = "§6"; … }   (* implemented *)
+{ pp_slug = "denotation_across_worlds"; pp_doc = "§6.3"; … }  (* proposed *)
+```
+
+`Canary_contract_registry.all_agreements` unions both into one list, so
+there is a single place that answers *what does canary believe, and
+where is it written down*. The slug is the name that survives the
+`c1..c8` renaming settle (§0), so citations do not rot when the ids go.
+
+**Proposed rows make the holes visible.** An agreement this catalogue
+states but the code has not implemented gets a row with
+`status = proposed` and a `needs` field, rather than being absent —
+the registry lists its own gaps, the same principle as the belief
+matrix's `~` marks. §6.3's four agreements are the first entries.
+
+**The harness.** Three pins in the layer suite, the third of which reads
+this file:
+
+| pin | property |
+|---|---|
+| `agreements.slugs_unique_and_named` | slugs unique and non-empty; every entry has a claim and a `§`-anchor |
+| `agreements.every_contract_has_an_entry` | the implemented rows and the proposals both appear in `all_agreements` |
+| `agreements.doc_anchors_exist` | **every declared section EXISTS as a heading in this document** |
+
+The third is the alignment property: renaming a section, or citing one
+that was never written, fails `canary project-test`. Verified by
+falsification — pointing one row at a `§99.1` that does not exist turns
+the pin red.
+
+**What it does not yet check** (worth naming so the harness is not read
+as stronger than it is): that the *claim text* matches the section's
+prose, that every agreement the doc describes has a row (only the
+reverse direction is enforced), and that a `Proposed` row's `needs` is
+still accurate. Those want a richer harness — the natural next step is
+the doc growing machine-citable agreement blocks.
 
 ---
 

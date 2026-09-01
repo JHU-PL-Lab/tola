@@ -1687,6 +1687,59 @@ let lib_name_optional_pin : pure_test =
            (Canary_artifact.equal_artifact_info gmp
               (Canary_artifact.a_lib_named "mpfr"))) }
 
+(* THE ALIGNMENT HARNESS (2026-09-01, user: "we can gradually use the
+   doc to guide and refer to the code … so that the doc and the checking
+   is aligned"). Three properties, and the third reads the catalogue
+   itself: every agreement's declared section must EXIST as a heading in
+   agreement_registry.md. Doc/code drift is then a test failure rather
+   than something noticed later. *)
+let agreement_bridge_pins : pure_test list =
+  let module CR = Canary_contract_registry in
+  let doc = "doc/canary/design/agreement_registry.md" in
+  [ { name = "agreements.slugs_unique_and_named";
+      check =
+        (fun () ->
+          let slugs = List.map CR.all_agreements ~f:(fun e -> e.CR.e_slug) in
+          let uniq = List.dedup_and_sort slugs ~compare:String.compare in
+          List.length slugs = List.length uniq
+          && List.for_all CR.all_agreements ~f:(fun e ->
+                 (not (String.is_empty e.CR.e_slug))
+                 && (not (String.is_empty e.CR.e_claim))
+                 && String.is_prefix e.CR.e_doc ~prefix:"\xc2\xa7")) };
+    { name = "agreements.every_contract_has_an_entry";
+      check =
+        (fun () ->
+          (* the eight implemented rows + at least the four §6 proposals *)
+          List.length CR.contract_registry = 8
+          && List.length CR.proposed_agreements >= 4
+          && List.length CR.all_agreements
+             = List.length CR.contract_registry
+               + List.length CR.proposed_agreements) };
+    (* the harness proper: the doc anchors resolve *)
+    { name = "agreements.doc_anchors_exist";
+      check =
+        (fun () ->
+          if not (Stdlib.Sys.file_exists doc) then true (* not in a checkout *)
+          else
+            let text =
+              Stdlib.In_channel.with_open_text doc Stdlib.In_channel.input_all
+            in
+            List.for_all CR.all_agreements ~f:(fun e ->
+                (* "§6.3" resolves if the doc has a §6 or §6.3 heading *)
+                let num =
+                  String.chop_prefix e.CR.e_doc ~prefix:"\xc2\xa7"
+                  |> Option.value ~default:e.CR.e_doc
+                in
+                let top =
+                  match String.lsplit2 num ~on:'.' with
+                  | Some (t, _) -> t
+                  | None -> num
+                in
+                String.is_substring text ~substring:("# " ^ num ^ ".")
+                || String.is_substring text ~substring:("## " ^ num ^ " ")
+                || String.is_substring text ~substring:("## " ^ num ^ ".")
+                || String.is_substring text ~substring:("# " ^ top ^ ".")) ) } ]
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ binding_source_vocabulary_pin; lib_name_optional_pin;
@@ -1710,6 +1763,7 @@ let all_tests : pure_test list =
       marker_stale_on_spec_change_pin;
       source_fetch_pinned_ref_check_post_pin ]
   @ contract_fixture_tests
+  @ agreement_bridge_pins
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the

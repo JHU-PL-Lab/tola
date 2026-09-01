@@ -47,6 +47,14 @@ type source =
 [@@deriving show, eq]
 
 type contract_row = {
+  cr_slug      : string;
+      (** THE STABLE NAME both the doc and the code use. The `c1..c8`
+          ids are provisional (§0); the slug is what a catalogue
+          section cites and what survives the renaming settle. *)
+  cr_doc       : string;
+      (** the catalogue section that DEFINES this agreement, e.g.
+          "§6.3". Paired with [cr_slug] this is a two-way bridge, and
+          [agreements.doc_anchors_exist] fails when it drifts. *)
   cr_check     : Canary_contract.contract_check;
       (** id / name / layer / status / enabled / predict — the
           existing pipeline ([Canary_contract_run.registered_checks]) *)
@@ -139,9 +147,11 @@ let check_of (id : Canary_contract.contract_id) :
          (Printf.sprintf "contract registry: no registered check for %s"
             (Canary_contract.string_of_contract_id id))
 
-let row ~invariant ~reads ~role ~firing ~source ~tags
+let row ~slug ~doc ~invariant ~reads ~role ~firing ~source ~tags
     (id : Canary_contract.contract_id) : contract_row =
-  { cr_check = check_of id;
+  { cr_slug = slug;
+    cr_doc = doc;
+    cr_check = check_of id;
     cr_invariant = invariant;
     cr_reads = reads;
     cr_role = role;
@@ -157,6 +167,7 @@ let row ~invariant ~reads ~role ~firing ~source ~tags
     contract IS a named relation over those reads. *)
 let contract_registry : contract_row list =
   [ row C1
+      ~slug:"symbol_exported" ~doc:"§2.7"
       ~invariant:
         "every symbol the binding declares (its stub references) is \
          exported by the lib"
@@ -164,39 +175,46 @@ let contract_registry : contract_row list =
       ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_missing" ];
     row C2
+      ~slug:"api_surface_complete" ~doc:"§2.7"
       ~invariant:
         "every watchlisted entry is present on the user-facing surface"
       ~reads:[ ("Sf.4", "binding") ]
       ~role:Surface ~firing:firing_default ~source:Inspection
       ~tags:[ "api_drop" ];
     row C3
+      ~slug:"behavior_matches" ~doc:"§8"
       ~invariant:"the probe's trace matches the recorded expectation"
       ~reads:[ ("Trace", "run") ]
       ~role:Execution ~firing:firing_probe_only ~source:Behavior_grep
       ~tags:[ "behavior" ];
     row C4
+      ~slug:"soname_denotes_needed" ~doc:"§6"
       ~invariant:
         "the lib's soname matches what the consumer records it needs"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
       ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "abi_soname" ];
     row C5
+      ~slug:"symbol_versions_present" ~doc:"§2.7"
       ~invariant:
         "versioned symbols carry the annotations the consumer expects"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
       ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_version" ];
     row C6
+      ~slug:"c_types_agree" ~doc:"§2.7"
       ~invariant:"C types at the header/stub boundary match"
       ~reads:[ ("Sf.1", "native"); ("Sf.3", "binding") ]
       ~role:Meeting ~firing:firing_default ~source:Inspection
       ~tags:[ "type_arity" ];
     row C7
+      ~slug:"repack_preserves_api" ~doc:"§7"
       ~invariant:"repackaging preserves the API"
       ~reads:[ ("Sf.4", "binding") ]
       ~role:Meeting ~firing:firing_probe_only ~source:Behavior_grep
       ~tags:[ "api_repack" ];
     row C8
+      ~slug:"repack_complete" ~doc:"§7"
       ~invariant:
         "repackaging is complete — nothing the original had is lost"
       ~reads:[ ("Sf.4", "binding") ]
@@ -410,3 +428,101 @@ let fill_list ?(mechanism = Canary_mechanism.Cstubs)
           match st with
           | Declared -> Some (r.cr_check.Canary_contract.id, a)
           | Wired | Blocked _ | Empty -> None))
+
+(* ── PROPOSED agreements — the catalogue's holes, as data (2026-09-01) ──
+   An agreement the doc STATES but the code does not yet implement gets a
+   row here rather than being absent. The registry then lists its own
+   gaps, which is the same principle as the belief matrix's `~` marks:
+   a hole should be visible in the artifact that claims completeness.
+
+   These carry no [contract_check] — there is no predict to run — so they
+   are a separate list that [all_agreements] unions with the implemented
+   rows for display and pinning. *)
+
+type proposed = {
+  pp_slug   : string;
+  pp_doc    : string;
+  pp_claim  : string;   (** falsifier-phrased, like [cr_invariant] *)
+  pp_reads  : (string * string) list;
+  pp_needs  : string;   (** what implementing it requires *)
+}
+
+let proposed_agreements : proposed list =
+  [ { pp_slug = "denotation_across_worlds";
+      pp_doc = "§6.3";
+      pp_claim =
+        "a recorded library identity denotes the SAME implementation in \
+         the deploy world as in the build world";
+      pp_reads = [ ("Sf.2", "native") ];
+      pp_needs =
+        "compare the object each soname names in both provisions of a \
+         2x2 world — static, no loader, no declaration (§6.3)" };
+    { pp_slug = "no_duplicate_implementation";
+      pp_doc = "§6.3";
+      pp_claim =
+        "the resolved set contains no two identities that are one \
+         implementation (alternative spelling), and none that statically \
+         absorbs another (containment)";
+      pp_reads = [ ("Sf.2", "native") ];
+      pp_needs =
+        "the shipped objects' symbol sets + version namespaces; the \
+         declared alternative-spelling fact is a convenience (§6.6)" };
+    { pp_slug = "closure_satisfiable";
+      pp_doc = "§6.3";
+      pp_claim =
+        "every name in the consumer's recorded NEEDED has a provider in \
+         this world";
+      pp_reads = [ ("Sf.5", "binding"); ("Sf.2", "native") ];
+      pp_needs = "readelf -d on the consumer + the world's object set" };
+    { pp_slug = "interposition_winner";
+      pp_doc = "§6.3";
+      pp_claim =
+        "the definition that wins for a shared symbol is the one the \
+         consumer was built against";
+      pp_reads = [ ("Trace", "run") ];
+      pp_needs =
+        "LD_DEBUG=bindings at probe — the RESOLVED view; evidence only, \
+         no verdict of its own (§6.7)" } ]
+
+(* ── the unified view — one list to print, cite and pin ── *)
+
+type status = Implemented of Canary_contract.contract_status | Not_wired
+
+type entry = {
+  e_slug  : string;
+  e_doc   : string;
+  e_claim : string;
+  e_reads : (string * string) list;
+  e_status : status;
+}
+
+(** EVERY agreement canary knows about, implemented or merely stated.
+    This is what a catalogue section cites and what the alignment
+    harness checks. *)
+let all_agreements : entry list =
+  List.map contract_registry ~f:(fun r ->
+      { e_slug = r.cr_slug;
+        e_doc = r.cr_doc;
+        e_claim = r.cr_invariant;
+        e_reads = r.cr_reads;
+        e_status = Implemented r.cr_check.Canary_contract.status })
+  @ List.map proposed_agreements ~f:(fun p ->
+        { e_slug = p.pp_slug;
+          e_doc = p.pp_doc;
+          e_claim = p.pp_claim;
+          e_reads = p.pp_reads;
+          e_status = Not_wired })
+
+let string_of_status = function
+  | Implemented s -> Canary_contract.string_of_contract_status s
+  | Not_wired -> "proposed"
+
+(** The registry as a table — `canary agreements`. *)
+let pp_agreements () : string =
+  let line (e : entry) =
+    Printf.sprintf "%-28s %-6s %-16s %s" e.e_slug e.e_doc
+      (string_of_status e.e_status) e.e_claim
+  in
+  String.concat ~sep:"\n"
+    (Printf.sprintf "%-28s %-6s %-16s %s" "agreement" "doc" "status" "claim"
+     :: List.map all_agreements ~f:line)
