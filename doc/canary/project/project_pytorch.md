@@ -54,6 +54,18 @@ Every cell run on WSL, OCaml 5.4.1 / dune 3.23.1. The fork lives at
 | fork `fix-macos` `b9b5410` | vendored 2.3.1 (route 1) | ✗ `cc1` rejects clang's `-Wno-error=` spelling — **Linux only** |
 | fork `canary` `e6bd980` | vendored 2.3.1 (route 1) | **✓ builds, installs via opam, probe runs** |
 | fork `canary` `e6bd980` | vendored 2.13.0 (route 1) | ✗ `at::rrelu_with_noise_out` API break |
+| official `v0.17.0` + our patch | vendored 2.2.1 (route 1) | ✗ `at::_cslt_sparse_mm` gained a parameter |
+
+**Every upper bound is real.** Both failures were produced through route
+1, which the solver cannot see, so they are facts about the CODE rather
+than the packaging. That vindicates upstream's
+`conflicts: {< "2.1.0" | >= "2.2.0"}` — 2.2.1 genuinely breaks v0.17.0 —
+and it means no metadata widening can produce a working 2.2.1 case; the
+generated shim is wrong for that library. Regeneration needs
+`Descriptions.yaml`, which no prebuilt zip ships (measured on all three),
+so it needs a PyTorch source build unless `gen.ml` can be fed
+`native_functions.yaml` from the pytorch repo instead. See
+[`issues.md`](issues.md).
 
 Two of those are regression PAIRS worth declaring as such:
 

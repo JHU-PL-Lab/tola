@@ -200,6 +200,43 @@ fork's staged world stays RED in `action z3` (the default full run) —
 deliberately, since silencing it would be choosing (a) by default.
 
 
+### Found — every ocaml-torch upper bound is REAL, and lifting one needs
+### a PyTorch source build (2026-09-01)
+
+Asked whether the declared libtorch windows are conservative metadata or
+measured facts. Both were tested by supplying the library through route 1
+(`LIBTORCH=<dir>`), which the solver cannot see, so the *code* answers
+rather than the packaging:
+
+| binding | libtorch | result |
+| --- | --- | --- |
+| official `v0.17.0` (+ our dune fix) | 2.1.2 | ✓ builds, runs |
+| official `v0.17.0` (+ our dune fix) | **2.2.1** | ✗ `at::_cslt_sparse_mm` gained a parameter |
+| fork `canary` | 2.3.1 | ✓ builds, installs, runs |
+| fork `canary` | **2.13.0** | ✗ `at::rrelu_with_noise_out` arg 3 became `Tensor&` |
+
+So **`conflicts: ["libtorch" {< "2.1.0" | >= "2.2.0"}]` is CORRECT**, not
+over-tight: 2.2.0 changed `_cslt_sparse_mm`'s signature and v0.17.0's
+generated shim passes the wrong argument 4. A "patched package that works
+with 2.2.1" therefore cannot be a metadata widening — the generated code
+itself is wrong for that library.
+
+**And regeneration is not cheap.** `src/gen_bindings/gen.ml` says it
+consumes *"the Descriptions.yaml file that gets generated when building
+PyTorch from source"*, and measured: none of the three prebuilt zips
+(2.2.1, 2.3.1, 2.13.0) ships **any** `.yaml` at all. So lifting a bound
+means producing that file, which means a PyTorch source build — the
+expensive path `project_pytorch.md` originally hoped to avoid. Worth
+checking before committing to it: whether `gen.ml` can be fed
+`aten/src/ATen/native/native_functions.yaml` fetched from the pytorch
+repo at the matching tag, since that is a source file rather than a build
+product. If it can, the whole "track current libtorch" story costs a
+download instead of a build.
+
+The contrast with the fork's own metadata is worth keeping: upstream's
+window is right, while the fork's `[2.3.0, 2.4.0)` is NOT a measured
+bound (2.3.1 works; nothing between 2.3.1 and 2.13.0 was tried).
+
 ### Found — the ocaml-torch shim does not compile against current
 ### libtorch, and the boundary is unmeasured (2026-09-01)
 

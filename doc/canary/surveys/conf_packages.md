@@ -308,6 +308,35 @@ measured per project):
 | `Bounded_with_conf` — a range on the CONF package | nothing inside the bound                           | ctypes-foreign/`conf-libffi {>= "2.0.0"}`                                 |
 | `Fixed_with_conf` — an exact pin                  | a wrapper package that drops the conf dep          | llvm/`conf-llvm-shared {= "19"}`                                          |
 | `Package_builds_lib` / `Bundled`                  | no pairing exists                                  | opam z3; the z3-solver & llvmlite wheels                                  |
+| **no conf package at all** — the binding's own configurator selects the lib | nothing *through opam*: the choice is an env var the build reads | **torch/libtorch** ← added 2026-09-01 |
+
+**The row added last is a different KIND of gate, and the table's column
+headings almost hide it.** Every row above it is checked when something
+*builds* — the conf package's own check, or the binding's. torch's bound
+is checked at **dependency RESOLUTION**:
+
+```
+opam install --dry-run torch libtorch          → picks libtorch 2.1.2
+opam install --dry-run torch libtorch.2.2.1    → No solution found
+```
+
+because `torch` declares `conflicts: ["libtorch" {< "2.1.0" | >= "2.2.0"}]`.
+Two consequences that none of the conf-\* rows have:
+
+- **The solver can forbid a world outright**, so the mismatch cell cannot
+  be reached by installing things — the lib has to be placed OUTSIDE opam.
+- **The bound only sees the opam PACKAGE.** torch actually chooses its
+  library from an ordered chain of environment variables
+  ([`lib_selection.md`](lib_selection.md) §3), and a libtorch supplied by
+  any of the other routes is invisible to the `conflicts:` clause. So the
+  gate and the selection do not talk to each other: you can satisfy the
+  solver and build against a library it never approved.
+
+opam has **no `conf-torch` and no `conf-libtorch`** — searched
+2026-09-01, the only matches are `libtorch` (a prebuilt archive, §H3) and
+`torch` itself. A conf package would not help here anyway: `depexts:` maps
+to distro packages, and apt ships none (Homebrew and Arch do — see
+`lib_selection.md` §4).
 
 The survey's dominant category IS the cheap one: **208 of 333 conf
 packages (62%) are a bare `pkg-config --exists <lib>` presence check** —
