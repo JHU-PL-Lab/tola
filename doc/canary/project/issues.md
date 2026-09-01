@@ -200,6 +200,57 @@ fork's staged world stays RED in `action z3` (the default full run) —
 deliberately, since silencing it would be choosing (a) by default.
 
 
+### Found — the ocaml-torch shim does not compile against current
+### libtorch, and the boundary is unmeasured (2026-09-01)
+
+The forward-mismatch cell torch was landed for, measured. Our fork at
+`canary` (`e6bd980`) builds and runs against libtorch **2.3.1** and fails
+against **2.13.0** with a genuine C++ API break, in a fresh opam tree:
+
+```
+torch_api_generated.cpp:15695: error: cannot bind non-const lvalue
+  reference of type 'at::Tensor&' to an rvalue of type 'at::Tensor'
+    torch::rrelu_with_noise_out(out_local, …, tensor_from_ocaml(noise), …)
+```
+
+libtorch changed `at::rrelu_with_noise_out` so parameter 3 (`noise`) is a
+non-const `at::Tensor&`; the generated shim passes a temporary. It is
+attributable to ONE named function, which is what makes it a good
+specimen — a c1/c6-shaped break with a name, not a link failure.
+
+Three things follow:
+
+- **"Target the latest" is not a declaration change.** Supporting 2.13.0
+  means REGENERATING `torch_api_generated.cpp` from that version's
+  `native_functions.yaml` (`src/gen_bindings`), which is the real work
+  behind the fork's stated intent.
+- **The supported window is unknown.** The fork's opam file claims
+  `[2.3.0, 2.4.0)`, which is stale metadata rather than a measured bound:
+  2.3.1 works, 2.13.0 does not, and nothing between them has been tried.
+  A bisect over the ~10 releases would give the true upper bound and is
+  the cheapest way to turn a guess into a declaration.
+- **It is a real 2×2 lib axis at last.** Vendored 2.3.1 (works) against
+  Vendored 2.13.0 (breaks) is a genuine channel pair from ONE provider
+  (upstream's own zips), which is what `spec-check`'s `lib pair` has been
+  warning about since the landing.
+
+### Found — a build cache that ignores its selecting ENV variable serves
+### a verdict about a different library (2026-09-01, torch)
+
+Generalized into [`landing.md`](landing.md) §4 as a landing lesson; the
+per-project fact is here. torch selects its library by reading `LIBTORCH`
+at build time, but the dune rule invoking the configurator depends only
+on `discover.exe`. Rebuilding a warm tree with a different `LIBTORCH`
+therefore reuses both the computed flags and `torch_api.o`: a build
+"against 2.13.0" returned rc=0 while
+`_build/default/src/wrapper/cxx_flags.sexp` still named `libtorch-2.3.1`.
+The failure above was only visible because opam builds in a fresh tree.
+
+For canary this is a REALIZATION constraint, not just trivia: any torch
+scenario that varies the lib must not reuse a working tree, and the
+scenario's `LIBTORCH` belongs in the step fingerprint (the same argument
+as the opam switch and the platform, CLAUDE.md's two choke points).
+
 ### Found — `status` matches inspect files by SUBSTRING, so a variant key
 ### that is a prefix of another reads its neighbour's evidence (2026-08-30)
 

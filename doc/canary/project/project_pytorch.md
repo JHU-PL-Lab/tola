@@ -41,6 +41,41 @@ and this was not. In brief:
   Vendored 2.2.1 world can — a platform-dependent *universe*, which pass 1
   cannot express today.
 
+## The measured matrix (2026-09-01)
+
+Every cell run on WSL, OCaml 5.4.1 / dune 3.23.1. The fork lives at
+`contrib/torch-all/ocaml-torch`, whose primary development branch is now
+`canary`.
+
+| binding | lib (discovery route) | result |
+| --- | --- | --- |
+| official `v0.17.0`, stock | — | ✗ dune staging bug (upstream issue #19, 7 months open) |
+| official `v0.17.0` + our patch | opam 2.1.2 (route 4) | ✓ |
+| fork `fix-macos` `b9b5410` | vendored 2.3.1 (route 1) | ✗ `cc1` rejects clang's `-Wno-error=` spelling — **Linux only** |
+| fork `canary` `e6bd980` | vendored 2.3.1 (route 1) | **✓ builds, installs via opam, probe runs** |
+| fork `canary` `e6bd980` | vendored 2.13.0 (route 1) | ✗ `at::rrelu_with_noise_out` API break |
+
+Two of those are regression PAIRS worth declaring as such:
+
+- `b9b5410` → `e6bd980` — the C-compiler portability fix. Note it is
+  platform-CONDITIONAL: the same ref passes on macOS and fails on Linux,
+  which makes it a sharper specimen than z3's `pre-10549` (that one fails
+  everywhere). See `design/platform.md` §9.
+- vendored 2.3.1 → vendored 2.13.0 — the lib channel pair, from ONE
+  provider (upstream's own zips), which is the first genuine lib pair
+  this project has had.
+
+Route 1 is verified end to end: with NO opam `libtorch` installed at all,
+`opam install torch` under `LIBTORCH=<dir>` builds, and the probe prints
+
+```
+torch resolved: …/prebuilt/libtorch-2.3.1/libtorch/lib/libtorch_cpu.so
+torch build-version: 2.3.1+cpu
+```
+
+so the world names the artifact that answered rather than a directory we
+hoped for.
+
 **Still open**: step 2 (the Vendored 2.2.1 cell — the project's real
 point), then steps 3–4 (pip, the multi-PM sweep). Step 2 needs `.zip`
 support in `Canary_prebuilt` and a binding REBUILD between lib worlds

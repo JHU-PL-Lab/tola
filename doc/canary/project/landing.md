@@ -319,6 +319,25 @@ never once executed. It was invisible precisely because it "passed".
 Fix: the wrapped command runs in a subshell. Rule: when you add a check
 by string concatenation, verify it RAN — make it fail once on purpose.
 
+**A build cache that does not track its ENVIRONMENT lies exactly like one
+that does not name its input** (2026-09-01, torch). torch's
+`src/config/discover.ml` picks the library by reading `LIBTORCH` from the
+environment, but the dune rule that runs it is
+
+    (targets cxx_flags.sexp flags.sexp) (deps ../config/discover.exe)
+
+— it depends on the executable, not on what the executable reads. So
+changing `LIBTORCH` and rebuilding in a warm tree invalidates nothing:
+dune reuses the flags AND the compiled `torch_api.o` from the previous
+library. Measured: a build "against 2.13.0" returned rc=0 while
+`_build/default/src/wrapper/cxx_flags.sexp` still named
+`libtorch-2.3.1`. The same build in a fresh opam tree failed with a real
+C++ API break. This is the *upstream* twin of sqlite's guard-inside-the-
+command: same disease, in a package we do not control. Rule for canary:
+**when a project selects an input by environment variable, a warm working
+tree is not evidence** — realize into a fresh tree, or make the env part
+of the step fingerprint, before believing a green.
+
 **A shared staging area lets one world answer another's question.** z3's
 install prefix was the build tree's sibling, shared by two refs, so the
 fork's staged package would have satisfied the pre-10549 world's staged

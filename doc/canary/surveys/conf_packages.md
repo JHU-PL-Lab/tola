@@ -696,3 +696,98 @@ keeping those in sync cost an edit in three files per landing.
    positives it had to learn to reject (a heredoc's escaped quotes, an
    opam comment saying "the CUDA version") are documented in the script
    rather than in anyone's memory.
+
+---
+
+## H. Two categories the classification was missing (2026-09-01)
+
+User: *"does our survey cover the use point (conversion, and have
+categories for cases like `conf-libssl`)? Also, does the survey cover the
+category for `lib<pkg>`? We shall have them."* Both measured over the
+live repository (`~/.opam/repo/default/packages`, 377 `conf-*`).
+
+### H1. What a conf-\* package IS: a conversion, and a lossy one
+
+The categories above (§Category details) classify conf packages by the
+CHECK they run. That is the mechanism. The USE point is one level up:
+
+> A `conf-<lib>` package converts *"this opam package needs library L"*
+> into *"this OS needs system package P"*, via `depexts:` keyed on
+> `os-family` / `os-distribution`.
+
+The conversion is **one-way and lossy**. It carries two things — that
+something satisfying the check is present, and a distro package NAME —
+and drops two others: the VERSION actually found, and any ability to
+CHOOSE among several. That is the single fact behind most of the
+downstream consequences already recorded here: why `Free_with_conf` is
+the common case, why an opam version bound on a conf package usually says
+nothing about the library (§G1a: only 13 of 370 carry a real one), and
+why canary's vendored worlds have to repoint `LD_LIBRARY_PATH` and then
+ASSERT that the loader obeyed rather than asking opam what answered.
+
+The contrast is [`lib_selection.md`](lib_selection.md) §3: torch's
+configurator does not convert at all — it names a directory, and the
+choice is baked into the built binding as an rpath.
+
+### H2. The install side — "virtual" is convention, not definition
+
+`flags: conf` is a marker. It does not forbid an `install:` field, and
+five packages have one:
+
+| conf package with `install:` | count |
+| --- | ---: |
+| `conf-bison`, `conf-dkml-cross-toolchain`, `conf-flex`, `conf-libssl`, `conf-m4` | **5 of 377** |
+
+`conf-libssl` is the specimen worth remembering because it is
+platform-conditional:
+
+```
+install: ["sh" "-ex" "./homebrew.sh" "install" lib] {os-distribution = "homebrew"}
+```
+
+so the same package is virtual on Debian and installs files on Homebrew.
+Anything that assumes "conf ⇒ nothing on disk" is right 372 times out of
+377 and wrong in a way that is platform-dependent — the worst shape.
+
+### H3. The `lib<pkg>` family — an opam package whose provision is `Vendored`
+
+A second population, and a small one: 23 packages named `lib*`, of which
+**3 ship a prebuilt binary** rather than building from source.
+
+| package | archive it unpacks | note |
+| --- | --- | --- |
+| **libtorch** | `download.pytorch.org/…/libtorch-…-<V>+cpu.zip` | per-platform versions; newest is 2.2.1 vs upstream's 2.13.0 |
+| **libwasmtime** | `github.com/…/wasmtime/releases/download/…-c-api.tar.xz` | version carries the platform (`0.22.0+macos-x86_64`) |
+| **libtensorflow** | `storage.googleapis.com/…/libtensorflow-cpu-<os>-x86_64-1.10.0.tar.gz` | pinned to 1.10.0 |
+
+(`libwasmer` is a mixed case: an upstream source tarball plus a vendored
+archive from the binding's own releases.) The other ~19 —
+`libbinaryen`, `libsvm`, `liblinear`, `libnlopt`, `libbpf`, `libdrm`,
+`libevent`, `libssh`, `libudev`, … — build from source and are ordinary
+packages that happen to start with `lib`.
+
+**Why this is a category and not trivia.** These three are `Vendored`
+artifacts wearing a `Lang_pkg` label. Canary's `provider` vocabulary
+records them as `Lang_pkg` because opam installs them, but their
+provenance is a downloaded binary — the same archive a `Canary_prebuilt`
+declaration would fetch. Three consequences:
+
+- **They freeze.** Nobody re-cuts the opam package when upstream
+  releases, so the opam version lags: libtorch 2.2.1 vs 2.13.0,
+  libtensorflow pinned at 1.10.0 (2018). A project that takes its
+  "stable" point from one of these is testing against an archive, not
+  against what users have.
+- **They carry the platform in the version string**
+  (`2.2.1+linux-x86_64`, `0.22.0+macos-x86_64`), because one opam version
+  cannot describe two binaries. That is also why libtorch has no arm64
+  package at any version: nobody cut one.
+- **They are indistinguishable from a real dependency in the metadata.**
+  `depends: ["libtorch" {>= …}]` looks like conf-\*'s cousin but resolves
+  to unzipping a tarball into the switch. The gate vocabulary
+  (`Pinned_depext`) names the shape; the provenance is not recorded
+  anywhere.
+
+Landing rule that follows: **before taking a `lib<pkg>` package as an
+axis point, check how far behind upstream it is.** If it lags, the honest
+declaration is `Vendored` from the upstream archive, with the opam
+package as at most a second, older point.
