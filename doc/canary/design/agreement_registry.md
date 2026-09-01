@@ -1,6 +1,6 @@
 # Tool-Grounded Agreement Catalogue for Cross-Language Binding Checks
 
-**Kind: proposal.** The producer landed (`surface/canary_contract_registry.ml` carries the rows); the catalogue's remaining rungs are open. **Landed when** every agreement in the catalogue resolves to a check that can ground it.
+**Kind: proposal.** The producer landed (`contract/canary_contract_registry.ml` carries the rows); the catalogue's remaining rungs are open. **Landed when** every agreement in the catalogue resolves to a check that can ground it.
 
 > **Where an agreement gets EVALUATED is an open question this catalogue
 > inherits** (2026-08-30):
@@ -1576,13 +1576,13 @@ The inspection tools themselves already exist in the project and have their own 
 ## A.1 — Producer-first, two-agent-safe
 
 
-The registry is a NEW additive module — `surface/canary_contract_registry.ml` —
+The registry is a NEW additive module — `contract/canary_contract_registry.ml` —
 that consumes nothing from `project/` or `main/`. It assembles the belief
 from theory pieces that already exist:
 
 - comparators + the `contract_check` proto-row (`id/name/layer/status/
-  enabled/predict`) — `surface/canary_compat.ml`
-- the predict closures + `registered_checks` — `surface/canary_compat_run.ml`
+  enabled/predict`) — `contract/canary_contract.ml`
+- the predict closures + `registered_checks` — `contract/canary_contract_run.ml`
 - the input template (`inputs_of_contract ?mechanism contract lang`) — M2
   step 2, same file
 - the fault tags — `scenario.md`'s catalogue + `canary_expected_of`
@@ -1614,7 +1614,7 @@ type source =
   | Placeholder     (* Expect_success until wired (missing-ness visible) *)
 
 type contract_row = {
-  row_check   : Canary_compat.contract_check;
+  row_check   : Canary_contract.contract_check;
       (* id, name, layer, status, enabled, predict — already exists *)
   invariant   : string;
       (* the one-sentence agreement, phrased as a FALSIFIER (§5); the
@@ -1625,7 +1625,7 @@ type contract_row = {
          already implies the cell's subject (one artifact vs a pair)
          and its evidence flavor. *)
   inputs      : Canary_mechanism.mechanism -> Canary_lang.lang ->
-                Canary_compat.inspect_input list;
+                Canary_contract.inspect_input list;
       (* the step-2 template — WHAT files the check reads, derived from
          the binding_decl (coupling products, surface_path) *)
   firing      : Canary_mechanism.mechanism -> Canary_lang.lang ->
@@ -1745,7 +1745,7 @@ artifact (the binary C lib) at `Build_lib`, all sharing one shape:
 | c5 @ build_lib | a declared version tag is absent from `versioned_exports` | `@@VER` vs the decl |
 
 Their closures (`c1_decl_predict`, `c4_decl_predict`,
-`c5_decl_predict` in `canary_compat_run.ml`) are **decl-comparison**
+`c5_decl_predict` in `canary_contract_run.ml`) are **decl-comparison**
 predicts: they read ONE artifact's inspected surface and compare it
 against the project's DECLARED facts (`binding_decl`), with no
 consumer involved.

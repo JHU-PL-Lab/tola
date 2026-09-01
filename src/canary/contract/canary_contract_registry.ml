@@ -10,7 +10,7 @@
     A row states:
     - WHAT the invariant is ([cr_invariant], falsifier-phrased — a
       check is a DISPROVER, never a proof, design §5);
-    - HOW we check it — the existing [Canary_compat.contract_check]
+    - HOW we check it — the existing [Canary_contract.contract_check]
       pipeline (id/status/predict) + the input template;
     - in which LOGICAL role (Surface / Meeting / Execution — the
       artifact-relationship axis, design §4);
@@ -47,9 +47,9 @@ type source =
 [@@deriving show, eq]
 
 type contract_row = {
-  cr_check     : Canary_compat.contract_check;
+  cr_check     : Canary_contract.contract_check;
       (** id / name / layer / status / enabled / predict — the
-          existing pipeline ([Canary_compat_run.registered_checks]) *)
+          existing pipeline ([Canary_contract_run.registered_checks]) *)
   cr_invariant : string;
       (** the one-sentence agreement, falsifier-phrased (design §5);
           the reconciliation point for ssot's Ag.X ↔ C1..C8 drift *)
@@ -68,8 +68,8 @@ type contract_row = {
           and its evidence flavor; the typed axis is [source] — how
           the expectation is produced. *)
   cr_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
-                 Canary_compat.inspect_input list;
-      (** the step-2 template ([Canary_compat_run.inputs_of_contract]) *)
+                 Canary_contract.inspect_input list;
+      (** the step-2 template ([Canary_contract_run.inputs_of_contract]) *)
   cr_firing    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_store.provision -> Canary_basic.action list;
       (** WHERE it fires — over the ACTION CATALOGUE
@@ -130,24 +130,24 @@ let firing_probe_only (_ : Canary_mechanism.mechanism)
 
 (* ── row assembly ── *)
 
-let check_of (id : Canary_compat.contract_id) :
-    Canary_compat.contract_check =
-  List.find Canary_compat_run.registered_checks
-    ~f:(fun ck -> Poly.equal ck.Canary_compat.id id)
+let check_of (id : Canary_contract.contract_id) :
+    Canary_contract.contract_check =
+  List.find Canary_contract_run.registered_checks
+    ~f:(fun ck -> Poly.equal ck.Canary_contract.id id)
   |> Option.value_exn
        ~message:
          (Printf.sprintf "contract registry: no registered check for %s"
-            (Canary_compat.string_of_contract_id id))
+            (Canary_contract.string_of_contract_id id))
 
 let row ~invariant ~reads ~role ~firing ~source ~tags
-    (id : Canary_compat.contract_id) : contract_row =
+    (id : Canary_contract.contract_id) : contract_row =
   { cr_check = check_of id;
     cr_invariant = invariant;
     cr_reads = reads;
     cr_role = role;
     cr_inputs =
       (fun m l ->
-        Canary_compat_run.inputs_of_contract ~mechanism:m id l);
+        Canary_contract_run.inputs_of_contract ~mechanism:m id l);
     cr_firing = firing;
     cr_source = source;
     cr_fault_tags = tags }
@@ -211,16 +211,16 @@ let contract_registry : contract_row list =
    WITH its fixture and a changed predict breaks the pin. Coverage:
    C1, C2 today. C3/C7 are blocked in the registry; C4/C5/C6 pend
    their fixture JSON shapes (elf/versioned/typed loaders in
-   [Canary_compat]). *)
+   [Canary_contract]). *)
 
 type fixture = {
   fx_predict :
     (resolve:(string -> string) ->
-     Canary_compat.inspect_input list -> string list) option;
+     Canary_contract.inspect_input list -> string list) option;
       (** the closure under test — [None] = the row's
           [cr_check.predict]. Some = a CELL predict (e.g. the
           decl-comparison closures for the lib-only cells). *)
-  fx_inputs : Canary_compat.inspect_input list;
+  fx_inputs : Canary_contract.inspect_input list;
       (** input-file references ([C_stub], [Native_lib], [Ocaml_mli],
           [Python_attrs], …) *)
   fx_bodies : (string * string) list;
@@ -229,7 +229,7 @@ type fixture = {
       (** the failure substrings [predict] must yield *)
 }
 
-let contract_fixtures : (Canary_compat.contract_id * fixture) list =
+let contract_fixtures : (Canary_contract.contract_id * fixture) list =
   let c_stub_body = {|{"kind": "c_stub", "path": "fx",
     "requires": ["tiny_sum", "tiny_offset"]}|} in
   let native_body = {|{"kind": "native", "path": "fx",
@@ -245,63 +245,63 @@ let contract_fixtures : (Canary_compat.contract_id * fixture) list =
     "elf": {"soname": "libtiny.so.2", "needed": []}}|} in
   let c5_lib_body = {|{"kind": "native", "path": "fx",
     "versioned_exports": {"tiny_sum": "TINY_1.0"}}|} in
-  [ ( Canary_compat.C1,
+  [ ( Canary_contract.C1,
       (* the LIB-ONLY cell: every declared c_api function exported by
          the built lib (sym_missing at the source, no binding) *)
       { fx_predict =
           Some
-            (Canary_compat_run.c1_decl_predict
+            (Canary_contract_run.c1_decl_predict
                ~declared_functions:
                  [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]);
-        fx_inputs = [ Canary_compat.Native_lib [ "lib.json" ] ];
+        fx_inputs = [ Canary_contract.Native_lib [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c1_lib_body) ];
         fx_expect = [ "tiny_offset" ] } );
-    ( Canary_compat.C4,
+    ( Canary_contract.C4,
       (* the LIB-ONLY cell: the built lib's elf soname vs the declared *)
       { fx_predict =
           Some
-            (Canary_compat_run.c4_decl_predict
+            (Canary_contract_run.c4_decl_predict
                ~declared_soname:"libtiny.so.1");
-        fx_inputs = [ Canary_compat.Native_lib [ "lib.json" ] ];
+        fx_inputs = [ Canary_contract.Native_lib [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c4_lib_body) ];
         fx_expect = [ "soname libtiny.so.2 != declared libtiny.so.1" ] } );
-    ( Canary_compat.C5,
+    ( Canary_contract.C5,
       (* the LIB-ONLY cell: the version script applied — the declared
          tag must appear among the built lib's @@VER annotations *)
       { fx_predict =
           Some
-            (Canary_compat_run.c5_decl_predict ~declared_tags:[ "TINY_2.0" ]);
-        fx_inputs = [ Canary_compat.Versioned_exports [ "lib.json" ] ];
+            (Canary_contract_run.c5_decl_predict ~declared_tags:[ "TINY_2.0" ]);
+        fx_inputs = [ Canary_contract.Versioned_exports [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c5_lib_body) ];
         fx_expect = [ "version TINY_2.0 not exported" ] } );
-    ( Canary_compat.C1,
+    ( Canary_contract.C1,
       { fx_predict = None;
         fx_inputs =
-          [ Canary_compat.C_stub [ "stub.json" ];
-            Canary_compat.Native_lib [ "lib.json" ] ];
+          [ Canary_contract.C_stub [ "stub.json" ];
+            Canary_contract.Native_lib [ "lib.json" ] ];
         fx_bodies =
           [ ("stub.json", c_stub_body); ("lib.json", native_body) ];
         fx_expect = [ "tiny_offset" ] } );
-    ( Canary_compat.C2,
+    ( Canary_contract.C2,
       { fx_predict = None;
-        fx_inputs = [ Canary_compat.Ocaml_mli [ "mli.json" ] ];
+        fx_inputs = [ Canary_contract.Ocaml_mli [ "mli.json" ] ];
         fx_bodies = [ ("mli.json", mli_body) ];
         (* the dotted-name expansion variants *)
         fx_expect = [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ] } );
-    ( Canary_compat.C2,
+    ( Canary_contract.C2,
       { fx_predict = None;
-        fx_inputs = [ Canary_compat.Python_attrs [ "py.json" ] ];
+        fx_inputs = [ Canary_contract.Python_attrs [ "py.json" ] ];
         fx_bodies = [ ("py.json", py_body) ];
         fx_expect = [ "Solver.add"; "add"; "BitVec" ] } ) ]
 
 (** Total lookup over the table. *)
-let row_of (id : Canary_compat.contract_id) : contract_row =
+let row_of (id : Canary_contract.contract_id) : contract_row =
   List.find contract_registry ~f:(fun r ->
-      Poly.equal r.cr_check.Canary_compat.id id)
+      Poly.equal r.cr_check.Canary_contract.id id)
   |> Option.value_exn
        ~message:
          (Printf.sprintf "contract registry: no row for %s"
-            (Canary_compat.string_of_contract_id id))
+            (Canary_contract.string_of_contract_id id))
 
 (* ── THE BELIEF MATRIX (2026-08-18) ──
    The registry's motivation made visible: enumerate every
@@ -321,7 +321,7 @@ let row_of (id : Canary_compat.contract_id) : contract_row =
 type cell_status =
   | Wired
   | Declared
-  | Blocked of Canary_compat.contract_id list
+  | Blocked of Canary_contract.contract_id list
   | Empty
 
 let mark_of_status = function
@@ -349,7 +349,7 @@ let matrix_actions (l : Canary_lang.lang) : Canary_basic.action list =
     Canary_basic.Build_app { Canary_basic.lang = l };
     Canary_basic.Probe_app { Canary_basic.lang = l } ]
 
-let has_fixture (id : Canary_compat.contract_id) : bool =
+let has_fixture (id : Canary_contract.contract_id) : bool =
   List.exists contract_fixtures ~f:(fun (i, _) -> Poly.equal i id)
 
 (** One cell's status under a concrete world. *)
@@ -362,9 +362,9 @@ let cell_status_of (r : contract_row) ~(mechanism : Canary_mechanism.mechanism)
   in
   if not fires then Empty
   else
-    match r.cr_check.Canary_compat.status with
-    | Canary_compat.Blocked deps -> Blocked deps
-    | _ -> if has_fixture r.cr_check.Canary_compat.id then Wired else Declared
+    match r.cr_check.Canary_contract.status with
+    | Canary_contract.Blocked deps -> Blocked deps
+    | _ -> if has_fixture r.cr_check.Canary_contract.id then Wired else Declared
 
 (** THE matrix: rows = contracts, columns = actions, under one world. *)
 let belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
@@ -388,7 +388,7 @@ let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
   let body =
     List.map m ~f:(fun (r, cells) ->
         Printf.sprintf "%-4s     | %s"
-          (Canary_compat.string_of_contract_id r.cr_check.Canary_compat.id)
+          (Canary_contract.string_of_contract_id r.cr_check.Canary_contract.id)
           (String.concat ~sep:" | "
              (List.map cells ~f:(fun (a, st) ->
                   let w =
@@ -403,10 +403,10 @@ let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
     fixture yet). The concrete answer to "what is left to fill". *)
 let fill_list ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
-    (Canary_compat.contract_id * Canary_basic.action) list =
+    (Canary_contract.contract_id * Canary_basic.action) list =
   List.concat_map (belief_matrix ~mechanism ~lang ~provision ())
     ~f:(fun (r, cells) ->
       List.filter_map cells ~f:(fun (a, st) ->
           match st with
-          | Declared -> Some (r.cr_check.Canary_compat.id, a)
+          | Declared -> Some (r.cr_check.Canary_contract.id, a)
           | Wired | Blocked _ | Empty -> None))

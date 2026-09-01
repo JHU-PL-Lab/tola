@@ -82,12 +82,12 @@ let compat_pure_tests =
   in
   let mli_path = write_inspect "ocaml_mli" "mli.json" [ "Llvm.Opcode.UncondBr" ] in
   let py_path  = write_inspect "python"   "py.json"  [ "Solver.add"; "BitVec" ] in
-  let l3_only = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
-      [ Canary_compat.Ocaml_mli [ mli_path ] ] in
-  let py_only = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
-      [ Canary_compat.Python_attrs [ py_path ] ] in
-  let mixed = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
-      [ Canary_compat.Ocaml_mli [ mli_path ]; Canary_compat.Python_attrs [ py_path ] ] in
+  let l3_only = Canary_contract_run.predicted_contains_any_v2 ~resolve:Fn.id
+      [ Canary_contract.Ocaml_mli [ mli_path ] ] in
+  let py_only = Canary_contract_run.predicted_contains_any_v2 ~resolve:Fn.id
+      [ Canary_contract.Python_attrs [ py_path ] ] in
+  let mixed = Canary_contract_run.predicted_contains_any_v2 ~resolve:Fn.id
+      [ Canary_contract.Ocaml_mli [ mli_path ]; Canary_contract.Python_attrs [ py_path ] ] in
   let mem xs s = List.mem xs s ~equal:String.equal in
   [
     { name = "compat.mli_dotted_expansion";
@@ -104,28 +104,28 @@ let compat_pure_tests =
         mem mixed "UncondBr" && mem mixed "BitVec" };
     { name = "compat.empty_inputs";
       check = fun () ->
-        List.is_empty (Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id []) };
+        List.is_empty (Canary_contract_run.predicted_contains_any_v2 ~resolve:Fn.id []) };
     (* A7 phase 1 — the per-contract form. Both fixture inputs are L3
        completeness, so exactly ONE registry row fires (c2) and it carries
        the union of both inputs' expansions. *)
     { name = "compat.by_contract_attribution";
       check = fun () ->
         match
-          Canary_compat_run.predicted_by_contract_v2 ~resolve:Fn.id
-            [ Canary_compat.Ocaml_mli [ mli_path ];
-              Canary_compat.Python_attrs [ py_path ] ]
+          Canary_contract_run.predicted_by_contract_v2 ~resolve:Fn.id
+            [ Canary_contract.Ocaml_mli [ mli_path ];
+              Canary_contract.Python_attrs [ py_path ] ]
         with
         | [ (c, subs) ] ->
-            Poly.equal c.Canary_compat.id Canary_compat.C2
+            Poly.equal c.Canary_contract.id Canary_contract.C2
             && mem subs "UncondBr" && mem subs "BitVec"
         | _ -> false };
     (* the flat form is exactly the flatten of the per-contract form *)
     { name = "compat.by_contract_flatten_equals_v2";
       check = fun () ->
         let flat =
-          Canary_compat_run.predicted_by_contract_v2 ~resolve:Fn.id
-            [ Canary_compat.Ocaml_mli [ mli_path ];
-              Canary_compat.Python_attrs [ py_path ] ]
+          Canary_contract_run.predicted_by_contract_v2 ~resolve:Fn.id
+            [ Canary_contract.Ocaml_mli [ mli_path ];
+              Canary_contract.Python_attrs [ py_path ] ]
           |> List.concat_map ~f:snd
           |> List.dedup_and_sort ~compare:String.compare
         in
@@ -159,17 +159,17 @@ let compat_pure_tests =
     { name = "compat.by_contract_disabled_skips";
       check = fun () ->
         List.is_empty
-          (Canary_compat_run.predicted_by_contract_v2
-             ~disabled:[ Canary_compat.C2 ] ~resolve:Fn.id
-             [ Canary_compat.Ocaml_mli [ mli_path ] ])
+          (Canary_contract_run.predicted_by_contract_v2
+             ~disabled:[ Canary_contract.C2 ] ~resolve:Fn.id
+             [ Canary_contract.Ocaml_mli [ mli_path ] ])
         && List.exists
-             (Canary_compat_run.skipped_checks ~disabled:[ Canary_compat.C2 ] ())
+             (Canary_contract_run.skipped_checks ~disabled:[ Canary_contract.C2 ] ())
              ~f:(fun (c, reason) ->
-               Poly.equal c.Canary_compat.id Canary_compat.C2
+               Poly.equal c.Canary_contract.id Canary_contract.C2
                && String.equal reason "disabled per call")
-        && List.exists (Canary_compat_run.skipped_checks ())
+        && List.exists (Canary_contract_run.skipped_checks ())
              ~f:(fun (c, reason) ->
-               Poly.equal c.Canary_compat.id Canary_compat.C3
+               Poly.equal c.Canary_contract.id Canary_contract.C3
                && String.is_substring reason ~substring:"registry") };
   ]
 
@@ -185,20 +185,20 @@ let compat_pure_tests =
    / c8 cmp_api_faithfulness will add fixtures here as they land — see
    plan.md §6 Step 4 (a). *)
 let cmp_symbol_pure_tests =
-  let stub_of requires : Canary_compat.stub_inspect =
+  let stub_of requires : Canary_contract.stub_inspect =
     { path = "fixture-stub"; requires } in
-  let native_of symbols : Canary_compat.native_inspect =
+  let native_of symbols : Canary_contract.native_inspect =
     { path = "fixture-native"; symbols } in
   [
     { name = "cmp_symbol.compatible";
       check = fun () ->
-        let r = Canary_compat.check_c_compat
+        let r = Canary_contract.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
             ~native_lib:(native_of [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]) in
         match r with Compatible -> true | _ -> false };
     { name = "cmp_symbol.missing_one";
       check = fun () ->
-        let r = Canary_compat.check_c_compat
+        let r = Canary_contract.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
             ~native_lib:(native_of [ "tiny_total"; "tiny_diff"; "tiny_offset" ]) in
         match r with
@@ -207,7 +207,7 @@ let cmp_symbol_pure_tests =
         | _ -> false };
     { name = "cmp_symbol.missing_multiple";
       check = fun () ->
-        let r = Canary_compat.check_c_compat
+        let r = Canary_contract.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff"; "tiny_extra" ])
             ~native_lib:(native_of [ "tiny_offset" ]) in
         match r with
@@ -220,13 +220,13 @@ let cmp_symbol_pure_tests =
         | _ -> false };
     { name = "cmp_symbol.unknown_empty_requires";
       check = fun () ->
-        let r = Canary_compat.check_c_compat
+        let r = Canary_contract.check_c_compat
             ~binding_stub:(stub_of [])
             ~native_lib:(native_of [ "tiny_sum" ]) in
         match r with Unknown -> true | _ -> false };
     { name = "cmp_symbol.unknown_empty_symbols";
       check = fun () ->
-        let r = Canary_compat.check_c_compat
+        let r = Canary_contract.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum" ])
             ~native_lib:(native_of []) in
         match r with Unknown -> true | _ -> false };
@@ -241,25 +241,25 @@ let cmp_symbol_pure_tests =
             ([ "tiny_sum"; "tiny_diff" ]
             @ List.init 98 ~f:(fun i -> "tiny_extra_" ^ Int.to_string i))
         in
-        let r = Canary_compat.check_c_compat ~binding_stub:stub ~native_lib:lib in
+        let r = Canary_contract.check_c_compat ~binding_stub:stub ~native_lib:lib in
         (match r with
          | Compatible_lag { required; provided } -> required = 2 && provided = 100
          | _ -> false)
         (* the witness pair: one IN (required) + one OUT (unused) — the
            warning shows concrete symbols, not bare counts *)
-        && (match Canary_compat.lag_examples ~binding_stub:stub ~native_lib:lib with
+        && (match Canary_contract.lag_examples ~binding_stub:stub ~native_lib:lib with
             | Some (in_use, unused) ->
                 String.equal in_use "tiny_sum"
                 && String.is_prefix unused ~prefix:"tiny_extra_"
             | None -> false)
         && Option.is_none
-             (Canary_compat.lag_examples ~binding_stub:stub
+             (Canary_contract.lag_examples ~binding_stub:stub
                 ~native_lib:(native_of [ "tiny_sum"; "tiny_diff" ])) };
     { name = "cmp_symbol.compatible_not_lag_when_healthy";
       check = fun () ->
         (* 2 of 3 provided: the consumer covers most of the provider —
            plain Compatible, no warning *)
-        let r = Canary_compat.check_c_compat
+        let r = Canary_contract.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
             ~native_lib:(native_of [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]) in
         match r with Compatible -> true | _ -> false };
@@ -272,7 +272,7 @@ let cmp_abi_pure_tests =
   [
     { name = "cmp_abi.compatible_soname_in_needed";
       check = fun () ->
-        let r = Canary_compat.check_abi
+        let r = Canary_contract.check_abi
             ~provider_soname:(Some "libtiny.so.1")
             ~consumer_needed:[ "libc.so.6"; "libtiny.so.1" ] in
         match r with Abi_compatible -> true | _ -> false };
@@ -281,7 +281,7 @@ let cmp_abi_pure_tests =
         (* e2-shape: provider bumped to libtiny.so.2 but consumer still
            references libtiny.so.1. The Abi_mismatch carries the
            expected (provider) SONAME for diagnostics. *)
-        let r = Canary_compat.check_abi
+        let r = Canary_contract.check_abi
             ~provider_soname:(Some "libtiny.so.2")
             ~consumer_needed:[ "libc.so.6"; "libtiny.so.1" ] in
         match r with
@@ -297,7 +297,7 @@ let cmp_abi_pure_tests =
            in the list. (Could be relaxed to Compatible if "consumer
            doesn't need our lib at all" is fine; today's check is
            strict.) *)
-        let r = Canary_compat.check_abi
+        let r = Canary_contract.check_abi
             ~provider_soname:(Some "libtiny.so.1")
             ~consumer_needed:[ "libc.so.6" ] in
         match r with
@@ -306,13 +306,13 @@ let cmp_abi_pure_tests =
         | _ -> false };
     { name = "cmp_abi.unknown_no_provider_soname";
       check = fun () ->
-        let r = Canary_compat.check_abi
+        let r = Canary_contract.check_abi
             ~provider_soname:None
             ~consumer_needed:[ "libtiny.so.1" ] in
         match r with Abi_unknown -> true | _ -> false };
     { name = "cmp_abi.unknown_empty_needed";
       check = fun () ->
-        let r = Canary_compat.check_abi
+        let r = Canary_contract.check_abi
             ~provider_soname:(Some "libtiny.so.1")
             ~consumer_needed:[] in
         match r with Abi_unknown -> true | _ -> false };
@@ -324,7 +324,7 @@ let cmp_abi_pure_tests =
    type-equivalence comparison would also map C types ↔ OCaml types;
    left for a later refinement. *)
 let cmp_type_pure_tests =
-  let open Canary_compat in
+  let open Canary_contract in
   [
     { name = "cmp_type.compatible_arity_match";
       check = fun () ->
@@ -404,7 +404,7 @@ let cmp_type_pure_tests =
    modulo declared renames).
    Catches the new tiny scenario e14 api_repack_stub_orphan. *)
 let cmp_api_repack_pure_tests =
-  let open Canary_compat in
+  let open Canary_contract in
   [
     { name = "cmp_api_repack.compatible_exact_match";
       check = fun () ->
@@ -469,10 +469,10 @@ let cmp_api_repack_pure_tests =
    Catches tiny scenario e4 api_faithful when the action pipeline
    wires c8 (today e4 is silent at the c1/c2/c3 level). *)
 let cmp_api_faithfulness_pure_tests =
-  let open Canary_compat in
-  let stub_of requires : Canary_compat.stub_inspect =
+  let open Canary_contract in
+  let stub_of requires : Canary_contract.stub_inspect =
     { path = "fixture-stub"; requires } in
-  let native_of symbols : Canary_compat.native_inspect =
+  let native_of symbols : Canary_contract.native_inspect =
     { path = "fixture-native"; symbols } in
   [
     { name = "cmp_faithful.all_compatible";
@@ -709,7 +709,7 @@ let cmp_sym_version_pure_tests =
   [
     { name = "cmp_sym_version.compatible_exact_match";
       check = fun () ->
-        let r = Canary_compat.check_sym_version
+        let r = Canary_contract.check_sym_version
             ~provider_versioned_exports:
               [ "malloc", "GLIBC_2.17"; "__cxa_throw", "GLIBC_2.3.4" ]
             ~consumer_required_versions:[ "GLIBC_2.17" ] in
@@ -717,7 +717,7 @@ let cmp_sym_version_pure_tests =
     { name = "cmp_sym_version.compatible_subset";
       check = fun () ->
         (* Consumer requires a subset of what provider exports. *)
-        let r = Canary_compat.check_sym_version
+        let r = Canary_contract.check_sym_version
             ~provider_versioned_exports:
               [ "malloc", "GLIBC_2.31"; "memcpy", "GLIBC_2.17";
                 "__cxa_throw", "GLIBC_2.3.4" ]
@@ -727,7 +727,7 @@ let cmp_sym_version_pure_tests =
       check = fun () ->
         (* The glibc-musl case: consumer built against GLIBC_2.31 but
            running on a host with only GLIBC_2.17 exports. *)
-        let r = Canary_compat.check_sym_version
+        let r = Canary_contract.check_sym_version
             ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
             ~consumer_required_versions:[ "GLIBC_2.31" ] in
         match r with
@@ -736,7 +736,7 @@ let cmp_sym_version_pure_tests =
         | _ -> false };
     { name = "cmp_sym_version.missing_multiple";
       check = fun () ->
-        let r = Canary_compat.check_sym_version
+        let r = Canary_contract.check_sym_version
             ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
             ~consumer_required_versions:
               [ "GLIBC_2.31"; "GLIBC_2.34"; "GLIBC_2.17" ] in
@@ -749,7 +749,7 @@ let cmp_sym_version_pure_tests =
     { name = "cmp_sym_version.unknown_no_consumer_req";
       check = fun () ->
         (* Consumer has no @VER requirements at all — nothing to check. *)
-        let r = Canary_compat.check_sym_version
+        let r = Canary_contract.check_sym_version
             ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
             ~consumer_required_versions:[] in
         match r with Sym_version_unknown -> true | _ -> false };
@@ -757,7 +757,7 @@ let cmp_sym_version_pure_tests =
       check = fun () ->
         (* Tiny baseline today: provider has no @@VER annotations even
            though it could in principle. We can't decide either way. *)
-        let r = Canary_compat.check_sym_version
+        let r = Canary_contract.check_sym_version
             ~provider_versioned_exports:[]
             ~consumer_required_versions:[ "GLIBC_2.17" ] in
         match r with Sym_version_unknown -> true | _ -> false };
@@ -790,13 +790,13 @@ let c2_prediction_pure_tests =
   [
     { name = "c2_prediction.mli_no_missing_no_strings";
       check = fun () ->
-        let r = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
-            [ Canary_compat.Ocaml_mli [ mli_clean ] ] in
+        let r = Canary_contract_run.predicted_contains_any_v2 ~resolve:Fn.id
+            [ Canary_contract.Ocaml_mli [ mli_clean ] ] in
         List.is_empty r };
     { name = "c2_prediction.python_no_missing_no_strings";
       check = fun () ->
-        let r = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
-            [ Canary_compat.Python_attrs [ py_clean ] ] in
+        let r = Canary_contract_run.predicted_contains_any_v2 ~resolve:Fn.id
+            [ Canary_contract.Python_attrs [ py_clean ] ] in
         List.is_empty r };
   ]
 

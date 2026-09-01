@@ -122,7 +122,7 @@ All six stages now have a standalone doc.
 | [check_evaluation.md](design/check_evaluation.md) | … `canary_gh.ml` holds no verdict logic — a check is an action the runner interprets and every backend merely renders. Records the live finding that CI evaluates NO `check_pre`/`check_post`, so a green job means only "every command exited 0" |
 | [step_identity.md](design/step_identity.md) | … a step tag is (action × location KIND) alone — `tag_of_probe_lib_location` called unconditionally, and no tag anywhere containing a PM name |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
-| [agreement_registry_audit.md](design/agreement_registry.md) | … every agreement in the catalogue resolves to a check that can ground it. The producer landed (`surface/canary_contract_registry.ml`); the rungs did not. Absorbed `contract_registry.md` 2026-08-21 |
+| [agreement_registry_audit.md](design/agreement_registry.md) | … every agreement in the catalogue resolves to a check that can ground it. The producer landed (`contract/canary_contract_registry.ml`); the rungs did not. Absorbed `contract_registry.md` 2026-08-21 |
 
 ### Retired
 

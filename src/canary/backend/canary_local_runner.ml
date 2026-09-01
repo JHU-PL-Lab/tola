@@ -535,30 +535,30 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
            [predicted_contains_any_v2] result). *)
         let derived_predictions inputs =
           let fired =
-            Canary_compat_run.predicted_by_contract_v2
+            Canary_contract_run.predicted_by_contract_v2
               ~disabled:step.disabled_contracts ~resolve:resolve_input inputs
           in
           List.iter fired
-            ~f:(fun ((c : Canary_compat.contract_check), subs) ->
+            ~f:(fun ((c : Canary_contract.contract_check), subs) ->
               log ~event:"compat_predicted"
                 ~detail:(Some (Printf.sprintf "%s %s: %d substring(s)"
-                                 (Canary_compat.string_of_contract_id c.id)
+                                 (Canary_contract.string_of_contract_id c.id)
                                  c.name (List.length subs))));
           if List.is_empty fired then
             log ~event:"compat_predicted" ~detail:(Some "no contract fired");
           (* the c1 coverage WARNING (2026-08-17): a passing c1 whose
              consumer surface covers a small fraction of the provider's
              may be out-of-date — a note, never a failure *)
-          (match Canary_compat_run.c1_lag_note ~resolve:resolve_input inputs with
+          (match Canary_contract_run.c1_lag_note ~resolve:resolve_input inputs with
            | Some note -> log ~event:"compat_note" ~detail:(Some note)
            | None -> ());
           List.iter
-            (Canary_compat_run.skipped_checks
+            (Canary_contract_run.skipped_checks
                ~disabled:step.disabled_contracts ())
-            ~f:(fun ((c : Canary_compat.contract_check), reason) ->
+            ~f:(fun ((c : Canary_contract.contract_check), reason) ->
               log ~event:"contract_skipped"
                 ~detail:(Some (Printf.sprintf "%s %s: %s"
-                                 (Canary_compat.string_of_contract_id c.id)
+                                 (Canary_contract.string_of_contract_id c.id)
                                  c.name reason)));
           fired
         in
@@ -572,9 +572,9 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
            confirmed expected failure. *)
         let confirming_contracts fired =
           List.filter_map fired
-            ~f:(fun ((c : Canary_compat.contract_check), subs) ->
+            ~f:(fun ((c : Canary_contract.contract_check), subs) ->
               if output_contains_any ~output_dir:out subs then
-                Some (Canary_compat.string_of_contract_id c.id)
+                Some (Canary_contract.string_of_contract_id c.id)
               else None)
         in
         let expectation_ok = match step.expectation with

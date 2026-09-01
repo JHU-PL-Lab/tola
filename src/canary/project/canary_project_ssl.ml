@@ -74,7 +74,7 @@ let app_nlv =
       to the FETCH LIB step, watchlisted with [app_nlv.requires] —
       native_library_version missing at 0.6.0 → the derived must-fail. *)
 let ssl_contract_bindings : Canary_scenario.contract_binding list =
-  let module CC = Canary_compat in
+  let module CC = Canary_contract in
   let module CS = Canary_scenario in
   [ { contract = CC.C2; lang = Canary_lang.OCaml;
       firings =

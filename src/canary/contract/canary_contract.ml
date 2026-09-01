@@ -1,4 +1,4 @@
-(** [Canary_compat] — pure surface-theory comparators (surface/).
+(** [Canary_contract] — pure surface-theory comparators (surface/).
 
     The theoretical half of the compat machinery: input types and the
     c1..c8 comparator functions. Pure; the only I/O is reading a JSON
@@ -14,7 +14,7 @@
       [check_sym_version], [check_type], [check_api_repack],
       [check_api_faithfulness]
 
-    The companion {!Canary_compat_run} module (same dir) carries the
+    The companion {!Canary_contract_run} module (same dir) carries the
     action-graph integration half: [predicted_contains_any_v2] (the
     ADT-to-substring derivation that consumes [inspect_input] declared
     above) + the CLI commands [run] / [run_for_project] /
@@ -70,7 +70,7 @@ let get_string_list j name =
 
     Unified on 2026-06-01 (Phase 4): previously this type lived twice,
     as [Canary.compat_inspect_input] (paths : string list) on the
-    declaration side and as [Canary_compat_run.typed_input] (single
+    declaration side and as [Canary_contract_run.typed_input] (single
     string) after resolution, with a manual 20-line translation in
     [Canary_action] and [Canary_gh]. Constructors map to surface
     roles:
@@ -652,7 +652,7 @@ let lag_examples ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
    turns [inspect_input list] into expected failure substrings.
 
    The concrete predicate implementations + registered list live in
-   {!Canary_compat_run} (which has the dispatch entry
+   {!Canary_contract_run} (which has the dispatch entry
    [predicted_contains_any_v2]). This file defines only the types so
    they're available to anyone consuming the theory layer. *)
 
@@ -714,7 +714,7 @@ let string_of_contract_status = function
   | Stubbed -> "stubbed"
 
 (** One entry in the contract registry. [predict] consumes the same
-    [inspect_input list + ~resolve] that {!Canary_compat_run}'s top-
+    [inspect_input list + ~resolve] that {!Canary_contract_run}'s top-
     level dispatcher does, and returns the substrings this contract
     predicts the probe.log will contain on failure. *)
 type contract_check = {

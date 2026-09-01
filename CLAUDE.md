@@ -206,7 +206,9 @@ order (also in [`src/canary/dune`](src/canary/dune)):
 ```
 base/      vocabulary — types every other layer uses (incl. API-surface
            claim types and output-tree naming conventions)
-surface/   surface theory — c1..c8 comparators + compat runner
+contract/  THE AGREEMENT LAYER (was surface/, 2026-09-01) — the agreement
+           registry + c1..c8 comparators/predicts; a check is an agreement
+           beyond a tool's direct result, so tool wrappers stay in tool/
 tool/      real-world wrappers — PM drivers, inspector drivers, build cmds,
            toolchain config (incl. per-language probe specs)
 action/    action graph — rules, step model, step builder, paths
@@ -231,7 +233,7 @@ main/      the RUNNING layer (canary_main library, 2026-08-14):
            in TEST code only
 ```
 
-`base/`→`surface/`→`tool/`→`action/`→`backend/` is the dependency
+`base/`→`contract/`→`tool/`→`action/`→`backend/` is the dependency
 order; `project/`, `main/` and `test/` consume the upper layers.
 Dependency direction: canary_lib ← canary_project ← canary_main
 (never the reverse).
@@ -276,8 +278,9 @@ reconciling with, not duplicating.
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
 | `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
-| `src/canary/surface/canary_compat.ml`               | Pure theory: `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) + contract registry vocabulary (`contract_id`, `contract_status`, `contract_check`) |
-| `src/canary/surface/canary_compat_run.ml`           | Drives the contract: cached-summary lookup + per-contract predict closures (`c1_predict`, …) + `registered_checks` list + `predicted_contains_any_v2 ~resolve` (4-line iterator over the registry) + CLI run/verify |
+| `src/canary/contract/canary_contract_registry.ml`   | **THE AGREEMENT REGISTRY** — one row per agreement (invariant as falsifier, the artifact surfaces it reads, firing over the action catalogue, expectation source, fault tags) + the counterexample fixtures + the belief matrix. Design: `doc/canary/design/agreement_registry.md` |
+| `src/canary/contract/canary_contract.ml`            | Pure theory (was `canary_compat.ml`): `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) + registry vocabulary (`contract_id`, `contract_status`, `contract_check`) |
+| `src/canary/contract/canary_contract_run.ml`        | Drives the contract (was `canary_compat_run.ml`): cached-summary lookup + per-contract predict closures (`c1_predict`, …) + `registered_checks` list + `predicted_contains_any_v2 ~resolve` (4-line iterator over the registry) + CLI run/verify |
 | `src/canary/tool/canary_toolchain.ml`               | OCaml toolchain types, opam packaging helpers, `pip_install_cmd` / `python_probe_only_cmd`             |
 | `src/canary/tool/canary_build_cmd.ml`               | Generic build-tool primitives: `cmake_configure_cmd`, `ninja_build_cmd`, `dune_build_cmd`, `with_marker` |
 | `src/canary/tool/canary_store_config.ml`            | `provision_spec` — ONE origin per admissible provision (`Fetched of provider` \| `Built_from of artifact_info` \| `Installed` \| `Vendored_at` \| `Absent`; 2026-08-25, replacing the coarse-universe + separate-provider pair) + `provision_of_spec` / `producing_action_of` / `fetch_provider_of`; `provider` (the fetch origins) + `store_config` + `binding_store` / `lib_store` + `binding_pm` |
@@ -379,7 +382,7 @@ renders GH Actions YAML; `backend/canary_diagram.ml` renders Mermaid;
 `actions.log`. Probe expectations come from `Expect_success` |
 `Expect_failure { contains_any }` | `Expect_compat_failure { inputs;
 version_info }` — the compat-failure inputs are read at runtime by
-`surface/canary_compat_run.ml`'s `predicted_contains_any_v2 ~resolve`
+`contract/canary_contract_run.ml`'s `predicted_contains_any_v2 ~resolve`
 which iterates the registered contracts over the inputs bag to compute
 predicted failure substrings (L0 C-symbol diff + L3 watchlist-missing
 etc.). The top-level project identity is `Canary_project_run.project_run`

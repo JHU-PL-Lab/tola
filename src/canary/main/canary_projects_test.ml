@@ -283,7 +283,7 @@ let z3_lowering_derived : Canary_project_test.pure_test =
       (match lower (B.Probe_binding Canary_lang.Python) pip_loc with
        | Canary_step_model.Expect_compat_derived { inputs; _ } ->
            List.exists inputs ~f:(function
-             | Canary_compat.Python_attrs _ -> true
+             | Canary_contract.Python_attrs _ -> true
              | _ -> false)
        | _ -> false)
       && sm_is_success (lower (B.Probe_binding Canary_lang.OCaml) None)
@@ -306,15 +306,15 @@ let llvm_lowering_derived : Canary_project_test.pure_test =
       (match lower (B.Probe_binding Canary_lang.OCaml) None with
        | Canary_step_model.Expect_compat_derived { inputs; _ } ->
            let has p = List.exists inputs ~f:p in
-           has (function Canary_compat.C_stub _ -> true | _ -> false)
-           && has (function Canary_compat.Native_lib _ -> true | _ -> false)
-           && has (function Canary_compat.Ocaml_mli _ -> true | _ -> false)
+           has (function Canary_contract.C_stub _ -> true | _ -> false)
+           && has (function Canary_contract.Native_lib _ -> true | _ -> false)
+           && has (function Canary_contract.Ocaml_mli _ -> true | _ -> false)
            (* dev-chain exemption: pack/build-tree path FIRST per input *)
            && List.for_all inputs ~f:(function
-                | Canary_compat.C_stub (p :: _)
-                | Canary_compat.Ocaml_mli (p :: _) ->
+                | Canary_contract.C_stub (p :: _)
+                | Canary_contract.Ocaml_mli (p :: _) ->
                     String.is_prefix p ~prefix:"pack_binding_ocaml/"
-                | Canary_compat.Native_lib (p :: _) ->
+                | Canary_contract.Native_lib (p :: _) ->
                     String.is_prefix p ~prefix:"probe_lib/"
                 | _ -> true)
        | _ -> false)
@@ -2250,9 +2250,9 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
           String.equal
             (Canary_basic.step_dir_of_tag binding_tag)
             "build_binding/ocaml"
-          && (match Canary_compat_run.inputs_of_contract Canary_compat.C1 Canary_lang.OCaml with
-              | [ Canary_compat.C_stub [ stub_rel ];
-                  Canary_compat.Native_lib [ lib_rel ] ] ->
+          && (match Canary_contract_run.inputs_of_contract Canary_contract.C1 Canary_lang.OCaml with
+              | [ Canary_contract.C_stub [ stub_rel ];
+                  Canary_contract.Native_lib [ lib_rel ] ] ->
                   String.is_prefix stub_rel ~prefix:(binding_tag ^ "/")
                   && String.equal lib_rel "build_lib/inspect.json"
               | _ -> false)

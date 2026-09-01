@@ -200,11 +200,11 @@ let action_cmd =
      the flag stays parsed so existing invocations don't break. *)
   let run project _quick failfast cache_path disable_contract_csv thin refs () =
     let root = "_out" in
-    let cli_disabled = Canary_compat.contract_ids_of_csv disable_contract_csv in
+    let cli_disabled = Canary_contract.contract_ids_of_csv disable_contract_csv in
     if cli_disabled <> [] then
       Fmt.pr "[disable-contract] skipping: %s@."
         (String.concat ", "
-           (List.map Canary_compat.string_of_contract_id cli_disabled));
+           (List.map Canary_contract.string_of_contract_id cli_disabled));
     (* the run config: --thin sets the policy variant, --refs
        narrows the source-repo set (orthogonal; the batch sets its own
        per-project config tier-based inside [Canary_batch.run]). *)
@@ -1307,7 +1307,7 @@ let compat_cmd =
   let run project variant stub_path lib_path () =
     let rc =
       match (stub_path, lib_path) with
-      | Some s, Some l -> Canary_compat_run.run ~stub_path:s ~lib_path:l
+      | Some s, Some l -> Canary_contract_run.run ~stub_path:s ~lib_path:l
       | _ -> (
           match project with
           | None ->
@@ -1317,7 +1317,7 @@ let compat_cmd =
               2
           | Some p ->
               let root = Stdlib.Sys.getcwd () in
-              Canary_compat_run.run_for_project ~root ~project:p ~variant)
+              Canary_contract_run.run_for_project ~root ~project:p ~variant)
     in
     Stdlib.exit rc
   in
@@ -1343,7 +1343,7 @@ let verify_cmd =
   in
   let run project variant () =
     let root = Stdlib.Sys.getcwd () in
-    Stdlib.exit (Canary_compat_run.verify_for_project ~root ~project ~variant)
+    Stdlib.exit (Canary_contract_run.verify_for_project ~root ~project ~variant)
   in
   Cmd.v
     (Cmd.info "verify"

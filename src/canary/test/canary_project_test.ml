@@ -811,8 +811,8 @@ let source_fetch_local_pin : pure_test =
 let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_matches_tiny_convention";
     check = (fun () ->
-      let module CC = Canary_compat in
-      let template = Canary_compat_run.inputs_of_contract in
+      let module CC = Canary_contract in
+      let template = Canary_contract_run.inputs_of_contract in
       let eq c l expected =
         Poly.equal (template c l) expected
       in
@@ -1146,7 +1146,7 @@ let agnostic_expectation_test : pure_test =
   { name = "scenario.lower_expectation_agnostic_c1";
     check = (fun () ->
       let module CS = Canary_scenario in
-      let module CC = Canary_compat in
+      let module CC = Canary_contract in
       let module SM = Canary_step_model in
       let bindings =
         CS.[ { contract = CC.C1; lang = ocaml;
@@ -1344,13 +1344,13 @@ let contract_registry_complete_pin : pure_test =
     check =
       (fun () ->
         let module CR = Canary_contract_registry in
-        let ids = Canary_compat.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
+        let ids = Canary_contract.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
         let rows = CR.contract_registry in
         (* one row per id, non-empty invariant, exactly one tag *)
         let rows_ok =
           List.for_all ids ~f:(fun id ->
               match List.filter rows ~f:(fun r ->
-                  Poly.equal r.CR.cr_check.Canary_compat.id id) with
+                  Poly.equal r.CR.cr_check.Canary_contract.id id) with
               | [ r ] ->
                   (not (String.is_empty r.CR.cr_invariant))
                   && List.length r.CR.cr_fault_tags = 1
@@ -1358,12 +1358,12 @@ let contract_registry_complete_pin : pure_test =
         in
         (* every registered check referenced exactly once *)
         let checks_ok =
-          List.for_all Canary_compat_run.registered_checks
+          List.for_all Canary_contract_run.registered_checks
             ~f:(fun ck ->
               List.count rows ~f:(fun r ->
-                  Poly.equal r.CR.cr_check.Canary_compat.id ck.id)
+                  Poly.equal r.CR.cr_check.Canary_contract.id ck.id)
               = 1)
-          && List.length rows = List.length Canary_compat_run.registered_checks
+          && List.length rows = List.length Canary_contract_run.registered_checks
         in
         (* the tag mapping (scenario.md's catalogue) *)
         let tag id =
@@ -1460,7 +1460,7 @@ let contract_fixture_tests : pure_test list =
         Stdlib.close_out oc);
     let predict =
       Option.value fx.CR.fx_predict
-        ~default:(CR.row_of _id).cr_check.Canary_compat.predict
+        ~default:(CR.row_of _id).cr_check.Canary_contract.predict
     in
     let got = predict ~resolve fx.CR.fx_inputs in
     List.for_all fx.CR.fx_expect ~f:(fun s ->
@@ -1469,8 +1469,8 @@ let contract_fixture_tests : pure_test list =
   let covered =
     List.map CR.contract_fixtures ~f:fst
     |> List.dedup_and_sort ~compare:(fun a b ->
-           String.compare (Canary_compat.string_of_contract_id a)
-             (Canary_compat.string_of_contract_id b))
+           String.compare (Canary_contract.string_of_contract_id a)
+             (Canary_contract.string_of_contract_id b))
   in
   [ { name = "contracts.fixtures_execute";
       check = (fun () -> List.for_all CR.contract_fixtures ~f:execute) };
@@ -1478,7 +1478,7 @@ let contract_fixture_tests : pure_test list =
        (their pair cells, C3/C7 blocked, C6 pend their fixtures) *)
     { name = "contracts.fixtures_complete";
       check = (fun () ->
-          Poly.equal covered Canary_compat.[ C1; C2; C4; C5 ]) } ]
+          Poly.equal covered Canary_contract.[ C1; C2; C4; C5 ]) } ]
 
 (* The matrix's mark extraction (2026-08-17, the result table): a
    synthetic actions.log (variant_start-scoped verdict events) drives

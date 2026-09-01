@@ -32,11 +32,16 @@
 ;                      data, no theory of its own. canary_lang is its
 ;                      own file so canary_store and canary_basic can
 ;                      both depend on it without a cycle.
-;   surface/ Layer 1 — surface theory: the API-surface declaration types,
-;                      the c1..c8 contracts (WHAT to check — canary_compat,
-;                      canary_compat_run, incl. the contract×mechanism input
-;                      template inputs_of_contract). Pure, no I/O beyond
-;                      Yojson.from_file.
+;   contract/ Layer 1 — THE AGREEMENT LAYER (was surface/, renamed
+;                      2026-09-01): what canary BELIEVES and how it is
+;                      falsified — the registry of agreements
+;                      (canary_contract_registry), the c1..c8 comparators
+;                      and predicts (canary_contract, canary_contract_run),
+;                      the contract×mechanism input template. A check is an
+;                      agreement BEYOND a tool's direct result, which is why
+;                      the tool wrappers stay in tool/. Pure, no I/O beyond
+;                      Yojson.from_file. Design:
+;                      doc/canary/design/agreement_registry.md.
 ;   tool/    Layer 2 — real-world tool wrappers: per-PM drivers
 ;                      (canary_pm_{apt,brew,opam,pip}), inspector drivers
 ;                      that shell out to inspect_*.py

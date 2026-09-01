@@ -1,7 +1,7 @@
-(** [Canary_compat_run] — drives the surface-theory compat contract over
+(** [Canary_contract_run] — drives the surface-theory compat contract over
     the action graph's cached artifacts (surface/, next to the contract).
 
-    Companion to {!Canary_compat}: that module is the pure theory (types
+    Companion to {!Canary_contract}: that module is the pure theory (types
     and c1..c8 comparators); this module locates the cached inspector
     JSONs in [_out/canary/projects/<project>/<step>/], hands them to the
     pure comparators, and derives the expected failure substrings the
@@ -20,7 +20,7 @@
     - Reporting: [print_result]. *)
 
 open Base
-open Canary_compat
+open Canary_contract
 
 
 (* ── Reporting ── *)
@@ -329,7 +329,7 @@ let predicted_contains_any
    [predicted_contains_any_v2] is a 4-line iterator over the registry;
    adding a new c* = one more registry entry + one predict function.
 
-   The types live in {!Canary_compat} so consumers can name
+   The types live in {!Canary_contract} so consumers can name
    [contract_id] / [contract_status] without opening this file. *)
 
 let pick_existing ~resolve paths =
@@ -424,10 +424,10 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
         | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
-      let prov = Canary_compat.load_versioned_symbols pp in
-      let cons = Canary_compat.load_versioned_symbols cp in
+      let prov = Canary_contract.load_versioned_symbols pp in
+      let cons = Canary_contract.load_versioned_symbols cp in
       let consumer_required = List.map cons.req_counts ~f:fst in
-      (match Canary_compat.check_sym_version
+      (match Canary_contract.check_sym_version
                ~provider_versioned_exports:prov.exports
                ~consumer_required_versions:consumer_required with
        | Sym_version_missing { missing_versions } -> missing_versions
@@ -451,9 +451,9 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
       ~f:(function Abi_surface ps -> pick_existing ~resolve ps | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
-      let prov = Canary_compat.load_abi_surface pp in
-      let cons = Canary_compat.load_abi_surface cp in
-      (match Canary_compat.check_abi
+      let prov = Canary_contract.load_abi_surface pp in
+      let cons = Canary_contract.load_abi_surface cp in
+      (match Canary_contract.check_abi
                ~provider_soname:prov.soname
                ~consumer_needed:cons.needed with
        | Abi_mismatch _ ->
@@ -587,8 +587,8 @@ let c6_predict ~resolve (inputs : inspect_input list) : string list =
                  | _ -> None) in
   match header_path, stub_path with
   | Some hp, Some sp ->
-      let h = Canary_compat.load_typed_signatures hp in
-      let s = Canary_compat.load_typed_signatures sp in
+      let h = Canary_contract.load_typed_signatures hp in
+      let s = Canary_contract.load_typed_signatures sp in
       List.filter_map h.functions ~f:(fun (name, h_sig) ->
         match List.Assoc.find s.functions name ~equal:String.equal with
         | None -> None
@@ -639,7 +639,7 @@ let registered_checks : contract_check list = [
     [resolve] turns a per-input relative path (e.g.
     [pack_binding_ocaml/inspect_stub.json]) into an absolute path. The
     runner picks the first input path whose resolved form exists on
-    disk, then hands it to the pure comparators in {!Canary_compat}.
+    disk, then hands it to the pure comparators in {!Canary_contract}.
 
     [?disabled] is the per-call list of contracts to skip on top of
     the registry's own [enabled] flag. Typical sources:
@@ -683,7 +683,7 @@ let skipped_checks ?(disabled = []) () : (contract_check * string) list =
       Some
         ( c,
           "disabled in registry ("
-          ^ Canary_compat.string_of_contract_status c.status
+          ^ Canary_contract.string_of_contract_status c.status
           ^ ")" )
     else None)
 
@@ -865,9 +865,9 @@ let verify_for_project ~root ~project ~variant =
    Mechanism refinement (dynamic bindings have no stub input) comes
    with the mechanism axis (M2 step 3). *)
 
-let inputs_of_contract ?mechanism (c : Canary_compat.contract_id)
-    (l : Canary_lang.lang) : Canary_compat.inspect_input list =
-  let open Canary_compat in
+let inputs_of_contract ?mechanism (c : Canary_contract.contract_id)
+    (l : Canary_lang.lang) : Canary_contract.inspect_input list =
+  let open Canary_contract in
   (* mechanism defaults to the language's default (static for OCaml/Python
      today) — current callers unchanged; a dynamic binding (ctypes/dynlink)
      has NO stub input (it dlopens at runtime). *)

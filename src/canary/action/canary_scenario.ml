@@ -87,7 +87,7 @@ type manifest =
     this mutation today; the mutation constructs a bad
     artifact that no comparator observes. *)
 type detector =
-  | Wired of Canary_compat.contract_id
+  | Wired of Canary_contract.contract_id
   | Detector_gap
 
 type mutation = {
@@ -179,7 +179,7 @@ let firing_site_of_action : Canary_basic.action -> firing_site option =
     context through to the emitted [step_expectation]:
 
     - [From_artifact { inputs; version_info }] — the contract's
-      [predict] closure (in {!Canary_compat_run}) reads the cached
+      [predict] closure (in {!Canary_contract_run}) reads the cached
       inspect JSONs listed in [inputs] and emits predicted failure
       substrings. Static source, dynamic check (grep of probe.log /
       build.log).
@@ -194,7 +194,7 @@ let firing_site_of_action : Canary_basic.action -> firing_site option =
       attempts to declare a scenario that would rely on it. *)
 type expectation_source =
   | From_artifact of {
-      inputs : Canary_compat.inspect_input list;
+      inputs : Canary_contract.inspect_input list;
       version_info : Canary_step_model.version_info option;
     }
   | From_behavior_grep of {
@@ -263,7 +263,7 @@ type firing = {
     contract can fire at multiple sites; empty means "this contract is
     silent for this language". *)
 type contract_binding = {
-  contract : Canary_compat.contract_id;
+  contract : Canary_contract.contract_id;
   lang     : Canary_lang.lang;
   firings  : firing list;
 }
@@ -275,7 +275,7 @@ type contract_binding = {
     a mutation, rather than silently emit Expect_success. *)
 let binding_has_live_firing
     (bindings : contract_binding list)
-    (contract : Canary_compat.contract_id)
+    (contract : Canary_contract.contract_id)
     (lang : Canary_lang.lang)
   : bool
   =
