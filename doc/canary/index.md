@@ -175,6 +175,7 @@ candidate selection and the failure taxonomy now in
 | ------------------------------------------------ | ------------------------------------------------------------------------------- |
 | [opam.md](surveys/opam.md)                       | Survey of 4460 opam packages: pattern A/B/C/D/E classification, revdep rankings |
 | [conf_packages.md](surveys/conf_packages.md)     | Classification of all 333 `conf-*` packages by build complexity; §G is the MEASURED landing ranking |
+| [lib_selection.md](surveys/lib_selection.md)               | **How an OCaml package says WHICH native library to use** — conf-* (a lossy conversion to a distro package name) vs torch's env-driven configurator chain; who actually ships libtorch per channel; the torch×libtorch constraint table and the depends→depopts weakening; co-provider support today |
 | [conf_mechanism.md](surveys/conf_mechanism.md)   | How a `conf-*` package works (the live `conf-gmp.5`) + the position that opam should drop them |
 | [conda_forge.md](surveys/conda_forge.md)         | conda-forge as a prebuilt-binary channel — feature/issue/experience + measured dependency closures |
 | [packaging_study.md](surveys/packaging_study.md) | Older packaging study (pre-rearchitecture)                                      |

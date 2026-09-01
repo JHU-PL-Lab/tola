@@ -379,3 +379,87 @@ output identical, and took that for a frozen spec. It is not: that dump
 carries step tags and deps, never command text, so it cannot show a
 command difference at all. sqlite's only "difference" there was its
 PM-keyed step TAG. The command-level survey above is what settles it.
+
+## 9. The toolchain axis — real, deliberately not enumerated, and it still has to be recorded (2026-09-01)
+
+User, after a C-compiler bug in the torch fork: *"this is a good feature
+that our framework shall support different c compiler in use, which is a
+very special case (which is also in our non-intended enumeration). It's
+like a special exclusive-combination in the enumeration. Some potential
+application e.g. different std c lib or linker. I was saying we don't
+usually and intend to enumerate among them but we may need to support it
+with some world customization."*
+
+### 9a. The case that raised it
+
+torch's C stubs are machine-generated and pass `const char *` where the
+generated header says `char *`. Recent clang makes the function-pointer
+form of that an ERROR, so the fork's macOS branch hardcoded
+`-Wno-error=incompatible-function-pointer-types`. That spelling is
+clang's; GCC has no such warning name and **refuses the whole option**
+rather than ignoring it:
+
+```
+cc1: error: '-Wno-error=incompatible-function-pointer-types':
+     no option '-Wincompatible-function-pointer-types'
+```
+
+So a fix for one compiler broke the other, and it broke at the *option
+parser*, before any of the code in question was reached. The fix
+(`canary/build-fixes` on the torch fork) is to FEATURE-TEST rather than
+branch: the existing `dune-configurator` compiles a trivial program with
+each candidate flag and keeps what is accepted — clang keeps its
+spelling, GCC gets `-Wno-error=incompatible-pointer-types`, and the dune
+file names no platform.
+
+### 9b. Why this is not the platform axis
+
+`Canary_store.platform ()` (§2a) is one carried value, and the system PM
+is derived from it. The C toolchain is a SIBLING value of the same shape
+— detected once, carried, consumed only at realize — but it is not
+derivable from the platform: WSL can have gcc *and* clang installed, and
+macOS's `cc` is clang while a brew gcc may sit beside it. Same for the
+C++ standard library (libstdc++ vs libc++) and the linker (bfd / gold /
+lld / mold — llvm's build already asks for mold).
+
+### 9c. The distinction that matters: enumerated vs customized
+
+The registry's axes are things we deliberately RANGE over — provision,
+version, channel. The toolchain is not one of those and should not
+become one: a project's 2×2 is about the library and the binding, and
+crossing it with three compilers would multiply the matrix for a
+dimension no finding has yet needed.
+
+But "not enumerated" must not mean "not recorded". The step FINGERPRINT
+already carries the switch and the platform precisely so a verdict earned
+in one world is never served to another (CLAUDE.md, the two choke
+points). The toolchain has exactly the same property and is currently
+absent from it — so today a green verdict compiled by gcc would be served
+to a run under clang, silently. That is the same class of bug as the
+ambient-switch pin check (five sqlite scenarios red, five green for the
+wrong reason), and it has the same fix: put the value in the fingerprint.
+
+So the shape is: **one carried value, in the fingerprint, with a single
+override — and no enumeration over it.** The user's phrase for the
+override is *world customization*, which fits the existing vocabulary:
+`Canary_world` is where a scenario states what the store must hold, and a
+toolchain claim is the same kind of statement about the machine.
+
+### 9d. What would have to happen
+
+Not started, and not urgent — recorded because the specimen is fresh.
+
+1. `Canary_store.toolchain ()` beside `platform ()` — detected once,
+   `--cc=` / `CANARY_CC` override, printed in the run header.
+2. Part of the step fingerprint, for the reason in §9c.
+3. A `Canary_world` claim so a scenario that NEEDS a compiler can say so
+   and fail loudly when the machine disagrees, rather than producing a
+   verdict about a different world.
+4. Only then, if a finding ever demands it, an axis — and the evidence
+   for that would be a real project whose lib and binding disagree
+   *because of* the compiler, which we do not have.
+
+The honest reading of the torch case is that it argues for (1)–(3) and
+against (4): the bug was fixed by asking the compiler a question, not by
+testing both compilers. A feature test inside the project beats an axis
+outside it whenever the project can ask.
