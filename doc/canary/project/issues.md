@@ -292,22 +292,45 @@ generated shim passes the wrong argument 4. A "patched package that works
 with 2.2.1" therefore cannot be a metadata widening — the generated code
 itself is wrong for that library.
 
-**And regeneration is not cheap.** `src/gen_bindings/gen.ml` says it
+**Regeneration is CHEAP, and an earlier version of this entry said the
+opposite** (corrected 2026-09-01, same day). The reasoning was: `gen.ml`
 consumes *"the Descriptions.yaml file that gets generated when building
-PyTorch from source"*, and measured: none of the three prebuilt zips
-(2.2.1, 2.3.1, 2.13.0) ships **any** `.yaml` at all. So lifting a bound
-means producing that file, which means a PyTorch source build — the
-expensive path `project_pytorch.md` originally hoped to avoid.
+PyTorch from source"*, and none of the three prebuilt zips ships any
+`.yaml` — therefore a source build. The first half is right and the
+conclusion does not follow, because the pip wheel ships **`torchgen`**,
+PyTorch's own code generator, together with its input
+(`torchgen/packaged/ATen/native/native_functions.yaml`). So the file can
+be produced from a wheel in seconds:
 
-The obvious shortcut does NOT work, checked 2026-09-01: fetching
-`aten/src/ATen/native/native_functions.yaml` from the pytorch repo at the
-matching tag gives entries shaped
-`- func: abs(Tensor self) -> Tensor` with `variants:` / `dispatch:`,
-while `gen.ml` reads `operator_name`, `overload_name`, `method_of`,
-`dynamic_type` and per-argument `type`. Those are the DERIVED schema
-PyTorch's codegen emits, not the source one — different vocabulary, not
-just a different file name. The manifest above is the nearest shipped
-substitute and would need a new parser.
+```sh
+uv venv <v> && VIRTUAL_ENV=<v> uv pip install \
+  --index-url https://download.pytorch.org/whl/cpu 'torch==2.3.1' pyyaml
+<v>/bin/python -m torchgen.gen \
+  -s <v>/lib/python3.12/site-packages/torchgen/packaged/ATen \
+  --install-dir <out> --generate declarations_yaml
+```
+
+Measured: 5.0 MB, 3096 operators — the same count as the shipped
+manifest — carrying every field `gen.ml` reads (`name`, `operator_name`,
+`overload_name`, `deprecated`, `method_of`, `arguments`, `returns`, and
+per-argument `dynamic_type` / `type`). Two flag traps cost the first two
+attempts: `-o` is `--output-dependencies`, not the output directory
+(that is `--install-dir`), and `-s` must point at `packaged/ATen`, not
+`packaged`.
+
+So lifting a libtorch bound means regenerating the shim from a wheel of
+the matching version, which is a download rather than a build. The
+lesson to keep: *"only produced by a source build"* was a statement about
+where the file appears, and it was read as a statement about what is
+required to produce it.
+
+Feeding `gen.ml` the raw `native_functions.yaml` does not work — its
+entries are `- func: abs(Tensor self) -> Tensor` with `variants:` /
+`dispatch:`, while `gen.ml` reads the DERIVED vocabulary
+(`operator_name`, `method_of`, `dynamic_type`, per-argument `type`). But
+that is the right INPUT to the wrong tool: PyTorch's `torchgen` performs
+exactly that derivation, and it ships in the wheel alongside a bundled
+copy of `native_functions.yaml`. See the correction above.
 
 The contrast with the fork's own metadata is worth keeping: upstream's
 window is right, while the fork's `[2.3.0, 2.4.0)` is NOT a measured

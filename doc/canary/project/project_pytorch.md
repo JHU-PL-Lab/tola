@@ -62,10 +62,10 @@ than the packaging. That vindicates upstream's
 `conflicts: {< "2.1.0" | >= "2.2.0"}` — 2.2.1 genuinely breaks v0.17.0 —
 and it means no metadata widening can produce a working 2.2.1 case; the
 generated shim is wrong for that library. Regeneration needs
-`Descriptions.yaml`, which no prebuilt zip ships (measured on all three),
-so it needs a PyTorch source build unless `gen.ml` can be fed
-`native_functions.yaml` from the pytorch repo instead. See
-[`issues.md`](issues.md).
+`Descriptions.yaml`, which no prebuilt zip ships — but it does NOT need a
+PyTorch source build: `torchgen` ships in the pip wheel with its input,
+and emits the file in seconds. Measured 2026-09-01; recipe and the flag
+traps in [`issues.md`](issues.md).
 
 Two of those are regression PAIRS worth declaring as such:
 
