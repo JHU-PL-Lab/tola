@@ -44,7 +44,7 @@ an unconfirmed section — the outline stays the review spine.
 
 # Progress Outline
 
-* [x] **0. Scope and checking philosophy**
+* [x] **0. Scope and checking philosophy** (0.6 taxonomy added 2026-09-01)
 * [x] **1. Resource presence and identification**
 * [ ] **2. Artifact surfaces and surface correspondence**
 
@@ -256,6 +256,115 @@ what later observation may confirm it
 ```
 
 The execution engine is separately responsible for avoiding duplicated work.
+
+---
+
+## 0.6 The check taxonomy — locus × origin, and which checks are obligatory
+
+> 2026-09-01, user. A first cut classified checks by WHAT EVIDENCE they
+> read (one artifact / a meeting / a run). That axis is real but on its
+> own it misleads, because **a pure artifact-only check is rare**: a
+> missing symbol is only a finding because some declaration or belief
+> said it should be there. So the classification needs a second column —
+> what the evidence is measured AGAINST.
+
+### The two axes
+
+```text
+LOCUS   what evidence the check reads      artifact | meet | runtime
+ORIGIN  what that evidence is judged against   (the table below)
+```
+
+A check is a point in the product, and the origin is usually the more
+informative coordinate. Same locus, different origin ⇒ genuinely
+different checks, with different blame and different failure modes.
+
+### Origins — what a belief is measured against
+
+| origin | the belief comes from | example |
+|---|---|---|
+| **self / format** | the artifact's own well-formedness — the only TRULY artifact-only case | the file parses as ELF; the inspect JSON has the kind it claims |
+| **declaration** | what the project declared | every declared `c_api` function is exported; the elf soname equals the declared soname |
+| **peer artifact** | another artifact's surface | the stub's undefined refs ⊆ the lib's exports; header types vs stub types |
+| **sibling world** | the SAME artifact obtained another way | denotation across worlds (§6.3) — what one soname names in each provision |
+| **prior version** | the same artifact at another version | export-set diffs between releases; internal (our channels) and external (upstream releases) versioning |
+| **upstream statement** | something the project itself asserts | a typed API manifest; documented guarantees; the project's own test suite |
+| **behavioural expectation** | a recorded expected observation | the probe's expected output |
+
+Two consequences worth stating:
+
+* **almost every current agreement is origin = declaration or peer**, not
+  self. `c1`'s lib-only cell reads ONE artifact but is judged against the
+  declaration, so it is not the same KIND of check as a format-integrity
+  check that reads the same file;
+* the last three origins (**prior version, upstream statement,
+  behavioural expectation**) are also **candidate GENERATORS** — they can
+  manufacture check instances rather than only judge them. That is §9's
+  subject, and it is where heuristic derivation belongs.
+
+### Locus, refined
+
+| locus | sub-kind | what it reads |
+|---|---|---|
+| **artifact** | integrity | the artifact alone (origin = self) |
+| | conformance | the artifact vs its declaration |
+| **meet** | build/link | can these two join at compile time |
+| | load | does the loader bind them, and to what |
+| | packaging | do two providers divide/name one implementation the same way (§6) |
+| **runtime** | direct use | the app calls the binding directly |
+| | indirect use | the app goes through a wrapper/helper — a sanity check for INDIRECT dependency (`app_via_helper` exists for exactly this) |
+| | differential | direct and indirect must agree; two provisions must agree |
+| | translated | a test that passes on one side must pass through the binding (below) |
+| | suite | the project's own tests, or a regression pinned from a past bug |
+
+### The obligation rule
+
+**Artifact and meet checks are must-need; runtime is the residue.** The
+reason is not that runtime checks are less valuable — `c3` and the
+ncurses crash are runtime — but that the first two bands are cheap,
+static, and applicable in every world, so a failure they *could* have
+caught and did not is a framework gap (§0.4's ladder). Runtime is where
+a belief goes when no earlier band can express it.
+
+This banding is also what decides how much a foreign backend must know
+(`check_evaluation.md`): artifact checks are already command-shaped, meet
+checks read files and compare, runtime checks are "observe the run".
+
+### The translated-test agreement (new, user 2026-09-01)
+
+A test suite is an oracle for the side it runs on. If a behaviour is
+asserted natively, then **its translation through the binding should
+assert the same thing** — and a divergence is a binding fault, because
+the native side already established the expected answer.
+
+```text
+native test passes   ──translate──▶   the same test through the binding
+                                       should also pass
+```
+
+This is strong for two reasons: the expected outcome is *given* rather
+than guessed, and it scales — one native suite yields as many binding
+tests as it has cases. Its cost is the translation itself, which is why
+it belongs with the derivation work in §9 rather than being a
+hand-written family. It also composes with the *differential* sub-kind:
+direct and via-helper translations of one native test should agree with
+each other as well as with the native result.
+
+### Worked classification
+
+| agreement | locus | origin |
+|---|---|---|
+| `symbol_exported` (lib-only cell) | artifact / conformance | declaration |
+| `symbol_exported` (pair) | meet / build | peer artifact |
+| `soname_denotes_needed` | meet / load | peer artifact |
+| `denotation_across_worlds` (§6.3) | artifact ×2 | **sibling world** |
+| `no_duplicate_implementation` (§6.3) | meet / packaging | peer artifact |
+| `c_types_agree` | meet / build | peer artifact |
+| `behavior_matches` | runtime / direct | behavioural expectation |
+| a translated native test | runtime / translated | upstream statement |
+
+The classification bites: three rows that all read a `.so` sit in three
+different cells, and their blame differs accordingly (§10).
 
 ---
 
@@ -1262,12 +1371,12 @@ are correct, and the versions are drop-in compatible: repoint the name
 and the same binaries run green with no rebuild.
 
 So blame attaches to **neither artifact but to their cooperation**
-(user, 2026-09-01) — which is an acceptable verdict, not a gap: the
-failure IS a runtime behaviour of the combination, so it belongs with
-the behavioural family (§8) even though its evidence is static. §10's
-consumer-vs-provider direction rule does not apply; the finding is that
-two packaging conventions disagree about how one implementation is named
-and divided.
+(user, 2026-09-01) — an acceptable verdict, not a gap: the failure IS a
+runtime behaviour of the combination, even though its evidence is
+static. This is the case that narrowed §10.2's direction rule, which now
+states both meet outcomes: direction when the sides differ by version,
+the cooperation when they differ by packaging. In §0.6's terms the check
+is *meet / packaging* with origin *peer artifact*.
 
 Canary's job here is not to fix upstream — the report is already
 addressed to Debian — but to PREDICT: the world becomes `xfail[cN]`
@@ -1474,7 +1583,31 @@ backward (provider newer than consumer) → the provider dropped or changed
 
 The rule is worth stating once, globally, rather than per agreement:
 **blame = (which artifacts the evidence relates) × (the scenario's
-mismatch direction)**.
+mismatch direction)** — with one amendment the ncurses case forced
+(2026-09-01).
+
+**Direction resolves a pair failure only when the two sides differ by
+VERSION.** When they differ by PACKAGING — both artifacts correct, the
+versions drop-in compatible, and the conventions disagreeing about how
+one implementation is named and divided — no direction exists, and the
+blamed party is the **cooperation** (§6.5). So the meet band has two
+blame outcomes, not one:
+
+```text
+meet failure, versions differ    → direction decides (forward: consumer,
+                                    backward: provider)
+meet failure, packaging differs  → the COOPERATION; neither artifact is
+                                    broken alone
+```
+
+Blame also follows the taxonomy of §0.6 rather than the locus alone:
+
+| locus | blame on failure |
+|---|---|
+| artifact / integrity | the artifact |
+| artifact / conformance | the artifact **or its declaration** — a conformance failure indicts whichever is wrong, and the row must say which it trusts |
+| meet | the pair: direction, else the cooperation |
+| runtime | the world that ran; the weakest blame, which is why §0.4 says do not leave a check here if an earlier band can hold it |
 
 ## 10.3 Instrumented observations shift blame deliberately
 
