@@ -12,8 +12,9 @@
       check is a DISPROVER, never a proof, design §5);
     - HOW we check it — the existing [Canary_agreement.agreement_check]
       pipeline (id/status/predict) + the input template;
-    - in which LOGICAL role (Surface / Meeting / Execution — the
-      artifact-relationship axis, design §4);
+    - what it CLAIMS and how that is observed ([ag_claim] /
+      [ag_evidence]), plus its descriptive category ([ag_cat], taken
+      from the check's own module);
     - WHERE it fires — over the ACTION CATALOGUE (any action kind),
       derived from mechanism × provision (design §3);
     - the fault tags it answers to (step 9's mapping as data).
@@ -212,17 +213,6 @@ type provenance =
   | Added
 [@@deriving show, eq]
 
-(** The expectation form per contract — HOW a check becomes an
-    expectation (the three shapes of the old per-project
-    [expectation_source], minus the payload). *)
-type source =
-  | Inspection      (** inspect JSONs → predict → compat-derived expectation *)
-  | Behavior_grep   (** the run's log substring → failure expectation *)
-  | Postcondition   (** the action's check_post family (markers, pin-checks,
-                        staged-parity at Install_lib, freshness) *)
-  | Placeholder     (** Expect_success until wired (missing-ness visible) *)
-[@@deriving show, eq]
-
 type agreement_row = {
   ag_slug      : string;
       (** THE STABLE NAME both the doc and the code use. The `c1..c8`
@@ -246,6 +236,9 @@ type agreement_row = {
           Sf.5 binding_lib) + "Trace" (the runtime observation). A
           contract IS a named relation over these reads; the action
           says where the read attaches. *)
+  ag_cat       : Canary_check_cat.cat;
+      (** the DESCRIPTIVE category, taken from the check's own module so
+          the table and the module cannot disagree *)
   ag_claim     : claim;
   ag_evidence  : evidence;
   ag_provenance : provenance;
@@ -264,11 +257,6 @@ type agreement_row = {
           enabled/disabled policy is the bypass. The action layer
           refines an action into [Canary_scenario.firing_site]
           (location, loc_filter) in phase 2. *)
-  ag_source    : source;
-      (** HOW the expectation comes to be — the expectation half of
-          the belief, mirroring the old per-project expectation_source
-          shapes without their payload (inputs come from the template,
-          version context from the scenario). *)
   ag_fault_tags : string list;
       (** step 9: sym_missing ↔ c1, … (scenario.md's catalogue) *)
 }
@@ -326,13 +314,14 @@ let check_of (id : Canary_agreement.agreement_id) :
          (Printf.sprintf "contract registry: no registered check for %s"
             (Canary_agreement.string_of_agreement_id id))
 
-let row ~slug ~doc ~invariant ~reads ~claim ~evidence ?(provenance = Added) ~firing ~source ~tags
+let row ~slug ~doc ~invariant ~reads ~cat ~claim ~evidence ?(provenance = Added) ~firing ~tags
     (id : Canary_agreement.agreement_id) : agreement_row =
   { ag_slug = slug;
     ag_doc = doc;
     ag_check = check_of id;
     ag_invariant = invariant;
     ag_reads = reads;
+    ag_cat = cat;
     ag_claim = claim;
     ag_evidence = evidence;
     ag_provenance = provenance;
@@ -340,7 +329,6 @@ let row ~slug ~doc ~invariant ~reads ~claim ~evidence ?(provenance = Added) ~fir
       (fun m l ->
         inputs_of_agreement ~mechanism:m id l);
     ag_firing = firing;
-    ag_source = source;
     ag_fault_tags = tags }
 
 (** THE table — one row per contract (c1..c8). Each row's [ag_reads]
@@ -348,58 +336,58 @@ let row ~slug ~doc ~invariant ~reads ~claim ~evidence ?(provenance = Added) ~fir
     contract IS a named relation over those reads. *)
 let agreement_registry : agreement_row list =
   [ row C1
-      ~slug:"symbol_exported" ~doc:"§3.3"
+      ~slug:"symbol_exported" ~cat:Canary_chk_symbols.cat ~doc:"§3.3"
       ~invariant:
         "every symbol the binding declares (its stub references) is \
          exported by the lib"
       ~reads:[ ("Sf.3", "binding"); ("Sf.2", "native") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib
       ~tags:[ "sym_missing" ];
     row C2
-      ~slug:"api_surface_complete" ~doc:"§3.3"
+      ~slug:"api_surface_complete" ~cat:Canary_chk_api_surface.cat ~doc:"§3.3"
       ~invariant:
         "every watchlisted entry is present on the user-facing surface"
       ~reads:[ ("Sf.4", "binding") ]
-      ~claim:Structural ~evidence:Inspect_one ~firing:firing_default ~source:Inspection
+      ~claim:Structural ~evidence:Inspect_one ~firing:firing_default
       ~tags:[ "api_drop" ];
     row C3
-      ~slug:"behavior_matches" ~doc:"§8"
+      ~slug:"behavior_matches" ~cat:Canary_chk_behaviour.trace_cat ~doc:"§8"
       ~invariant:"the probe's trace matches the recorded expectation"
       ~reads:[ ("Trace", "run") ]
-      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only ~source:Behavior_grep
+      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only
       ~tags:[ "behavior" ];
     row C4
-      ~slug:"soname_denotes_needed" ~doc:"§6"
+      ~slug:"soname_denotes_needed" ~cat:Canary_chk_identity.soname_cat ~doc:"§6"
       ~invariant:
         "the lib's soname matches what the consumer records it needs"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib
       ~tags:[ "abi_soname" ];
     row C5
-      ~slug:"symbol_versions_present" ~doc:"§3.3"
+      ~slug:"symbol_versions_present" ~cat:Canary_chk_identity.version_cat ~doc:"§3.3"
       ~invariant:
         "versioned symbols carry the annotations the consumer expects"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib
       ~tags:[ "sym_version" ];
     row C6
-      ~slug:"c_types_agree" ~doc:"§3.3"
+      ~slug:"c_types_agree" ~cat:Canary_chk_types.cat ~doc:"§3.3"
       ~invariant:"C types at the header/stub boundary match"
       ~reads:[ ("Sf.1", "native"); ("Sf.3", "binding") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_default ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_default
       ~tags:[ "type_arity" ];
     row C7
-      ~slug:"repack_preserves_api" ~doc:"§5.3"
+      ~slug:"repack_preserves_api" ~cat:Canary_chk_behaviour.repack_cat ~doc:"§5.3"
       ~invariant:"repackaging preserves the API"
       ~reads:[ ("Sf.4", "binding") ]
-      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only ~source:Behavior_grep
+      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only
       ~tags:[ "api_repack" ];
     row C8
-      ~slug:"repack_complete" ~doc:"§5.3"
+      ~slug:"repack_complete" ~cat:Canary_chk_behaviour.repack_cat ~doc:"§5.3"
       ~invariant:
         "repackaging is complete — nothing the original had is lost"
       ~reads:[ ("Sf.4", "binding") ]
-      ~claim:Semantic ~evidence:Run_program ~firing:firing_default ~source:Placeholder
+      ~claim:Semantic ~evidence:Run_program ~firing:firing_default
       ~tags:[ "api_add" ] ]
 
 (* ── spec fixtures — testing AHEAD of project running ──

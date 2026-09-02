@@ -295,44 +295,6 @@ let load_watchlist_missing path =
     | Some wl -> get_string_list wl "missing"
     | None -> []
 
-(** Predict substrings that would appear in a failed [probe.log] given
-    cached inspector JSON paths. Legacy positional API kept for back-
-    compat; new call sites should use {!predicted_contains_any_v2}.
-
-    Combines two prediction layers:
-    - [stub_inspect_path] + [lib_inspect_path] → {i c1 cmp_symbol}
-      missing-symbol prediction (set diff: stub requires \ lib defines).
-      Driven by {i bo7} + {i n4} for OCaml or {i bpe3} + {i n4} for cext.
-    - [mli_inspect_path] → {i c2 cmp_api_completeness} watchlist-missing
-      prediction. Driven by {i bo4 user_binding_ocaml.mli}'s inspect JSON. *)
-let predicted_contains_any
-    ?stub_inspect_path ?lib_inspect_path ?mli_inspect_path () =
-  let l3 = Option.value_map mli_inspect_path ~default:[] ~f:load_watchlist_missing in
-  let l3_variants =
-    List.concat_map l3 ~f:name_variants
-    |> List.dedup_and_sort ~compare:String.compare
-  in
-  let l0 = match stub_inspect_path, lib_inspect_path with
-    | Some s, Some l
-      when Stdlib.Sys.file_exists s && Stdlib.Sys.file_exists l ->
-        let stub = load_stub s in
-        let lib = load_native l in
-        (match check_c_compat ~binding_stub:stub ~native_lib:lib with
-         | Missing { symbols } -> symbols
-         | Compatible | Compatible_lag _ | Unknown -> [])
-    | _ -> []
-  in
-  l3_variants @ l0
-  |> List.dedup_and_sort ~compare:String.compare
-
-(* ── Contract registry (Phase 12, 2026-06-02) ─────────────────────────
-   Each c* contract is a registered entry with its own predict closure.
-   [predicted_contains_any_v2] is a 4-line iterator over the registry;
-   adding a new c* = one more registry entry + one predict function.
-
-   The types live in {!Canary_agreement} so consumers can name
-   [agreement_id] / [agreement_status] without opening this file. *)
-
 let pick_existing ~resolve paths =
   List.find_map paths ~f:(fun rel ->
     let abs = resolve rel in

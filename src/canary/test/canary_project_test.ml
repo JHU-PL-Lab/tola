@@ -1398,21 +1398,16 @@ let agreement_registry_complete_pin : pure_test =
           List.for_all CR.agreement_registry ~f:(fun r ->
               Poly.equal r.CR.ag_provenance CR.Added)
         in
-                (* the expectation forms: inspection-derived for the surface
-           + meeting contracts, behavior-grep for the trace contracts,
-           placeholder while blocked *)
-        let source_is r exp = Poly.equal r.CR.ag_source exp in
-        let sources_ok =
-          source_is (CR.row_of C1) CR.Inspection
-          && source_is (CR.row_of C2) CR.Inspection
-          && source_is (CR.row_of C3) CR.Behavior_grep
-          && source_is (CR.row_of C4) CR.Inspection
-          && source_is (CR.row_of C5) CR.Inspection
-          && source_is (CR.row_of C6) CR.Inspection
-          && source_is (CR.row_of C7) CR.Behavior_grep
-          && source_is (CR.row_of C8) CR.Placeholder
+                (* the category on a row is the one its check MODULE declares —
+           the two cannot drift because there is one definition *)
+        let cats_ok =
+          Poly.equal (CR.row_of C1).CR.ag_cat Canary_chk_symbols.cat
+          && Poly.equal (CR.row_of C2).CR.ag_cat Canary_chk_api_surface.cat
+          && Poly.equal (CR.row_of C4).CR.ag_cat Canary_chk_identity.soname_cat
+          && Poly.equal (CR.row_of C5).CR.ag_cat Canary_chk_identity.version_cat
+          && Poly.equal (CR.row_of C6).CR.ag_cat Canary_chk_types.cat
         in
-        rows_ok && checks_ok && tags_ok && axes_ok && sources_ok) }
+        rows_ok && checks_ok && tags_ok && axes_ok && cats_ok) }
 
 let agreement_registry_firing_pin : pure_test =
   { name = "contracts.firing_defaults";

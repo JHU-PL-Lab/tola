@@ -646,12 +646,29 @@ let checks_cmd =
   let project =
     Arg.(value & pos 0 (some string) None & info [] ~docv:"PROJECT")
   in
-  let run project () =
-    match project with
-    | None ->
+  let matrix =
+    Arg.(value & flag & info [ "matrix" ]
+           ~doc:"Print the agreement × action matrix instead of the index.")
+  in
+  let run project matrix () =
+    match (project, matrix) with
+    | _, true ->
+        (* Appendix A.2 tells the reader to read the matrix from the
+           code rather than from a transcribed table; this is where. *)
+        Fmt.pr "%s@." (Canary_agreement_registry.pp_belief_matrix ());
+        let fill = Canary_agreement_registry.fill_list () in
+        Fmt.pr "@.fill list (%d cell(s) fire without a counterexample):@."
+          (List.length fill);
+        List.iter
+          (fun (id, a) ->
+            Fmt.pr "  %s @@ %s@."
+              (Canary_agreement.string_of_agreement_id id)
+              (Canary_basic.string_of_action a))
+          fill
+    | None, false ->
         (* no project: the registry itself *)
         Fmt.pr "%s@." (Canary_agreement_registry.pp_agreements ())
-    | Some name -> (
+    | Some name, false -> (
         match List.assoc_opt name Canary_registry.all_projects with
         | Some pr ->
             let idx = Canary_check_index.of_project pr in
@@ -667,7 +684,7 @@ let checks_cmd =
          "The checking index: with no argument, every agreement the \
           registry declares; with a project, the checks that apply to \
           each of its actions and where each comes from. No execution.")
-    Term.(const run $ project $ const ())
+    Term.(const run $ project $ matrix $ const ())
 
 let spec_check_cmd =
   let project =
