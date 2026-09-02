@@ -261,95 +261,137 @@ The execution engine is separately responsible for avoiding duplicated work.
 
 ## 0.6 What to check, how to check it, and why it is a check at all
 
-> 2026-09-01, user; redrafted twice the same day. It carries in one
-> narrative the material that was previously split and partly in
-> conflict — the legacy Surface/Meeting/Execution roles, the obligation
-> banding, and §10's blame rules.
-
 Two questions, in the order they are useful:
 
 ```text
-1. WHAT is checked, and HOW          → the target and the method (§0.6a)
-2. WHY is it a check at all          → the source of the belief (§0.6b)
+1. WHAT is checked, and HOW   → the target and the method   (§0.6a)
+2. WHY is it a check at all   → the source of the belief     (§0.6b)
 ```
 
-The first is the concrete one and comes first. The second is what
-decides whether a check is obligatory and who is blamed when it fails,
-so it cannot be skipped — but it reads better once the mechanics are in
-view.
+The first is concrete and comes first. The second decides whether a
+check is obligatory and who is blamed when it fails.
 
 ### 0.6a The check: target and method
 
 | target | method | what it can see | what it cannot |
 |---|---|---|---|
-| **a solo artifact** | an inspector — `nm`, `readelf`, `ocamlobjinfo`, `dir()`, a parser | what this one artifact presents, and whether that matches what was declared about it | anything relational; anything about the other side |
-| **several artifacts** | inspect each, then COMPARE — still only artifacts, nothing runs | that two recorded/declared surfaces disagree | what the toolchain will actually do with them |
+| **a solo artifact** | an inspector — `nm`, `readelf`, `ocamlobjinfo`, `dir()`, a parser | what this one artifact presents, and whether it matches what was declared about it | anything relational; anything about the other side |
+| **several artifacts** | inspect each, then COMPARE — still only artifacts, nothing runs | that two recorded or declared surfaces disagree | what the toolchain will actually do with them |
 | **a running result** | observe the outcome of running a TOOL (compiler, linker, loader) or of running TEST CODE | that the join or the behaviour really happened, in this world | only the observable result — never the mechanism that produced it (§0.2) |
 
-Sub-shapes worth naming, because they fail differently:
+Two consequences of stating it this way:
 
-| target | sub-shapes |
-|---|---|
-| solo artifact | integrity (is it well formed) · conformance (does it match its declaration) |
-| several artifacts | consumer↔provider · the same artifact in two provisions · the same artifact at two versions |
-| running result | a tool's verdict (compile / link / load) · direct use · indirect use through a wrapper (`app_via_helper`) · differential (direct vs indirect, or provision vs provision) · a translated test · a project's own suite |
-
-**This replaces the legacy triple.** Surface / Meeting / Execution map
-onto these three targets, with one correction the mapping makes visible:
-what was called *meeting* actually splits in two — comparing two
-artifacts statically is the second target, while the join ACTUALLY
-HAPPENING (a link, a load) is a running result. Those are different
-checks with different costs and different failure modes, and the old
-word hid that.
-
-**One agreement can have checks at several targets.** That is §0.4's
-ladder restated: c6's type agreement can be checked by comparing header
-and stub signatures (target 2) and confirmed later by the compiler
-accepting the pair (target 3). The agreement is one; the observations
-are many, and the earliest one that can hold it should.
+* **comparing two artifacts and joining them are different targets.**
+  Static comparison is the second; the join actually happening — a link,
+  a load — is a running result. Different cost, different failure mode,
+  different blame.
+* **one agreement can have checks at several targets.** That is §0.4's
+  ladder restated: `c_types_agree` compares header and stub signatures,
+  and the compiler's verdict later confirms the same agreement. The
+  agreement is one; the observations are many, and the earliest that can
+  hold it should.
 
 ### 0.6b Why it is a check at all — the source of belief
 
 **Every check compares an artifact against a claim.** Nothing is
 checkable in isolation: a C library exporting 462 symbols is not wrong
 until something says it should export 463. So the answer to *why is this
-a check* is always **who claims it** — and that determines two things the
+a check* is always **who claims it**, and that decides two things the
 target and method do not:
 
-| # | source of belief | the claim | usual target | obligation | blame when it fails |
-|---|---|---|---|---|---|
-| 1 | **self / format** | the artifact is well formed | solo | **always** — costs nothing, needs no declaration | the artifact |
-| 2 | **declaration** | the project said this artifact provides X | solo | **always**, wherever a declaration exists | the artifact **or the declaration** — the row must say which it trusts |
-| 3 | **peer artifact** | another artifact records that it needs X | several, then a running result as confirmation | **always**, wherever both are present | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§6.5) |
-| 4 | **sibling world** | the same artifact, obtained another way, disagrees | several | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§6.3) |
-| 5 | **prior version** | this version differs from the last | several | when a version axis exists | the change — a regression indicts the newer side |
-| 6 | **upstream statement** | the project asserts it itself — a manifest, docs, its own tests | several (a manifest) or running (a suite) | opportunistic — only if upstream said something | strong: the project contradicted **itself** |
-| 7 | **behavioural expectation** | a recorded observation says what running does | running | the residue — nothing earlier could express it | the world that ran; the weakest blame |
+| # | source of belief | the claim | obligation | blame when it fails |
+|---|---|---|---|---|
+| 1 | **self / format** | the artifact is well formed, or satisfies a universal property of its kind | **always** — costs nothing, needs no declaration | the artifact |
+| 2 | **declaration** | the project said this artifact provides X | **always**, wherever a declaration exists | the artifact **or the declaration** — a row must say which it trusts |
+| 3 | **peer artifact** | another artifact records that it needs X | **always**, wherever both are present | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§6.5) |
+| 4 | **sibling world** | the same artifact, obtained another way, disagrees | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§6.3) |
+| 5 | **prior version** | this version differs from the last | when a version axis exists | the change — a regression indicts the newer side |
+| 6 | **upstream statement** | the project asserts it itself — a manifest, docs, its own tests | opportunistic — only if upstream said something | strong: the project contradicted **itself** |
+| 7 | **behavioural expectation** | a recorded observation says what running does | the residue — nothing earlier could express it | the world that ran; the weakest blame |
 
-**Obligation follows availability, not cost.** An earlier draft called
-the first targets "must-need" because they are cheap. True, but not the
-reason. *A check is obligatory when its source of belief is present in
-every world.* Rows 1–3 always have their source; row 4 has it whenever a
-world holds two provisions, which canary's 2×2 guarantees; rows 5–6
-depend on the project offering a version axis or a statement; row 7's
-source — an observed run — does not exist until everything before it has
-passed.
+**Obligation follows availability, not cost.** A check is obligatory
+when its source of belief is present in every world. Rows 1–3 always
+have their source; row 4 has it whenever a world holds two provisions,
+which canary's 2×2 guarantees; rows 5–6 depend on the project offering a
+version axis or a statement; row 7's source — an observed run — does not
+exist until everything before it has passed.
 
 **Blame follows the claimant.** A failing check means **either the
 artifact or the claim is wrong**, and the source names the claim's
-author, so blame candidates are read off the table rather than argued
-case by case. Two rows need care:
+author. Two rows need care:
 
-* **row 2 (declaration)** is the one that gets misread. A conformance
-  failure does not automatically indict the artifact — the declaration
-  may simply be stale. A row must state which side it treats as
-  authoritative, or its finding is unattributable.
+* **row 2** is the one that gets misread. A conformance failure does not
+  automatically indict the artifact — the declaration may be stale. A
+  row must state which side it treats as authoritative, or its finding
+  is unattributable.
 * **rows 3–4** hold the ncurses case: both artifacts correct, no version
   between them, so canary's forward/backward *direction* has nothing to
   resolve and the blamed party is the cooperation, or the provisioning.
-  **Direction is a tiebreaker within row 3, not a universal rule** (§10).
+  **Direction is a tiebreaker within row 3, not a universal rule.**
 
-### 0.6c Three sources also GENERATE checks
+### 0.6c The catalogue — every check we run or have proposed
+
+Status: **wired** = a live check; **row** = a registry row without an
+implementation; **proposed** = named in this document, no row yet.
+
+#### Target 1 — a solo artifact, via an inspector
+
+| check | falsifier | method | source | status |
+|---|---|---|---|---|
+| `symbol_exported` (lib-only) | a declared `c_api` function is missing from the built lib | `nm -D` vs the decl | declaration | wired |
+| `api_surface_complete` (c2) | a watchlisted name is absent from the user-facing surface | `.mli` / `dir()` vs the watchlist | declaration | wired |
+| `soname_denotes_needed` (lib-only) | the built lib's elf soname ≠ the declared soname | `readelf -d` vs the decl | declaration | wired |
+| `symbol_versions_present` (lib-only) | a declared version tag is not exported | `nm -D` version nodes vs the decl | declaration | wired |
+| action markers | the action's declared output never appeared | `test -f` | declaration | wired |
+| PM pin check | the installed package is not at the pinned version | the PM's own query | declaration | wired |
+| pinned-ref freshness | the checkout is not at the ref it claims | `rev-parse HEAD` vs the ref | declaration | wired |
+| repo contents | the tree lacks what its row says it provides | file existence | declaration | wired |
+| staged completeness | a declared artifact did not stage | `test -f` under the prefix | declaration | wired (hand list; deriving it from the declared surface is open) |
+| portability of a staged binary | a staged artifact still contains a build-tree path | grep the artifact's metadata/strings | **self** — installable binaries must be relocatable | proposed (§7) |
+| inspect-JSON integrity | the summary does not have the kind it claims | the parser | **self** | wired (warns) |
+| spec maturity | a project's own declaration is incomplete | `canary spec-check` | **self** — applied to a declaration rather than an artifact | wired |
+
+#### Target 2 — several artifacts, inspected and compared
+
+| check | falsifier | method | source | status |
+|---|---|---|---|---|
+| `symbol_exported` (pair) | the stub's undefined refs are not covered by the lib's exports | `nm` both, set difference | peer | wired |
+| `c_types_agree` (c6) | header and stub disagree on a signature | typed inspects, compare | peer | wired |
+| `soname_denotes_needed` (pair) | the lib's soname is not what the consumer recorded | `readelf -d` both | peer | wired |
+| `symbol_versions_present` (pair) | the consumer requires a version node the provider does not export | version maps, compare | peer | wired |
+| `c1_lag_note` | *(a warning, not a failure)* the consumer uses a small fraction of the provider's surface — possibly stale | set sizes | peer | wired |
+| `closure_satisfiable` | a recorded `NEEDED` has no provider in this world | `readelf -d` vs the world's objects | peer | row |
+| `no_duplicate_implementation` | two identities in the closure are one implementation, or one absorbs another | symbol sets + version namespaces | peer | row |
+| `denotation_across_worlds` | one soname names different implementations in the two provisions | compare the object each soname names | **sibling world** | row |
+| staged parity | the staged image differs from the build tree beyond declared transforms | symbol/version diff, build vs staged | sibling world | proposed (§7) |
+| header-as-oracle | a consumer's declared types contradict the header it wraps, at a later action | typed header vs the consumer's surface | peer | proposed (§2) |
+| DWARF signatures | the built lib's compiled signatures contradict the declared header | `readelf --debug-dump=info` vs the header | declaration | proposed (§2, when DWARF exists) |
+| export-set diff | a version changed what it exports under a consumer's feet | two versions' `nm` output | **prior version** | proposed (§9) |
+| upstream manifest | the artifact contradicts a typed API manifest the project ships | manifest vs `nm`/headers | **upstream statement** | proposed (§9; torch has one) |
+
+#### Target 3 — a running result, of a tool or of test code
+
+| check | falsifier | method | source | status |
+|---|---|---|---|---|
+| build/link verdict | the pair does not compile or link | the compiler's/linker's exit + log | peer | wired (as step outcome) |
+| `behavior_matches` (c3) | the probe's trace differs from what was recorded | run, grep the log | behavioural | row (disabled) |
+| `repack_preserves_api` (c7) | the user layer is not a sound repacking of the stub layer | run the binding probe | behavioural | row (stubbed) |
+| `repack_complete` (c8) | the repack lost something the original had | — | behavioural | row (blocked on c6+c7) |
+| smoke load | the lib does not load, or a declared function cannot be entered | link a minimal program, run it | declaration | proposed (§13; decl-derived, exercises the LOADER) |
+| `interposition_winner` | the definition that wins for a shared symbol is not the one built against | `LD_DEBUG=bindings` | peer | row |
+| recorder shim | *(evidence, not a verdict)* what the consumer actually requested/resolved | interposition, log | — | proposed (§6.7) |
+| fake provider | the consumer breaks against a provider that satisfies the declared surface | plant a lib, run | declaration | proposed (§10.3) |
+| direct-vs-indirect differential | `app_direct` and `app_via_helper` disagree | run both, compare | behavioural | proposed |
+| prebuilt self-sufficiency | a prebuilt needs env beyond the library path to run | run with only the declared env | declaration | proposed (§6.8) |
+| translated test | a natively-asserted behaviour does not survive translation through the binding | run the translation | **upstream statement** | proposed (§0.6d) |
+| project's own suite | upstream's tests fail against this world | run the suite | upstream statement | proposed |
+| regression pin | a past bug reappears | re-run its witness | prior version | proposed (§14) |
+
+Reading the catalogue: **the same `.so` appears at all three targets and
+under four different sources.** The file does not determine the check;
+the claim does, and the target only says where you can see it.
+
+### 0.6d Three sources also GENERATE checks
 
 Rows 5–7 can manufacture candidates, not merely judge them: version
 diffs propose *did this export set change under a consumer's feet*; an
@@ -363,28 +405,10 @@ expectation can be **derived** rather than written — most sharply as the
 
 Strong for two reasons — the expected outcome is *given* rather than
 guessed, and one native suite yields as many binding checks as it has
-cases — and it composes with the differential sub-shape: a direct and a
+cases — and it composes with the differential shape: a direct and a
 via-helper translation of one native test should agree with each other
 as well as with the native result. Its cost is the translation, so it
 belongs with §9's derivation work.
-
-### 0.6d Worked classification
-
-| agreement | target / method | source of belief |
-|---|---|---|
-| `symbol_exported` (lib-only cell) | solo · inspector | declaration |
-| `symbol_exported` (pair) | several · inspect + compare | peer artifact |
-| `soname_denotes_needed` | several · inspect + compare | peer artifact |
-| `denotation_across_worlds` (§6.3) | several · the same soname in two provisions | **sibling world** |
-| `no_duplicate_implementation` (§6.3) | several · compare shipped objects | peer artifact |
-| `c_types_agree` | several · compare signatures; later the compiler's verdict | peer artifact |
-| `behavior_matches` | running · test code's output | behavioural expectation |
-| a translated native test | running · test code's output | upstream statement |
-
-Three of these read the same `.so`, at two different targets, from three
-different sources — which is the point: **the file does not determine
-the check; the claim does, and the target only says where you can see
-it.**
 
 ---
 
@@ -1980,7 +2004,7 @@ reconcile.
 
 
 
-## A.6 — the `ag_role` field is prose, not a typed axis (superseded by §0.6)
+## A.6 — the `ag_role` field is prose, not a typed axis
 
 The code's row still carries a `cr_role` (`Surface` / `Meeting` /
 `Execution`). It is a DESCRIPTIVE tag only: the action already implies
@@ -2027,7 +2051,7 @@ how the expectation is produced — inspect JSONs → predict
 (Inspection), grep the run's log (Behavior_grep), the action's
 check_post family (Postcondition — where staged-parity at Install_lib,
 pin-checks, and freshness live), or not wired yet (Placeholder).
-The legacy roles stay prose — see §0.6, where they are evidence SHAPES rather than the base axis.
+See §0.6: what a check reads is its TARGET, and nothing dispatches on the field.
 
 **The derivation rules** (what the code actually does — the roles are
 NOT part of it; they were demoted to prose, §4):
