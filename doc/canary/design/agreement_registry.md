@@ -1715,10 +1715,14 @@ The last two are the alignment properties: renaming a section, or citing
 one that was never written, fails `canary project-test`. Both were
 verified by falsification rather than trusted — pointing a row at a
 section number that does not exist turns the anchor pin red, and the
-cross-reference pin found five stale references on its very first run
-(`§12`, `§13`, `§14`, `§16` from an earlier merge, plus a sentence whose
-example number read as a citation). That is the class of rot a document
-meant to guide code accumulates silently.
+cross-reference pin found five stale references on its very first run —
+four section numbers left pointing at their pre-merge meanings, plus a
+sentence whose example number read as a citation. That is the class of
+rot a document meant to guide code accumulates silently.
+
+(Those numbers are deliberately not written here with their sigil: the
+pin reads any such token as a citation, which is a small illustration
+of the rule that a harness constrains the prose it checks.)
 
 **What it does not yet check** (worth naming so the harness is not read
 as stronger than it is): that the *claim text* matches the section's
