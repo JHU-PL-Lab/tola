@@ -58,34 +58,43 @@ why §5 states the phenomenon once and points at each level's mechanisms.
 
 * [ ] **4. Resolution — one name, several candidates**
 
-  * [ ] 4.1 The mechanisms, concretely — compiler include lookup · linker
-    library lookup · dynamic loader · findlib / `OCAMLPATH` · Python
-    import · `ctypes` `dlopen`
-  * [ ] 4.2 Search paths and their variables, per platform —
+  * [ ] 4.1 The mechanisms, concretely *(planned)* — compiler include
+    lookup · linker library lookup · dynamic loader · findlib /
+    `OCAMLPATH` · Python import · `ctypes` `dlopen`
+  * [ ] 4.2 Search paths and their variables, per platform *(planned)* —
     `LD_LIBRARY_PATH` / `DYLD_*` · `DT_RPATH` / `DT_RUNPATH` / `LC_RPATH`
     · `CAML_LD_LIBRARY_PATH` · `PYTHONPATH` · `PKG_CONFIG_PATH` · `PATH`
   * [ ] 4.3 Transformation and staging — the same artifact in more than
     one place (build tree vs install prefix; the four staged-parity
     checks)
-  * [ ] 4.4 Shadowing and precedence — which candidate wins, and why it
-    is not always the declared one
+  * [ ] 4.4 Shadowing and precedence *(planned)* — which candidate wins,
+    and why it is not always the declared one
 * [ ] **5. Late binding — versions and dependencies**
 
-  * [ ] 5.0 The four moments — declared · solved · installed · loaded
-  * [ ] 5.1 Versioning at the ARTIFACT level — sonames, version nodes,
-    symbol versioning (the mechanisms live in §3.1.2)
-  * [ ] 5.2 Versioning at the PACKAGE level — constraints, solving, pins
-    (the mechanisms live in §6)
-  * [ ] 5.3 The three views of a dependency — declared · recorded ·
+  * [ ] 5.0 A name binds to a version, and to a dependency — the four
+    moments (declared · solved · installed · loaded), external versus
+    internal versioning
+  * [ ] 5.1 The three views of a dependency — declared · recorded ·
     resolved
-  * [ ] 5.4 Denotation, and what the artifacts alone can say
-  * [ ] 5.5 Hidden dependencies
+  * [ ] 5.2 The instance (ncurses)
+  * [ ] 5.3 What the artifacts alone say
+  * [ ] 5.4 The agreements
+  * [ ] 5.5 What the fix costs
+  * [ ] 5.6 Blame — the cooperation
+  * [ ] 5.7 The second form, and the method lesson
+  * [ ] 5.8 Hidden dependencies
+  * [ ] 5.9 Open steps
+  * [ ] 5.10 Versioning at the artifact level *(planned)* — sonames,
+    version nodes, symbol versioning; the mechanisms live in §3.1.2
+  * [ ] 5.11 Versioning at the package level *(planned)* — constraints,
+    solving, pins; the mechanisms live in §6
 * [ ] **6. Package managers — the resource store that chooses**
 
   * [ ] 6.1 What a package manager is as a checking substrate
-  * [ ] 6.2 System managers — `apt` · `brew` · conda-forge
-  * [ ] 6.3 Language managers — `opam` · `pip` and its variants (`uv`,
-    `pipx`, conda's channel)
+  * [ ] 6.2 Two kinds — system versus language
+  * [ ] 6.3 The managers, concretely *(planned)* — `apt` · `brew` ·
+    conda-forge · `opam` · `pip` and its variants (`uv`, `pipx`, conda
+    channels)
   * [ ] 6.4 The gate as data — `pm_dep_gate` → `combination_freedom`
   * [ ] 6.5 What the layer contributes — identity · exclusivity · refusal
 
@@ -1860,7 +1869,7 @@ section for that reason. It decides which artifact a name resolves to,
 what may be installed beside what, and — the part canary cares most
 about — **what it will refuse**.
 
-## 4.1 What a package manager is, as a checking substrate
+## 6.1 What a package manager is, as a checking substrate
 
 It has its own resource model and its own observable commands, so
 "package X exists" is a different question from "file Y exists" even
@@ -1877,7 +1886,7 @@ Canary drives four: `apt` / `brew` (system), `opam` (OCaml), `pip`
 outside the agreement layer, because a tool wrapper reports a fact and
 an agreement is a claim about it.
 
-## 4.2 Two kinds, and why the distinction matters
+## 6.2 Two kinds, and why the distinction matters
 
 | kind | examples | provides | canary's use |
 |---|---|---|---|
@@ -1888,7 +1897,7 @@ The two meet at the **gate**: a language package declares what it needs
 from the system side, and that declaration is what canary must satisfy —
 or deliberately defeat — to construct a world.
 
-## 4.3 The gate, as data
+## 6.4 The gate, as data
 
 `Canary_binding_decl.pm_dep_gate` models exactly that declaration, and
 `combination_freedom_of` derives the one thing it exists for: **what it
@@ -1906,7 +1915,7 @@ usually **packaging**, not a statement about the library — only 13 of
 370 carry a version into their system check. So a bound that looks
 binding often is not, and the real freedom is `Any_version`.
 
-## 4.4 What the layer contributes to checking
+## 6.5 What the layer contributes to checking
 
 Three things, each already visible elsewhere in this catalogue:
 
