@@ -259,112 +259,123 @@ The execution engine is separately responsible for avoiding duplicated work.
 
 ---
 
-## 0.6 The check taxonomy — locus × origin, and which checks are obligatory
+## 0.6 The source of belief — the base of the taxonomy
 
-> 2026-09-01, user. A first cut classified checks by WHAT EVIDENCE they
-> read (one artifact / a meeting / a run). That axis is real but on its
-> own it misleads, because **a pure artifact-only check is rare**: a
-> missing symbol is only a finding because some declaration or belief
-> said it should be there. So the classification needs a second column —
-> what the evidence is measured AGAINST.
+> 2026-09-01, user; redrafted the same day so that ONE narrative carries
+> the material that was previously split and partly in conflict — the
+> legacy Surface/Meeting/Execution roles, the obligation banding, and
+> §10's blame rules.
 
-### The two axes
+### The one idea
 
-```text
-LOCUS   what evidence the check reads      artifact | meet | runtime
-ORIGIN  what that evidence is judged against   (the table below)
-```
+**Every check compares an artifact against a claim.** Nothing is
+checkable in isolation: a C library that exports 462 symbols is not
+wrong until something says it should export 463. So the base axis is not
+what evidence a check reads — it is **where the claim comes from**.
 
-A check is a point in the product, and the origin is usually the more
-informative coordinate. Same locus, different origin ⇒ genuinely
-different checks, with different blame and different failure modes.
-
-### Origins — what a belief is measured against
-
-| origin | the belief comes from | example |
-|---|---|---|
-| **self / format** | the artifact's own well-formedness — the only TRULY artifact-only case | the file parses as ELF; the inspect JSON has the kind it claims |
-| **declaration** | what the project declared | every declared `c_api` function is exported; the elf soname equals the declared soname |
-| **peer artifact** | another artifact's surface | the stub's undefined refs ⊆ the lib's exports; header types vs stub types |
-| **sibling world** | the SAME artifact obtained another way | denotation across worlds (§6.3) — what one soname names in each provision |
-| **prior version** | the same artifact at another version | export-set diffs between releases; internal (our channels) and external (upstream releases) versioning |
-| **upstream statement** | something the project itself asserts | a typed API manifest; documented guarantees; the project's own test suite |
-| **behavioural expectation** | a recorded expected observation | the probe's expected output |
-
-Two consequences worth stating:
-
-* **almost every current agreement is origin = declaration or peer**, not
-  self. `c1`'s lib-only cell reads ONE artifact but is judged against the
-  declaration, so it is not the same KIND of check as a format-integrity
-  check that reads the same file;
-* the last three origins (**prior version, upstream statement,
-  behavioural expectation**) are also **candidate GENERATORS** — they can
-  manufacture check instances rather than only judge them. That is §9's
-  subject, and it is where heuristic derivation belongs.
-
-### Locus, refined
-
-| locus | sub-kind | what it reads |
-|---|---|---|
-| **artifact** | integrity | the artifact alone (origin = self) |
-| | conformance | the artifact vs its declaration |
-| **meet** | build/link | can these two join at compile time |
-| | load | does the loader bind them, and to what |
-| | packaging | do two providers divide/name one implementation the same way (§6) |
-| **runtime** | direct use | the app calls the binding directly |
-| | indirect use | the app goes through a wrapper/helper — a sanity check for INDIRECT dependency (`app_via_helper` exists for exactly this) |
-| | differential | direct and indirect must agree; two provisions must agree |
-| | translated | a test that passes on one side must pass through the binding (below) |
-| | suite | the project's own tests, or a regression pinned from a past bug |
-
-### The obligation rule
-
-**Artifact and meet checks are must-need; runtime is the residue.** The
-reason is not that runtime checks are less valuable — `c3` and the
-ncurses crash are runtime — but that the first two bands are cheap,
-static, and applicable in every world, so a failure they *could* have
-caught and did not is a framework gap (§0.4's ladder). Runtime is where
-a belief goes when no earlier band can express it.
-
-This banding is also what decides how much a foreign backend must know
-(`check_evaluation.md`): artifact checks are already command-shaped, meet
-checks read files and compare, runtime checks are "observe the run".
-
-### The translated-test agreement (new, user 2026-09-01)
-
-A test suite is an oracle for the side it runs on. If a behaviour is
-asserted natively, then **its translation through the binding should
-assert the same thing** — and a divergence is a binding fault, because
-the native side already established the expected answer.
+That single choice settles three things previously stated separately:
 
 ```text
-native test passes   ──translate──▶   the same test through the binding
-                                       should also pass
+what evidence is needed    ── follows from the claim's source
+when a check is obligatory ── follows from whether that source is always present
+who is blamed on failure   ── follows from who made the claim
 ```
 
-This is strong for two reasons: the expected outcome is *given* rather
-than guessed, and it scales — one native suite yields as many binding
-tests as it has cases. Its cost is the translation itself, which is why
-it belongs with the derivation work in §9 rather than being a
-hand-written family. It also composes with the *differential* sub-kind:
-direct and via-helper translations of one native test should agree with
-each other as well as with the native result.
+### The table
+
+| # | source of belief | the claim | evidence it needs | obligation | blame when it fails |
+|---|---|---|---|---|---|
+| 1 | **self / format** | the artifact is well formed | the artifact alone | **always** — costs nothing, needs no declaration | the artifact |
+| 2 | **declaration** | the project said this artifact provides X | the artifact + the declared facts | **always**, wherever a declaration exists | the artifact **or the declaration** — the row must say which it trusts |
+| 3 | **peer artifact** | another artifact records that it needs X | both artifacts' surfaces | **always**, wherever both are present | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§6.5) |
+| 4 | **sibling world** | the same artifact, obtained another way, disagrees | the artifact in two provisions | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§6.3's denotation check) |
+| 5 | **prior version** | this version differs from the last | the artifact at two versions | when a version axis exists | the change — a regression indicts the newer side |
+| 6 | **upstream statement** | the project asserts it itself (manifest, docs, its own tests) | the artifact + the upstream text or suite | opportunistic — only if upstream said something | strong: the project contradicted **itself** |
+| 7 | **behavioural expectation** | a recorded observation says what running does | a run | the residue — nothing earlier could express it | the world that ran; the weakest blame |
+
+### Obligation follows availability, not cost
+
+An earlier draft called artifact and meeting checks "must-need" because
+they are cheap. True, but not the reason. **A check is obligatory when
+its source of belief is present in every world.** Rows 1–3 always have
+their source; row 4 has it whenever a world holds two provisions, which
+canary's 2×2 guarantees; rows 5–6 depend on the project offering a
+version axis or a statement; row 7's source — an observed run — does not
+exist until everything before it has passed.
+
+§0.4's ladder points the same way from a different angle: an agreement
+observable from an always-present source should not be left to one that
+only exists at the end.
+
+### Blame follows the claimant
+
+A failing check means **either the artifact or the claim is wrong**, and
+the source names the claim's author — so the blame candidates are read
+off the table rather than argued case by case. Two rows deserve care:
+
+* **row 2 (declaration)** is the one that gets misread. A conformance
+  failure does not automatically indict the artifact; the declaration
+  may simply be stale. A row must state which side it treats as
+  authoritative, or its finding is unattributable.
+* **rows 3–4** are where the ncurses case lives: both artifacts correct,
+  no version between them, so canary's forward/backward *direction* has
+  nothing to resolve and the blamed party is the cooperation, or the
+  provisioning. **Direction is a tiebreaker within row 3, not a
+  universal rule** (§10).
+
+### Evidence shape is derived — vocabulary, not axis
+
+The old triple — **surface** (one artifact), **meeting** (two artifacts
+joining), **execution** (a run) — describes what the evidence looks like
+once the source is fixed. It stays useful, and its sub-shapes are worth
+naming because they fail differently:
+
+| shape | sub-shape | typical rows |
+|---|---|---|
+| surface | integrity / conformance | 1–2 |
+| meeting | build-link / load / packaging | 3–4 |
+| execution | direct / indirect / differential / translated / suite | 7, and 5–6 when exercised by running |
+
+`app_via_helper` is the *indirect* sub-shape and exists precisely to
+sanity-check an indirect dependency; *differential* covers direct
+vs. indirect and provision vs. provision. None of these is the base
+axis, and nothing dispatches on them.
+
+### Three sources also GENERATE checks
+
+Rows 5–7 can manufacture candidates, not merely judge them: version
+diffs propose "did this export set change under a consumer's feet"; an
+upstream manifest proposes a typed expectation; and a behavioural
+expectation can be *derived* rather than written — most sharply as the
+**translated test**:
+
+> A behaviour asserted natively should survive translation through the
+> binding. A divergence is a binding fault, because the native side
+> already established the expected answer.
+
+Strong for two reasons — the expected outcome is **given** rather than
+guessed, and one native suite yields as many binding checks as it has
+cases — and it composes with the differential sub-shape: a direct and a
+via-helper translation of one native test should agree with each other
+as well as with the native result. Its cost is the translation, so it
+belongs with §9's derivation work.
 
 ### Worked classification
 
-| agreement | locus | origin |
+| agreement | source | shape |
 |---|---|---|
-| `symbol_exported` (lib-only cell) | artifact / conformance | declaration |
-| `symbol_exported` (pair) | meet / build | peer artifact |
-| `soname_denotes_needed` | meet / load | peer artifact |
-| `denotation_across_worlds` (§6.3) | artifact ×2 | **sibling world** |
-| `no_duplicate_implementation` (§6.3) | meet / packaging | peer artifact |
-| `c_types_agree` | meet / build | peer artifact |
-| `behavior_matches` | runtime / direct | behavioural expectation |
-| a translated native test | runtime / translated | upstream statement |
+| `symbol_exported` (lib-only cell) | declaration | surface / conformance |
+| `symbol_exported` (pair) | peer artifact | meeting / build-link |
+| `soname_denotes_needed` | peer artifact | meeting / load |
+| `denotation_across_worlds` (§6.3) | **sibling world** | surface ×2 |
+| `no_duplicate_implementation` (§6.3) | peer artifact | meeting / packaging |
+| `c_types_agree` | peer artifact | meeting / build-link |
+| `behavior_matches` | behavioural expectation | execution / direct |
+| a translated native test | upstream statement | execution / translated |
 
-The classification bites: three rows that all read a `.so` sit in three
-different cells, and their blame differs accordingly (§10).
+Three of these read the same `.so` and land in three different rows —
+which is the point: **the file does not determine the check, the claim
+does.**
 
 ---
 
@@ -1581,10 +1592,14 @@ backward (provider newer than consumer) → the provider dropped or changed
                                           something; the lib is indicted
 ```
 
-The rule is worth stating once, globally, rather than per agreement:
-**blame = (which artifacts the evidence relates) × (the scenario's
-mismatch direction)** — with one amendment the ncurses case forced
-(2026-09-01).
+**Blame assignment now lives in §0.6**, where it is read off the source
+of the claim: a failure means the artifact or the claim is wrong, and
+the source names the claim's author. What remains this section's own is
+the part that is not about attribution — the depth-of-pass reading
+(§10.1) and the instrumented cases (§10.3).
+
+The one rule this section contributed, and the amendment the ncurses
+case forced (2026-09-01):
 
 **Direction resolves a pair failure only when the two sides differ by
 VERSION.** When they differ by PACKAGING — both artifacts correct, the
@@ -1600,14 +1615,8 @@ meet failure, packaging differs  → the COOPERATION; neither artifact is
                                     broken alone
 ```
 
-Blame also follows the taxonomy of §0.6 rather than the locus alone:
-
-| locus | blame on failure |
-|---|---|
-| artifact / integrity | the artifact |
-| artifact / conformance | the artifact **or its declaration** — a conformance failure indicts whichever is wrong, and the row must say which it trusts |
-| meet | the pair: direction, else the cooperation |
-| runtime | the world that ran; the weakest blame, which is why §0.4 says do not leave a check here if an earlier band can hold it |
+So **direction is a tiebreaker within one source (peer artifact), not a
+universal rule** — §0.6's table is where every other case is decided.
 
 ## 10.3 Instrumented observations shift blame deliberately
 
@@ -1962,7 +1971,7 @@ reconcile.
 
 
 
-## A.6 — the `role` field is prose, not a typed axis
+## A.6 — the `ag_role` field is prose, not a typed axis (superseded by §0.6)
 
 The code's row still carries a `cr_role` (`Surface` / `Meeting` /
 `Execution`). It is a DESCRIPTIVE tag only: the action already implies
@@ -2009,7 +2018,7 @@ how the expectation is produced — inspect JSONs → predict
 (Inspection), grep the run's log (Behavior_grep), the action's
 check_post family (Postcondition — where staged-parity at Install_lib,
 pin-checks, and freshness live), or not wired yet (Placeholder).
-The legacy roles stay prose (§4).
+The legacy roles stay prose — see §0.6, where they are evidence SHAPES rather than the base axis.
 
 **The derivation rules** (what the code actually does — the roles are
 NOT part of it; they were demoted to prose, §4):
