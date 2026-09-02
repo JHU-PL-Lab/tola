@@ -1,44 +1,34 @@
 # Tool-Grounded Agreement Catalogue for Cross-Language Binding Checks
 
-**Kind: proposal.** The producer landed (`agreement/canary_agreement_registry.ml` carries the rows); the catalogue's remaining rungs are open. **Landed when** every agreement in the catalogue resolves to a check that can ground it.
+**Kind: proposal.** The producer landed
+(`agreement/canary_agreement_registry.ml` carries the rows); the
+catalogue's remaining rungs are open. **Landed when** every agreement in
+the catalogue resolves to a check that can ground it.
 
-> **Where an agreement gets EVALUATED is an open question this catalogue
-> inherits** (2026-08-30):
-> [`check_evaluation.md`](check_evaluation.md). Canary's checks are OCaml
-> closures on a step, so they cannot cross into a backend that only emits
-> YAML — the GH backend renders `check_pre`/`check_post` zero times, and a
-> green CI job today means only "every command exited 0". If an agreement
-> is to be checkable wherever a world runs, the catalogue's natural
-> projection is onto CHECK ACTIONS ([`../status.md`](../status.md),
-> `[Pre; Action; Post]`), and the IR question — does a check action carry
-> its implementation or its meaning? — is worth settling here rather than
-> after.
+## Purpose
 
-## Status and Purpose
+The project enumerates many **provider × binding × consumer worlds** and
+runs ordinary lifecycle actions over them — fetch, build, publish,
+install/stage, probe. This document is narrower:
 
-This document is an intermediate design note for consolidating the checking logic scattered across the cross-language binding project.
+> **Systematically catalogue the agreements that can be checked around
+> those actions, and define the principles by which those agreements are
+> observed.**
 
-The project already enumerates many possible **provider × binding × consumer worlds**, including different provider provisions, binding implementations, direct applications, and applications using an additional wrapper layer. Those worlds then exercise ordinary lifecycle actions such as fetch, build, publish, fetch-from-package, install/stage, and use/probe.
+It is about the checking MODEL — not the enumeration engine, not the
+cache. `Canary_agreement_registry` is its executable projection, and the
+harness in §10a is what keeps the two aligned.
 
-The purpose of this document is narrower:
-
-> **Systematically catalogue the agreements that can be checked around those actions, and define the principles by which those agreements are observed.**
-
-This document is therefore about the **checking model**, not the enumeration engine and not the cache implementation.
-
-The existing project already has a contract registry, firing rules, fixtures, and an action-centred belief matrix. The current registry is intended to make the checking belief explicit and printable rather than leaving it scattered across project-specific tables and helper code.
-
-The work here sits one level above that implementation. Its goal is to establish a more systematic catalogue from which concrete registry rows can later be derived.
-
-**Merged 2026-08-21.** This is now the single doc: the former
-`contract_registry.md` was folded in and deleted. Its material landed in
-three places — the confirmed sections below absorbed what belongs to
-them (§0.3/§0.4 falsification and the ladder, §1 the implemented
-presence/identification instances, §2.1 the surface-role table);
-the **implemented module** moved to Appendices A–C; and catalogue
-drafts whose home is a section still under review wait in **Appendix
-D**, tagged with their intended destination. Nothing was inserted into
-an unconfirmed section — the outline stays the review spine.
+**One inherited open question — where an agreement gets EVALUATED.**
+Canary's checks are OCaml closures on a step, so they cannot cross into
+a backend that only emits YAML: the GH backend renders
+`check_pre`/`check_post` zero times, and a green CI job therefore means
+only "every command exited 0"
+([`check_evaluation.md`](check_evaluation.md), due to merge into this
+document). If an agreement is to be checkable wherever a world runs, the
+catalogue's projection is onto CHECK ACTIONS (`[Pre; Action; Post]`),
+and the IR question — does a check action carry its implementation or
+its meaning? — is worth settling here rather than after.
 
 ---
 
@@ -48,14 +38,14 @@ an unconfirmed section — the outline stays the review spine.
 * [x] **1. Resource presence and identification**
 * [ ] **2. Artifact surfaces and surface correspondence**
 
-  * [x] 2.1 Syntactic versus realized/semantical surface
-  * [ ] 2.2 Surface projections
+  * [x] 2.1 Syntactic surface and realized surface
+  * [ ] 2.2 Fundamental surface agreement
   * [ ] 2.3 Provider-side surface chain
-  * [ ] 2.4 OCaml C-stub surface chain
-  * [ ] 2.5 Python C-extension surface chain
-  * [ ] 2.6 Python ctypes surface chain
-  * [ ] 2.7 Cross-surface agreements
-  * [ ] 2.8 Static observation and later dynamic confirmation
+  * [ ] 2.4 OCaml C-stub surfaces, and the lifecycle each stage lets us check
+  * [ ] 2.5 Python C-extension surfaces, and its lifecycle
+  * [ ] 2.6 Python ctypes surfaces, and its lifecycle (with dynlink)
+  * [ ] 2.7 Surface correspondence, its projections, and the carried type oracle
+  * [ ] 2.8 Surface inspection versus resolution
 * [ ] **3. Representation and marshalling agreements**
 * [ ] **4. Lifetime and ownership agreements**
 * [ ] **5. Resolution agreements**
@@ -1949,6 +1939,14 @@ types / signatures
 references / requirements
 metadata
 ```
+
+Two things settled since this question was posed, worth carrying into
+the answer: the taxonomy now distinguishes an artifact's **identity**
+(its soname — what the ncurses case turned on) from its **interface**
+detail, so *identity* may deserve to be a projection in its own right
+rather than a kind of metadata (§6.2); and §2.7 now also holds the
+carried type oracle, which is a correspondence between the same two
+projections separated in time.
 
 The next pass should determine:
 
