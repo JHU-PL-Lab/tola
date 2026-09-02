@@ -58,36 +58,19 @@ why §5 states the phenomenon once and points at each level's mechanisms.
 
 * [ ] **4. Resolution — one name, several candidates**
 
-  * [ ] 4.1 The mechanisms, concretely *(planned)* — compiler include
-    lookup · linker library lookup · dynamic loader · findlib /
-    `OCAMLPATH` · Python import · `ctypes` `dlopen`
-  * [ ] 4.2 Search paths and their variables, per platform *(planned)* —
-    `LD_LIBRARY_PATH` / `DYLD_*` · `DT_RPATH` / `DT_RUNPATH` / `LC_RPATH`
-    · `CAML_LD_LIBRARY_PATH` · `PYTHONPATH` · `PKG_CONFIG_PATH` · `PATH`
+  * [ ] 4.1 The mechanisms, concretely *(planned)* — ELF resolution (the
+    dynamic loader) · compiler include lookup · linker library lookup ·
+    findlib / `OCAMLPATH` · Python import · `ctypes` `dlopen`
+  * [ ] 4.2 Search paths and their variables, per platform *(planned)*
   * [ ] 4.3 Transformation and staging — the same artifact in more than
-    one place (build tree vs install prefix; the four staged-parity
-    checks)
-  * [ ] 4.4 Shadowing and precedence *(planned)* — which candidate wins,
-    and why it is not always the declared one
+    one place
+  * [ ] 4.4 Shadowing and precedence *(planned)*
 * [ ] **5. Late binding — versions and dependencies**
 
-  * [ ] 5.0 A name binds to a version, and to a dependency — the four
-    moments (declared · solved · installed · loaded), external versus
-    internal versioning
-  * [ ] 5.1 The three views of a dependency — declared · recorded ·
-    resolved
-  * [ ] 5.2 The instance (ncurses)
-  * [ ] 5.3 What the artifacts alone say
-  * [ ] 5.4 The agreements
-  * [ ] 5.5 What the fix costs
-  * [ ] 5.6 Blame — the cooperation
-  * [ ] 5.7 The second form, and the method lesson
-  * [ ] 5.8 Hidden dependencies
-  * [ ] 5.9 Open steps
-  * [ ] 5.10 Versioning at the artifact level *(planned)* — sonames,
-    version nodes, symbol versioning; the mechanisms live in §3.1.2
-  * [ ] 5.11 Versioning at the package level *(planned)* — constraints,
-    solving, pins; the mechanisms live in §6
+  * [ ] 5.1 Versioning at the ELF level — brief
+  * [ ] 5.2 Versioning at the package-manager level — brief
+  * [ ] 5.3 Dependencies — declared, recorded, resolved (the ncurses
+    finding, and what follows from it)
 * [ ] **6. Package managers — the resource store that chooses**
 
   * [ ] 6.1 What a package manager is as a checking substrate
@@ -307,8 +290,8 @@ target and method do not:
 | --- | --------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | 1   | **self / format**           | the artifact is well formed, or satisfies a universal property of its kind | **always** — costs nothing, needs no declaration             | the artifact                                                                                            |
 | 2   | **declaration**             | the project said this artifact provides X                                  | **always**, wherever a declaration exists                    | the artifact **or the declaration** — a row must say which it trusts                                    |
-| 3   | **peer artifact**           | another artifact records that it needs X                                   | **always**, wherever both are present                        | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§5.6) |
-| 4   | **sibling world**           | the same artifact, obtained another way, disagrees                         | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§5.4)                                                           |
+| 3   | **peer artifact**           | another artifact records that it needs X                                   | **always**, wherever both are present                        | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§5.3.6) |
+| 4   | **sibling world**           | the same artifact, obtained another way, disagrees                         | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§5.3.4)                                                           |
 | 5   | **prior version**           | this version differs from the last                                         | when a version axis exists                                   | the change — a regression indicts the newer side                                                        |
 | 6   | **upstream statement**      | the project asserts it itself — a manifest, docs, its own tests            | opportunistic — only if upstream said something              | strong: the project contradicted **itself**                                                             |
 | 7   | **behavioural expectation** | a recorded observation says what running does                              | the residue — nothing earlier could express it               | the world that ran; the weakest blame                                                                   |
@@ -400,10 +383,10 @@ implementation; **proposed** = named in this document, no row yet.
 | `repack_complete` (c8)          | the repack lost something the original had                                     | —                                  | behavioural            | row (blocked on c6+c7)                             |
 | smoke load                      | the lib does not load, or a declared function cannot be entered                | link a minimal program, run it     | declaration            | proposed (§0.6c; decl-derived, exercises the LOADER) |
 | `interposition_winner`          | the definition that wins for a shared symbol is not the one built against      | `LD_DEBUG=bindings`                | peer                   | row                                                |
-| recorder shim                   | *(evidence, not a verdict)* what the consumer actually requested/resolved      | interposition, log                 | —                      | proposed (§5.9)                                    |
+| recorder shim                   | *(evidence, not a verdict)* what the consumer actually requested/resolved      | interposition, log                 | —                      | proposed (§5.3.9)                                    |
 | fake provider                   | the consumer breaks against a provider that satisfies the declared surface     | plant a lib, run                   | declaration            | proposed (§10.3)                                   |
 | direct-vs-indirect differential | `app_direct` and `app_via_helper` disagree                                     | run both, compare                  | behavioural            | proposed                                           |
-| prebuilt self-sufficiency       | a prebuilt needs env beyond the library path to run                            | run with only the declared env     | declaration            | proposed (§5.9)                                    |
+| prebuilt self-sufficiency       | a prebuilt needs env beyond the library path to run                            | run with only the declared env     | declaration            | proposed (§5.3.9)                                    |
 | translated test                 | a natively-asserted behaviour does not survive translation through the binding | run the translation                | **upstream statement** | proposed (§0.6d)                                   |
 | project's own suite             | upstream's tests fail against this world                                       | run the suite                      | upstream statement     | proposed                                           |
 | regression pin                  | a past bug reappears                                                           | re-run its witness                 | prior version          | proposed (§0.4)                                     |
@@ -1586,51 +1569,49 @@ instance rather than from design. Absorbs the former
 > names the symptom — two objects loaded together — not the fault. The
 > fault is that a library IDENTITY stopped denoting one implementation.
 
-## 5.0 Late binding: a name binds to a version, and to a dependency
-
-Part I could assume a name denotes the artifact we meant. It does not:
-a name denotes an artifact **at a version**, and which version — and
-which dependency — is chosen *after* the name is written. That deferral
-is what this section is about, and it has two axes.
-
-### Versions
-
-A version constraint is written at one moment and satisfied at another,
-and the gap is where the surprises live:
+A name binds to an artifact **at a version**, and to the
+**dependencies** that artifact brings — and both are chosen after the
+name is written. The deferral has four moments:
 
 ```text
 declared     a constraint is written        ">= 2.0", "= 19", or nothing
-solved       a manager picks a candidate    (§7 — and it may refuse)
+solved       a manager picks a candidate    (§6 — and it may refuse)
 installed    the store materialises one     the pin check's subject
 loaded       the loader picks among those   sonames, version nodes
 ```
 
-Two kinds of version are in play and they are not the same thing:
+Versioning shows up at two levels and is brief at both, because canary's
+implementation leans on it lightly today.
 
-* **external** — what upstream released, and the identity it advertises:
-  a release number, a soname, an ABI generation. Not under our control,
-  and the only one a third party can observe;
-* **internal** — the channels canary itself constructs: `Stable` and
-  `Dev`, a build we made from a ref we chose. Under our control, and
-  what makes a 2×2 world possible at all.
+## 5.1 Versioning at the ELF level
 
-The interesting case fuses version with identity: **a soname is a
-version-bearing name**. That is why §5.3's failure is possible at all —
-if identity carried no version claim there would be nothing to
-mis-denote.
+The artifact carries its own version claims: a **soname**
+(`libfoo.so.6`), ELF **version nodes** (`NCURSESW6_6.2`), and per-symbol
+version tags (`sym@@VER`). The mechanisms live with the artifact
+(§3.1.2); what matters here is that a soname is a **version-bearing
+name**, so identity and version are fused at this level — which is why
+§5.3.3's denotation failure is possible at all, and why `c4`/`c5` are
+version checks wearing identity clothes.
 
-What canary does with versions today: pins them at install (an identity
-check, §0.6c), enumerates them as an axis (the version half of a 2×2),
-and can *derive* candidate agreements from the diff between two of them
-(§10). What it does not do is check a version constraint's meaning —
-§7's measurement that only 13 of 370 conf packages carry a version into
-their system check is the reason that matters.
+Canary reads all three today, and compares them against the declaration
+(the solo-artifact cells of §0.6c).
 
-### Dependencies
+## 5.2 Versioning at the package-manager level
 
-The second axis, and the one this section was written from.
+The manager carries version claims of a different kind: a **constraint**
+in a package's metadata, a **solve** that picks among candidates, and a
+**pin** that fixes the result. The mechanisms live with the manager
+(§6).
 
-## 5.1 The three views of a dependency
+Canary's use is deliberately thin: it pins (an identity check at
+install) and it enumerates versions as an axis. It does not model
+solving, and the measurement in §6.4 is why that is defensible — only 13
+of 370 conf packages carry a version into their system check, so most
+constraints say less about the library than they appear to.
+
+## 5.3 Dependencies — declared, recorded, resolved
+
+### 5.3.1 The three views of a dependency
 
 A dependency exists in three forms, and every agreement in this family is
 a disagreement between two of them:
@@ -1664,9 +1645,9 @@ Two consequences the `app_via_helper` wiring already makes concrete:
 
 So "it worked where it was built" is evidence about one machine's
 resolution, not about the recorded dependencies being portable — which
-is exactly what §5.2 is an instance of.
+is exactly what §5.3.2 is an instance of.
 
-## 5.2 The instance that made this section (ncurses)
+### 5.3.2 The instance that made this section (ncurses)
 
 Two providers of one library — apt 6.4 and conda-forge 6.6 — agree on
 soname, on all 463 exported symbols, and on every ELF version node.
@@ -1700,7 +1681,7 @@ two names → one implementation     BENIGN   (Debian's proposed alias)
 one name  → two implementations    HAZARD   (the ncurses case)
 ```
 
-## 5.3 What the artifacts alone say (measured 2026-09-01)
+### 5.3.3 What the artifacts alone say (measured 2026-09-01)
 
 Both tinfo objects, conda-forge 6.6:
 
@@ -1731,7 +1712,7 @@ the SAME record (a header-level Sf.1 fact), and that the two objects are
 alternative spellings of one implementation. **The difference is
 artifact-visible; the sameness is not.**
 
-## 5.4 The agreements
+### 5.3.4 The agreements
 
 Identity first, falsifier-phrased:
 
@@ -1753,7 +1734,7 @@ are scalars a provider states about ITSELF, whereas these relate a
 consumer's recorded list to a provider's layout, or one world's layout
 to another's.
 
-## 5.5 What the fix costs, measured on this machine
+### 5.3.5 What the fix costs, measured on this machine
 
 Ubuntu today has **no `libtinfow` at all** — one file, and both `.pc`
 files name it:
@@ -1775,7 +1756,7 @@ records `libtinfow.so.6` and will not run on an older Debian lacking the
 alias — additive for existing binaries, backward-incompatible for new
 ones.
 
-## 5.6 Blame — the cooperation is the blamed party
+### 5.3.6 Blame — the cooperation is the blamed party
 
 The report's verdict: *"The crash needs both halves; neither party is
 broken alone… It is the interaction that fails."* The consumer did the
@@ -1795,7 +1776,7 @@ Canary's job here is not to fix upstream — the report is already
 addressed to Debian — but to PREDICT: the world becomes `xfail[cN]`
 with a derived reason instead of an undeclared segfault.
 
-## 5.7 The second form, and the method lesson
+### 5.3.7 The second form, and the method lesson
 
 The sweep (`../raw/closure_shape_sweep.sh`, run before any code, 2026-08-25)
 found the hazard is not an ncurses peculiarity and that it has two forms:
@@ -1816,7 +1797,7 @@ for FINDING candidates; an identity fact or a declaration is what a
 contract READS. This is §0.3's falsification discipline applied to the
 detector itself.
 
-## 5.8 Hidden dependencies (from Appendix D.2)
+### 5.3.8 Hidden dependencies
 
 The wider family this section owns — what `nm` on one artifact does not
 reveal:
@@ -1833,15 +1814,15 @@ reveal:
   wins when several exist.
 
 These are the home for the interposition-shim RECORDER: it produces
-evidence for the **resolved** view of §5.1 without issuing a verdict
+evidence for the **resolved** view of §5.3.1 without issuing a verdict
 (§10.3).
 
-## 5.9 Open steps
+### 5.3.9 Open steps
 
-1. ~~sweep the existing pairs~~ — done 2026-08-25, not falsified (§5.6).
+1. ~~sweep the existing pairs~~ — done 2026-08-25, not falsified (§5.3.6).
 2. Declare the alternative-spelling fact on `native_api` beside
    `soname` — now a CONVENIENCE that names which identities are
-   alternatives, since §5.4's denotation check needs only the two
+   alternatives, since §5.3.4's denotation check needs only the two
    worlds' objects.
 3. Add the contract row: denotation across worlds first (cheapest, and
    canary holds both provisions), then no-duplicate-implementation
@@ -2028,7 +2009,7 @@ case forced (2026-09-01):
 VERSION.** When they differ by PACKAGING — both artifacts correct, the
 versions drop-in compatible, and the conventions disagreeing about how
 one implementation is named and divided — no direction exists, and the
-blamed party is the **cooperation** (§5.6). So the meet band has two
+blamed party is the **cooperation** (§5.3.6). So the meet band has two
 blame outcomes, not one:
 
 ```text
@@ -2193,7 +2174,7 @@ Two things settled since this question was posed, worth carrying into
 the answer: the taxonomy now distinguishes an artifact's **identity**
 (its soname — what the ncurses case turned on) from its **interface**
 detail, so *identity* may deserve to be a projection in its own right
-rather than a kind of metadata (§5.2); and §2.3 now also holds the
+rather than a kind of metadata (§5.3.2); and §2.3 now also holds the
 carried type oracle, which is a correspondence between the same two
 projections separated in time.
 
@@ -2250,7 +2231,7 @@ Appendix B's pins keep honest.
 Static ⇒ build + probe where something is built, probe alone where
 nothing is; Dynamic ⇒ probe only; the three solo-artifact cells add
 `Build_lib`. The provision axis is what makes a Fetched world skip build
-sites — see §5.1 for the same idea stated over dependencies.
+sites — see §5.3.1 for the same idea stated over dependencies.
 
 **Fixtures** — every wired agreement ships its minimal counterexample as
 data, and the layer suite executes them hermetically, ahead of any
@@ -2293,7 +2274,7 @@ a stable **slug** and the **section that defines it**:
 
 ```ocaml
 { cr_slug = "soname_denotes_needed"; cr_doc = "§6"; … }   (* implemented *)
-{ prop_slug = "denotation_across_worlds"; prop_doc = "§5.4"; … }  (* proposed *)
+{ prop_slug = "denotation_across_worlds"; prop_doc = "§5.3.4"; … }  (* proposed *)
 ```
 
 `Canary_agreement_registry.all_agreements` unions both into one list, so
@@ -2305,7 +2286,7 @@ where is it written down*. The slug is the name that survives the
 states but the code has not implemented gets a row with
 `status = proposed` and a `needs` field, rather than being absent —
 the registry lists its own gaps, the same principle as the belief
-matrix's `~` marks. §5.4's four agreements are the first entries.
+matrix's `~` marks. §5.3.4's four agreements are the first entries.
 
 **The harness.** Three pins in the layer suite, the third of which reads
 this file:

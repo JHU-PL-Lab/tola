@@ -601,7 +601,7 @@ type proposed = {
 
 let proposed_agreements : proposed list =
   [ { prop_slug = "denotation_across_worlds";
-      prop_doc = "§5.4";
+      prop_doc = "§5.3.4";
       prop_claim =
         "a recorded library identity denotes the SAME implementation in \
          the deploy world as in the build world";
@@ -610,7 +610,7 @@ let proposed_agreements : proposed list =
         "compare the object each soname names in both provisions of a \
          2x2 world — static, no loader, no declaration (§6.3)" };
     { prop_slug = "no_duplicate_implementation";
-      prop_doc = "§5.4";
+      prop_doc = "§5.3.4";
       prop_claim =
         "the resolved set contains no two identities that are one \
          implementation (alternative spelling), and none that statically \
@@ -620,14 +620,14 @@ let proposed_agreements : proposed list =
         "the shipped objects' symbol sets + version namespaces; the \
          declared alternative-spelling fact is a convenience (§6.6)" };
     { prop_slug = "closure_satisfiable";
-      prop_doc = "§5.4";
+      prop_doc = "§5.3.4";
       prop_claim =
         "every name in the consumer's recorded NEEDED has a provider in \
          this world";
       prop_reads = [ ("Sf.5", "binding"); ("Sf.2", "native") ];
       prop_needs = "readelf -d on the consumer + the world's object set" };
     { prop_slug = "interposition_winner";
-      prop_doc = "§5.4";
+      prop_doc = "§5.3.4";
       prop_claim =
         "the definition that wins for a shared symbol is the one the \
          consumer was built against";
