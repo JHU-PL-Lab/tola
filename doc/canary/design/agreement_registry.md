@@ -267,8 +267,8 @@ target and method do not:
 | --- | --------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | 1   | **self / format**           | the artifact is well formed, or satisfies a universal property of its kind | **always** — costs nothing, needs no declaration             | the artifact                                                                                            |
 | 2   | **declaration**             | the project said this artifact provides X                                  | **always**, wherever a declaration exists                    | the artifact **or the declaration** — a row must say which it trusts                                    |
-| 3   | **peer artifact**           | another artifact records that it needs X                                   | **always**, wherever both are present                        | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§6.5) |
-| 4   | **sibling world**           | the same artifact, obtained another way, disagrees                         | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§6.3)                                                           |
+| 3   | **peer artifact**           | another artifact records that it needs X                                   | **always**, wherever both are present                        | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§6.6) |
+| 4   | **sibling world**           | the same artifact, obtained another way, disagrees                         | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§6.4)                                                           |
 | 5   | **prior version**           | this version differs from the last                                         | when a version axis exists                                   | the change — a regression indicts the newer side                                                        |
 | 6   | **upstream statement**      | the project asserts it itself — a manifest, docs, its own tests            | opportunistic — only if upstream said something              | strong: the project contradicted **itself**                                                             |
 | 7   | **behavioural expectation** | a recorded observation says what running does                              | the residue — nothing earlier could express it               | the world that ran; the weakest blame                                                                   |
@@ -360,10 +360,10 @@ implementation; **proposed** = named in this document, no row yet.
 | `repack_complete` (c8)          | the repack lost something the original had                                     | —                                  | behavioural            | row (blocked on c6+c7)                             |
 | smoke load                      | the lib does not load, or a declared function cannot be entered                | link a minimal program, run it     | declaration            | proposed (§0.6c; decl-derived, exercises the LOADER) |
 | `interposition_winner`          | the definition that wins for a shared symbol is not the one built against      | `LD_DEBUG=bindings`                | peer                   | row                                                |
-| recorder shim                   | *(evidence, not a verdict)* what the consumer actually requested/resolved      | interposition, log                 | —                      | proposed (§6.7)                                    |
+| recorder shim                   | *(evidence, not a verdict)* what the consumer actually requested/resolved      | interposition, log                 | —                      | proposed (§6.9)                                    |
 | fake provider                   | the consumer breaks against a provider that satisfies the declared surface     | plant a lib, run                   | declaration            | proposed (§10.3)                                   |
 | direct-vs-indirect differential | `app_direct` and `app_via_helper` disagree                                     | run both, compare                  | behavioural            | proposed                                           |
-| prebuilt self-sufficiency       | a prebuilt needs env beyond the library path to run                            | run with only the declared env     | declaration            | proposed (§6.8)                                    |
+| prebuilt self-sufficiency       | a prebuilt needs env beyond the library path to run                            | run with only the declared env     | declaration            | proposed (§6.9)                                    |
 | translated test                 | a natively-asserted behaviour does not survive translation through the binding | run the translation                | **upstream statement** | proposed (§0.6d)                                   |
 | project's own suite             | upstream's tests fail against this world                                       | run the suite                      | upstream statement     | proposed                                           |
 | regression pin                  | a past bug reappears                                                           | re-run its witness                 | prior version          | proposed (§0.4)                                     |
@@ -495,6 +495,10 @@ Again, this is substrate-level evidence.
 ---
 
 ## 1.3 Package-manager resources
+
+> This is the SUBSTRATE view — a package manager as a place resources
+> live, answering presence and identity. The manager as a LAYER that
+> chooses between candidates, and what it will refuse, is §7.
 
 Package-level existence cannot always be reduced to file-system existence.
 
@@ -1464,6 +1468,15 @@ concrete (§7).
 # 4. Resolution — one name, several candidates
 **Status: pending.**
 
+**What already exists elsewhere.** The catalogue does not wait on this
+section: §0.6c already carries resolution-shaped checks
+(`closure_satisfiable`, `interposition_winner`, the prebuilt's
+self-sufficiency), §2.4 draws the inspect-versus-resolve line, and §6
+treats the resolved view as one of three. What is missing HERE is the
+consolidated statement — the mechanisms enumerated in one place, each
+with the tool that observes it. Appendix D's path family is its raw
+material.
+
 Resolution should build on the lower-level resource presence/identification capability.
 
 The central question is:
@@ -1533,7 +1546,51 @@ instance rather than from design. Absorbs the former
 > names the symptom — two objects loaded together — not the fault. The
 > fault is that a library IDENTITY stopped denoting one implementation.
 
-## 6.0 The three views of a dependency
+## 6.0 Late binding: a name binds to a version, and to a dependency
+
+Part I could assume a name denotes the artifact we meant. It does not:
+a name denotes an artifact **at a version**, and which version — and
+which dependency — is chosen *after* the name is written. That deferral
+is what this section is about, and it has two axes.
+
+### Versions
+
+A version constraint is written at one moment and satisfied at another,
+and the gap is where the surprises live:
+
+```text
+declared     a constraint is written        ">= 2.0", "= 19", or nothing
+solved       a manager picks a candidate    (§7 — and it may refuse)
+installed    the store materialises one     the pin check's subject
+loaded       the loader picks among those   sonames, version nodes
+```
+
+Two kinds of version are in play and they are not the same thing:
+
+* **external** — what upstream released, and the identity it advertises:
+  a release number, a soname, an ABI generation. Not under our control,
+  and the only one a third party can observe;
+* **internal** — the channels canary itself constructs: `Stable` and
+  `Dev`, a build we made from a ref we chose. Under our control, and
+  what makes a 2×2 world possible at all.
+
+The interesting case fuses version with identity: **a soname is a
+version-bearing name**. That is why §6.3's failure is possible at all —
+if identity carried no version claim there would be nothing to
+mis-denote.
+
+What canary does with versions today: pins them at install (an identity
+check, §0.6c), enumerates them as an axis (the version half of a 2×2),
+and can *derive* candidate agreements from the diff between two of them
+(§10). What it does not do is check a version constraint's meaning —
+§7's measurement that only 13 of 370 conf packages carry a version into
+their system check is the reason that matters.
+
+### Dependencies
+
+The second axis, and the one this section was written from.
+
+## 6.1 The three views of a dependency
 
 A dependency exists in three forms, and every agreement in this family is
 a disagreement between two of them:
@@ -1567,9 +1624,9 @@ Two consequences the `app_via_helper` wiring already makes concrete:
 
 So "it worked where it was built" is evidence about one machine's
 resolution, not about the recorded dependencies being portable — which
-is exactly what §6.1 is an instance of.
+is exactly what §6.2 is an instance of.
 
-## 6.1 The instance that made this section (ncurses)
+## 6.2 The instance that made this section (ncurses)
 
 Two providers of one library — apt 6.4 and conda-forge 6.6 — agree on
 soname, on all 463 exported symbols, and on every ELF version node.
@@ -1603,7 +1660,7 @@ two names → one implementation     BENIGN   (Debian's proposed alias)
 one name  → two implementations    HAZARD   (the ncurses case)
 ```
 
-## 6.2 What the artifacts alone say (measured 2026-09-01)
+## 6.3 What the artifacts alone say (measured 2026-09-01)
 
 Both tinfo objects, conda-forge 6.6:
 
@@ -1634,7 +1691,7 @@ the SAME record (a header-level Sf.1 fact), and that the two objects are
 alternative spellings of one implementation. **The difference is
 artifact-visible; the sameness is not.**
 
-## 6.3 The agreements
+## 6.4 The agreements
 
 Identity first, falsifier-phrased:
 
@@ -1656,7 +1713,7 @@ are scalars a provider states about ITSELF, whereas these relate a
 consumer's recorded list to a provider's layout, or one world's layout
 to another's.
 
-## 6.4 What the fix costs, measured on this machine
+## 6.5 What the fix costs, measured on this machine
 
 Ubuntu today has **no `libtinfow` at all** — one file, and both `.pc`
 files name it:
@@ -1678,7 +1735,7 @@ records `libtinfow.so.6` and will not run on an older Debian lacking the
 alias — additive for existing binaries, backward-incompatible for new
 ones.
 
-## 6.5 Blame — the cooperation is the blamed party
+## 6.6 Blame — the cooperation is the blamed party
 
 The report's verdict: *"The crash needs both halves; neither party is
 broken alone… It is the interaction that fails."* The consumer did the
@@ -1698,7 +1755,7 @@ Canary's job here is not to fix upstream — the report is already
 addressed to Debian — but to PREDICT: the world becomes `xfail[cN]`
 with a derived reason instead of an undeclared segfault.
 
-## 6.6 The second form, and the method lesson
+## 6.7 The second form, and the method lesson
 
 The sweep (`../raw/closure_shape_sweep.sh`, run before any code, 2026-08-25)
 found the hazard is not an ncurses peculiarity and that it has two forms:
@@ -1719,7 +1776,7 @@ for FINDING candidates; an identity fact or a declaration is what a
 contract READS. This is §0.3's falsification discipline applied to the
 detector itself.
 
-## 6.7 Hidden dependencies (from Appendix D.2)
+## 6.8 Hidden dependencies (from Appendix D.2)
 
 The wider family this section owns — what `nm` on one artifact does not
 reveal:
@@ -1739,7 +1796,7 @@ These are the home for the interposition-shim RECORDER: it produces
 evidence for the **resolved** view of §6.0 without issuing a verdict
 (§10.3).
 
-## 6.8 Open steps
+## 6.9 Open steps
 
 1. ~~sweep the existing pairs~~ — done 2026-08-25, not falsified (§6.6).
 2. Declare the alternative-spelling fact on `native_api` beside
@@ -1762,6 +1819,10 @@ evidence for the **resolved** view of §6.0 without issuing a verdict
 ---
 
 # 7. Package Managers — the resource store that chooses
+> §1.3 covered a package manager as a resource SUBSTRATE — how one
+> answers presence and identity. This section is the manager as a
+> LAYER: what it chooses, and what it refuses.
+
 A package manager is not part of a language chain and not part of a
 native library; it is a **layer over both**, and it deserves its own
 section for that reason. It decides which artifact a name resolves to,
@@ -1838,6 +1899,14 @@ than in sequence.
 
 # 8. Behavioural Agreements
 **Status: pending.**
+
+**What already exists elsewhere.** §0.6c's third target is entirely this
+section's subject — `behavior_matches`, the smoke load, the
+direct-versus-indirect differential, the translated test, upstream
+suites and regression pins — and §0.6b explains why behaviour is the
+residue: its source of belief, an observed run, does not exist until
+everything earlier has passed. What is missing HERE is the family's own
+treatment.
 
 Behavior should remain the deepest observation layer.
 
@@ -1919,7 +1988,7 @@ case forced (2026-09-01):
 VERSION.** When they differ by PACKAGING — both artifacts correct, the
 versions drop-in compatible, and the conventions disagreeing about how
 one implementation is named and divided — no direction exists, and the
-blamed party is the **cooperation** (§6.5). So the meet band has two
+blamed party is the **cooperation** (§6.6). So the meet band has two
 blame outcomes, not one:
 
 ```text
@@ -1959,6 +2028,14 @@ blame statement fixed in advance:
 
 # 10. Derivation and Discovery
 **Status: pending.**
+
+**What already exists elsewhere.** §0.6b names the three sources that
+can GENERATE rather than only judge — prior version, upstream statement,
+behavioural expectation — and §0.6d states the sharpest of them, the
+**translated test**: a behaviour asserted natively should survive
+translation through the binding, and a divergence is a binding fault
+because the native side already established the expected answer. What is
+missing HERE is the machinery: how a candidate becomes a row.
 
 Candidate agreements may originate from several sources:
 
