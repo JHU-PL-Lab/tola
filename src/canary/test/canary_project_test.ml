@@ -1715,6 +1715,69 @@ let agreement_bridge_pins : pure_test list =
           && List.length CR.all_agreements
              = List.length CR.agreement_registry
                + List.length CR.proposed_agreements) };
+    (* every PROSE cross-reference resolves too — the gap §10a named.
+       Lines mentioning another .md are skipped (their § belongs to that
+       document, not this one). *)
+    { name = "agreements.doc_cross_refs_resolve";
+      check =
+        (fun () ->
+          if not (Stdlib.Sys.file_exists doc) then true
+          else
+            let text =
+              Stdlib.In_channel.with_open_text doc Stdlib.In_channel.input_all
+            in
+            let lines = String.split_lines text in
+            let take_tok s =
+              let n = String.length s in
+              let rec go i =
+                if i >= n then i
+                else
+                  let ch = s.[i] in
+                  if Char.is_alphanum ch || Char.equal ch '.' then go (i + 1)
+                  else i
+              in
+              String.sub s ~pos:0 ~len:(go 0)
+            in
+            let headings =
+              List.filter_map lines ~f:(fun l ->
+                  if String.is_prefix l ~prefix:"#" then
+                    let body =
+                      String.lstrip (String.lstrip l ~drop:(Char.equal '#'))
+                    in
+                    let tok = take_tok body in
+                    let tok = String.rstrip tok ~drop:(Char.equal '.') in
+                    if String.is_empty tok then None else Some tok
+                  else None)
+              |> List.dedup_and_sort ~compare:String.compare
+            in
+            let refs_of line =
+              let rec go acc i =
+                match String.substr_index line ~pos:i ~pattern:"\xc2\xa7" with
+                | None -> acc
+                | Some j ->
+                    let start = j + 2 in
+                    let tok = take_tok (String.drop_prefix line start) in
+                    let tok = String.rstrip tok ~drop:(Char.equal '.') in
+                    go (if String.is_empty tok then acc else tok :: acc)
+                      (start + 1)
+              in
+              go [] 0
+            in
+            let bad =
+              List.concat_map lines ~f:(fun l ->
+                  if String.is_substring l ~substring:".md" then []
+                  else
+                    List.filter (refs_of l) ~f:(fun r ->
+                        not
+                          (List.mem headings r ~equal:String.equal
+                          || List.exists headings ~f:(fun h ->
+                                 String.is_prefix h ~prefix:(r ^ ".")))))
+              |> List.dedup_and_sort ~compare:String.compare
+            in
+            if not (List.is_empty bad) then
+              Fmt.pr "    unresolved doc refs: %s@."
+                (String.concat ~sep:", " (List.map bad ~f:(fun r -> "\xc2\xa7" ^ r)));
+            List.is_empty bad) };
     (* the harness proper: the doc anchors resolve *)
     { name = "agreements.doc_anchors_exist";
       check =

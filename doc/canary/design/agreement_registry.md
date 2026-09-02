@@ -273,11 +273,11 @@ check is obligatory and who is blamed when it fails.
 
 ### 0.6a The check: target and method
 
-| target | method | what it can see | what it cannot |
-|---|---|---|---|
-| **a solo artifact** | an inspector — `nm`, `readelf`, `ocamlobjinfo`, `dir()`, a parser | what this one artifact presents, and whether it matches what was declared about it | anything relational; anything about the other side |
-| **several artifacts** | inspect each, then COMPARE — still only artifacts, nothing runs | that two recorded or declared surfaces disagree | what the toolchain will actually do with them |
-| **a running result** | observe the outcome of running a TOOL (compiler, linker, loader) or of running TEST CODE | that the join or the behaviour really happened, in this world | only the observable result — never the mechanism that produced it (§0.2) |
+| target                | method                                                                                   | what it can see                                                                    | what it cannot                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **a solo artifact**   | an inspector — `nm`, `readelf`, `ocamlobjinfo`, `dir()`, a parser                        | what this one artifact presents, and whether it matches what was declared about it | anything relational; anything about the other side                       |
+| **several artifacts** | inspect each, then COMPARE — still only artifacts, nothing runs                          | that two recorded or declared surfaces disagree                                    | what the toolchain will actually do with them                            |
+| **a running result**  | observe the outcome of running a TOOL (compiler, linker, loader) or of running TEST CODE | that the join or the behaviour really happened, in this world                      | only the observable result — never the mechanism that produced it (§0.2) |
 
 Two consequences of stating it this way:
 
@@ -299,15 +299,15 @@ until something says it should export 463. So the answer to *why is this
 a check* is always **who claims it**, and that decides two things the
 target and method do not:
 
-| # | source of belief | the claim | obligation | blame when it fails |
-|---|---|---|---|---|
-| 1 | **self / format** | the artifact is well formed, or satisfies a universal property of its kind | **always** — costs nothing, needs no declaration | the artifact |
-| 2 | **declaration** | the project said this artifact provides X | **always**, wherever a declaration exists | the artifact **or the declaration** — a row must say which it trusts |
-| 3 | **peer artifact** | another artifact records that it needs X | **always**, wherever both are present | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§6.5) |
-| 4 | **sibling world** | the same artifact, obtained another way, disagrees | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§6.3) |
-| 5 | **prior version** | this version differs from the last | when a version axis exists | the change — a regression indicts the newer side |
-| 6 | **upstream statement** | the project asserts it itself — a manifest, docs, its own tests | opportunistic — only if upstream said something | strong: the project contradicted **itself** |
-| 7 | **behavioural expectation** | a recorded observation says what running does | the residue — nothing earlier could express it | the world that ran; the weakest blame |
+| #   | source of belief            | the claim                                                                  | obligation                                                   | blame when it fails                                                                                     |
+| --- | --------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| 1   | **self / format**           | the artifact is well formed, or satisfies a universal property of its kind | **always** — costs nothing, needs no declaration             | the artifact                                                                                            |
+| 2   | **declaration**             | the project said this artifact provides X                                  | **always**, wherever a declaration exists                    | the artifact **or the declaration** — a row must say which it trusts                                    |
+| 3   | **peer artifact**           | another artifact records that it needs X                                   | **always**, wherever both are present                        | the pair: *direction* if they differ by version, the **cooperation** if they differ by packaging (§6.5) |
+| 4   | **sibling world**           | the same artifact, obtained another way, disagrees                         | when a world holds two provisions — canary's 2×2 always does | neither artifact: the **provisioning** (§6.3)                                                           |
+| 5   | **prior version**           | this version differs from the last                                         | when a version axis exists                                   | the change — a regression indicts the newer side                                                        |
+| 6   | **upstream statement**      | the project asserts it itself — a manifest, docs, its own tests            | opportunistic — only if upstream said something              | strong: the project contradicted **itself**                                                             |
+| 7   | **behavioural expectation** | a recorded observation says what running does                              | the residue — nothing earlier could express it               | the world that ran; the weakest blame                                                                   |
 
 **Obligation follows availability, not cost.** A check is obligatory
 when its source of belief is present in every world. Rows 1–3 always
@@ -336,56 +336,56 @@ implementation; **proposed** = named in this document, no row yet.
 
 #### Target 1 — a solo artifact, via an inspector
 
-| check | falsifier | method | source | status |
-|---|---|---|---|---|
-| `symbol_exported` (lib-only) | a declared `c_api` function is missing from the built lib | `nm -D` vs the decl | declaration | wired |
-| `api_surface_complete` (c2) | a watchlisted name is absent from the user-facing surface | `.mli` / `dir()` vs the watchlist | declaration | wired |
-| `soname_denotes_needed` (lib-only) | the built lib's elf soname ≠ the declared soname | `readelf -d` vs the decl | declaration | wired |
-| `symbol_versions_present` (lib-only) | a declared version tag is not exported | `nm -D` version nodes vs the decl | declaration | wired |
-| action markers | the action's declared output never appeared | `test -f` | declaration | wired |
-| PM pin check | the installed package is not at the pinned version | the PM's own query | declaration | wired |
-| pinned-ref freshness | the checkout is not at the ref it claims | `rev-parse HEAD` vs the ref | declaration | wired |
-| repo contents | the tree lacks what its row says it provides | file existence | declaration | wired |
-| staged completeness | a declared artifact did not stage | `test -f` under the prefix | declaration | wired (hand list; deriving it from the declared surface is open) |
-| portability of a staged binary | a staged artifact still contains a build-tree path | grep the artifact's metadata/strings | **self** — installable binaries must be relocatable | proposed (§7) |
-| inspect-JSON integrity | the summary does not have the kind it claims | the parser | **self** | wired (warns) |
-| spec maturity | a project's own declaration is incomplete | `canary spec-check` | **self** — applied to a declaration rather than an artifact | wired |
+| check                                | falsifier                                                 | method                               | source                                                      | status                                                           |
+| ------------------------------------ | --------------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| `symbol_exported` (lib-only)         | a declared `c_api` function is missing from the built lib | `nm -D` vs the decl                  | declaration                                                 | wired                                                            |
+| `api_surface_complete` (c2)          | a watchlisted name is absent from the user-facing surface | `.mli` / `dir()` vs the watchlist    | declaration                                                 | wired                                                            |
+| `soname_denotes_needed` (lib-only)   | the built lib's elf soname ≠ the declared soname          | `readelf -d` vs the decl             | declaration                                                 | wired                                                            |
+| `symbol_versions_present` (lib-only) | a declared version tag is not exported                    | `nm -D` version nodes vs the decl    | declaration                                                 | wired                                                            |
+| action markers                       | the action's declared output never appeared               | `test -f`                            | declaration                                                 | wired                                                            |
+| PM pin check                         | the installed package is not at the pinned version        | the PM's own query                   | declaration                                                 | wired                                                            |
+| pinned-ref freshness                 | the checkout is not at the ref it claims                  | `rev-parse HEAD` vs the ref          | declaration                                                 | wired                                                            |
+| repo contents                        | the tree lacks what its row says it provides              | file existence                       | declaration                                                 | wired                                                            |
+| staged completeness                  | a declared artifact did not stage                         | `test -f` under the prefix           | declaration                                                 | wired (hand list; deriving it from the declared surface is open) |
+| portability of a staged binary       | a staged artifact still contains a build-tree path        | grep the artifact's metadata/strings | **self** — installable binaries must be relocatable         | proposed (§7)                                                    |
+| inspect-JSON integrity               | the summary does not have the kind it claims              | the parser                           | **self**                                                    | wired (warns)                                                    |
+| spec maturity                        | a project's own declaration is incomplete                 | `canary spec-check`                  | **self** — applied to a declaration rather than an artifact | wired                                                            |
 
 #### Target 2 — several artifacts, inspected and compared
 
-| check | falsifier | method | source | status |
-|---|---|---|---|---|
-| `symbol_exported` (pair) | the stub's undefined refs are not covered by the lib's exports | `nm` both, set difference | peer | wired |
-| `c_types_agree` (c6) | header and stub disagree on a signature | typed inspects, compare | peer | wired |
-| `soname_denotes_needed` (pair) | the lib's soname is not what the consumer recorded | `readelf -d` both | peer | wired |
-| `symbol_versions_present` (pair) | the consumer requires a version node the provider does not export | version maps, compare | peer | wired |
-| `c1_lag_note` | *(a warning, not a failure)* the consumer uses a small fraction of the provider's surface — possibly stale | set sizes | peer | wired |
-| `closure_satisfiable` | a recorded `NEEDED` has no provider in this world | `readelf -d` vs the world's objects | peer | row |
-| `no_duplicate_implementation` | two identities in the closure are one implementation, or one absorbs another | symbol sets + version namespaces | peer | row |
-| `denotation_across_worlds` | one soname names different implementations in the two provisions | compare the object each soname names | **sibling world** | row |
-| staged parity | the staged image differs from the build tree beyond declared transforms | symbol/version diff, build vs staged | sibling world | proposed (§7) |
-| header-as-oracle | a consumer's declared types contradict the header it wraps, at a later action | typed header vs the consumer's surface | peer | proposed (§2) |
-| DWARF signatures | the built lib's compiled signatures contradict the declared header | `readelf --debug-dump=info` vs the header | declaration | proposed (§2, when DWARF exists) |
-| export-set diff | a version changed what it exports under a consumer's feet | two versions' `nm` output | **prior version** | proposed (§9) |
-| upstream manifest | the artifact contradicts a typed API manifest the project ships | manifest vs `nm`/headers | **upstream statement** | proposed (§9; torch has one) |
+| check                            | falsifier                                                                                                  | method                                    | source                 | status                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ---------------------- | -------------------------------- |
+| `symbol_exported` (pair)         | the stub's undefined refs are not covered by the lib's exports                                             | `nm` both, set difference                 | peer                   | wired                            |
+| `c_types_agree` (c6)             | header and stub disagree on a signature                                                                    | typed inspects, compare                   | peer                   | wired                            |
+| `soname_denotes_needed` (pair)   | the lib's soname is not what the consumer recorded                                                         | `readelf -d` both                         | peer                   | wired                            |
+| `symbol_versions_present` (pair) | the consumer requires a version node the provider does not export                                          | version maps, compare                     | peer                   | wired                            |
+| `c1_lag_note`                    | *(a warning, not a failure)* the consumer uses a small fraction of the provider's surface — possibly stale | set sizes                                 | peer                   | wired                            |
+| `closure_satisfiable`            | a recorded `NEEDED` has no provider in this world                                                          | `readelf -d` vs the world's objects       | peer                   | row                              |
+| `no_duplicate_implementation`    | two identities in the closure are one implementation, or one absorbs another                               | symbol sets + version namespaces          | peer                   | row                              |
+| `denotation_across_worlds`       | one soname names different implementations in the two provisions                                           | compare the object each soname names      | **sibling world**      | row                              |
+| staged parity                    | the staged image differs from the build tree beyond declared transforms                                    | symbol/version diff, build vs staged      | sibling world          | proposed (§7)                    |
+| header-as-oracle                 | a consumer's declared types contradict the header it wraps, at a later action                              | typed header vs the consumer's surface    | peer                   | proposed (§2)                    |
+| DWARF signatures                 | the built lib's compiled signatures contradict the declared header                                         | `readelf --debug-dump=info` vs the header | declaration            | proposed (§2, when DWARF exists) |
+| export-set diff                  | a version changed what it exports under a consumer's feet                                                  | two versions' `nm` output                 | **prior version**      | proposed (§9)                    |
+| upstream manifest                | the artifact contradicts a typed API manifest the project ships                                            | manifest vs `nm`/headers                  | **upstream statement** | proposed (§9; torch has one)     |
 
 #### Target 3 — a running result, of a tool or of test code
 
-| check | falsifier | method | source | status |
-|---|---|---|---|---|
-| build/link verdict | the pair does not compile or link | the compiler's/linker's exit + log | peer | wired (as step outcome) |
-| `behavior_matches` (c3) | the probe's trace differs from what was recorded | run, grep the log | behavioural | row (disabled) |
-| `repack_preserves_api` (c7) | the user layer is not a sound repacking of the stub layer | run the binding probe | behavioural | row (stubbed) |
-| `repack_complete` (c8) | the repack lost something the original had | — | behavioural | row (blocked on c6+c7) |
-| smoke load | the lib does not load, or a declared function cannot be entered | link a minimal program, run it | declaration | proposed (§13; decl-derived, exercises the LOADER) |
-| `interposition_winner` | the definition that wins for a shared symbol is not the one built against | `LD_DEBUG=bindings` | peer | row |
-| recorder shim | *(evidence, not a verdict)* what the consumer actually requested/resolved | interposition, log | — | proposed (§6.7) |
-| fake provider | the consumer breaks against a provider that satisfies the declared surface | plant a lib, run | declaration | proposed (§10.3) |
-| direct-vs-indirect differential | `app_direct` and `app_via_helper` disagree | run both, compare | behavioural | proposed |
-| prebuilt self-sufficiency | a prebuilt needs env beyond the library path to run | run with only the declared env | declaration | proposed (§6.8) |
-| translated test | a natively-asserted behaviour does not survive translation through the binding | run the translation | **upstream statement** | proposed (§0.6d) |
-| project's own suite | upstream's tests fail against this world | run the suite | upstream statement | proposed |
-| regression pin | a past bug reappears | re-run its witness | prior version | proposed (§14) |
+| check                           | falsifier                                                                      | method                             | source                 | status                                             |
+| ------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------- | ---------------------- | -------------------------------------------------- |
+| build/link verdict              | the pair does not compile or link                                              | the compiler's/linker's exit + log | peer                   | wired (as step outcome)                            |
+| `behavior_matches` (c3)         | the probe's trace differs from what was recorded                               | run, grep the log                  | behavioural            | row (disabled)                                     |
+| `repack_preserves_api` (c7)     | the user layer is not a sound repacking of the stub layer                      | run the binding probe              | behavioural            | row (stubbed)                                      |
+| `repack_complete` (c8)          | the repack lost something the original had                                     | —                                  | behavioural            | row (blocked on c6+c7)                             |
+| smoke load                      | the lib does not load, or a declared function cannot be entered                | link a minimal program, run it     | declaration            | proposed (App. A.5; decl-derived, exercises the LOADER) |
+| `interposition_winner`          | the definition that wins for a shared symbol is not the one built against      | `LD_DEBUG=bindings`                | peer                   | row                                                |
+| recorder shim                   | *(evidence, not a verdict)* what the consumer actually requested/resolved      | interposition, log                 | —                      | proposed (§6.7)                                    |
+| fake provider                   | the consumer breaks against a provider that satisfies the declared surface     | plant a lib, run                   | declaration            | proposed (§10.3)                                   |
+| direct-vs-indirect differential | `app_direct` and `app_via_helper` disagree                                     | run both, compare                  | behavioural            | proposed                                           |
+| prebuilt self-sufficiency       | a prebuilt needs env beyond the library path to run                            | run with only the declared env     | declaration            | proposed (§6.8)                                    |
+| translated test                 | a natively-asserted behaviour does not survive translation through the binding | run the translation                | **upstream statement** | proposed (§0.6d)                                   |
+| project's own suite             | upstream's tests fail against this world                                       | run the suite                      | upstream statement     | proposed                                           |
+| regression pin                  | a past bug reappears                                                           | re-run its witness                 | prior version          | proposed (§0.4)                                     |
 
 Reading the catalogue: **the same `.so` appears at all three targets and
 under four different sources.** The file does not determine the check;
@@ -624,13 +624,13 @@ Details of paths, ABI compatibility, versions, loader policies, and search order
 The capability already exists in the framework, scattered across the
 execution layer rather than named as one module. Its instances:
 
-| instance | substrate | presence | identification |
-|---|---|---|---|
-| per-action markers (`marker_of_action`: `source.ok`, `build.ok`, `install.ok`, `probe.log`, …) | file system | the action's declared output exists | the file itself; nothing finer |
-| pinned-ref freshness | git working tree | the checkout is there | `rev-parse HEAD` equals the declared ref (works for SHAs and tags) |
-| PM pin-check | package manager | the package is installed | the installed VERSION equals the declared pin |
-| repo-contents invariant | git tree | the tree is there | it contains what its declared row says it provides |
-| staged completeness (`assert_staged`) | file system, install prefix | the staged file exists | (currently a hand list; deriving it from the declared surface is a to-do) |
+| instance                                                                                       | substrate                   | presence                            | identification                                                            |
+| ---------------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------- | ------------------------------------------------------------------------- |
+| per-action markers (`marker_of_action`: `source.ok`, `build.ok`, `install.ok`, `probe.log`, …) | file system                 | the action's declared output exists | the file itself; nothing finer                                            |
+| pinned-ref freshness                                                                           | git working tree            | the checkout is there               | `rev-parse HEAD` equals the declared ref (works for SHAs and tags)        |
+| PM pin-check                                                                                   | package manager             | the package is installed            | the installed VERSION equals the declared pin                             |
+| repo-contents invariant                                                                        | git tree                    | the tree is there                   | it contains what its declared row says it provides                        |
+| staged completeness (`assert_staged`)                                                          | file system, install prefix | the staged file exists              | (currently a hand list; deriving it from the declared surface is a to-do) |
 
 Two observations from that table:
 
@@ -721,13 +721,13 @@ The manuscript already names five surfaces along exactly this axis
 the vocabulary the checking code writes against, so the catalogue
 should reuse the identifiers rather than invent parallel ones:
 
-| id | name | side | kind | what it is |
-|---|---|---|---|---|
-| Sf.1 | `native_header` | native | syntactic | declared C interface — signatures, structs, macros |
-| Sf.2 | `native_lib` | native | realized | the compiled `.so`/`.dylib` — defined symbols, `@@VER`, SONAME, NEEDED |
-| Sf.3 | `binding_stub` | binding | syntactic | the stub-facing declarations — `external`, `argtypes`, `PyMethodDef` |
-| Sf.4 | `binding_header` | binding | syntactic | the user-facing module signature — `.mli` vals, Python module names |
-| Sf.5 | `binding_lib` | binding | realized | the compiled binding — `.cmxa` + stub `.a`, the cext `.so` (ctypes: n/a) |
+| id   | name             | side    | kind      | what it is                                                               |
+| ---- | ---------------- | ------- | --------- | ------------------------------------------------------------------------ |
+| Sf.1 | `native_header`  | native  | syntactic | declared C interface — signatures, structs, macros                       |
+| Sf.2 | `native_lib`     | native  | realized  | the compiled `.so`/`.dylib` — defined symbols, `@@VER`, SONAME, NEEDED   |
+| Sf.3 | `binding_stub`   | binding | syntactic | the stub-facing declarations — `external`, `argtypes`, `PyMethodDef`     |
+| Sf.4 | `binding_header` | binding | syntactic | the user-facing module signature — `.mli` vals, Python module names      |
+| Sf.5 | `binding_lib`    | binding | realized  | the compiled binding — `.cmxa` + stub `.a`, the cext `.so` (ctypes: n/a) |
 
 A **runtime observation** (a probe's trace) is deliberately NOT one of
 the five: it observes execution, not an artifact's boundary. It is
@@ -739,15 +739,15 @@ Each inspect input the checking code consumes maps to exactly one
 surface role — this is what grounds a check in an artifact rather than
 in a tool:
 
-| inspect input | surface role (side) |
-|---|---|
-| `C_stub` | Sf.3 (binding) |
-| `Native_lib` | Sf.2 (native) |
-| `Ocaml_mli` / `Python_attrs` | Sf.4 (binding) |
-| `Abi_surface` | Sf.5 (binding) |
-| `Versioned_exports` / `Versioned_req` | Sf.2 (native) / Sf.5 (binding) |
-| `Typed_header` / `Typed_binding_stub` | Sf.1 (native) / Sf.3 (binding) |
-| probe output | `Trace` — a runtime observation, not a surface |
+| inspect input                         | surface role (side)                            |
+| ------------------------------------- | ---------------------------------------------- |
+| `C_stub`                              | Sf.3 (binding)                                 |
+| `Native_lib`                          | Sf.2 (native)                                  |
+| `Ocaml_mli` / `Python_attrs`          | Sf.4 (binding)                                 |
+| `Abi_surface`                         | Sf.5 (binding)                                 |
+| `Versioned_exports` / `Versioned_req` | Sf.2 (native) / Sf.5 (binding)                 |
+| `Typed_header` / `Typed_binding_stub` | Sf.1 (native) / Sf.3 (binding)                 |
+| probe output                          | `Trace` — a runtime observation, not a surface |
 
 Note that Sf.5 is empty for ctypes (nothing is compiled on the binding
 side), which is the structural reason that mechanism loses its
@@ -1266,11 +1266,11 @@ instance rather than from design. Absorbs the former
 A dependency exists in three forms, and every agreement in this family is
 a disagreement between two of them:
 
-| view | what it is | observed by |
-|---|---|---|
-| **declared** | what the project/packaging says is needed | `pkg-config --libs`, opam `depends`, depexts, the `pm_dep_gate` |
-| **recorded** | what the built artifact froze into itself | `readelf -d` (`NEEDED`, `RPATH`/`RUNPATH`), `.cmxa` linkopts, wheel metadata |
-| **resolved** | what the loader actually bound, in this world | `LD_DEBUG=libs,bindings`, `ldd`, the run itself |
+| view         | what it is                                    | observed by                                                                  |
+| ------------ | --------------------------------------------- | ---------------------------------------------------------------------------- |
+| **declared** | what the project/packaging says is needed     | `pkg-config --libs`, opam `depends`, depexts, the `pm_dep_gate`              |
+| **recorded** | what the built artifact froze into itself     | `readelf -d` (`NEEDED`, `RPATH`/`RUNPATH`), `.cmxa` linkopts, wheel metadata |
+| **resolved** | what the loader actually bound, in this world | `LD_DEBUG=libs,bindings`, `ldd`, the run itself                              |
 
 The recorded view is pivotal: it is **frozen at build time in the
 provider's shape**, and it is what travels when the artifact is deployed
@@ -1366,12 +1366,12 @@ artifact-visible; the sameness is not.**
 
 Identity first, falsifier-phrased:
 
-| agreement | falsifier | reads |
-|---|---|---|
-| **denotation across worlds** | a recorded identity denotes a DIFFERENT implementation in the deploy world than in the build world | the same soname's object in both provisions |
-| **no duplicate implementation** | the resolved set contains two identities that are one implementation (alternative spellings), or one that statically absorbs another (containment) | the shipped objects |
-| **closure satisfiable** | a recorded name has no provider in this world | recorded vs the world's objects |
-| **interposition winner** *(candidate)* | the definition that wins for a shared symbol is not the one the consumer was built against | resolved (`LD_DEBUG=bindings`) |
+| agreement                              | falsifier                                                                                                                                          | reads                                       |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| **denotation across worlds**           | a recorded identity denotes a DIFFERENT implementation in the deploy world than in the build world                                                 | the same soname's object in both provisions |
+| **no duplicate implementation**        | the resolved set contains two identities that are one implementation (alternative spellings), or one that statically absorbs another (containment) | the shipped objects                         |
+| **closure satisfiable**                | a recorded name has no provider in this world                                                                                                      | recorded vs the world's objects             |
+| **interposition winner** *(candidate)* | the definition that wins for a shared symbol is not the one the consumer was built against                                                         | resolved (`LD_DEBUG=bindings`)              |
 
 The first is the primary one, and **canary is unusually well placed to
 run it**: a 2×2 world holds BOTH provisions, so the check is a static
@@ -1431,10 +1431,10 @@ with a derived reason instead of an undeclared segfault.
 The sweep (`../raw/closure_shape_sweep.sh`, run before any code, 2026-08-25)
 found the hazard is not an ncurses peculiarity and that it has two forms:
 
-| form | signature | instance |
-|---|---|---|
-| **alternative spelling** | overlap covers ≥80% of BOTH sides — one implementation, two names | ncurses (4 pairs) |
-| **containment** | ≥80% of the smaller only — a large object statically absorbed a small one | sundials (82) |
+| form                     | signature                                                                 | instance          |
+| ------------------------ | ------------------------------------------------------------------------- | ----------------- |
+| **alternative spelling** | overlap covers ≥80% of BOTH sides — one implementation, two names         | ncurses (4 pairs) |
+| **containment**          | ≥80% of the smaller only — a large object statically absorbed a small one | sundials (82)     |
 
 cairo, libffi, zlib and zstd score zero on both, so the landed pairs are
 not retroactively in doubt — the check they passed was narrower than we
@@ -1704,15 +1704,15 @@ matrix's `~` marks. §6.3's four agreements are the first entries.
 **The harness.** Three pins in the layer suite, the third of which reads
 this file:
 
-| pin | property |
-|---|---|
-| `agreements.slugs_unique_and_named` | slugs unique and non-empty; every entry has a claim and a `§`-anchor |
+| pin                                      | property                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| `agreements.slugs_unique_and_named`      | slugs unique and non-empty; every entry has a claim and a `§`-anchor   |
 | `agreements.every_contract_has_an_entry` | the implemented rows and the proposals both appear in `all_agreements` |
-| `agreements.doc_anchors_exist` | **every declared section EXISTS as a heading in this document** |
+| `agreements.doc_anchors_exist`           | **every declared section EXISTS as a heading in this document**        |
 
 The third is the alignment property: renaming a section, or citing one
 that was never written, fails `canary project-test`. Verified by
-falsification — pointing one row at a `§99.1` that does not exist turns
+falsification — pointing one row at a section number that does not exist turns
 the pin red.
 
 **What it does not yet check** (worth naming so the harness is not read
@@ -1948,7 +1948,7 @@ inspect inputs (file-name references + their JSON bodies) and the
 failure substrings a `predict` MUST yield on them. A fixture may carry
 its OWN closure (`fx_predict`) instead of the row's — that is how a
 per-CELL predict is tested (the lib-only cells' decl-comparison
-closures, §13); `None` means "the row's `cr_check.predict`". The layer
+closures, App. A.5); `None` means "the row's `cr_check.predict`". The layer
 tests (`contracts.fixtures_execute`) run every fixture hermetically —
 no project run, the framework-test axis (same shape as the
 compat-helper tests; the loaders read real files, so the test writes
@@ -1972,11 +1972,11 @@ lib-only halves are covered).
 Three cells landed as the first deliberate fill, all on the ONE
 artifact (the binary C lib) at `Build_lib`, all sharing one shape:
 
-| cell | falsifier | evidence |
-|---|---|---|
+| cell           | falsifier                                                           | evidence               |
+| -------------- | ------------------------------------------------------------------- | ---------------------- |
 | c1 @ build_lib | a declared `c_api` function is missing from the built lib's exports | nm symbols vs the decl |
-| c4 @ build_lib | the built lib's elf soname ≠ the declared soname | elf vs the decl |
-| c5 @ build_lib | a declared version tag is absent from `versioned_exports` | `@@VER` vs the decl |
+| c4 @ build_lib | the built lib's elf soname ≠ the declared soname                    | elf vs the decl        |
+| c5 @ build_lib | a declared version tag is absent from `versioned_exports`           | `@@VER` vs the decl    |
 
 Their closures (`c1_decl_predict`, `c4_decl_predict`,
 `c5_decl_predict` in `canary_agreement_run.ml`) are **decl-comparison**
@@ -2017,127 +2017,36 @@ the code's tag is kept only until the rename in §11.
 
 ---
 
-# Appendix B. The two matrix views
+# Appendix B. Matrix views
 
 > Carried over from `contract_registry.md`. Both are views of ONE cell
 > set; §11 decides which survives as the registry's own rendering.
 
-## B.1 — The general matrix
+## B.1 — The agreement × action matrix: read it from the code
 
+The matrix of *which agreement fires at which action* is DERIVED — the
+firing functions compute it — so a table here can only be a snapshot
+that goes stale. It is printed instead:
 
-The belief space is NOT a free product of its axes — most of it is
-DERIVED. The matrix that is actually general: **rows = contracts,
-columns = ACTIONS**, because an action already determines its
-artifacts (the action catalogue's consumes/produces). The mechanism
-and provision axes do not add cells — they REFINE them: they decide
-which actions exist in a scenario (chain shape × enumeration) and
-what the input template yields. So:
-
-```
-  cell : (contract × action) → {
-    status      : Wired | Declared_empty of reason | Blocked of deps
-    inputs      : mechanism -> lang -> inspect_input list
-    source      : Inspection | Behavior_grep | Postcondition | Placeholder
-    fixture     : the bad-world counterexample (predicted substrings)
-    pass_means  : the good-world reading (blame axis, §16)
-  }
+```ocaml
+Canary_agreement_registry.belief_matrix  ?mechanism ?lang ?provision ()
+Canary_agreement_registry.pp_belief_matrix ?mechanism ?lang ?provision ()
+Canary_agreement_registry.fill_list      ?mechanism ?lang ?provision ()
 ```
 
-**One typed axis.** The ACTION implies the cell's subject (one artifact
-at a lifecycle action vs a pair at a meeting — its consumes/produces
-say which artifacts) and its evidence flavor (read / join / run). The
-only typed axis that survives is the expectation MECHANICS (`source`):
-how the expectation is produced — inspect JSONs → predict
-(Inspection), grep the run's log (Behavior_grep), the action's
-check_post family (Postcondition — where staged-parity at Install_lib,
-pin-checks, and freshness live), or not wired yet (Placeholder).
-See §0.6: what a check reads is its TARGET, and nothing dispatches on the field.
+Marks: `✓` fires here AND ships a counterexample fixture · `~` fires,
+no fixture yet — **the fill list** · `⊘` the agreement is disabled or
+blocked · `·` does not fire here, by the firing derivation.
 
-**The derivation rules** (what the code actually does — the roles are
-NOT part of it; they were demoted to prose, §4):
+The matrix is TOTAL by construction — the firing function answers for
+every action — so there is no "un-answered" state, and *filling* it has
+a bounded meaning: turn `~` into `✓` by attaching a counterexample to a
+cell that already fires. `fill_list` returns exactly that set.
 
-1. each row names a FIRING FUNCTION — `mechanism × lang × provision →
-   action list`. Three exist today:
-   - `firing_default` — Static ⇒ `[Build_binding l; Probe_binding l]`
-     in Built/Installed worlds, `[Probe_binding l]` where nothing is
-     built; Dynamic ⇒ `[Probe_binding l]` (no compile stage);
-   - `firing_with_build_lib` — the same PLUS `Build_lib` in Built
-     worlds: the row also has a lib-only cell (§9);
-   - `firing_probe_only` — a run is required, so probe only, in every
-     world.
-2. the input template (`inputs_of_contract ?mechanism`) says which
-   surfaces the cell reads — the mechanism refinement lives there
-   (a dynamic binding has no stub to inspect).
-3. everything else about a cell (its subject, its evidence flavor) is
-   implied by the ACTION, not stored.
-
-A new firing shape is a new small function, not a framework change;
-phase 2's per-project overrides land as row-level firing functions,
-each pinned equal to today's hand-written tables.
-
-**The marks — and why there is no "un-answered".** The matrix is TOTAL
-by construction: the firing function answers for every action, so
-every cell has a status. (An earlier draft posited an `✗ Un-answered`
-mark; it cannot occur — dropped 2026-08-18.)
-
-| mark | status | meaning |
-|---|---|---|
-| `✓` | `Wired` | fires here AND ships a counterexample fixture |
-| `~` | `Declared` | fires here, predict exists, NO fixture yet — **the fill list** |
-| `⊘` | `Blocked` | the contract itself is disabled/blocked on deps |
-| `·` | `Empty` | does not fire here — the firing derivation says so; a principled absence, not an omission |
-
-**"Filling the matrix" therefore has a bounded, concrete meaning**:
-turn `~` into `✓` — attach a counterexample to a cell that already
-fires. The job is finite and enumerable (`fill_list` returns exactly
-the `~` cells), not open-ended.
-
-Today's shape under the reference world (Cstubs × OCaml × Built),
-read off the firing functions:
-
-| contract | fetch_src | conf | scan | hdrs | fetch_lib | **build_lib** | install | fetch_bind | **build_bind** | pack | probe_lib | **probe_bind** | build_app | probe_app |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| c1 symbol (Sf.3×Sf.2) | · | · | · | · | · | ✓ | · | · | ✓ | · | · | ✓ | · | · |
-| c2 api-completeness (Sf.4) | · | · | · | · | · | · | · | · | ✓ | · | · | ✓ | · | · |
-| c3 behavior (Trace) | · | · | · | · | · | · | · | · | · | · | · | ⊘ | · | · |
-| c4 soname (Sf.2×Sf.5) | · | · | · | · | · | ✓ | · | · | ✓ | · | · | ✓ | · | · |
-| c5 sym-version (Sf.2×Sf.5) | · | · | · | · | · | ✓ | · | · | ✓ | · | · | ✓ | · | · |
-| c6 type (Sf.1×Sf.3) | · | · | (reads) | · | · | · | · | · | ~ | · | · | ~ | · | · |
-| c7 repack (Sf.4) | · | · | · | · | · | · | · | · | · | · | · | ⊘ | · | · |
-| c8 faithfulness (Sf.4) | · | · | · | · | · | · | · | · | ⊘ | · | · | ⊘ | · | · |
-
-**This table shows only ONE of the three axes' pairings** — contract ×
-action, with the artifact left implicit (the action determines it).
-For the per-artifact reading — and for the `Postcondition` families,
-which have no contract and therefore no row here at all — see §9.
-
-Reading it: the ✓ cells are the belief that is both stated AND
-falsifier-tested; `~` (c6) is the whole current fill list; the `·`
-majority is the honest picture — most of the action space carries no
-contract yet, and the widenings below name which of those we intend
-to populate. The `install_lib` column is where the staged-parity
-family lands (`Postcondition` source, not a contract predict).
-
-**Two doc↔code drifts this table exposed** (fix in the code, not by
-re-wording):
-
-1. `Stubbed` has no distinct mark — `cell_status_of` maps everything
-   that is not `Blocked` to Wired/Declared, so c7/c8 currently render
-   as `~` (a fill candidate) when in truth their predicts return `[]`
-   by construction. `Stubbed` deserves its own status.
-2. c8's registered status is `Stubbed`, while this design and
-   `scenario.md` both say it is blocked on c6+c7. Reconcile to
-   `Blocked [C6; C7]` so the dependency is data, not prose.
-
-Widenings already designed, not landed: a fetch-side integrity cell
-(pinned-ref freshness is its postcondition half, e2b4d27), publish
-verification cells (the other agent's work), probe_lib/app cells
-beyond the oracle, and the mechanisms/langs beyond the wired three —
-their cells answer `[]` = declared-empty, never un-answered.
-
-
-
-
+What the WIDER catalogue of checks looks like, including the ones that
+have no agreement row at all (the `Postcondition` families — markers,
+pin checks, staged parity), is §0.6c. What the belief looks like per
+ARTIFACT rather than per agreement is B.2.
 
 ## B.2 — The artifact-centred view — the same cells, re-projected
 
@@ -2160,16 +2069,16 @@ So the belief has TWO views of one cell set:
   actions where it merely participates are listed as provider rows.
   Both cell kinds appear.
 
-Marks as in §8 (`✓` wired + counterexample, `~` declared/designed, `·`
+Marks as in B.1 (`✓` wired + counterexample, `~` declared/designed, `·`
 absent). Reference world: Cstubs × OCaml × Built.
 
 **Source**
 
-| stage | belief | kind | |
-|---|---|---|---|
-| `Fetch Source` | the tree is there; a pinned ref is AT its pin (`rev-parse HEAD = <ref>^{commit}`, e2b4d27) | Postcondition | ✓ |
-| `Scan_sources` | the typed-signature JSONs exist (they are c6's inputs, not a belief about source) | Postcondition | ✓ |
-| `Fetch Source` | the tree contains what its repo row declares (the repo-contents invariant, `enumeration/stage1_declare_spec.md` §4) | Postcondition | ✓ |
+| stage          | belief                                                                                                              | kind          |     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------- | --- |
+| `Fetch Source` | the tree is there; a pinned ref is AT its pin (`rev-parse HEAD = <ref>^{commit}`, e2b4d27)                          | Postcondition | ✓   |
+| `Scan_sources` | the typed-signature JSONs exist (they are c6's inputs, not a belief about source)                                   | Postcondition | ✓   |
+| `Fetch Source` | the tree contains what its repo row declares (the repo-contents invariant, `enumeration/stage1_declare_spec.md` §4) | Postcondition | ✓   |
 
 **A source tree has no standalone property to check** (user,
 2026-08-18) — and this is a PRINCIPLED absence, not a gap in the fill
@@ -2183,47 +2092,47 @@ it.
 
 **Headers**
 
-| stage | belief | kind | |
-|---|---|---|---|
-| `Build_headers` / `Fetch Headers` | the declared header set is present | Postcondition | ✓ |
-| as provider @ `Build_binding` | c6 — the C types at the header/stub boundary agree | Inspection | ~ |
-| as **carried oracle** @ `Probe_binding` | the user-facing surface's types agree with the header's (§12) | Inspection | · designed |
-| as **carried oracle** @ `Build_app` / `Probe_app` | an INDIRECT wrapper (helper/app) still agrees with the original C API's types (§12) | Inspection | · designed |
+| stage                                             | belief                                                                              | kind          |            |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------- | ---------- |
+| `Build_headers` / `Fetch Headers`                 | the declared header set is present                                                  | Postcondition | ✓          |
+| as provider @ `Build_binding`                     | c6 — the C types at the header/stub boundary agree                                  | Inspection    | ~          |
+| as **carried oracle** @ `Probe_binding`           | the user-facing surface's types agree with the header's (App. D.4)                       | Inspection    | · designed |
+| as **carried oracle** @ `Build_app` / `Probe_app` | an INDIRECT wrapper (helper/app) still agrees with the original C API's types (App. D.4) | Inspection    | · designed |
 
 Headers are the only artifact whose value is **syntactic form**: they
-carry the API's TYPES, which no compiled artifact does. §12 makes that
+carry the API's TYPES, which no compiled artifact does. App. D.4 makes that
 the basis of a new cell class.
 
 **Lib** — the richest column, and the one we worked through
 
-| stage | belief | kind | |
-|---|---|---|---|
-| `Fetch Lib` | the PM package is installed, AT the pinned version | Postcondition | ✓ |
-| `Build_lib` | c1 — every declared `c_api` function is exported | Inspection (decl-cmp) | ✓ |
-| `Build_lib` | c4 — the elf soname equals the declared soname | Inspection (decl-cmp) | ✓ |
-| `Build_lib` | c5 — the declared version tags are exported | Inspection (decl-cmp) | ✓ |
-| `Build_lib` | the DWARF signatures of the built lib match the declared header (§12; canary controls `-g` here) | Inspection (decl-cmp) | · designed |
-| `Install_lib` | staged parity: completeness / integrity / parity / isolation, incl. no build-tree path in a staged binary | Postcondition | ~ designed |
-| `Probe_lib` | the declared prefix's symbols are exported (nm) | Inspection | ✓ project-side |
-| `Probe_lib` | it LOADS and each declared function can be entered (the smoke cell) | Behavior_grep | · postponed |
-| as provider @ `Build_binding` | c1 / c4 / c5 / c6 against the consumer | Inspection | ✓ / ~ |
-| as provider @ `Probe_binding` | c1..c5 at load/run | Inspection | ✓ |
+| stage                         | belief                                                                                                    | kind                  |                |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- | -------------- |
+| `Fetch Lib`                   | the PM package is installed, AT the pinned version                                                        | Postcondition         | ✓              |
+| `Build_lib`                   | c1 — every declared `c_api` function is exported                                                          | Inspection (decl-cmp) | ✓              |
+| `Build_lib`                   | c4 — the elf soname equals the declared soname                                                            | Inspection (decl-cmp) | ✓              |
+| `Build_lib`                   | c5 — the declared version tags are exported                                                               | Inspection (decl-cmp) | ✓              |
+| `Build_lib`                   | the DWARF signatures of the built lib match the declared header (App. D.4; canary controls `-g` here)          | Inspection (decl-cmp) | · designed     |
+| `Install_lib`                 | staged parity: completeness / integrity / parity / isolation, incl. no build-tree path in a staged binary | Postcondition         | ~ designed     |
+| `Probe_lib`                   | the declared prefix's symbols are exported (nm)                                                           | Inspection            | ✓ project-side |
+| `Probe_lib`                   | it LOADS and each declared function can be entered (the smoke cell)                                       | Behavior_grep         | · postponed    |
+| as provider @ `Build_binding` | c1 / c4 / c5 / c6 against the consumer                                                                    | Inspection            | ✓ / ~          |
+| as provider @ `Probe_binding` | c1..c5 at load/run                                                                                        | Inspection            | ✓              |
 
 **Binding**
 
-| stage | belief | kind | |
-|---|---|---|---|
-| `Fetch (Binding l)` | the package is installed, AT the pinned version | Postcondition | ✓ |
-| `Build_binding l` | c1 (stub refs vs lib), c2 (user surface), c6 (types) | Inspection | ✓ ✓ ~ |
-| `Publish (Binding l)` | the package materialises (publish verification is the other agent's) | Postcondition | ~ |
-| `Probe_binding l` | c1..c5 at load/run; c3's trace | Inspection / Behavior_grep | ✓ / ⊘ |
-| as provider @ `Build_app` | the app compiles against the binding's surface | — | · |
+| stage                     | belief                                                               | kind                       |       |
+| ------------------------- | -------------------------------------------------------------------- | -------------------------- | ----- |
+| `Fetch (Binding l)`       | the package is installed, AT the pinned version                      | Postcondition              | ✓     |
+| `Build_binding l`         | c1 (stub refs vs lib), c2 (user surface), c6 (types)                 | Inspection                 | ✓ ✓ ~ |
+| `Publish (Binding l)`     | the package materialises (publish verification is the other agent's) | Postcondition              | ~     |
+| `Probe_binding l`         | c1..c5 at load/run; c3's trace                                       | Inspection / Behavior_grep | ✓ / ⊘ |
+| as provider @ `Build_app` | the app compiles against the binding's surface                       | —                          | ·     |
 
 **App**
 
-| stage | belief | kind | |
-|---|---|---|---|
-| `Build_app` | the app builds against the binding | Postcondition | ✓ |
+| stage       | belief                                       | kind          |                      |
+| ----------- | -------------------------------------------- | ------------- | -------------------- |
+| `Build_app` | the app builds against the binding           | Postcondition | ✓                    |
 | `Probe_app` | c3 — the run's trace matches the expectation | Behavior_grep | ✓ tiny's oracle only |
 
 The Lib rows above cover the SYMBOL family only. Its two other
@@ -2235,7 +2144,7 @@ the per-MECHANISM lifecycles (cstubs / cext / ctypes / dynlink), which
 are where `lang × mechanism` gives each artifact chain its own
 agreements.
 
-**What the projection makes obvious** (and §8's table does not): the
+**What the projection makes obvious** (and the agreement × action view does not): the
 Lib is checked at FOUR distinct stages with three different mechanics,
 and its weakest stages are the ones where the artifact merely arrives
 or is transformed — `Fetch` (identity only) and `Install_lib` (parity
@@ -2273,7 +2182,7 @@ so completeness of checking is itself checkable. The space:
    stale world.
 2. **Contract firings — the wired subset.** The registry defaults fire
    at `Build_binding l` / `Probe_binding l`, PLUS `Build_lib` for the
-   three lib-only cells (§13). Declared but unwired: `Probe_lib` (no row fires there — c1's lib side rides
+   three lib-only cells (App. A.5). Declared but unwired: `Probe_lib` (no row fires there — c1's lib side rides
    inspect attachments on build_lib), `Build_app`/`Probe_app` (the
    firing vocabulary has the sites; no row uses them — tiny's oracle
    covers app firings today), `Scan_sources` (c6's inputs READ its
@@ -2286,7 +2195,7 @@ so completeness of checking is itself checkable. The space:
    gaps (c4-OCaml's Placeholder firing, `symbol_orphan`'s
    contract-less build failure) close inside the registry; c8's
    registered status needs the `Blocked [C6; C7]` reconciliation
-   (§8's drift 2).
+   (B.1's drift note).
 4. **Mechanisms/langs beyond the wired three.** Cffi/Dynlink and the
    Rust/Java/Cpp/CSharp langs are declared in the vocabulary with no
    belief cells yet — the row functions must answer for them too
@@ -2300,7 +2209,7 @@ so completeness of checking is itself checkable. The space:
    is total, so the pin is not "no un-answered cell" (impossible) but
    the fill-list SHAPE: the pin states today's `~` set exactly, so a
    new unfixtured cell shows up as a diff. Two code refinements the
-   table exposed are listed in §8.
+   table exposed are listed in B.1.
 2. **Per-cell counterexamples.** The fixture harness generalizes from
    per-contract to per-CELL (contract × firing action): each wired
    cell ships the minimal bad-world input + its predicted substrings;
@@ -2360,8 +2269,8 @@ only the cmd strings.
 
 1. [x] **Land the producer** (2026-08-17/18): `contract_registry` rows
    for c1..c8 (invariant, reads, source, fault tags, input template,
-   firing derivation) + the fixture harness + the first fills (§13) +
-   the matrix view (§8). Consumers untouched — `registered_checks` and
+   firing derivation) + the fixture harness + the first fills (App. A.5) +
+   the matrix view (B.1). Consumers untouched — `registered_checks` and
    the per-project tables keep working; 4 pins green. Still open
    inside this step: the ssot Ag.X ↔ C1..C8 reconciliation (the Ag.8
    decision) and §8's two drifts.
@@ -2385,13 +2294,13 @@ only the cmd strings.
 > inserted — pull from it when the destination section is worked
 > through. Nothing in Appendix D is confirmed.
 
-| draft | intended destination |
-|---|---|
-| D.1 the lib's path family | §5 Resolution (search/selection); its recorded-vs-resolved half now has §6.0's vocabulary |
-| ~~D.2 the lib's hidden dependencies~~ | **PLACED 2026-09-01** — folded into §6.6 |
-| D.3 per-mechanism lifecycles (cstubs / cext / ctypes / dynlink) | §2.4, §2.5, §2.6 — as the artifact chains those sections enumerate |
-| D.4 the header as a carried type oracle | §2.3 + §2.7 (a surface-correspondence projection), with the provider-side DWARF note |
-| D.5 staged parity | §7 Transformation and packaging preservation |
+| draft                                                           | intended destination                                                                      |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| D.1 the lib's path family                                       | §5 Resolution (search/selection); its recorded-vs-resolved half now has §6.0's vocabulary |
+| ~~D.2 the lib's hidden dependencies~~                           | **PLACED 2026-09-01** — folded into §6.6                                                  |
+| D.3 per-mechanism lifecycles (cstubs / cext / ctypes / dynlink) | §2.4, §2.5, §2.6 — as the artifact chains those sections enumerate                        |
+| D.4 the header as a carried type oracle                         | §2.3 + §2.7 (a surface-correspondence projection), with the provider-side DWARF note      |
+| D.5 staged parity                                               | §7 Transformation and packaging preservation                                              |
 
 ## D.1–D.2 — The lib — symbols, paths, hidden dependencies
 
@@ -2399,27 +2308,27 @@ only the cmd strings.
 Symbols are the best-developed family; two others are open and
 substantial.
 
-#### 10a. Symbols (developed)
+#### D.2a Symbols (developed)
 
 Exports vs declared API (c1), versioned symbols (c5), the soname (c4),
-and the coarse `readelf -sW` shape. See the registry's §13 lib-only
+and the coarse `readelf -sW` shape. See App. A.5's lib-only
 cells.
 
-#### 10b. Paths — the biggest untouched family
+#### D.2b Paths — the biggest untouched family
 
 Every stage of a lib's life is mediated by a path mechanism, and they
 differ per platform. The inventory (to be developed WITH the user's
 pre-existing study, which predates this work and should be brought in
 before designing cells):
 
-| kind | Linux/ELF | macOS/Mach-O | where it bites |
-|---|---|---|---|
-| loader search | `LD_LIBRARY_PATH`, `/etc/ld.so.conf`, `ldconfig` cache | `DYLD_LIBRARY_PATH` (stripped by SIP for protected binaries) | which lib actually loads — a system copy can shadow the built one |
-| embedded search | `DT_RPATH` / `DT_RUNPATH` (`-Wl,-rpath`, `LD_RUN_PATH`) | `LC_RPATH` + `@rpath` / `@loader_path` / `@executable_path` | a build-tree path baked into a staged artifact (the portability falsifier) |
-| identity | `DT_SONAME` | `LC_ID_DYLIB` / install_name | what dependents record; must be the INSTALLED identity |
-| language-side | `CAML_LD_LIBRARY_PATH` (OCaml stublibs), `PYTHONPATH`, `OCAMLPATH` | same | the binding's own artifacts, not the C lib |
-| build-time discovery | `PKG_CONFIG_PATH`, `LIBRARY_PATH`, cmake prefix paths | same | which headers/libs the BUILD picked — often not the ones we think |
-| tool lookup | `PATH` | `PATH` | which compiler/linker/tool ran at all |
+| kind                 | Linux/ELF                                                          | macOS/Mach-O                                                 | where it bites                                                             |
+| -------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| loader search        | `LD_LIBRARY_PATH`, `/etc/ld.so.conf`, `ldconfig` cache             | `DYLD_LIBRARY_PATH` (stripped by SIP for protected binaries) | which lib actually loads — a system copy can shadow the built one          |
+| embedded search      | `DT_RPATH` / `DT_RUNPATH` (`-Wl,-rpath`, `LD_RUN_PATH`)            | `LC_RPATH` + `@rpath` / `@loader_path` / `@executable_path`  | a build-tree path baked into a staged artifact (the portability falsifier) |
+| identity             | `DT_SONAME`                                                        | `LC_ID_DYLIB` / install_name                                 | what dependents record; must be the INSTALLED identity                     |
+| language-side        | `CAML_LD_LIBRARY_PATH` (OCaml stublibs), `PYTHONPATH`, `OCAMLPATH` | same                                                         | the binding's own artifacts, not the C lib                                 |
+| build-time discovery | `PKG_CONFIG_PATH`, `LIBRARY_PATH`, cmake prefix paths              | same                                                         | which headers/libs the BUILD picked — often not the ones we think          |
+| tool lookup          | `PATH`                                                             | `PATH`                                                       | which compiler/linker/tool ran at all                                      |
 
 Known trap classes to turn into agreements: `DT_RUNPATH` does NOT
 apply to transitive dependencies (unlike `DT_RPATH`) — a lib that
@@ -2427,7 +2336,7 @@ works standalone can fail as a dependency; ordering/shadowing between
 a system lib and a built one; `LD_LIBRARY_PATH` ignored for
 setuid/setgid; macOS install_name that must be patched AFTER the move.
 
-#### 10c. Hidden dependencies
+#### D.2c Hidden dependencies
 
 Things `nm` on the lib does not reveal:
 
@@ -2443,7 +2352,7 @@ Things `nm` on the lib does not reveal:
 
 These are the natural home for the interposition-shim RECORDER idea
 (observe what is actually requested/resolved at load) — see the
-§16.
+§10.
 
 
 
@@ -2455,35 +2364,35 @@ is in play, each mechanism has its OWN artifact chain and its own
 agreements. This is the second group of tables; sketches, to be filled
 the same way (from real bugs, up the ladder).
 
-#### 11a. Cstubs (OCaml, `Static_c_abi`)
+#### D.3a Cstubs (OCaml, `Static_c_abi`)
 
-| stage | artifacts | agreements |
-|---|---|---|
-| build stub | `*_stubs.c` → `.o` → `lib<pkg>_stubs.a` (+ `dll<pkg>_stubs.so` for bytecode) | the stub compiles against the header (types); the archive's undefined refs ⊆ the lib's exports |
-| build OCaml | `.cmi/.cmx/.cmxa/.cma` | the `.mli` surface is what the package claims; module names survive dune's wrapping convention |
-| link | linkopts inside the `.cmxa` | the recorded `-L`/`-l` resolve OUTSIDE the build tree (the `$CAMLORIGIN/../..` trap) |
-| install | ocamlfind layout, `META` | `directory`/`archive(native)`/`requires` describe the real layout; `dll*_stubs.so` lands in the switch's `stublibs` |
-| use | `CAML_LD_LIBRARY_PATH`, RPATH | the stub `.so` that loads is THIS package's (a stale one in the switch shadows it) |
+| stage       | artifacts                                                                    | agreements                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| build stub  | `*_stubs.c` → `.o` → `lib<pkg>_stubs.a` (+ `dll<pkg>_stubs.so` for bytecode) | the stub compiles against the header (types); the archive's undefined refs ⊆ the lib's exports                      |
+| build OCaml | `.cmi/.cmx/.cmxa/.cma`                                                       | the `.mli` surface is what the package claims; module names survive dune's wrapping convention                      |
+| link        | linkopts inside the `.cmxa`                                                  | the recorded `-L`/`-l` resolve OUTSIDE the build tree (the `$CAMLORIGIN/../..` trap)                                |
+| install     | ocamlfind layout, `META`                                                     | `directory`/`archive(native)`/`requires` describe the real layout; `dll*_stubs.so` lands in the switch's `stublibs` |
+| use         | `CAML_LD_LIBRARY_PATH`, RPATH                                                | the stub `.so` that loads is THIS package's (a stale one in the switch shadows it)                                  |
 
-#### 11b. Cext (Python, `Static_c_abi`)
+#### D.3b Cext (Python, `Static_c_abi`)
 
-| stage | artifacts | agreements |
-|---|---|---|
-| build | `_native.c` → `_native.<EXT_SUFFIX>.so` | the `EXT_SUFFIX` matches the interpreter that will import it (ABI tag + version); `PyInit_<name>` exists and matches the module name |
-| link | NEEDED + RPATH of the extension | the C lib is resolvable from the extension's own search path |
-| package | `__init__.py`, wheel metadata | the user-facing surface is the package's, not the extension's |
-| import | the load meeting | no unresolved symbol at import; the right interpreter |
+| stage   | artifacts                               | agreements                                                                                                                           |
+| ------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| build   | `_native.c` → `_native.<EXT_SUFFIX>.so` | the `EXT_SUFFIX` matches the interpreter that will import it (ABI tag + version); `PyInit_<name>` exists and matches the module name |
+| link    | NEEDED + RPATH of the extension         | the C lib is resolvable from the extension's own search path                                                                         |
+| package | `__init__.py`, wheel metadata           | the user-facing surface is the package's, not the extension's                                                                        |
+| import  | the load meeting                        | no unresolved symbol at import; the right interpreter                                                                                |
 
-#### 11c. Ctypes / Cffi (Python, `Dynamic_ffi`)
+#### D.3c Ctypes / Cffi (Python, `Dynamic_ffi`)
 
-| stage | artifacts | agreements |
-|---|---|---|
-| (no build) | pure `.py` | — the absence of a build stage is itself the point: no build-time falsifier exists |
-| load | `dlopen` by name | the declared soname/path resolves at import |
-| call | `argtypes`/`restype` declarations | the DECLARED types match the C signatures — checkable only against the header: this is the prime consumer-side case for the carried type oracle (registry §12) |
-| failure mode | per-call resolution | a missing symbol surfaces at FIRST CALL, not at import — so coverage of the declared API determines what is caught at all |
+| stage        | artifacts                         | agreements                                                                                                                                                     |
+| ------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (no build)   | pure `.py`                        | — the absence of a build stage is itself the point: no build-time falsifier exists                                                                             |
+| load         | `dlopen` by name                  | the declared soname/path resolves at import                                                                                                                    |
+| call         | `argtypes`/`restype` declarations | the DECLARED types match the C signatures — checkable only against the header: this is the prime consumer-side case for the carried type oracle (App. D.4) |
+| failure mode | per-call resolution               | a missing symbol surfaces at FIRST CALL, not at import — so coverage of the declared API determines what is caught at all                                      |
 
-#### 11d. Dynlink (OCaml, `Dynamic_ffi`) — not wired
+#### D.3d Dynlink (OCaml, `Dynamic_ffi`) — not wired
 
 `.cmxs` plugin loading; the same shape as 3c (load-time resolution, no
 build-time falsifier).
@@ -2532,22 +2441,22 @@ wrapper" case has a witness ready.
 **Cells this yields** (all `Inspection`, all reading `Typed_header`
 plus one consumer-side typed surface):
 
-| cell | falsifier |
-|---|---|
-| header × user surface @ `Probe_binding` | the user-facing signature contradicts the C signature it claims to wrap (arity, direction, ownership) |
-| header × wrapper surface @ `Build_app` / `Probe_app` | an indirect wrapper re-exports the API with a changed shape |
-| header × consumer usage @ app stages | the app calls the API in a way the header's types forbid |
+| cell                                                 | falsifier                                                                                             |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| header × user surface @ `Probe_binding`              | the user-facing signature contradicts the C signature it claims to wrap (arity, direction, ownership) |
+| header × wrapper surface @ `Build_app` / `Probe_app` | an indirect wrapper re-exports the API with a changed shape                                           |
+| header × consumer usage @ app stages                 | the app calls the API in a way the header's types forbid                                              |
 
 **The provider side too — with binutils** (user, 2026-08-18). An
 earlier draft called the compiled provider untypeable; that
 understates the tools. `nm -D` gives names only, but the ELF file can
 carry much more:
 
-| tool / data | what it yields | precondition |
-|---|---|---|
+| tool / data                                          | what it yields                                                                                             | precondition                                                                                                                |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `readelf --debug-dump=info` / `objdump --dwarf=info` | **full signatures** — `DW_TAG_subprogram` with return type + formal parameter types, struct layouts, sizes | DWARF is present (`-g`, or a separate `.debug` / debuginfo package). Often absent — use it WHEN APPLICABLE, never assume it |
-| `readelf -sW` | symbol TYPE (FUNC/OBJECT) + size — a coarse shape check | always |
-| mangled names + `c++filt` | parameter types encoded in the symbol itself | C++ only (C symbols carry nothing) |
+| `readelf -sW`                                        | symbol TYPE (FUNC/OBJECT) + size — a coarse shape check                                                    | always                                                                                                                      |
+| mangled names + `c++filt`                            | parameter types encoded in the symbol itself                                                               | C++ only (C symbols carry nothing)                                                                                          |
 
 So provider-side type retrofit is not impossible — it is
 **provision-dependent**, which fits the rest of the matrix:
