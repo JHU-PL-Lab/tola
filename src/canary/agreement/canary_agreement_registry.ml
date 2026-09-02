@@ -449,7 +449,7 @@ let agreement_fixtures : (Canary_agreement.agreement_id * fixture) list =
          the built lib (sym_missing at the source, no binding) *)
       { fx_predict =
           Some
-            (Canary_agreement_run.c1_decl_predict
+            (Canary_chk_lib_declares.symbol_exported
                ~declared_functions:
                  [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]);
         fx_inputs = [ Canary_agreement.Native_lib [ "lib.json" ] ];
@@ -459,7 +459,7 @@ let agreement_fixtures : (Canary_agreement.agreement_id * fixture) list =
       (* the LIB-ONLY cell: the built lib's elf soname vs the declared *)
       { fx_predict =
           Some
-            (Canary_agreement_run.c4_decl_predict
+            (Canary_chk_lib_declares.soname_matches
                ~declared_soname:"libtiny.so.1");
         fx_inputs = [ Canary_agreement.Native_lib [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c4_lib_body) ];
@@ -469,7 +469,7 @@ let agreement_fixtures : (Canary_agreement.agreement_id * fixture) list =
          tag must appear among the built lib's @@VER annotations *)
       { fx_predict =
           Some
-            (Canary_agreement_run.c5_decl_predict ~declared_tags:[ "TINY_2.0" ]);
+            (Canary_chk_lib_declares.version_tags_exported ~declared_tags:[ "TINY_2.0" ]);
         fx_inputs = [ Canary_agreement.Versioned_exports [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c5_lib_body) ];
         fx_expect = [ "version TINY_2.0 not exported" ] } );

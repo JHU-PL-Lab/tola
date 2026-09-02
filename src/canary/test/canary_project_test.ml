@@ -1810,6 +1810,31 @@ let agreement_bridge_pins : pure_test list =
                 || String.is_substring text ~substring:("## " ^ num ^ ".")
                 || String.is_substring text ~substring:("# " ^ top ^ ".")) ) } ]
 
+(* The per-check MODULE pattern (2026-09-02, user): a check lives in its
+   own module with a descriptive category, a falsifier-phrased
+   statement, and whatever function signature suits it. This pins the
+   pattern rather than the contents — that a check family states its
+   category and its claim, and that the categories are the descriptive
+   type, not a dispatch. *)
+let check_module_pattern_pin : pure_test =
+  { name = "checks.module_pattern";
+    check =
+      (fun () ->
+        let module M = Canary_chk_lib_declares in
+        let module C = Canary_check_cat in
+        List.length M.all = 3
+        && List.for_all M.all ~f:(fun (_, _, says) ->
+               not (String.is_empty says))
+        && Poly.equal M.symbol_exported_cat (C.Symbols `Exported)
+        && Poly.equal M.soname_matches_cat (C.Identity `Soname)
+        && Poly.equal M.version_tags_exported_cat (C.Identity `Version_node)
+        && (* every family member is a DECLARED agreement, not a
+              convention — the toolchain says nothing about which
+              symbols a project ought to export *)
+        List.for_all M.all ~f:(fun (_, standing, _) ->
+            Poly.equal standing C.Declared)
+        && String.equal (C.string_of_cat C.Action_succeeded) "action-succeeded") }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ binding_source_vocabulary_pin; lib_name_optional_pin;
@@ -1834,6 +1859,7 @@ let all_tests : pure_test list =
       source_fetch_pinned_ref_check_post_pin ]
   @ agreement_fixture_tests
   @ agreement_bridge_pins
+  @ [ check_module_pattern_pin ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the
