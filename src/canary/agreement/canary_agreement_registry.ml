@@ -177,14 +177,39 @@ let inputs_of_agreement ?mechanism (c : Canary_agreement.agreement_id)
   | _ -> []  (* placeholder / unwired / behavior-grep / dynamic — no inputs *)
 
 
-(** The three LOGICAL roles — the artifact-relationship axis of
-    checking (design §4). Methods (inspections, strict-flag builds,
-    shim recorders, probes, decl-derived programs, upstream suites)
-    are PLACED into slots, not classified here. *)
-type role =
-  | Surface    (** one artifact: what it presents at its boundary *)
-  | Meeting    (** two artifacts: compatible where they link/load *)
-  | Execution  (** two artifacts running: what the trace shows *)
+(** WHAT A CHECK CLAIMS — the primary axis (design §1.6). A structural
+    claim is about artifacts and their FIT; a semantic claim is about
+    what the program MEANS or does. The distinction is not "does it
+    run": a link verdict is observed by running a tool and is still a
+    structural finding, which is exactly the case that made this axis
+    primary rather than the evidence one. *)
+type claim =
+  | Structural  (** about an artifact, or about two artifacts' fit *)
+  | Semantic    (** about behaviour — what running it means *)
+[@@deriving show, eq]
+
+(** HOW the claim is observed — the secondary axis (design §1.5). It
+    varies independently of [claim]: [Run_tool] carries structural
+    claims (a compiler's verdict on a pairing), [Run_program] carries
+    semantic ones. *)
+type evidence =
+  | Inspect_one       (** one artifact, an inspector *)
+  | Compare_several   (** several artifacts, inspected then compared *)
+  | Run_tool          (** a compiler/linker/loader verdict *)
+  | Run_program       (** the program's own output *)
+[@@deriving show, eq]
+
+(** WHERE the check comes from in a run (user, 2026-09-02). An
+    [Intrinsic] check is the action's own outcome — the build produced
+    its declared output, the fetch landed the package — and the runner
+    performs it whether or not any agreement is declared. An [Added]
+    check is canary's extra inspection, which exists only because this
+    catalogue says it should. The split is also the cheap/expensive
+    boundary a foreign backend cares about: intrinsic checks are already
+    command-shaped. *)
+type provenance =
+  | Intrinsic
+  | Added
 [@@deriving show, eq]
 
 (** The expectation form per contract — HOW a check becomes an
@@ -221,12 +246,9 @@ type agreement_row = {
           Sf.5 binding_lib) + "Trace" (the runtime observation). A
           contract IS a named relation over these reads; the action
           says where the read attaches. *)
-  ag_role      : role;
-      (** PROSE tag at most (Surface/Meeting/Execution — the legacy
-          evidence vocabulary). NOT a typed axis: the action column
-          already implies the cell's subject (one artifact vs a pair)
-          and its evidence flavor; the typed axis is [source] — how
-          the expectation is produced. *)
+  ag_claim     : claim;
+  ag_evidence  : evidence;
+  ag_provenance : provenance;
   ag_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_agreement.inspect_input list;
       (** the step-2 template ([inputs_of_agreement]) *)
@@ -278,7 +300,12 @@ let firing_with_build_lib (m : Canary_mechanism.mechanism)
     (l : Canary_lang.lang) (p : Canary_store.provision) :
     Canary_basic.action list =
   match (Canary_mechanism.discipline_of_mechanism m, p) with
-  | Canary_mechanism.Static_c_abi, Canary_store.Built ->
+  (* Installed belongs with Built, as it does in [firing_default]: its
+     chain performed the real build and then staged the result, so the
+     lib-only cells have their artifact. The checking index caught this
+     omission — an Installed world showed no checks at Build_lib
+     (2026-09-02). *)
+  | Canary_mechanism.Static_c_abi, (Canary_store.Built | Canary_store.Installed) ->
       [ Canary_basic.Build_lib; Canary_basic.Build_binding l;
         Canary_basic.Probe_binding l ]
   | _ -> firing_default m l p
@@ -299,14 +326,16 @@ let check_of (id : Canary_agreement.agreement_id) :
          (Printf.sprintf "contract registry: no registered check for %s"
             (Canary_agreement.string_of_agreement_id id))
 
-let row ~slug ~doc ~invariant ~reads ~role ~firing ~source ~tags
+let row ~slug ~doc ~invariant ~reads ~claim ~evidence ?(provenance = Added) ~firing ~source ~tags
     (id : Canary_agreement.agreement_id) : agreement_row =
   { ag_slug = slug;
     ag_doc = doc;
     ag_check = check_of id;
     ag_invariant = invariant;
     ag_reads = reads;
-    ag_role = role;
+    ag_claim = claim;
+    ag_evidence = evidence;
+    ag_provenance = provenance;
     ag_inputs =
       (fun m l ->
         inputs_of_agreement ~mechanism:m id l);
@@ -324,53 +353,53 @@ let agreement_registry : agreement_row list =
         "every symbol the binding declares (its stub references) is \
          exported by the lib"
       ~reads:[ ("Sf.3", "binding"); ("Sf.2", "native") ]
-      ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_missing" ];
     row C2
       ~slug:"api_surface_complete" ~doc:"§3.3"
       ~invariant:
         "every watchlisted entry is present on the user-facing surface"
       ~reads:[ ("Sf.4", "binding") ]
-      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~claim:Structural ~evidence:Inspect_one ~firing:firing_default ~source:Inspection
       ~tags:[ "api_drop" ];
     row C3
       ~slug:"behavior_matches" ~doc:"§8"
       ~invariant:"the probe's trace matches the recorded expectation"
       ~reads:[ ("Trace", "run") ]
-      ~role:Execution ~firing:firing_probe_only ~source:Behavior_grep
+      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only ~source:Behavior_grep
       ~tags:[ "behavior" ];
     row C4
       ~slug:"soname_denotes_needed" ~doc:"§6"
       ~invariant:
         "the lib's soname matches what the consumer records it needs"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "abi_soname" ];
     row C5
       ~slug:"symbol_versions_present" ~doc:"§3.3"
       ~invariant:
         "versioned symbols carry the annotations the consumer expects"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_version" ];
     row C6
       ~slug:"c_types_agree" ~doc:"§3.3"
       ~invariant:"C types at the header/stub boundary match"
       ~reads:[ ("Sf.1", "native"); ("Sf.3", "binding") ]
-      ~role:Meeting ~firing:firing_default ~source:Inspection
+      ~claim:Structural ~evidence:Compare_several ~firing:firing_default ~source:Inspection
       ~tags:[ "type_arity" ];
     row C7
       ~slug:"repack_preserves_api" ~doc:"§5.3"
       ~invariant:"repackaging preserves the API"
       ~reads:[ ("Sf.4", "binding") ]
-      ~role:Meeting ~firing:firing_probe_only ~source:Behavior_grep
+      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only ~source:Behavior_grep
       ~tags:[ "api_repack" ];
     row C8
       ~slug:"repack_complete" ~doc:"§5.3"
       ~invariant:
         "repackaging is complete — nothing the original had is lost"
       ~reads:[ ("Sf.4", "binding") ]
-      ~role:Meeting ~firing:firing_default ~source:Placeholder
+      ~claim:Semantic ~evidence:Run_program ~firing:firing_default ~source:Placeholder
       ~tags:[ "api_add" ] ]
 
 (* ── spec fixtures — testing AHEAD of project running ──

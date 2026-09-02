@@ -639,6 +639,36 @@ let spec_cmd =
 (* Static spec-maturity audit (2026-08-13): reads ONLY the declared
    [project_run] (artifact rows + wrapper pkgs) — no enumeration, no
    realization. Exit 1 when any project has errors (a gate). *)
+(* The checking index (2026-09-02): what a project checks, and where
+   each check comes from — the sync point between the registry and a
+   run. Static: no run needed. *)
+let checks_cmd =
+  let project =
+    Arg.(value & pos 0 (some string) None & info [] ~docv:"PROJECT")
+  in
+  let run project () =
+    match project with
+    | None ->
+        (* no project: the registry itself *)
+        Fmt.pr "%s@." (Canary_agreement_registry.pp_agreements ())
+    | Some name -> (
+        match List.assoc_opt name Canary_registry.all_projects with
+        | Some pr ->
+            let idx = Canary_check_index.of_project pr in
+            Fmt.pr "%s@." (Canary_check_index.pp pr idx)
+        | None ->
+            Fmt.epr "usage: canary checks [<%s>]@."
+              (String.concat "|" (List.map fst Canary_registry.all_projects));
+            Stdlib.exit 2)
+  in
+  Cmd.v
+    (Cmd.info "checks"
+       ~doc:
+         "The checking index: with no argument, every agreement the \
+          registry declares; with a project, the checks that apply to \
+          each of its actions and where each comes from. No execution.")
+    Term.(const run $ project $ const ())
+
 let spec_check_cmd =
   let project =
     Arg.(
@@ -2108,6 +2138,7 @@ let () =
         cache_test_cmd;
         emit_cmd;
         spec_cmd;
+        checks_cmd;
         spec_check_cmd;
         mutation_test_cmd;
         artifact_inspect_cmd;

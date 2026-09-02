@@ -1379,19 +1379,26 @@ let agreement_registry_complete_pin : pure_test =
           && String.equal (tag C7) "api_repack"
           && String.equal (tag C8) "api_add"
         in
-        (* the roles (design §4) *)
-        let role_is r exp = Poly.equal r.CR.ag_role exp in
-        let roles_ok =
-          role_is (CR.row_of C1) CR.Surface
-          && role_is (CR.row_of C2) CR.Surface
-          && role_is (CR.row_of C3) CR.Execution
-          && role_is (CR.row_of C4) CR.Surface
-          && role_is (CR.row_of C5) CR.Surface
-          && role_is (CR.row_of C6) CR.Meeting
-          && role_is (CR.row_of C7) CR.Meeting
-          && role_is (CR.row_of C8) CR.Meeting
+(* the two typed axes (design §1.5/§1.6): a claim is structural or
+           semantic, and the evidence varies independently — a link
+           verdict is Run_tool yet structural *)
+        let claim_is r exp = Poly.equal r.CR.ag_claim exp in
+        let ev_is r exp = Poly.equal r.CR.ag_evidence exp in
+        let axes_ok =
+          claim_is (CR.row_of C1) CR.Structural
+          && ev_is (CR.row_of C1) CR.Compare_several
+          && claim_is (CR.row_of C2) CR.Structural
+          && ev_is (CR.row_of C2) CR.Inspect_one
+          && claim_is (CR.row_of C3) CR.Semantic
+          && ev_is (CR.row_of C3) CR.Run_program
+          && claim_is (CR.row_of C6) CR.Structural
+          && claim_is (CR.row_of C7) CR.Semantic
+          && (* every agreement row is an ADDED check; the intrinsic ones
+                are the actions' own outcomes *)
+          List.for_all CR.agreement_registry ~f:(fun r ->
+              Poly.equal r.CR.ag_provenance CR.Added)
         in
-        (* the expectation forms: inspection-derived for the surface
+                (* the expectation forms: inspection-derived for the surface
            + meeting contracts, behavior-grep for the trace contracts,
            placeholder while blocked *)
         let source_is r exp = Poly.equal r.CR.ag_source exp in
@@ -1405,7 +1412,7 @@ let agreement_registry_complete_pin : pure_test =
           && source_is (CR.row_of C7) CR.Behavior_grep
           && source_is (CR.row_of C8) CR.Placeholder
         in
-        rows_ok && checks_ok && tags_ok && roles_ok && sources_ok) }
+        rows_ok && checks_ok && tags_ok && axes_ok && sources_ok) }
 
 let agreement_registry_firing_pin : pure_test =
   { name = "contracts.firing_defaults";
