@@ -408,6 +408,14 @@ Reading the catalogue: **the same `.so` appears at all three targets and
 under four different sources.** The file does not determine the check;
 the claim does, and the target only says where you can see it.
 
+Read instead by ARTIFACT, the catalogue says where coverage is thin, and
+the answer is not an agreement row: it is the stages where an artifact
+**changes hands** — `Fetch` (identity only), `Install_lib` (parity still
+designed), `Publish` (nothing checks what we hand back out). Those are
+exactly the stages where canary is not the one doing the work, which is
+why they were easy to leave uncovered. Source's bareness is the
+exception and is principled (§0.6b), not thin.
+
 ### 0.6d Three sources also GENERATE checks
 
 Rows 5–7 can manufacture candidates, not merely judge them: version
@@ -1005,6 +1013,17 @@ The exact catalogue of projections still needs to be completed.
 
 ---
 
+### The lifecycle, and what each stage lets us check
+
+| stage       | artifacts                                                                    | agreements                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| build stub  | `*_stubs.c` → `.o` → `lib<pkg>_stubs.a` (+ `dll<pkg>_stubs.so` for bytecode) | the stub compiles against the header (types); the archive's undefined refs ⊆ the lib's exports                      |
+| build OCaml | `.cmi/.cmx/.cmxa/.cma`                                                       | the `.mli` surface is what the package claims; module names survive dune's wrapping convention                      |
+| link        | linkopts inside the `.cmxa`                                                  | the recorded `-L`/`-l` resolve OUTSIDE the build tree (the `$CAMLORIGIN/../..` trap)                                |
+| install     | ocamlfind layout, `META`                                                     | `directory`/`archive(native)`/`requires` describe the real layout; `dll*_stubs.so` lands in the switch's `stublibs` |
+| use         | `CAML_LD_LIBRARY_PATH`, RPATH                                                | the stub `.so` that loads is THIS package's (a stale one in the switch shadows it)                                  |
+
+
 ## 2.5 Python C-extension surfaces
 
 The Python C-extension mechanism has a similar but distinct chain:
@@ -1060,6 +1079,16 @@ compiled extension
 ```
 
 ---
+
+### The lifecycle, and what each stage lets us check
+
+| stage   | artifacts                               | agreements                                                                                                                           |
+| ------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| build   | `_native.c` → `_native.<EXT_SUFFIX>.so` | the `EXT_SUFFIX` matches the interpreter that will import it (ABI tag + version); `PyInit_<name>` exists and matches the module name |
+| link    | NEEDED + RPATH of the extension         | the C lib is resolvable from the extension's own search path                                                                         |
+| package | `__init__.py`, wheel metadata           | the user-facing surface is the package's, not the extension's                                                                        |
+| import  | the load meeting                        | no unresolved symbol at import; the right interpreter                                                                                |
+
 
 ## 2.6 Python ctypes surfaces
 
@@ -1118,6 +1147,24 @@ This is an example of mechanism affecting **where an agreement can be observed**
 
 ---
 
+### The lifecycle, and what each stage lets us check
+
+| stage        | artifacts                         | agreements                                                                                                                                                     |
+| ------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (no build)   | pure `.py`                        | — the absence of a build stage is itself the point: no build-time falsifier exists                                                                             |
+| load         | `dlopen` by name                  | the declared soname/path resolves at import                                                                                                                    |
+| call         | `argtypes`/`restype` declarations | the DECLARED types match the C signatures — checkable only against the header: this is the prime consumer-side case for the carried type oracle (App. D.4) |
+| failure mode | per-call resolution               | a missing symbol surfaces at FIRST CALL, not at import — so coverage of the declared API determines what is caught at all                                      |
+
+
+### Dynlink (OCaml, `Dynamic_ffi`) — not wired
+
+`.cmxs` plugin loading; the same shape as 3c (load-time resolution, no
+build-time falsifier).
+
+
+
+
 ## 2.7 Surface correspondence as the common model
 
 The general form is:
@@ -1156,6 +1203,88 @@ compiled binding ↔ runtime-visible module
 The exact projection catalogue remains the next item to develop.
 
 ---
+
+### The header as a carried type oracle — correspondence deferred in time
+
+A header is normally consulted once, when the binding is COMPILED, and
+then dropped: using a binding, or wrapping it indirectly, involves no
+header at all. That discards the only artifact carrying TYPES — a
+compiled component is type-free, so every stage after the compile is
+checked namewise even though the type information existed a moment
+earlier.
+
+The proposal is to let LATER actions refer back to it: the header stops
+being a build input and becomes a **carried oracle**, retrofitting types
+onto stages where the compiled component alone is untyped. It is not a
+new kind of agreement — it is §2.7's correspondence with the two sides
+separated in TIME rather than in space, which is why it has a seat in
+the taxonomy already: `header-as-oracle` and `DWARF signatures` are rows
+in §0.6c, both *several artifacts · compared*.
+
+Canary can do it cheaply because the mechanism exists: `scan_sources`
+emits the typed-header JSON early — deliberately, so c6 can cite it even
+when a later build fails — and it persists in the run tree. What is
+missing is cells that read it at actions other than `Build_binding`.
+**The chain it enables.** Types can be followed hop by hop instead of
+only at the first hop:
+
+    header (Sf.1, typed)
+      → binding stub (Sf.3, typed)        ← c6 today, at build_binding
+      → user-facing surface (Sf.4, typed) ← the wrapper's own claim
+      → indirect wrapper / helper / app   ← nothing checks this today
+
+Each hop must preserve the API under the declared marshalling. The last
+hop is the interesting one: tiny already declares an indirect wiring
+(`a_app Via_helper` beside `a_app Direct`), so the "wrapper of a
+wrapper" case has a witness ready.
+
+**Cells this yields** (all `Inspection`, all reading `Typed_header`
+plus one consumer-side typed surface):
+
+| cell                                                 | falsifier                                                                                             |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| header × user surface @ `Probe_binding`              | the user-facing signature contradicts the C signature it claims to wrap (arity, direction, ownership) |
+| header × wrapper surface @ `Build_app` / `Probe_app` | an indirect wrapper re-exports the API with a changed shape                                           |
+| header × consumer usage @ app stages                 | the app calls the API in a way the header's types forbid                                              |
+
+**The provider side too — with binutils** (user, 2026-08-18). An
+earlier draft called the compiled provider untypeable; that
+understates the tools. `nm -D` gives names only, but the ELF file can
+carry much more:
+
+| tool / data                                          | what it yields                                                                                             | precondition                                                                                                                |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `readelf --debug-dump=info` / `objdump --dwarf=info` | **full signatures** — `DW_TAG_subprogram` with return type + formal parameter types, struct layouts, sizes | DWARF is present (`-g`, or a separate `.debug` / debuginfo package). Often absent — use it WHEN APPLICABLE, never assume it |
+| `readelf -sW`                                        | symbol TYPE (FUNC/OBJECT) + size — a coarse shape check                                                    | always                                                                                                                      |
+| mangled names + `c++filt`                            | parameter types encoded in the symbol itself                                                               | C++ only (C symbols carry nothing)                                                                                          |
+
+So provider-side type retrofit is not impossible — it is
+**provision-dependent**, which fits the rest of the matrix:
+
+- **Built worlds**: canary compiles the lib itself, so canary controls
+  the flags — building with `-g` GUARANTEES the oracle. The strongest
+  form of the idea lands here: compare the header's declared
+  signatures against the DWARF of the artifact actually produced. That
+  catches header/source skew (the header claims `f(int)`, the object
+  was compiled from a source where `f` takes two) — today only caught
+  if some consumer compile happens to fail.
+- **Fetched worlds**: distro releases are usually stripped, so the
+  oracle needs the matching `-dbg`/`debuginfo` package declared as an
+  extra. Where it is absent, the cell degrades to the coarse
+  `readelf -sW` shape check and the meeting check (the link accepts
+  the pairing or does not) — a weaker but still non-empty belief.
+
+**Version skew — a future to-do.** Plainly: the header and the lib can
+come from DIFFERENT provisions — headers from the source repo, the lib
+from a package manager — and then they may not describe the same
+build. A type check pairing them tests the consumer against the
+SOURCE's API while the run uses the PACKAGE's lib, so a disagreement
+can indict the wrong artifact. The cell must record which artifact's
+version the oracle came from; blame then follows §10's direction rule.
+Not designed further yet — a future to-do.
+
+
+
 
 ## 2.8 Surface inspection versus resolution
 
@@ -1508,7 +1637,25 @@ evidence for the **resolved** view of §6.0 without issuing a verdict
 
 # 7. Transformation and Packaging Preservation
 
-**Status: pending.**
+**Status: pending here; partly built elsewhere.** The design and the
+divergence taxonomy live in [`staged_parity.md`](staged_parity.md) —
+the install is a copy-TRANSFORM, and its classes (identity transforms,
+content selection, missing install rules, relocation failure, platform
+invariants, accumulation) are the bug class to check. Four checks are
+named there: completeness, integrity, parity, **isolation**.
+
+As of 2026-09-02: **isolation is done for z3** (per-world install
+prefixes, 2026-08-19) and turned out to be a correctness property rather
+than hygiene — a shared staging area would have let the fork's staged
+package answer the pre-10549 world's staged probe and silence its
+regression xfail. Its GENERAL form (no project's two worlds may share a
+staging area, derived rather than hand-pinned) and the other three
+checks are open, tracked in
+[`../project/status_project.md`](../project/status_project.md).
+
+In this catalogue the family already has rows: staged completeness
+(wired, a hand list), staged parity and the portability falsifier — a
+staged binary must contain no build-tree path — both proposed (§0.6c).
 
 Any lifecycle transformation such as:
 
@@ -1816,20 +1963,7 @@ The inspection tools themselves already exist in the project and have their own 
 
 ---
 
-# Appendix A. The implementation, and the views onto it
-
-> What canary checks is stated three ways, on purpose, and this appendix
-> holds the two that are mechanical. §0.6c is the CATALOGUE — every check
-> with its target, method, source and status, which is the view to read
-> first. A.2 is the same belief as the code computes it, printed rather
-> than transcribed. A.3 is the same belief filtered per artifact, which
-> is the view that shows where the coverage is thin.
-
-
-> Carried over from `contract_registry.md` (merged 2026-08-21). This is
-> the EXECUTABLE projection of the catalogue as it stands today —
-> §11 absorbs it when the mapping-back section is worked through.
-> Nothing here is a proposal; it is what the code does.
+# Appendix A. The implementation
 
 ## A.1 — Where things live
 
@@ -1899,27 +2033,6 @@ The WIDER catalogue — including the checks that have no agreement row at
 all, such as the `Postcondition` families — is §0.6c; the per-artifact
 reading is A.3.
 
-## A.3 — The same belief, read per artifact
-
-§0.6c is organised by how a check is made; this is the same set filtered
-by WHICH ARTIFACT is under test. It is a summary rather than a second
-catalogue — the rows live in §0.6c — and it exists because the filter
-shows something neither other view does: **where an artifact is thinly
-covered, and at which point in its life.**
-
-| artifact | checked at | thinnest point |
-|---|---|---|
-| **source** | fetch (existence, pinned-ref freshness, repo contents) | nothing beyond existence and provenance — and that is PRINCIPLED: a source tree's API is its headers', its behaviour is its lib's (§0.6b) |
-| **headers** | their own presence; as provider at `Build_binding` (c6) | consulted once, at compile time, and then dropped — the carried-oracle idea (App. D.4) is about re-reading them later |
-| **lib** | fetch (identity/pin) · `Build_lib` (three solo cells) · `Install_lib` (staged parity, designed) · `Probe_lib` (nm prefix) · as provider at build and probe | **where it merely ARRIVES or is TRANSFORMED** — `Fetch` checks identity only, and `Install_lib`'s parity family is still designed. Four stages, three mechanics, and the two weakest are the two where canary did not build it |
-| **binding** | fetch/pin · `Build_binding` (c1/c2/c6) · `Probe_binding` (c1–c5, c3's trace) | **`Publish`** — nothing checks what we hand back out |
-| **app** | `Build_app` (marker) · `Probe_app` (c3, tiny's oracle) | nearly bare; the direct-vs-indirect differential is proposed, not built |
-
-Read down the last column and the fill priority is not the agreement
-rows at all — it is the *stages where an artifact changes hands*: fetch,
-install, publish. Those are exactly the points where canary is not the
-one doing the work, which is why they were easy to leave uncovered.
-
 # Appendix C. The standing goal, and the sequence
 
 ## C.1 — Coverage status — where it lives
@@ -1974,22 +2087,17 @@ status, and lives in the trackers above.
 
 ---
 
-# Appendix D. Carried-over drafts awaiting placement
+# Appendix D. Parked — the lib's path and hidden-dependency families
 
-> These were written before this doc's outline existed. Each belongs to
-> a section still under review, so it is parked here rather than
-> inserted — pull from it when the destination section is worked
-> through. Nothing in Appendix D is confirmed.
+> The only draft still waiting. Its subject (search paths, embedded
+> paths, identity, hidden dependencies) is being worked by a dedicated
+> outer effort, so it stays parked rather than being placed: §5
+> (resolution) and §6 (dependency and denotation) are its destinations
+> when it lands. Everything else that sat here has been placed —
+> the per-mechanism lifecycles into §2.4–2.6, the carried type oracle
+> into §2.7, staged parity into §7.
 
-| draft                                                           | intended destination                                                                      |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| D.1 the lib's path family                                       | §5 Resolution (search/selection); its recorded-vs-resolved half now has §6.0's vocabulary |
-| ~~D.2 the lib's hidden dependencies~~                           | **PLACED 2026-09-01** — folded into §6.6                                                  |
-| D.3 per-mechanism lifecycles (cstubs / cext / ctypes / dynlink) | §2.4, §2.5, §2.6 — as the artifact chains those sections enumerate                        |
-| D.4 the header as a carried type oracle                         | §2.3 + §2.7 (a surface-correspondence projection), with the provider-side DWARF note      |
-| D.5 staged parity                                               | §7 Transformation and packaging preservation                                              |
-
-## D.1–D.2 — The lib — symbols, paths, hidden dependencies
+## D.1 — The lib: symbols, paths, hidden dependencies
 
 
 Symbols are the best-developed family; two others are open and
@@ -2043,142 +2151,3 @@ These are the natural home for the interposition-shim RECORDER idea
 
 
 
-## D.3 — Per-mechanism lifecycles
-
-
-"The lib" above implicitly means the **C lib**. Once `lang × mechanism`
-is in play, each mechanism has its OWN artifact chain and its own
-agreements. This is the second group of tables; sketches, to be filled
-the same way (from real bugs, up the ladder).
-
-#### D.3a Cstubs (OCaml, `Static_c_abi`)
-
-| stage       | artifacts                                                                    | agreements                                                                                                          |
-| ----------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| build stub  | `*_stubs.c` → `.o` → `lib<pkg>_stubs.a` (+ `dll<pkg>_stubs.so` for bytecode) | the stub compiles against the header (types); the archive's undefined refs ⊆ the lib's exports                      |
-| build OCaml | `.cmi/.cmx/.cmxa/.cma`                                                       | the `.mli` surface is what the package claims; module names survive dune's wrapping convention                      |
-| link        | linkopts inside the `.cmxa`                                                  | the recorded `-L`/`-l` resolve OUTSIDE the build tree (the `$CAMLORIGIN/../..` trap)                                |
-| install     | ocamlfind layout, `META`                                                     | `directory`/`archive(native)`/`requires` describe the real layout; `dll*_stubs.so` lands in the switch's `stublibs` |
-| use         | `CAML_LD_LIBRARY_PATH`, RPATH                                                | the stub `.so` that loads is THIS package's (a stale one in the switch shadows it)                                  |
-
-#### D.3b Cext (Python, `Static_c_abi`)
-
-| stage   | artifacts                               | agreements                                                                                                                           |
-| ------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| build   | `_native.c` → `_native.<EXT_SUFFIX>.so` | the `EXT_SUFFIX` matches the interpreter that will import it (ABI tag + version); `PyInit_<name>` exists and matches the module name |
-| link    | NEEDED + RPATH of the extension         | the C lib is resolvable from the extension's own search path                                                                         |
-| package | `__init__.py`, wheel metadata           | the user-facing surface is the package's, not the extension's                                                                        |
-| import  | the load meeting                        | no unresolved symbol at import; the right interpreter                                                                                |
-
-#### D.3c Ctypes / Cffi (Python, `Dynamic_ffi`)
-
-| stage        | artifacts                         | agreements                                                                                                                                                     |
-| ------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| (no build)   | pure `.py`                        | — the absence of a build stage is itself the point: no build-time falsifier exists                                                                             |
-| load         | `dlopen` by name                  | the declared soname/path resolves at import                                                                                                                    |
-| call         | `argtypes`/`restype` declarations | the DECLARED types match the C signatures — checkable only against the header: this is the prime consumer-side case for the carried type oracle (App. D.4) |
-| failure mode | per-call resolution               | a missing symbol surfaces at FIRST CALL, not at import — so coverage of the declared API determines what is caught at all                                      |
-
-#### D.3d Dynlink (OCaml, `Dynamic_ffi`) — not wired
-
-`.cmxs` plugin loading; the same shape as 3c (load-time resolution, no
-build-time falsifier).
-
-
-
-## D.4 — The header as a carried type oracle (designed, 2026-08-18)
-
-
-**The gap in traditional practice.** A header is consulted exactly
-once — when the binding is COMPILED. After that it is dropped: using a
-binding, or wrapping it indirectly, involves no header at all. That is
-fine for building, but it throws away the only artifact that carries
-TYPES. A compiled component (`.so`, `.cmxa`, a cext `.so`) is
-type-free: `nm` yields names and nothing else. So every stage after
-the compile is checked namewise even though the type information
-existed a moment earlier.
-
-**The idea** (user, 2026-08-18): let LATER actions refer back to the
-header, so a compiled component can be type-checked at stages where it
-alone would be untyped — *retrofitting type information onto a compiled
-component*. The header stops being a build input and becomes a
-**carried oracle**: declared once, inspected once (`Scan_sources` →
-`inspect_typed_header.json`), then available as an input to any
-downstream cell.
-
-**Why canary can do this cheaply.** The mechanism already exists — the
-typed-header JSON is emitted early (deliberately, so c6 can cite it
-even when a later build fails) and it persists in the run's output
-tree. What is missing is not machinery but CELLS: contracts that read
-`Typed_header` at actions other than `Build_binding`.
-
-**The chain it enables.** Types can be followed hop by hop instead of
-only at the first hop:
-
-    header (Sf.1, typed)
-      → binding stub (Sf.3, typed)        ← c6 today, at build_binding
-      → user-facing surface (Sf.4, typed) ← the wrapper's own claim
-      → indirect wrapper / helper / app   ← nothing checks this today
-
-Each hop must preserve the API under the declared marshalling. The last
-hop is the interesting one: tiny already declares an indirect wiring
-(`a_app Via_helper` beside `a_app Direct`), so the "wrapper of a
-wrapper" case has a witness ready.
-
-**Cells this yields** (all `Inspection`, all reading `Typed_header`
-plus one consumer-side typed surface):
-
-| cell                                                 | falsifier                                                                                             |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| header × user surface @ `Probe_binding`              | the user-facing signature contradicts the C signature it claims to wrap (arity, direction, ownership) |
-| header × wrapper surface @ `Build_app` / `Probe_app` | an indirect wrapper re-exports the API with a changed shape                                           |
-| header × consumer usage @ app stages                 | the app calls the API in a way the header's types forbid                                              |
-
-**The provider side too — with binutils** (user, 2026-08-18). An
-earlier draft called the compiled provider untypeable; that
-understates the tools. `nm -D` gives names only, but the ELF file can
-carry much more:
-
-| tool / data                                          | what it yields                                                                                             | precondition                                                                                                                |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `readelf --debug-dump=info` / `objdump --dwarf=info` | **full signatures** — `DW_TAG_subprogram` with return type + formal parameter types, struct layouts, sizes | DWARF is present (`-g`, or a separate `.debug` / debuginfo package). Often absent — use it WHEN APPLICABLE, never assume it |
-| `readelf -sW`                                        | symbol TYPE (FUNC/OBJECT) + size — a coarse shape check                                                    | always                                                                                                                      |
-| mangled names + `c++filt`                            | parameter types encoded in the symbol itself                                                               | C++ only (C symbols carry nothing)                                                                                          |
-
-So provider-side type retrofit is not impossible — it is
-**provision-dependent**, which fits the rest of the matrix:
-
-- **Built worlds**: canary compiles the lib itself, so canary controls
-  the flags — building with `-g` GUARANTEES the oracle. The strongest
-  form of the idea lands here: compare the header's declared
-  signatures against the DWARF of the artifact actually produced. That
-  catches header/source skew (the header claims `f(int)`, the object
-  was compiled from a source where `f` takes two) — today only caught
-  if some consumer compile happens to fail.
-- **Fetched worlds**: distro releases are usually stripped, so the
-  oracle needs the matching `-dbg`/`debuginfo` package declared as an
-  extra. Where it is absent, the cell degrades to the coarse
-  `readelf -sW` shape check and the meeting check (the link accepts
-  the pairing or does not) — a weaker but still non-empty belief.
-
-**Version skew — a future to-do.** Plainly: the header and the lib can
-come from DIFFERENT provisions — headers from the source repo, the lib
-from a package manager — and then they may not describe the same
-build. A type check pairing them tests the consumer against the
-SOURCE's API while the run uses the PACKAGE's lib, so a disagreement
-can indict the wrong artifact. The cell must record which artifact's
-version the oracle came from; blame then follows §10's direction rule.
-Not designed further yet — a future to-do.
-
-
-
-## D.5 — staged parity
-
-Lives in its own doc, [`staged_parity.md`](staged_parity.md): the
-build→install transform's divergence classes (identity transforms,
-content selection, missing rules, relocation failure, platform
-invariants, accumulation/isolation) and the four checks
-(completeness / integrity / parity / isolation), including the
-portability falsifier — a staged binary must contain no concrete
-build-tree path. It is the same artifact-checking family one lifecycle
-stage later, and is §7's principal input.
