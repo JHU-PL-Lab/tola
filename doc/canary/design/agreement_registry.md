@@ -17,7 +17,7 @@ install/stage, probe. This document is narrower:
 
 It is about the checking MODEL — not the enumeration engine, not the
 cache. `Canary_agreement_registry` is its executable projection, and the
-harness in §10a is what keeps the two aligned.
+harness in Appendix B is what keeps the two aligned.
 
 **One inherited open question — where an agreement gets EVALUATED.**
 Canary's checks are OCaml closures on a step, so they cannot cross into
@@ -35,30 +35,42 @@ its meaning? — is worth settling here rather than after.
 # Progress Outline
 
 * [x] **0. Scope and checking philosophy** (0.6 taxonomy)
+
+**Part I — the artifact, assuming ideal local resolution**
+
 * [x] **1. Resource presence and identification**
-* [ ] **2. Artifact surfaces and surface correspondence**
+* [ ] **2. Artifact surfaces — the vocabulary**
 
   * [x] 2.1 Syntactic surface and realized surface
   * [ ] 2.2 Fundamental surface agreement
-  * [ ] 2.3 The provider's source surface — the C library
-  * [ ] 2.4 The provider's realized surface — the compiled object
-  * [ ] 2.5 Surface correspondence, its projections, the carried type oracle
-  * [ ] 2.6 Surface inspection versus resolution
-* [ ] **3. Language chains — how a language consumes a provider**
+  * [ ] 2.3 Surface correspondence, its projections, the carried type oracle
+  * [ ] 2.4 Surface inspection versus resolution
+* [ ] **3. The artifact families**
 
-  * [ ] 3.1 OCaml — cstubs, dynlink
-  * [ ] 3.2 Python — C extension, ctypes, cffi
-  * [ ] 3.3 Not yet in scope
-* [ ] **4. Package managers — the layer above**
-* [ ] **5. Resolution agreements**
-* [ ] **6. Dependency and denotation agreements**
-* [ ] **7. Transformation and packaging preservation**
-* [ ] **8. Behavioral agreements**
-* [ ] **9. Project- and version-derived agreement discovery**
-* [ ] **10. Blame and result interpretation**
-* [x] **10a. The doc/code bridge and its harness**
+  * [ ] 3.1 The native provider — its C API, and its compiled object
+  * [ ] 3.2 The consumer language, in itself
+  * [ ] 3.3 The foreign interface — per language, per mechanism
+
+**Part II — nothing is in one place**
+
+* [ ] **4. Resolution — one name, several candidates**
+* [ ] **5. Transformation and staging**
+* [ ] **6. Late binding — versions and dependencies**
+* [ ] **7. Package managers — the resource store that chooses**
+
+**Part III — the axes** (each applies at every mechanism and stage)
+
+* [ ] **8. Behavioural agreements**
+* [ ] **9. Blame and result interpretation**
+* [ ] **10. Derivation and discovery**
+
+**Closing**
+
 * [ ] **11. Mapping the catalogue back to actions and the registry**
 * [x] **12. Design space not yet entered**
+
+Appendices: A the implementation · B the doc/code bridge and its harness
+· C the standing goal and the sequence · D parked drafts.
 
 Current discussion should resume from **§2: Artifact surfaces**.
 
@@ -623,7 +635,7 @@ Two observations from that table:
 
 ---
 
-# 2. Artifact Surfaces
+# 2. Artifact Surfaces — the vocabulary
 
 This is the current active section.
 
@@ -728,7 +740,7 @@ in a tool:
 
 Note that Sf.5 is empty for ctypes (nothing is compiled on the binding
 side), which is the structural reason that mechanism loses its
-static falsifiers — the point §2.6 develops.
+static falsifiers — the point §3.3 develops.
 
 ---
 
@@ -774,92 +786,7 @@ This suggests that symbol agreements and type agreements belong under a common c
 
 ---
 
-## 2.3 The provider's source surface — the C library
-
-The provider's declared interface. Today that is a C header:
-
-Typically represented by the C header:
-
-```text
-foo.h
-```
-
-It may expose:
-
-```text
-function names
-parameter types
-return types
-struct declarations
-enum declarations
-constants/macros where relevant
-calling-related annotations
-visibility declarations
-```
-
-This is the strongest source-level description of the provider API currently available to the binding.
-
----
-
-**The producing language is a variable, not a constant.** Nothing in a
-binding's relationship to its provider requires that provider to be
-written in C — only that it PRESENT a C-compatible interface. Rust
-(`extern "C"`), C++ behind a C wrapper, or a language not yet invented
-can occupy exactly this position. The registry already contains the
-counterexample to the assumption: **torch's boundary is mangled C++**,
-87,877 Itanium-mangled symbols, where the prefixes a check watches must
-be spelled `_ZN2at` rather than `at::`. The agreements are unchanged by
-this; what changes is the spelling the inspectors must use.
-
-## 2.4 The provider's realized surface — the compiled object
-
-The compiled C library:
-
-```text
-libfoo.so
-```
-
-has a different observable surface.
-
-Depending on available tooling and build information, it may expose:
-
-```text
-exported symbols
-undefined symbols
-symbol kind
-symbol versions
-dynamic metadata
-relocations
-debug/type information when available
-```
-
-The existing document already exploits this difference. It notes that headers carry type information while compiled artifacts often require tools such as `nm` or DWARF inspection to recover parts of the realized interface.
-
-This naturally creates provider-side correspondence checks:
-
-```text
-header
-  ↕
-compiled C library
-```
-
----
-
-**The object format is also a variable.** ELF is today's case; Mach-O is
-already exercised (canary runs on macOS, where the sibling facts differ:
-`nm` underscores every C symbol, identity is `LC_ID_DYLIB` rather than
-`DT_SONAME`, the loader reads `DYLD_*` and `@rpath`); PE/COFF is
-untried. An agreement over this surface is therefore
-**format-parameterised** — the claim is the same, the tool and the field
-names differ — which is exactly how the code already treats it, with the
-platform carried as a value rather than sniffed.
-
-Keeping these two sections apart matters because they vary
-independently: the language that PRODUCED the object and the FORMAT it
-was produced in are separate axes, and §2.1's syntactic/realized
-distinction is the only structure needed to hold them.
-
-## 2.5 Surface correspondence as the common model
+## 2.3 Surface correspondence as the common model
 
 The general form is:
 
@@ -910,7 +837,7 @@ earlier.
 The proposal is to let LATER actions refer back to it: the header stops
 being a build input and becomes a **carried oracle**, retrofitting types
 onto stages where the compiled component alone is untyped. It is not a
-new kind of agreement — it is §2.5's correspondence with the two sides
+new kind of agreement — it is §2.3's correspondence with the two sides
 separated in TIME rather than in space, which is why it has a seat in
 the taxonomy already: `header-as-oracle` and `DWARF signatures` are rows
 in §0.6c, both *several artifacts · compared*.
@@ -980,7 +907,7 @@ Not designed further yet — a future to-do.
 
 
 
-## 2.6 Surface inspection versus resolution
+## 2.4 Surface inspection versus resolution
 
 A key boundary should be maintained.
 
@@ -1019,7 +946,158 @@ The distinction is useful because many later agreements repeatedly consume previ
 
 ---
 
-# 3. Language Chains — how a language consumes a provider
+# 3. The Artifact Families
+
+§2 is vocabulary; this section is what the vocabulary describes. Three
+families, in the order a binding traverses them:
+
+```text
+3.1  the native PROVIDER        — whoever made the object, in whatever format
+3.2  the consumer LANGUAGE      — its own artifacts, independent of any FFI
+3.3  the FOREIGN INTERFACE      — how that language reaches the provider
+```
+
+The middle one is easy to lose: a `.cmi` is a `.cmi` whichever mechanism
+produced it, and a Python package is a package whether its native half
+is a compiled extension or a `dlopen`. Separating it keeps the
+mechanism sections about *coupling* rather than re-explaining the
+language each time.
+
+## 3.1 The native provider
+
+The provider's declared interface. Today that is a C header:
+
+Typically represented by the C header:
+
+```text
+foo.h
+```
+
+It may expose:
+
+```text
+function names
+parameter types
+return types
+struct declarations
+enum declarations
+constants/macros where relevant
+calling-related annotations
+visibility declarations
+```
+
+This is the strongest source-level description of the provider API currently available to the binding.
+
+---
+
+**The producing language is a variable, not a constant.** Nothing in a
+binding's relationship to its provider requires that provider to be
+written in C — only that it PRESENT a C-compatible interface. Rust
+(`extern "C"`), C++ behind a C wrapper, or a language not yet invented
+can occupy exactly this position. The registry already contains the
+counterexample to the assumption: **torch's boundary is mangled C++**,
+87,877 Itanium-mangled symbols, where the prefixes a check watches must
+be spelled `_ZN2at` rather than `at::`. The agreements are unchanged by
+this; what changes is the spelling the inspectors must use.
+
+
+
+### 3.1.2 Its realized surface — the compiled object
+
+The compiled C library:
+
+```text
+libfoo.so
+```
+
+has a different observable surface.
+
+Depending on available tooling and build information, it may expose:
+
+```text
+exported symbols
+undefined symbols
+symbol kind
+symbol versions
+dynamic metadata
+relocations
+debug/type information when available
+```
+
+The existing document already exploits this difference. It notes that headers carry type information while compiled artifacts often require tools such as `nm` or DWARF inspection to recover parts of the realized interface.
+
+This naturally creates provider-side correspondence checks:
+
+```text
+header
+  ↕
+compiled C library
+```
+
+---
+
+**The object format is also a variable.** ELF is today's case; Mach-O is
+already exercised (canary runs on macOS, where the sibling facts differ:
+`nm` underscores every C symbol, identity is `LC_ID_DYLIB` rather than
+`DT_SONAME`, the loader reads `DYLD_*` and `@rpath`); PE/COFF is
+untried. An agreement over this surface is therefore
+**format-parameterised** — the claim is the same, the tool and the field
+names differ — which is exactly how the code already treats it, with the
+platform carried as a value rather than sniffed.
+
+Keeping these two sections apart matters because they vary
+independently: the language that PRODUCED the object and the FORMAT it
+was produced in are separate axes, and §2.1's syntactic/realized
+distinction is the only structure needed to hold them.
+
+
+
+## 3.2 The consumer language, in itself
+
+Before any foreign interface, a language has its own compilation model,
+its own artifacts and its own package layout — and canary already
+inspects several of them. What lives here is what every mechanism of
+that language shares.
+
+### 3.2.1 OCaml
+
+| artifact | what it presents | inspected by |
+|---|---|---|
+| `.mli` | the declared module signature — vals, types, constructors | `inspect_binding.py --kind mli` |
+| `.cmi` | the compiled signature the compiler enforces | (the compiler itself: `.ml` conforms to `.mli`) |
+| `.cmxa` / `.cma` | the module list of an archive | `ocamlobjinfo` |
+| `META` + the findlib layout | what `ocamlfind` will hand a consumer: `directory`, `archive`, `requires` | the package's own files |
+
+Two language-level facts that bite regardless of mechanism: dune's
+wrapping convention changes module NAMES in an archive (`Tiny__Foo`
+versus `Foo`), so a watchlist that names only the top-level module is
+portable and one naming mangled submodules is not; and a switch holds
+**one version per package**, which is why worlds that disagree cannot
+coexist and why run order is grouped by the state a scenario locks.
+
+### 3.2.2 Python
+
+| artifact | what it presents | inspected by |
+|---|---|---|
+| a module / package | the names `dir()` yields at import | `inspect_python.py` |
+| `__init__.py` | the package's user-facing surface | read as a source surface |
+| an installed distribution | what the interpreter will import, and from where | `pip` |
+
+The language-level fact that bites: an importable name says nothing
+about what backs it. The same `import foo` may be pure Python, a
+compiled extension, or a `dlopen` — which is precisely why the
+mechanism must be declared rather than inferred (§3.3).
+
+### 3.2.3 What is missing here
+
+Neither language's own artifacts are checked for their own sake today —
+they are inspected only as inputs to a binding agreement. A language's
+solo claims (does this archive contain the modules its `META` promises;
+does an installed distribution import at all) are a real family with no
+rows yet.
+
+## 3.3 The foreign interface
+
 
 The provider side (§2.3, §2.4) is one component: whoever produced the
 object, in whatever format. This section is the other, and it is
@@ -1075,9 +1153,9 @@ Other mechanisms such as Rust FFI, JNI, P/Invoke, CFFI, and OCaml Dynlink may be
 
 ---
 
-## 3.1 OCaml
+### 3.3.1 OCaml
 
-### 3.1a Cstubs — `Static_c_abi`
+#### Cstubs — `Static_c_abi`
 
 For the OCaml mechanism, the binding itself exposes several different surfaces.
 
@@ -1215,14 +1293,14 @@ The exact catalogue of projections still needs to be completed.
 | install     | ocamlfind layout, `META`                                                     | `directory`/`archive(native)`/`requires` describe the real layout; `dll*_stubs.so` lands in the switch's `stublibs` |
 | use         | `CAML_LD_LIBRARY_PATH`, RPATH                                                | the stub `.so` that loads is THIS package's (a stale one in the switch shadows it)                                  |
 
-### 3.1b Dynlink — `Dynamic_ffi`, not wired
+#### Dynlink — `Dynamic_ffi`, not wired
 
-`.cmxs` plugin loading. Structurally the same as ctypes (§3.2b):
+`.cmxs` plugin loading. Structurally the same as ctypes (§3.3.2):
 resolution happens at load, so there is no build-time falsifier.
 
-## 3.2 Python
+### 3.3.2 Python
 
-### 3.2a C extension — `Static_c_abi`
+#### C extension — `Static_c_abi`
 
 The Python C-extension mechanism has a similar but distinct chain:
 
@@ -1287,7 +1365,7 @@ compiled extension
 | package | `__init__.py`, wheel metadata           | the user-facing surface is the package's, not the extension's                                                                        |
 | import  | the load meeting                        | no unresolved symbol at import; the right interpreter                                                                                |
 
-### 3.2b ctypes — `Dynamic_ffi`
+#### ctypes — `Dynamic_ffi`
 
 ctypes has a shorter artifact chain:
 
@@ -1359,89 +1437,31 @@ This is an example of mechanism affecting **where an agreement can be observed**
 `.cmxs` plugin loading; the same shape as 3c (load-time resolution, no
 build-time falsifier).
 
-### 3.2c cffi — not wired
+#### cffi — not wired
 
 Same discipline as ctypes: declarations in Python, resolution at load.
 Its `cdef` block re-declares the C surface, so it has a syntactic
 surface ctypes lacks — a candidate consumer for the carried type
-oracle (§2.5).
+oracle (§2.3).
 
-## 3.3 Not yet in scope
+### 3.3.3 Not yet in scope
 
 Rust FFI, JNI, P/Invoke. Each would add a language section with its own
 mechanisms; none complicates the model, which is the point of nesting
 this way.
 
-# 4. Package Managers — the layer above
 
-A package manager is not part of a language chain and not part of a
-native library; it is a **layer over both**, and it deserves its own
-section for that reason. It decides which artifact a name resolves to,
-what may be installed beside what, and — the part canary cares most
-about — **what it will refuse**.
+---
 
-## 4.1 What a package manager is, as a checking substrate
+# Part II — Nothing is in one place
 
-It has its own resource model and its own observable commands, so
-"package X exists" is a different question from "file Y exists" even
-when X eventually materialises Y (§1.3). The four questions canary
-actually asks:
+Up to here the model assumes **ideal local resolution**: a name denotes
+the artifact we meant, and it is where we expect. Both assumptions fail
+in practice, and the next four sections are what replaces them —
+a rationale (§4–§6) and then the mechanism that makes the choices
+concrete (§7).
 
-```text
-does this package exist?        is it installed?
-what version is installed?      what files does it own?
-```
-
-Canary drives four: `apt` / `brew` (system), `opam` (OCaml), `pip`
-(Python) — the drivers live in `tool/canary_pm_*.ml`, deliberately
-outside the agreement layer, because a tool wrapper reports a fact and
-an agreement is a claim about it.
-
-## 4.2 Two kinds, and why the distinction matters
-
-| kind | examples | provides | canary's use |
-|---|---|---|---|
-| **system PM** | apt, brew, conda-forge | the native library — the provider of §2.4 | the `Fetched` provision for a lib; the *stable* half of a version pair |
-| **language PM** | opam, pip | the binding, and sometimes the lib | the `Fetched` provision for a binding; the switch/venv is the world's shared state |
-
-The two meet at the **gate**: a language package declares what it needs
-from the system side, and that declaration is what canary must satisfy —
-or deliberately defeat — to construct a world.
-
-## 4.3 The gate, as data
-
-`Canary_binding_decl.pm_dep_gate` models exactly that declaration, and
-`combination_freedom_of` derives the one thing it exists for: **what it
-takes to force a pairing the manager would not choose itself.**
-
-| gate | freedom | what forcing costs |
-|---|---|---|
-| a conf-\* with no version constraint | `Any_version` | nothing — the conf proves presence only |
-| a conf-\* with a range | `Within_bound` | free while the version satisfies it |
-| a conf-\* pinned exactly, or a bounded depext | `Wrapper_needed` | publish a wrapper package that drops the dependency |
-| the package builds the lib, or bundles it | `No_pairing` | the lib axis does not exist on that side |
-
-The measured surprise worth keeping: a conf package's own version is
-usually **packaging**, not a statement about the library — only 13 of
-370 carry a version into their system check. So a bound that looks
-binding often is not, and the real freedom is `Any_version`.
-
-## 4.4 What the layer contributes to checking
-
-Three things, each already visible elsewhere in this catalogue:
-
-* **identity** — "the installed package is at the pinned version" is a
-  solo-artifact check whose claim comes from the PM's own query (§0.6c);
-* **exclusivity** — a switch or a venv is shared mutable state, so two
-  worlds cannot hold conflicting versions at once; that is why run order
-  is grouped by the state a scenario locks, and it is the same shape as
-  the staging-area isolation of §7;
-* **what the manager refuses** — the gate above, which decides whether a
-  mismatch world is constructible at all. An agreement we cannot build a
-  world for is not falsifiable, so this layer bounds the catalogue.
-
-# 5. Resolution Agreements
-
+# 4. Resolution — one name, several candidates
 **Status: pending.**
 
 Resolution should build on the lower-level resource presence/identification capability.
@@ -1465,8 +1485,46 @@ Path rules, version selection, ABI-related selection, and shadowing should be di
 
 ---
 
-# 6. Dependency and Denotation Agreements
+# 5. Transformation and Staging
+**Status: pending here; partly built elsewhere.** The design and the
+divergence taxonomy live in [`staged_parity.md`](staged_parity.md) —
+the install is a copy-TRANSFORM, and its classes (identity transforms,
+content selection, missing install rules, relocation failure, platform
+invariants, accumulation) are the bug class to check. Four checks are
+named there: completeness, integrity, parity, **isolation**.
 
+As of 2026-09-02: **isolation is done for z3** (per-world install
+prefixes, 2026-08-19) and turned out to be a correctness property rather
+than hygiene — a shared staging area would have let the fork's staged
+package answer the pre-10549 world's staged probe and silence its
+regression xfail. Its GENERAL form (no project's two worlds may share a
+staging area, derived rather than hand-pinned) and the other three
+checks are open, tracked in
+[`../project/status_project.md`](../project/status_project.md).
+
+In this catalogue the family already has rows: staged completeness
+(wired, a hand list), staged parity and the portability falsifier — a
+staged binary must contain no build-tree path — both proposed (§0.6c).
+
+Any lifecycle transformation such as:
+
+```text
+build → stage
+stage → package
+package → publish
+publish → fetch
+fetch → install
+```
+
+may preserve some properties while changing the carrier.
+
+The existing staged-parity work is already an instance of this broader pattern. The current document explicitly describes staged parity as the same artifact-checking family one lifecycle stage later.
+
+This section should generalize that idea.
+
+---
+
+# 6. Late Binding — Versions and Dependencies
 **Status: drafted 2026-09-01, pending review.** Written from a confirmed
 instance rather than from design. Absorbs the former
 `closure_shape.md` and Appendix D.2.
@@ -1703,48 +1761,82 @@ evidence for the **resolved** view of §6.0 without issuing a verdict
 
 ---
 
-# 7. Transformation and Packaging Preservation
+# 7. Package Managers — the resource store that chooses
+A package manager is not part of a language chain and not part of a
+native library; it is a **layer over both**, and it deserves its own
+section for that reason. It decides which artifact a name resolves to,
+what may be installed beside what, and — the part canary cares most
+about — **what it will refuse**.
 
-**Status: pending here; partly built elsewhere.** The design and the
-divergence taxonomy live in [`staged_parity.md`](staged_parity.md) —
-the install is a copy-TRANSFORM, and its classes (identity transforms,
-content selection, missing install rules, relocation failure, platform
-invariants, accumulation) are the bug class to check. Four checks are
-named there: completeness, integrity, parity, **isolation**.
+## 4.1 What a package manager is, as a checking substrate
 
-As of 2026-09-02: **isolation is done for z3** (per-world install
-prefixes, 2026-08-19) and turned out to be a correctness property rather
-than hygiene — a shared staging area would have let the fork's staged
-package answer the pre-10549 world's staged probe and silence its
-regression xfail. Its GENERAL form (no project's two worlds may share a
-staging area, derived rather than hand-pinned) and the other three
-checks are open, tracked in
-[`../project/status_project.md`](../project/status_project.md).
-
-In this catalogue the family already has rows: staged completeness
-(wired, a hand list), staged parity and the portability falsifier — a
-staged binary must contain no build-tree path — both proposed (§0.6c).
-
-Any lifecycle transformation such as:
+It has its own resource model and its own observable commands, so
+"package X exists" is a different question from "file Y exists" even
+when X eventually materialises Y (§1.3). The four questions canary
+actually asks:
 
 ```text
-build → stage
-stage → package
-package → publish
-publish → fetch
-fetch → install
+does this package exist?        is it installed?
+what version is installed?      what files does it own?
 ```
 
-may preserve some properties while changing the carrier.
+Canary drives four: `apt` / `brew` (system), `opam` (OCaml), `pip`
+(Python) — the drivers live in `tool/canary_pm_*.ml`, deliberately
+outside the agreement layer, because a tool wrapper reports a fact and
+an agreement is a claim about it.
 
-The existing staged-parity work is already an instance of this broader pattern. The current document explicitly describes staged parity as the same artifact-checking family one lifecycle stage later.
+## 4.2 Two kinds, and why the distinction matters
 
-This section should generalize that idea.
+| kind | examples | provides | canary's use |
+|---|---|---|---|
+| **system PM** | apt, brew, conda-forge | the native library — the provider of §2.4 | the `Fetched` provision for a lib; the *stable* half of a version pair |
+| **language PM** | opam, pip | the binding, and sometimes the lib | the `Fetched` provision for a binding; the switch/venv is the world's shared state |
+
+The two meet at the **gate**: a language package declares what it needs
+from the system side, and that declaration is what canary must satisfy —
+or deliberately defeat — to construct a world.
+
+## 4.3 The gate, as data
+
+`Canary_binding_decl.pm_dep_gate` models exactly that declaration, and
+`combination_freedom_of` derives the one thing it exists for: **what it
+takes to force a pairing the manager would not choose itself.**
+
+| gate | freedom | what forcing costs |
+|---|---|---|
+| a conf-\* with no version constraint | `Any_version` | nothing — the conf proves presence only |
+| a conf-\* with a range | `Within_bound` | free while the version satisfies it |
+| a conf-\* pinned exactly, or a bounded depext | `Wrapper_needed` | publish a wrapper package that drops the dependency |
+| the package builds the lib, or bundles it | `No_pairing` | the lib axis does not exist on that side |
+
+The measured surprise worth keeping: a conf package's own version is
+usually **packaging**, not a statement about the library — only 13 of
+370 carry a version into their system check. So a bound that looks
+binding often is not, and the real freedom is `Any_version`.
+
+## 4.4 What the layer contributes to checking
+
+Three things, each already visible elsewhere in this catalogue:
+
+* **identity** — "the installed package is at the pinned version" is a
+  solo-artifact check whose claim comes from the PM's own query (§0.6c);
+* **exclusivity** — a switch or a venv is shared mutable state, so two
+  worlds cannot hold conflicting versions at once; that is why run order
+  is grouped by the state a scenario locks, and it is the same shape as
+  the staging-area isolation of §7;
+* **what the manager refuses** — the gate above, which decides whether a
+  mismatch world is constructible at all. An agreement we cannot build a
+  world for is not falsifiable, so this layer bounds the catalogue.
 
 ---
 
-# 8. Behavioral Agreements
+# Part III — The axes
 
+Behaviour, blame and derivation are not steps in the arc: each applies
+at every mechanism and every stage, which is why they sit apart rather
+than in sequence.
+
+# 8. Behavioural Agreements
 **Status: pending.**
 
 Behavior should remain the deepest observation layer.
@@ -1766,50 +1858,7 @@ Execution should remain a last resort when earlier artifact or meeting observati
 
 ---
 
-# 9. Project- and Version-Derived Agreement Discovery
-
-**Status: pending.**
-
-Candidate agreements may originate from several sources:
-
-```text
-artifact structure
-binding mechanism
-language/platform tool behavior
-project declarations
-project code
-version information
-historical regressions
-```
-
-Version differences are particularly useful because they can generate candidate agreements without requiring a full semantic model.
-
-For example:
-
-```text
-stable provider exports {a, b, c}
-dev provider exports    {a, c}
-```
-
-immediately suggests a symbol-surface compatibility question for existing bindings.
-
-Likewise:
-
-```text
-header signature changes
-SONAME changes
-dependency-set changes
-binding interface changes
-```
-
-can generate candidate checks.
-
-This should later feed the agreement catalogue, while the project-specific declaration remains the oracle for facts that cannot be inferred generically.
-
----
-
-# 10. Blame and Result Interpretation
-
+# 9. Blame and Result Interpretation
 **Status: pending review.** Carried over from the registry design,
 where it was an open axis; the outline gained a section for it
 2026-08-21.
@@ -1908,8 +1957,216 @@ blame statement fixed in advance:
 
 ---
 
-# 10a. The doc/code bridge — and the harness that keeps it honest
+# 10. Derivation and Discovery
+**Status: pending.**
 
+Candidate agreements may originate from several sources:
+
+```text
+artifact structure
+binding mechanism
+language/platform tool behavior
+project declarations
+project code
+version information
+historical regressions
+```
+
+Version differences are particularly useful because they can generate candidate agreements without requiring a full semantic model.
+
+For example:
+
+```text
+stable provider exports {a, b, c}
+dev provider exports    {a, c}
+```
+
+immediately suggests a symbol-surface compatibility question for existing bindings.
+
+Likewise:
+
+```text
+header signature changes
+SONAME changes
+dependency-set changes
+binding interface changes
+```
+
+can generate candidate checks.
+
+This should later feed the agreement catalogue, while the project-specific declaration remains the oracle for facts that cannot be inferred generically.
+
+---
+
+# 11. Mapping Back to Actions and the Registry
+
+**Status: pending.**
+
+Once the agreement catalogue is sufficiently complete, concrete agreements should be mapped back into the existing action-centred framework.
+
+The existing design already models the main checking space as:
+
+```text
+agreement/contract × action
+```
+
+with mechanism and provision refining where a check applies rather than creating a full Cartesian-product matrix.
+
+Each final agreement row should eventually state something close to:
+
+```text
+name
+claim                          (phrased as its falsifier, §0.3)
+origin
+relevant surfaces/artifacts    (Sf.1..Sf.5 / Trace, §2.1)
+earliest observation point     (the ladder rung, §0.4)
+tool/result used as evidence
+later dynamic confirmation
+applicable mechanism
+applicable provision
+minimal falsifier / fixture    (executed ahead of any project run, App. A)
+pass meaning + blame           (§10)
+current implementation status
+```
+
+The registry then becomes the executable projection of this larger catalogue.
+
+---
+
+# 12. Design space not yet entered
+
+Families and axes that are real, that this project has **no material
+for**, and that are recorded so they are not mistaken for planned work.
+
+| what | why it is empty here |
+|---|---|
+| **representation / marshalling** — integer width, strings, NULL/None, struct layout, enum mappings, ownership of returned pointers | no inspector, no mutation, no agreement row touches value representation; `c_types_agree` checks the declared SHAPES, which is not the same claim |
+| **lifetime and ownership** — borrowed vs owned, callback lifetime, GC rooting, refcounts, use-after-free | would need dynamic instrumentation canary does not have; nothing in the witness or the projects exercises it |
+| **other producing languages** — Rust `extern "C"`, C++ behind a wrapper | partially false already: torch's boundary is mangled C++ (§2.3). The agreements are unchanged; the spelling the inspectors use is not |
+| **other object formats** — Mach-O, PE/COFF | Mach-O is exercised on macOS; PE is untried. An agreement over the realized surface is format-parameterised (§2.4) |
+| **other consumer languages** — Rust FFI, JNI, P/Invoke | each adds a §3 language section; none complicates the model |
+
+The first two are genuine gaps in the catalogue. The last three are not
+gaps but PARAMETERS: the claims survive, and only the tool and the
+spelling change — which is the argument for keeping the provider's
+source and realized surfaces separate (§2.3, §2.4) rather than writing
+"C" and "ELF" into the agreements themselves.
+
+---
+
+# Current Working Position
+
+The discussion should continue from **§2: Artifact surfaces**.
+
+The next concrete question is:
+
+> **What projections make up an artifact surface?**
+
+The current candidates are:
+
+```text
+names / symbols
+members / modules
+types / signatures
+references / requirements
+metadata
+```
+
+Two things settled since this question was posed, worth carrying into
+the answer: the taxonomy now distinguishes an artifact's **identity**
+(its soname — what the ncurses case turned on) from its **interface**
+detail, so *identity* may deserve to be a projection in its own right
+rather than a kind of metadata (§6.2); and §2.3 now also holds the
+carried type oracle, which is a correspondence between the same two
+projections separated in time.
+
+The next pass should determine:
+
+1. whether these projections are complete;
+2. which projections exist on the provider side;
+3. which projections exist for OCaml C stubs;
+4. which projections exist for Python C extensions;
+5. which projections exist for Python ctypes;
+6. which pairs of surfaces produce useful concrete agreements.
+
+The inspection tools themselves already exist in the project and have their own tests, so the next step should focus on **what is being observed and compared**, rather than re-cataloguing tool implementations.
+
+---
+
+---
+
+
+# Appendix A. The implementation
+
+## A.1 — Where things live
+
+Since the table moved into the registry (2026-09-01), the module IS the
+definition and its own docstrings are the detail. This map is what the
+appendix needs to carry:
+
+| file | holds |
+|---|---|
+| `agreement/canary_agreement_registry.ml` | **the table** — one row per agreement (slug, doc anchor, claim, reads, firing, expectation source, fault tags) · the proposed rows · `all_agreements` · the counterexample fixtures · the belief matrix (`belief_matrix` / `pp_belief_matrix` / `fill_list`) · the queries (`predicted_contains_any_v2`, `predicted_by_agreement_v2`, `skipped_checks`, `inputs_of_agreement`) |
+| `agreement/canary_agreement_run.ml` | the predicate IMPLEMENTATIONS only — `c1_predict` … `c8_predict`, the decl-comparison predicts, the loaders, the CLI |
+| `agreement/canary_agreement.ml` | the vocabulary and the pure comparators — `inspect_input`, `agreement_id`, `agreement_check`, `check_c_compat`, `check_abi`, … |
+
+Dependency direction is **registry → run → agreement**, with no cycle,
+which is why the queries had to travel with the table. Adding an
+agreement means editing one file.
+
+**Producer-first, and still additive.** Nothing in `project/` or `main/`
+reads the registry yet; its only consumers are the pins. The per-project
+`*_agreement_bindings` tables still drive the live lowering, and they
+are deleted only behind byte-equal pins — that migration is phase 2 and
+is not started.
+
+The row still carries an `ag_role` field (`Surface` / `Meeting` /
+`Execution`). It is prose: what a check reads is its TARGET (§0.6a) and
+nothing dispatches on the field.
+
+**The row's shape** is documented in the module. Two fields exist for
+this document's sake rather than the code's: `ag_slug`, the stable name
+a section cites, and `ag_doc`, the section that defines it — the bridge
+Appendix B's pins keep honest.
+
+**Firing** is a function of `mechanism × lang × provision`, not a table:
+Static ⇒ build + probe where something is built, probe alone where
+nothing is; Dynamic ⇒ probe only; the three solo-artifact cells add
+`Build_lib`. The provision axis is what makes a Fetched world skip build
+sites — see §6.0 for the same idea stated over dependencies.
+
+**Fixtures** — every wired agreement ships its minimal counterexample as
+data, and the layer suite executes them hermetically, ahead of any
+project run. A new agreement lands WITH its fixture; a changed predict
+turns the pin red. The covered set is stated in the pin itself, so the
+gaps are visible rather than implied.
+
+## A.2 — The agreement × action matrix: read it from the code
+
+The matrix of *which agreement fires at which action* is DERIVED — the
+firing functions compute it — so a table here can only be a snapshot
+that goes stale. It is printed instead:
+
+```ocaml
+Canary_agreement_registry.belief_matrix  ?mechanism ?lang ?provision ()
+Canary_agreement_registry.pp_belief_matrix ?mechanism ?lang ?provision ()
+Canary_agreement_registry.fill_list      ?mechanism ?lang ?provision ()
+```
+
+Marks: `✓` fires here AND ships a counterexample fixture · `~` fires,
+no fixture yet — **the fill list** · `⊘` the agreement is disabled or
+blocked · `·` does not fire here, by the firing derivation.
+
+The matrix is TOTAL by construction — the firing function answers for
+every action — so there is no "un-answered" state, and *filling* it has
+a bounded meaning: turn `~` into `✓` by attaching a counterexample to a
+cell that already fires. `fill_list` returns exactly that set.
+
+The WIDER catalogue — including the checks that have no agreement row at
+all, such as the `Postcondition` families — is §0.6c; the per-artifact
+reading is A.3.
+
+# Appendix B. The doc/code bridge and its harness
 **Landed 2026-09-01.** The catalogue is not only something the code is
 cited BY; it is meant to guide the code, so the two must be checkably
 aligned (user).
@@ -1965,170 +2222,7 @@ the doc growing machine-citable agreement blocks.
 
 ---
 
-# 11. Mapping Back to Actions and the Registry
-
-**Status: pending.**
-
-Once the agreement catalogue is sufficiently complete, concrete agreements should be mapped back into the existing action-centred framework.
-
-The existing design already models the main checking space as:
-
-```text
-agreement/contract × action
-```
-
-with mechanism and provision refining where a check applies rather than creating a full Cartesian-product matrix.
-
-Each final agreement row should eventually state something close to:
-
-```text
-name
-claim                          (phrased as its falsifier, §0.3)
-origin
-relevant surfaces/artifacts    (Sf.1..Sf.5 / Trace, §2.1)
-earliest observation point     (the ladder rung, §0.4)
-tool/result used as evidence
-later dynamic confirmation
-applicable mechanism
-applicable provision
-minimal falsifier / fixture    (executed ahead of any project run, App. A)
-pass meaning + blame           (§10)
-current implementation status
-```
-
-The registry then becomes the executable projection of this larger catalogue.
-
 ---
-
-# Current Working Position
-
-The discussion should continue from **§2: Artifact surfaces**.
-
-The next concrete question is:
-
-> **What projections make up an artifact surface?**
-
-The current candidates are:
-
-```text
-names / symbols
-members / modules
-types / signatures
-references / requirements
-metadata
-```
-
-Two things settled since this question was posed, worth carrying into
-the answer: the taxonomy now distinguishes an artifact's **identity**
-(its soname — what the ncurses case turned on) from its **interface**
-detail, so *identity* may deserve to be a projection in its own right
-rather than a kind of metadata (§6.2); and §2.5 now also holds the
-carried type oracle, which is a correspondence between the same two
-projections separated in time.
-
-The next pass should determine:
-
-1. whether these projections are complete;
-2. which projections exist on the provider side;
-3. which projections exist for OCaml C stubs;
-4. which projections exist for Python C extensions;
-5. which projections exist for Python ctypes;
-6. which pairs of surfaces produce useful concrete agreements.
-
-The inspection tools themselves already exist in the project and have their own tests, so the next step should focus on **what is being observed and compared**, rather than re-cataloguing tool implementations.
-
----
-
-# 12. Design space not yet entered
-
-Families and axes that are real, that this project has **no material
-for**, and that are recorded so they are not mistaken for planned work.
-
-| what | why it is empty here |
-|---|---|
-| **representation / marshalling** — integer width, strings, NULL/None, struct layout, enum mappings, ownership of returned pointers | no inspector, no mutation, no agreement row touches value representation; `c_types_agree` checks the declared SHAPES, which is not the same claim |
-| **lifetime and ownership** — borrowed vs owned, callback lifetime, GC rooting, refcounts, use-after-free | would need dynamic instrumentation canary does not have; nothing in the witness or the projects exercises it |
-| **other producing languages** — Rust `extern "C"`, C++ behind a wrapper | partially false already: torch's boundary is mangled C++ (§2.3). The agreements are unchanged; the spelling the inspectors use is not |
-| **other object formats** — Mach-O, PE/COFF | Mach-O is exercised on macOS; PE is untried. An agreement over the realized surface is format-parameterised (§2.4) |
-| **other consumer languages** — Rust FFI, JNI, P/Invoke | each adds a §3 language section; none complicates the model |
-
-The first two are genuine gaps in the catalogue. The last three are not
-gaps but PARAMETERS: the claims survive, and only the tool and the
-spelling change — which is the argument for keeping the provider's
-source and realized surfaces separate (§2.3, §2.4) rather than writing
-"C" and "ELF" into the agreements themselves.
-
----
-
-# Appendix A. The implementation
-
-## A.1 — Where things live
-
-Since the table moved into the registry (2026-09-01), the module IS the
-definition and its own docstrings are the detail. This map is what the
-appendix needs to carry:
-
-| file | holds |
-|---|---|
-| `agreement/canary_agreement_registry.ml` | **the table** — one row per agreement (slug, doc anchor, claim, reads, firing, expectation source, fault tags) · the proposed rows · `all_agreements` · the counterexample fixtures · the belief matrix (`belief_matrix` / `pp_belief_matrix` / `fill_list`) · the queries (`predicted_contains_any_v2`, `predicted_by_agreement_v2`, `skipped_checks`, `inputs_of_agreement`) |
-| `agreement/canary_agreement_run.ml` | the predicate IMPLEMENTATIONS only — `c1_predict` … `c8_predict`, the decl-comparison predicts, the loaders, the CLI |
-| `agreement/canary_agreement.ml` | the vocabulary and the pure comparators — `inspect_input`, `agreement_id`, `agreement_check`, `check_c_compat`, `check_abi`, … |
-
-Dependency direction is **registry → run → agreement**, with no cycle,
-which is why the queries had to travel with the table. Adding an
-agreement means editing one file.
-
-**Producer-first, and still additive.** Nothing in `project/` or `main/`
-reads the registry yet; its only consumers are the pins. The per-project
-`*_agreement_bindings` tables still drive the live lowering, and they
-are deleted only behind byte-equal pins — that migration is phase 2 and
-is not started.
-
-The row still carries an `ag_role` field (`Surface` / `Meeting` /
-`Execution`). It is prose: what a check reads is its TARGET (§0.6a) and
-nothing dispatches on the field.
-
-**The row's shape** is documented in the module. Two fields exist for
-this document's sake rather than the code's: `ag_slug`, the stable name
-a section cites, and `ag_doc`, the section that defines it — the bridge
-§10a's pins keep honest.
-
-**Firing** is a function of `mechanism × lang × provision`, not a table:
-Static ⇒ build + probe where something is built, probe alone where
-nothing is; Dynamic ⇒ probe only; the three solo-artifact cells add
-`Build_lib`. The provision axis is what makes a Fetched world skip build
-sites — see §6.0 for the same idea stated over dependencies.
-
-**Fixtures** — every wired agreement ships its minimal counterexample as
-data, and the layer suite executes them hermetically, ahead of any
-project run. A new agreement lands WITH its fixture; a changed predict
-turns the pin red. The covered set is stated in the pin itself, so the
-gaps are visible rather than implied.
-
-## A.2 — The agreement × action matrix: read it from the code
-
-The matrix of *which agreement fires at which action* is DERIVED — the
-firing functions compute it — so a table here can only be a snapshot
-that goes stale. It is printed instead:
-
-```ocaml
-Canary_agreement_registry.belief_matrix  ?mechanism ?lang ?provision ()
-Canary_agreement_registry.pp_belief_matrix ?mechanism ?lang ?provision ()
-Canary_agreement_registry.fill_list      ?mechanism ?lang ?provision ()
-```
-
-Marks: `✓` fires here AND ships a counterexample fixture · `~` fires,
-no fixture yet — **the fill list** · `⊘` the agreement is disabled or
-blocked · `·` does not fire here, by the firing derivation.
-
-The matrix is TOTAL by construction — the firing function answers for
-every action — so there is no "un-answered" state, and *filling* it has
-a bounded meaning: turn `~` into `✓` by attaching a counterexample to a
-cell that already fires. `fill_list` returns exactly that set.
-
-The WIDER catalogue — including the checks that have no agreement row at
-all, such as the `Postcondition` families — is §0.6c; the per-artifact
-reading is A.3.
 
 # Appendix C. The standing goal, and the sequence
 
@@ -2192,7 +2286,7 @@ status, and lives in the trackers above.
 > (resolution) and §6 (dependency and denotation) are its destinations
 > when it lands. Everything else that sat here has been placed —
 > the per-mechanism lifecycles into §3, the carried type oracle
-> into §2.5, staged parity into §7.
+> into §2.3, staged parity into §5.
 
 ## D.1 — The lib: symbols, paths, hidden dependencies
 

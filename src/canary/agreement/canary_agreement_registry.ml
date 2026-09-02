@@ -319,7 +319,7 @@ let row ~slug ~doc ~invariant ~reads ~role ~firing ~source ~tags
     contract IS a named relation over those reads. *)
 let agreement_registry : agreement_row list =
   [ row C1
-      ~slug:"symbol_exported" ~doc:"§2.5"
+      ~slug:"symbol_exported" ~doc:"§2.3"
       ~invariant:
         "every symbol the binding declares (its stub references) is \
          exported by the lib"
@@ -327,7 +327,7 @@ let agreement_registry : agreement_row list =
       ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_missing" ];
     row C2
-      ~slug:"api_surface_complete" ~doc:"§2.5"
+      ~slug:"api_surface_complete" ~doc:"§2.3"
       ~invariant:
         "every watchlisted entry is present on the user-facing surface"
       ~reads:[ ("Sf.4", "binding") ]
@@ -347,26 +347,26 @@ let agreement_registry : agreement_row list =
       ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "abi_soname" ];
     row C5
-      ~slug:"symbol_versions_present" ~doc:"§2.5"
+      ~slug:"symbol_versions_present" ~doc:"§2.3"
       ~invariant:
         "versioned symbols carry the annotations the consumer expects"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
       ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_version" ];
     row C6
-      ~slug:"c_types_agree" ~doc:"§2.5"
+      ~slug:"c_types_agree" ~doc:"§2.3"
       ~invariant:"C types at the header/stub boundary match"
       ~reads:[ ("Sf.1", "native"); ("Sf.3", "binding") ]
       ~role:Meeting ~firing:firing_default ~source:Inspection
       ~tags:[ "type_arity" ];
     row C7
-      ~slug:"repack_preserves_api" ~doc:"§7"
+      ~slug:"repack_preserves_api" ~doc:"§5"
       ~invariant:"repackaging preserves the API"
       ~reads:[ ("Sf.4", "binding") ]
       ~role:Meeting ~firing:firing_probe_only ~source:Behavior_grep
       ~tags:[ "api_repack" ];
     row C8
-      ~slug:"repack_complete" ~doc:"§7"
+      ~slug:"repack_complete" ~doc:"§5"
       ~invariant:
         "repackaging is complete — nothing the original had is lost"
       ~reads:[ ("Sf.4", "binding") ]
