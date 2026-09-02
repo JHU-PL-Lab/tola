@@ -549,7 +549,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
           (* the c1 coverage WARNING (2026-08-17): a passing c1 whose
              consumer surface covers a small fraction of the provider's
              may be out-of-date — a note, never a failure *)
-          (match Canary_agreement_run.c1_lag_note ~resolve:resolve_input inputs with
+          (match Canary_chk_symbols.c1_lag_note ~resolve:resolve_input inputs with
            | Some note -> log ~event:"compat_note" ~detail:(Some note)
            | None -> ());
           List.iter

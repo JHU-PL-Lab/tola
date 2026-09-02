@@ -1,23 +1,24 @@
-(** [Canary_agreement_run] — drives the surface-theory compat contract over
-    the action graph's cached artifacts (surface/, next to the contract).
+(** [Canary_agreement_run] — where the EVIDENCE is found, and the
+    on-demand commands that report on it.
 
-    Companion to {!Canary_agreement}: that module is the pure theory (types
-    and c1..c8 comparators); this module locates the cached inspector
-    JSONs in [_out/canary/projects/<project>/<step>/], hands them to the
-    pure comparators, and derives the expected failure substrings the
-    [Expect_compat_failure] runner consumes. What lives here:
+    After the per-check split (2026-09-02) this module holds no checks.
+    Its three jobs:
 
-    - [typed_input] — the action-graph's view of which JSONs a step
-      expectation should consume (constructors map to surface roles).
-    - [predicted_contains_any] / [predicted_contains_any_v2] — derive
-      expected probe-failure substrings from cached inspector JSONs;
-      consumed by {!Canary_action}'s [Expect_compat_failure] runner.
-    - Cached-summary path resolution: [resolve_variant],
-      [find_lib_inspect], [find_stub_inspect], [find_mli_inspect],
-      [find_python_inspect].
-    - CLI entry points: [run] (single stub/lib pair),
-      [run_for_project], [verify_for_project].
-    - Reporting: [print_result]. *)
+    - **locating evidence** — [resolve_variant], [step_path],
+      [find_lib_inspect] and friends turn a project/variant/step into the
+      cached inspector JSON on disk. This is the CALLER's side of a
+      check: a check takes what it needs, and finding it is not its
+      business;
+    - **shared loading helpers** — [pick_existing],
+      [load_watchlist_missing], [name_variants], used by several check
+      families;
+    - **the on-demand commands** — [run_for_project] (`canary compat`)
+      and [verify_for_project] (`canary verify`), which report outside a
+      run.
+
+    The checks themselves live one per family in [canary_chk_*.ml], each
+    stating its category, its standing and its falsifier; the table that
+    collects them is [Canary_agreement_registry]. *)
 
 open Base
 open Canary_agreement
@@ -337,273 +338,6 @@ let pick_existing ~resolve paths =
     let abs = resolve rel in
     if Stdlib.Sys.file_exists abs then Some abs else None)
 
-(** The c1 input pair: the existing C_stub + Native_lib summaries among
-    [inputs], loaded. [None] = either side missing (the check can't
-    decide — [c1_predict]/[c1_lag_note] both report nothing). *)
-let c1_pair ~resolve (inputs : inspect_input list) :
-    (stub_inspect * native_inspect) option =
-  let stub_path =
-    List.find_map inputs
-      ~f:(function C_stub ps -> pick_existing ~resolve ps | _ -> None)
-  in
-  let lib_path =
-    List.find_map inputs
-      ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None)
-  in
-  match stub_path, lib_path with
-  | Some s, Some l -> Some (load_stub s, load_native l)
-  | _ -> None
-
-(** c1 cmp_symbol (L0). Pairs C_stub + Native_lib paths and returns
-    the missing C symbols from {!check_c_compat}. *)
-let c1_predict ~resolve (inputs : inspect_input list) : string list =
-  match c1_pair ~resolve inputs with
-  | Some (stub, lib) -> (
-      match check_c_compat ~binding_stub:stub ~native_lib:lib with
-      | Missing { symbols } -> symbols
-      | Compatible | Compatible_lag _ | Unknown -> [])
-  | None -> []
-
-(** The c1 coverage NOTE (2026-08-17, user): when the check passes but
-    the consumer's required set covers a small fraction of the
-    provider's surface, warn POSSIBLY OUT-OF-DATE — inclusion alone
-    can't tell wrapping-a-subset (by design) from a stale binding (by
-    accident). A WARNING, never a failure: [None] when the data is
-    missing or the coverage is healthy. Logged by the runner as a
-    [compat_note] event. *)
-let c1_lag_note ~resolve (inputs : inspect_input list) : string option =
-  match c1_pair ~resolve inputs with
-  | Some (stub, lib) -> (
-      match check_c_compat ~binding_stub:stub ~native_lib:lib with
-      | Compatible_lag { required; provided } ->
-          let witness =
-            match lag_examples ~binding_stub:stub ~native_lib:lib with
-            | Some (in_use, unused) ->
-                Printf.sprintf " (e.g. %s in use; %s in the unused remainder)"
-                  in_use unused
-            | None -> ""
-          in
-          Some
-            (Printf.sprintf
-               "c1 cmp_symbol: consumer requires %d of the provider's %d \
-                symbols%s — POSSIBLY OUT-OF-DATE (a small consumer surface may \
-                be by design or lag)"
-               required provided witness)
-      | Compatible | Missing _ | Unknown -> None)
-  | None -> None
-
-(** c2 cmp_api_completeness (L3). Reads watchlist_missing from
-    Ocaml_mli / Python_attrs JSONs and expands each missing name into
-    its observable variants (e.g. [Llvm.Opcode.UncondBr] →
-    [Opcode.UncondBr], [UncondBr]). *)
-let c2_predict ~resolve (inputs : inspect_input list) : string list =
-  List.concat_map inputs ~f:(function
-    | Ocaml_mli ps | Python_attrs ps ->
-        (match pick_existing ~resolve ps with
-         | None -> []
-         | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants)
-    | _ -> [])
-
-(** c5 cmp_sym_version (L1b). Reads provider's versioned_exports map
-    from a [Versioned_exports] input and consumer's versioned_req map
-    from a [Versioned_req] input; runs [check_sym_version] and on
-    mismatch returns the version tags the consumer requires that the
-    provider doesn't export. dyld's runtime error mentions those tags
-    verbatim ("version `TINY_1.0' not found"), so they're the right
-    substrings to grep probe.log for. *)
-let c5_predict ~resolve (inputs : inspect_input list) : string list =
-  let provider_path =
-    List.find_map inputs
-      ~f:(function
-        | Versioned_exports ps -> pick_existing ~resolve ps
-        | _ -> None) in
-  let consumer_path =
-    List.find_map inputs
-      ~f:(function
-        | Versioned_req ps -> pick_existing ~resolve ps
-        | _ -> None) in
-  match provider_path, consumer_path with
-  | Some pp, Some cp ->
-      let prov = Canary_agreement.load_versioned_symbols pp in
-      let cons = Canary_agreement.load_versioned_symbols cp in
-      let consumer_required = List.map cons.req_counts ~f:fst in
-      (match Canary_agreement.check_sym_version
-               ~provider_versioned_exports:prov.exports
-               ~consumer_required_versions:consumer_required with
-       | Sym_version_missing { missing_versions } -> missing_versions
-       | Sym_version_compatible | Sym_version_unknown -> [])
-  | _ -> []
-
-(** c4 cmp_abi (L4). Reads provider's SONAME from a [Native_lib]
-    input's [elf.soname] and consumer's NEEDED list from an
-    [Abi_surface] input's [elf.needed]. When [check_abi] returns
-    [Abi_mismatch], the predicted substring set is the consumer's
-    NEEDED entries that share the provider's family-stem
-    (e.g. [libtiny] from [libtiny.so.1]) — at runtime, dyld's error
-    mentions the missing NEEDED entry verbatim, so that's what we want
-    to grep for. *)
-let c4_predict ~resolve (inputs : inspect_input list) : string list =
-  let provider_path =
-    List.find_map inputs
-      ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None) in
-  let consumer_path =
-    List.find_map inputs
-      ~f:(function Abi_surface ps -> pick_existing ~resolve ps | _ -> None) in
-  match provider_path, consumer_path with
-  | Some pp, Some cp ->
-      let prov = Canary_agreement.load_abi_surface pp in
-      let cons = Canary_agreement.load_abi_surface cp in
-      (match Canary_agreement.check_abi
-               ~provider_soname:prov.soname
-               ~consumer_needed:cons.needed with
-       | Abi_mismatch _ ->
-           (* Stem = strip trailing ".so.X" / ".so.X.Y" so libtiny.so.1
-              and libtiny.so.2 share stem "libtiny". *)
-           let stem name =
-             match String.index name '.' with
-             | None -> name
-             | Some i -> String.sub name ~pos:0 ~len:i in
-           (match prov.soname with
-            | None -> []
-            | Some sn ->
-                let prov_stem = stem sn in
-                List.filter cons.needed
-                  ~f:(fun n -> String.equal (stem n) prov_stem))
-       | Abi_compatible | Abi_unknown -> [])
-  | _ -> []
-
-(** c3 cmp_behavior is structurally different from c1/c2/c4/c5.
-    There's no static input to predict over — behavioral truth lives
-    in the {b running} binary, and expected values live inside the
-    probe's source as embedded assertions. The comparator IS the
-    probe's exit-code check; canary surfaces it via
-    [Expect_failure { contains_any = ["FAIL "] }] on Probe steps (the
-    tiny probe prints [FAIL …] on assertion mismatch).
-    See [Canary_tiny_scenario.make_lib_behavior_broken_runner_spec]
-    for the demo against harness scenario [e7 behavior_silent].
-    [c3_predict] returns [] honestly: there's nothing static to
-    predict. Status stays [Blocked []] to reflect the {b predict} side
-    being a no-op; coverage is via the probe runner.
-
-    c7 [api_sound_repack] is structurally analogous to c3 — same
-    probe-runner mechanism, different Contract attribution (binding-
-    repack-layer bug vs native-behavior bug). Variants declaring c7
-    use [Expect_failure { contains_any = ["FAIL "] }] same as c3.
-    [c7_predict] returns []; registry entry stays in place for
-    documentation only (status = Stubbed, enabled = false). See
-    [Canary_tiny_scenario.make_binding_repack_broken_runner_spec] and
-    [make_binding_python_repack_broken_runner_spec] for live demos
-    against scenarios [api_repack] and [api_repack_python].
-
-    c8 is disabled — no Contract for canary to maintain. Each binding
-    is independent; cross-binding consistency isn't a canary-side
-    agreement. Candidate for removal in a future registry cleanup. *)
-let c3_predict ~resolve:_ _ = []
-let c7_predict ~resolve:_ _ = []
-let c8_predict ~resolve:_ _ = []
-
-(** c6 cmp_type (L2). Pairs a [Typed_header] input (provider's C
-    signatures, n3) with a [Typed_binding_stub] input (consumer's
-    stub-facing typed surface, bo1 / bpe1 — the binding's expectation
-    of the C ABI). For each function present on both sides, checks
-    whether the signatures agree (same return type, same arg type
-    list). Mismatching names are returned as predicted substrings —
-    the compiler error message for an arity / type clash mentions the
-    function name verbatim (e.g.
-    `error: too few arguments to function 'tiny_sum'`).
-
-    Names present in only one side aren't c6 — they're c1
-    (cmp_symbol's domain). c6 only fires when both sides claim the
-    function but disagree on its signature. *)
-(* ── decl-comparison predicts (2026-08-18) — the lib-only cells.
-   The language TOOLS (compilers, linkers, version scripts) are black
-   boxes with no bit-wise operational semantics — we inspect their
-   ARTIFACTS and compare against the DECLARED facts. *)
-
-(** c4 lib-only: the BUILT lib's own elf soname vs the declared soname
-    (the linker's -Wl,-soname application is the black box; the
-    artifact's elf is the evidence). *)
-(** c1 lib-only: every DECLARED c_api function is exported by the
-    built lib — the lib's own completeness falsifier, no binding
-    involved. (The status-level watchlist verdict is this same
-    comparison, currently recorded rather than predicted.) *)
-let c1_decl_predict ~declared_functions ~resolve
-    (inputs : inspect_input list) : string list =
-  let lib_path =
-    List.find_map inputs ~f:(function
-        | Native_lib ps -> pick_existing ~resolve ps
-        | _ -> None)
-  in
-  match lib_path with
-  | None -> []
-  | Some p ->
-      let symbols = (load_native p).symbols in
-      List.filter declared_functions ~f:(fun f ->
-          not (List.mem symbols f ~equal:String.equal))
-
-let c4_decl_predict ~declared_soname ~resolve
-    (inputs : inspect_input list) : string list =
-  let lib_path =
-    List.find_map inputs ~f:(function
-        | Native_lib ps -> pick_existing ~resolve ps
-        | _ -> None)
-  in
-  match lib_path with
-  | None -> []
-  | Some p -> (
-      match (load_abi_surface p).soname with
-      | Some s when not (String.equal s declared_soname) ->
-          [ Printf.sprintf "soname %s != declared %s" s declared_soname ]
-      | _ -> [])
-
-(** c5 lib-only: the built lib's versioned exports include the DECLARED
-    version tag (the version-script application is the black box; the
-    @@VER annotations are the evidence). *)
-let c5_decl_predict ~declared_tags ~resolve
-    (inputs : inspect_input list) : string list =
-  let lib_path =
-    List.find_map inputs ~f:(function
-        | Versioned_exports ps -> pick_existing ~resolve ps
-        | _ -> None)
-  in
-  match lib_path with
-  | None -> []
-  | Some p ->
-      let vs = load_versioned_symbols p in
-      let exported =
-        List.map vs.exports ~f:snd |> List.dedup_and_sort ~compare:String.compare
-      in
-      List.filter_map declared_tags ~f:(fun tag ->
-          if List.mem exported tag ~equal:String.equal then None
-          else Some (Printf.sprintf "version %s not exported" tag))
-
-let c6_predict ~resolve (inputs : inspect_input list) : string list =
-  let header_path =
-    List.find_map inputs
-      ~f:(function Typed_header ps -> pick_existing ~resolve ps | _ -> None) in
-  let stub_path =
-    List.find_map inputs
-      ~f:(function Typed_binding_stub ps -> pick_existing ~resolve ps
-                 | _ -> None) in
-  match header_path, stub_path with
-  | Some hp, Some sp ->
-      let h = Canary_agreement.load_typed_signatures hp in
-      let s = Canary_agreement.load_typed_signatures sp in
-      List.filter_map h.functions ~f:(fun (name, h_sig) ->
-        match List.Assoc.find s.functions name ~equal:String.equal with
-        | None -> None
-        | Some s_sig ->
-            if String.equal h_sig.return_type s_sig.return_type
-               && List.equal String.equal h_sig.arg_types s_sig.arg_types
-            then None
-            else Some name)
-  | _ -> []
-
-(* Best-effort: ".ok" marker file alongside cmd success implies probe step
-   succeeded. probe.log non-empty + no .ok marker implies cmd failed (which
-   for Expect_failure cases is the GOAL — see step_expectation in
-   canary_action.ml). We're not re-implementing the runner's verdict; just
-   distinguishing "log has compile error text" from "log shows runtime ok". *)
 let probe_log_inspect log =
   let lines = String.split_lines log in
   let line_count = List.length lines in

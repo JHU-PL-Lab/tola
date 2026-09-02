@@ -38,17 +38,17 @@ let registered_checks : Canary_agreement.agreement_check list =
   let open Canary_agreement in
   [
   { id = C1; name = "cmp_symbol";            layer = "L0";  status = Wired;
-    enabled = true;  predict = Canary_agreement_run.c1_predict };
+    enabled = true;  predict = Canary_chk_symbols.c1_predict };
   { id = C2; name = "cmp_api_completeness";  layer = "L3";  status = Wired;
-    enabled = true;  predict = Canary_agreement_run.c2_predict };
+    enabled = true;  predict = Canary_chk_api_surface.c2_predict };
   { id = C3; name = "cmp_behavior";          layer = "dyn"; status = Blocked [];
-    enabled = false; predict = Canary_agreement_run.c3_predict };
+    enabled = false; predict = Canary_chk_behaviour.c3_predict };
   { id = C4; name = "cmp_abi";               layer = "L4";  status = Wired;
-    enabled = true;  predict = Canary_agreement_run.c4_predict };
+    enabled = true;  predict = Canary_chk_identity.c4_predict };
   { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Wired;
-    enabled = true;  predict = Canary_agreement_run.c5_predict };
+    enabled = true;  predict = Canary_chk_identity.c5_predict };
   { id = C6; name = "cmp_type";              layer = "L2";  status = Wired;
-    enabled = true;  predict = Canary_agreement_run.c6_predict };
+    enabled = true;  predict = Canary_chk_types.c6_predict };
   (* c7 api_sound_repack — Contract that the binding's user-facing
      layer is a sound repacking of its stub-facing layer. Same check
      shape as c3 (probe-assertion refutation), different Contract
@@ -59,14 +59,14 @@ let registered_checks : Canary_agreement.agreement_check list =
      [Canary_tiny_scenario.make_binding_repack_broken_runner_spec]
      for the demo against harness scenario [api_repack] (e5). *)
   { id = C7; name = "api_sound_repack";      layer = "dyn"; status = Stubbed;
-    enabled = false; predict = Canary_agreement_run.c7_predict };
+    enabled = false; predict = Canary_chk_behaviour.c7_predict };
   (* c8 disabled — no Contract for canary to maintain. Each binding
      is independent; cross-binding consistency isn't a canary-side
      agreement to check. Probes happen to assert the same constants
      across languages by project convention, not by a Contract.
      Candidate for removal in a future registry cleanup. *)
   { id = C8; name = "cmp_api_faithfulness";  layer = "n/a"; status = Stubbed;
-    enabled = false; predict = Canary_agreement_run.c8_predict };
+    enabled = false; predict = Canary_chk_behaviour.c8_predict };
 ]
 
 (** Derive expected failure substrings from declared inspector inputs.

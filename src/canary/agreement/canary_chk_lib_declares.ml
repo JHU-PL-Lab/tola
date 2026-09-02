@@ -13,6 +13,7 @@
     against the declaration. *)
 
 open Base
+open Canary_agreement
 module Cat = Canary_check_cat
 
 (* ── every declared c_api function is exported ── *)
@@ -23,8 +24,19 @@ let symbol_exported_says =
   "every function the project declares in c_api is exported by the \
    built lib"
 
-let symbol_exported ~declared_functions ~resolve inputs =
-  Canary_agreement_run.c1_decl_predict ~declared_functions ~resolve inputs
+let symbol_exported ~declared_functions ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Native_lib ps -> Canary_agreement_run.pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p ->
+      let symbols = (load_native p).symbols in
+      List.filter declared_functions ~f:(fun f ->
+          not (List.mem symbols f ~equal:String.equal))
 
 (* ── the elf soname is the declared one ── *)
 
@@ -33,8 +45,24 @@ let soname_matches_standing = Cat.Declared
 let soname_matches_says =
   "the built lib's elf soname is the soname the project declared"
 
-let soname_matches ~declared_soname ~resolve inputs =
-  Canary_agreement_run.c4_decl_predict ~declared_soname ~resolve inputs
+let soname_matches ~declared_soname ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Native_lib ps -> Canary_agreement_run.pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p -> (
+      match (load_abi_surface p).soname with
+      | Some s when not (String.equal s declared_soname) ->
+          [ Printf.sprintf "soname %s != declared %s" s declared_soname ]
+      | _ -> [])
+
+(** c5 lib-only: the built lib's versioned exports include the DECLARED
+    version tag (the version-script application is the black box; the
+    @@VER annotations are the evidence). *)
 
 (* ── the declared version tags are exported ── *)
 
@@ -44,8 +72,23 @@ let version_tags_exported_says =
   "every version tag the project declares appears among the built lib's \
    versioned exports"
 
-let version_tags_exported ~declared_tags ~resolve inputs =
-  Canary_agreement_run.c5_decl_predict ~declared_tags ~resolve inputs
+let version_tags_exported ~declared_tags ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Versioned_exports ps -> Canary_agreement_run.pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p ->
+      let vs = load_versioned_symbols p in
+      let exported =
+        List.map vs.exports ~f:snd |> List.dedup_and_sort ~compare:String.compare
+      in
+      List.filter_map declared_tags ~f:(fun tag ->
+          if List.mem exported tag ~equal:String.equal then None
+          else Some (Printf.sprintf "version %s not exported" tag))
 
 (** The family, for the catalogue and the index. *)
 let all : (Cat.cat * Cat.standing * string) list =

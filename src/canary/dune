@@ -40,7 +40,11 @@
 ;                      the contract×mechanism input template. A check is an
 ;                      agreement BEYOND a tool's direct result, which is why
 ;                      the tool wrappers stay in tool/. Pure, no I/O beyond
-;                      Yojson.from_file. Design:
+;                      Yojson.from_file. Since 2026-09-02 the checks live
+;                      one per family in canary_chk_*.ml (category + standing +
+;                      falsifier + function); canary_agreement_run.ml keeps only
+;                      evidence location, shared loaders and the on-demand
+;                      compat/verify commands. Design:
 ;                      doc/canary/design/agreement_registry.md.
 ;   tool/    Layer 2 — real-world tool wrappers: per-PM drivers
 ;                      (canary_pm_{apt,brew,opam,pip}), inspector drivers
