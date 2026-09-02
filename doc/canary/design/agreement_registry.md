@@ -1816,7 +1816,15 @@ The inspection tools themselves already exist in the project and have their own 
 
 ---
 
-# Appendix A. The implementation — a map
+# Appendix A. The implementation, and the views onto it
+
+> What canary checks is stated three ways, on purpose, and this appendix
+> holds the two that are mechanical. §0.6c is the CATALOGUE — every check
+> with its target, method, source and status, which is the view to read
+> first. A.2 is the same belief as the code computes it, printed rather
+> than transcribed. A.3 is the same belief filtered per artifact, which
+> is the view that shows where the coverage is thin.
+
 
 > Carried over from `contract_registry.md` (merged 2026-08-21). This is
 > the EXECUTABLE projection of the catalogue as it stands today —
@@ -1866,12 +1874,7 @@ project run. A new agreement lands WITH its fixture; a changed predict
 turns the pin red. The covered set is stated in the pin itself, so the
 gaps are visible rather than implied.
 
-# Appendix B. Matrix views
-
-> Carried over from `contract_registry.md`. Both are views of ONE cell
-> set; §11 decides which survives as the registry's own rendering.
-
-## B.1 — The agreement × action matrix: read it from the code
+## A.2 — The agreement × action matrix: read it from the code
 
 The matrix of *which agreement fires at which action* is DERIVED — the
 firing functions compute it — so a table here can only be a snapshot
@@ -1892,120 +1895,30 @@ every action — so there is no "un-answered" state, and *filling* it has
 a bounded meaning: turn `~` into `✓` by attaching a counterexample to a
 cell that already fires. `fill_list` returns exactly that set.
 
-What the WIDER catalogue of checks looks like, including the ones that
-have no agreement row at all (the `Postcondition` families — markers,
-pin checks, staged parity), is §0.6c. What the belief looks like per
-ARTIFACT rather than per agreement is B.2.
+The WIDER catalogue — including the checks that have no agreement row at
+all, such as the `Postcondition` families — is §0.6c; the per-artifact
+reading is A.3.
 
-## B.2 — The artifact-centred view — the same cells, re-projected
+## A.3 — The same belief, read per artifact
 
+§0.6c is organised by how a check is made; this is the same set filtered
+by WHICH ARTIFACT is under test. It is a summary rather than a second
+catalogue — the rows live in §0.6c — and it exists because the filter
+shows something neither other view does: **where an artifact is thinly
+covered, and at which point in its life.**
 
-Three axes are in play — **artifact, action, contract** — and a single
-2-D table cannot show all three. They are not independent, though:
-**the action determines the artifact** (the catalogue's
-consumes/produces), so `contract × action` loses no information. What
-it loses is READABILITY per artifact, and one whole cell kind: the
-`Postcondition` families (markers, pin-checks, staged parity,
-freshness) never appear in it, because they belong to no contract.
+| artifact | checked at | thinnest point |
+|---|---|---|
+| **source** | fetch (existence, pinned-ref freshness, repo contents) | nothing beyond existence and provenance — and that is PRINCIPLED: a source tree's API is its headers', its behaviour is its lib's (§0.6b) |
+| **headers** | their own presence; as provider at `Build_binding` (c6) | consulted once, at compile time, and then dropped — the carried-oracle idea (App. D.4) is about re-reading them later |
+| **lib** | fetch (identity/pin) · `Build_lib` (three solo cells) · `Install_lib` (staged parity, designed) · `Probe_lib` (nm prefix) · as provider at build and probe | **where it merely ARRIVES or is TRANSFORMED** — `Fetch` checks identity only, and `Install_lib`'s parity family is still designed. Four stages, three mechanics, and the two weakest are the two where canary did not build it |
+| **binding** | fetch/pin · `Build_binding` (c1/c2/c6) · `Probe_binding` (c1–c5, c3's trace) | **`Publish`** — nothing checks what we hand back out |
+| **app** | `Build_app` (marker) · `Probe_app` (c3, tiny's oracle) | nearly bare; the direct-vs-indirect differential is proposed, not built |
 
-So the belief has TWO views of one cell set:
-
-- **contract × action** (§8) — "where does this belief fire?" The
-  contract is the subject; good for seeing a contract's whole reach.
-- **artifact × stage** (here) — "what do we believe about THIS
-  artifact, end to end?" The artifact is the subject; the actions
-  where it is PRODUCED or EXERCISED are its lifecycle stages, and the
-  actions where it merely participates are listed as provider rows.
-  Both cell kinds appear.
-
-Marks as in B.1 (`✓` wired + counterexample, `~` declared/designed, `·`
-absent). Reference world: Cstubs × OCaml × Built.
-
-**Source**
-
-| stage          | belief                                                                                                              | kind          |     |
-| -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------- | --- |
-| `Fetch Source` | the tree is there; a pinned ref is AT its pin (`rev-parse HEAD = <ref>^{commit}`, e2b4d27)                          | Postcondition | ✓   |
-| `Scan_sources` | the typed-signature JSONs exist (they are c6's inputs, not a belief about source)                                   | Postcondition | ✓   |
-| `Fetch Source` | the tree contains what its repo row declares (the repo-contents invariant, `enumeration/stage1_declare_spec.md` §4) | Postcondition | ✓   |
-
-**A source tree has no standalone property to check** (user,
-2026-08-18) — and this is a PRINCIPLED absence, not a gap in the fill
-list. Everything one might want to assert about source is really an
-assertion about one of its derived artifacts: its API is the HEADERS'
-surface, its behaviour is the LIB's. What is left is existence and
-provenance — the tree is here, at the ref it claims, containing what it
-declared — which is exactly the postcondition family above. Source is
-therefore `·` by construction, and the fill list should never chase
-it.
-
-**Headers**
-
-| stage                                             | belief                                                                              | kind          |            |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------- | ---------- |
-| `Build_headers` / `Fetch Headers`                 | the declared header set is present                                                  | Postcondition | ✓          |
-| as provider @ `Build_binding`                     | c6 — the C types at the header/stub boundary agree                                  | Inspection    | ~          |
-| as **carried oracle** @ `Probe_binding`           | the user-facing surface's types agree with the header's (App. D.4)                       | Inspection    | · designed |
-| as **carried oracle** @ `Build_app` / `Probe_app` | an INDIRECT wrapper (helper/app) still agrees with the original C API's types (App. D.4) | Inspection    | · designed |
-
-Headers are the only artifact whose value is **syntactic form**: they
-carry the API's TYPES, which no compiled artifact does. App. D.4 makes that
-the basis of a new cell class.
-
-**Lib** — the richest column, and the one we worked through
-
-| stage                         | belief                                                                                                    | kind                  |                |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- | -------------- |
-| `Fetch Lib`                   | the PM package is installed, AT the pinned version                                                        | Postcondition         | ✓              |
-| `Build_lib`                   | c1 — every declared `c_api` function is exported                                                          | Inspection (decl-cmp) | ✓              |
-| `Build_lib`                   | c4 — the elf soname equals the declared soname                                                            | Inspection (decl-cmp) | ✓              |
-| `Build_lib`                   | c5 — the declared version tags are exported                                                               | Inspection (decl-cmp) | ✓              |
-| `Build_lib`                   | the DWARF signatures of the built lib match the declared header (App. D.4; canary controls `-g` here)          | Inspection (decl-cmp) | · designed     |
-| `Install_lib`                 | staged parity: completeness / integrity / parity / isolation, incl. no build-tree path in a staged binary | Postcondition         | ~ designed     |
-| `Probe_lib`                   | the declared prefix's symbols are exported (nm)                                                           | Inspection            | ✓ project-side |
-| `Probe_lib`                   | it LOADS and each declared function can be entered (the smoke cell)                                       | Behavior_grep         | · postponed    |
-| as provider @ `Build_binding` | c1 / c4 / c5 / c6 against the consumer                                                                    | Inspection            | ✓ / ~          |
-| as provider @ `Probe_binding` | c1..c5 at load/run                                                                                        | Inspection            | ✓              |
-
-**Binding**
-
-| stage                     | belief                                                               | kind                       |       |
-| ------------------------- | -------------------------------------------------------------------- | -------------------------- | ----- |
-| `Fetch (Binding l)`       | the package is installed, AT the pinned version                      | Postcondition              | ✓     |
-| `Build_binding l`         | c1 (stub refs vs lib), c2 (user surface), c6 (types)                 | Inspection                 | ✓ ✓ ~ |
-| `Publish (Binding l)`     | the package materialises (publish verification is the other agent's) | Postcondition              | ~     |
-| `Probe_binding l`         | c1..c5 at load/run; c3's trace                                       | Inspection / Behavior_grep | ✓ / ⊘ |
-| as provider @ `Build_app` | the app compiles against the binding's surface                       | —                          | ·     |
-
-**App**
-
-| stage       | belief                                       | kind          |                      |
-| ----------- | -------------------------------------------- | ------------- | -------------------- |
-| `Build_app` | the app builds against the binding           | Postcondition | ✓                    |
-| `Probe_app` | c3 — the run's trace matches the expectation | Behavior_grep | ✓ tiny's oracle only |
-
-The Lib rows above cover the SYMBOL family only. Its two other
-families — **paths** (loader/embedded/identity/language-side search,
-per platform) and **hidden dependencies** (transitive NEEDED, dlopen'd
-plugins, interposition) — are catalogued in
-§10, together with
-the per-MECHANISM lifecycles (cstubs / cext / ctypes / dynlink), which
-are where `lang × mechanism` gives each artifact chain its own
-agreements.
-
-**What the projection makes obvious** (and the agreement × action view does not): the
-Lib is checked at FOUR distinct stages with three different mechanics,
-and its weakest stages are the ones where the artifact merely arrives
-or is transformed — `Fetch` (identity only) and `Install_lib` (parity
-still designed). The Binding is well covered at build/probe and
-uncovered at publish. Source and App are nearly bare. That is the
-development picture per artifact, which is what "fill the matrix"
-should be steered by.
-
-
-
-
----
+Read down the last column and the fill priority is not the agreement
+rows at all — it is the *stages where an artifact changes hands*: fetch,
+install, publish. Those are exactly the points where canary is not the
+one doing the work, which is why they were easy to leave uncovered.
 
 # Appendix C. The standing goal, and the sequence
 
@@ -2031,7 +1944,7 @@ properties of the design rather than of a given week:
   self-invalidates and a stale world can no longer be served as a pass;
 * **the agreement matrix is total by construction** — the firing
   function answers for every action, so there is no un-answered cell and
-  "filling" means turning `~` into `✓` (B.1). `fill_list` prints the
+  "filling" means turning `~` into `✓` (A.2). `fill_list` prints the
   remainder.
 
 Everything else — which agreements are wired this week, which
@@ -2044,7 +1957,7 @@ status, and lives in the trackers above.
 1. [x] **Land the producer** (2026-08-17/18): `contract_registry` rows
    for c1..c8 (invariant, reads, source, fault tags, input template,
    firing derivation) + the fixture harness + the first fills (§0.6c) +
-   the matrix view (B.1). Consumers untouched — `registered_checks` and
+   the matrix view (A.2). Consumers untouched — `registered_checks` and
    the per-project tables keep working; 4 pins green. Still open
    inside this step: the ssot Ag.X ↔ C1..C8 reconciliation (the Ag.8
    decision) and §8's two drifts.
