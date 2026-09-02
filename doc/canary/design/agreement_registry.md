@@ -1709,11 +1709,16 @@ this file:
 | `agreements.slugs_unique_and_named`      | slugs unique and non-empty; every entry has a claim and a `§`-anchor   |
 | `agreements.every_contract_has_an_entry` | the implemented rows and the proposals both appear in `all_agreements` |
 | `agreements.doc_anchors_exist`           | **every declared section EXISTS as a heading in this document**        |
+| `agreements.doc_cross_refs_resolve`      | **every prose `§` reference in this document resolves to a heading** — lines naming another `.md` are skipped, since their `§` belongs to that document |
 
-The third is the alignment property: renaming a section, or citing one
-that was never written, fails `canary project-test`. Verified by
-falsification — pointing one row at a section number that does not exist turns
-the pin red.
+The last two are the alignment properties: renaming a section, or citing
+one that was never written, fails `canary project-test`. Both were
+verified by falsification rather than trusted — pointing a row at a
+section number that does not exist turns the anchor pin red, and the
+cross-reference pin found five stale references on its very first run
+(`§12`, `§13`, `§14`, `§16` from an earlier merge, plus a sentence whose
+example number read as a citation). That is the class of rot a document
+meant to guide code accumulates silently.
 
 **What it does not yet check** (worth naming so the harness is not read
 as stronger than it is): that the *claim text* matches the section's
