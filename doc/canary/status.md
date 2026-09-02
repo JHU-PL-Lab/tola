@@ -188,6 +188,18 @@ Steps (each step keeps the suite green before the next):
    stage 2 of [`research/plan.md` §4](plan.md)'s delivery
    pipeline; the catalogue itself is 3 of 20 sections confirmed and
    resumes at its §2 *Artifact surfaces*.
+   **Coverage, as of 2026-09-02** (moved here from the design doc, which
+   should not carry a second copy): the agreement rows fire at
+   `Build_binding` / `Probe_binding`, plus `Build_lib` for the three
+   solo-artifact cells. Declared but unwired: `Probe_lib`,
+   `Build_app`/`Probe_app` (tiny's oracle covers app firings today),
+   `Scan_sources` (c6 READS its JSONs but fires elsewhere), and the
+   fetch/configure/install/publish actions. Expectation forms: 5
+   Inspection, 2 Behavior_grep, 1 Placeholder (c8, whose registered
+   status still needs the `Blocked [C6; C7]` reconciliation), plus the
+   `Postcondition` form reserved for the check_post families. Cffi /
+   Dynlink and the Rust/Java/Cpp/CSharp langs have no cells yet. The
+   catalogue's own view of all of this is its §0.6c.
 7. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
    OCaml probe not predicted); `symbol_orphan`'s build failure has no
    contract. Known in `canary_expected_of` table. (Closes inside
