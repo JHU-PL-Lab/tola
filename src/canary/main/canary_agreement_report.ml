@@ -174,7 +174,7 @@ let find_mli_inspect ~project_dir ~variant_id =
 
 
 open Base
-open Canary_agreement
+open Canary_agreement_common
 open Canary_chk_symbols
 
 let print_result ~(stub : stub_inspect) ~(lib : native_inspect) result =

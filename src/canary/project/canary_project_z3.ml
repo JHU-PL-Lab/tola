@@ -361,7 +361,7 @@ let render_opam_in ~tola_root =
     OCaml probes fall through to Expect_success (no OCaml compat
     failure declared for z3 today). *)
 let z3_agreement_bindings : Canary_scenario.agreement_binding list =
-  let module CC = Canary_agreement in
+  let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
   [
     { contract = CC.C2; lang = Canary_lang.Python;

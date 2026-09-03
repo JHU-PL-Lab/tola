@@ -6,14 +6,130 @@
     suits it, and the caller supplies the inputs. *)
 
 open Base
-open Canary_agreement
-module Cat = Canary_agreement
+open Canary_agreement_common
+module Cat = Canary_agreement_common
 
 let soname_cat = Cat.Identity `Soname
 let version_cat = Cat.Identity `Version_node
 let standing = Cat.Declared
 let soname_says = "the lib's soname is the one the consumer recorded it needs"
 let version_says = "the provider exports every version node the consumer requires"
+
+(* ── the evidence this family reads ── *)
+
+(** ELF surface view of an inspect JSON — what {!check_abi} needs.
+    The producing inspector ([inspect_native.py] for the lib;
+    [inspect_binding.py --kind stub] for shared-lib consumers) emits an
+    [elf] sub-object with [soname] (string or null) and [needed] (list
+    of strings). Either may be empty/None on archives or platforms
+    without readelf. *)
+type abi_surface_inspect = {
+  path : string;
+  soname : string option;
+  needed : string list;
+}
+
+let load_abi_surface path =
+  let j = load path in
+  let elf = field j "elf" in
+  let soname =
+    match Option.bind elf ~f:(fun e -> field e "soname") with
+    | Some (`String s) when not (String.is_empty s) -> Some s
+    | _ -> None in
+  let needed =
+    match Option.bind elf ~f:(fun e -> field e "needed") with
+    | Some (`List xs) ->
+        List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+    | _ -> [] in
+  { path = get_string j "path"; soname; needed }
+
+(** Versioned-symbol view of an inspect JSON. Produced by
+    [inspect_native.py] (which reads [@@VER] / [@VER] suffixes from
+    [nm -D]); fields are non-empty when the ELF artifact carries
+    GNU symbol versioning.
+    - [exports] map: defined symbol → exported version tag (provider
+      side, populated for libs built with a version script).
+    - [req_counts] map: required version tag → reference count
+      (consumer side, populated for binaries linked against a
+      versioned provider). *)
+type versioned_symbols_inspect = {
+  path : string;
+  exports : (string * string) list;
+  req_counts : (string * int) list;
+}
+
+let load_versioned_symbols path : versioned_symbols_inspect =
+  let j = load path in
+  let exports =
+    match field j "versioned_exports" with
+    | Some (`Assoc entries) ->
+        List.filter_map entries ~f:(fun (sym, v) ->
+          match v with `String ver -> Some (sym, ver) | _ -> None)
+    | _ -> [] in
+  let req_counts =
+    match field j "versioned_req" with
+    | Some (`Assoc entries) ->
+        List.filter_map entries ~f:(fun (ver, v) ->
+          match v with `Int n -> Some (ver, n) | _ -> None)
+    | _ -> [] in
+  { path = get_string j "path"; exports; req_counts }
+
+(* ── the SOLO cells: the lib against the DECLARATION ──
+
+   Same two agreements as below, asked of ONE artifact instead of two:
+   is the built lib's soname the declared one, are the declared version
+   tags exported. They lived in [canary_chk_lib_declares] until
+   2026-09-02 — a module split by evidence source rather than by
+   category, which put two [Identity] checks outside the identity
+   family. The version-script application and the linker are black
+   boxes, so neither trusts an exit code: each reads the artifact. *)
+
+let soname_matches_cat = Cat.Identity `Soname
+let soname_matches_standing = Cat.Declared
+let soname_matches_says =
+  "the built lib's elf soname is the soname the project declared"
+
+(** c4 lib-only: the BUILT lib's own elf soname vs the declared soname
+    (the linker's -Wl,-soname application is the black box; the
+    artifact's elf is the evidence). *)
+let soname_matches ~declared_soname ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Native_lib ps -> pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p -> (
+      match (load_abi_surface p).soname with
+      | Some s when not (String.equal s declared_soname) ->
+          [ Printf.sprintf "soname %s != declared %s" s declared_soname ]
+      | _ -> [])
+
+let version_tags_exported_cat = Cat.Identity `Version_node
+let version_tags_exported_standing = Cat.Declared
+let version_tags_exported_says =
+  "every version tag the project declares appears among the built lib's \
+   versioned exports"
+
+let version_tags_exported ~declared_tags ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Versioned_exports ps -> pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p ->
+      let vs = load_versioned_symbols p in
+      let exported =
+        List.map vs.exports ~f:snd |> List.dedup_and_sort ~compare:String.compare
+      in
+      List.filter_map declared_tags ~f:(fun tag ->
+          if List.mem exported tag ~equal:String.equal then None
+          else Some (Printf.sprintf "version %s not exported" tag))
 
 (* ── c4: the soname ── *)
 
@@ -146,8 +262,8 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
         | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
-      let prov = Canary_agreement.load_versioned_symbols pp in
-      let cons = Canary_agreement.load_versioned_symbols cp in
+      let prov = load_versioned_symbols pp in
+      let cons = load_versioned_symbols cp in
       let consumer_required = List.map cons.req_counts ~f:fst in
       (match check_sym_version
                ~provider_versioned_exports:prov.exports
@@ -174,8 +290,8 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
       ~f:(function Abi_surface ps -> pick_existing ~resolve ps | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
-      let prov = Canary_agreement.load_abi_surface pp in
-      let cons = Canary_agreement.load_abi_surface cp in
+      let prov = load_abi_surface pp in
+      let cons = load_abi_surface cp in
       (match check_abi
                ~provider_soname:prov.soname
                ~consumer_needed:cons.needed with

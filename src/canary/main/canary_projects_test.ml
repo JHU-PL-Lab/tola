@@ -283,7 +283,7 @@ let z3_lowering_derived : Canary_project_test.pure_test =
       (match lower (B.Probe_binding Canary_lang.Python) pip_loc with
        | Canary_step_model.Expect_compat_derived { inputs; _ } ->
            List.exists inputs ~f:(function
-             | Canary_agreement.Python_attrs _ -> true
+             | Canary_agreement_common.Python_attrs _ -> true
              | _ -> false)
        | _ -> false)
       && sm_is_success (lower (B.Probe_binding Canary_lang.OCaml) None)
@@ -306,15 +306,15 @@ let llvm_lowering_derived : Canary_project_test.pure_test =
       (match lower (B.Probe_binding Canary_lang.OCaml) None with
        | Canary_step_model.Expect_compat_derived { inputs; _ } ->
            let has p = List.exists inputs ~f:p in
-           has (function Canary_agreement.C_stub _ -> true | _ -> false)
-           && has (function Canary_agreement.Native_lib _ -> true | _ -> false)
-           && has (function Canary_agreement.Ocaml_mli _ -> true | _ -> false)
+           has (function Canary_agreement_common.C_stub _ -> true | _ -> false)
+           && has (function Canary_agreement_common.Native_lib _ -> true | _ -> false)
+           && has (function Canary_agreement_common.Ocaml_mli _ -> true | _ -> false)
            (* dev-chain exemption: pack/build-tree path FIRST per input *)
            && List.for_all inputs ~f:(function
-                | Canary_agreement.C_stub (p :: _)
-                | Canary_agreement.Ocaml_mli (p :: _) ->
+                | Canary_agreement_common.C_stub (p :: _)
+                | Canary_agreement_common.Ocaml_mli (p :: _) ->
                     String.is_prefix p ~prefix:"pack_binding_ocaml/"
-                | Canary_agreement.Native_lib (p :: _) ->
+                | Canary_agreement_common.Native_lib (p :: _) ->
                     String.is_prefix p ~prefix:"probe_lib/"
                 | _ -> true)
        | _ -> false)
@@ -341,8 +341,8 @@ let derived_evidence_matches_projects : Canary_project_test.pure_test =
       in
       (* what the framework derives, as a flat path list *)
       let paths_of = List.concat_map ~f:(function
-        | Canary_agreement.Ocaml_mli ps | Canary_agreement.Python_attrs ps
-        | Canary_agreement.C_stub ps -> ps
+        | Canary_agreement_common.Ocaml_mli ps | Canary_agreement_common.Python_attrs ps
+        | Canary_agreement_common.C_stub ps -> ps
         | _ -> [])
       in
       let derived lang provision id =
@@ -361,7 +361,7 @@ let derived_evidence_matches_projects : Canary_project_test.pure_test =
       in
       let tags l = List.map l ~f:tag in
       let derived_tag lang provision =
-        match derived lang provision Canary_agreement.C2 with
+        match derived lang provision Canary_agreement_common.C2 with
         | p :: _ -> tag p
         | [] -> "«none»"
       in
@@ -2344,9 +2344,9 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
           String.equal
             (Canary_basic.step_dir_of_tag binding_tag)
             "build_binding/ocaml"
-          && (match Canary_agreement_registry.inputs_of_agreement Canary_agreement.C1 Canary_lang.OCaml with
-              | [ Canary_agreement.C_stub [ stub_rel ];
-                  Canary_agreement.Native_lib [ lib_rel ] ] ->
+          && (match Canary_agreement_registry.inputs_of_agreement Canary_agreement_common.C1 Canary_lang.OCaml with
+              | [ Canary_agreement_common.C_stub [ stub_rel ];
+                  Canary_agreement_common.Native_lib [ lib_rel ] ] ->
                   String.is_prefix stub_rel ~prefix:(binding_tag ^ "/")
                   && String.equal lib_rel "build_lib/inspect.json"
               | _ -> false)

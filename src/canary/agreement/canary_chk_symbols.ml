@@ -6,12 +6,78 @@
     suits it, and the caller supplies the inputs. *)
 
 open Base
-open Canary_agreement
-module Cat = Canary_agreement
+open Canary_agreement_common
+module Cat = Canary_agreement_common
 
 let cat = Cat.Symbols `Required
 let standing = Cat.Declared
 let says = "every symbol the binding's stub references is exported by the lib"
+
+(* ── the evidence this family reads ── *)
+
+type stub_inspect = {
+  path : string;
+  requires : string list;
+}
+
+type native_inspect = {
+  path : string;
+  symbols : string list;  (* defined exports, prefix-filtered if emitted that way *)
+}
+
+let load_stub path =
+  let j = load path in
+  let kind = get_string j "kind" in
+  if not (String.equal kind "c_stub") then
+    Fmt.epr "compat: warning — expected kind=c_stub, got %s (%s)@." kind path;
+  { path = get_string j "path"; requires = get_string_list j "requires" }
+
+let load_native path =
+  let j = load path in
+  let kind = get_string j "kind" in
+  if not (String.equal kind "native") then
+    Fmt.epr "compat: warning — expected kind=native, got %s (%s)@." kind path;
+  let symbols = get_string_list j "symbols" in
+  if List.is_empty symbols then
+    Fmt.epr "compat: warning — native summary has no 'symbols' field; was \
+             it produced with --emit-symbols? (%s)@." path;
+  { path = get_string j "path"; symbols }
+
+(* ── the SOLO cell: the lib against the DECLARATION ──
+
+   One agreement has two targets — the lib alone (does it export what the
+   project declared?) and the pair (does it export what this consumer
+   requires?). Both live here, because they are the same agreement asked
+   of one artifact and of two. They were in a [canary_chk_lib_declares]
+   module until 2026-09-02, which split the families by EVIDENCE SOURCE
+   while every other module splits them by CATEGORY — so this check
+   declared [Symbols `Exported] two files away from the symbols family.
+   The tools that produce the artifact are black boxes, so this does not
+   trust an exit code: it reads the lib and compares it to the decl. *)
+
+let symbol_exported_cat = Cat.Symbols `Exported
+let symbol_exported_standing = Cat.Declared
+let symbol_exported_says =
+  "every function the project declares in c_api is exported by the \
+   built lib"
+
+(** c1 lib-only: every DECLARED c_api function is exported by the
+    built lib — the lib's own completeness falsifier, no binding
+    involved. (The status-level watchlist verdict is this same
+    comparison, currently recorded rather than predicted.) *)
+let symbol_exported ~declared_functions ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Native_lib ps -> pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p ->
+      let symbols = (load_native p).symbols in
+      List.filter declared_functions ~f:(fun f ->
+          not (List.mem symbols f ~equal:String.equal))
 
 type compat_result =
   | Compatible

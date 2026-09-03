@@ -811,7 +811,7 @@ let source_fetch_local_pin : pure_test =
 let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_matches_tiny_convention";
     check = (fun () ->
-      let module CC = Canary_agreement in
+      let module CC = Canary_agreement_common in
       let template = Canary_agreement_registry.inputs_of_agreement in
       let eq c l expected =
         Poly.equal (template c l) expected
@@ -1146,7 +1146,7 @@ let agnostic_expectation_test : pure_test =
   { name = "scenario.lower_expectation_agnostic_c1";
     check = (fun () ->
       let module CS = Canary_scenario in
-      let module CC = Canary_agreement in
+      let module CC = Canary_agreement_common in
       let module SM = Canary_step_model in
       let bindings =
         CS.[ { contract = CC.C1; lang = ocaml;
@@ -1344,13 +1344,13 @@ let agreement_registry_complete_pin : pure_test =
     check =
       (fun () ->
         let module CR = Canary_agreement_registry in
-        let ids = Canary_agreement.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
+        let ids = Canary_agreement_common.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
         let rows = CR.agreement_registry in
         (* one row per id, non-empty invariant, exactly one tag *)
         let rows_ok =
           List.for_all ids ~f:(fun id ->
               match List.filter rows ~f:(fun r ->
-                  Poly.equal r.CR.ag_check.Canary_agreement.id id) with
+                  Poly.equal r.CR.ag_check.Canary_agreement_common.id id) with
               | [ r ] ->
                   (not (String.is_empty r.CR.ag_invariant))
                   && List.length r.CR.ag_fault_tags = 1
@@ -1361,7 +1361,7 @@ let agreement_registry_complete_pin : pure_test =
           List.for_all Canary_agreement_registry.registered_checks
             ~f:(fun ck ->
               List.count rows ~f:(fun r ->
-                  Poly.equal r.CR.ag_check.Canary_agreement.id ck.id)
+                  Poly.equal r.CR.ag_check.Canary_agreement_common.id ck.id)
               = 1)
           && List.length rows = List.length Canary_agreement_registry.registered_checks
         in
@@ -1471,7 +1471,7 @@ let agreement_fixture_tests : pure_test list =
         Stdlib.close_out oc);
     let predict =
       Option.value fx.CR.fx_predict
-        ~default:(CR.row_of _id).ag_check.Canary_agreement.predict
+        ~default:(CR.row_of _id).ag_check.Canary_agreement_common.predict
     in
     let got = predict ~resolve fx.CR.fx_inputs in
     List.for_all fx.CR.fx_expect ~f:(fun s ->
@@ -1480,8 +1480,8 @@ let agreement_fixture_tests : pure_test list =
   let covered =
     List.map CR.agreement_fixtures ~f:fst
     |> List.dedup_and_sort ~compare:(fun a b ->
-           String.compare (Canary_agreement.string_of_agreement_id a)
-             (Canary_agreement.string_of_agreement_id b))
+           String.compare (Canary_agreement_common.string_of_agreement_id a)
+             (Canary_agreement_common.string_of_agreement_id b))
   in
   [ { name = "contracts.fixtures_execute";
       check = (fun () -> List.for_all CR.agreement_fixtures ~f:execute) };
@@ -1489,7 +1489,7 @@ let agreement_fixture_tests : pure_test list =
        (their pair cells, C3/C7 blocked, C6 pend their fixtures) *)
     { name = "contracts.fixtures_complete";
       check = (fun () ->
-          Poly.equal covered Canary_agreement.[ C1; C2; C4; C5 ]) } ]
+          Poly.equal covered Canary_agreement_common.[ C1; C2; C4; C5 ]) } ]
 
 (* The matrix's mark extraction (2026-08-17, the result table): a
    synthetic actions.log (variant_start-scoped verdict events) drives
@@ -1814,6 +1814,79 @@ let agreement_bridge_pins : pure_test list =
                 || String.is_substring text ~substring:("## " ^ num ^ ".")
                 || String.is_substring text ~substring:("# " ^ top ^ ".")) ) } ]
 
+(* The THREE TIERS of the agreement layer (2026-09-02, user): a common
+   module declares the types; each canary_chk_<topic> is one concrete
+   family and refers only to that; the registry gathers them and
+   provides the matrix. The load-bearing half is the middle one — a
+   family must not reach sideways — so this reads the sources and
+   fails if one names another, which is how the tiers stay true after
+   the next check lands.
+
+   Two deliberate exceptions, both named here so that adding a third
+   requires saying why: canary_chk_composed is not a family (it reads
+   other families' VERDICTS, which is the whole point of it), and a
+   module may MENTION a sibling in prose. *)
+let agreement_tiers_pin : pure_test =
+  { name = "agreements.families_do_not_reach_sideways";
+    check =
+      (fun () ->
+        let dir = "src/canary/agreement" in
+        match Sys_unix.file_exists dir with
+        | `No | `Unknown -> true (* not run from the repo root *)
+        | `Yes ->
+            let families =
+              Sys_unix.readdir dir |> Array.to_list
+              |> List.filter ~f:(fun f ->
+                     String.is_prefix f ~prefix:"canary_chk_"
+                     && String.is_suffix f ~suffix:".ml"
+                     && not (String.equal f "canary_chk_composed.ml"))
+            in
+            (* the split itself: five or more families, none of which
+               reads another *)
+            List.length families >= 5
+            && List.for_all families ~f:(fun f ->
+                   let self =
+                     "Canary_chk_"
+                     ^ String.chop_suffix_exn
+                         (String.chop_prefix_exn f ~prefix:"canary_chk_")
+                         ~suffix:".ml"
+                   in
+                   (* prose may name a sibling; CODE may not — so the
+                      comments come out first, tracking nesting rather
+                      than guessing per line (the first version of this
+                      read continuation lines of a doc comment as code
+                      and failed on three of them) *)
+                   let code =
+                     let s = Stdio.In_channel.read_all (dir ^ "/" ^ f) in
+                     let buf = Buffer.create (String.length s) in
+                     let depth = ref 0 in
+                     let i = ref 0 in
+                     let n = String.length s in
+                     while !i < n do
+                       if !i + 1 < n && Char.equal s.[!i] '('
+                          && Char.equal s.[!i + 1] '*' then (
+                         Int.incr depth;
+                         i := !i + 2)
+                       else if !i + 1 < n && Char.equal s.[!i] '*'
+                               && Char.equal s.[!i + 1] ')' && !depth > 0 then (
+                         Int.decr depth;
+                         i := !i + 2)
+                       else (
+                         if !depth = 0 then Buffer.add_char buf s.[!i];
+                         Int.incr i)
+                     done;
+                     Buffer.contents buf
+                   in
+                   (not (String.is_substring code ~substring:"Canary_chk_"))
+                   || not
+                        (List.exists
+                           (String.substr_index_all code
+                              ~may_overlap:false ~pattern:"Canary_chk_")
+                           ~f:(fun at ->
+                             not
+                               (String.is_prefix (String.subo code ~pos:at)
+                                  ~prefix:self))))) }
+
 (* The per-check MODULE pattern (2026-09-02, user): a check lives in its
    own module with a descriptive category, a falsifier-phrased
    statement, and whatever function signature suits it. This pins the
@@ -1824,18 +1897,35 @@ let check_module_pattern_pin : pure_test =
   { name = "checks.module_pattern";
     check =
       (fun () ->
-        let module M = Canary_chk_lib_declares in
-        let module C = Canary_agreement in
-        List.length M.all = 3
-        && List.for_all M.all ~f:(fun (_, _, says) ->
+        let module C = Canary_agreement_common in
+        (* the three decl-comparisons now sit in the family whose
+           CATEGORY they declare, not in a module of their own — one
+           agreement, one module, whether it is asked of one artifact
+           or of two (2026-09-02) *)
+        let solo =
+          [ (Canary_chk_symbols.symbol_exported_cat,
+             Canary_chk_symbols.symbol_exported_standing,
+             Canary_chk_symbols.symbol_exported_says);
+            (Canary_chk_identity.soname_matches_cat,
+             Canary_chk_identity.soname_matches_standing,
+             Canary_chk_identity.soname_matches_says);
+            (Canary_chk_identity.version_tags_exported_cat,
+             Canary_chk_identity.version_tags_exported_standing,
+             Canary_chk_identity.version_tags_exported_says) ]
+        in
+        List.length solo = 3
+        && List.for_all solo ~f:(fun (_, _, says) ->
                not (String.is_empty says))
-        && Poly.equal M.symbol_exported_cat (C.Symbols `Exported)
-        && Poly.equal M.soname_matches_cat (C.Identity `Soname)
-        && Poly.equal M.version_tags_exported_cat (C.Identity `Version_node)
-        && (* every family member is a DECLARED agreement, not a
-              convention — the toolchain says nothing about which
-              symbols a project ought to export *)
-        List.for_all M.all ~f:(fun (_, standing, _) ->
+        && Poly.equal Canary_chk_symbols.symbol_exported_cat
+             (C.Symbols `Exported)
+        && Poly.equal Canary_chk_identity.soname_matches_cat
+             (C.Identity `Soname)
+        && Poly.equal Canary_chk_identity.version_tags_exported_cat
+             (C.Identity `Version_node)
+        && (* every one is a DECLARED agreement, not a convention — the
+              toolchain says nothing about which symbols a project ought
+              to export *)
+        List.for_all solo ~f:(fun (_, standing, _) ->
             Poly.equal standing C.Declared)
         && String.equal (C.string_of_cat C.Action_succeeded) "action-succeeded") }
 
@@ -1877,7 +1967,7 @@ let agreements_for_pin : pure_test =
         (* … and every returned row is enabled and carries its inputs
            without the caller naming an id *)
         && List.for_all built ~f:(fun (r, _) ->
-               r.R.ag_check.Canary_agreement.enabled)
+               r.R.ag_check.Canary_agreement_common.enabled)
         (* a Fetched world has no build_lib checks at all *)
         && List.is_empty
              (got ~action:Canary_basic.Build_lib
@@ -1932,7 +2022,7 @@ let all_tests : pure_test list =
       source_fetch_pinned_ref_check_post_pin ]
   @ agreement_fixture_tests
   @ agreement_bridge_pins
-  @ [ check_module_pattern_pin; agreements_for_pin ]
+  @ [ check_module_pattern_pin; agreement_tiers_pin; agreements_for_pin ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the

@@ -40,7 +40,7 @@ let added_at ~(mechanism : Canary_mechanism.mechanism) ~(lang : Canary_lang.lang
             List.exists (r.R.ag_firing mechanism lang w) ~f:(fun a ->
                 Poly.equal a action))
       in
-      let enabled = r.R.ag_check.Canary_agreement.enabled in
+      let enabled = r.R.ag_check.Canary_agreement_common.enabled in
       if fires then
         Some
           ( (if enabled then r.R.ag_slug else r.R.ag_slug ^ " (off)"),

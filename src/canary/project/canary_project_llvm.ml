@@ -372,7 +372,7 @@ let llvm_cmake_flags =
 let llvm_stable_agreement_bindings
   : Canary_scenario.agreement_binding list
   =
-  let module CC = Canary_agreement in
+  let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
   [
     { contract = CC.C2; lang = Canary_lang.OCaml;

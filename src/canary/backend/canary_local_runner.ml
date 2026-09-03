@@ -539,10 +539,10 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
               ~disabled:step.disabled_agreements ~resolve:resolve_input inputs
           in
           List.iter fired
-            ~f:(fun ((c : Canary_agreement.agreement_check), subs) ->
+            ~f:(fun ((c : Canary_agreement_common.agreement_check), subs) ->
               log ~event:"compat_predicted"
                 ~detail:(Some (Printf.sprintf "%s %s: %d substring(s)"
-                                 (Canary_agreement.string_of_agreement_id c.id)
+                                 (Canary_agreement_common.string_of_agreement_id c.id)
                                  c.name (List.length subs))));
           if List.is_empty fired then
             log ~event:"compat_predicted" ~detail:(Some "no contract fired");
@@ -555,10 +555,10 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
           List.iter
             (Canary_agreement_registry.skipped_checks
                ~disabled:step.disabled_agreements ())
-            ~f:(fun ((c : Canary_agreement.agreement_check), reason) ->
+            ~f:(fun ((c : Canary_agreement_common.agreement_check), reason) ->
               log ~event:"agreement_skipped"
                 ~detail:(Some (Printf.sprintf "%s %s: %s"
-                                 (Canary_agreement.string_of_agreement_id c.id)
+                                 (Canary_agreement_common.string_of_agreement_id c.id)
                                  c.name reason)));
           fired
         in
@@ -572,9 +572,9 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
            confirmed expected failure. *)
         let confirming_contracts fired =
           List.filter_map fired
-            ~f:(fun ((c : Canary_agreement.agreement_check), subs) ->
+            ~f:(fun ((c : Canary_agreement_common.agreement_check), subs) ->
               if output_contains_any ~output_dir:out subs then
-                Some (Canary_agreement.string_of_agreement_id c.id)
+                Some (Canary_agreement_common.string_of_agreement_id c.id)
               else None)
         in
         let expectation_ok = match step.expectation with

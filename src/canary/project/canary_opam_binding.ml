@@ -335,7 +335,7 @@ let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
    lib's exports — the tiny-full precedent), not a raw FAIL. The other
    cells keep Expect_success. *)
 let opam_binding_agreement_bindings : Canary_scenario.agreement_binding list =
-  let module CC = Canary_agreement in
+  let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
   [ { contract = CC.C1; lang = Canary_lang.OCaml;
       firings = [

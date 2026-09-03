@@ -233,7 +233,7 @@ type runner_spec = {
       its [?disabled] argument. Layered with the CLI's
       [--disable-contract] flag — both contribute to the per-run
       disabled set. *)
-  disabled_agreements : Canary_agreement.agreement_id list;
+  disabled_agreements : Canary_agreement_common.agreement_id list;
   (** World-identity assertions: per-(action, location) claims that the
       step must satisfy for it to pass — the positive-polarity
       counterpart to [expectation]. Empty list = no assertions.
@@ -1077,7 +1077,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
 
 
 (* Moved from bin 2026-08-10 *)
-let with_cli_disabled (cli_disabled : Canary_agreement.agreement_id list)
+let with_cli_disabled (cli_disabled : Canary_agreement_common.agreement_id list)
     (spec : runner_spec) : runner_spec =
   if List.is_empty cli_disabled then spec
   else { spec with disabled_agreements = spec.disabled_agreements @ cli_disabled }

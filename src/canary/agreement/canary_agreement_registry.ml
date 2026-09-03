@@ -10,7 +10,7 @@
     A row states:
     - WHAT the invariant is ([ag_invariant], falsifier-phrased — a
       check is a DISPROVER, never a proof, design §5);
-    - HOW we check it — the existing [Canary_agreement.agreement_check]
+    - HOW we check it — the existing [Canary_agreement_common.agreement_check]
       pipeline (id/status/predict) + the input template;
     - what it CLAIMS and how that is observed ([ag_claim] /
       [ag_evidence]), plus its descriptive category ([ag_cat], taken
@@ -35,8 +35,8 @@ open Base
 
 (** The contract registry. Single source of truth for §2.4 of
     [doc/canary/research/surface_draft/surface.md] Part C — adding a contract = adding one entry. *)
-let registered_checks : Canary_agreement.agreement_check list =
-  let open Canary_agreement in
+let registered_checks : Canary_agreement_common.agreement_check list =
+  let open Canary_agreement_common in
   [
   { id = C1; name = "cmp_symbol";            layer = "L0";  status = Wired;
     enabled = true;  predict = Canary_chk_symbols.c1_predict };
@@ -60,14 +60,14 @@ let registered_checks : Canary_agreement.agreement_check list =
      [Canary_tiny_scenario.make_binding_repack_broken_runner_spec]
      for the demo against harness scenario [api_repack] (e5). *)
   { id = C7; name = "api_sound_repack";      layer = "dyn"; status = Stubbed;
-    enabled = false; predict = Canary_chk_behaviour.c7_predict };
+    enabled = false; predict = Canary_chk_api_surface.c7_predict };
   (* c8 disabled — no Contract for canary to maintain. Each binding
      is independent; cross-binding consistency isn't a canary-side
      agreement to check. Probes happen to assert the same constants
      across languages by project convention, not by a Contract.
      Candidate for removal in a future registry cleanup. *)
   { id = C8; name = "cmp_api_faithfulness";  layer = "n/a"; status = Stubbed;
-    enabled = false; predict = Canary_chk_behaviour.c8_predict };
+    enabled = false; predict = Canary_chk_composed.c8_predict };
 ]
 
 (** Derive expected failure substrings from declared inspector inputs.
@@ -75,7 +75,7 @@ let registered_checks : Canary_agreement.agreement_check list =
     [resolve] turns a per-input relative path (e.g.
     [pack_binding_ocaml/inspect_stub.json]) into an absolute path. The
     runner picks the first input path whose resolved form exists on
-    disk, then hands it to the pure comparators in {!Canary_agreement}.
+    disk, then hands it to the pure comparators in {!Canary_agreement_common}.
 
     [?disabled] is the per-call list of contracts to skip on top of
     the registry's own [enabled] flag. Typical sources:
@@ -98,9 +98,9 @@ let registered_checks : Canary_agreement.agreement_check list =
     per-contract firings instead of one collapsed count (the status-§2
     "per-step contract outcome" seed). *)
 let predicted_by_agreement_v2 ?(disabled = []) ~resolve
-    (inputs : Canary_agreement.inspect_input list) :
-    (Canary_agreement.agreement_check * string list) list =
-  let open Canary_agreement in
+    (inputs : Canary_agreement_common.inspect_input list) :
+    (Canary_agreement_common.agreement_check * string list) list =
+  let open Canary_agreement_common in
   List.filter_map registered_checks ~f:(fun c ->
     if c.enabled && not (List.mem disabled c.id ~equal:Poly.equal) then
       match c.predict ~resolve inputs with
@@ -114,8 +114,8 @@ let predicted_by_agreement_v2 ?(disabled = []) ~resolve
     own [enabled] flag (status names why). For the runner's
     [agreement_skipped] events. *)
 let skipped_checks ?(disabled = []) () :
-    (Canary_agreement.agreement_check * string) list =
-  let open Canary_agreement in
+    (Canary_agreement_common.agreement_check * string) list =
+  let open Canary_agreement_common in
   List.filter_map registered_checks ~f:(fun c ->
     if List.mem disabled c.id ~equal:Poly.equal then
       Some (c, "disabled per call")
@@ -123,12 +123,12 @@ let skipped_checks ?(disabled = []) () :
       Some
         ( c,
           "disabled in registry ("
-          ^ Canary_agreement.string_of_agreement_status c.status
+          ^ Canary_agreement_common.string_of_agreement_status c.status
           ^ ")" )
     else None)
 
 let predicted_contains_any_v2 ?(disabled = []) ~resolve
-    (inputs : Canary_agreement.inspect_input list) : string list =
+    (inputs : Canary_agreement_common.inspect_input list) : string list =
   predicted_by_agreement_v2 ~disabled ~resolve inputs
   |> List.concat_map ~f:snd
   |> List.dedup_and_sort ~compare:String.compare
@@ -168,9 +168,9 @@ let binding_evidence_tag (w : Canary_artifact.assignment)
   in
   Canary_basic.string_of_action a
 
-let inputs_of_agreement ?mechanism ?(world = []) (c : Canary_agreement.agreement_id)
-    (l : Canary_lang.lang) : Canary_agreement.inspect_input list =
-  let open Canary_agreement in
+let inputs_of_agreement ?mechanism ?(world = []) (c : Canary_agreement_common.agreement_id)
+    (l : Canary_lang.lang) : Canary_agreement_common.inspect_input list =
+  let open Canary_agreement_common in
   (* mechanism defaults to the language's default (static for OCaml/Python
      today) — current callers unchanged; a dynamic binding (ctypes/dynlink)
      has NO stub input (it dlopens at runtime). *)
@@ -272,7 +272,7 @@ type agreement_row = {
       (** the catalogue section that DEFINES this agreement, e.g.
           "§6.3". Paired with [ag_slug] this is a two-way bridge, and
           [agreements.doc_anchors_exist] fails when it drifts. *)
-  ag_check     : Canary_agreement.agreement_check;
+  ag_check     : Canary_agreement_common.agreement_check;
       (** id / name / layer / status / enabled / predict — the
           existing pipeline ([registered_checks]) *)
   ag_invariant : string;
@@ -286,7 +286,7 @@ type agreement_row = {
           Sf.5 binding_lib) + "Trace" (the runtime observation). A
           contract IS a named relation over these reads; the action
           says where the read attaches. *)
-  ag_cat       : Canary_agreement.cat;
+  ag_cat       : Canary_agreement_common.cat;
       (** the DESCRIPTIVE category, taken from the check's own module so
           the table and the module cannot disagree *)
   ag_claim     : claim;
@@ -294,7 +294,7 @@ type agreement_row = {
   ag_provenance : provenance;
   ag_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_artifact.assignment ->
-                 Canary_agreement.inspect_input list;
+                 Canary_agreement_common.inspect_input list;
       (** WHAT it reads ([inputs_of_agreement]). The world is a
           parameter for the same reason it is one on [ag_firing]: an
           artifact's evidence sits in the output dir of the step that
@@ -390,17 +390,17 @@ let uniform_world ~(lang : Canary_lang.lang)
 
 (* ── row assembly ── *)
 
-let check_of (id : Canary_agreement.agreement_id) :
-    Canary_agreement.agreement_check =
+let check_of (id : Canary_agreement_common.agreement_id) :
+    Canary_agreement_common.agreement_check =
   List.find registered_checks
-    ~f:(fun ck -> Poly.equal ck.Canary_agreement.id id)
+    ~f:(fun ck -> Poly.equal ck.Canary_agreement_common.id id)
   |> Option.value_exn
        ~message:
          (Printf.sprintf "contract registry: no registered check for %s"
-            (Canary_agreement.string_of_agreement_id id))
+            (Canary_agreement_common.string_of_agreement_id id))
 
 let row ~slug ~doc ~invariant ~reads ~cat ~claim ~evidence ?(provenance = Added) ~firing ~tags
-    (id : Canary_agreement.agreement_id) : agreement_row =
+    (id : Canary_agreement_common.agreement_id) : agreement_row =
   { ag_slug = slug;
     ag_doc = doc;
     ag_check = check_of id;
@@ -462,13 +462,13 @@ let agreement_registry : agreement_row list =
       ~claim:Structural ~evidence:Compare_several ~firing:firing_default
       ~tags:[ "type_arity" ];
     row C7
-      ~slug:"repack_preserves_api" ~cat:Canary_chk_behaviour.repack_cat ~doc:"§5.3"
+      ~slug:"repack_preserves_api" ~cat:Canary_chk_api_surface.repack_cat ~doc:"§5.3"
       ~invariant:"repackaging preserves the API"
       ~reads:[ ("Sf.4", "binding") ]
       ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only
       ~tags:[ "api_repack" ];
     row C8
-      ~slug:"repack_complete" ~cat:Canary_chk_behaviour.repack_cat ~doc:"§5.3"
+      ~slug:"repack_complete" ~cat:Canary_chk_api_surface.repack_cat ~doc:"§5.3"
       ~invariant:
         "repackaging is complete — nothing the original had is lost"
       ~reads:[ ("Sf.4", "binding") ]
@@ -483,16 +483,16 @@ let agreement_registry : agreement_row list =
    WITH its fixture and a changed predict breaks the pin. Coverage:
    C1, C2 today. C3/C7 are blocked in the registry; C4/C5/C6 pend
    their fixture JSON shapes (elf/versioned/typed loaders in
-   [Canary_agreement]). *)
+   [Canary_agreement_common]). *)
 
 type fixture = {
   fx_predict :
     (resolve:(string -> string) ->
-     Canary_agreement.inspect_input list -> string list) option;
+     Canary_agreement_common.inspect_input list -> string list) option;
       (** the closure under test — [None] = the row's
           [ag_check.predict]. Some = a CELL predict (e.g. the
           decl-comparison closures for the lib-only cells). *)
-  fx_inputs : Canary_agreement.inspect_input list;
+  fx_inputs : Canary_agreement_common.inspect_input list;
       (** input-file references ([C_stub], [Native_lib], [Ocaml_mli],
           [Python_attrs], …) *)
   fx_bodies : (string * string) list;
@@ -501,7 +501,7 @@ type fixture = {
       (** the failure substrings [predict] must yield *)
 }
 
-let agreement_fixtures : (Canary_agreement.agreement_id * fixture) list =
+let agreement_fixtures : (Canary_agreement_common.agreement_id * fixture) list =
   let c_stub_body = {|{"kind": "c_stub", "path": "fx",
     "requires": ["tiny_sum", "tiny_offset"]}|} in
   let native_body = {|{"kind": "native", "path": "fx",
@@ -517,63 +517,63 @@ let agreement_fixtures : (Canary_agreement.agreement_id * fixture) list =
     "elf": {"soname": "libtiny.so.2", "needed": []}}|} in
   let c5_lib_body = {|{"kind": "native", "path": "fx",
     "versioned_exports": {"tiny_sum": "TINY_1.0"}}|} in
-  [ ( Canary_agreement.C1,
+  [ ( Canary_agreement_common.C1,
       (* the LIB-ONLY cell: every declared c_api function exported by
          the built lib (sym_missing at the source, no binding) *)
       { fx_predict =
           Some
-            (Canary_chk_lib_declares.symbol_exported
+            (Canary_chk_symbols.symbol_exported
                ~declared_functions:
                  [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]);
-        fx_inputs = [ Canary_agreement.Native_lib [ "lib.json" ] ];
+        fx_inputs = [ Canary_agreement_common.Native_lib [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c1_lib_body) ];
         fx_expect = [ "tiny_offset" ] } );
-    ( Canary_agreement.C4,
+    ( Canary_agreement_common.C4,
       (* the LIB-ONLY cell: the built lib's elf soname vs the declared *)
       { fx_predict =
           Some
-            (Canary_chk_lib_declares.soname_matches
+            (Canary_chk_identity.soname_matches
                ~declared_soname:"libtiny.so.1");
-        fx_inputs = [ Canary_agreement.Native_lib [ "lib.json" ] ];
+        fx_inputs = [ Canary_agreement_common.Native_lib [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c4_lib_body) ];
         fx_expect = [ "soname libtiny.so.2 != declared libtiny.so.1" ] } );
-    ( Canary_agreement.C5,
+    ( Canary_agreement_common.C5,
       (* the LIB-ONLY cell: the version script applied — the declared
          tag must appear among the built lib's @@VER annotations *)
       { fx_predict =
           Some
-            (Canary_chk_lib_declares.version_tags_exported ~declared_tags:[ "TINY_2.0" ]);
-        fx_inputs = [ Canary_agreement.Versioned_exports [ "lib.json" ] ];
+            (Canary_chk_identity.version_tags_exported ~declared_tags:[ "TINY_2.0" ]);
+        fx_inputs = [ Canary_agreement_common.Versioned_exports [ "lib.json" ] ];
         fx_bodies = [ ("lib.json", c5_lib_body) ];
         fx_expect = [ "version TINY_2.0 not exported" ] } );
-    ( Canary_agreement.C1,
+    ( Canary_agreement_common.C1,
       { fx_predict = None;
         fx_inputs =
-          [ Canary_agreement.C_stub [ "stub.json" ];
-            Canary_agreement.Native_lib [ "lib.json" ] ];
+          [ Canary_agreement_common.C_stub [ "stub.json" ];
+            Canary_agreement_common.Native_lib [ "lib.json" ] ];
         fx_bodies =
           [ ("stub.json", c_stub_body); ("lib.json", native_body) ];
         fx_expect = [ "tiny_offset" ] } );
-    ( Canary_agreement.C2,
+    ( Canary_agreement_common.C2,
       { fx_predict = None;
-        fx_inputs = [ Canary_agreement.Ocaml_mli [ "mli.json" ] ];
+        fx_inputs = [ Canary_agreement_common.Ocaml_mli [ "mli.json" ] ];
         fx_bodies = [ ("mli.json", mli_body) ];
         (* the dotted-name expansion variants *)
         fx_expect = [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ] } );
-    ( Canary_agreement.C2,
+    ( Canary_agreement_common.C2,
       { fx_predict = None;
-        fx_inputs = [ Canary_agreement.Python_attrs [ "py.json" ] ];
+        fx_inputs = [ Canary_agreement_common.Python_attrs [ "py.json" ] ];
         fx_bodies = [ ("py.json", py_body) ];
         fx_expect = [ "Solver.add"; "add"; "BitVec" ] } ) ]
 
 (** Total lookup over the table. *)
-let row_of (id : Canary_agreement.agreement_id) : agreement_row =
+let row_of (id : Canary_agreement_common.agreement_id) : agreement_row =
   List.find agreement_registry ~f:(fun r ->
-      Poly.equal r.ag_check.Canary_agreement.id id)
+      Poly.equal r.ag_check.Canary_agreement_common.id id)
   |> Option.value_exn
        ~message:
          (Printf.sprintf "contract registry: no row for %s"
-            (Canary_agreement.string_of_agreement_id id))
+            (Canary_agreement_common.string_of_agreement_id id))
 
 (* ── THE BELIEF MATRIX (2026-08-18) ──
    The registry's motivation made visible: enumerate every
@@ -593,7 +593,7 @@ let row_of (id : Canary_agreement.agreement_id) : agreement_row =
 type cell_status =
   | Wired
   | Declared
-  | Blocked of Canary_agreement.agreement_id list
+  | Blocked of Canary_agreement_common.agreement_id list
   | Empty
 
 let mark_of_status = function
@@ -621,7 +621,7 @@ let matrix_actions (l : Canary_lang.lang) : Canary_basic.action list =
     Canary_basic.Build_app { Canary_basic.lang = l };
     Canary_basic.Probe_app { Canary_basic.lang = l } ]
 
-let has_fixture (id : Canary_agreement.agreement_id) : bool =
+let has_fixture (id : Canary_agreement_common.agreement_id) : bool =
   List.exists agreement_fixtures ~f:(fun (i, _) -> Poly.equal i id)
 
 (** One cell's status under a concrete world. *)
@@ -634,9 +634,9 @@ let cell_status_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
   in
   if not fires then Empty
   else
-    match r.ag_check.Canary_agreement.status with
-    | Canary_agreement.Blocked deps -> Blocked deps
-    | _ -> if has_fixture r.ag_check.Canary_agreement.id then Wired else Declared
+    match r.ag_check.Canary_agreement_common.status with
+    | Canary_agreement_common.Blocked deps -> Blocked deps
+    | _ -> if has_fixture r.ag_check.Canary_agreement_common.id then Wired else Declared
 
 (** THE matrix: rows = contracts, columns = actions, under one world. *)
 let belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
@@ -661,7 +661,7 @@ let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
   let body =
     List.map m ~f:(fun (r, cells) ->
         Printf.sprintf "%-4s     | %s"
-          (Canary_agreement.string_of_agreement_id r.ag_check.Canary_agreement.id)
+          (Canary_agreement_common.string_of_agreement_id r.ag_check.Canary_agreement_common.id)
           (String.concat ~sep:" | "
              (List.map cells ~f:(fun (a, st) ->
                   let w =
@@ -676,12 +676,12 @@ let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
     fixture yet). The concrete answer to "what is left to fill". *)
 let fill_list ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
-    (Canary_agreement.agreement_id * Canary_basic.action) list =
+    (Canary_agreement_common.agreement_id * Canary_basic.action) list =
   List.concat_map (belief_matrix ~mechanism ~lang ~provision ())
     ~f:(fun (r, cells) ->
       List.filter_map cells ~f:(fun (a, st) ->
           match st with
-          | Declared -> Some (r.ag_check.Canary_agreement.id, a)
+          | Declared -> Some (r.ag_check.Canary_agreement_common.id, a)
           | Wired | Blocked _ | Empty -> None))
 
 (* ── PROPOSED agreements — the catalogue's holes, as data (2026-09-01) ──
@@ -741,7 +741,7 @@ let proposed_agreements : proposed list =
 
 (* ── the unified view — one list to print, cite and pin ── *)
 
-type status = Implemented of Canary_agreement.agreement_status | Not_wired
+type status = Implemented of Canary_agreement_common.agreement_status | Not_wired
 
 type entry = {
   e_slug  : string;
@@ -760,7 +760,7 @@ let all_agreements : entry list =
         e_doc = r.ag_doc;
         e_claim = r.ag_invariant;
         e_reads = r.ag_reads;
-        e_status = Implemented r.ag_check.Canary_agreement.status })
+        e_status = Implemented r.ag_check.Canary_agreement_common.status })
   @ List.map proposed_agreements ~f:(fun p ->
         { e_slug = p.prop_slug;
           e_doc = p.prop_doc;
@@ -769,7 +769,7 @@ let all_agreements : entry list =
           e_status = Not_wired })
 
 let string_of_status = function
-  | Implemented s -> Canary_agreement.string_of_agreement_status s
+  | Implemented s -> Canary_agreement_common.string_of_agreement_status s
   | Not_wired -> "proposed"
 
 (** The registry as a table — `canary agreements`. *)
@@ -801,7 +801,7 @@ let pp_agreements () : string =
     at one action; omit it for all of them. *)
 let agreements_for ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
-    ?action () : (agreement_row * Canary_agreement.inspect_input list) list =
+    ?action () : (agreement_row * Canary_agreement_common.inspect_input list) list =
   List.filter_map agreement_registry ~f:(fun r ->
       let fires =
         let sites = r.ag_firing mechanism lang world in
@@ -809,6 +809,6 @@ let agreements_for ~(mechanism : Canary_mechanism.mechanism)
         | None -> not (List.is_empty sites)
         | Some a -> List.exists sites ~f:(fun s -> Poly.equal s a)
       in
-      if fires && r.ag_check.Canary_agreement.enabled then
+      if fires && r.ag_check.Canary_agreement_common.enabled then
         Some (r, r.ag_inputs mechanism lang world)
       else None)

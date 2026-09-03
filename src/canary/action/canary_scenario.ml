@@ -87,7 +87,7 @@ type manifest =
     this mutation today; the mutation constructs a bad
     artifact that no comparator observes. *)
 type detector =
-  | Wired of Canary_agreement.agreement_id
+  | Wired of Canary_agreement_common.agreement_id
   | Detector_gap
 
 type mutation = {
@@ -194,7 +194,7 @@ let firing_site_of_action : Canary_basic.action -> firing_site option =
       attempts to declare a scenario that would rely on it. *)
 type expectation_source =
   | From_artifact of {
-      inputs : Canary_agreement.inspect_input list;
+      inputs : Canary_agreement_common.inspect_input list;
       version_info : Canary_step_model.version_info option;
     }
   | From_behavior_grep of {
@@ -263,7 +263,7 @@ type firing = {
     contract can fire at multiple sites; empty means "this contract is
     silent for this language". *)
 type agreement_binding = {
-  contract : Canary_agreement.agreement_id;
+  contract : Canary_agreement_common.agreement_id;
   lang     : Canary_lang.lang;
   firings  : firing list;
 }
@@ -275,7 +275,7 @@ type agreement_binding = {
     a mutation, rather than silently emit Expect_success. *)
 let binding_has_live_firing
     (bindings : agreement_binding list)
-    (contract : Canary_agreement.agreement_id)
+    (contract : Canary_agreement_common.agreement_id)
     (lang : Canary_lang.lang)
   : bool
   =

@@ -283,7 +283,7 @@ let project_run_of_tiny1 ~(name : string) : project_run =
 (* ── tiny1 run helpers (moved from bin 2026-08-10) ── *)
 
 let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
-    ~cache_path ~(cli_disabled : Canary_agreement.agreement_id list) ~name () =
+    ~cache_path ~(cli_disabled : Canary_agreement_common.agreement_id list) ~name () =
   let name = TS.name_of_string name in
   let workspace =
     match workspace_override with

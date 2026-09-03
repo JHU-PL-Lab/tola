@@ -1,4 +1,4 @@
-(** [Canary_agreement] — pure surface-theory comparators (surface/).
+(** [Canary_agreement_common] — pure surface-theory comparators (surface/).
 
     The theoretical half of the compat machinery: input types and the
     c1..c8 comparator functions. Pure; the only I/O is reading a JSON
@@ -108,137 +108,14 @@ type inspect_input =
   | Typed_binding_stub of string list   (* bo1/bpe1 — consumer C sigs *)
   | Typed_binding_user of string list   (* bo4/bpe2 — consumer language sigs *)
 
-type stub_inspect = {
-  path : string;
-  requires : string list;
-}
-
-type native_inspect = {
-  path : string;
-  symbols : string list;  (* defined exports, prefix-filtered if emitted that way *)
-}
-
-let load_stub path =
-  let j = load path in
-  let kind = get_string j "kind" in
-  if not (String.equal kind "c_stub") then
-    Fmt.epr "compat: warning — expected kind=c_stub, got %s (%s)@." kind path;
-  { path = get_string j "path"; requires = get_string_list j "requires" }
-
-let load_native path =
-  let j = load path in
-  let kind = get_string j "kind" in
-  if not (String.equal kind "native") then
-    Fmt.epr "compat: warning — expected kind=native, got %s (%s)@." kind path;
-  let symbols = get_string_list j "symbols" in
-  if List.is_empty symbols then
-    Fmt.epr "compat: warning — native summary has no 'symbols' field; was \
-             it produced with --emit-symbols? (%s)@." path;
-  { path = get_string j "path"; symbols }
-
-(** ELF surface view of an inspect JSON — what {!check_abi} needs.
-    The producing inspector ([inspect_native.py] for the lib;
-    [inspect_binding.py --kind stub] for shared-lib consumers) emits an
-    [elf] sub-object with [soname] (string or null) and [needed] (list
-    of strings). Either may be empty/None on archives or platforms
-    without readelf. *)
-type abi_surface_inspect = {
-  path : string;
-  soname : string option;
-  needed : string list;
-}
-
-let load_abi_surface path =
-  let j = load path in
-  let elf = field j "elf" in
-  let soname =
-    match Option.bind elf ~f:(fun e -> field e "soname") with
-    | Some (`String s) when not (String.is_empty s) -> Some s
-    | _ -> None in
-  let needed =
-    match Option.bind elf ~f:(fun e -> field e "needed") with
-    | Some (`List xs) ->
-        List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
-    | _ -> [] in
-  { path = get_string j "path"; soname; needed }
-
-(** Typed-signature view of an inspect JSON. The producing inspector
-    ([canary/scripts/inspect_tiny_typed.py] today; AST-based
-    replacements later) emits one [functions] dict keyed by name with
-    typed return / arg lists. [layer] preserves which surface this
-    came from (header / stub_ocaml / user_ocaml / stub_python /
-    user_python) so c6/c7/c8 predicates can sanity-check the inputs
-    they were handed.
-
-    Provider and consumer sides share this shape — what differs is
-    which file the inspector ran on. The diff happens in the
-    comparator (c6 checks header vs stub agreement; c7 checks
-    stub vs user repack consistency; c8 combines both). *)
-type typed_signature = {
-  return_type : string;
-  arg_types : string list;
-}
-
-type typed_signatures_inspect = {
-  path : string;
-  layer : string;
-  functions : (string * typed_signature) list;
-}
-
-(** Versioned-symbol view of an inspect JSON. Produced by
-    [inspect_native.py] (which reads [@@VER] / [@VER] suffixes from
-    [nm -D]); fields are non-empty when the ELF artifact carries
-    GNU symbol versioning.
-    - [exports] map: defined symbol → exported version tag (provider
-      side, populated for libs built with a version script).
-    - [req_counts] map: required version tag → reference count
-      (consumer side, populated for binaries linked against a
-      versioned provider). *)
-type versioned_symbols_inspect = {
-  path : string;
-  exports : (string * string) list;
-  req_counts : (string * int) list;
-}
-
-let load_versioned_symbols path : versioned_symbols_inspect =
-  let j = load path in
-  let exports =
-    match field j "versioned_exports" with
-    | Some (`Assoc entries) ->
-        List.filter_map entries ~f:(fun (sym, v) ->
-          match v with `String ver -> Some (sym, ver) | _ -> None)
-    | _ -> [] in
-  let req_counts =
-    match field j "versioned_req" with
-    | Some (`Assoc entries) ->
-        List.filter_map entries ~f:(fun (ver, v) ->
-          match v with `Int n -> Some (ver, n) | _ -> None)
-    | _ -> [] in
-  { path = get_string j "path"; exports; req_counts }
-
-let load_typed_signatures path : typed_signatures_inspect =
-  let j = load path in
-  let kind = get_string j "kind" in
-  let layer =
-    match String.chop_prefix kind ~prefix:"typed_" with
-    | Some l -> l
-    | None ->
-        Fmt.epr "compat: warning — expected kind=typed_<layer>, got %s (%s)@."
-          kind path;
-        "unknown" in
-  let functions =
-    match field j "functions" with
-    | Some (`Assoc entries) ->
-        List.map entries ~f:(fun (name, sig_json) ->
-          let return_type = get_string sig_json "return" in
-          let arg_types =
-            match field sig_json "args" with
-            | Some (`List xs) ->
-                List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
-            | _ -> [] in
-          (name, { return_type; arg_types }))
-    | _ -> [] in
-  { path = get_string j "path"; layer; functions }
+(* Each family's evidence RECORDS and their loaders moved to the family
+   that reads them (2026-09-02): [stub_inspect]/[native_inspect] to
+   [Canary_chk_symbols], the elf and version views to
+   [Canary_chk_identity], the typed signatures to [Canary_chk_types].
+   What stays here is what more than one family needs — the JSON
+   primitives, the [inspect_input] ADT that NAMES evidence, and the
+   agreement vocabulary. The rule: a family owns whatever is only about
+   its own topic; this module owns what is common. *)
 
 (* ── Cross-check ── *)
 

@@ -202,11 +202,11 @@ let action_cmd =
      the flag stays parsed so existing invocations don't break. *)
   let run project _quick failfast cache_path disable_agreement_csv thin refs () =
     let root = "_out" in
-    let cli_disabled = Canary_agreement.agreement_ids_of_csv disable_agreement_csv in
+    let cli_disabled = Canary_agreement_common.agreement_ids_of_csv disable_agreement_csv in
     if cli_disabled <> [] then
       Fmt.pr "[disable-agreement] skipping: %s@."
         (String.concat ", "
-           (List.map Canary_agreement.string_of_agreement_id cli_disabled));
+           (List.map Canary_agreement_common.string_of_agreement_id cli_disabled));
     (* the run config: --thin sets the policy variant, --refs
        narrows the source-repo set (orthogonal; the batch sets its own
        per-project config tier-based inside [Canary_batch.run]). *)
@@ -662,7 +662,7 @@ let checks_cmd =
         List.iter
           (fun (id, a) ->
             Fmt.pr "  %s @@ %s@."
-              (Canary_agreement.string_of_agreement_id id)
+              (Canary_agreement_common.string_of_agreement_id id)
               (Canary_basic.string_of_action a))
           fill
     | None, false ->

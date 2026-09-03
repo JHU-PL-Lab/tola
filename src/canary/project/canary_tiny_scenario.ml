@@ -68,7 +68,7 @@ type tiny_recipe = {
   mutates : string list;
   mutation : mutation option;
   expected : (string * outcome) list;
-  violates : Canary_agreement.agreement_id list;
+  violates : Canary_agreement_common.agreement_id list;
 }
 
 (** Pairing of concept ([Canary_scenario.scenario]) + implementation
@@ -176,7 +176,7 @@ let actions_of_parents (parents : string list) : Canary_basic.action list =
       if List.mem acc r ~equal:Poly.equal then acc else acc @ [ r ])
 
 let scenario_specs : scenario_spec list =
-  let open Canary_agreement in
+  let open Canary_agreement_common in
   let open Canary_scenario in
   let mk ~id ~name ~description ~mutates ~concrete_pert
          ~scenario_pert ~expected ~violates =
@@ -677,7 +677,7 @@ let matches_derived_cell
     guard there can consult
     {!Canary_scenario.binding_has_live_firing}. *)
 let tiny_agreement_bindings : Canary_scenario.agreement_binding list =
-  let module CC = Canary_agreement in
+  let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
   [
     (* c1 — symbol set. Fires at Probe_binding: stub link (Python
@@ -857,7 +857,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_source (Source.rename_c_symbol
              ~file ~from_:"tiny_sum" ~to_:"tiny_total"));
            expected = [];
-           violates = [ Canary_agreement.C1 ];
+           violates = [ Canary_agreement_common.C1 ];
          }
      | Source, On_behavior ->
          (* No parametric behavior-change primitive. behavior_silent
@@ -880,14 +880,14 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
          let langs = Canary_scenario.langs_of_scenario cell in
          let live = List.exists langs ~f:(fun l ->
            Canary_scenario.binding_has_live_firing
-             tiny_agreement_bindings Canary_agreement.C4 l) in
+             tiny_agreement_bindings Canary_agreement_common.C4 l) in
          if live then
            Some {
              mutates = [ "c/build/libtiny.so.1.0" ];
              mutation = Some (Of_native (Native.soname_bump
                ~from_so:"libtiny.so.1.0" ~to_so:"libtiny.so.2.0"));
              expected = [];
-             violates = [ Canary_agreement.C4 ];
+             violates = [ Canary_agreement_common.C4 ];
            }
          else None
      | Binding Canary_lang.OCaml, On_artifact (Binding Canary_lang.OCaml) ->
@@ -899,7 +899,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_binding (Binding.drop_ocaml_val
              ~file ~name:"sum"));
            expected = [];
-           violates = [ Canary_agreement.C2 ];
+           violates = [ Canary_agreement_common.C2 ];
          }
      | Binding Canary_lang.Python, On_artifact (Binding Canary_lang.Python) ->
          (* Drop a top-level def from tiny_cext/__init__.py. Default:
@@ -913,7 +913,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_binding (Binding.drop_python_attr
              ~file ~name:"sum"));
            expected = [];
-           violates = [ Canary_agreement.C2 ];
+           violates = [ Canary_agreement_common.C2 ];
          }
      | Binding Canary_lang.Python, _ -> None
      | App, _ ->
@@ -1375,8 +1375,8 @@ let canary_expected_of (entry : scenario_spec) : canary_expected =
      c7 api_repack    c8 api_add *)
 
 (** Concise fault tag for a contract. *)
-let fault_tag_of_contract : Canary_agreement.agreement_id -> string = function
-  | Canary_agreement.C1 -> "sym_missing"
+let fault_tag_of_contract : Canary_agreement_common.agreement_id -> string = function
+  | Canary_agreement_common.C1 -> "sym_missing"
   | C2 -> "api_drop"
   | C3 -> "behavior"
   | C4 -> "abi_soname"
@@ -1511,9 +1511,9 @@ let iter_scenario_specs
     ~f:(fun i spec -> f ~index:(i + 1) ~total:n ~spec)
 
 (** Compact contract label — ["c1"..."c8"] via
-    {!Canary_agreement.string_of_agreement_id}, or ["gap"] for [Detector_gap]. *)
+    {!Canary_agreement_common.string_of_agreement_id}, or ["gap"] for [Detector_gap]. *)
 let detector_short = function
-  | Canary_scenario.Wired c -> Canary_agreement.string_of_agreement_id c
+  | Canary_scenario.Wired c -> Canary_agreement_common.string_of_agreement_id c
   | Canary_scenario.Detector_gap -> "gap"
 
 (** 1-based index of an artifact in a scenario's [related_artifacts], or
@@ -1689,14 +1689,14 @@ let name_of_string (n : string) : string =
 
 (** Human-readable contract label used by the Python harness's JSON
     output ("Symbol", "Type", "ABI", …). Distinct from
-    [Canary_agreement.string_of_agreement_id] which emits "c1".."c8".
+    [Canary_agreement_common.string_of_agreement_id] which emits "c1".."c8".
     Used by [print_expected] to preserve the JSON shape. *)
 (** Human-readable contract label — ["Symbol"], ["ABI"], ["Type"], …
-    Distinct from {!Canary_agreement.string_of_agreement_id} (["c1"..."c8"]).
+    Distinct from {!Canary_agreement_common.string_of_agreement_id} (["c1"..."c8"]).
     Used by tiny's [confirm_ill.json] and [tiny expected] output for legacy
     parity with the Python harness. *)
 let violates_label = function
-  | Canary_agreement.C1 -> "Symbol"
+  | Canary_agreement_common.C1 -> "Symbol"
   | C2 -> "API-completeness"
   | C3 -> "Behavior"
   | C4 -> "ABI"

@@ -83,11 +83,11 @@ let compat_pure_tests =
   let mli_path = write_inspect "ocaml_mli" "mli.json" [ "Llvm.Opcode.UncondBr" ] in
   let py_path  = write_inspect "python"   "py.json"  [ "Solver.add"; "BitVec" ] in
   let l3_only = Canary_agreement_registry.predicted_contains_any_v2 ~resolve:Fn.id
-      [ Canary_agreement.Ocaml_mli [ mli_path ] ] in
+      [ Canary_agreement_common.Ocaml_mli [ mli_path ] ] in
   let py_only = Canary_agreement_registry.predicted_contains_any_v2 ~resolve:Fn.id
-      [ Canary_agreement.Python_attrs [ py_path ] ] in
+      [ Canary_agreement_common.Python_attrs [ py_path ] ] in
   let mixed = Canary_agreement_registry.predicted_contains_any_v2 ~resolve:Fn.id
-      [ Canary_agreement.Ocaml_mli [ mli_path ]; Canary_agreement.Python_attrs [ py_path ] ] in
+      [ Canary_agreement_common.Ocaml_mli [ mli_path ]; Canary_agreement_common.Python_attrs [ py_path ] ] in
   let mem xs s = List.mem xs s ~equal:String.equal in
   [
     { name = "compat.mli_dotted_expansion";
@@ -112,11 +112,11 @@ let compat_pure_tests =
       check = fun () ->
         match
           Canary_agreement_registry.predicted_by_agreement_v2 ~resolve:Fn.id
-            [ Canary_agreement.Ocaml_mli [ mli_path ];
-              Canary_agreement.Python_attrs [ py_path ] ]
+            [ Canary_agreement_common.Ocaml_mli [ mli_path ];
+              Canary_agreement_common.Python_attrs [ py_path ] ]
         with
         | [ (c, subs) ] ->
-            Poly.equal c.Canary_agreement.id Canary_agreement.C2
+            Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C2
             && mem subs "UncondBr" && mem subs "BitVec"
         | _ -> false };
     (* the flat form is exactly the flatten of the per-contract form *)
@@ -124,8 +124,8 @@ let compat_pure_tests =
       check = fun () ->
         let flat =
           Canary_agreement_registry.predicted_by_agreement_v2 ~resolve:Fn.id
-            [ Canary_agreement.Ocaml_mli [ mli_path ];
-              Canary_agreement.Python_attrs [ py_path ] ]
+            [ Canary_agreement_common.Ocaml_mli [ mli_path ];
+              Canary_agreement_common.Python_attrs [ py_path ] ]
           |> List.concat_map ~f:snd
           |> List.dedup_and_sort ~compare:String.compare
         in
@@ -160,16 +160,16 @@ let compat_pure_tests =
       check = fun () ->
         List.is_empty
           (Canary_agreement_registry.predicted_by_agreement_v2
-             ~disabled:[ Canary_agreement.C2 ] ~resolve:Fn.id
-             [ Canary_agreement.Ocaml_mli [ mli_path ] ])
+             ~disabled:[ Canary_agreement_common.C2 ] ~resolve:Fn.id
+             [ Canary_agreement_common.Ocaml_mli [ mli_path ] ])
         && List.exists
-             (Canary_agreement_registry.skipped_checks ~disabled:[ Canary_agreement.C2 ] ())
+             (Canary_agreement_registry.skipped_checks ~disabled:[ Canary_agreement_common.C2 ] ())
              ~f:(fun (c, reason) ->
-               Poly.equal c.Canary_agreement.id Canary_agreement.C2
+               Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C2
                && String.equal reason "disabled per call")
         && List.exists (Canary_agreement_registry.skipped_checks ())
              ~f:(fun (c, reason) ->
-               Poly.equal c.Canary_agreement.id Canary_agreement.C3
+               Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C3
                && String.is_substring reason ~substring:"registry") };
   ]
 
@@ -185,9 +185,9 @@ let compat_pure_tests =
    / c8 cmp_api_faithfulness will add fixtures here as they land — see
    plan.md §6 Step 4 (a). *)
 let cmp_symbol_pure_tests =
-  let stub_of requires : Canary_agreement.stub_inspect =
+  let stub_of requires : Canary_chk_symbols.stub_inspect =
     { path = "fixture-stub"; requires } in
-  let native_of symbols : Canary_agreement.native_inspect =
+  let native_of symbols : Canary_chk_symbols.native_inspect =
     { path = "fixture-native"; symbols } in
   [
     { name = "cmp_symbol.compatible";
@@ -404,7 +404,7 @@ let cmp_type_pure_tests =
    modulo declared renames).
    Catches the new tiny scenario e14 api_repack_stub_orphan. *)
 let cmp_api_repack_pure_tests =
-  let open Canary_chk_behaviour in
+  let open Canary_chk_api_surface in
   [
     { name = "cmp_api_repack.compatible_exact_match";
       check = fun () ->
@@ -469,13 +469,13 @@ let cmp_api_repack_pure_tests =
    Catches tiny scenario e4 api_faithful when the action pipeline
    wires c8 (today e4 is silent at the c1/c2/c3 level). *)
 let cmp_api_faithfulness_pure_tests =
-  let open Canary_agreement in
   let open Canary_chk_types in
   let open Canary_chk_symbols in
-  let open Canary_chk_behaviour in
-  let stub_of requires : Canary_agreement.stub_inspect =
+  let open Canary_chk_api_surface in
+  let open Canary_chk_composed in
+  let stub_of requires : Canary_chk_symbols.stub_inspect =
     { path = "fixture-stub"; requires } in
-  let native_of symbols : Canary_agreement.native_inspect =
+  let native_of symbols : Canary_chk_symbols.native_inspect =
     { path = "fixture-native"; symbols } in
   [
     { name = "cmp_faithful.all_compatible";
@@ -794,12 +794,12 @@ let c2_prediction_pure_tests =
     { name = "c2_prediction.mli_no_missing_no_strings";
       check = fun () ->
         let r = Canary_agreement_registry.predicted_contains_any_v2 ~resolve:Fn.id
-            [ Canary_agreement.Ocaml_mli [ mli_clean ] ] in
+            [ Canary_agreement_common.Ocaml_mli [ mli_clean ] ] in
         List.is_empty r };
     { name = "c2_prediction.python_no_missing_no_strings";
       check = fun () ->
         let r = Canary_agreement_registry.predicted_contains_any_v2 ~resolve:Fn.id
-            [ Canary_agreement.Python_attrs [ py_clean ] ] in
+            [ Canary_agreement_common.Python_attrs [ py_clean ] ] in
         List.is_empty r };
   ]
 

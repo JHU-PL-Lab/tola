@@ -67,7 +67,7 @@ type step_expectation =
       version_info : version_info option;
     }
   | Expect_compat_failure of {
-      inputs       : Canary_agreement.inspect_input list;
+      inputs       : Canary_agreement_common.inspect_input list;
       version_info : version_info option;
     }
   (* Like [Expect_compat_failure] (same payload), but the runtime PREDICTION
@@ -80,7 +80,7 @@ type step_expectation =
      [Canary_scenario.lower_expectation_agnostic]; only tiny-full uses it —
      z3/llvm keep the oracle variant. *)
   | Expect_compat_derived of {
-      inputs       : Canary_agreement.inspect_input list;
+      inputs       : Canary_agreement_common.inspect_input list;
       version_info : version_info option;
     }
 
@@ -102,7 +102,7 @@ type step = {
      from runner_spec.disabled_agreements). The runner combines this
      with the CLI's --disable-contract list before evaluating
      Expect_compat_failure. *)
-  disabled_agreements : Canary_agreement.agreement_id list;
+  disabled_agreements : Canary_agreement_common.agreement_id list;
 }
 
 type logger = {
