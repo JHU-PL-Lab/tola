@@ -134,7 +134,41 @@ let predicted_contains_any_v2 ?(disabled = []) ~resolve
   |> List.dedup_and_sort ~compare:String.compare
 
 
-let inputs_of_agreement ?mechanism (c : Canary_agreement.agreement_id)
+(** WHERE a binding's inspection sits. Measured 2026-09-02 across every
+    project's run outputs rather than assumed, because the answer turned
+    out to be three-way and the template had been claiming one answer
+    for all of it ([build_binding_<lang>], unconditionally):
+
+    - FETCHED (ssl's opam binding, z3's pip wheel) → the fetch step.
+      The framework's own summaries attach at the install
+      ([Canary_step_builder]'s [auto_binding_summaries] matches exactly
+      [Fetch (Binding _)] and [Publish (Binding OCaml)]), and both
+      projects hand-wrote [fetch_binding_<lang>/…] to say so.
+    - BUILT IN THE WORKSPACE (tiny, zarith) → the build step, which is
+      where those two actually emit and what this template already
+      described.
+    - BUILT THEN PUBLISHED (llvm packs into opam and inspects the
+      published package) → the pack step. This one is NOT derived: the
+      world says how an artifact was provisioned, not whether the
+      project publishes it, and no declaration carries that bit today.
+      llvm therefore still writes its own paths, and the pin
+      [agreements.derived_evidence_matches_projects] records the gap so
+      that closing it is noticed. *)
+let binding_evidence_tag (w : Canary_artifact.assignment)
+    (l : Canary_lang.lang) : string =
+  let a =
+    match Canary_artifact.provision_of_binding w l with
+    | Canary_store.Fetched -> Canary_basic.Fetch (Canary_basic.Binding l)
+    (* Absent covers the callers that pass no world at all (tiny and the
+       Pattern A template): the build tree is what they have always
+       meant, so an unconverted caller keeps its answer *)
+    | Canary_store.Built | Canary_store.Installed | Canary_store.Vendored
+    | Canary_store.Absent ->
+        Canary_basic.Build_binding l
+  in
+  Canary_basic.string_of_action a
+
+let inputs_of_agreement ?mechanism ?(world = []) (c : Canary_agreement.agreement_id)
     (l : Canary_lang.lang) : Canary_agreement.inspect_input list =
   let open Canary_agreement in
   (* mechanism defaults to the language's default (static for OCaml/Python
@@ -151,26 +185,42 @@ let inputs_of_agreement ?mechanism (c : Canary_agreement.agreement_id)
       Canary_mechanism.Dynamic_ffi
   in
   let tag action = Canary_basic.string_of_action action in
-  let build_binding_tag = tag (Canary_basic.Build_binding l) in
+  let binding_tag = binding_evidence_tag world l in
+  (* the LIB half is NOT a convention yet, and saying so is more honest
+     than deriving it: sqlite and zarith attach the native inspection at
+     [build_lib], z3 and llvm at [probe_lib] (llvm with per-location
+     suffixes, [probe_lib_apt] / [probe_lib_staged]). It is a project
+     choice today because [spec.inspect] is a per-project override,
+     where the BINDING summaries are framework-generated. Generalizing
+     it is the user's open point B — "should the inspect be general so
+     it must have" — and until it is, a project that puts its lib
+     inspection elsewhere still declares that one path itself. *)
   let build_lib_tag = tag Canary_basic.Build_lib in
   match c, l with
   | C1, (Canary_lang.OCaml | Canary_lang.Python) when not is_dynamic ->
-      [ C_stub [ build_binding_tag ^ "/inspect.json" ];
+      [ C_stub [ binding_tag ^ "/inspect.json" ];
         Native_lib [ build_lib_tag ^ "/inspect.json" ] ]
   | C1, (Canary_lang.OCaml | Canary_lang.Python) ->
       (* dynamic: no compiled stub to inspect — the runtime fallback
          (probe.log presence) catches missing-symbol failures *)
       []
+  (* the BASENAMES stay as they were: they are tiny's, and tiny is the
+     template's only live consumer (with the Pattern A binding). The
+     framework's auto-summaries spell the same things differently —
+     "inspect" is the mli there and the stub here — which the resolver
+     papers over with [name_variants]. One name per artifact would be
+     better than a tolerant reader, but that is a rename across the
+     emitter, the resolver and the stored outputs, not a line here. *)
   | C2, Canary_lang.OCaml ->
-      [ Ocaml_mli [ build_binding_tag ^ "/inspect_mli.json" ] ]
+      [ Ocaml_mli [ binding_tag ^ "/inspect_mli.json" ] ]
   | C2, Canary_lang.Python ->
-      [ Python_attrs [ build_binding_tag ^ "/inspect_attrs.json" ] ]
+      [ Python_attrs [ binding_tag ^ "/inspect_attrs.json" ] ]
   | C4, Canary_lang.Python when not is_dynamic ->
       [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
-        Abi_surface [ build_binding_tag ^ "/inspect.json" ] ]
+        Abi_surface [ binding_tag ^ "/inspect.json" ] ]
   | C5, Canary_lang.Python when not is_dynamic ->
       [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
-        Versioned_req [ build_binding_tag ^ "/inspect.json" ] ]
+        Versioned_req [ binding_tag ^ "/inspect.json" ] ]
   | C6, Canary_lang.OCaml when not is_dynamic ->
       [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
         Typed_binding_stub
@@ -243,8 +293,13 @@ type agreement_row = {
   ag_evidence  : evidence;
   ag_provenance : provenance;
   ag_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
+                 Canary_artifact.assignment ->
                  Canary_agreement.inspect_input list;
-      (** the step-2 template ([inputs_of_agreement]) *)
+      (** WHAT it reads ([inputs_of_agreement]). The world is a
+          parameter for the same reason it is one on [ag_firing]: an
+          artifact's evidence sits in the output dir of the step that
+          produced it, and which step that is depends on how the world
+          provisioned it. *)
   ag_firing    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_artifact.assignment -> Canary_basic.action list;
       (** WHERE it fires — over the ACTION CATALOGUE
@@ -356,8 +411,8 @@ let row ~slug ~doc ~invariant ~reads ~cat ~claim ~evidence ?(provenance = Added)
     ag_evidence = evidence;
     ag_provenance = provenance;
     ag_inputs =
-      (fun m l ->
-        inputs_of_agreement ~mechanism:m id l);
+      (fun m l w ->
+        inputs_of_agreement ~mechanism:m ~world:w id l);
     ag_firing = firing;
     ag_fault_tags = tags }
 
@@ -755,5 +810,5 @@ let agreements_for ~(mechanism : Canary_mechanism.mechanism)
         | Some a -> List.exists sites ~f:(fun s -> Poly.equal s a)
       in
       if fires && r.ag_check.Canary_agreement.enabled then
-        Some (r, r.ag_inputs mechanism lang)
+        Some (r, r.ag_inputs mechanism lang world)
       else None)

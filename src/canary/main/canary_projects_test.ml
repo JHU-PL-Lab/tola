@@ -320,6 +320,100 @@ let llvm_lowering_derived : Canary_project_test.pure_test =
        | _ -> false)
       && sm_is_success (lower (B.Probe_binding Canary_lang.Python) pip_loc)) }
 
+(* The framework's DERIVED evidence path must be the one the projects
+   independently hand-wrote (2026-09-02). Three tables written at three
+   different times agree on the rule — a binding's inspection lives in
+   its INSTALL step's output dir — and until now the template
+   contradicted all three by naming [build_binding_<lang>], a step that
+   carries no binding inspection in any world. The check is worth having
+   as a pin rather than a comment because it is what lets these tables
+   be deleted: a derivation that reproduces them is a safe replacement,
+   and this fails the moment it stops reproducing them. *)
+let derived_evidence_matches_projects : Canary_project_test.pure_test =
+  { name = "agreements.derived_evidence_matches_projects";
+    check = (fun () ->
+      let module R = Canary_agreement_registry in
+      let module CS = Canary_scenario in
+      let world lang provision : Canary_artifact.assignment =
+        [ ( Canary_artifact.a_binding lang Canary_mechanism.Cstubs,
+            { Canary_artifact.provision;
+              version = Canary_basic.good Canary_basic.Dev } ) ]
+      in
+      (* what the framework derives, as a flat path list *)
+      let paths_of = List.concat_map ~f:(function
+        | Canary_agreement.Ocaml_mli ps | Canary_agreement.Python_attrs ps
+        | Canary_agreement.C_stub ps -> ps
+        | _ -> [])
+      in
+      let derived lang provision id =
+        paths_of (R.inputs_of_agreement ~world:(world lang provision) id lang)
+      in
+      (* what a project declared, as the same flat list *)
+      let declared (bs : CS.agreement_binding list) =
+        List.concat_map bs ~f:(fun b ->
+            List.concat_map b.CS.firings ~f:(fun f ->
+                match f.CS.source with
+                | CS.From_artifact { inputs; _ } -> paths_of inputs
+                | _ -> []))
+      in
+      let tag p = match String.lsplit2 p ~on:'/' with
+        | Some (t, _) -> t | None -> p
+      in
+      let tags l = List.map l ~f:tag in
+      let derived_tag lang provision =
+        match derived lang provision Canary_agreement.C2 with
+        | p :: _ -> tag p
+        | [] -> "«none»"
+      in
+      (* ssl: an opam-fetched OCaml binding. Its C2 firing names
+         fetch_binding_ocaml; the second firing's inspect_nlv.json is a
+         project-specific SECOND view of the same artifact, so only the
+         tag is shared — which is the part being derived. *)
+      let ssl_tags = tags (declared Canary_project_ssl.ssl_agreement_bindings) in
+      let ssl_ok =
+        (not (List.is_empty ssl_tags))
+        && List.for_all ssl_tags ~f:(String.equal "fetch_binding_ocaml")
+        && String.equal (derived_tag Canary_lang.OCaml Canary_store.Fetched)
+             "fetch_binding_ocaml"
+      in
+      (* z3: a pip-fetched Python binding *)
+      let z3_ok =
+        List.equal String.equal
+          (tags (declared Canary_project_z3.z3_agreement_bindings))
+          [ "fetch_binding_python" ]
+        && String.equal (derived_tag Canary_lang.Python Canary_store.Fetched)
+             "fetch_binding_python"
+      in
+      (* tiny and the Pattern A template pass NO world and mean the
+         build tree — the convention this template was written for, and
+         the one an unconverted caller must keep getting *)
+      let workspace_ok =
+        String.equal (derived_tag Canary_lang.OCaml Canary_store.Built)
+          "build_binding_ocaml"
+        && String.equal (derived_tag Canary_lang.OCaml Canary_store.Absent)
+             "build_binding_ocaml"
+      in
+      (* llvm is the THIRD case and the one still out of reach: it packs
+         its built binding into opam and inspects the published package,
+         and nothing declares that a project publishes. So its table
+         names pack_binding_ocaml where the derivation says
+         build_binding_ocaml. This asserts the gap rather than hiding
+         it: add the publish bit and this pin fails, which is the
+         reminder to derive llvm's path and delete its table. *)
+      let llvm_binding_tags =
+        List.filter
+          (tags (declared Canary_project_llvm.llvm_stable_agreement_bindings))
+          ~f:(fun t -> String.is_substring t ~substring:"binding")
+      in
+      let llvm_gap_still_open =
+        List.mem llvm_binding_tags "pack_binding_ocaml" ~equal:String.equal
+        && not
+             (String.equal
+                (derived_tag Canary_lang.OCaml Canary_store.Built)
+                "pack_binding_ocaml")
+      in
+      ssl_ok && z3_ok && workspace_ok && llvm_gap_still_open) }
+
 (* ── milestone-(b) first slice pin: declared runtime edges (on the spec
    rows' [ax_runtime]) resolve to the two-instance pairing per scenario ──
    sqlite (the live case): python is Ambient in EVERY world (bundled lib —
@@ -3897,6 +3991,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
 let base_tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
+      derived_evidence_matches_projects;
       (* z3's binding no longer follows the lib (2026-08-19) — the
          mismatch-matrix pin below asserts the opposite claim for it;
          llvm still follows, so the lockstep pin still applies there *)
