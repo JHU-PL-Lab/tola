@@ -2100,6 +2100,42 @@ let agreement_tiers_pin : pure_test =
                        || List.mem Canary_agreement_composed.composes other
                             ~equal:String.equal))) }
 
+(* A LANGUAGE FACT is stated once, in that language's module
+   (2026-09-03). The families state CLAIMS, which are language-neutral:
+   c2 says the same sentence for OCaml and for Python and only the
+   surface differs. So a family that spells an OCaml-specific path has
+   taken a fact that is not its own, and this fails.
+
+   The literals, not the ADT constructors: a family legitimately
+   MATCHES on [Ocaml_mli] in its predict — that is reading evidence it
+   was handed. What it may not do is decide where that evidence lives.
+
+   The list grows one entry per language as the per-language modules
+   land; today it is OCaml's two surfaces. *)
+let language_facts_pin : pure_test =
+  { name = "agreements.language_facts_live_with_the_language";
+    check =
+      (fun () ->
+        match Sys_unix.file_exists agreement_dir with
+        | `No | `Unknown -> true
+        | `Yes ->
+            let ocaml_specific =
+              [ "inspect_mli"; "inspect_typed_binding_stub_ocaml" ]
+            in
+            let bad =
+              List.filter_map (agreement_families ()) ~f:(fun (name, code) ->
+                  let taken =
+                    List.filter ocaml_specific ~f:(fun lit ->
+                        String.is_substring code ~substring:lit)
+                  in
+                  if List.is_empty taken then None
+                  else Some (name ^ ": " ^ String.concat ~sep:", " taken))
+            in
+            if not (List.is_empty bad) then
+              Fmt.pr "    a family spells a language's own path: %s@."
+                (String.concat ~sep:" | " bad);
+            List.is_empty bad) }
+
 (* The per-check MODULE pattern (2026-09-02, user): a check lives in its
    own module with a descriptive category, a falsifier-phrased
    statement, and whatever function signature suits it. This pins the
@@ -2243,7 +2279,8 @@ let all_tests : pure_test list =
   @ agreement_fixture_tests
   @ agreement_bridge_pins
   @ [ check_module_pattern_pin; agreement_tiers_pin;
-      agreement_module_shape_pin; agreements_for_pin ]
+      agreement_module_shape_pin; language_facts_pin;
+      agreements_for_pin ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the

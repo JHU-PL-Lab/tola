@@ -354,6 +354,23 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
        | Sym_version_compatible | Sym_version_unknown -> [])
   | _ -> []
 
+(* ── what a CONSUMER has to offer these two ──
+
+   Both identity agreements read the consumer's recorded NEEDED /
+   version requirements, so they fire only where the consumer keeps
+   those in an artifact canary can read. That is a fact about the
+   LANGUAGE, and it now lives with the language (2026-09-03): this
+   family used to spell it [| Canary_lang.Python, false ->], which is
+   the branch rather than the reason for it.
+
+   Python answers yes inline until its own module lands — a cext is a
+   .so and records both. *)
+let consumer_records_needed (l : Canary_lang.lang) : bool =
+  match l with
+  | Canary_lang.OCaml ->
+      Canary_agreement_ocaml.records_needed_in_a_readable_artifact
+  | _ -> true
+
 let c4 : description =
   { about = soname;
     claim = Structural;
@@ -364,13 +381,10 @@ let c4 : description =
     firing = firing_with_build_lib;
     inputs =
       (fun m l w ->
-        (* only the cext surfaces NEEDED today — an OCaml binding's
-           NEEDED lives on the linked exe, not the .cmxa *)
-        match (l, is_dynamic m) with
-        | Canary_lang.Python, false ->
-            [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
-              Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
-        | _ -> []);
+        if consumer_records_needed l && not (is_dynamic m) then
+          [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
+            Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+        else []);
     counterexamples =
       [ (* the SOLO cell: the built lib's elf soname vs the declared
            one — the linker's -Wl,-soname is the black box, the elf is
@@ -394,11 +408,10 @@ let c5 : description =
     firing = firing_with_build_lib;
     inputs =
       (fun m l w ->
-        match (l, is_dynamic m) with
-        | Canary_lang.Python, false ->
-            [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
-              Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
-        | _ -> []);
+        if consumer_records_needed l && not (is_dynamic m) then
+          [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
+            Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+        else []);
     counterexamples =
       [ (* the SOLO cell: the version script applied — a declared tag
            must appear among the built lib's @@VER annotations *)

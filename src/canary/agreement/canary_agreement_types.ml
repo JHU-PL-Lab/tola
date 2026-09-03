@@ -212,9 +212,10 @@ let c6 : description =
       (fun m l _ ->
         match (l, is_dynamic m) with
         | Canary_lang.OCaml, false ->
+            (* the header is the NATIVE side and language-neutral; the
+               stub surface is OCaml's, and says so there *)
             [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
-              Typed_binding_stub
-                [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
+              Canary_agreement_ocaml.typed_stub_surface ]
         | _ -> []);
     (* pends its fixture: the typed-signature JSON shape is the one
        loader with no synthetic body written for it yet *)

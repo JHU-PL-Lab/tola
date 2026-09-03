@@ -136,7 +136,9 @@ let c2 : description =
       (fun _ l w ->
         let tag = binding_evidence_tag w l in
         match l with
-        | Canary_lang.OCaml -> [ Ocaml_mli [ tag ^ "/inspect_mli.json" ] ]
+        (* the CLAIM is identical across languages; only the surface
+           differs, so each language says where its own is (2026-09-03) *)
+        | Canary_lang.OCaml -> [ Canary_agreement_ocaml.user_surface tag ]
         | Canary_lang.Python -> [ Python_attrs [ tag ^ "/inspect_attrs.json" ] ]
         | _ -> []);
     counterexamples =
