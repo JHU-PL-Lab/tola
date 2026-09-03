@@ -165,7 +165,7 @@ fi|}]
         p
       in
       let derived =
-        Canary_agreement_registry.predicted_contains_any
+        Canary_agreement.predicted_contains_any
           ~disabled:step.disabled_agreements ~resolve inputs
       in
       (* THE DERIVED VARIANT DECIDES ITS OWN POLARITY (2026-08-28).

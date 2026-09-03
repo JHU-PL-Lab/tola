@@ -332,7 +332,7 @@ let llvm_lowering_derived : Canary_project_test.pure_test =
 let derived_evidence_matches_projects : Canary_project_test.pure_test =
   { name = "agreements.derived_evidence_matches_projects";
     check = (fun () ->
-      let module R = Canary_agreement_registry in
+      let module R = Canary_agreement in
       let module CS = Canary_scenario in
       let world lang provision : Canary_artifact.assignment =
         [ ( Canary_artifact.a_binding lang Canary_mechanism.Cstubs,
@@ -2344,7 +2344,7 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
           String.equal
             (Canary_basic.step_dir_of_tag binding_tag)
             "build_binding/ocaml"
-          && (match Canary_agreement_registry.inputs_of_agreement Canary_agreement_common.C1 Canary_lang.OCaml with
+          && (match Canary_agreement.inputs_of_agreement Canary_agreement_common.C1 Canary_lang.OCaml with
               | [ Canary_agreement_common.C_stub [ stub_rel ];
                   Canary_agreement_common.Native_lib [ lib_rel ] ] ->
                   String.is_prefix stub_rel ~prefix:(binding_tag ^ "/")

@@ -1,28 +1,34 @@
-(** The contract registry — M2 step 6
-    ([doc/canary/design/agreement_registry_audit.md], 2026-08-17; the
-    former agreement_registry.md merged into it 2026-08-21).
+(** [Canary_agreement] — TIER 3: THE LIST, and everything derived from
+    it. Design: [doc/canary/design/agreement_registry.md].
 
-    Producer-first: the BELIEF in one table — one row per contract.
-    Consumers (the expectation lowering, the per-project binding
-    tables, spec-check, the tiny oracle) migrate in phase 2; until
-    then this module is additive and nothing reads it but the pins.
+    The agreement layer is three tiers: [Canary_agreement_common]
+    declares the types; each [Canary_agreement_<topic>] is one family
+    that uses them to describe ITSELF; this module gathers the families
+    and is what everyone else consults. Named for the thing rather than
+    the shape of it (2026-09-02, user: "the _registry suffix ... is not
+    very easy to read"), which also sorts it first in the directory,
+    ahead of the families.
 
-    A row states:
-    - WHAT the invariant is ([ag_invariant], falsifier-phrased — a
-      check is a DISPROVER, never a proof, design §5);
-    - HOW we check it — the existing [Canary_agreement_common.agreement_check]
-      pipeline (id/status/predict) + the input template;
-    - what it CLAIMS and how that is observed ([ag_claim] /
-      [ag_evidence]), plus its descriptive category ([ag_cat], taken
-      from the check's own module);
-    - WHERE it fires — over the ACTION CATALOGUE (any action kind),
-      derived from mechanism × provision (design §3);
-    - the fault tags it answers to (step 9's mapping as data).
+    A ROW is three things and no more — a slug, a doc anchor, and the
+    family module that describes the agreement:
 
-    Layering: surface/ — depends only on base/ + the surface theory;
-    the firing domain is [Canary_basic.action] (base vocabulary — no
-    new firing type invented here). The action layer refines an action
-    into a concrete [Canary_scenario.firing_site] in phase 2. *)
+      row C1 ~slug:"symbol_exported" ~doc:"§3.3"
+        ~desc:Canary_agreement_symbols.c1
+
+    Everything else here is DERIVED from that list: the predict
+    dispatch ([predicted_by_agreement] / [predicted_contains_any],
+    which is what a run actually calls), [inputs_of_agreement] (a
+    lookup), the gathered counterexamples, the belief matrix and its
+    fill list, the proposed-agreement table, [all_agreements] for
+    printing, and [agreements_for] (facts in, checks out).
+
+    What is NOT here, deliberately: no sentence, no category, no input
+    path, no counterexample. Every one of those was here once, and
+    every one of them had drifted from the family's copy.
+
+    Layering: agreement/ depends only on base/. The firing domain is
+    [Canary_basic.action] — base vocabulary, no new firing type
+    invented here. *)
 
 open Base
 

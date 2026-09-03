@@ -812,7 +812,7 @@ let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_matches_tiny_convention";
     check = (fun () ->
       let module CC = Canary_agreement_common in
-      let template = Canary_agreement_registry.inputs_of_agreement in
+      let template = Canary_agreement.inputs_of_agreement in
       let eq c l expected =
         Poly.equal (template c l) expected
       in
@@ -1343,7 +1343,7 @@ let agreement_registry_complete_pin : pure_test =
   { name = "contracts.registry_complete";
     check =
       (fun () ->
-        let module CR = Canary_agreement_registry in
+        let module CR = Canary_agreement in
         let ids = Canary_agreement_common.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
         let rows = CR.agreement_registry in
         (* one row per id, non-empty invariant, exactly one tag *)
@@ -1358,12 +1358,12 @@ let agreement_registry_complete_pin : pure_test =
         in
         (* every registered check referenced exactly once *)
         let checks_ok =
-          List.for_all Canary_agreement_registry.registered_checks
+          List.for_all Canary_agreement.registered_checks
             ~f:(fun ck ->
               List.count rows ~f:(fun r ->
                   Poly.equal r.CR.ag_check.Canary_agreement_common.id ck.id)
               = 1)
-          && List.length rows = List.length Canary_agreement_registry.registered_checks
+          && List.length rows = List.length Canary_agreement.registered_checks
         in
         (* the tag mapping (scenario.md's catalogue) *)
         let tag id =
@@ -1422,7 +1422,7 @@ let agreement_registry_firing_pin : pure_test =
   { name = "contracts.firing_defaults";
     check =
       (fun () ->
-        let module CR = Canary_agreement_registry in
+        let module CR = Canary_agreement in
         let f = (CR.row_of C1).CR.ag_desc.Canary_agreement_common.firing in
         let eq got want = Poly.equal got want in
         (* the uniform worlds these cases were written against: firing
@@ -1467,7 +1467,7 @@ let agreement_registry_firing_pin : pure_test =
    new contract lands WITH its fixture; a changed predict breaks
    this pin. *)
 let agreement_fixture_tests : pure_test list =
-  let module CR = Canary_agreement_registry in
+  let module CR = Canary_agreement in
   let tmp_root = "_out/canary/test/contract-fixtures" in
   let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
   let execute (_id, (fx : Canary_agreement_common.fixture)) : bool =
@@ -1714,7 +1714,7 @@ let lib_name_optional_pin : pure_test =
    agreement_registry.md. Doc/code drift is then a test failure rather
    than something noticed later. *)
 let agreement_bridge_pins : pure_test list =
-  let module CR = Canary_agreement_registry in
+  let module CR = Canary_agreement in
   let doc = "doc/canary/design/agreement_registry.md" in
   [ { name = "agreements.slugs_unique_and_named";
       check =
@@ -2012,7 +2012,7 @@ let agreements_for_pin : pure_test =
   { name = "agreements.facts_in_checks_out";
     check =
       (fun () ->
-        let module R = Canary_agreement_registry in
+        let module R = Canary_agreement in
         let world ~lib ~binding : Canary_artifact.assignment =
           let at id p =
             (id, { Canary_artifact.provision = p;

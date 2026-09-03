@@ -342,7 +342,7 @@ let opam_binding_agreement_bindings : Canary_scenario.agreement_binding list =
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = Canary_agreement_registry.inputs_of_agreement CC.C1 Canary_lang.OCaml;
+            inputs = Canary_agreement.inputs_of_agreement CC.C1 Canary_lang.OCaml;
             version_info = None;
           }};
       ]} ]

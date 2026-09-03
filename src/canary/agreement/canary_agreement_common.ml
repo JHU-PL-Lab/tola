@@ -3,7 +3,7 @@
     The agreement layer is three tiers (2026-09-02, user): this module
     declares the common types; each [canary_agreement_<topic>] is one concrete
     family that uses those types to describe ITSELF; and
-    [Canary_agreement_registry] lists the families and derives the views
+    [Canary_agreement] lists the families and derives the views
     others read. A family refers only to this module — pinned by
     [agreements.families_do_not_reach_sideways].
 
@@ -147,7 +147,7 @@ type inspect_input =
    sits in (L0/L1b/L2/L3/L4), an enable flag, and the predicate that
    turns [inspect_input list] into expected failure substrings.
 
-   The rows and the dispatch live in {!Canary_agreement_registry}; this
+   The rows and the dispatch live in {!Canary_agreement}; this
    file defines only the types, so they are available to every check
    family below the registry. That is also why the CATEGORY lives here
    (2026-09-02, user: "why do we need a check_cat file separately? can

@@ -5,7 +5,7 @@ manuscript ↔ code. It is retired: it was a *third copy* of facts that
 each had an owner elsewhere, so every row drifted at whatever rate its
 two real ends were edited — and the measurement that ended it found the
 drift was this file's own (its `Sf` table lagged behind both the draft
-and `canary_agreement_registry.ml`, which already agreed).
+and `canary_agreement.ml`, which already agreed).
 
 **The stub stays because the source cites it in 33 places.** Those
 citations name a section; this table says where that section went.
@@ -24,4 +24,4 @@ Repointing them is mechanical and unblocked.
 agree on an id, the fix is a generated fragment plus a check that
 diffs it — not a third hand-maintained copy. The `Ag.X` ↔ `C1..C8`
 mapping is the one bridge worth generating, and
-`canary_agreement_registry.ml` already holds the data to generate it.
+`canary_agreement.ml` already holds the data to generate it.

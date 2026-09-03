@@ -262,7 +262,7 @@ on per-language artifact, language tools, binding mechanisms
 - **A taxonomy of the defects** this exposes. [to write]
 
 *Material: design/agreement_registry_audit.md (the backbone);
-canary_agreement_registry.ml.*
+canary_agreement.ml.*
 
 ## 5. Evidence
 

@@ -17,7 +17,7 @@
     WOULD be checked, which is the thing to compare a run against. *)
 
 open Base
-module R = Canary_agreement_registry
+module R = Canary_agreement
 
 type entry = {
   en_action    : Canary_basic.action;

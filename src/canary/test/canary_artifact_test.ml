@@ -82,11 +82,11 @@ let compat_pure_tests =
   in
   let mli_path = write_inspect "ocaml_mli" "mli.json" [ "Llvm.Opcode.UncondBr" ] in
   let py_path  = write_inspect "python"   "py.json"  [ "Solver.add"; "BitVec" ] in
-  let l3_only = Canary_agreement_registry.predicted_contains_any ~resolve:Fn.id
+  let l3_only = Canary_agreement.predicted_contains_any ~resolve:Fn.id
       [ Canary_agreement_common.Ocaml_mli [ mli_path ] ] in
-  let py_only = Canary_agreement_registry.predicted_contains_any ~resolve:Fn.id
+  let py_only = Canary_agreement.predicted_contains_any ~resolve:Fn.id
       [ Canary_agreement_common.Python_attrs [ py_path ] ] in
-  let mixed = Canary_agreement_registry.predicted_contains_any ~resolve:Fn.id
+  let mixed = Canary_agreement.predicted_contains_any ~resolve:Fn.id
       [ Canary_agreement_common.Ocaml_mli [ mli_path ]; Canary_agreement_common.Python_attrs [ py_path ] ] in
   let mem xs s = List.mem xs s ~equal:String.equal in
   [
@@ -104,14 +104,14 @@ let compat_pure_tests =
         mem mixed "UncondBr" && mem mixed "BitVec" };
     { name = "compat.empty_inputs";
       check = fun () ->
-        List.is_empty (Canary_agreement_registry.predicted_contains_any ~resolve:Fn.id []) };
+        List.is_empty (Canary_agreement.predicted_contains_any ~resolve:Fn.id []) };
     (* A7 phase 1 — the per-contract form. Both fixture inputs are L3
        completeness, so exactly ONE registry row fires (c2) and it carries
        the union of both inputs' expansions. *)
     { name = "compat.by_agreement_attribution";
       check = fun () ->
         match
-          Canary_agreement_registry.predicted_by_agreement ~resolve:Fn.id
+          Canary_agreement.predicted_by_agreement ~resolve:Fn.id
             [ Canary_agreement_common.Ocaml_mli [ mli_path ];
               Canary_agreement_common.Python_attrs [ py_path ] ]
         with
@@ -123,7 +123,7 @@ let compat_pure_tests =
     { name = "compat.by_agreement_flatten_equals_flat";
       check = fun () ->
         let flat =
-          Canary_agreement_registry.predicted_by_agreement ~resolve:Fn.id
+          Canary_agreement.predicted_by_agreement ~resolve:Fn.id
             [ Canary_agreement_common.Ocaml_mli [ mli_path ];
               Canary_agreement_common.Python_attrs [ py_path ] ]
           |> List.concat_map ~f:snd
@@ -159,15 +159,15 @@ let compat_pure_tests =
     { name = "compat.by_agreement_disabled_skips";
       check = fun () ->
         List.is_empty
-          (Canary_agreement_registry.predicted_by_agreement
+          (Canary_agreement.predicted_by_agreement
              ~disabled:[ Canary_agreement_common.C2 ] ~resolve:Fn.id
              [ Canary_agreement_common.Ocaml_mli [ mli_path ] ])
         && List.exists
-             (Canary_agreement_registry.skipped_checks ~disabled:[ Canary_agreement_common.C2 ] ())
+             (Canary_agreement.skipped_checks ~disabled:[ Canary_agreement_common.C2 ] ())
              ~f:(fun (c, reason) ->
                Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C2
                && String.equal reason "disabled per call")
-        && List.exists (Canary_agreement_registry.skipped_checks ())
+        && List.exists (Canary_agreement.skipped_checks ())
              ~f:(fun (c, reason) ->
                Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C3
                && String.is_substring reason ~substring:"registry") };
@@ -793,12 +793,12 @@ let c2_prediction_pure_tests =
   [
     { name = "c2_prediction.mli_no_missing_no_strings";
       check = fun () ->
-        let r = Canary_agreement_registry.predicted_contains_any ~resolve:Fn.id
+        let r = Canary_agreement.predicted_contains_any ~resolve:Fn.id
             [ Canary_agreement_common.Ocaml_mli [ mli_clean ] ] in
         List.is_empty r };
     { name = "c2_prediction.python_no_missing_no_strings";
       check = fun () ->
-        let r = Canary_agreement_registry.predicted_contains_any ~resolve:Fn.id
+        let r = Canary_agreement.predicted_contains_any ~resolve:Fn.id
             [ Canary_agreement_common.Python_attrs [ py_clean ] ] in
         List.is_empty r };
   ]

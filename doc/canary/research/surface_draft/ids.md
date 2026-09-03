@@ -20,7 +20,7 @@ rather than moved:
 **Read the status columns as history, not fact.** Every `Ar.` and `Sf.`
 row below is marked `drift`, but the drift was *this file's*: the
 manuscript's five surface roles (`Sf.1` native_header … `Sf.5`
-binding_lib) and the code's `canary_agreement_registry.ml` already
+binding_lib) and the code's `canary_agreement.ml` already
 agreed with each other, and only this table lagged. The live surface
 numbering is the draft's. What is still worth having here is the
 **`Ag.X` ↔ `C1..C8` mapping** and the **`Bs.N` catalogue**.

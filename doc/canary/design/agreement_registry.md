@@ -1,7 +1,7 @@
 # Tool-Grounded Agreement Catalogue for Cross-Language Binding Checks
 
 **Kind: proposal.** The producer landed
-(`agreement/canary_agreement_registry.ml` carries the rows); the
+(`agreement/canary_agreement.ml` carries the rows); the
 catalogue's remaining rungs are open. **Landed when** every agreement in
 the catalogue resolves to a check that can ground it.
 
@@ -16,7 +16,7 @@ install/stage, probe. This document is narrower:
 > observed.**
 
 It is about the checking MODEL — not the enumeration engine, not the
-cache. `Canary_agreement_registry` is its executable projection, and the
+cache. `Canary_agreement` is its executable projection, and the
 harness in Appendix B is what keeps the two aligned.
 
 **One inherited open question — where an agreement gets EVALUATED.**
@@ -2145,7 +2145,7 @@ appendix needs to carry:
 
 | file | holds |
 |---|---|
-| `agreement/canary_agreement_registry.ml` | **the table** — one row per agreement (slug, doc anchor, claim, reads, firing, expectation source, fault tags) · the proposed rows · `all_agreements` · the counterexample fixtures · the belief matrix (`belief_matrix` / `pp_belief_matrix` / `fill_list`) · the queries (`predicted_contains_any_v2`, `predicted_by_agreement_v2`, `skipped_checks`, `inputs_of_agreement`) |
+| `agreement/canary_agreement.ml` | **the table** — one row per agreement (slug, doc anchor, claim, reads, firing, expectation source, fault tags) · the proposed rows · `all_agreements` · the counterexample fixtures · the belief matrix (`belief_matrix` / `pp_belief_matrix` / `fill_list`) · the queries (`predicted_contains_any_v2`, `predicted_by_agreement_v2`, `skipped_checks`, `inputs_of_agreement`) |
 | `agreement/canary_agreement_run.ml` | the predicate IMPLEMENTATIONS only — `c1_predict` … `c8_predict`, the decl-comparison predicts, the loaders, the CLI |
 | `agreement/canary_agreement.ml` | the vocabulary and the pure comparators — `inspect_input`, `agreement_id`, `agreement_check`, `check_c_compat`, `check_abi`, … |
 
@@ -2187,9 +2187,9 @@ firing functions compute it — so a table here can only be a snapshot
 that goes stale. It is printed instead:
 
 ```ocaml
-Canary_agreement_registry.belief_matrix  ?mechanism ?lang ?provision ()
-Canary_agreement_registry.pp_belief_matrix ?mechanism ?lang ?provision ()
-Canary_agreement_registry.fill_list      ?mechanism ?lang ?provision ()
+Canary_agreement.belief_matrix  ?mechanism ?lang ?provision ()
+Canary_agreement.pp_belief_matrix ?mechanism ?lang ?provision ()
+Canary_agreement.fill_list      ?mechanism ?lang ?provision ()
 ```
 
 Marks: `✓` fires here AND ships a counterexample fixture · `~` fires,
@@ -2218,7 +2218,7 @@ a stable **slug** and the **section that defines it**:
 { prop_slug = "denotation_across_worlds"; prop_doc = "§6.3.4"; … }  (* proposed *)
 ```
 
-`Canary_agreement_registry.all_agreements` unions both into one list, so
+`Canary_agreement.all_agreements` unions both into one list, so
 there is a single place that answers *what does canary believe, and
 where is it written down*. The slug is the name that survives the
 `c1..c8` renaming settle (§1), so citations do not rot when the ids go.

@@ -655,8 +655,8 @@ let checks_cmd =
     | _, true ->
         (* Appendix A.2 tells the reader to read the matrix from the
            code rather than from a transcribed table; this is where. *)
-        Fmt.pr "%s@." (Canary_agreement_registry.pp_belief_matrix ());
-        let fill = Canary_agreement_registry.fill_list () in
+        Fmt.pr "%s@." (Canary_agreement.pp_belief_matrix ());
+        let fill = Canary_agreement.fill_list () in
         Fmt.pr "@.fill list (%d cell(s) fire without a counterexample):@."
           (List.length fill);
         List.iter
@@ -667,7 +667,7 @@ let checks_cmd =
           fill
     | None, false ->
         (* no project: the registry itself *)
-        Fmt.pr "%s@." (Canary_agreement_registry.pp_agreements ())
+        Fmt.pr "%s@." (Canary_agreement.pp_agreements ())
     | Some name, false -> (
         match List.assoc_opt name Canary_registry.all_projects with
         | Some pr ->
