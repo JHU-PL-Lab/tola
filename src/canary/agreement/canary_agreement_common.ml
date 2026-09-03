@@ -306,7 +306,7 @@ let firing_probe_only (_ : Canary_mechanism.mechanism) (l : Canary_lang.lang)
 
 (** The UNIFORM world: lib and binding both at one provision. It is what
     a single provision argument used to mean, kept for the views that
-    want a hypothetical rather than a real world (the belief matrix, the
+    want a hypothetical rather than a real world (the firing table, the
     fill list). A real caller passes the enumeration's own assignment. *)
 let uniform_world ~(lang : Canary_lang.lang)
     ~(mechanism : Canary_mechanism.mechanism) (p : Canary_store.provision) :
@@ -343,7 +343,7 @@ let build_lib_tag = Canary_basic.string_of_action Canary_basic.Build_lib
 (** A COUNTEREXAMPLE: synthetic inspect JSON plus the failure
     substrings the check MUST yield on it. A check that cannot show one
     is not wired, whatever the registry says about it — which is why
-    the belief matrix marks ✓ only where a fixture exists.
+    the firing table marks ✓ only where a fixture exists.
 
     The bodies are SYNTHETIC. They borrow names from real findings
     ([tiny_sum] and [libtiny.so.1] from the witness,
@@ -427,7 +427,7 @@ type description = {
   counterexamples : fixture list;
       (** the cases that prove it can FAIL — one per cell it covers
           (a solo cell and a pair cell are two). Empty = declared but
-          never shown to fire, which the belief matrix renders [~].
+          never shown to fire, which the firing table renders [~].
           They live with the check for the same reason everything else
           here does: only the check knows what would falsify it
           (2026-09-02). *)

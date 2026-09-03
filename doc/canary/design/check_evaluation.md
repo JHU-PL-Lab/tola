@@ -113,7 +113,7 @@ section means.
 
 A contract is a check with declared inputs and an expected outcome, so
 "registry → check actions" is a projection rather than a translation. That
-gives one place where the belief matrix is defined, and
+gives one place where the firing table is defined, and
 [`status.md`](../status.md)'s entry already names the payoff: every cell
 becomes an action in the graph and the coverage pin becomes an enumeration
 invariant.

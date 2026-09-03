@@ -277,7 +277,7 @@ world). What is NOT done:
   (check_pre/check_post closures) to FIRST-CLASS ACTIONS — the
   enumeration emits `[Pre; Action; Post]` triples and the runner
   interprets checks exactly as commands (uniform warm-mask
-  fingerprinting included). Payoff: the belief matrix (contract
+  fingerprinting included). Payoff: the firing table (contract
   registry) becomes a property of the enumeration — every cell IS an
   action in the graph, and the coverage pin becomes an enumeration
   invariant. The smoke probe / staged-parity / decl-comparison cells

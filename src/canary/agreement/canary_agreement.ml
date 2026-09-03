@@ -18,7 +18,7 @@
     Everything else here is DERIVED from that list: the predict
     dispatch ([predicted_by_agreement] / [predicted_contains_any],
     which is what a run actually calls), [inputs_of_agreement] (a
-    lookup), the gathered counterexamples, the belief matrix and its
+    lookup), the gathered counterexamples, the firing table and its
     fill list, the proposed-agreement table, [all_agreements] for
     printing, and [agreements_for] (facts in, checks out).
 
@@ -258,12 +258,21 @@ let inputs_of_agreement ?mechanism ?(world = [])
   in
   (row_of c).ag_desc.Canary_agreement_common.inputs m l world
 
-(* ── THE BELIEF MATRIX (2026-08-18) ──
+(* ── THE FIRING TABLE (2026-08-18; was "the belief matrix" until
+   2026-09-03) ──
    The registry's motivation made visible: enumerate every
-   (contract × action) cell and give each a STATUS. The matrix is
-   TOTAL by construction — every cell has a status, so "the possible
-   invariant matrix" is a table you can read rather than an idea, and
-   "filling it" is a concrete list of [Declared] cells.
+   (agreement × action) cell and give each a STATUS. It is TOTAL by
+   construction — every cell has a status, so where an agreement takes
+   effect is a table you can read rather than an idea, and "filling it"
+   is a concrete list of [Declared] cells.
+
+   Named for FIRING because that is already the word for where an
+   agreement takes effect ([firing_default], [ag_firing],
+   [Canary_scenario.firing_site]), and because "matrix" was taken:
+   [Canary_matrix] renders `canary result`, a grid over nearly the same
+   axes but filled with verdicts FROM REAL RUNS. Two grids called
+   matrix, one measured and one static, was the confusion worth
+   removing (user, 2026-09-02).
 
    Reading the marks:
    - [Wired]    ✓ fires here AND ships a counterexample fixture;
@@ -288,8 +297,8 @@ let mark_of_status = function
 (** The COLUMNS — the general action space one lang's chain can carry
     (the action catalogue, SSOT §6.5). Actions with no cell wired yet
     still appear: the empty columns ARE the picture. *)
-(** The matrix's columns: THE action catalogue, not a copy of it. *)
-let matrix_actions (l : Canary_lang.lang) : Canary_basic.action list =
+(** The table's columns: THE action catalogue, not a copy of it. *)
+let firing_columns (l : Canary_lang.lang) : Canary_basic.action list =
   Canary_basic.actions_of_lang l
 
 let has_fixture (id : Canary_agreement_common.agreement_id) : bool =
@@ -309,21 +318,22 @@ let cell_status_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
     | Canary_agreement_common.Blocked deps -> Blocked deps
     | _ -> if has_fixture r.ag_check.Canary_agreement_common.id then Wired else Declared
 
-(** THE matrix: rows = contracts, columns = actions, under one world. *)
-let belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
+(** THE firing table: rows = agreements, columns = actions, under one
+    world. *)
+let firing_table ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
     (agreement_row * (Canary_basic.action * cell_status) list) list =
   let world = uniform_world ~lang ~mechanism provision in
   List.map agreement_registry ~f:(fun r ->
       ( r,
-        List.map (matrix_actions lang) ~f:(fun a ->
+        List.map (firing_columns lang) ~f:(fun a ->
             (a, cell_status_of r ~mechanism ~lang ~world a)) ))
 
-(** Render the matrix as a text table (the CLI view). *)
-let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
+(** Render the firing table as text (the CLI view). *)
+let pp_firing_table ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () : string =
-  let m = belief_matrix ~mechanism ~lang ~provision () in
-  let cols = matrix_actions lang in
+  let m = firing_table ~mechanism ~lang ~provision () in
+  let cols = firing_columns lang in
   let head =
     "contract | "
     ^ String.concat ~sep:" | "
@@ -348,7 +358,7 @@ let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
 let fill_list ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
     (Canary_agreement_common.agreement_id * Canary_basic.action) list =
-  List.concat_map (belief_matrix ~mechanism ~lang ~provision ())
+  List.concat_map (firing_table ~mechanism ~lang ~provision ())
     ~f:(fun (r, cells) ->
       List.filter_map cells ~f:(fun (a, st) ->
           match st with
@@ -358,7 +368,7 @@ let fill_list ?(mechanism = Canary_mechanism.Cstubs)
 (* ── PROPOSED agreements — the catalogue's holes, as data (2026-09-01) ──
    An agreement the doc STATES but the code does not yet implement gets a
    row here rather than being absent. The registry then lists its own
-   gaps, which is the same principle as the belief matrix's `~` marks:
+   gaps, which is the same principle as the firing table's `~` marks:
    a hole should be visible in the artifact that claims completeness.
 
    These carry no [agreement_check] — there is no predict to run — so they

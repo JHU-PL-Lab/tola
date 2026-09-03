@@ -2186,8 +2186,8 @@ firing functions compute it — so a table here can only be a snapshot
 that goes stale. It is printed instead:
 
 ```ocaml
-Canary_agreement.belief_matrix  ?mechanism ?lang ?provision ()
-Canary_agreement.pp_belief_matrix ?mechanism ?lang ?provision ()
+Canary_agreement.firing_table    ?mechanism ?lang ?provision ()
+Canary_agreement.pp_firing_table ?mechanism ?lang ?provision ()
 Canary_agreement.fill_list      ?mechanism ?lang ?provision ()
 ```
 
