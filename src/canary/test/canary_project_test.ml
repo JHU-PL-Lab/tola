@@ -1735,6 +1735,152 @@ let agreement_bridge_pins : pure_test list =
           && List.length CR.all_agreements
              = List.length CR.agreement_registry
                + List.length CR.proposed_agreements) };
+    (* Every CODE IDENTIFIER the doc names must EXIST (2026-09-03).
+       The two pins below check the doc's § anchors, which is why six
+       commits of renaming left them green while the doc went on naming
+       canary_agreement_run.ml (retired), contract_registry (the
+       registry's old name), ag_role (a field removed with the legacy
+       axis) and predicted_*_v2 (renamed).
+
+       Two things it does NOT do, both deliberate. It checks for a
+       DEFINITION rather than a mention, because three source comments
+       still name Canary_agreement_run and a grep would have called the
+       doc correct on their strength. And it skips fenced blocks, where
+       the doc quotes shell and OCaml that is not required to exist. *)
+    { name = "agreements.doc_names_live_code";
+      check =
+        (fun () ->
+          if not (Stdlib.Sys.file_exists doc) then true
+          else
+            let text =
+              Stdlib.In_channel.with_open_text doc Stdlib.In_channel.input_all
+            in
+            let rec walk dir acc =
+              Sys_unix.readdir dir |> Array.to_list
+              |> List.fold ~init:acc ~f:(fun acc e ->
+                     let p = dir ^ "/" ^ e in
+                     match Sys_unix.is_directory p with
+                     | `Yes -> walk p acc
+                     | _ ->
+                         if String.is_suffix e ~suffix:".ml" then
+                           (e, Stdio.In_channel.read_all p) :: acc
+                         else acc)
+            in
+            let sources = walk "src" [] in
+            let file_of base =
+              List.find_map sources ~f:(fun (e, body) ->
+                  if String.equal e base then Some body else None)
+            in
+            (* a definition or a literal, not a passing mention: [let x],
+               [type x], a labelled argument, a string literal, or a
+               record field (whose colon may sit any number of spaces
+               away, which the first version of this got wrong) *)
+            let defined_in body tok =
+              List.exists
+                [ "let " ^ tok; "type " ^ tok; "~" ^ tok; "\"" ^ tok ^ "\"" ]
+                ~f:(fun pat -> String.is_substring body ~substring:pat)
+              ||
+              let n = String.length body and m = String.length tok in
+              let rec go i =
+                match String.substr_index body ~pos:i ~pattern:tok with
+                | None -> false
+                | Some at ->
+                    let before_ok =
+                      at = 0 || Char.is_whitespace body.[at - 1]
+                    in
+                    let rec skip k =
+                      if k < n && Char.equal body.[k] ' ' then skip (k + 1) else k
+                    in
+                    let after = skip (at + m) in
+                    if before_ok && after < n && Char.equal body.[after] ':' then
+                      true
+                    else go (at + 1)
+              in
+              go 0
+            in
+            let defined tok =
+              List.exists sources ~f:(fun (_, body) -> defined_in body tok)
+            in
+            (* Names from the THEORY or the world, not from our code:
+               two surface roles, two proposed artifacts, and an
+               ncurses symbol from the §5.3 finding. A new entry here
+               is a deliberate statement that the doc means something
+               other than a definition in src/. *)
+            let doc_vocabulary =
+              [ "native_header"; "binding_header"; "app_direct";
+                "app_via_helper"; "cur_term" ]
+            in
+            let backticked =
+              let lines = String.split_lines text in
+              let _, toks =
+                List.fold lines ~init:(false, []) ~f:(fun (fenced, acc) line ->
+                    if String.is_prefix (String.lstrip line) ~prefix:"```" then
+                      (not fenced, acc)
+                    else if fenced then (fenced, acc)
+                    else
+                      let rec go acc i =
+                        match String.substr_index line ~pos:i ~pattern:"`" with
+                        | None -> acc
+                        | Some a -> (
+                            match
+                              String.substr_index line ~pos:(a + 1) ~pattern:"`"
+                            with
+                            | None -> acc
+                            | Some b ->
+                                go
+                                  (String.sub line ~pos:(a + 1) ~len:(b - a - 1)
+                                  :: acc)
+                                  (b + 1))
+                      in
+                      (fenced, go acc 0))
+              in
+              List.dedup_and_sort toks ~compare:String.compare
+            in
+            let is_snake t =
+              (not (String.is_empty t))
+              && Char.is_lowercase t.[0]
+              && String.exists t ~f:(Char.equal '_')
+              && String.for_all t ~f:(fun ch ->
+                     Char.is_lowercase ch || Char.is_digit ch || Char.equal ch '_')
+            in
+            let bad =
+              List.filter backticked ~f:(fun t ->
+                  (* metavariables and globs name a SHAPE, not a
+                     definition: canary_agreement_<topic>.ml,
+                     canary_pm_*.ml *)
+                  if
+                    String.exists t ~f:(fun c ->
+                        Char.equal c '*' || Char.equal c ' ' || Char.equal c '<'
+                        || Char.equal c '>')
+                  then false
+                  else
+                    let base =
+                      Option.value (List.last (String.split t ~on:'/')) ~default:t
+                    in
+                    if String.is_suffix base ~suffix:".ml" then
+                      String.length base > 3 && Option.is_none (file_of base)
+                    else if String.is_prefix t ~prefix:"Canary_" then
+                      let m, member =
+                        match String.lsplit2 t ~on:'.' with
+                        | Some (m, mem) -> (m, Some mem)
+                        | None -> (t, None)
+                      in
+                      match file_of (String.lowercase m ^ ".ml") with
+                      | None -> true
+                      | Some body -> (
+                          match member with
+                          | None -> false
+                          | Some mem -> not (String.is_substring body ~substring:mem))
+                    else
+                      is_snake t
+                      && (not (List.mem doc_vocabulary t ~equal:String.equal))
+                      && not (defined t))
+            in
+            if not (List.is_empty bad) then
+              Fmt.pr
+                "    doc names code that has no definition: %s@."
+                (String.concat ~sep:", " bad);
+            List.is_empty bad) };
     (* every PROSE cross-reference resolves too — the gap §10a named.
        Lines mentioning another .md are skipped (their § belongs to that
        document, not this one). *)

@@ -1093,7 +1093,21 @@ let schema_check_cmd ~path ~kind ~asserts =
 
 (* inspect_native.py — kind='native'. Shape: counts.total(int) +
    counts.by_prefix(dict), versioned_req(dict), versioned_exports(dict),
-   watchlist.{present,missing}(lists). *)
+   watchlist.{present,missing}(lists), symbols(list), elf.{soname,needed}.
+
+   THE FIELDS A COMPARATOR READS ARE ASSERTED HERE (2026-09-03). The
+   framework axis had a seam down the middle: this half ran the real
+   inspector and checked its output, the pure half fed HAND-WRITTEN
+   JSON to the comparators, and the two never met. So the schema
+   asserted versioned_* (which c5 reads) but not `symbols` (which is
+   c1's entire provider side) or `elf.*` (c4's). If inspect_native.py
+   dropped `symbols`, all 59 agreement-layer tests would still have
+   passed and a real run would have degraded to a runtime warning and a
+   silently empty prediction.
+
+   `elf` is asserted SHAPE-IF-PRESENT rather than present: the script
+   emits it only when the platform's reader works, and readelf is
+   absent on macOS (platform.md's fourth silent-failure class). *)
 let native_schema_cmd path =
   schema_check_cmd ~path ~kind:"native" ~asserts:
     "assert isinstance(d['counts']['total'], int), 'counts.total not int'\n\
@@ -1102,7 +1116,11 @@ let native_schema_cmd path =
      assert isinstance(d['versioned_exports'], dict), 'versioned_exports not dict'\n\
      assert isinstance(d['watchlist']['present'], list), 'watchlist.present not list'\n\
      assert isinstance(d['watchlist']['missing'], list), 'watchlist.missing not list'\n\
-     assert d['counts']['total'] > 0, 'no defined symbols in native fixture'"
+     assert d['counts']['total'] > 0, 'no defined symbols in native fixture'\n\
+     assert isinstance(d['symbols'], list), 'symbols not list (load_native reads it; c1)'\n\
+     assert len(d['symbols']) > 0, 'symbols empty — --emit-symbols lost?'\n\
+     assert 'elf' not in d or isinstance(d['elf'].get('needed'), list), 'elf.needed not list (load_abi_surface reads it; c4)'\n\
+     assert 'elf' not in d or d['elf'].get('soname') is None or isinstance(d['elf']['soname'], str), 'elf.soname not string-or-null'"
 
 (* inspect_ocaml.py — kind='ocaml'. Shape: counts.modules(int),
    counts.imports(list), modules(list), watchlist.{present,missing}. *)

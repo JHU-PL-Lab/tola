@@ -1769,7 +1769,7 @@ evidence for the **resolved** view of §6.3.1 without issuing a verdict
    canary holds both provisions), then no-duplicate-implementation
    covering both forms; firing at `Probe_binding` over a non-`Fetched`
    lib provision, `source = Inspection`.
-4. `Canary_prebuilt.env` — the same world first failed differently:
+4. **prebuilt self-sufficiency** — the same world first failed differently:
    conda's `libtinfow` has its build prefix compiled in for terminfo
    data, so a prebuilt may need env beyond the library path
    (`TERMINFO_DIRS`). It is a relocation failure, so the agreement
@@ -2143,30 +2143,29 @@ Since the table moved into the registry (2026-09-01), the module IS the
 definition and its own docstrings are the detail. This map is what the
 appendix needs to carry:
 
+The layer is three tiers (2026-09-02):
+
 | file | holds |
 |---|---|
-| `agreement/canary_agreement.ml` | **the table** — one row per agreement (slug, doc anchor, claim, reads, firing, expectation source, fault tags) · the proposed rows · `all_agreements` · the counterexample fixtures · the belief matrix (`belief_matrix` / `pp_belief_matrix` / `fill_list`) · the queries (`predicted_contains_any_v2`, `predicted_by_agreement_v2`, `skipped_checks`, `inputs_of_agreement`) |
-| `agreement/canary_agreement_run.ml` | the predicate IMPLEMENTATIONS only — `c1_predict` … `c8_predict`, the decl-comparison predicts, the loaders, the CLI |
-| `agreement/canary_agreement.ml` | the vocabulary and the pure comparators — `inspect_input`, `agreement_id`, `agreement_check`, `check_c_compat`, `check_abi`, … |
+| `agreement/canary_agreement_common.ml` | **tier 1, the declarations** every family needs — `cat`, `standing`, `about`, `claim`, `evidence`, `provenance`, `description`, `fixture`, the `inspect_input` ADT, `agreement_id` / `agreement_check`, the firing derivations, the JSON primitives |
+| `agreement/canary_agreement_<topic>.ml` | **tier 2, one family per topic** — symbols · api_surface · identity · types · behaviour, each describing ITSELF: its `about` records and `checks` list, the evidence records and loaders it reads, its comparators, its predicts, its `description`s and their counterexamples. `canary_agreement_composed.ml` is not a family — it declares what it `composes` and reads other families' verdicts |
+| `agreement/canary_agreement.ml` | **tier 3, the list and the views** — a row is a slug, a doc anchor and the family that describes the agreement, and nothing else. Everything else is derived: `predicted_contains_any` / `predicted_by_agreement` / `skipped_checks`, `inputs_of_agreement`, the gathered `agreement_fixtures`, the firing table, `proposed_agreements`, `all_agreements` |
 
-Dependency direction is **registry → run → agreement**, with no cycle,
-which is why the queries had to travel with the table. Adding an
-agreement means editing one file.
+A family refers only to tier 1, which the pin
+`agreements.families_do_not_reach_sideways` keeps true; a family is
+DEFINED as a module publishing `checks` and declaring no `composes`, so
+renaming the files cannot quietly empty that pin. Adding an agreement
+means writing a family's description and one row.
 
-**Producer-first, and still additive.** Nothing in `project/` or `main/`
-reads the registry yet; its only consumers are the pins. The per-project
-`*_agreement_bindings` tables still drive the live lowering, and they
-are deleted only behind byte-equal pins — that migration is phase 2 and
-is not started.
+**What the registry does NOT hold**, deliberately: no sentence, no
+category, no input path, no counterexample. Each of those lived here
+once, and each had drifted from the family's copy — all eight
+falsifier sentences were written twice and all eight had diverged
+before anyone compared them.
 
-The row still carries an `ag_role` field (`Surface` / `Meeting` /
-`Execution`). It is prose: what a check reads is its TARGET (§1.5) and
-nothing dispatches on the field.
-
-**The row's shape** is documented in the module. Two fields exist for
-this document's sake rather than the code's: `ag_slug`, the stable name
-a section cites, and `ag_doc`, the section that defines it — the bridge
-Appendix B's pins keep honest.
+Two fields exist for this document's sake rather than the code's:
+`ag_slug`, the stable name a section cites, and `ag_doc`, the section
+that defines it — the bridge Appendix B's pins keep honest.
 
 **Firing** is a function of `mechanism × lang × provision`, not a table:
 Static ⇒ build + probe where something is built, probe alone where
@@ -2297,7 +2296,7 @@ status, and lives in the trackers above.
 ## C.2 — Sequence (each step keeps the suite green)
 
 
-1. [x] **Land the producer** (2026-08-17/18): `contract_registry` rows
+1. [x] **Land the producer** (2026-08-17/18): the registry's rows
    for c1..c8 (invariant, reads, source, fault tags, input template,
    firing derivation) + the fixture harness + the first fills (§1.7) +
    the matrix view (A.2). Consumers untouched — `registered_checks` and
