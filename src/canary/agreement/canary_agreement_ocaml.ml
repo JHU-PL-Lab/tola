@@ -29,26 +29,10 @@ open Canary_agreement_common
 let user_surface (tag : string) : inspect_input =
   Ocaml_mli [ tag ^ "/inspect_mli.json" ]
 
-(** The STUB-FACING typed surface (Sf.3): the binding's [external]
-    declarations with their C types, scanned from SOURCE rather than
-    from a built artifact — which is why the path is [scan_sources] and
-    not a per-world step. A typed surface is what the source says; the
-    compiled artifact has already thrown the types away. *)
-let typed_stub_surface : inspect_input =
-  Typed_binding_stub [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ]
-
-(** Does a compiled OCaml binding record, in an artifact canary can
-    read, WHICH shared library it needs?
-
-    No. The [.cmxa] and the stub [.a] are archives: the [DT_NEEDED] and
-    [SONAME] entries appear only on the final linked executable, so
-    there is no consumer-side artifact for the identity agreements (c4
-    soname, c5 version nodes) to read on this language. A Python cext
-    is a [.so] and does record them, which is why those two fire for
-    Python today and not for OCaml.
-
-    Stated as a fact about the language rather than as [| Python -> …]
-    inside the identity family, because it is the reason for that
-    branch, not the branch itself. Reading the linked probe executable
-    would change this answer, and the change would belong here. *)
-let records_needed_in_a_readable_artifact = false
+(* Its MECHANISMS' facts live with the mechanism: the typed stub
+   surface and whether a compiled artifact records NEEDED are both
+   properties of what cstubs BUILDS, and an OCaml Dynlink binding
+   builds none of it. Both started here on 2026-09-03 and moved to
+   [Canary_agreement_cstubs] the same day — the axis was wrong, not
+   just the file. What stays is what every OCaml binding has whatever
+   its mechanism: an .mli. *)

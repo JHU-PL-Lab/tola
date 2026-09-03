@@ -358,18 +358,22 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
 
    Both identity agreements read the consumer's recorded NEEDED /
    version requirements, so they fire only where the consumer keeps
-   those in an artifact canary can read. That is a fact about the
-   LANGUAGE, and it now lives with the language (2026-09-03): this
-   family used to spell it [| Canary_lang.Python, false ->], which is
-   the branch rather than the reason for it.
+   those in an artifact canary can read. This family used to spell that
+   [| Canary_lang.Python, false ->] — the branch rather than the reason
+   for it — and the reason is a MECHANISM fact: it is a question about
+   the artifact a mechanism produces. Language is the wrong axis, which
+   the two OCaml mechanisms show: cstubs archives a .a that records
+   nothing, dynlink produces nothing at all, and Python's cext is a .so
+   that records both.
 
-   Python answers yes inline until its own module lands — a cext is a
-   .so and records both. *)
-let consumer_records_needed (l : Canary_lang.lang) : bool =
-  match l with
-  | Canary_lang.OCaml ->
-      Canary_agreement_ocaml.records_needed_in_a_readable_artifact
-  | _ -> true
+   The mechanisms without a module of their own answer by discipline
+   until they get one — dynamic means no compiled artifact, so nothing
+   to read. *)
+let consumer_records_needed (m : Canary_mechanism.mechanism) : bool =
+  match m with
+  | Canary_mechanism.Cstubs ->
+      Canary_agreement_cstubs.records_needed_in_a_readable_artifact
+  | _ -> not (is_dynamic m)
 
 let c4 : description =
   { about = soname;
@@ -381,7 +385,7 @@ let c4 : description =
     firing = firing_with_build_lib;
     inputs =
       (fun m l w ->
-        if consumer_records_needed l && not (is_dynamic m) then
+        if consumer_records_needed m && not (is_dynamic m) then
           [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
             Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
         else []);
@@ -408,7 +412,7 @@ let c5 : description =
     firing = firing_with_build_lib;
     inputs =
       (fun m l w ->
-        if consumer_records_needed l && not (is_dynamic m) then
+        if consumer_records_needed m && not (is_dynamic m) then
           [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
             Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
         else []);
