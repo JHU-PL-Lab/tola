@@ -12,9 +12,26 @@
 
 open Base
 open Canary_agreement_common
-open Canary_chk_types
-open Canary_chk_symbols
-open Canary_chk_api_surface
+
+(** The families this composes — DECLARED, so the layering pin can tell
+    a composition from a family that reached sideways by accident. A
+    module that publishes [checks] and no [composes] is a family, and
+    families may not name each other; this one says what it is. *)
+let composes =
+  [ "Canary_agreement_types"; "Canary_agreement_symbols";
+    "Canary_agreement_api_surface" ]
+open Canary_agreement_types
+open Canary_agreement_symbols
+open Canary_agreement_api_surface
+
+(* ── what this module is about ── *)
+
+let complete : about =
+  { cat = Api `Repacked;
+    standing = Declared;
+    says = "the repack loses nothing the original had" }
+
+let checks : (string * about) list = [ ("repack_complete", complete) ]
 
 (* ── c8: is the user-facing API faithful to the C one (the composition) ── *)
 
@@ -81,13 +98,6 @@ let check_api_faithfulness
 (* c8 is UNWIRED: it can only compose verdicts, and two of the three it
    composes are themselves unwired. [] until they are not. *)
 let c8_predict ~resolve:_ _ = []
-
-let complete : about =
-  { cat = Api `Repacked;
-    standing = Declared;
-    says = "the repack loses nothing the original had" }
-
-let checks : (string * about) list = [ ("repack_complete", complete) ]
 
 let c8 : description =
   { about = complete;

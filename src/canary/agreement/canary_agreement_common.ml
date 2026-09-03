@@ -1,7 +1,7 @@
 (** [Canary_agreement_common] — TIER 1: what every check family needs.
 
     The agreement layer is three tiers (2026-09-02, user): this module
-    declares the common types; each [canary_chk_<topic>] is one concrete
+    declares the common types; each [canary_agreement_<topic>] is one concrete
     family that uses those types to describe ITSELF; and
     [Canary_agreement_registry] lists the families and derives the views
     others read. A family refers only to this module — pinned by
@@ -118,8 +118,8 @@ type inspect_input =
 
 (* Each family's evidence RECORDS and their loaders moved to the family
    that reads them (2026-09-02): [stub_inspect]/[native_inspect] to
-   [Canary_chk_symbols], the elf and version views to
-   [Canary_chk_identity], the typed signatures to [Canary_chk_types].
+   [Canary_agreement_symbols], the elf and version views to
+   [Canary_agreement_identity], the typed signatures to [Canary_agreement_types].
    What stays here is what more than one family needs — the JSON
    primitives, the [inspect_input] ADT that NAMES evidence, and the
    agreement vocabulary. The rule: a family owns whatever is only about
@@ -127,18 +127,18 @@ type inspect_input =
 
 (* ── Cross-check ── *)
 
-(* the c1 comparator and [compat_result] moved to [Canary_chk_symbols];
+(* the c1 comparator and [compat_result] moved to [Canary_agreement_symbols];
    the c4/c5 comparators and their result types moved to
-   [Canary_chk_identity] (2026-09-02, user: "shall we put the checking
-   into a corresponding canary_chk_ file rather than in this file") —
+   [Canary_agreement_identity] (2026-09-02, user: "shall we put the checking
+   into a corresponding canary_agreement_ file rather than in this file") —
    a family's check, its result shape and its predict now sit together *)
 
-(* the c6 comparator and [type_result] moved to [Canary_chk_types];
+(* the c6 comparator and [type_result] moved to [Canary_agreement_types];
    the c7/c8 comparators and their result types to
-   [Canary_chk_behaviour] *)
+   [Canary_agreement_behaviour] *)
 
 
-(* [check_c_compat] and [lag_examples] moved to [Canary_chk_symbols],
+(* [check_c_compat] and [lag_examples] moved to [Canary_agreement_symbols],
    with [compat_result] — see the note at that type's old site *)
 
 (* ── Agreement registry vocabulary (Phase 12, 2026-06-02) ─────────────

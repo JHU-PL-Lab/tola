@@ -6,7 +6,7 @@
     it; nothing else calls them.
 
     Evidence location lives in [Canary_evidence]; the checks in
-    [canary_chk_*.ml]. *)
+    [canary_agreement_*.ml]. *)
 
 open Base
 
@@ -175,7 +175,7 @@ let find_mli_inspect ~project_dir ~variant_id =
 
 open Base
 open Canary_agreement_common
-open Canary_chk_symbols
+open Canary_agreement_symbols
 
 let print_result ~(stub : stub_inspect) ~(lib : native_inspect) result =
   Fmt.pr "stub:     %s (%d required symbols)@."

@@ -10,12 +10,14 @@
     static to predict over. The registry marks it disabled rather than
     pretending it checks something.
 
-    c7 moved to [Canary_chk_api_surface] and c8 to
-    [Canary_chk_composed] (2026-09-02): c7's own declared category is
+    c7 moved to [Canary_agreement_api_surface] and c8 to
+    [Canary_agreement_composed] (2026-09-02): c7's own declared category is
     [Api `Repacked], and c8 is a composition rather than a family. *)
 
 open Canary_agreement_common
 module Cat = Canary_agreement_common
+
+(* ── what this module is about ── *)
 
 let trace : about =
   { cat = Cat.Behaviour `Trace;

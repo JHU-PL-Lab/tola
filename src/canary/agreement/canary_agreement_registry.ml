@@ -42,17 +42,17 @@ let registered_checks : Canary_agreement_common.agreement_check list =
   let open Canary_agreement_common in
   [
   { id = C1; name = "cmp_symbol";            layer = "L0";  status = Wired;
-    enabled = true;  predict = Canary_chk_symbols.c1_predict };
+    enabled = true;  predict = Canary_agreement_symbols.c1_predict };
   { id = C2; name = "cmp_api_completeness";  layer = "L3";  status = Wired;
-    enabled = true;  predict = Canary_chk_api_surface.c2_predict };
+    enabled = true;  predict = Canary_agreement_api_surface.c2_predict };
   { id = C3; name = "cmp_behavior";          layer = "dyn"; status = Blocked [];
-    enabled = false; predict = Canary_chk_behaviour.c3_predict };
+    enabled = false; predict = Canary_agreement_behaviour.c3_predict };
   { id = C4; name = "cmp_abi";               layer = "L4";  status = Wired;
-    enabled = true;  predict = Canary_chk_identity.c4_predict };
+    enabled = true;  predict = Canary_agreement_identity.c4_predict };
   { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Wired;
-    enabled = true;  predict = Canary_chk_identity.c5_predict };
+    enabled = true;  predict = Canary_agreement_identity.c5_predict };
   { id = C6; name = "cmp_type";              layer = "L2";  status = Wired;
-    enabled = true;  predict = Canary_chk_types.c6_predict };
+    enabled = true;  predict = Canary_agreement_types.c6_predict };
   (* c7 api_sound_repack — Contract that the binding's user-facing
      layer is a sound repacking of its stub-facing layer. Same check
      shape as c3 (probe-assertion refutation), different Contract
@@ -63,14 +63,14 @@ let registered_checks : Canary_agreement_common.agreement_check list =
      [Canary_tiny_scenario.make_binding_repack_broken_runner_spec]
      for the demo against harness scenario [api_repack] (e5). *)
   { id = C7; name = "api_sound_repack";      layer = "dyn"; status = Stubbed;
-    enabled = false; predict = Canary_chk_api_surface.c7_predict };
+    enabled = false; predict = Canary_agreement_api_surface.c7_predict };
   (* c8 disabled — no Contract for canary to maintain. Each binding
      is independent; cross-binding consistency isn't a canary-side
      agreement to check. Probes happen to assert the same constants
      across languages by project convention, not by a Contract.
      Candidate for removal in a future registry cleanup. *)
   { id = C8; name = "cmp_api_faithfulness";  layer = "n/a"; status = Stubbed;
-    enabled = false; predict = Canary_chk_composed.c8_predict };
+    enabled = false; predict = Canary_agreement_composed.c8_predict };
 ]
 
 (** Derive expected failure substrings from declared inspector inputs.
@@ -190,18 +190,18 @@ let row ~slug ~doc ~desc (id : Canary_agreement_common.agreement_id) :
     grounds the evidence in the artifact surfaces it reads — the
     contract IS a named relation over those reads. *)
 let agreement_registry : agreement_row list =
-  [ row C1 ~slug:"symbol_exported" ~doc:"§3.3" ~desc:Canary_chk_symbols.c1;
+  [ row C1 ~slug:"symbol_exported" ~doc:"§3.3" ~desc:Canary_agreement_symbols.c1;
     row C2 ~slug:"api_surface_complete" ~doc:"§3.3"
-      ~desc:Canary_chk_api_surface.c2;
-    row C3 ~slug:"behavior_matches" ~doc:"§8" ~desc:Canary_chk_behaviour.c3;
+      ~desc:Canary_agreement_api_surface.c2;
+    row C3 ~slug:"behavior_matches" ~doc:"§8" ~desc:Canary_agreement_behaviour.c3;
     row C4 ~slug:"soname_denotes_needed" ~doc:"§6"
-      ~desc:Canary_chk_identity.c4;
+      ~desc:Canary_agreement_identity.c4;
     row C5 ~slug:"symbol_versions_present" ~doc:"§3.3"
-      ~desc:Canary_chk_identity.c5;
-    row C6 ~slug:"c_types_agree" ~doc:"§3.3" ~desc:Canary_chk_types.c6;
+      ~desc:Canary_agreement_identity.c5;
+    row C6 ~slug:"c_types_agree" ~doc:"§3.3" ~desc:Canary_agreement_types.c6;
     row C7 ~slug:"repack_preserves_api" ~doc:"§5.3"
-      ~desc:Canary_chk_api_surface.c7;
-    row C8 ~slug:"repack_complete" ~doc:"§5.3" ~desc:Canary_chk_composed.c8 ]
+      ~desc:Canary_agreement_api_surface.c7;
+    row C8 ~slug:"repack_complete" ~doc:"§5.3" ~desc:Canary_agreement_composed.c8 ]
 
 (* ── the counterexamples, GATHERED ──
    Each family ships its own (in its [description.counterexamples]);

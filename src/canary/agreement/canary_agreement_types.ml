@@ -9,6 +9,15 @@ open Base
 open Canary_agreement_common
 module Cat = Canary_agreement_common
 
+(* ── what this module is about ── *)
+
+let signature : about =
+  { cat = Cat.Types `Signature;
+    standing = Cat.Declared;
+    says = "the types a stub declares agree with the header it wraps" }
+
+let checks : (string * about) list = [ ("c_types_agree", signature) ]
+
 (* ── the evidence this family reads ── *)
 
 (** Typed-signature view of an inspect JSON. The producing inspector
@@ -149,13 +158,6 @@ let check_type
       Type_unmapped { externals = unmapped }
     else
       Type_compatible
-
-let signature : about =
-  { cat = Cat.Types `Signature;
-    standing = Cat.Declared;
-    says = "the types a stub declares agree with the header it wraps" }
-
-let checks : (string * about) list = [ ("c_types_agree", signature) ]
 
 (** c6 cmp_type (L2). Pairs a [Typed_header] input (provider's C
     signatures, n3) with a [Typed_binding_stub] input (consumer's

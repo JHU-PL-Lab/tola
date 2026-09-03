@@ -9,6 +9,8 @@ open Base
 open Canary_agreement_common
 module Cat = Canary_agreement_common
 
+(* ── what this module is about ── *)
+
 (** The PAIR check: this binding against this lib. *)
 let required : about =
   { cat = Cat.Symbols `Required;
@@ -63,7 +65,7 @@ let load_native path =
    One agreement has two targets — the lib alone (does it export what the
    project declared?) and the pair (does it export what this consumer
    requires?). Both live here, because they are the same agreement asked
-   of one artifact and of two. They were in a [canary_chk_lib_declares]
+   of one artifact and of two. They were in a [canary_agreement_lib_declares]
    module until 2026-09-02, which split the families by EVIDENCE SOURCE
    while every other module splits them by CATEGORY — so this check
    declared [Symbols `Exported] two files away from the symbols family.

@@ -9,6 +9,8 @@ open Base
 open Canary_agreement_common
 module Cat = Canary_agreement_common
 
+(* ── what this module is about ── *)
+
 (** The PAIR checks: this lib against what this consumer recorded. *)
 let soname : about =
   { cat = Cat.Identity `Soname;
@@ -103,7 +105,7 @@ let load_versioned_symbols path : versioned_symbols_inspect =
 
    Same two agreements as below, asked of ONE artifact instead of two:
    is the built lib's soname the declared one, are the declared version
-   tags exported. They lived in [canary_chk_lib_declares] until
+   tags exported. They lived in [canary_agreement_lib_declares] until
    2026-09-02 — a module split by evidence source rather than by
    category, which put two [Identity] checks outside the identity
    family. The version-script application and the linker are black
@@ -253,39 +255,6 @@ let check_sym_version
     if List.is_empty missing then Sym_version_compatible
     else Sym_version_missing { missing_versions = missing }
 
-(** c5 cmp_sym_version (L1b) — the PREDICT side. Reads provider's
-    versioned_exports map from a [Versioned_exports] input and
-    consumer's versioned_req map from a [Versioned_req] input; runs
-    [check_sym_version] and on mismatch returns the version tags the
-    consumer requires that the provider doesn't export. dyld's runtime
-    error mentions those tags verbatim ("version `TINY_1.0' not
-    found"), so they're the right substrings to grep probe.log for.
-    (This comment was stranded in [Canary_chk_api_surface] by the
-    per-family split; it belongs with the check it describes.) *)
-
-let c5_predict ~resolve (inputs : inspect_input list) : string list =
-  let provider_path =
-    List.find_map inputs
-      ~f:(function
-        | Versioned_exports ps -> pick_existing ~resolve ps
-        | _ -> None) in
-  let consumer_path =
-    List.find_map inputs
-      ~f:(function
-        | Versioned_req ps -> pick_existing ~resolve ps
-        | _ -> None) in
-  match provider_path, consumer_path with
-  | Some pp, Some cp ->
-      let prov = load_versioned_symbols pp in
-      let cons = load_versioned_symbols cp in
-      let consumer_required = List.map cons.req_counts ~f:fst in
-      (match check_sym_version
-               ~provider_versioned_exports:prov.exports
-               ~consumer_required_versions:consumer_required with
-       | Sym_version_missing { missing_versions } -> missing_versions
-       | Sym_version_compatible | Sym_version_unknown -> [])
-  | _ -> []
-
 (** c4 cmp_abi (L4). Reads provider's SONAME from a [Native_lib]
     input's [elf.soname] and consumer's NEEDED list from an
     [Abi_surface] input's [elf.needed]. When [check_abi] returns
@@ -351,6 +320,39 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
     c8 is disabled — no Contract for canary to maintain. Each binding
     is independent; cross-binding consistency isn't a canary-side
     agreement. Candidate for removal in a future registry cleanup. *)
+
+(** c5 cmp_sym_version (L1b) — the PREDICT side. Reads provider's
+    versioned_exports map from a [Versioned_exports] input and
+    consumer's versioned_req map from a [Versioned_req] input; runs
+    [check_sym_version] and on mismatch returns the version tags the
+    consumer requires that the provider doesn't export. dyld's runtime
+    error mentions those tags verbatim ("version `TINY_1.0' not
+    found"), so they're the right substrings to grep probe.log for.
+    (This comment was stranded in [Canary_agreement_api_surface] by the
+    per-family split; it belongs with the check it describes.) *)
+
+let c5_predict ~resolve (inputs : inspect_input list) : string list =
+  let provider_path =
+    List.find_map inputs
+      ~f:(function
+        | Versioned_exports ps -> pick_existing ~resolve ps
+        | _ -> None) in
+  let consumer_path =
+    List.find_map inputs
+      ~f:(function
+        | Versioned_req ps -> pick_existing ~resolve ps
+        | _ -> None) in
+  match provider_path, consumer_path with
+  | Some pp, Some cp ->
+      let prov = load_versioned_symbols pp in
+      let cons = load_versioned_symbols cp in
+      let consumer_required = List.map cons.req_counts ~f:fst in
+      (match check_sym_version
+               ~provider_versioned_exports:prov.exports
+               ~consumer_required_versions:consumer_required with
+       | Sym_version_missing { missing_versions } -> missing_versions
+       | Sym_version_compatible | Sym_version_unknown -> [])
+  | _ -> []
 
 let c4 : description =
   { about = soname;

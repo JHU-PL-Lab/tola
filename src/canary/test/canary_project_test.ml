@@ -1407,14 +1407,14 @@ let agreement_registry_complete_pin : pure_test =
            a description carries closures, which polymorphic compare
            raises on. *)
         let wiring_ok =
-          phys_equal (CR.row_of C1).CR.ag_desc Canary_chk_symbols.c1
-          && phys_equal (CR.row_of C2).CR.ag_desc Canary_chk_api_surface.c2
-          && phys_equal (CR.row_of C3).CR.ag_desc Canary_chk_behaviour.c3
-          && phys_equal (CR.row_of C4).CR.ag_desc Canary_chk_identity.c4
-          && phys_equal (CR.row_of C5).CR.ag_desc Canary_chk_identity.c5
-          && phys_equal (CR.row_of C6).CR.ag_desc Canary_chk_types.c6
-          && phys_equal (CR.row_of C7).CR.ag_desc Canary_chk_api_surface.c7
-          && phys_equal (CR.row_of C8).CR.ag_desc Canary_chk_composed.c8
+          phys_equal (CR.row_of C1).CR.ag_desc Canary_agreement_symbols.c1
+          && phys_equal (CR.row_of C2).CR.ag_desc Canary_agreement_api_surface.c2
+          && phys_equal (CR.row_of C3).CR.ag_desc Canary_agreement_behaviour.c3
+          && phys_equal (CR.row_of C4).CR.ag_desc Canary_agreement_identity.c4
+          && phys_equal (CR.row_of C5).CR.ag_desc Canary_agreement_identity.c5
+          && phys_equal (CR.row_of C6).CR.ag_desc Canary_agreement_types.c6
+          && phys_equal (CR.row_of C7).CR.ag_desc Canary_agreement_api_surface.c7
+          && phys_equal (CR.row_of C8).CR.ag_desc Canary_agreement_composed.c8
         in
         rows_ok && checks_ok && tags_ok && axes_ok && wiring_ok) }
 
@@ -1824,7 +1824,7 @@ let agreement_bridge_pins : pure_test list =
                 || String.is_substring text ~substring:("# " ^ top ^ ".")) ) } ]
 
 (* The THREE TIERS of the agreement layer (2026-09-02, user): a common
-   module declares the types; each canary_chk_<topic> is one concrete
+   module declares the types; each canary_agreement_<topic> is one concrete
    family and refers only to that; the registry gathers them and
    provides the matrix. The load-bearing half is the middle one — a
    family must not reach sideways — so this reads the sources and
@@ -1832,69 +1832,127 @@ let agreement_bridge_pins : pure_test list =
    the next check lands.
 
    Two deliberate exceptions, both named here so that adding a third
-   requires saying why: canary_chk_composed is not a family (it reads
+   requires saying why: canary_agreement_composed is not a family (it reads
    other families' VERDICTS, which is the whole point of it), and a
    module may MENTION a sibling in prose. *)
+(* The agreement layer's source, with comments removed — nesting
+   tracked rather than guessed per line, because prose may name a
+   sibling module while code may not. Shared by the two pins that read
+   these files. *)
+let agreement_dir = "src/canary/agreement"
+
+let code_without_comments path =
+  let s = Stdio.In_channel.read_all path in
+  let buf = Buffer.create (String.length s) in
+  let depth = ref 0 and i = ref 0 in
+  let n = String.length s in
+  while !i < n do
+    if !i + 1 < n && Char.equal s.[!i] '(' && Char.equal s.[!i + 1] '*' then (
+      Int.incr depth;
+      i := !i + 2)
+    else if
+      !i + 1 < n && Char.equal s.[!i] '*' && Char.equal s.[!i + 1] ')'
+      && !depth > 0
+    then (
+      Int.decr depth;
+      i := !i + 2)
+    else (
+      if !depth = 0 then Buffer.add_char buf s.[!i];
+      Int.incr i)
+  done;
+  Buffer.contents buf
+
+(** The families, as (module name, comment-free source). A FAMILY is a
+    module that publishes [checks] and declares no [composes] — a
+    PROPERTY, not a filename convention, so renaming the files cannot
+    empty the pins that read this (2026-09-02). *)
+let agreement_families () : (string * string) list =
+  Sys_unix.readdir agreement_dir |> Array.to_list
+  |> List.filter ~f:(String.is_suffix ~suffix:".ml")
+  |> List.map ~f:(fun f ->
+         ( String.capitalize (String.chop_suffix_exn f ~suffix:".ml"),
+           code_without_comments (agreement_dir ^ "/" ^ f) ))
+  |> List.filter ~f:(fun (_, code) ->
+         String.is_substring code ~substring:"let checks"
+         && not (String.is_substring code ~substring:"let composes"))
+
+(* Every family reads the same way top to bottom (2026-09-02, user:
+   "we can make the file or the module more uniform"): what it is
+   ABOUT, then the EVIDENCE it reads, then the CHECKS, then the
+   DESCRIPTIONS it hands the registry. Five modules had four different
+   orders before this. The pin states the two boundaries that carry the
+   meaning — [checks] before any description, and no evidence or type
+   declared after the descriptions start — rather than the exact
+   banners, so the shape is enforced without freezing the prose. *)
+let agreement_module_shape_pin : pure_test =
+  { name = "agreements.families_share_one_shape";
+    check =
+      (fun () ->
+        match Sys_unix.file_exists agreement_dir with
+        | `No | `Unknown -> true
+        | `Yes ->
+            let families = agreement_families () in
+            List.length families >= 5
+            && List.for_all families ~f:(fun (_, code) ->
+                   match
+                     ( String.substr_index code ~pattern:"let checks",
+                       String.substr_index code ~pattern:": description" )
+                   with
+                   | Some at_checks, Some at_desc ->
+                       (* about first … *)
+                       at_checks < at_desc
+                       &&
+                       (* … and descriptions last *)
+                       let tail = String.subo code ~pos:at_desc in
+                       (not (String.is_substring tail ~substring:"\ntype "))
+                       && not (String.is_substring tail ~substring:"\nlet load_")
+                   | _ -> false)) }
+
 let agreement_tiers_pin : pure_test =
   { name = "agreements.families_do_not_reach_sideways";
     check =
       (fun () ->
-        let dir = "src/canary/agreement" in
+        let dir = agreement_dir in
         match Sys_unix.file_exists dir with
         | `No | `Unknown -> true (* not run from the repo root *)
         | `Yes ->
-            let families =
+            let modules =
               Sys_unix.readdir dir |> Array.to_list
-              |> List.filter ~f:(fun f ->
-                     String.is_prefix f ~prefix:"canary_chk_"
-                     && String.is_suffix f ~suffix:".ml"
-                     && not (String.equal f "canary_chk_composed.ml"))
+              |> List.filter ~f:(String.is_suffix ~suffix:".ml")
+              |> List.map ~f:(fun f ->
+                     let base = String.chop_suffix_exn f ~suffix:".ml" in
+                     ( String.capitalize base,
+                       code_without_comments (dir ^ "/" ^ f) ))
             in
-            (* the split itself: five or more families, none of which
-               reads another *)
+            (* A FAMILY is a module that publishes [checks] and does not
+               declare what it [composes] — a PROPERTY, not a filename
+               convention (2026-09-02). The prefix used to be the
+               marker, which made renaming the files a way to empty this
+               pin silently; keying on the property means the rename
+               cannot go dark. *)
+            let is_family (_, code) =
+              String.is_substring code ~substring:"let checks"
+              && not (String.is_substring code ~substring:"let composes")
+            in
+            let families = List.filter modules ~f:is_family in
+            let family_names = List.map families ~f:fst in
             List.length families >= 5
-            && List.for_all families ~f:(fun f ->
-                   let self =
-                     "Canary_chk_"
-                     ^ String.chop_suffix_exn
-                         (String.chop_prefix_exn f ~prefix:"canary_chk_")
-                         ~suffix:".ml"
-                   in
-                   (* prose may name a sibling; CODE may not — so the
-                      comments come out first, tracking nesting rather
-                      than guessing per line (the first version of this
-                      read continuation lines of a doc comment as code
-                      and failed on three of them) *)
-                   let code =
-                     let s = Stdio.In_channel.read_all (dir ^ "/" ^ f) in
-                     let buf = Buffer.create (String.length s) in
-                     let depth = ref 0 in
-                     let i = ref 0 in
-                     let n = String.length s in
-                     while !i < n do
-                       if !i + 1 < n && Char.equal s.[!i] '('
-                          && Char.equal s.[!i + 1] '*' then (
-                         Int.incr depth;
-                         i := !i + 2)
-                       else if !i + 1 < n && Char.equal s.[!i] '*'
-                               && Char.equal s.[!i + 1] ')' && !depth > 0 then (
-                         Int.decr depth;
-                         i := !i + 2)
-                       else (
-                         if !depth = 0 then Buffer.add_char buf s.[!i];
-                         Int.incr i)
-                     done;
-                     Buffer.contents buf
-                   in
-                   (not (String.is_substring code ~substring:"Canary_chk_"))
-                   || not
-                        (List.exists
-                           (String.substr_index_all code
-                              ~may_overlap:false ~pattern:"Canary_chk_")
-                           ~f:(fun at ->
-                             not
-                               (String.is_prefix (String.subo code ~pos:at)
-                                  ~prefix:self))))) }
+            (* a family names no other family in code *)
+            && List.for_all families ~f:(fun (self, code) ->
+                   List.for_all family_names ~f:(fun other ->
+                       String.equal other self
+                       || not (String.is_substring code ~substring:other)))
+            (* the composition names exactly what it declares it
+               composes, and it declares at least one *)
+            && (not (List.is_empty Canary_agreement_composed.composes))
+            && List.for_all
+                 (List.filter modules ~f:(fun (_, code) ->
+                      String.is_substring code ~substring:"let composes"))
+                 ~f:(fun (_, code) ->
+                   List.for_all family_names ~f:(fun other ->
+                       (not (String.is_substring code ~substring:other))
+                       || List.mem Canary_agreement_composed.composes other
+                            ~equal:String.equal))) }
 
 (* The per-check MODULE pattern (2026-09-02, user): a check lives in its
    own module with a descriptive category, a falsifier-phrased
@@ -1914,12 +1972,12 @@ let check_module_pattern_pin : pure_test =
            (2026-09-02, user: "then the category content for each chk
            file can be unified"). *)
         let families =
-          [ ("symbols", Canary_chk_symbols.checks);
-            ("api_surface", Canary_chk_api_surface.checks);
-            ("identity", Canary_chk_identity.checks);
-            ("types", Canary_chk_types.checks);
-            ("behaviour", Canary_chk_behaviour.checks);
-            ("composed", Canary_chk_composed.checks) ]
+          [ ("symbols", Canary_agreement_symbols.checks);
+            ("api_surface", Canary_agreement_api_surface.checks);
+            ("identity", Canary_agreement_identity.checks);
+            ("types", Canary_agreement_types.checks);
+            ("behaviour", Canary_agreement_behaviour.checks);
+            ("composed", Canary_agreement_composed.checks) ]
         in
         let all = List.concat_map families ~f:snd in
         (* the six families cover more CHECKS than the registry has
@@ -1932,11 +1990,11 @@ let check_module_pattern_pin : pure_test =
         (* the solo checks state the claim they actually make, which is
            not the pair's: exported-as-declared, not required-by-a-stub *)
         && Poly.equal
-             (List.Assoc.find_exn Canary_chk_symbols.checks
+             (List.Assoc.find_exn Canary_agreement_symbols.checks
                 "symbol_exported/solo" ~equal:String.equal)
                .C.cat (C.Symbols `Exported)
         && Poly.equal
-             (List.Assoc.find_exn Canary_chk_symbols.checks
+             (List.Assoc.find_exn Canary_agreement_symbols.checks
                 "symbol_exported/pair" ~equal:String.equal)
                .C.cat (C.Symbols `Required)
         && (* every one is a DECLARED agreement, not a convention — the
@@ -2038,7 +2096,8 @@ let all_tests : pure_test list =
       source_fetch_pinned_ref_check_post_pin ]
   @ agreement_fixture_tests
   @ agreement_bridge_pins
-  @ [ check_module_pattern_pin; agreement_tiers_pin; agreements_for_pin ]
+  @ [ check_module_pattern_pin; agreement_tiers_pin;
+      agreement_module_shape_pin; agreements_for_pin ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the
