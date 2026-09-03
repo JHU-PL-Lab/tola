@@ -695,3 +695,31 @@ let pp_agreements () : string =
   String.concat ~sep:"\n"
     (Printf.sprintf "%-28s %-6s %-16s %s" "agreement" "doc" "status" "claim"
      :: List.map all_agreements ~f:line)
+
+(* ── FACTS IN, CHECKS OUT (user, 2026-09-02) ──
+   A project declares what it IS — its language, its binding mechanism,
+   how the artifact was provisioned. It has no business naming an
+   agreement: which checks those facts imply, and what each needs to
+   read, is the framework's knowledge.
+
+   This is the direction [inputs_of_agreement] had backwards. A project
+   calling `inputs_of_agreement C1 OCaml` has to know that C1 exists, and
+   that it applies here — two facts it should never have had to learn.
+   With this, no project writes an agreement id. *)
+
+(** Every agreement that applies to a binding with these facts, paired
+    with the inputs it would read. [action] narrows to the checks that
+    fire at one action; omit it for all of them. *)
+let agreements_for ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(provision : Canary_store.provision)
+    ?action () : (agreement_row * Canary_agreement.inspect_input list) list =
+  List.filter_map agreement_registry ~f:(fun r ->
+      let fires =
+        let sites = r.ag_firing mechanism lang provision in
+        match action with
+        | None -> not (List.is_empty sites)
+        | Some a -> List.exists sites ~f:(fun s -> Poly.equal s a)
+      in
+      if fires && r.ag_check.Canary_agreement.enabled then
+        Some (r, r.ag_inputs mechanism lang)
+      else None)

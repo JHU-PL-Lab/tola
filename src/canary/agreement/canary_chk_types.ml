@@ -16,10 +16,10 @@ let says = "the types a stub declares agree with the header it wraps"
 let c6_predict ~resolve (inputs : inspect_input list) : string list =
   let header_path =
     List.find_map inputs
-      ~f:(function Typed_header ps -> Canary_agreement_run.pick_existing ~resolve ps | _ -> None) in
+      ~f:(function Typed_header ps -> Canary_evidence.pick_existing ~resolve ps | _ -> None) in
   let stub_path =
     List.find_map inputs
-      ~f:(function Typed_binding_stub ps -> Canary_agreement_run.pick_existing ~resolve ps
+      ~f:(function Typed_binding_stub ps -> Canary_evidence.pick_existing ~resolve ps
                  | _ -> None) in
   match header_path, stub_path with
   | Some hp, Some sp ->

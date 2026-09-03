@@ -1830,6 +1830,39 @@ let check_module_pattern_pin : pure_test =
             Poly.equal standing C.Declared)
         && String.equal (C.string_of_cat C.Action_succeeded) "action-succeeded") }
 
+(* Facts in, checks out (2026-09-02): a project declares its language,
+   its mechanism and how the artifact was provisioned; the registry says
+   which agreements that implies and what each reads. Pinned because it
+   is the direction inputs_of_agreement had backwards — no project
+   should ever name an agreement id. *)
+let agreements_for_pin : pure_test =
+  { name = "agreements.facts_in_checks_out";
+    check =
+      (fun () ->
+        let module R = Canary_agreement_registry in
+        let got ?action () =
+          R.agreements_for ~mechanism:Canary_mechanism.Cstubs
+            ~lang:Canary_lang.OCaml ~provision:Canary_store.Built ?action ()
+        in
+        let slugs l = List.map l ~f:(fun (r, _) -> r.R.ag_slug) in
+        let built = got () in
+        let at_build_lib =
+          got ~action:Canary_basic.Build_lib ()
+        in
+        (* a Built world reaches the solo cells at build_lib … *)
+        List.mem (slugs at_build_lib) "symbol_exported" ~equal:String.equal
+        && List.mem (slugs at_build_lib) "soname_denotes_needed"
+             ~equal:String.equal
+        (* … and every returned row is enabled and carries its inputs
+           without the caller naming an id *)
+        && List.for_all built ~f:(fun (r, _) ->
+               r.R.ag_check.Canary_agreement.enabled)
+        (* a Fetched world has no build_lib checks at all *)
+        && List.is_empty
+             (R.agreements_for ~mechanism:Canary_mechanism.Cstubs
+                ~lang:Canary_lang.OCaml ~provision:Canary_store.Fetched
+                ~action:Canary_basic.Build_lib ())) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ binding_source_vocabulary_pin; lib_name_optional_pin;
@@ -1854,7 +1887,7 @@ let all_tests : pure_test list =
       source_fetch_pinned_ref_check_post_pin ]
   @ agreement_fixture_tests
   @ agreement_bridge_pins
-  @ [ check_module_pattern_pin ]
+  @ [ check_module_pattern_pin; agreements_for_pin ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the

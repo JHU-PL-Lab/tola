@@ -1356,7 +1356,7 @@ let compat_cmd =
   let run project variant stub_path lib_path () =
     let rc =
       match (stub_path, lib_path) with
-      | Some s, Some l -> Canary_agreement_run.run ~stub_path:s ~lib_path:l
+      | Some s, Some l -> Canary_agreement_report.run ~stub_path:s ~lib_path:l
       | _ -> (
           match project with
           | None ->
@@ -1366,7 +1366,7 @@ let compat_cmd =
               2
           | Some p ->
               let root = Stdlib.Sys.getcwd () in
-              Canary_agreement_run.run_for_project ~root ~project:p ~variant)
+              Canary_agreement_report.run_for_project ~root ~project:p ~variant)
     in
     Stdlib.exit rc
   in
@@ -1392,7 +1392,7 @@ let verify_cmd =
   in
   let run project variant () =
     let root = Stdlib.Sys.getcwd () in
-    Stdlib.exit (Canary_agreement_run.verify_for_project ~root ~project ~variant)
+    Stdlib.exit (Canary_agreement_report.verify_for_project ~root ~project ~variant)
   in
   Cmd.v
     (Cmd.info "verify"

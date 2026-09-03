@@ -20,11 +20,11 @@ let c1_pair ~resolve (inputs : inspect_input list) :
     (stub_inspect * native_inspect) option =
   let stub_path =
     List.find_map inputs
-      ~f:(function C_stub ps -> Canary_agreement_run.pick_existing ~resolve ps | _ -> None)
+      ~f:(function C_stub ps -> Canary_evidence.pick_existing ~resolve ps | _ -> None)
   in
   let lib_path =
     List.find_map inputs
-      ~f:(function Native_lib ps -> Canary_agreement_run.pick_existing ~resolve ps | _ -> None)
+      ~f:(function Native_lib ps -> Canary_evidence.pick_existing ~resolve ps | _ -> None)
   in
   match stub_path, lib_path with
   | Some s, Some l -> Some (load_stub s, load_native l)

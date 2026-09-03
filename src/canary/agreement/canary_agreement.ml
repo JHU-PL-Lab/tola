@@ -70,7 +70,7 @@ let get_string_list j name =
 
     Unified on 2026-06-01 (Phase 4): previously this type lived twice,
     as [Canary.compat_inspect_input] (paths : string list) on the
-    declaration side and as [Canary_agreement_run.typed_input] (single
+    declaration side and as [Canary_evidence.typed_input] (single
     string) after resolution, with a manual 20-line translation in
     [Canary_action] and [Canary_gh]. Constructors map to surface
     roles:

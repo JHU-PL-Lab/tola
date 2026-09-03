@@ -28,7 +28,7 @@ let symbol_exported ~declared_functions ~resolve
     (inputs : inspect_input list) : string list =
   let lib_path =
     List.find_map inputs ~f:(function
-        | Native_lib ps -> Canary_agreement_run.pick_existing ~resolve ps
+        | Native_lib ps -> Canary_evidence.pick_existing ~resolve ps
         | _ -> None)
   in
   match lib_path with
@@ -49,7 +49,7 @@ let soname_matches ~declared_soname ~resolve
     (inputs : inspect_input list) : string list =
   let lib_path =
     List.find_map inputs ~f:(function
-        | Native_lib ps -> Canary_agreement_run.pick_existing ~resolve ps
+        | Native_lib ps -> Canary_evidence.pick_existing ~resolve ps
         | _ -> None)
   in
   match lib_path with
@@ -76,7 +76,7 @@ let version_tags_exported ~declared_tags ~resolve
     (inputs : inspect_input list) : string list =
   let lib_path =
     List.find_map inputs ~f:(function
-        | Versioned_exports ps -> Canary_agreement_run.pick_existing ~resolve ps
+        | Versioned_exports ps -> Canary_evidence.pick_existing ~resolve ps
         | _ -> None)
   in
   match lib_path with
