@@ -1,25 +1,33 @@
-(** [Canary_agreement_common] — pure surface-theory comparators (surface/).
+(** [Canary_agreement_common] — TIER 1: what every check family needs.
 
-    The theoretical half of the compat machinery: input types and the
-    c1..c8 comparator functions. Pure; the only I/O is reading a JSON
-    file from a path. Holds:
+    The agreement layer is three tiers (2026-09-02, user): this module
+    declares the common types; each [canary_chk_<topic>] is one concrete
+    family that uses those types to describe ITSELF; and
+    [Canary_agreement_registry] lists the families and derives the views
+    others read. A family refers only to this module — pinned by
+    [agreements.families_do_not_reach_sideways].
 
-    - Input types: [stub_inspect], [native_inspect]
-    - Comparator result types: [compat_result] (c1), [abi_result] (c4),
-      [sym_version_result] (c5), [type_result] (c6), [repack_result] (c7),
-      [faithfulness_result] (c8)
-    - JSON loaders: [load], [field], [get_string], [get_string_list],
-      [load_stub], [load_native]
-    - Pure comparator functions: [check_c_compat], [check_abi],
-      [check_sym_version], [check_type], [check_api_repack],
-      [check_api_faithfulness]
+    What lives here, and why each thing is common rather than a
+    family's:
 
-    The companion {!Canary_agreement_run} module (same dir) carries the
-    action-graph integration half: [predicted_contains_any_v2] (the
-    ADT-to-substring derivation that consumes [inspect_input] declared
-    above) + the CLI commands [run] / [run_for_project] /
-    [verify_for_project] + cached-summary lookup helpers
-    ([find_*_inspect], [resolve_variant]). *)
+    - the DESCRIPTIVE types a check uses to describe itself — [cat],
+      [standing], [claim], [evidence], [provenance], and the
+      [description] record that gathers them;
+    - the [inspect_input] ADT, which NAMES evidence (the records that
+      parse it belong to the family that reads them);
+    - the registry vocabulary — [agreement_id], [agreement_status],
+      [agreement_check];
+    - the shared derivations a family needs in order to state where it
+      fires and what it reads: [firing_default],
+      [firing_with_build_lib], [firing_probe_only], [uniform_world],
+      [binding_evidence_tag];
+    - the JSON primitives every loader is built from.
+
+    The rule that decides membership: a family owns whatever is only
+    about its own topic; this module owns what more than one family
+    needs. Applying it moved the comparators, the result types and the
+    evidence records OUT of here (755 → this), and moved [cat] and the
+    firing derivations IN. *)
 
 open Base
 
@@ -206,6 +214,173 @@ let string_of_cat = function
     obligatory and project-independent, which makes them the richest
     place to look for new checks. *)
 type standing = Declared | Convention
+
+(** WHAT A CHECK CLAIMS — the primary axis (design §1.6). A structural
+    claim is about artifacts and their FIT; a semantic claim is about
+    what the program MEANS or does. The distinction is not "does it
+    run": a link verdict is observed by running a tool and is still a
+    structural finding, which is exactly the case that made this axis
+    primary rather than the evidence one. *)
+type claim =
+  | Structural  (** about an artifact, or about two artifacts' fit *)
+  | Semantic    (** about behaviour — what running it means *)
+[@@deriving show, eq]
+
+(** HOW the claim is observed — the secondary axis (design §1.5). It
+    varies independently of [claim]: [Run_tool] carries structural
+    claims (a compiler's verdict on a pairing), [Run_program] carries
+    semantic ones. *)
+type evidence =
+  | Inspect_one       (** one artifact, an inspector *)
+  | Compare_several   (** several artifacts, inspected then compared *)
+  | Run_tool          (** a compiler/linker/loader verdict *)
+  | Run_program       (** the program's own output *)
+[@@deriving show, eq]
+
+(** WHERE the obligation comes from (design §1.6): [Intrinsic] holds of
+    the toolchain whether or not canary exists; [Added] is an
+    expectation canary states. *)
+type provenance =
+  | Intrinsic
+  | Added
+[@@deriving show, eq]
+
+(* ── where a check fires, and what it reads ──
+
+   Both are DERIVED from mechanism × language × world, and both are
+   things a check family states about itself, so the derivations live
+   here rather than in the registry (2026-09-02, user: "the type
+   especially for category should be defined in common, then the
+   concrete chk can use the type to describe itself"). *)
+
+(** [produced_here p]: did this world make the artifact, or receive it?
+    Installed groups with Built — its chain performed the real build and
+    then staged the result, so the build-family agreements have their
+    artifact. *)
+let produced_here (p : Canary_store.provision) : bool =
+  match p with
+  | Canary_store.Built | Canary_store.Installed -> true
+  | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent -> false
+
+let is_dynamic (m : Canary_mechanism.mechanism) : bool =
+  Base.Poly.equal
+    (Canary_mechanism.discipline_of_mechanism m)
+    Canary_mechanism.Dynamic_ffi
+
+(** The default firing: Static and the BINDING was built here → build
+    then probe; Static and it arrived ready-made → probe (no build step
+    exists); Dynamic → probe (probe-only chains).
+
+    The world is an [assignment] rather than one provision because a
+    world provisions each artifact separately — sqlite builds its lib
+    and fetches its binding from opam — and the questions asked here are
+    about different artifacts. *)
+let firing_default (m : Canary_mechanism.mechanism) (l : Canary_lang.lang)
+    (w : Canary_artifact.assignment) : Canary_basic.action list =
+  let probe = Canary_basic.Probe_binding l in
+  if is_dynamic m then [ probe ]
+  else if produced_here (Canary_artifact.provision_of_binding w l) then
+    [ Canary_basic.Build_binding l; probe ]
+  else [ probe ]
+
+(** c4/c5's lib-only cell: a BUILT lib carries its own inspection — elf
+    soname / versioned exports vs the DECLARED facts. The LIB's
+    provenance decides this one and the binding's decides
+    [Build_binding] inside the rest, which is the whole point of taking
+    a world. The discipline gate is preserved as it stood; whether a
+    soname check should also fire under a Dynamic_ffi binding (where
+    dlopen resolves BY soname, so arguably it matters more) is a
+    separate question. *)
+let firing_with_build_lib (m : Canary_mechanism.mechanism)
+    (l : Canary_lang.lang) (w : Canary_artifact.assignment) :
+    Canary_basic.action list =
+  let rest = firing_default m l w in
+  if (not (is_dynamic m)) && produced_here (Canary_artifact.provision_of_lib w)
+  then Canary_basic.Build_lib :: rest
+  else rest
+
+(** Behaviour needs a run — probe only, in every world. *)
+let firing_probe_only (_ : Canary_mechanism.mechanism) (l : Canary_lang.lang)
+    (_ : Canary_artifact.assignment) : Canary_basic.action list =
+  [ Canary_basic.Probe_binding l ]
+
+(** The UNIFORM world: lib and binding both at one provision. It is what
+    a single provision argument used to mean, kept for the views that
+    want a hypothetical rather than a real world (the belief matrix, the
+    fill list). A real caller passes the enumeration's own assignment. *)
+let uniform_world ~(lang : Canary_lang.lang)
+    ~(mechanism : Canary_mechanism.mechanism) (p : Canary_store.provision) :
+    Canary_artifact.assignment =
+  let at id =
+    (id, { Canary_artifact.provision = p; version = Canary_basic.good Dev })
+  in
+  [ at Canary_artifact.a_lib; at (Canary_artifact.a_binding lang mechanism) ]
+
+(** WHERE a binding's inspection sits. Measured across every project's
+    run outputs rather than assumed, because the answer is three-way:
+
+    - FETCHED (ssl's opam binding, z3's pip wheel) → the fetch step;
+    - BUILT IN THE WORKSPACE (tiny, zarith) → the build step;
+    - BUILT THEN PUBLISHED (llvm packs into opam and inspects the
+      published package) → the pack step. NOT derived: the world says
+      how an artifact was provisioned, not whether the project
+      publishes it, and no declaration carries that bit. *)
+let binding_evidence_tag (w : Canary_artifact.assignment)
+    (l : Canary_lang.lang) : string =
+  let a =
+    match Canary_artifact.provision_of_binding w l with
+    | Canary_store.Fetched -> Canary_basic.Fetch (Canary_basic.Binding l)
+    (* Absent covers the callers that pass no world at all: the build
+       tree is what they have always meant *)
+    | Canary_store.Built | Canary_store.Installed | Canary_store.Vendored
+    | Canary_store.Absent ->
+        Canary_basic.Build_binding l
+  in
+  Canary_basic.string_of_action a
+
+let build_lib_tag = Canary_basic.string_of_action Canary_basic.Build_lib
+
+(** HOW AN AGREEMENT DESCRIBES ITSELF (2026-09-02, user: "the concrete
+    chk can use the type to describe itself, and the registry just list
+    the checked").
+
+    Every field is a fact only the check knows, so every field is
+    stated by the check's own module. The registry adds what is not
+    self-knowledge — the slug, the doc anchor, the position in the
+    list — and derives the views.
+
+    The field this type exists for is [says]. It used to be written
+    twice: as [~invariant] on the registry row and as [says] in the
+    family, and all eight had drifted apart in wording by the time
+    anyone compared them — c5's two read "versioned symbols carry the
+    annotations the consumer expects" and "the provider exports every
+    version node the consumer requires", which are not the same claim.
+    One definition, one sentence. *)
+type description = {
+  cat : cat;
+  standing : standing;
+  says : string;
+      (** falsifier-phrased: the sentence a counterexample refutes *)
+  claim : claim;
+  evidence : evidence;
+  provenance : provenance;
+  reads : (string * string) list;
+      (** the artifact surfaces this grounds in: (Sf.n | Trace) × which
+          artifact. The agreement IS a named relation over these. *)
+  fault_tags : string list;
+  firing :
+    Canary_mechanism.mechanism -> Canary_lang.lang ->
+    Canary_artifact.assignment -> Canary_basic.action list;
+      (** WHERE it fires, over the ACTION catalogue (SSOT §6.5).
+          Agreements are general for ALL artifacts, actions and
+          mechanisms; a check returns [] for actions it does not fire
+          at. *)
+  inputs :
+    Canary_mechanism.mechanism -> Canary_lang.lang ->
+    Canary_artifact.assignment -> inspect_input list;
+      (** WHAT it reads, as evidence references resolved against the
+          world's own output tree. *)
+}
 
 (** The eight contracts of surface theory. See
     [doc/canary/research/surface_draft/surface.md] Part C for definitions. *)

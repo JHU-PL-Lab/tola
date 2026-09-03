@@ -1352,8 +1352,8 @@ let agreement_registry_complete_pin : pure_test =
               match List.filter rows ~f:(fun r ->
                   Poly.equal r.CR.ag_check.Canary_agreement_common.id id) with
               | [ r ] ->
-                  (not (String.is_empty r.CR.ag_invariant))
-                  && List.length r.CR.ag_fault_tags = 1
+                  (not (String.is_empty r.CR.ag_desc.Canary_agreement_common.says))
+                  && List.length r.CR.ag_desc.Canary_agreement_common.fault_tags = 1
               | _ -> false)
         in
         (* every registered check referenced exactly once *)
@@ -1367,7 +1367,7 @@ let agreement_registry_complete_pin : pure_test =
         in
         (* the tag mapping (scenario.md's catalogue) *)
         let tag id =
-          match CR.row_of id with r -> List.hd_exn r.CR.ag_fault_tags
+          match CR.row_of id with r -> List.hd_exn r.CR.ag_desc.Canary_agreement_common.fault_tags
         in
         let tags_ok =
           String.equal (tag C1) "sym_missing"
@@ -1382,30 +1382,30 @@ let agreement_registry_complete_pin : pure_test =
 (* the two typed axes (design §1.5/§1.6): a claim is structural or
            semantic, and the evidence varies independently — a link
            verdict is Run_tool yet structural *)
-        let claim_is r exp = Poly.equal r.CR.ag_claim exp in
-        let ev_is r exp = Poly.equal r.CR.ag_evidence exp in
+        let claim_is r exp = Poly.equal r.CR.ag_desc.Canary_agreement_common.claim exp in
+        let ev_is r exp = Poly.equal r.CR.ag_desc.Canary_agreement_common.evidence exp in
         let axes_ok =
-          claim_is (CR.row_of C1) CR.Structural
-          && ev_is (CR.row_of C1) CR.Compare_several
-          && claim_is (CR.row_of C2) CR.Structural
-          && ev_is (CR.row_of C2) CR.Inspect_one
-          && claim_is (CR.row_of C3) CR.Semantic
-          && ev_is (CR.row_of C3) CR.Run_program
-          && claim_is (CR.row_of C6) CR.Structural
-          && claim_is (CR.row_of C7) CR.Semantic
+          claim_is (CR.row_of C1) Canary_agreement_common.Structural
+          && ev_is (CR.row_of C1) Canary_agreement_common.Compare_several
+          && claim_is (CR.row_of C2) Canary_agreement_common.Structural
+          && ev_is (CR.row_of C2) Canary_agreement_common.Inspect_one
+          && claim_is (CR.row_of C3) Canary_agreement_common.Semantic
+          && ev_is (CR.row_of C3) Canary_agreement_common.Run_program
+          && claim_is (CR.row_of C6) Canary_agreement_common.Structural
+          && claim_is (CR.row_of C7) Canary_agreement_common.Semantic
           && (* every agreement row is an ADDED check; the intrinsic ones
                 are the actions' own outcomes *)
           List.for_all CR.agreement_registry ~f:(fun r ->
-              Poly.equal r.CR.ag_provenance CR.Added)
+              Poly.equal r.CR.ag_desc.Canary_agreement_common.provenance Canary_agreement_common.Added)
         in
                 (* the category on a row is the one its check MODULE declares —
            the two cannot drift because there is one definition *)
         let cats_ok =
-          Poly.equal (CR.row_of C1).CR.ag_cat Canary_chk_symbols.cat
-          && Poly.equal (CR.row_of C2).CR.ag_cat Canary_chk_api_surface.cat
-          && Poly.equal (CR.row_of C4).CR.ag_cat Canary_chk_identity.soname_cat
-          && Poly.equal (CR.row_of C5).CR.ag_cat Canary_chk_identity.version_cat
-          && Poly.equal (CR.row_of C6).CR.ag_cat Canary_chk_types.cat
+          Poly.equal (CR.row_of C1).CR.ag_desc.Canary_agreement_common.cat Canary_chk_symbols.cat
+          && Poly.equal (CR.row_of C2).CR.ag_desc.Canary_agreement_common.cat Canary_chk_api_surface.cat
+          && Poly.equal (CR.row_of C4).CR.ag_desc.Canary_agreement_common.cat Canary_chk_identity.soname_cat
+          && Poly.equal (CR.row_of C5).CR.ag_desc.Canary_agreement_common.cat Canary_chk_identity.version_cat
+          && Poly.equal (CR.row_of C6).CR.ag_desc.Canary_agreement_common.cat Canary_chk_types.cat
         in
         rows_ok && checks_ok && tags_ok && axes_ok && cats_ok) }
 
@@ -1414,17 +1414,17 @@ let agreement_registry_firing_pin : pure_test =
     check =
       (fun () ->
         let module CR = Canary_agreement_registry in
-        let f = (CR.row_of C1).CR.ag_firing in
+        let f = (CR.row_of C1).CR.ag_desc.Canary_agreement_common.firing in
         let eq got want = Poly.equal got want in
         (* the uniform worlds these cases were written against: firing
            takes an assignment now, so a "Built world" has to be said in
            full rather than named by one provision *)
-        let ml = CR.uniform_world ~lang:Canary_lang.OCaml
+        let ml = Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
                    ~mechanism:Canary_mechanism.Cstubs in
         let built_ml = ml Canary_store.Built
         and fetched_ml = ml Canary_store.Fetched in
         let built_py =
-          CR.uniform_world ~lang:Canary_lang.Python
+          Canary_agreement_common.uniform_world ~lang:Canary_lang.Python
             ~mechanism:Canary_mechanism.Ctypes Canary_store.Built
         in
         (* Static + Built → build_lib + build + probe (C1 carries the
@@ -1439,16 +1439,16 @@ let agreement_registry_firing_pin : pure_test =
         && eq (f Canary_mechanism.Ctypes Canary_lang.Python built_py)
              [ Canary_basic.Probe_binding Canary_lang.Python ]
         && (* behavior fires at probe in every world *)
-        eq ((CR.row_of C3).CR.ag_firing Canary_mechanism.Cstubs
+        eq ((CR.row_of C3).CR.ag_desc.Canary_agreement_common.firing Canary_mechanism.Cstubs
               Canary_lang.OCaml built_ml)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]
         && (* c4/c5 also gain the Build_lib cell in Built worlds *)
-        eq ((CR.row_of C4).CR.ag_firing Canary_mechanism.Cstubs
+        eq ((CR.row_of C4).CR.ag_desc.Canary_agreement_common.firing Canary_mechanism.Cstubs
               Canary_lang.OCaml built_ml)
              [ Canary_basic.Build_lib;
                Canary_basic.Build_binding Canary_lang.OCaml;
                Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && eq ((CR.row_of C4).CR.ag_firing Canary_mechanism.Cstubs
+        && eq ((CR.row_of C4).CR.ag_desc.Canary_agreement_common.firing Canary_mechanism.Cstubs
                  Canary_lang.OCaml fetched_ml)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]) }
 

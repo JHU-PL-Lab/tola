@@ -26,6 +26,9 @@
 
 open Base
 
+(* the shared vocabulary and derivations this list gathers over *)
+open Canary_agreement_common
+
 (* ── MOVED HERE 2026-09-01 (step B: one file to edit) ──
    The table and everything derived from it left
    [canary_agreement_run.ml], which now holds only the predicate
@@ -134,259 +137,39 @@ let predicted_contains_any_v2 ?(disabled = []) ~resolve
   |> List.dedup_and_sort ~compare:String.compare
 
 
-(** WHERE a binding's inspection sits. Measured 2026-09-02 across every
-    project's run outputs rather than assumed, because the answer turned
-    out to be three-way and the template had been claiming one answer
-    for all of it ([build_binding_<lang>], unconditionally):
+(* [binding_evidence_tag] and the per-agreement [inputs_of_agreement]
+   match moved out (2026-09-02): WHAT a check reads is something only
+   the check knows, so each family states it in its own
+   [description.inputs]; the shared tag derivation is in
+   [Canary_agreement_common]. This file listed it per id. *)
 
-    - FETCHED (ssl's opam binding, z3's pip wheel) → the fetch step.
-      The framework's own summaries attach at the install
-      ([Canary_step_builder]'s [auto_binding_summaries] matches exactly
-      [Fetch (Binding _)] and [Publish (Binding OCaml)]), and both
-      projects hand-wrote [fetch_binding_<lang>/…] to say so.
-    - BUILT IN THE WORKSPACE (tiny, zarith) → the build step, which is
-      where those two actually emit and what this template already
-      described.
-    - BUILT THEN PUBLISHED (llvm packs into opam and inspects the
-      published package) → the pack step. This one is NOT derived: the
-      world says how an artifact was provisioned, not whether the
-      project publishes it, and no declaration carries that bit today.
-      llvm therefore still writes its own paths, and the pin
-      [agreements.derived_evidence_matches_projects] records the gap so
-      that closing it is noticed. *)
-let binding_evidence_tag (w : Canary_artifact.assignment)
-    (l : Canary_lang.lang) : string =
-  let a =
-    match Canary_artifact.provision_of_binding w l with
-    | Canary_store.Fetched -> Canary_basic.Fetch (Canary_basic.Binding l)
-    (* Absent covers the callers that pass no world at all (tiny and the
-       Pattern A template): the build tree is what they have always
-       meant, so an unconverted caller keeps its answer *)
-    | Canary_store.Built | Canary_store.Installed | Canary_store.Vendored
-    | Canary_store.Absent ->
-        Canary_basic.Build_binding l
-  in
-  Canary_basic.string_of_action a
-
-let inputs_of_agreement ?mechanism ?(world = []) (c : Canary_agreement_common.agreement_id)
-    (l : Canary_lang.lang) : Canary_agreement_common.inspect_input list =
-  let open Canary_agreement_common in
-  (* mechanism defaults to the language's default (static for OCaml/Python
-     today) — current callers unchanged; a dynamic binding (ctypes/dynlink)
-     has NO stub input (it dlopens at runtime). *)
-  let m =
-    Option.value mechanism
-      ~default:
-        (Option.value (Canary_mechanism.default_mechanism_of_lang l)
-           ~default:Canary_mechanism.Cstubs)
-  in
-  let is_dynamic =
-    Poly.equal (Canary_mechanism.discipline_of_mechanism m)
-      Canary_mechanism.Dynamic_ffi
-  in
-  let tag action = Canary_basic.string_of_action action in
-  let binding_tag = binding_evidence_tag world l in
-  (* the LIB half is NOT a convention yet, and saying so is more honest
-     than deriving it: sqlite and zarith attach the native inspection at
-     [build_lib], z3 and llvm at [probe_lib] (llvm with per-location
-     suffixes, [probe_lib_apt] / [probe_lib_staged]). It is a project
-     choice today because [spec.inspect] is a per-project override,
-     where the BINDING summaries are framework-generated. Generalizing
-     it is the user's open point B — "should the inspect be general so
-     it must have" — and until it is, a project that puts its lib
-     inspection elsewhere still declares that one path itself. *)
-  let build_lib_tag = tag Canary_basic.Build_lib in
-  match c, l with
-  | C1, (Canary_lang.OCaml | Canary_lang.Python) when not is_dynamic ->
-      [ C_stub [ binding_tag ^ "/inspect.json" ];
-        Native_lib [ build_lib_tag ^ "/inspect.json" ] ]
-  | C1, (Canary_lang.OCaml | Canary_lang.Python) ->
-      (* dynamic: no compiled stub to inspect — the runtime fallback
-         (probe.log presence) catches missing-symbol failures *)
-      []
-  (* the BASENAMES stay as they were: they are tiny's, and tiny is the
-     template's only live consumer (with the Pattern A binding). The
-     framework's auto-summaries spell the same things differently —
-     "inspect" is the mli there and the stub here — which the resolver
-     papers over with [name_variants]. One name per artifact would be
-     better than a tolerant reader, but that is a rename across the
-     emitter, the resolver and the stored outputs, not a line here. *)
-  | C2, Canary_lang.OCaml ->
-      [ Ocaml_mli [ binding_tag ^ "/inspect_mli.json" ] ]
-  | C2, Canary_lang.Python ->
-      [ Python_attrs [ binding_tag ^ "/inspect_attrs.json" ] ]
-  | C4, Canary_lang.Python when not is_dynamic ->
-      [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
-        Abi_surface [ binding_tag ^ "/inspect.json" ] ]
-  | C5, Canary_lang.Python when not is_dynamic ->
-      [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
-        Versioned_req [ binding_tag ^ "/inspect.json" ] ]
-  | C6, Canary_lang.OCaml when not is_dynamic ->
-      [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
-        Typed_binding_stub
-          [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
-  | _ -> []  (* placeholder / unwired / behavior-grep / dynamic — no inputs *)
-
-
-(** WHAT A CHECK CLAIMS — the primary axis (design §1.6). A structural
-    claim is about artifacts and their FIT; a semantic claim is about
-    what the program MEANS or does. The distinction is not "does it
-    run": a link verdict is observed by running a tool and is still a
-    structural finding, which is exactly the case that made this axis
-    primary rather than the evidence one. *)
-type claim =
-  | Structural  (** about an artifact, or about two artifacts' fit *)
-  | Semantic    (** about behaviour — what running it means *)
-[@@deriving show, eq]
-
-(** HOW the claim is observed — the secondary axis (design §1.5). It
-    varies independently of [claim]: [Run_tool] carries structural
-    claims (a compiler's verdict on a pairing), [Run_program] carries
-    semantic ones. *)
-type evidence =
-  | Inspect_one       (** one artifact, an inspector *)
-  | Compare_several   (** several artifacts, inspected then compared *)
-  | Run_tool          (** a compiler/linker/loader verdict *)
-  | Run_program       (** the program's own output *)
-[@@deriving show, eq]
-
-(** WHERE the check comes from in a run (user, 2026-09-02). An
-    [Intrinsic] check is the action's own outcome — the build produced
-    its declared output, the fetch landed the package — and the runner
-    performs it whether or not any agreement is declared. An [Added]
-    check is canary's extra inspection, which exists only because this
-    catalogue says it should. The split is also the cheap/expensive
-    boundary a foreign backend cares about: intrinsic checks are already
-    command-shaped. *)
-type provenance =
-  | Intrinsic
-  | Added
-[@@deriving show, eq]
+(* [claim] / [evidence] / [provenance] moved to
+   [Canary_agreement_common] beside [cat] — they are the descriptive
+   types a family uses to describe ITSELF, so they must sit below the
+   families rather than in the registry that gathers them. *)
 
 type agreement_row = {
   ag_slug      : string;
-      (** THE STABLE NAME both the doc and the code use. The `c1..c8`
-          ids are provisional (§0); the slug is what a catalogue
-          section cites and what survives the renaming settle. *)
+      (** the stable NAME — the registry's to give, because uniqueness
+          is a property of the list rather than of any one check *)
   ag_doc       : string;
-      (** the catalogue section that DEFINES this agreement, e.g.
-          "§6.3". Paired with [ag_slug] this is a two-way bridge, and
-          [agreements.doc_anchors_exist] fails when it drifts. *)
+      (** the anchor in doc/canary/design/agreement_registry.md, pinned
+          by [agreements.doc_anchors_exist]. Also the registry's: a fact
+          about the DOCUMENT, not about the check *)
   ag_check     : Canary_agreement_common.agreement_check;
-      (** id / name / layer / status / enabled / predict — the
-          existing pipeline ([registered_checks]) *)
-  ag_invariant : string;
-      (** the one-sentence agreement, falsifier-phrased (design §5);
-          the reconciliation point for ssot's Ag.X ↔ C1..C8 drift *)
-  ag_reads     : (string * string) list;
-      (** THE GROUNDING: which artifact-surface roles the cell's
-          evidence reads — (surface_role, side), e.g. ("Sf.3",
-          "binding"). The draft's five surfaces (Sf.1 native_header,
-          Sf.2 native_lib, Sf.3 binding_stub, Sf.4 binding_header,
-          Sf.5 binding_lib) + "Trace" (the runtime observation). A
-          contract IS a named relation over these reads; the action
-          says where the read attaches. *)
-  ag_cat       : Canary_agreement_common.cat;
-      (** the DESCRIPTIVE category, taken from the check's own module so
-          the table and the module cannot disagree *)
-  ag_claim     : claim;
-  ag_evidence  : evidence;
-  ag_provenance : provenance;
-  ag_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
-                 Canary_artifact.assignment ->
-                 Canary_agreement_common.inspect_input list;
-      (** WHAT it reads ([inputs_of_agreement]). The world is a
-          parameter for the same reason it is one on [ag_firing]: an
-          artifact's evidence sits in the output dir of the step that
-          produced it, and which step that is depends on how the world
-          provisioned it. *)
-  ag_firing    : Canary_mechanism.mechanism -> Canary_lang.lang ->
-                 Canary_artifact.assignment -> Canary_basic.action list;
-      (** WHERE it fires — over the ACTION CATALOGUE
-          ([Canary_basic.action], the general vocabulary; SSOT §6.5).
-          Contracts are general for ALL artifacts, actions and
-          mechanisms: any action kind can carry a check (fetch,
-          configure, build, publish, probe, …); today's rows fire at
-          the build/probe actions — the wired subset. A row returns
-          [] for actions it does not fire at; the per-project
-          enabled/disabled policy is the bypass. The action layer
-          refines an action into [Canary_scenario.firing_site]
-          (location, loc_filter) in phase 2. *)
-  ag_fault_tags : string list;
-      (** step 9: sym_missing ↔ c1, … (scenario.md's catalogue) *)
+      (** the registered predict closure (id, status, enabled) *)
+  ag_desc      : Canary_agreement_common.description;
+      (** EVERYTHING ELSE, stated by the check's own module: category,
+          standing, the falsifier sentence, claim, evidence, provenance,
+          the surfaces it reads, fault tags, where it fires and what it
+          reads. The registry copies none of it (2026-09-02, user: "the
+          registry just list the checked") — it used to restate the
+          sentence and the category, and all eight sentences had
+          drifted from the family's. *)
 }
 
-(* ── the firing derivations ── *)
-
-(** [produced_here p]: did this world make the artifact, or receive it?
-    Installed groups with Built (2026-08-18) — its chain performed the
-    real build and then staged the result, so the build-family
-    agreements have their artifact. *)
-let produced_here (p : Canary_store.provision) : bool =
-  match p with
-  | Canary_store.Built | Canary_store.Installed -> true
-  | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent -> false
-
-(** The default: mechanism × lang × world → actions. Static and the
-    BINDING was built here → build then probe; Static and it arrived
-    ready-made → probe (no build step exists); Dynamic → probe
-    (probe-only chains).
-
-    The world is an [assignment] rather than one provision because a
-    world provisions each artifact separately — sqlite builds its lib
-    and fetches its binding from opam — and the two questions this
-    module asks are about different artifacts. Passing a single
-    provision made [Build_binding] fire on the LIB's provenance, which
-    claimed a build step in worlds that have none (2026-09-02; masked
-    until now only because both callers intersect with the world's real
-    action list). *)
-let firing_default (m : Canary_mechanism.mechanism) (l : Canary_lang.lang)
-    (w : Canary_artifact.assignment) : Canary_basic.action list =
-  let probe = Canary_basic.Probe_binding l in
-  match Canary_mechanism.discipline_of_mechanism m with
-  | Canary_mechanism.Dynamic_ffi -> [ probe ]
-  | Canary_mechanism.Static_c_abi ->
-      if produced_here (Canary_artifact.provision_of_binding w l) then
-        [ Canary_basic.Build_binding l; probe ]
-      else [ probe ]
-
-(** c4/c5's lib-only cell (2026-08-18): a BUILT lib carries its own
-    inspection — elf soname / versioned exports vs the DECLARED facts.
-    Fires at [Build_lib] in Built worlds: the tool (linker, version
-    script) is a black box; its artifact is the evidence. *)
-let firing_with_build_lib (m : Canary_mechanism.mechanism)
-    (l : Canary_lang.lang) (w : Canary_artifact.assignment) :
-    Canary_basic.action list =
-  let rest = firing_default m l w in
-  (* the LIB's own provenance decides this one, and the binding's decides
-     [Build_binding] inside [rest] — the whole point of taking a world.
-     The discipline gate is preserved as it stood; whether a soname
-     check should also fire under a Dynamic_ffi binding (where dlopen
-     resolves BY soname, so arguably it matters more) is a separate
-     question, not a refactor's to decide. *)
-  match
-    ( Canary_mechanism.discipline_of_mechanism m,
-      produced_here (Canary_artifact.provision_of_lib w) )
-  with
-  | Canary_mechanism.Static_c_abi, true -> Canary_basic.Build_lib :: rest
-  | _ -> rest
-
-(** Behavior needs a run — probe only, in every world. *)
-let firing_probe_only (_ : Canary_mechanism.mechanism)
-    (l : Canary_lang.lang) (_ : Canary_artifact.assignment) :
-    Canary_basic.action list = [ Canary_basic.Probe_binding l ]
-
-(** The UNIFORM world: lib and binding both at one provision. It is what
-    a single [~provision] argument used to mean, kept for the views that
-    want a hypothetical rather than a real world (the belief matrix, the
-    fill list). A real caller passes the enumeration's own assignment. *)
-let uniform_world ~(lang : Canary_lang.lang)
-    ~(mechanism : Canary_mechanism.mechanism)
-    (p : Canary_store.provision) : Canary_artifact.assignment =
-  let at id =
-    (id, { Canary_artifact.provision = p; version = Canary_basic.good Dev })
-  in
-  [ at Canary_artifact.a_lib; at (Canary_artifact.a_binding lang mechanism) ]
+(* the firing derivations and [uniform_world] moved to
+   [Canary_agreement_common]: a family states where it fires. *)
 
 (* ── row assembly ── *)
 
@@ -399,81 +182,26 @@ let check_of (id : Canary_agreement_common.agreement_id) :
          (Printf.sprintf "contract registry: no registered check for %s"
             (Canary_agreement_common.string_of_agreement_id id))
 
-let row ~slug ~doc ~invariant ~reads ~cat ~claim ~evidence ?(provenance = Added) ~firing ~tags
-    (id : Canary_agreement_common.agreement_id) : agreement_row =
-  { ag_slug = slug;
-    ag_doc = doc;
-    ag_check = check_of id;
-    ag_invariant = invariant;
-    ag_reads = reads;
-    ag_cat = cat;
-    ag_claim = claim;
-    ag_evidence = evidence;
-    ag_provenance = provenance;
-    ag_inputs =
-      (fun m l w ->
-        inputs_of_agreement ~mechanism:m ~world:w id l);
-    ag_firing = firing;
-    ag_fault_tags = tags }
+let row ~slug ~doc ~desc (id : Canary_agreement_common.agreement_id) :
+    agreement_row =
+  { ag_slug = slug; ag_doc = doc; ag_check = check_of id; ag_desc = desc }
 
 (** THE table — one row per contract (c1..c8). Each row's [ag_reads]
     grounds the evidence in the artifact surfaces it reads — the
     contract IS a named relation over those reads. *)
 let agreement_registry : agreement_row list =
-  [ row C1
-      ~slug:"symbol_exported" ~cat:Canary_chk_symbols.cat ~doc:"§3.3"
-      ~invariant:
-        "every symbol the binding declares (its stub references) is \
-         exported by the lib"
-      ~reads:[ ("Sf.3", "binding"); ("Sf.2", "native") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib
-      ~tags:[ "sym_missing" ];
-    row C2
-      ~slug:"api_surface_complete" ~cat:Canary_chk_api_surface.cat ~doc:"§3.3"
-      ~invariant:
-        "every watchlisted entry is present on the user-facing surface"
-      ~reads:[ ("Sf.4", "binding") ]
-      ~claim:Structural ~evidence:Inspect_one ~firing:firing_default
-      ~tags:[ "api_drop" ];
-    row C3
-      ~slug:"behavior_matches" ~cat:Canary_chk_behaviour.trace_cat ~doc:"§8"
-      ~invariant:"the probe's trace matches the recorded expectation"
-      ~reads:[ ("Trace", "run") ]
-      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only
-      ~tags:[ "behavior" ];
-    row C4
-      ~slug:"soname_denotes_needed" ~cat:Canary_chk_identity.soname_cat ~doc:"§6"
-      ~invariant:
-        "the lib's soname matches what the consumer records it needs"
-      ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib
-      ~tags:[ "abi_soname" ];
-    row C5
-      ~slug:"symbol_versions_present" ~cat:Canary_chk_identity.version_cat ~doc:"§3.3"
-      ~invariant:
-        "versioned symbols carry the annotations the consumer expects"
-      ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_with_build_lib
-      ~tags:[ "sym_version" ];
-    row C6
-      ~slug:"c_types_agree" ~cat:Canary_chk_types.cat ~doc:"§3.3"
-      ~invariant:"C types at the header/stub boundary match"
-      ~reads:[ ("Sf.1", "native"); ("Sf.3", "binding") ]
-      ~claim:Structural ~evidence:Compare_several ~firing:firing_default
-      ~tags:[ "type_arity" ];
-    row C7
-      ~slug:"repack_preserves_api" ~cat:Canary_chk_api_surface.repack_cat ~doc:"§5.3"
-      ~invariant:"repackaging preserves the API"
-      ~reads:[ ("Sf.4", "binding") ]
-      ~claim:Semantic ~evidence:Run_program ~firing:firing_probe_only
-      ~tags:[ "api_repack" ];
-    row C8
-      ~slug:"repack_complete" ~cat:Canary_chk_api_surface.repack_cat ~doc:"§5.3"
-      ~invariant:
-        "repackaging is complete — nothing the original had is lost"
-      ~reads:[ ("Sf.4", "binding") ]
-      ~claim:Semantic ~evidence:Run_program ~firing:firing_default
-      ~tags:[ "api_add" ] ]
+  [ row C1 ~slug:"symbol_exported" ~doc:"§3.3" ~desc:Canary_chk_symbols.c1;
+    row C2 ~slug:"api_surface_complete" ~doc:"§3.3"
+      ~desc:Canary_chk_api_surface.c2;
+    row C3 ~slug:"behavior_matches" ~doc:"§8" ~desc:Canary_chk_behaviour.c3;
+    row C4 ~slug:"soname_denotes_needed" ~doc:"§6"
+      ~desc:Canary_chk_identity.c4;
+    row C5 ~slug:"symbol_versions_present" ~doc:"§3.3"
+      ~desc:Canary_chk_identity.c5;
+    row C6 ~slug:"c_types_agree" ~doc:"§3.3" ~desc:Canary_chk_types.c6;
+    row C7 ~slug:"repack_preserves_api" ~doc:"§5.3"
+      ~desc:Canary_chk_api_surface.c7;
+    row C8 ~slug:"repack_complete" ~doc:"§5.3" ~desc:Canary_chk_composed.c8 ]
 
 (* ── spec fixtures — testing AHEAD of project running ──
    Each contract ships its MINIMAL COUNTEREXAMPLE: synthetic inspect
@@ -575,6 +303,26 @@ let row_of (id : Canary_agreement_common.agreement_id) : agreement_row =
          (Printf.sprintf "contract registry: no row for %s"
             (Canary_agreement_common.string_of_agreement_id id))
 
+(** What one agreement reads, by id — a LOOKUP in the list, now that
+    each family states its own [inputs] (2026-09-02). It was a 65-line
+    match on the id in this file; the registry knows which module
+    describes C1, not what C1 reads.
+
+    [mechanism] defaults to the language's default (static for
+    OCaml/Python today); a dynamic binding has no compiled stub to
+    inspect, which each family's [inputs] answers for itself. *)
+let inputs_of_agreement ?mechanism ?(world = [])
+    (c : Canary_agreement_common.agreement_id) (l : Canary_lang.lang) :
+    Canary_agreement_common.inspect_input list =
+  let m =
+    Option.value mechanism
+      ~default:
+        (Option.value
+           (Canary_mechanism.default_mechanism_of_lang l)
+           ~default:Canary_mechanism.Cstubs)
+  in
+  (row_of c).ag_desc.Canary_agreement_common.inputs m l world
+
 (* ── THE BELIEF MATRIX (2026-08-18) ──
    The registry's motivation made visible: enumerate every
    (contract × action) cell and give each a STATUS. The matrix is
@@ -629,7 +377,7 @@ let cell_status_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
     (a : Canary_basic.action) : cell_status =
   let fires =
-    List.exists (r.ag_firing mechanism lang world) ~f:(fun x ->
+    List.exists (r.ag_desc.Canary_agreement_common.firing mechanism lang world) ~f:(fun x ->
         Poly.equal x a)
   in
   if not fires then Empty
@@ -758,8 +506,8 @@ let all_agreements : entry list =
   List.map agreement_registry ~f:(fun r ->
       { e_slug = r.ag_slug;
         e_doc = r.ag_doc;
-        e_claim = r.ag_invariant;
-        e_reads = r.ag_reads;
+        e_claim = r.ag_desc.Canary_agreement_common.says;
+        e_reads = r.ag_desc.Canary_agreement_common.reads;
         e_status = Implemented r.ag_check.Canary_agreement_common.status })
   @ List.map proposed_agreements ~f:(fun p ->
         { e_slug = p.prop_slug;
@@ -804,11 +552,11 @@ let agreements_for ~(mechanism : Canary_mechanism.mechanism)
     ?action () : (agreement_row * Canary_agreement_common.inspect_input list) list =
   List.filter_map agreement_registry ~f:(fun r ->
       let fires =
-        let sites = r.ag_firing mechanism lang world in
+        let sites = r.ag_desc.Canary_agreement_common.firing mechanism lang world in
         match action with
         | None -> not (List.is_empty sites)
         | Some a -> List.exists sites ~f:(fun s -> Poly.equal s a)
       in
       if fires && r.ag_check.Canary_agreement_common.enabled then
-        Some (r, r.ag_inputs mechanism lang world)
+        Some (r, r.ag_desc.Canary_agreement_common.inputs mechanism lang world)
       else None)

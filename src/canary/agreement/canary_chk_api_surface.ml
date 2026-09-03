@@ -110,3 +110,29 @@ let repack_says =
    RUNNING the binding probe, not in any static input, so this returns
    [] honestly and the registry keeps the row disabled. *)
 let c7_predict ~resolve:_ _ = []
+
+let c2 : description =
+  { cat; standing; says;
+    claim = Structural;
+    evidence = Inspect_one;
+    provenance = Added;
+    reads = [ ("Sf.4", "binding") ];
+    fault_tags = [ "api_drop" ];
+    firing = firing_default;
+    inputs =
+      (fun _ l w ->
+        let tag = binding_evidence_tag w l in
+        match l with
+        | Canary_lang.OCaml -> [ Ocaml_mli [ tag ^ "/inspect_mli.json" ] ]
+        | Canary_lang.Python -> [ Python_attrs [ tag ^ "/inspect_attrs.json" ] ]
+        | _ -> []) }
+
+let c7 : description =
+  { cat = repack_cat; standing; says = repack_says;
+    claim = Semantic;
+    evidence = Run_program;
+    provenance = Added;
+    reads = [ ("Sf.4", "binding") ];
+    fault_tags = [ "api_repack" ];
+    firing = firing_probe_only;
+    inputs = (fun _ _ _ -> []) }

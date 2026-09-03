@@ -22,7 +22,7 @@ module R = Canary_agreement_registry
 type entry = {
   en_action    : Canary_basic.action;
   en_intrinsic : string;                     (** the action's own postcondition *)
-  en_added     : (string * R.claim * R.evidence) list;  (** slug, claim, evidence *)
+  en_added     : (string * Canary_agreement_common.claim * Canary_agreement_common.evidence) list;  (** slug, claim, evidence *)
 }
 
 (** The agreements that fire at [action] for a binding of this mechanism
@@ -33,19 +33,19 @@ type entry = {
     from being read off its lib's. *)
 let added_at ~(mechanism : Canary_mechanism.mechanism) ~(lang : Canary_lang.lang)
     ~(worlds : Canary_artifact.assignment list) (action : Canary_basic.action) :
-    (string * R.claim * R.evidence) list =
+    (string * Canary_agreement_common.claim * Canary_agreement_common.evidence) list =
   List.filter_map R.agreement_registry ~f:(fun r ->
       let fires =
         List.exists worlds ~f:(fun w ->
-            List.exists (r.R.ag_firing mechanism lang w) ~f:(fun a ->
+            List.exists (r.R.ag_desc.Canary_agreement_common.firing mechanism lang w) ~f:(fun a ->
                 Poly.equal a action))
       in
       let enabled = r.R.ag_check.Canary_agreement_common.enabled in
       if fires then
         Some
           ( (if enabled then r.R.ag_slug else r.R.ag_slug ^ " (off)"),
-            r.R.ag_claim,
-            r.R.ag_evidence )
+            r.R.ag_desc.Canary_agreement_common.claim,
+            r.R.ag_desc.Canary_agreement_common.evidence )
       else None)
 
 (** The index for one project: every action its scenarios derive, paired
@@ -115,12 +115,12 @@ let pp (pr : Canary_project_run.project_run)
               String.concat ~sep:", "
                 (List.map e.en_added ~f:(fun (slug, cl, ev) ->
                      Printf.sprintf "%s [%s/%s]" slug
-                       (match cl with R.Structural -> "struct" | R.Semantic -> "sem")
+                       (match cl with Canary_agreement_common.Structural -> "struct" | Canary_agreement_common.Semantic -> "sem")
                        (match ev with
-                        | R.Inspect_one -> "inspect"
-                        | R.Compare_several -> "compare"
-                        | R.Run_tool -> "tool"
-                        | R.Run_program -> "run")))
+                        | Canary_agreement_common.Inspect_one -> "inspect"
+                        | Canary_agreement_common.Compare_several -> "compare"
+                        | Canary_agreement_common.Run_tool -> "tool"
+                        | Canary_agreement_common.Run_program -> "run")))
           in
           Buffer.add_string buf
             (Printf.sprintf "  %-22s intrinsic %-12s added %s\n"

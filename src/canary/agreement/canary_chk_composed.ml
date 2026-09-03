@@ -11,6 +11,7 @@
     blocking relation is executable rather than merely recorded. *)
 
 open Base
+open Canary_agreement_common
 open Canary_chk_types
 open Canary_chk_symbols
 open Canary_chk_api_surface
@@ -80,3 +81,17 @@ let check_api_faithfulness
 (* c8 is UNWIRED: it can only compose verdicts, and two of the three it
    composes are themselves unwired. [] until they are not. *)
 let c8_predict ~resolve:_ _ = []
+
+let cat = Canary_agreement_common.Api `Repacked
+let standing = Canary_agreement_common.Declared
+let says = "the repack loses nothing the original had"
+
+let c8 : description =
+  { cat; standing; says;
+    claim = Semantic;
+    evidence = Run_program;
+    provenance = Added;
+    reads = [ ("Sf.4", "binding") ];
+    fault_tags = [ "api_add" ];
+    firing = firing_default;
+    inputs = (fun _ _ _ -> []) }

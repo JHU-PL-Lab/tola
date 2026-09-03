@@ -337,3 +337,37 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
     c8 is disabled — no Contract for canary to maintain. Each binding
     is independent; cross-binding consistency isn't a canary-side
     agreement. Candidate for removal in a future registry cleanup. *)
+
+let c4 : description =
+  { cat = soname_cat; standing; says = soname_says;
+    claim = Structural;
+    evidence = Compare_several;
+    provenance = Added;
+    reads = [ ("Sf.2", "native"); ("Sf.5", "binding") ];
+    fault_tags = [ "abi_soname" ];
+    firing = firing_with_build_lib;
+    inputs =
+      (fun m l w ->
+        (* only the cext surfaces NEEDED today — an OCaml binding's
+           NEEDED lives on the linked exe, not the .cmxa *)
+        match (l, is_dynamic m) with
+        | Canary_lang.Python, false ->
+            [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
+              Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+        | _ -> []) }
+
+let c5 : description =
+  { cat = version_cat; standing; says = version_says;
+    claim = Structural;
+    evidence = Compare_several;
+    provenance = Added;
+    reads = [ ("Sf.2", "native"); ("Sf.5", "binding") ];
+    fault_tags = [ "sym_version" ];
+    firing = firing_with_build_lib;
+    inputs =
+      (fun m l w ->
+        match (l, is_dynamic m) with
+        | Canary_lang.Python, false ->
+            [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
+              Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+        | _ -> []) }

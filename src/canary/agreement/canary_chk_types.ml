@@ -194,3 +194,20 @@ let c6_predict ~resolve (inputs : inspect_input list) : string list =
    for Expect_failure cases is the GOAL — see step_expectation in
    canary_action.ml). We're not re-implementing the runner's verdict; just
    distinguishing "log has compile error text" from "log shows runtime ok". *)
+
+let c6 : description =
+  { cat; standing; says;
+    claim = Structural;
+    evidence = Compare_several;
+    provenance = Added;
+    reads = [ ("Sf.1", "native"); ("Sf.3", "binding") ];
+    fault_tags = [ "type_arity" ];
+    firing = firing_default;
+    inputs =
+      (fun m l _ ->
+        match (l, is_dynamic m) with
+        | Canary_lang.OCaml, false ->
+            [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
+              Typed_binding_stub
+                [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
+        | _ -> []) }

@@ -203,3 +203,22 @@ let c1_lag_note ~resolve (inputs : inspect_input list) : string option =
     Ocaml_mli / Python_attrs JSONs and expands each missing name into
     its observable variants (e.g. [Llvm.Opcode.UncondBr] →
     [Opcode.UncondBr], [UncondBr]). *)
+
+(** How c1 describes itself to the registry (2026-09-02). The [says]
+    here is THE sentence — the registry no longer writes a second one. *)
+let c1 : description =
+  { cat; standing; says;
+    claim = Structural;
+    evidence = Compare_several;
+    provenance = Added;
+    reads = [ ("Sf.3", "binding"); ("Sf.2", "native") ];
+    fault_tags = [ "sym_missing" ];
+    firing = firing_with_build_lib;
+    inputs =
+      (fun m l w ->
+        (* dynamic: no compiled stub to inspect — the runtime fallback
+           (probe.log presence) catches missing-symbol failures *)
+        if is_dynamic m then []
+        else
+          [ C_stub [ binding_evidence_tag w l ^ "/inspect.json" ];
+            Native_lib [ build_lib_tag ^ "/inspect.json" ] ]) }

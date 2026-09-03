@@ -14,6 +14,7 @@
     [Canary_chk_composed] (2026-09-02): c7's own declared category is
     [Api `Repacked], and c8 is a composition rather than a family. *)
 
+open Canary_agreement_common
 module Cat = Canary_agreement_common
 
 let trace_cat = Cat.Behaviour `Trace
@@ -22,3 +23,12 @@ let trace_says = "the probe's trace matches what was recorded for it"
 
 let c3_predict ~resolve:_ _ = []
 
+let c3 : description =
+  { cat = trace_cat; standing; says = trace_says;
+    claim = Semantic;
+    evidence = Run_program;
+    provenance = Added;
+    reads = [ ("Trace", "run") ];
+    fault_tags = [ "behavior" ];
+    firing = firing_probe_only;
+    inputs = (fun _ _ _ -> []) }
