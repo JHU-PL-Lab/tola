@@ -19,12 +19,12 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
   let provider_path =
     List.find_map inputs
       ~f:(function
-        | Versioned_exports ps -> Canary_evidence.pick_existing ~resolve ps
+        | Versioned_exports ps -> pick_existing ~resolve ps
         | _ -> None) in
   let consumer_path =
     List.find_map inputs
       ~f:(function
-        | Versioned_req ps -> Canary_evidence.pick_existing ~resolve ps
+        | Versioned_req ps -> pick_existing ~resolve ps
         | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
@@ -50,10 +50,10 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
 let c4_predict ~resolve (inputs : inspect_input list) : string list =
   let provider_path =
     List.find_map inputs
-      ~f:(function Native_lib ps -> Canary_evidence.pick_existing ~resolve ps | _ -> None) in
+      ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None) in
   let consumer_path =
     List.find_map inputs
-      ~f:(function Abi_surface ps -> Canary_evidence.pick_existing ~resolve ps | _ -> None) in
+      ~f:(function Abi_surface ps -> pick_existing ~resolve ps | _ -> None) in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
       let prov = Canary_agreement.load_abi_surface pp in

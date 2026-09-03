@@ -70,7 +70,7 @@ let get_string_list j name =
 
     Unified on 2026-06-01 (Phase 4): previously this type lived twice,
     as [Canary.compat_inspect_input] (paths : string list) on the
-    declaration side and as [Canary_evidence.typed_input] (single
+    declaration side and as [typed_input] (single
     string) after resolution, with a manual 20-line translation in
     [Canary_action] and [Canary_gh]. Constructors map to surface
     roles:
@@ -725,3 +725,31 @@ type agreement_check = {
   enabled   : bool;
   predict   : resolve:(string -> string) -> inspect_input list -> string list;
 }
+
+(* ── loader support shared by the check families (2026-09-02) ──
+   These sit with [load_stub] / [load_native] because that is what they
+   are: reading an inspect JSON, and expanding a dotted name into the
+   forms a log might show. They were briefly in a module of their own;
+   "evidence" turned out not to be a category. *)
+
+let pick_existing ~resolve paths =
+  List.find_map paths ~f:(fun rel ->
+    let abs = resolve rel in
+    if Stdlib.Sys.file_exists abs then Some abs else None)
+
+let load_watchlist_missing path =
+  if not (Stdlib.Sys.file_exists path) then []
+  else
+    let j = Yojson.Basic.from_file path in
+    match field j "watchlist" with
+    | Some wl -> get_string_list wl "missing"
+    | None -> []
+
+let name_variants e =
+  let parts = String.split e ~on:'.' in
+  let suffix_no_top = match parts with
+    | _ :: (_ :: _ as rest) -> [ String.concat ~sep:"." rest ]
+    | _ -> []
+  in
+  let last = match List.last parts with Some l -> [ l ] | None -> [] in
+  e :: suffix_no_top @ last

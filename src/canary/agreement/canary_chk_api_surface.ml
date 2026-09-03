@@ -16,9 +16,9 @@ let says = "every watchlisted name is present on the binding's user-facing surfa
 let c2_predict ~resolve (inputs : inspect_input list) : string list =
   List.concat_map inputs ~f:(function
     | Ocaml_mli ps | Python_attrs ps ->
-        (match Canary_evidence.pick_existing ~resolve ps with
+        (match pick_existing ~resolve ps with
          | None -> []
-         | Some p -> Canary_evidence.load_watchlist_missing p |> List.concat_map ~f:Canary_evidence.name_variants)
+         | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants)
     | _ -> [])
 
 (** c5 cmp_sym_version (L1b). Reads provider's versioned_exports map
