@@ -1416,31 +1416,40 @@ let agreement_registry_firing_pin : pure_test =
         let module CR = Canary_agreement_registry in
         let f = (CR.row_of C1).CR.ag_firing in
         let eq got want = Poly.equal got want in
+        (* the uniform worlds these cases were written against: firing
+           takes an assignment now, so a "Built world" has to be said in
+           full rather than named by one provision *)
+        let ml = CR.uniform_world ~lang:Canary_lang.OCaml
+                   ~mechanism:Canary_mechanism.Cstubs in
+        let built_ml = ml Canary_store.Built
+        and fetched_ml = ml Canary_store.Fetched in
+        let built_py =
+          CR.uniform_world ~lang:Canary_lang.Python
+            ~mechanism:Canary_mechanism.Ctypes Canary_store.Built
+        in
         (* Static + Built → build_lib + build + probe (C1 carries the
            lib-only cell); Static + Fetched → probe; Dynamic → probe —
            over the ACTION catalogue *)
-        eq (f Canary_mechanism.Cstubs Canary_lang.OCaml Canary_store.Built)
+        eq (f Canary_mechanism.Cstubs Canary_lang.OCaml built_ml)
           [ Canary_basic.Build_lib;
             Canary_basic.Build_binding Canary_lang.OCaml;
             Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && eq (f Canary_mechanism.Cstubs Canary_lang.OCaml
-                 Canary_store.Fetched)
+        && eq (f Canary_mechanism.Cstubs Canary_lang.OCaml fetched_ml)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && eq (f Canary_mechanism.Ctypes Canary_lang.Python
-                 Canary_store.Built)
+        && eq (f Canary_mechanism.Ctypes Canary_lang.Python built_py)
              [ Canary_basic.Probe_binding Canary_lang.Python ]
         && (* behavior fires at probe in every world *)
         eq ((CR.row_of C3).CR.ag_firing Canary_mechanism.Cstubs
-              Canary_lang.OCaml Canary_store.Built)
+              Canary_lang.OCaml built_ml)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]
         && (* c4/c5 also gain the Build_lib cell in Built worlds *)
         eq ((CR.row_of C4).CR.ag_firing Canary_mechanism.Cstubs
-              Canary_lang.OCaml Canary_store.Built)
+              Canary_lang.OCaml built_ml)
              [ Canary_basic.Build_lib;
                Canary_basic.Build_binding Canary_lang.OCaml;
                Canary_basic.Probe_binding Canary_lang.OCaml ]
         && eq ((CR.row_of C4).CR.ag_firing Canary_mechanism.Cstubs
-                 Canary_lang.OCaml Canary_store.Fetched)
+                 Canary_lang.OCaml fetched_ml)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]) }
 
 (* M2 step 6 (2026-08-17): the spec fixtures execute AHEAD of any
@@ -1840,15 +1849,27 @@ let agreements_for_pin : pure_test =
     check =
       (fun () ->
         let module R = Canary_agreement_registry in
-        let got ?action () =
+        let world ~lib ~binding : Canary_artifact.assignment =
+          let at id p =
+            (id, { Canary_artifact.provision = p;
+                   version = Canary_basic.good Canary_basic.Dev })
+          in
+          [ at Canary_artifact.a_lib lib;
+            at
+              (Canary_artifact.a_binding Canary_lang.OCaml
+                 Canary_mechanism.Cstubs)
+              binding ]
+        in
+        let got ?action w =
           R.agreements_for ~mechanism:Canary_mechanism.Cstubs
-            ~lang:Canary_lang.OCaml ~provision:Canary_store.Built ?action ()
+            ~lang:Canary_lang.OCaml ~world:w ?action ()
         in
         let slugs l = List.map l ~f:(fun (r, _) -> r.R.ag_slug) in
-        let built = got () in
-        let at_build_lib =
-          got ~action:Canary_basic.Build_lib ()
+        let all_built =
+          world ~lib:Canary_store.Built ~binding:Canary_store.Built
         in
+        let built = got all_built in
+        let at_build_lib = got ~action:Canary_basic.Build_lib all_built in
         (* a Built world reaches the solo cells at build_lib … *)
         List.mem (slugs at_build_lib) "symbol_exported" ~equal:String.equal
         && List.mem (slugs at_build_lib) "soname_denotes_needed"
@@ -1859,9 +1880,33 @@ let agreements_for_pin : pure_test =
                r.R.ag_check.Canary_agreement.enabled)
         (* a Fetched world has no build_lib checks at all *)
         && List.is_empty
-             (R.agreements_for ~mechanism:Canary_mechanism.Cstubs
-                ~lang:Canary_lang.OCaml ~provision:Canary_store.Fetched
-                ~action:Canary_basic.Build_lib ())) }
+             (got ~action:Canary_basic.Build_lib
+                (world ~lib:Canary_store.Fetched
+                   ~binding:Canary_store.Fetched))
+        (* … and the artifacts are asked SEPARATELY (2026-09-02): sqlite's
+           shape — lib built here, binding fetched from opam — reaches
+           build_lib and must NOT claim a build_binding step, which is
+           the bug a single ~provision could not express *)
+        && (not
+              (List.is_empty
+                 (got ~action:Canary_basic.Build_lib
+                    (world ~lib:Canary_store.Built
+                       ~binding:Canary_store.Fetched))))
+        && List.is_empty
+             (got
+                ~action:(Canary_basic.Build_binding Canary_lang.OCaml)
+                (world ~lib:Canary_store.Built ~binding:Canary_store.Fetched))
+        (* the mirror image: a fetched lib with a binding built against
+           it checks the build_binding cell and no build_lib cell *)
+        && (not
+              (List.is_empty
+                 (got
+                    ~action:(Canary_basic.Build_binding Canary_lang.OCaml)
+                    (world ~lib:Canary_store.Fetched
+                       ~binding:Canary_store.Built))))
+        && List.is_empty
+             (got ~action:Canary_basic.Build_lib
+                (world ~lib:Canary_store.Fetched ~binding:Canary_store.Built))) }
 
 let all_tests : pure_test list =
   catalogue_tests

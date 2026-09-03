@@ -246,7 +246,7 @@ type agreement_row = {
                  Canary_agreement.inspect_input list;
       (** the step-2 template ([inputs_of_agreement]) *)
   ag_firing    : Canary_mechanism.mechanism -> Canary_lang.lang ->
-                 Canary_store.provision -> Canary_basic.action list;
+                 Canary_artifact.assignment -> Canary_basic.action list;
       (** WHERE it fires — over the ACTION CATALOGUE
           ([Canary_basic.action], the general vocabulary; SSOT §6.5).
           Contracts are general for ALL artifacts, actions and
@@ -263,45 +263,75 @@ type agreement_row = {
 
 (* ── the firing derivations ── *)
 
-(** The default: mechanism × lang × provision → actions. Static +
-    Built → build then probe; Static + Fetched/Vendored → probe (no
-    build step exists); Dynamic → probe (probe-only chains). *)
+(** [produced_here p]: did this world make the artifact, or receive it?
+    Installed groups with Built (2026-08-18) — its chain performed the
+    real build and then staged the result, so the build-family
+    agreements have their artifact. *)
+let produced_here (p : Canary_store.provision) : bool =
+  match p with
+  | Canary_store.Built | Canary_store.Installed -> true
+  | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent -> false
+
+(** The default: mechanism × lang × world → actions. Static and the
+    BINDING was built here → build then probe; Static and it arrived
+    ready-made → probe (no build step exists); Dynamic → probe
+    (probe-only chains).
+
+    The world is an [assignment] rather than one provision because a
+    world provisions each artifact separately — sqlite builds its lib
+    and fetches its binding from opam — and the two questions this
+    module asks are about different artifacts. Passing a single
+    provision made [Build_binding] fire on the LIB's provenance, which
+    claimed a build step in worlds that have none (2026-09-02; masked
+    until now only because both callers intersect with the world's real
+    action list). *)
 let firing_default (m : Canary_mechanism.mechanism) (l : Canary_lang.lang)
-    (p : Canary_store.provision) : Canary_basic.action list =
+    (w : Canary_artifact.assignment) : Canary_basic.action list =
   let probe = Canary_basic.Probe_binding l in
   match Canary_mechanism.discipline_of_mechanism m with
   | Canary_mechanism.Dynamic_ffi -> [ probe ]
-  | Canary_mechanism.Static_c_abi -> (
-      match p with
-      (* Installed groups with Built (2026-08-18): its chain includes
-         the real build + the staging — the build-family contracts fire. *)
-      | Canary_store.Built | Canary_store.Installed ->
-          [ Canary_basic.Build_binding l; probe ]
-      | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent ->
-          [ probe ])
+  | Canary_mechanism.Static_c_abi ->
+      if produced_here (Canary_artifact.provision_of_binding w l) then
+        [ Canary_basic.Build_binding l; probe ]
+      else [ probe ]
 
 (** c4/c5's lib-only cell (2026-08-18): a BUILT lib carries its own
     inspection — elf soname / versioned exports vs the DECLARED facts.
     Fires at [Build_lib] in Built worlds: the tool (linker, version
     script) is a black box; its artifact is the evidence. *)
 let firing_with_build_lib (m : Canary_mechanism.mechanism)
-    (l : Canary_lang.lang) (p : Canary_store.provision) :
+    (l : Canary_lang.lang) (w : Canary_artifact.assignment) :
     Canary_basic.action list =
-  match (Canary_mechanism.discipline_of_mechanism m, p) with
-  (* Installed belongs with Built, as it does in [firing_default]: its
-     chain performed the real build and then staged the result, so the
-     lib-only cells have their artifact. The checking index caught this
-     omission — an Installed world showed no checks at Build_lib
-     (2026-09-02). *)
-  | Canary_mechanism.Static_c_abi, (Canary_store.Built | Canary_store.Installed) ->
-      [ Canary_basic.Build_lib; Canary_basic.Build_binding l;
-        Canary_basic.Probe_binding l ]
-  | _ -> firing_default m l p
+  let rest = firing_default m l w in
+  (* the LIB's own provenance decides this one, and the binding's decides
+     [Build_binding] inside [rest] — the whole point of taking a world.
+     The discipline gate is preserved as it stood; whether a soname
+     check should also fire under a Dynamic_ffi binding (where dlopen
+     resolves BY soname, so arguably it matters more) is a separate
+     question, not a refactor's to decide. *)
+  match
+    ( Canary_mechanism.discipline_of_mechanism m,
+      produced_here (Canary_artifact.provision_of_lib w) )
+  with
+  | Canary_mechanism.Static_c_abi, true -> Canary_basic.Build_lib :: rest
+  | _ -> rest
 
 (** Behavior needs a run — probe only, in every world. *)
 let firing_probe_only (_ : Canary_mechanism.mechanism)
-    (l : Canary_lang.lang) (_ : Canary_store.provision) :
+    (l : Canary_lang.lang) (_ : Canary_artifact.assignment) :
     Canary_basic.action list = [ Canary_basic.Probe_binding l ]
+
+(** The UNIFORM world: lib and binding both at one provision. It is what
+    a single [~provision] argument used to mean, kept for the views that
+    want a hypothetical rather than a real world (the belief matrix, the
+    fill list). A real caller passes the enumeration's own assignment. *)
+let uniform_world ~(lang : Canary_lang.lang)
+    ~(mechanism : Canary_mechanism.mechanism)
+    (p : Canary_store.provision) : Canary_artifact.assignment =
+  let at id =
+    (id, { Canary_artifact.provision = p; version = Canary_basic.good Dev })
+  in
+  [ at Canary_artifact.a_lib; at (Canary_artifact.a_binding lang mechanism) ]
 
 (* ── row assembly ── *)
 
@@ -541,10 +571,10 @@ let has_fixture (id : Canary_agreement.agreement_id) : bool =
 
 (** One cell's status under a concrete world. *)
 let cell_status_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
-    ~(lang : Canary_lang.lang) ~(provision : Canary_store.provision)
+    ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
     (a : Canary_basic.action) : cell_status =
   let fires =
-    List.exists (r.ag_firing mechanism lang provision) ~f:(fun x ->
+    List.exists (r.ag_firing mechanism lang world) ~f:(fun x ->
         Poly.equal x a)
   in
   if not fires then Empty
@@ -557,10 +587,11 @@ let cell_status_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
 let belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
     (agreement_row * (Canary_basic.action * cell_status) list) list =
+  let world = uniform_world ~lang ~mechanism provision in
   List.map agreement_registry ~f:(fun r ->
       ( r,
         List.map (matrix_actions lang) ~f:(fun a ->
-            (a, cell_status_of r ~mechanism ~lang ~provision a)) ))
+            (a, cell_status_of r ~mechanism ~lang ~world a)) ))
 
 (** Render the matrix as a text table (the CLI view). *)
 let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
@@ -708,14 +739,17 @@ let pp_agreements () : string =
    With this, no project writes an agreement id. *)
 
 (** Every agreement that applies to a binding with these facts, paired
-    with the inputs it would read. [action] narrows to the checks that
-    fire at one action; omit it for all of them. *)
+    with the inputs it would read. [world] is the enumeration's own
+    [assignment] — it already records how EVERY artifact was
+    provisioned, so nothing here has to choose which provision stands
+    for the world (2026-09-02). [action] narrows to the checks that fire
+    at one action; omit it for all of them. *)
 let agreements_for ~(mechanism : Canary_mechanism.mechanism)
-    ~(lang : Canary_lang.lang) ~(provision : Canary_store.provision)
+    ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
     ?action () : (agreement_row * Canary_agreement.inspect_input list) list =
   List.filter_map agreement_registry ~f:(fun r ->
       let fires =
-        let sites = r.ag_firing mechanism lang provision in
+        let sites = r.ag_firing mechanism lang world in
         match action with
         | None -> not (List.is_empty sites)
         | Some a -> List.exists sites ~f:(fun s -> Poly.equal s a)

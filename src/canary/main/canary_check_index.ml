@@ -26,14 +26,19 @@ type entry = {
 }
 
 (** The agreements that fire at [action] for a binding of this mechanism
-    and language, under this provision. *)
+    and language, in any of [worlds]. A row of this index stands for a
+    GROUP of worlds (those sharing a lib provision), so the checks are
+    unioned over the group exactly as its actions are — and each world
+    is asked as itself, which is what stops a world's binding provision
+    from being read off its lib's. *)
 let added_at ~(mechanism : Canary_mechanism.mechanism) ~(lang : Canary_lang.lang)
-    ~(provision : Canary_store.provision) (action : Canary_basic.action) :
+    ~(worlds : Canary_artifact.assignment list) (action : Canary_basic.action) :
     (string * R.claim * R.evidence) list =
   List.filter_map R.agreement_registry ~f:(fun r ->
       let fires =
-        List.exists (r.R.ag_firing mechanism lang provision) ~f:(fun a ->
-            Poly.equal a action)
+        List.exists worlds ~f:(fun w ->
+            List.exists (r.R.ag_firing mechanism lang w) ~f:(fun a ->
+                Poly.equal a action))
       in
       let enabled = r.R.ag_check.Canary_agreement.enabled in
       if fires then
@@ -62,9 +67,7 @@ let of_project ?policy (pr : Canary_project_run.project_run) :
   let by_provision =
     Canary_project_run.scenarios_of ?policy pr
     |> List.map ~f:(fun a ->
-           let provision =
-             Canary_enumerate.provision_of a Canary_artifact.a_lib
-           in
+           let provision = Canary_artifact.provision_of_lib a in
            let spec = pr.Canary_project_run.pr_runner_spec a ~workspace:"_out/tmp" () in
            let steps =
              Canary_step_builder.derive_steps ~root:"_out"
@@ -72,22 +75,27 @@ let of_project ?policy (pr : Canary_project_run.project_run) :
                ~langs:Canary_lang.[ OCaml; Python ] spec
            in
            ( provision,
-             List.map steps ~f:(fun (s : Canary_step_model.step) ->
-                 s.Canary_step_model.action) ))
-    |> List.fold ~init:[] ~f:(fun acc (pv, acts) ->
+             ( [ a ],
+               List.map steps ~f:(fun (s : Canary_step_model.step) ->
+                   s.Canary_step_model.action) ) ))
+    (* the group carries its WORLDS, not just their shared lib
+       provision: what fires depends on each world in full, so the
+       group cannot be collapsed to one provision before asking *)
+    |> List.fold ~init:[] ~f:(fun acc (pv, (ws, acts)) ->
            match List.Assoc.find acc pv ~equal:Poly.equal with
-           | Some prev ->
-               List.Assoc.add acc pv (prev @ acts) ~equal:Poly.equal
-           | None -> List.Assoc.add acc pv acts ~equal:Poly.equal)
-    |> List.map ~f:(fun (pv, acts) ->
-           (pv, List.dedup_and_sort acts ~compare:Poly.compare))
+           | Some (prev_ws, prev) ->
+               List.Assoc.add acc pv (prev_ws @ ws, prev @ acts)
+                 ~equal:Poly.equal
+           | None -> List.Assoc.add acc pv (ws, acts) ~equal:Poly.equal)
+    |> List.map ~f:(fun (pv, (ws, acts)) ->
+           (pv, (ws, List.dedup_and_sort acts ~compare:Poly.compare)))
   in
-  List.map by_provision ~f:(fun (provision, actions) ->
+  List.map by_provision ~f:(fun (provision, (worlds, actions)) ->
       ( provision,
         List.map actions ~f:(fun action ->
             { en_action = action;
               en_intrinsic = Canary_step_builder.marker_of_action action;
-              en_added = added_at ~mechanism ~lang ~provision action }) ))
+              en_added = added_at ~mechanism ~lang ~worlds action }) ))
 
 let pp (pr : Canary_project_run.project_run)
     (index : (Canary_store.provision * entry list) list) : string =

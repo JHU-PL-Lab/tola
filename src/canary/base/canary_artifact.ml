@@ -427,3 +427,37 @@ type placement = { provision : provision; version : Canary_basic.build_id }
 [@@deriving show]
 
 type assignment = (artifact_info * placement) list [@@deriving show]
+
+(** Lookups over an assignment. They live here, beside the type, because
+    an assignment is base vocabulary and its accessors were the only part
+    of it stranded a layer up (moved down 2026-09-02 so the agreement
+    layer can ask a world what it holds). [Canary_enumerate] re-exports
+    them, so existing callers are unaffected. *)
+let placement_of (a : assignment) (id : artifact_info) : placement option =
+  Base.List.Assoc.find a id ~equal:equal_artifact_info
+
+let provision_of (a : assignment) (id : artifact_info) : provision =
+  match placement_of a id with Some p -> p.provision | None -> Absent
+
+(** By KIND rather than by exact identity: "how was the lib provisioned
+    in this world" without the caller having to know whether the project
+    named its lib ([A_lib (Some _)]) or has just the one ([A_lib None]),
+    or which mechanism its binding was declared with. A world that holds
+    no such artifact answers [Absent], which is the truth. *)
+let provision_of_lib (a : assignment) : provision =
+  match
+    Base.List.find a ~f:(fun (id, _) ->
+        match kind_of id with Lib -> true | _ -> false)
+  with
+  | Some (_, p) -> p.provision
+  | None -> Absent
+
+let provision_of_binding (a : assignment) (l : Canary_lang.lang) : provision =
+  match
+    Base.List.find a ~f:(fun (id, _) ->
+        match kind_of id with
+        | Binding l' -> Base.Poly.equal l l'
+        | _ -> false)
+  with
+  | Some (_, p) -> p.provision
+  | None -> Absent

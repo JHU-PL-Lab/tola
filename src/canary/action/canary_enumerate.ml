@@ -73,11 +73,10 @@ type assignment = Canary_artifact.assignment
 type 'm point =
   { assignment : assignment; mutations : (artifact_info * 'm) list }
 
-let placement_of (a : assignment) (id : artifact_info) : placement option =
-  List.Assoc.find a id ~equal:equal_artifact_info
-
-let provision_of (a : assignment) (id : artifact_info) : provision =
-  match placement_of a id with Some p -> p.provision | None -> Absent
+(* moved to base beside the type they read (2026-09-02); re-exported so
+   every existing caller is unaffected *)
+let placement_of = Canary_artifact.placement_of
+let provision_of = Canary_artifact.provision_of
 
 let version_of (a : assignment) (id : artifact_info) : build_id =
   match placement_of a id with
