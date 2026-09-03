@@ -1,0 +1,48 @@
+[canary-local] synchronised from file:///home/red/code/research/tola/canary/templates/opam-local-repo
+
+<><> Updating package repositories ><><><><><><><><><><><><><><><><><><><><><><>
+[canary-local] no changes from file:///home/red/code/research/tola/canary/templates/opam-local-repo
+The following actions will be performed:
+=== downgrade 1 package
+  ↘ torch v0.17.0-canary1 to v0.17.0
+
+<><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+⬇ retrieved torch.v0.17.0  (cached)
+[ERROR] The compilation of torch.v0.17.0 failed at "dune build -p torch -j 31".
+
+#=== ERROR while compiling torch.v0.17.0 ======================================#
+# context              2.5.0 | linux/x86_64 | ocaml-base-compiler.5.4.1 | https://opam.ocaml.org#462111e6aeff3d118a1fb42d7c3016393bb4777f
+# path                 ~/.opam/canary/.opam-switch/build/torch.v0.17.0
+# command              ~/.opam/opam-init/hooks/sandbox.sh build dune build -p torch -j 31
+# exit-code            1
+# env-file             ~/.opam/log/torch-3024238-c20613.env
+# output-file          ~/.opam/log/torch-3024238-c20613.out
+### output ###
+# 35007 |                    x33586, x33589, x33590, x33593, x33596);
+# [...]
+# torch_api_generated.h:2336:182: note: expected ‘char *’ but argument is of type ‘const char *’
+#  2336 | raw_tensor atg_stft_center(gc_tensor self, int64_t n_fft, int64_t hop_length_v, int hop_length_null, int64_t win_length_v, int win_length_null, gc_tensor window, int center, char * pad_mode, int normalized, int onesided, int return_complex);
+#       |                                                                                                                                                                               ~~~~~~~^~~~~~~~
+# File "src/wrapper/dune", line 4, characters 9-18:
+# 4 |   (names torch_api)
+#              ^^^^^^^^^
+# (cd _build/default/src/wrapper && /usr/bin/gcc -std=c++17 -fPIC -D_GLIBCXX_USE_CXX11_ABI=1 -isystem /home/red/.opam/canary/lib/libtorch/include -isystem /home/red/.opam/canary/lib/libtorch/include/torch/csrc/api/include -g -I /home/red/.opam/canary/lib/ocaml -I /home/red/.opam/canary/lib/base -I /home/red/.opam/canary/lib/base/base_internalhash_types -I /home/red/.opam/canary/lib/base/md5 -I [...]
+# torch_api.cpp:944:10: fatal error: torch_api_generated.cpp: No such file or directory
+#   944 | #include "torch_api_generated.cpp"
+#       |          ^~~~~~~~~~~~~~~~~~~~~~~~~
+# compilation terminated.
+
+
+
+<><> Error report <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+┌─ The following actions failed
+│ λ build torch v0.17.0
+└─ 
+╶─ No changes have been performed
+
+<><> torch.v0.17.0 troubleshooting ><><><><><><><><><><><><><><><><><><><><><><>
+=> Installation of ocaml-torch failed. This likely happened
+   because there is no system installation of libtorch to compile
+   OCaml bindings against. Please instal the CPU version of libtorch
+   through opam, or the appropriate version of libtorch for your GPU
+   through the official distribution.

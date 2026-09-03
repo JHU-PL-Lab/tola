@@ -192,13 +192,13 @@ let cmp_symbol_pure_tests =
   [
     { name = "cmp_symbol.compatible";
       check = fun () ->
-        let r = Canary_agreement.check_c_compat
+        let r = Canary_chk_symbols.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
             ~native_lib:(native_of [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]) in
         match r with Compatible -> true | _ -> false };
     { name = "cmp_symbol.missing_one";
       check = fun () ->
-        let r = Canary_agreement.check_c_compat
+        let r = Canary_chk_symbols.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
             ~native_lib:(native_of [ "tiny_total"; "tiny_diff"; "tiny_offset" ]) in
         match r with
@@ -207,7 +207,7 @@ let cmp_symbol_pure_tests =
         | _ -> false };
     { name = "cmp_symbol.missing_multiple";
       check = fun () ->
-        let r = Canary_agreement.check_c_compat
+        let r = Canary_chk_symbols.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff"; "tiny_extra" ])
             ~native_lib:(native_of [ "tiny_offset" ]) in
         match r with
@@ -220,13 +220,13 @@ let cmp_symbol_pure_tests =
         | _ -> false };
     { name = "cmp_symbol.unknown_empty_requires";
       check = fun () ->
-        let r = Canary_agreement.check_c_compat
+        let r = Canary_chk_symbols.check_c_compat
             ~binding_stub:(stub_of [])
             ~native_lib:(native_of [ "tiny_sum" ]) in
         match r with Unknown -> true | _ -> false };
     { name = "cmp_symbol.unknown_empty_symbols";
       check = fun () ->
-        let r = Canary_agreement.check_c_compat
+        let r = Canary_chk_symbols.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum" ])
             ~native_lib:(native_of []) in
         match r with Unknown -> true | _ -> false };
@@ -241,25 +241,25 @@ let cmp_symbol_pure_tests =
             ([ "tiny_sum"; "tiny_diff" ]
             @ List.init 98 ~f:(fun i -> "tiny_extra_" ^ Int.to_string i))
         in
-        let r = Canary_agreement.check_c_compat ~binding_stub:stub ~native_lib:lib in
+        let r = Canary_chk_symbols.check_c_compat ~binding_stub:stub ~native_lib:lib in
         (match r with
          | Compatible_lag { required; provided } -> required = 2 && provided = 100
          | _ -> false)
         (* the witness pair: one IN (required) + one OUT (unused) — the
            warning shows concrete symbols, not bare counts *)
-        && (match Canary_agreement.lag_examples ~binding_stub:stub ~native_lib:lib with
+        && (match Canary_chk_symbols.lag_examples ~binding_stub:stub ~native_lib:lib with
             | Some (in_use, unused) ->
                 String.equal in_use "tiny_sum"
                 && String.is_prefix unused ~prefix:"tiny_extra_"
             | None -> false)
         && Option.is_none
-             (Canary_agreement.lag_examples ~binding_stub:stub
+             (Canary_chk_symbols.lag_examples ~binding_stub:stub
                 ~native_lib:(native_of [ "tiny_sum"; "tiny_diff" ])) };
     { name = "cmp_symbol.compatible_not_lag_when_healthy";
       check = fun () ->
         (* 2 of 3 provided: the consumer covers most of the provider —
            plain Compatible, no warning *)
-        let r = Canary_agreement.check_c_compat
+        let r = Canary_chk_symbols.check_c_compat
             ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
             ~native_lib:(native_of [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]) in
         match r with Compatible -> true | _ -> false };
@@ -272,7 +272,7 @@ let cmp_abi_pure_tests =
   [
     { name = "cmp_abi.compatible_soname_in_needed";
       check = fun () ->
-        let r = Canary_agreement.check_abi
+        let r = Canary_chk_identity.check_abi
             ~provider_soname:(Some "libtiny.so.1")
             ~consumer_needed:[ "libc.so.6"; "libtiny.so.1" ] in
         match r with Abi_compatible -> true | _ -> false };
@@ -281,7 +281,7 @@ let cmp_abi_pure_tests =
         (* e2-shape: provider bumped to libtiny.so.2 but consumer still
            references libtiny.so.1. The Abi_mismatch carries the
            expected (provider) SONAME for diagnostics. *)
-        let r = Canary_agreement.check_abi
+        let r = Canary_chk_identity.check_abi
             ~provider_soname:(Some "libtiny.so.2")
             ~consumer_needed:[ "libc.so.6"; "libtiny.so.1" ] in
         match r with
@@ -297,7 +297,7 @@ let cmp_abi_pure_tests =
            in the list. (Could be relaxed to Compatible if "consumer
            doesn't need our lib at all" is fine; today's check is
            strict.) *)
-        let r = Canary_agreement.check_abi
+        let r = Canary_chk_identity.check_abi
             ~provider_soname:(Some "libtiny.so.1")
             ~consumer_needed:[ "libc.so.6" ] in
         match r with
@@ -306,13 +306,13 @@ let cmp_abi_pure_tests =
         | _ -> false };
     { name = "cmp_abi.unknown_no_provider_soname";
       check = fun () ->
-        let r = Canary_agreement.check_abi
+        let r = Canary_chk_identity.check_abi
             ~provider_soname:None
             ~consumer_needed:[ "libtiny.so.1" ] in
         match r with Abi_unknown -> true | _ -> false };
     { name = "cmp_abi.unknown_empty_needed";
       check = fun () ->
-        let r = Canary_agreement.check_abi
+        let r = Canary_chk_identity.check_abi
             ~provider_soname:(Some "libtiny.so.1")
             ~consumer_needed:[] in
         match r with Abi_unknown -> true | _ -> false };
@@ -324,7 +324,7 @@ let cmp_abi_pure_tests =
    type-equivalence comparison would also map C types ↔ OCaml types;
    left for a later refinement. *)
 let cmp_type_pure_tests =
-  let open Canary_agreement in
+  let open Canary_chk_types in
   [
     { name = "cmp_type.compatible_arity_match";
       check = fun () ->
@@ -404,7 +404,7 @@ let cmp_type_pure_tests =
    modulo declared renames).
    Catches the new tiny scenario e14 api_repack_stub_orphan. *)
 let cmp_api_repack_pure_tests =
-  let open Canary_agreement in
+  let open Canary_chk_behaviour in
   [
     { name = "cmp_api_repack.compatible_exact_match";
       check = fun () ->
@@ -470,6 +470,9 @@ let cmp_api_repack_pure_tests =
    wires c8 (today e4 is silent at the c1/c2/c3 level). *)
 let cmp_api_faithfulness_pure_tests =
   let open Canary_agreement in
+  let open Canary_chk_types in
+  let open Canary_chk_symbols in
+  let open Canary_chk_behaviour in
   let stub_of requires : Canary_agreement.stub_inspect =
     { path = "fixture-stub"; requires } in
   let native_of symbols : Canary_agreement.native_inspect =
@@ -709,7 +712,7 @@ let cmp_sym_version_pure_tests =
   [
     { name = "cmp_sym_version.compatible_exact_match";
       check = fun () ->
-        let r = Canary_agreement.check_sym_version
+        let r = Canary_chk_identity.check_sym_version
             ~provider_versioned_exports:
               [ "malloc", "GLIBC_2.17"; "__cxa_throw", "GLIBC_2.3.4" ]
             ~consumer_required_versions:[ "GLIBC_2.17" ] in
@@ -717,7 +720,7 @@ let cmp_sym_version_pure_tests =
     { name = "cmp_sym_version.compatible_subset";
       check = fun () ->
         (* Consumer requires a subset of what provider exports. *)
-        let r = Canary_agreement.check_sym_version
+        let r = Canary_chk_identity.check_sym_version
             ~provider_versioned_exports:
               [ "malloc", "GLIBC_2.31"; "memcpy", "GLIBC_2.17";
                 "__cxa_throw", "GLIBC_2.3.4" ]
@@ -727,7 +730,7 @@ let cmp_sym_version_pure_tests =
       check = fun () ->
         (* The glibc-musl case: consumer built against GLIBC_2.31 but
            running on a host with only GLIBC_2.17 exports. *)
-        let r = Canary_agreement.check_sym_version
+        let r = Canary_chk_identity.check_sym_version
             ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
             ~consumer_required_versions:[ "GLIBC_2.31" ] in
         match r with
@@ -736,7 +739,7 @@ let cmp_sym_version_pure_tests =
         | _ -> false };
     { name = "cmp_sym_version.missing_multiple";
       check = fun () ->
-        let r = Canary_agreement.check_sym_version
+        let r = Canary_chk_identity.check_sym_version
             ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
             ~consumer_required_versions:
               [ "GLIBC_2.31"; "GLIBC_2.34"; "GLIBC_2.17" ] in
@@ -749,7 +752,7 @@ let cmp_sym_version_pure_tests =
     { name = "cmp_sym_version.unknown_no_consumer_req";
       check = fun () ->
         (* Consumer has no @VER requirements at all — nothing to check. *)
-        let r = Canary_agreement.check_sym_version
+        let r = Canary_chk_identity.check_sym_version
             ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
             ~consumer_required_versions:[] in
         match r with Sym_version_unknown -> true | _ -> false };
@@ -757,7 +760,7 @@ let cmp_sym_version_pure_tests =
       check = fun () ->
         (* Tiny baseline today: provider has no @@VER annotations even
            though it could in principle. We can't decide either way. *)
-        let r = Canary_agreement.check_sym_version
+        let r = Canary_chk_identity.check_sym_version
             ~provider_versioned_exports:[]
             ~consumer_required_versions:[ "GLIBC_2.17" ] in
         match r with Sym_version_unknown -> true | _ -> false };

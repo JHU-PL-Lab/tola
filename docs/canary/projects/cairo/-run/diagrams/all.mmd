@@ -1,9 +1,9 @@
 graph LR
-    source_node@{ shape: docs, label: "source [1]" }
+    source_node@{ shape: docs, label: "source" }
     headers_node@{ shape: docs, label: "headers" }
-    lib_node@{ shape: docs, label: "lib [2]" }
+    lib_node@{ shape: docs, label: "lib [1]" }
     app_node@{ shape: docs, label: "app" }
-    ocaml_binding_node@{ shape: docs, label: "ocaml binding [3]" }
+    ocaml_binding_node@{ shape: docs, label: "ocaml binding [2]" }
 
     A_configure{{"configure"}}
     A_build_headers{{"build_headers"}}
@@ -14,9 +14,9 @@ graph LR
     A_pack_binding_ocaml{{"pack_binding_ocaml"}}
     A_pack_lib{{"pack_lib"}}
     A_pack_app{{"pack_app"}}
-    A_probe_binding_ocaml(["probe_binding_ocaml [4][5]"])
+    A_probe_binding_ocaml(["probe_binding_ocaml [3][4]"])
     A_probe_app_ocaml(["probe_app_ocaml"])
-    A_probe_lib(["probe_lib [6][7]"])
+    A_probe_lib(["probe_lib [5][6]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers

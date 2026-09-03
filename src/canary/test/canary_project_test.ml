@@ -1825,7 +1825,7 @@ let check_module_pattern_pin : pure_test =
     check =
       (fun () ->
         let module M = Canary_chk_lib_declares in
-        let module C = Canary_check_cat in
+        let module C = Canary_agreement in
         List.length M.all = 3
         && List.for_all M.all ~f:(fun (_, _, says) ->
                not (String.is_empty says))

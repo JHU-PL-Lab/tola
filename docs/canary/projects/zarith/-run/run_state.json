@@ -10,14 +10,6 @@
       "status": "done"
     },
     {
-      "tag": "fetch_binding_source_ocaml",
-      "output_tag": "fetch_binding_source_ocaml",
-      "action": "fetch_binding_source_ocaml",
-      "variant_id": "lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14",
-      "expect": "success",
-      "status": "done"
-    },
-    {
       "tag": "fetch_binding_ocaml",
       "output_tag": "fetch_binding_ocaml",
       "action": "fetch_binding_ocaml",

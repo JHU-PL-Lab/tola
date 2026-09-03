@@ -6,6 +6,7 @@
     "total": 420
   },
   "elf": {
+    "format": "elf",
     "needed": [
       "libm.so.6",
       "libz.so.1",

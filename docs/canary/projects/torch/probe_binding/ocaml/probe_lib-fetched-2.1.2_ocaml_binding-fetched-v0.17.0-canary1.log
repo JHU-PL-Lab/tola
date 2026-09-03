@@ -1,0 +1,4 @@
+torch resolved: /home/red/.opam/canary/lib/libtorch/lib/libtorch_cpu.so
+torch build-version: 2.1.2+cpu
+torch sum: 36 (expected 36)
+torch ok

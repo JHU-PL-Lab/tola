@@ -286,7 +286,7 @@ type agreement_row = {
           Sf.5 binding_lib) + "Trace" (the runtime observation). A
           contract IS a named relation over these reads; the action
           says where the read attaches. *)
-  ag_cat       : Canary_check_cat.cat;
+  ag_cat       : Canary_agreement.cat;
       (** the DESCRIPTIVE category, taken from the check's own module so
           the table and the module cannot disagree *)
   ag_claim     : claim;

@@ -3,20 +3,20 @@ graph LR
     headers_node@{ shape: docs, label: "headers" }
     lib_node@{ shape: docs, label: "lib [1]" }
     app_node@{ shape: docs, label: "app" }
-    ocaml_binding_node@{ shape: docs, label: "ocaml binding [3]" }
+    ocaml_binding_node@{ shape: docs, label: "ocaml binding" }
 
     A_configure{{"configure"}}
     A_build_headers{{"build_headers"}}
     A_build_lib{{"build_lib"}}
-    A_build_binding_ocaml{{"build_binding_ocaml"}}
+    A_build_binding_ocaml{{"build_binding_ocaml [3]"}}
     A_build_app_ocaml{{"build_app_ocaml"}}
     A_install_lib{{"install_lib"}}
-    A_pack_binding_ocaml{{"pack_binding_ocaml"}}
+    A_pack_binding_ocaml{{"pack_binding_ocaml [4]"}}
     A_pack_lib{{"pack_lib"}}
     A_pack_app{{"pack_app"}}
-    A_probe_binding_ocaml(["probe_binding_ocaml [4][5]"])
+    A_probe_binding_ocaml(["probe_binding_ocaml [5][6]"])
     A_probe_app_ocaml(["probe_app_ocaml"])
-    A_probe_lib(["probe_lib [6][7]"])
+    A_probe_lib(["probe_lib [7][8]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers
@@ -52,10 +52,10 @@ graph LR
     class A_configure st_nospec
     class A_build_headers st_nospec
     class A_build_lib st_nospec
-    class A_build_binding_ocaml st_nospec
+    class A_build_binding_ocaml st_done
     class A_build_app_ocaml st_nospec
     class A_install_lib st_nospec
-    class A_pack_binding_ocaml st_nospec
+    class A_pack_binding_ocaml st_done
     class A_pack_lib st_nospec
     class A_pack_app st_nospec
     class A_probe_binding_ocaml st_done
@@ -66,15 +66,15 @@ graph LR
     linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 3 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 4 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 5 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 6 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 7 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 8 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 5 stroke:#4caf50,stroke-width:3px
+    linkStyle 6 stroke:#4caf50,stroke-width:3px
+    linkStyle 7 stroke:#4caf50,stroke-width:3px
+    linkStyle 8 stroke:#4caf50,stroke-width:3px
     linkStyle 9 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 10 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 11 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 12 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 13 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 13 stroke:#4caf50,stroke-width:3px
     linkStyle 14 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 15 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 16 stroke:#4caf50,stroke-width:3px

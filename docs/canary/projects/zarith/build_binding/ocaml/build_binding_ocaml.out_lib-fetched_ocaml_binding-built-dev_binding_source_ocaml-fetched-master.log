@@ -1,0 +1,49 @@
+binary ocaml: found in /home/red/.opam/canary/bin
+binary ocamlc: found in /home/red/.opam/canary/bin
+binary ocamldep: found in /home/red/.opam/canary/bin
+binary ocamlmklib: found in /home/red/.opam/canary/bin
+binary ocamldoc: found in /home/red/.opam/canary/bin
+binary ocamlopt: found in /home/red/.opam/canary/bin
+checking compilation with ocamlc -O3 -Wall -Wextra : working
+include caml/mlvalues.h: found
+library dynlink.cmxa: found
+binary ocamlfind: found in /home/red/.opam/canary/bin
+OCaml's word size is 64
+package gmp: found
+OCaml supports -bin-annot to produce documentation
+
+detected configuration:
+
+  native-code:          yes
+  dynamic linking:      yes
+  defines:              -DHAS_GMP 
+  includes:             -I/home/red/.opam/canary/lib/ocaml  
+  libraries:             -lgmp 
+  linker options:       
+  C options:            -O3 -Wall -Wextra 
+  installation path:    /home/red/.opam/canary/lib
+  installation method   findlib
+
+configuration successful!
+now type "make" to build
+then type "make install" or "sudo make install" to install
+(echo "let"; grep "version" META | head -1) > zarith_version.ml
+ocamldep  zarith_version.ml z.ml q.ml big_int_Z.ml z.mli q.mli big_int_Z.mli > depend
+ocamlc -g -I +compiler-libs -bin-annot  -c zarith_version.ml
+ocamlc -g -I +compiler-libs -bin-annot  -c z.mli
+ocamlc -g -I +compiler-libs -bin-annot  -c z.ml
+ocamlc -g -I +compiler-libs -bin-annot  -c q.mli
+ocamlc -g -I +compiler-libs -bin-annot  -c q.ml
+ocamlc -g -I +compiler-libs -bin-annot  -c big_int_Z.mli
+ocamlc -g -I +compiler-libs -bin-annot  -c big_int_Z.ml
+ocamlmklib -g -failsafe -o zarith zarith_version.cmo z.cmo q.cmo big_int_Z.cmo -lgmp  
+ocamlc -ccopt "-I/home/red/.opam/canary/lib/ocaml   -DHAS_GMP  -O3 -Wall -Wextra " -c caml_z.c
+ocamlmklib -g -failsafe -o zarith caml_z.o -lgmp  
+ocamlc -g -I +compiler-libs -bin-annot  -c zarith_top.ml
+ocamlc -g -o zarith_top.cma -a zarith_top.cmo
+ocamlopt -g -I +compiler-libs  -c zarith_version.ml
+ocamlopt -g -I +compiler-libs  -c z.ml
+ocamlopt -g -I +compiler-libs  -c q.ml
+ocamlopt -g -I +compiler-libs  -c big_int_Z.ml
+ocamlmklib -g -failsafe -o zarith zarith_version.cmx z.cmx q.cmx big_int_Z.cmx -lgmp  
+ocamlopt -shared -o zarith.cmxs -I . zarith.cmxa -linkall

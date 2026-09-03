@@ -7,7 +7,7 @@
 
 open Base
 open Canary_agreement
-module Cat = Canary_check_cat
+module Cat = Canary_agreement
 
 let cat = Cat.Api `Complete
 let standing = Cat.Declared
@@ -20,11 +20,3 @@ let c2_predict ~resolve (inputs : inspect_input list) : string list =
          | None -> []
          | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants)
     | _ -> [])
-
-(** c5 cmp_sym_version (L1b). Reads provider's versioned_exports map
-    from a [Versioned_exports] input and consumer's versioned_req map
-    from a [Versioned_req] input; runs [check_sym_version] and on
-    mismatch returns the version tags the consumer requires that the
-    provider doesn't export. dyld's runtime error mentions those tags
-    verbatim ("version `TINY_1.0' not found"), so they're the right
-    substrings to grep probe.log for. *)

@@ -6,6 +6,7 @@
     "total": 422
   },
   "elf": {
+    "format": "elf",
     "needed": [
       "libpthread.so.0",
       "libm.so.6",

@@ -14,7 +14,7 @@
 
 open Base
 open Canary_agreement
-module Cat = Canary_check_cat
+module Cat = Canary_agreement
 
 (* ── every declared c_api function is exported ── *)
 
