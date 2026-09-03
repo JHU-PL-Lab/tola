@@ -210,4 +210,7 @@ let c6 : description =
             [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
               Typed_binding_stub
                 [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
-        | _ -> []) }
+        | _ -> []);
+    (* pends its fixture: the typed-signature JSON shape is the one
+       loader with no synthetic body written for it yet *)
+    counterexamples = [] }

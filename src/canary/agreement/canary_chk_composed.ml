@@ -94,4 +94,5 @@ let c8 : description =
     reads = [ ("Sf.4", "binding") ];
     fault_tags = [ "api_add" ];
     firing = firing_default;
-    inputs = (fun _ _ _ -> []) }
+    inputs = (fun _ _ _ -> []);
+    counterexamples = [] }

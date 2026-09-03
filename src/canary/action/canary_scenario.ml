@@ -304,7 +304,7 @@ let binding_has_live_firing
     since A7 phase 3): derives the expectation from the project's [bindings]
     table + the (action, loc) ALONE, by UNIONing every contract's
     [From_artifact] inputs at the matching firing site and letting the compat
-    runner ([predicted_by_agreement_v2]) DISCOVER which contract actually
+    runner ([predicted_by_agreement]) DISCOVER which contract actually
     breaks by inspecting the materialized artifacts. Nobody tells it which
     contract fires — the same way a real project works (status §1a P2b).
 

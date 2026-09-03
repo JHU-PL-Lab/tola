@@ -340,6 +340,30 @@ let binding_evidence_tag (w : Canary_artifact.assignment)
 
 let build_lib_tag = Canary_basic.string_of_action Canary_basic.Build_lib
 
+(** A COUNTEREXAMPLE: synthetic inspect JSON plus the failure
+    substrings the check MUST yield on it. A check that cannot show one
+    is not wired, whatever the registry says about it — which is why
+    the belief matrix marks ✓ only where a fixture exists.
+
+    The bodies are SYNTHETIC. They borrow names from real findings
+    ([tiny_sum] and [libtiny.so.1] from the witness,
+    [Llvm.Opcode.UncondBr] and [Solver.add] from the two live
+    mismatches) so that a reader can see which case each one echoes,
+    but nothing about the check depends on the spelling — the fixture
+    is a JSON string and an expected substring set, and it runs with no
+    project anywhere near it. *)
+type fixture = {
+  fx_predict :
+    (resolve:(string -> string) -> inspect_input list -> string list) option;
+      (** the closure under test — [None] = the registered predict for
+          this agreement. [Some] = a CELL predict, e.g. a solo cell's
+          decl-comparison, which takes the declared facts as arguments
+          and so cannot be the row's own closure. *)
+  fx_inputs : inspect_input list;
+  fx_bodies : (string * string) list;  (** file name → synthetic JSON *)
+  fx_expect : string list;             (** substrings [predict] must yield *)
+}
+
 (** HOW AN AGREEMENT DESCRIBES ITSELF (2026-09-02, user: "the concrete
     chk can use the type to describe itself, and the registry just list
     the checked").
@@ -380,6 +404,13 @@ type description = {
     Canary_artifact.assignment -> inspect_input list;
       (** WHAT it reads, as evidence references resolved against the
           world's own output tree. *)
+  counterexamples : fixture list;
+      (** the cases that prove it can FAIL — one per cell it covers
+          (a solo cell and a pair cell are two). Empty = declared but
+          never shown to fire, which the belief matrix renders [~].
+          They live with the check for the same reason everything else
+          here does: only the check knows what would falsify it
+          (2026-09-02). *)
 }
 
 (** The eight contracts of surface theory. See

@@ -31,4 +31,6 @@ let c3 : description =
     reads = [ ("Trace", "run") ];
     fault_tags = [ "behavior" ];
     firing = firing_probe_only;
-    inputs = (fun _ _ _ -> []) }
+    inputs = (fun _ _ _ -> []);
+    (* nothing static to predict over, so nothing to falsify here *)
+    counterexamples = [] }

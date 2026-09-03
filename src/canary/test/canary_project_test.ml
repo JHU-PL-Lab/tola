@@ -1461,20 +1461,20 @@ let agreement_fixture_tests : pure_test list =
   let module CR = Canary_agreement_registry in
   let tmp_root = "_out/canary/test/contract-fixtures" in
   let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
-  let execute (_id, (fx : CR.fixture)) : bool =
+  let execute (_id, (fx : Canary_agreement_common.fixture)) : bool =
     (* [resolve] maps input-file names to REAL files (the loaders
        read from disk), so the fixture bodies are written out *)
     let resolve rel = [%string "%{tmp_root}/%{rel}"] in
-    List.iter fx.CR.fx_bodies ~f:(fun (rel, body) ->
+    List.iter fx.Canary_agreement_common.fx_bodies ~f:(fun (rel, body) ->
         let oc = Stdlib.open_out (resolve rel) in
         Stdlib.output_string oc body;
         Stdlib.close_out oc);
     let predict =
-      Option.value fx.CR.fx_predict
+      Option.value fx.Canary_agreement_common.fx_predict
         ~default:(CR.row_of _id).ag_check.Canary_agreement_common.predict
     in
-    let got = predict ~resolve fx.CR.fx_inputs in
-    List.for_all fx.CR.fx_expect ~f:(fun s ->
+    let got = predict ~resolve fx.Canary_agreement_common.fx_inputs in
+    List.for_all fx.Canary_agreement_common.fx_expect ~f:(fun s ->
         List.mem got s ~equal:String.equal)
   in
   let covered =

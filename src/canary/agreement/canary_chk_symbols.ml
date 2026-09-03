@@ -221,4 +221,29 @@ let c1 : description =
         if is_dynamic m then []
         else
           [ C_stub [ binding_evidence_tag w l ^ "/inspect.json" ];
-            Native_lib [ build_lib_tag ^ "/inspect.json" ] ]) }
+            Native_lib [ build_lib_tag ^ "/inspect.json" ] ]);
+    counterexamples =
+      [ (* the SOLO cell: a declared c_api function the built lib does
+           not export. Takes the declared facts, so it is a cell
+           predict rather than the row's own closure. *)
+        { fx_predict =
+            Some
+              (symbol_exported
+                 ~declared_functions:[ "tiny_sum"; "tiny_diff"; "tiny_offset" ]);
+          fx_inputs = [ Native_lib [ "lib.json" ] ];
+          fx_bodies =
+            [ ("lib.json",
+               {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
+          fx_expect = [ "tiny_offset" ] };
+        (* the PAIR cell: the stub requires what the lib does not export *)
+        { fx_predict = None;
+          fx_inputs = [ C_stub [ "stub.json" ]; Native_lib [ "lib.json" ] ];
+          fx_bodies =
+            [ ("stub.json",
+               {|{"kind": "c_stub", "path": "fx",
+    "requires": ["tiny_sum", "tiny_offset"]}|});
+              ("lib.json",
+               {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
+          fx_expect = [ "tiny_offset" ] } ] }

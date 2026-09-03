@@ -354,7 +354,19 @@ let c4 : description =
         | Canary_lang.Python, false ->
             [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
               Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
-        | _ -> []) }
+        | _ -> []);
+    counterexamples =
+      [ (* the SOLO cell: the built lib's elf soname vs the declared
+           one — the linker's -Wl,-soname is the black box, the elf is
+           the evidence *)
+        { fx_predict = Some (soname_matches ~declared_soname:"libtiny.so.1");
+          fx_inputs = [ Native_lib [ "lib.json" ] ];
+          fx_bodies =
+            [ ("lib.json",
+               {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum"],
+    "elf": {"soname": "libtiny.so.2", "needed": []}}|}) ];
+          fx_expect = [ "soname libtiny.so.2 != declared libtiny.so.1" ] } ] }
 
 let c5 : description =
   { cat = version_cat; standing; says = version_says;
@@ -370,4 +382,15 @@ let c5 : description =
         | Canary_lang.Python, false ->
             [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
               Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
-        | _ -> []) }
+        | _ -> []);
+    counterexamples =
+      [ (* the SOLO cell: the version script applied — a declared tag
+           must appear among the built lib's @@VER annotations *)
+        { fx_predict =
+            Some (version_tags_exported ~declared_tags:[ "TINY_2.0" ]);
+          fx_inputs = [ Versioned_exports [ "lib.json" ] ];
+          fx_bodies =
+            [ ("lib.json",
+               {|{"kind": "native", "path": "fx",
+    "versioned_exports": {"tiny_sum": "TINY_1.0"}}|}) ];
+          fx_expect = [ "version TINY_2.0 not exported" ] } ] }

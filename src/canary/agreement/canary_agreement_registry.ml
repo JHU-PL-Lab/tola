@@ -96,11 +96,11 @@ let registered_checks : Canary_agreement_common.agreement_check list =
     Phase 13 (2026-06-02): per-call [?disabled] override added. *)
 (** Per-contract form (A7 phase 1): the registry rows that FIRED — each
     enabled, not-disabled contract whose [predict] returned substrings —
-    paired with its (deduped) substrings. {!predicted_contains_any_v2} is
+    paired with its (deduped) substrings. {!predicted_contains_any} is
     its flatten; keeping the grouping lets the runner log and report
     per-contract firings instead of one collapsed count (the status-§2
     "per-step contract outcome" seed). *)
-let predicted_by_agreement_v2 ?(disabled = []) ~resolve
+let predicted_by_agreement ?(disabled = []) ~resolve
     (inputs : Canary_agreement_common.inspect_input list) :
     (Canary_agreement_common.agreement_check * string list) list =
   let open Canary_agreement_common in
@@ -111,7 +111,7 @@ let predicted_by_agreement_v2 ?(disabled = []) ~resolve
       | subs -> Some (c, List.dedup_and_sort ~compare:String.compare subs)
     else None)
 
-(** The registry rows a [predicted_by_agreement_v2] call does NOT consult,
+(** The registry rows a [predicted_by_agreement] call does NOT consult,
     each with its human reason — the per-call [?disabled] override (a
     project's [disabled_agreements] / --disable-contract) vs the registry's
     own [enabled] flag (status names why). For the runner's
@@ -130,9 +130,9 @@ let skipped_checks ?(disabled = []) () :
           ^ ")" )
     else None)
 
-let predicted_contains_any_v2 ?(disabled = []) ~resolve
+let predicted_contains_any ?(disabled = []) ~resolve
     (inputs : Canary_agreement_common.inspect_input list) : string list =
-  predicted_by_agreement_v2 ~disabled ~resolve inputs
+  predicted_by_agreement ~disabled ~resolve inputs
   |> List.concat_map ~f:snd
   |> List.dedup_and_sort ~compare:String.compare
 
@@ -203,96 +203,25 @@ let agreement_registry : agreement_row list =
       ~desc:Canary_chk_api_surface.c7;
     row C8 ~slug:"repack_complete" ~doc:"§5.3" ~desc:Canary_chk_composed.c8 ]
 
-(* ── spec fixtures — testing AHEAD of project running ──
-   Each contract ships its MINIMAL COUNTEREXAMPLE: synthetic inspect
-   inputs + the failure substrings the row's predict MUST yield on
-   them. The layer tests execute every fixture hermetically (no
-   project run — the framework-test axis), so a new contract lands
-   WITH its fixture and a changed predict breaks the pin. Coverage:
-   C1, C2 today. C3/C7 are blocked in the registry; C4/C5/C6 pend
-   their fixture JSON shapes (elf/versioned/typed loaders in
-   [Canary_agreement_common]). *)
+(* ── the counterexamples, GATHERED ──
+   Each family ships its own (in its [description.counterexamples]);
+   this is the flat view the layer tests iterate. It used to be a
+   hand-written table HERE, which put per-agreement data — synthetic
+   inspect JSON, expected substrings, the declared facts a solo cell
+   compares against — in the file that is supposed to list rather than
+   describe (2026-09-02, user: "this looks too tiny related and some
+   hardcoded llvm and solver ... why is it here").
 
-type fixture = {
-  fx_predict :
-    (resolve:(string -> string) ->
-     Canary_agreement_common.inspect_input list -> string list) option;
-      (** the closure under test — [None] = the row's
-          [ag_check.predict]. Some = a CELL predict (e.g. the
-          decl-comparison closures for the lib-only cells). *)
-  fx_inputs : Canary_agreement_common.inspect_input list;
-      (** input-file references ([C_stub], [Native_lib], [Ocaml_mli],
-          [Python_attrs], …) *)
-  fx_bodies : (string * string) list;
-      (** file name → synthetic inspect JSON (the [resolve] source) *)
-  fx_expect : string list;
-      (** the failure substrings [predict] must yield *)
-}
+   The layer tests execute every one hermetically (no project run —
+   the framework-test axis), so a new agreement lands WITH its
+   counterexample and a changed predict breaks the pin. *)
 
-let agreement_fixtures : (Canary_agreement_common.agreement_id * fixture) list =
-  let c_stub_body = {|{"kind": "c_stub", "path": "fx",
-    "requires": ["tiny_sum", "tiny_offset"]}|} in
-  let native_body = {|{"kind": "native", "path": "fx",
-    "symbols": ["tiny_sum", "tiny_diff"]}|} in
-  let mli_body = {|{"kind": "ocaml_mli", "path": "fx",
-    "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}|} in
-  let py_body = {|{"kind": "python", "path": "fx",
-    "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}|} in
-  let c1_lib_body = {|{"kind": "native", "path": "fx",
-    "symbols": ["tiny_sum", "tiny_diff"]}|} in
-  let c4_lib_body = {|{"kind": "native", "path": "fx",
-    "symbols": ["tiny_sum"],
-    "elf": {"soname": "libtiny.so.2", "needed": []}}|} in
-  let c5_lib_body = {|{"kind": "native", "path": "fx",
-    "versioned_exports": {"tiny_sum": "TINY_1.0"}}|} in
-  [ ( Canary_agreement_common.C1,
-      (* the LIB-ONLY cell: every declared c_api function exported by
-         the built lib (sym_missing at the source, no binding) *)
-      { fx_predict =
-          Some
-            (Canary_chk_symbols.symbol_exported
-               ~declared_functions:
-                 [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]);
-        fx_inputs = [ Canary_agreement_common.Native_lib [ "lib.json" ] ];
-        fx_bodies = [ ("lib.json", c1_lib_body) ];
-        fx_expect = [ "tiny_offset" ] } );
-    ( Canary_agreement_common.C4,
-      (* the LIB-ONLY cell: the built lib's elf soname vs the declared *)
-      { fx_predict =
-          Some
-            (Canary_chk_identity.soname_matches
-               ~declared_soname:"libtiny.so.1");
-        fx_inputs = [ Canary_agreement_common.Native_lib [ "lib.json" ] ];
-        fx_bodies = [ ("lib.json", c4_lib_body) ];
-        fx_expect = [ "soname libtiny.so.2 != declared libtiny.so.1" ] } );
-    ( Canary_agreement_common.C5,
-      (* the LIB-ONLY cell: the version script applied — the declared
-         tag must appear among the built lib's @@VER annotations *)
-      { fx_predict =
-          Some
-            (Canary_chk_identity.version_tags_exported ~declared_tags:[ "TINY_2.0" ]);
-        fx_inputs = [ Canary_agreement_common.Versioned_exports [ "lib.json" ] ];
-        fx_bodies = [ ("lib.json", c5_lib_body) ];
-        fx_expect = [ "version TINY_2.0 not exported" ] } );
-    ( Canary_agreement_common.C1,
-      { fx_predict = None;
-        fx_inputs =
-          [ Canary_agreement_common.C_stub [ "stub.json" ];
-            Canary_agreement_common.Native_lib [ "lib.json" ] ];
-        fx_bodies =
-          [ ("stub.json", c_stub_body); ("lib.json", native_body) ];
-        fx_expect = [ "tiny_offset" ] } );
-    ( Canary_agreement_common.C2,
-      { fx_predict = None;
-        fx_inputs = [ Canary_agreement_common.Ocaml_mli [ "mli.json" ] ];
-        fx_bodies = [ ("mli.json", mli_body) ];
-        (* the dotted-name expansion variants *)
-        fx_expect = [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ] } );
-    ( Canary_agreement_common.C2,
-      { fx_predict = None;
-        fx_inputs = [ Canary_agreement_common.Python_attrs [ "py.json" ] ];
-        fx_bodies = [ ("py.json", py_body) ];
-        fx_expect = [ "Solver.add"; "add"; "BitVec" ] } ) ]
+let agreement_fixtures :
+    (Canary_agreement_common.agreement_id * Canary_agreement_common.fixture) list
+    =
+  List.concat_map agreement_registry ~f:(fun r ->
+      List.map r.ag_desc.Canary_agreement_common.counterexamples ~f:(fun fx ->
+          (r.ag_check.Canary_agreement_common.id, fx)))
 
 (** Total lookup over the table. *)
 let row_of (id : Canary_agreement_common.agreement_id) : agreement_row =

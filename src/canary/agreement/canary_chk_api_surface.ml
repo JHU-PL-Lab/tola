@@ -125,7 +125,27 @@ let c2 : description =
         match l with
         | Canary_lang.OCaml -> [ Ocaml_mli [ tag ^ "/inspect_mli.json" ] ]
         | Canary_lang.Python -> [ Python_attrs [ tag ^ "/inspect_attrs.json" ] ]
-        | _ -> []) }
+        | _ -> []);
+    counterexamples =
+      [ (* the OCaml watchlist, echoing llvm's Opcode.UncondBr — the
+           expectation is the dotted-name expansion, which is what a
+           probe log actually prints *)
+        { fx_predict = None;
+          fx_inputs = [ Ocaml_mli [ "mli.json" ] ];
+          fx_bodies =
+            [ ("mli.json",
+               {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}|}) ];
+          fx_expect =
+            [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ] };
+        (* the Python one, echoing z3's wheel surface *)
+        { fx_predict = None;
+          fx_inputs = [ Python_attrs [ "py.json" ] ];
+          fx_bodies =
+            [ ("py.json",
+               {|{"kind": "python", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}|}) ];
+          fx_expect = [ "Solver.add"; "add"; "BitVec" ] } ] }
 
 let c7 : description =
   { cat = repack_cat; standing; says = repack_says;
@@ -135,4 +155,7 @@ let c7 : description =
     reads = [ ("Sf.4", "binding") ];
     fault_tags = [ "api_repack" ];
     firing = firing_probe_only;
-    inputs = (fun _ _ _ -> []) }
+    inputs = (fun _ _ _ -> []);
+    (* the repack drift shows up by RUNNING, so there is no static
+       counterexample to write — the registry keeps c7 stubbed *)
+    counterexamples = [] }

@@ -532,10 +532,10 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
            entry, instead of a single collapsed count. Returns the fired
            rows; [flat_predictions] is the substring union the expectation
            check greps for (identical to the old
-           [predicted_contains_any_v2] result). *)
+           [predicted_contains_any] result). *)
         let derived_predictions inputs =
           let fired =
-            Canary_agreement_registry.predicted_by_agreement_v2
+            Canary_agreement_registry.predicted_by_agreement
               ~disabled:step.disabled_agreements ~resolve:resolve_input inputs
           in
           List.iter fired
