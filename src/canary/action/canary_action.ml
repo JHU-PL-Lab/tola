@@ -78,22 +78,12 @@ type action_graph = {
 let pool_get ar kind =
   List.Assoc.find ar.pools ~equal:Poly.equal kind |> Option.value ~default:[]
 
-(* Standard action sets.
-   ~langs: binding languages this project supports (external loop).
-   Each lang gets its own Build_binding / Fetch / Publish / Probe actions. *)
-let store_actions ~langs =
-  [ Fetch Source; Configure; Scan_sources; Build_headers; Fetch Headers; Build_lib; Install_lib; Fetch Lib ]
-  @ List.concat_map langs ~f:(fun lang ->
-      (* the OFF-TREE binding source (2026-08-18, user): a binding's
-         repo may differ from the lib's — its own fetch leads the
-         per-language block, the same shape as Fetch Source. A repo
-         providing BOTH (on-tree bindings) wires the idempotent local
-         path — already there. *)
-      [ Fetch (Binding_source lang);
-        Build_binding lang; Fetch (Binding lang);
-        Publish (Binding lang); Probe_binding lang;
-        Build_app { lang }; Probe_app { lang } ])
-  @ [ Fetch App; Publish Lib; Publish App; Probe_lib ]
+(* The catalogue moved to [Canary_basic] beside the action type
+   (2026-09-02) so the agreement layer can use it too — it is below
+   this one, and its belief matrix had been carrying a hand-written
+   copy that drifted. Re-exported so every caller here keeps its
+   spelling. *)
+let store_actions = Canary_basic.store_actions
 
 (** The per-runtime-edge resolution mode (dynamic_enumeration.md), shared by the
     FORWARD construction ([make_action_graph]'s [Build_app]) and the lift

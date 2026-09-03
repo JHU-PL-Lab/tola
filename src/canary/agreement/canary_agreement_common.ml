@@ -364,6 +364,29 @@ type fixture = {
   fx_expect : string list;             (** substrings [predict] must yield *)
 }
 
+(** WHAT A CHECK IS, in the descriptive vocabulary — the metadata
+    every check states about itself, whether or not it has a registry
+    row (2026-09-02, user: "we can have a record type for checking
+    metadata, then the category content for each chk file can be
+    unified").
+
+    Before this, each family spelled the same three facts as loose
+    bindings with a different convention per family — [cat] and [says]
+    in one, [trace_cat] and [trace_says] in another,
+    [soname_matches_cat] and [soname_matches_standing] in a third.
+    Twenty-odd bindings, four conventions, one shape.
+
+    A solo cell and a pair cell are two CHECKS and state two of these,
+    which is why this is separate from [description]: a description
+    also carries where it fires and what it reads, and those are
+    properties of the agreement as a whole. *)
+type about = {
+  cat : cat;
+  standing : standing;
+  says : string;
+      (** falsifier-phrased: the sentence a counterexample refutes *)
+}
+
 (** HOW AN AGREEMENT DESCRIBES ITSELF (2026-09-02, user: "the concrete
     chk can use the type to describe itself, and the registry just list
     the checked").
@@ -381,10 +404,7 @@ type fixture = {
     version node the consumer requires", which are not the same claim.
     One definition, one sentence. *)
 type description = {
-  cat : cat;
-  standing : standing;
-  says : string;
-      (** falsifier-phrased: the sentence a counterexample refutes *)
+  about : about;  (** what it is: category, standing, the sentence *)
   claim : claim;
   evidence : evidence;
   provenance : provenance;

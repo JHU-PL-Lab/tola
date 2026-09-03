@@ -9,9 +9,24 @@ open Base
 open Canary_agreement_common
 module Cat = Canary_agreement_common
 
-let cat = Cat.Symbols `Required
-let standing = Cat.Declared
-let says = "every symbol the binding's stub references is exported by the lib"
+(** The PAIR check: this binding against this lib. *)
+let required : about =
+  { cat = Cat.Symbols `Required;
+    standing = Cat.Declared;
+    says = "every symbol the binding's stub references is exported by the lib" }
+
+(** The SOLO check: the lib against the project's declaration. A
+    different claim, so a different [about] — [Symbols `Exported], not
+    [`Required], and no binding is involved. *)
+let exported : about =
+  { cat = Cat.Symbols `Exported;
+    standing = Cat.Declared;
+    says =
+      "every function the project declares in c_api is exported by the \
+       built lib" }
+
+let checks : (string * about) list =
+  [ ("symbol_exported/pair", required); ("symbol_exported/solo", exported) ]
 
 (* ── the evidence this family reads ── *)
 
@@ -54,12 +69,6 @@ let load_native path =
    declared [Symbols `Exported] two files away from the symbols family.
    The tools that produce the artifact are black boxes, so this does not
    trust an exit code: it reads the lib and compares it to the decl. *)
-
-let symbol_exported_cat = Cat.Symbols `Exported
-let symbol_exported_standing = Cat.Declared
-let symbol_exported_says =
-  "every function the project declares in c_api is exported by the \
-   built lib"
 
 (** c1 lib-only: every DECLARED c_api function is exported by the
     built lib — the lib's own completeness falsifier, no binding
@@ -207,7 +216,7 @@ let c1_lag_note ~resolve (inputs : inspect_input list) : string option =
 (** How c1 describes itself to the registry (2026-09-02). The [says]
     here is THE sentence — the registry no longer writes a second one. *)
 let c1 : description =
-  { cat; standing; says;
+  { about = required;
     claim = Structural;
     evidence = Compare_several;
     provenance = Added;

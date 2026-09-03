@@ -378,6 +378,43 @@ type action =
   | Probe_binding of Canary_lang.lang
   | Probe_app of app_info
 
+(** THE ACTION CATALOGUE (SSOT §6.5) — every action a store can run,
+    per binding language.
+
+    It lives in base because two layers need it and they are on
+    opposite sides of the dependency order: the action graph builds
+    from it, and the agreement layer's belief matrix uses it for its
+    columns. The matrix used to carry its own hand-written list, which
+    had drifted to five actions short — [pack_binding_ocaml] among them,
+    which is exactly where a BUILT binding's inspection sits, so a
+    check firing there had no column to appear in (2026-09-02, user:
+    "can we move this in action catalogue ... I am not sure how is it
+    used so maybe I am wrong" — not wrong).
+
+    The user's caveat stands and is worth recording: this ranges over
+    LANGUAGE only. It says nothing about package managers or binding
+    mechanisms, so a check that fires per-PM or per-mechanism has no
+    column of its own yet. That is a real limit of the vocabulary, not
+    of this function. *)
+let store_actions ~(langs : Canary_lang.lang list) : action list =
+  [ Fetch Source; Configure; Scan_sources; Build_headers; Fetch Headers;
+    Build_lib; Install_lib; Fetch Lib ]
+  @ Base.List.concat_map langs ~f:(fun lang ->
+        (* the OFF-TREE binding source (2026-08-18, user): a binding's
+           repo may differ from the lib's — its own fetch leads the
+           per-language block, the same shape as Fetch Source. A repo
+           providing BOTH (on-tree bindings) wires the idempotent local
+           path — already there. *)
+        [ Fetch (Binding_source lang);
+          Build_binding lang; Fetch (Binding lang);
+          Publish (Binding lang); Probe_binding lang;
+          Build_app { lang }; Probe_app { lang } ])
+  @ [ Fetch App; Publish Lib; Publish App; Probe_lib ]
+
+(** The catalogue for ONE language — the common case. *)
+let actions_of_lang (l : Canary_lang.lang) : action list =
+  store_actions ~langs:[ l ]
+
 let string_of_action = function
   | Configure -> "configure"
   | Scan_sources -> "scan_sources"

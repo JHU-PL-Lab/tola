@@ -150,9 +150,12 @@ let check_type
     else
       Type_compatible
 
-let cat = Cat.Types `Signature
-let standing = Cat.Declared
-let says = "the types a stub declares agree with the header it wraps"
+let signature : about =
+  { cat = Cat.Types `Signature;
+    standing = Cat.Declared;
+    says = "the types a stub declares agree with the header it wraps" }
+
+let checks : (string * about) list = [ ("c_types_agree", signature) ]
 
 (** c6 cmp_type (L2). Pairs a [Typed_header] input (provider's C
     signatures, n3) with a [Typed_binding_stub] input (consumer's
@@ -196,7 +199,7 @@ let c6_predict ~resolve (inputs : inspect_input list) : string list =
    distinguishing "log has compile error text" from "log shows runtime ok". *)
 
 let c6 : description =
-  { cat; standing; says;
+  { about = signature;
     claim = Structural;
     evidence = Compare_several;
     provenance = Added;

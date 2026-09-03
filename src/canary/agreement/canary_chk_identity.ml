@@ -9,11 +9,36 @@ open Base
 open Canary_agreement_common
 module Cat = Canary_agreement_common
 
-let soname_cat = Cat.Identity `Soname
-let version_cat = Cat.Identity `Version_node
-let standing = Cat.Declared
-let soname_says = "the lib's soname is the one the consumer recorded it needs"
-let version_says = "the provider exports every version node the consumer requires"
+(** The PAIR checks: this lib against what this consumer recorded. *)
+let soname : about =
+  { cat = Cat.Identity `Soname;
+    standing = Cat.Declared;
+    says = "the lib's soname is the one the consumer recorded it needs" }
+
+let version : about =
+  { cat = Cat.Identity `Version_node;
+    standing = Cat.Declared;
+    says = "the provider exports every version node the consumer requires" }
+
+(** The SOLO checks: the built lib against the project's declaration —
+    same two categories, different claims, no consumer involved. *)
+let soname_declared : about =
+  { cat = Cat.Identity `Soname;
+    standing = Cat.Declared;
+    says = "the built lib's elf soname is the soname the project declared" }
+
+let version_declared : about =
+  { cat = Cat.Identity `Version_node;
+    standing = Cat.Declared;
+    says =
+      "every version tag the project declares appears among the built lib's \
+       versioned exports" }
+
+let checks : (string * about) list =
+  [ ("soname_denotes_needed/pair", soname);
+    ("soname_denotes_needed/solo", soname_declared);
+    ("symbol_versions_present/pair", version);
+    ("symbol_versions_present/solo", version_declared) ]
 
 (* ── the evidence this family reads ── *)
 
@@ -84,11 +109,6 @@ let load_versioned_symbols path : versioned_symbols_inspect =
    family. The version-script application and the linker are black
    boxes, so neither trusts an exit code: each reads the artifact. *)
 
-let soname_matches_cat = Cat.Identity `Soname
-let soname_matches_standing = Cat.Declared
-let soname_matches_says =
-  "the built lib's elf soname is the soname the project declared"
-
 (** c4 lib-only: the BUILT lib's own elf soname vs the declared soname
     (the linker's -Wl,-soname application is the black box; the
     artifact's elf is the evidence). *)
@@ -106,12 +126,6 @@ let soname_matches ~declared_soname ~resolve
       | Some s when not (String.equal s declared_soname) ->
           [ Printf.sprintf "soname %s != declared %s" s declared_soname ]
       | _ -> [])
-
-let version_tags_exported_cat = Cat.Identity `Version_node
-let version_tags_exported_standing = Cat.Declared
-let version_tags_exported_says =
-  "every version tag the project declares appears among the built lib's \
-   versioned exports"
 
 let version_tags_exported ~declared_tags ~resolve
     (inputs : inspect_input list) : string list =
@@ -339,7 +353,7 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
     agreement. Candidate for removal in a future registry cleanup. *)
 
 let c4 : description =
-  { cat = soname_cat; standing; says = soname_says;
+  { about = soname;
     claim = Structural;
     evidence = Compare_several;
     provenance = Added;
@@ -369,7 +383,7 @@ let c4 : description =
           fx_expect = [ "soname libtiny.so.2 != declared libtiny.so.1" ] } ] }
 
 let c5 : description =
-  { cat = version_cat; standing; says = version_says;
+  { about = version;
     claim = Structural;
     evidence = Compare_several;
     provenance = Added;

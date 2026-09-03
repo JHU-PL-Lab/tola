@@ -1352,7 +1352,7 @@ let agreement_registry_complete_pin : pure_test =
               match List.filter rows ~f:(fun r ->
                   Poly.equal r.CR.ag_check.Canary_agreement_common.id id) with
               | [ r ] ->
-                  (not (String.is_empty r.CR.ag_desc.Canary_agreement_common.says))
+                  (not (String.is_empty r.CR.ag_desc.Canary_agreement_common.about.Canary_agreement_common.says))
                   && List.length r.CR.ag_desc.Canary_agreement_common.fault_tags = 1
               | _ -> false)
         in
@@ -1398,16 +1398,25 @@ let agreement_registry_complete_pin : pure_test =
           List.for_all CR.agreement_registry ~f:(fun r ->
               Poly.equal r.CR.ag_desc.Canary_agreement_common.provenance Canary_agreement_common.Added)
         in
-                (* the category on a row is the one its check MODULE declares —
-           the two cannot drift because there is one definition *)
-        let cats_ok =
-          Poly.equal (CR.row_of C1).CR.ag_desc.Canary_agreement_common.cat Canary_chk_symbols.cat
-          && Poly.equal (CR.row_of C2).CR.ag_desc.Canary_agreement_common.cat Canary_chk_api_surface.cat
-          && Poly.equal (CR.row_of C4).CR.ag_desc.Canary_agreement_common.cat Canary_chk_identity.soname_cat
-          && Poly.equal (CR.row_of C5).CR.ag_desc.Canary_agreement_common.cat Canary_chk_identity.version_cat
-          && Poly.equal (CR.row_of C6).CR.ag_desc.Canary_agreement_common.cat Canary_chk_types.cat
+        (* A row carries the description its family declares — the same
+           VALUE, not a copy of some of its fields. The old form of this
+           compared the row's cat against the module's, which stopped
+           being falsifiable once the row started holding the module's
+           whole description; what can still go wrong is the WIRING, so
+           that is what this now pins. Physical equality on purpose:
+           a description carries closures, which polymorphic compare
+           raises on. *)
+        let wiring_ok =
+          phys_equal (CR.row_of C1).CR.ag_desc Canary_chk_symbols.c1
+          && phys_equal (CR.row_of C2).CR.ag_desc Canary_chk_api_surface.c2
+          && phys_equal (CR.row_of C3).CR.ag_desc Canary_chk_behaviour.c3
+          && phys_equal (CR.row_of C4).CR.ag_desc Canary_chk_identity.c4
+          && phys_equal (CR.row_of C5).CR.ag_desc Canary_chk_identity.c5
+          && phys_equal (CR.row_of C6).CR.ag_desc Canary_chk_types.c6
+          && phys_equal (CR.row_of C7).CR.ag_desc Canary_chk_api_surface.c7
+          && phys_equal (CR.row_of C8).CR.ag_desc Canary_chk_composed.c8
         in
-        rows_ok && checks_ok && tags_ok && axes_ok && cats_ok) }
+        rows_ok && checks_ok && tags_ok && axes_ok && wiring_ok) }
 
 let agreement_registry_firing_pin : pure_test =
   { name = "contracts.firing_defaults";
@@ -1898,35 +1907,42 @@ let check_module_pattern_pin : pure_test =
     check =
       (fun () ->
         let module C = Canary_agreement_common in
-        (* the three decl-comparisons now sit in the family whose
-           CATEGORY they declare, not in a module of their own — one
-           agreement, one module, whether it is asked of one artifact
-           or of two (2026-09-02) *)
-        let solo =
-          [ (Canary_chk_symbols.symbol_exported_cat,
-             Canary_chk_symbols.symbol_exported_standing,
-             Canary_chk_symbols.symbol_exported_says);
-            (Canary_chk_identity.soname_matches_cat,
-             Canary_chk_identity.soname_matches_standing,
-             Canary_chk_identity.soname_matches_says);
-            (Canary_chk_identity.version_tags_exported_cat,
-             Canary_chk_identity.version_tags_exported_standing,
-             Canary_chk_identity.version_tags_exported_says) ]
+        (* every family publishes the same shape now — a [checks] list
+           of (name, about) — so this iterates rather than naming each
+           binding. It used to list nine of them by hand, which is what
+           made a family's naming convention nobody's problem
+           (2026-09-02, user: "then the category content for each chk
+           file can be unified"). *)
+        let families =
+          [ ("symbols", Canary_chk_symbols.checks);
+            ("api_surface", Canary_chk_api_surface.checks);
+            ("identity", Canary_chk_identity.checks);
+            ("types", Canary_chk_types.checks);
+            ("behaviour", Canary_chk_behaviour.checks);
+            ("composed", Canary_chk_composed.checks) ]
         in
-        List.length solo = 3
-        && List.for_all solo ~f:(fun (_, _, says) ->
-               not (String.is_empty says))
-        && Poly.equal Canary_chk_symbols.symbol_exported_cat
-             (C.Symbols `Exported)
-        && Poly.equal Canary_chk_identity.soname_matches_cat
-             (C.Identity `Soname)
-        && Poly.equal Canary_chk_identity.version_tags_exported_cat
-             (C.Identity `Version_node)
+        let all = List.concat_map families ~f:snd in
+        (* the six families cover more CHECKS than the registry has
+           rows: c1/c4/c5 each state a solo cell as well as a pair *)
+        List.length all >= 8
+        && List.for_all families ~f:(fun (_, cs) -> not (List.is_empty cs))
+        && List.for_all all ~f:(fun (name, a) ->
+               (not (String.is_empty name))
+               && not (String.is_empty a.C.says))
+        (* the solo checks state the claim they actually make, which is
+           not the pair's: exported-as-declared, not required-by-a-stub *)
+        && Poly.equal
+             (List.Assoc.find_exn Canary_chk_symbols.checks
+                "symbol_exported/solo" ~equal:String.equal)
+               .C.cat (C.Symbols `Exported)
+        && Poly.equal
+             (List.Assoc.find_exn Canary_chk_symbols.checks
+                "symbol_exported/pair" ~equal:String.equal)
+               .C.cat (C.Symbols `Required)
         && (* every one is a DECLARED agreement, not a convention — the
               toolchain says nothing about which symbols a project ought
               to export *)
-        List.for_all solo ~f:(fun (_, standing, _) ->
-            Poly.equal standing C.Declared)
+        List.for_all all ~f:(fun (_, a) -> Poly.equal a.C.standing C.Declared)
         && String.equal (C.string_of_cat C.Action_succeeded) "action-succeeded") }
 
 (* Facts in, checks out (2026-09-02): a project declares its language,

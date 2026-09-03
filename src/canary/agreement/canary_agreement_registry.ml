@@ -282,21 +282,9 @@ let mark_of_status = function
 (** The COLUMNS — the general action space one lang's chain can carry
     (the action catalogue, SSOT §6.5). Actions with no cell wired yet
     still appear: the empty columns ARE the picture. *)
+(** The matrix's columns: THE action catalogue, not a copy of it. *)
 let matrix_actions (l : Canary_lang.lang) : Canary_basic.action list =
-  [ Canary_basic.Fetch Canary_basic.Source;
-    Canary_basic.Configure;
-    Canary_basic.Scan_sources;
-    Canary_basic.Build_headers;
-    Canary_basic.Fetch Canary_basic.Lib;
-    Canary_basic.Build_lib;
-    Canary_basic.Install_lib;
-    Canary_basic.Fetch (Canary_basic.Binding l);
-    Canary_basic.Build_binding l;
-    Canary_basic.Publish Canary_basic.Lib;
-    Canary_basic.Probe_lib;
-    Canary_basic.Probe_binding l;
-    Canary_basic.Build_app { Canary_basic.lang = l };
-    Canary_basic.Probe_app { Canary_basic.lang = l } ]
+  Canary_basic.actions_of_lang l
 
 let has_fixture (id : Canary_agreement_common.agreement_id) : bool =
   List.exists agreement_fixtures ~f:(fun (i, _) -> Poly.equal i id)
@@ -435,7 +423,7 @@ let all_agreements : entry list =
   List.map agreement_registry ~f:(fun r ->
       { e_slug = r.ag_slug;
         e_doc = r.ag_doc;
-        e_claim = r.ag_desc.Canary_agreement_common.says;
+        e_claim = r.ag_desc.Canary_agreement_common.about.Canary_agreement_common.says;
         e_reads = r.ag_desc.Canary_agreement_common.reads;
         e_status = Implemented r.ag_check.Canary_agreement_common.status })
   @ List.map proposed_agreements ~f:(fun p ->

@@ -17,14 +17,19 @@
 open Canary_agreement_common
 module Cat = Canary_agreement_common
 
-let trace_cat = Cat.Behaviour `Trace
-let standing = Cat.Declared
-let trace_says = "the probe's trace matches what was recorded for it"
+let trace : about =
+  { cat = Cat.Behaviour `Trace;
+    standing = Cat.Declared;
+    says = "the probe's trace matches what was recorded for it" }
+
+(** Every check this family states, for the module-pattern pin and the
+    catalogue. One entry per CHECK, not per agreement. *)
+let checks : (string * about) list = [ ("behavior_matches", trace) ]
 
 let c3_predict ~resolve:_ _ = []
 
 let c3 : description =
-  { cat = trace_cat; standing; says = trace_says;
+  { about = trace;
     claim = Semantic;
     evidence = Run_program;
     provenance = Added;

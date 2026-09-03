@@ -82,12 +82,15 @@ let check_api_faithfulness
    composes are themselves unwired. [] until they are not. *)
 let c8_predict ~resolve:_ _ = []
 
-let cat = Canary_agreement_common.Api `Repacked
-let standing = Canary_agreement_common.Declared
-let says = "the repack loses nothing the original had"
+let complete : about =
+  { cat = Api `Repacked;
+    standing = Declared;
+    says = "the repack loses nothing the original had" }
+
+let checks : (string * about) list = [ ("repack_complete", complete) ]
 
 let c8 : description =
-  { cat; standing; says;
+  { about = complete;
     claim = Semantic;
     evidence = Run_program;
     provenance = Added;

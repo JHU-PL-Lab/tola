@@ -9,9 +9,19 @@ open Base
 open Canary_agreement_common
 module Cat = Canary_agreement_common
 
-let cat = Cat.Api `Complete
-let standing = Cat.Declared
-let says = "every watchlisted name is present on the binding's user-facing surface"
+let complete : about =
+  { cat = Cat.Api `Complete;
+    standing = Cat.Declared;
+    says =
+      "every watchlisted name is present on the binding's user-facing surface" }
+
+let repack : about =
+  { cat = Cat.Api `Repacked;
+    standing = Cat.Declared;
+    says = "the user-facing layer is a sound repacking of the stub-facing one" }
+
+let checks : (string * about) list =
+  [ ("api_surface_complete", complete); ("repack_preserves_api", repack) ]
 
 let c2_predict ~resolve (inputs : inspect_input list) : string list =
   List.concat_map inputs ~f:(function
@@ -102,17 +112,13 @@ let check_api_repack
     | _, false ->
         Repack_user_phantom { vals_without_external = Set.to_list phantoms }
 
-let repack_cat = Cat.Api `Repacked
-let repack_says =
-  "the user-facing layer is a sound repacking of the stub-facing one"
-
 (* c7 is UNWIRED on the predict side: the repack drift shows up by
    RUNNING the binding probe, not in any static input, so this returns
    [] honestly and the registry keeps the row disabled. *)
 let c7_predict ~resolve:_ _ = []
 
 let c2 : description =
-  { cat; standing; says;
+  { about = complete;
     claim = Structural;
     evidence = Inspect_one;
     provenance = Added;
@@ -148,7 +154,7 @@ let c2 : description =
           fx_expect = [ "Solver.add"; "add"; "BitVec" ] } ] }
 
 let c7 : description =
-  { cat = repack_cat; standing; says = repack_says;
+  { about = repack;
     claim = Semantic;
     evidence = Run_program;
     provenance = Added;
