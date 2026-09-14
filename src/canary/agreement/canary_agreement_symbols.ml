@@ -235,15 +235,15 @@ let declared_symbols_exported : agreement =
       [ checking_method ~name:"declared_exports_vs_library" ~kind:Compare
           ~reference:Declared_facts
           ~firing:firing_built_lib_only
-          ~inputs:(fun { ac_world = w; ac_declared = d; _ } ->
-            (* the library half is located by the WORLD; the declaration
-               half comes from the project's own c_api, routed onto the
-               context since 2026-09-14 — before that it reached no
-               action and this comparison had no reference to hold the
-               artifact against *)
+          ~inputs:(fun { ac_declared = d; _ } ->
+            (* the declaration half comes from the project's own c_api,
+               routed onto the context since 2026-09-14 — before that it
+               reached no action and this comparison had no reference to
+               hold the artifact against. The artifact half is the copy
+               BUILD_LIB made, not the world's library: this is a
+               post-check, and in an Installed world those differ. *)
             declared_exports_input d
-            @
-            [ Native_lib (lib_evidence_paths w "inspect.json") ])
+            @ [ Native_lib (built_lib_evidence_paths "inspect.json") ])
           ~eval:declared_exports_eval
           ~limits:
             "only declared names are covered; signatures, versions and \

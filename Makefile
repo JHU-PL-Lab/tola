@@ -68,7 +68,8 @@ canary-tiny1-bridge:
 # evidence has to be produced by THIS run, in an order where the step
 # that reads it runs second.
 CANARY_LANDED_AGREEMENTS = api_names_present required_symbols_exported \
-                           declared_symbols_exported staged_interface_preserved
+                           declared_symbols_exported staged_interface_preserved \
+                           soname_matches_declaration
 
 canary-agreement-roundtrip:
 	@rm -f _out/canary/projects/sqlite/probe_binding/*/*.ok

@@ -78,7 +78,11 @@ let sqlite_api_source : Canary_artifact.t =
         symbol_prefixes = [ "sqlite3_" ];
         stable_symbols = sqlite_native_modern_watchlist;
         versioned_symbols = [];
-        soname = None;
+        (* what the library calls itself — matching apt's, and now the
+           built one's too (2026-09-14). Declaring it is what lets
+           [soname_matches_declaration] decide instead of reporting
+           that the project said nothing. *)
+        soname = Some "libsqlite3.so.0";
         c_runtime = None;
         cxx_abi = None };
     binding_apis =
@@ -294,7 +298,11 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
             stamp src_dir amalg_dir fetch libdir
             (Canary_build_cmd.cc_shared_lib_cmd
                ~c_src:(Printf.sprintf "%s/%s/sqlite3.c" src_dir amalg_dir)
-               ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ] ())
+               ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ]
+               (* the same identity apt's libsqlite3 records, so a Built
+                  world models a deployed one (2026-09-14). The .so.0
+                  symlink below is what the soname then resolves to. *)
+               ~soname:"libsqlite3.so.0" ())
             libdir stamp libdir
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) };
     (* THE BUILD STEP SUMMARIZES ITS OWN OUTPUT (2026-09-14). The

@@ -52,16 +52,30 @@ tracker is readable without a checkout.
 | | `soname_matches_requirement` | reported as `not_applicable`/`unavailable` |
 | | `required_versions_exported` | reported as `not_applicable`/`unavailable` |
 | | `dependencies_provided` | reported as `not_applicable`/`unavailable` |
-| | `soname_matches_declaration` | `unavailable` — **the project declares no soname.** Not a gap in canary: sqlite's `native_api.soname` is `None`, and its binding declaration claims `libsqlite3.so.0` while the built library records no SONAME at all (`gcc -shared` with no `-Wl,-soname`; the `.so.0` is a bare symlink). Declaring one would make this decide, and probably `violated` |
+| **LANDED** | `soname_matches_declaration` | **`holds` ×16 on sqlite (2026-09-14); falsified by declaring `libsqlite3.so.99` → `violated: soname libsqlite3.so.0 != declared libsqlite3.so.99`. Landing it required fixing canary's own build: `cc_shared_lib_cmd` passed no `-Wl,-soname`, so every library canary built recorded no identity while apt's records `libsqlite3.so.0`** |
 | | `declared_versions_exported` | `unavailable` — **the project declares no version tags, and that is the truth.** sqlite builds without a version script, so there are no version nodes to check. The projects that do use one (openssl) fetch their lib, so `build_lib` never fires for them |
 | | `behavior_matches` | reported as `not_implemented` |
 | | `repack_preserves_api` | reported as `not_implemented` |
 | | `repack_complete` | reported as `not_implemented` |
 
-**Four landed of thirteen.** The two that arrived on 2026-09-14 came from one
-change — routing the project's own declared C API onto the agreement context —
-and one consequence of it: once `build_lib` summarised its own output, the
-staging comparison had a build-tree copy to compare against and decided too.
+**Five landed of thirteen.** Three arrived on 2026-09-14 from one change —
+routing the project's own declared C API onto the agreement context — plus two
+consequences of it. Once `build_lib` summarised its own output, the staging
+comparison had a build-tree copy to hold the staged one against. And once the
+declarations were reachable, `soname_matches_declaration` could be landed by
+fixing the thing it was complaining about: canary's own `cc_shared_lib_cmd`
+passed no `-Wl,-soname`, so every library canary built recorded no identity at
+all while the system's records one. That was a FIDELITY bug, not a cosmetic
+one — a consumer linked against a no-soname library records a path or a bare
+filename in `DT_NEEDED`, so a Built world was not a model of a deployed one
+precisely where the identity agreements read.
+
+**A post-check reads the copy its own action produced.** Asking
+`lib_evidence_paths` — "where is this world's library" — handed the three
+`build_lib_post` agreements the STAGED copy in Installed worlds, and they
+reported `inconclusive` against an artifact they were not asking about. That
+is the rule the pre/post slots make explicit, and `built_lib_evidence_paths`
+is its other half.
 
 Note the four rows that now read `not_applicable`/`unavailable`
 rather than `not_applicable` alone: sqlite grew a Python chain on 2026-09-12,

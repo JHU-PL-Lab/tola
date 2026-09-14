@@ -412,11 +412,13 @@ let soname_matches_declaration : agreement =
     ag_methods =
       [ checking_method ~name:"declared_soname_vs_library" ~kind:Compare
           ~reference:Declared_facts ~firing:firing_built_lib_only
-          ~inputs:(fun { ac_world = w; ac_declared = d; _ } ->
+          ~inputs:(fun { ac_declared = d; _ } ->
             (* the DECLARED identity is the reference half; without it
-               there is nothing to hold the artifact against *)
+               there is nothing to hold the artifact against. The
+               artifact half is the copy BUILD_LIB made — see
+               [built_lib_evidence_paths] for why not the world's. *)
             declared_soname_input d
-            @ [ Native_lib (lib_evidence_paths w "inspect.json") ])
+            @ [ Native_lib (built_lib_evidence_paths "inspect.json") ])
           ~eval:soname_declaration_eval
           ~limits:
             "matching a name does not identify a unique implementation: two \
@@ -515,9 +517,9 @@ let declared_versions_exported : agreement =
     ag_methods =
       [ checking_method ~name:"declared_tags_vs_library_exports" ~kind:Compare
           ~reference:Declared_facts ~firing:firing_built_lib_only
-          ~inputs:(fun { ac_world = w; ac_declared = d; _ } ->
+          ~inputs:(fun { ac_declared = d; _ } ->
             declared_version_tags_input d
-            @ [ Versioned_exports (lib_evidence_paths w "inspect.json") ])
+            @ [ Versioned_exports (built_lib_evidence_paths "inspect.json") ])
           ~eval:declared_versions_eval
           ~limits:
             "presence of a tag says nothing about the symbols inside it, nor \

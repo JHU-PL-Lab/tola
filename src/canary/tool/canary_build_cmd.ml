@@ -94,11 +94,29 @@ let curl_unzip_cmd ~url ~dest () =
 (* Compile one C translation unit into a shared library. Defaults produce
    "gcc -shared -fPIC <src> -o <out> <ldlibs>"; guards/symlinks stay with
    the caller (project-shaped), the compiler verb lives here. *)
+(** [soname] RECORDS AN IDENTITY IN THE OBJECT (2026-09-14, user).
+
+    Without it the linker writes no [DT_SONAME], and a library with no
+    soname is not what any distribution ships: apt's libsqlite3 records
+    [libsqlite3.so.0], and the one canary built beside it recorded
+    nothing. That is a FIDELITY problem, not a cosmetic one — a
+    consumer linked against a no-soname library records the path or the
+    bare filename in its [DT_NEEDED], so the identity agreements
+    ([soname_matches_requirement], [dependencies_provided]) read
+    different data in a canary-built world than in a real one, and a
+    Built world stops being a model of a deployed one exactly where
+    those claims live.
+
+    A caller that passes no [soname] keeps the old behaviour, which is
+    right for a library that genuinely ships without one. *)
 let cc_shared_lib_cmd ?(cc = "gcc") ?(flags = [ "-shared"; "-fPIC" ])
-    ?(ldlibs = []) ~c_src ~out () =
-  Printf.sprintf "%s %s %s -o %s %s" cc
+    ?(ldlibs = []) ?soname ~c_src ~out () =
+  let soname_flag =
+    match soname with None -> "" | Some s -> Printf.sprintf " -Wl,-soname,%s" s
+  in
+  Printf.sprintf "%s %s%s %s -o %s %s" cc
     (String.concat ~sep:" " flags)
-    c_src out
+    soname_flag c_src out
     (String.concat ~sep:" " ldlibs)
 
 let dune_build_cmd ?(env_extra = []) ?root ?target () =

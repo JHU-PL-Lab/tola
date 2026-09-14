@@ -574,6 +574,28 @@ let lib_evidence_tags (w : Canary_artifact.assignment) : string list =
   | Canary_store.Built | Canary_store.Vendored | Canary_store.Absent ->
       [ build; probe ]
 
+(** THE COPY [build_lib] MADE, never the staged one (2026-09-14).
+
+    {!lib_evidence_paths} answers "where is THIS WORLD's library", and
+    for an Installed world the honest answer is the staged copy — which
+    is right for every check that asks what a consumer will meet, and
+    wrong for every check that asks what the build produced.
+
+    A [build_lib_post] agreement is the second kind. Asking the
+    world-aware derivation gave it the staged file and it reported
+    [inconclusive: the library records no identity] on Installed
+    worlds, because the staged copy was a stale pre-[-soname] build —
+    a post-check answering a question about the wrong artifact, and
+    only noticed because the two copies had drifted.
+
+    The rule the [pre]/[post] slots make explicit: a PRE-check wants
+    the world's library, a POST-check wants the copy its own action
+    produced. [staged_interface_preserved] already names both sides
+    positionally for the same reason. *)
+let built_lib_evidence_paths (file : string) : string list =
+  [ build_lib_tag ^ "/" ^ file;
+    Canary_basic.string_of_action Canary_basic.Probe_lib ^ "/" ^ file ]
+
 (** The library's inspection paths for one filename, in world order. *)
 let lib_evidence_paths (w : Canary_artifact.assignment) (file : string) :
     string list =
