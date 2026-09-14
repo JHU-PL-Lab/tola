@@ -135,7 +135,7 @@ let api_names_present : agreement =
     ag_methods =
       [ checking_method ~name:"watchlist_vs_user_surface" ~kind:Inspect
           ~reference:Declared_facts ~firing:firing_default
-          ~inputs:(fun _ l w ->
+          ~inputs:(fun { ac_lang = l; ac_world = w; _ } ->
             let tag = binding_evidence_tag w l in
             match l with
             (* the CLAIM is identical across languages; only the surface
@@ -212,7 +212,7 @@ let repack_preserves_api : agreement =
     ag_methods =
       [ checking_method ~name:"declared_repacking_relation" ~kind:Run_program
           ~reference:Declared_facts ~firing:firing_probe_only
-          ~inputs:(fun _ _ _ -> [])
+          ~inputs:(fun _ -> [])
           ~planned:
             "the repacking relation is not specified: \"preserves\" has no \
              agreed scope, so there is nothing to compare a binding against. \

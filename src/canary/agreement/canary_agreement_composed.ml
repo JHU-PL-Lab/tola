@@ -98,7 +98,7 @@ let repack_complete : agreement =
     ag_methods =
       [ checking_method ~name:"composed_faithfulness" ~kind:Run_program
           ~reference:Declared_facts ~firing:firing_default
-          ~inputs:(fun _ _ _ -> [])
+          ~inputs:(fun _ -> [])
           ~planned:
             "the claim's scope is unsettled (\"loses nothing\" needs an \
              allowed-omission policy), and two of the three agreements it \

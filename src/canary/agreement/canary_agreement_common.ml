@@ -370,7 +370,54 @@ type action_context = {
   ac_mechanism : Canary_mechanism.mechanism;
   ac_lang : Canary_lang.lang;
   ac_world : Canary_artifact.assignment;
+  ac_declared : Canary_artifact.t option;
+      (** WHAT THE PROJECT SAID IT SHIPS (2026-09-14) — the declared
+          C API: the stable symbols, the library identity, the
+          symbol-version tags.
+
+          A DECLARATION IS EVIDENCE. It is the reference half of every
+          [Declared_facts] comparison, and it was the one kind of
+          evidence with nowhere to come from: a method's [m_inputs]
+          saw the mechanism, the language and the world, and a
+          declaration is none of those. So the three agreements at
+          [build_lib_post] reported "the project's c_api declaration is
+          not routed into the evidence" on every run of every project
+          — the comparison's own reference was unreachable.
+
+          [None] where the project declares no API. The agreements that
+          want it then report [unavailable] with a reason naming the
+          project rather than the plumbing, which is a to-do for
+          somebody rather than a bug. *)
 }
+
+(** THE DECLARED HALF, AS EVIDENCE (2026-09-14).
+
+    Each returns [] when the project declares nothing of that kind,
+    which is a different state from "the plumbing is missing" and now
+    reads as one: the evaluator reports [unavailable] with a reason
+    naming the project. sqlite declares its stable symbols and no
+    version script, so its [build_lib_post] column honestly shows one
+    claim decided and one inapplicable, rather than three claims
+    blocked on canary. *)
+let declared_exports_input (d : Canary_artifact.t option) : inspect_input list =
+  match d with
+  | Some a
+    when not (List.is_empty a.Canary_artifact.native_api.stable_symbols) ->
+      [ Declared_exports a.Canary_artifact.native_api.stable_symbols ]
+  | _ -> []
+
+let declared_soname_input (d : Canary_artifact.t option) : inspect_input list =
+  match Option.bind d ~f:(fun a -> a.Canary_artifact.native_api.soname) with
+  | Some s when not (String.is_empty s) -> [ Declared_soname s ]
+  | _ -> []
+
+let declared_version_tags_input (d : Canary_artifact.t option) :
+    inspect_input list =
+  match d with
+  | Some a
+    when not (List.is_empty a.Canary_artifact.native_api.versioned_symbols) ->
+      [ Declared_version_tags a.Canary_artifact.native_api.versioned_symbols ]
+  | _ -> []
 
 (** The evaluator's signature: resolve a declared relative evidence
     path to an absolute one, read the inputs, decide. *)
@@ -781,11 +828,20 @@ type checking_method = {
     Canary_mechanism.mechanism -> Canary_lang.lang ->
     Canary_artifact.assignment -> Canary_basic.action list;
       (** WHERE it fires, over the ACTION catalogue (SSOT §6.5). *)
-  m_inputs :
-    Canary_mechanism.mechanism -> Canary_lang.lang ->
-    Canary_artifact.assignment -> inspect_input list;
+  m_inputs : action_context -> inspect_input list;
       (** WHAT it reads, as evidence references resolved against the
-          world's own output tree. *)
+          world's own output tree.
+
+          It takes the whole CONTEXT while [m_applicable] and
+          [m_firing] still take the three fields, and the asymmetry is
+          the point rather than an oversight: those two ask about the
+          shape of the WORLD — does this mechanism carry the claim,
+          which actions exist — and the world is exactly mechanism,
+          language and provisioning. This one asks what EVIDENCE
+          exists, and a project's declaration is evidence that belongs
+          to none of those three. Widening all three would have been
+          churn; widening the one that reads evidence is the
+          distinction. *)
   m_eval : evaluator option;
   m_planned : string;
       (** why there is no evaluator; reported as the [Not_implemented]
@@ -1004,6 +1060,7 @@ let has_evaluator (ag : agreement) : bool =
     and one that does not apply must not be reported as unimplemented. *)
 let evaluate_method ?(disabled = false) ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
+    ?(declared : Canary_artifact.t option)
     ~(resolve : string -> string) ?inputs (m : checking_method) : outcome =
   if disabled then Disabled "switched off for this run"
   else
@@ -1018,7 +1075,10 @@ let evaluate_method ?(disabled = false) ~(mechanism : Canary_mechanism.mechanism
             let ins =
               match inputs with
               | Some i -> i
-              | None -> m.m_inputs mechanism lang world
+              | None ->
+                  m.m_inputs
+                    { ac_mechanism = mechanism; ac_lang = lang;
+                      ac_world = world; ac_declared = declared }
             in
             try normalize_outcome (ev ~resolve ins)
             with exn -> Error (Exn.to_string exn)))

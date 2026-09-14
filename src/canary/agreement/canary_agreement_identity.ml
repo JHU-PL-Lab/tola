@@ -205,8 +205,10 @@ let soname_declaration_eval ~resolve inputs : outcome =
   match declared_soname inputs with
   | None ->
       Unavailable
-        "no declared soname reaches this action — the project's library \
-         identity declaration is not routed into the evidence inputs"
+        "this project declares no soname for its library, so there is \
+         nothing to hold the artifact's recorded identity against. A \
+         project to-do, not a gap in canary: set [native_api.soname] and \
+         this decides"
   | Some declared -> (
       match native_path ~resolve inputs with
       | None -> Unavailable "no native library inspection in this world"
@@ -255,8 +257,11 @@ let declared_versions_eval ~resolve inputs : outcome =
   match declared_version_tags inputs with
   | None ->
       Unavailable
-        "no declared symbol-version tags reach this action — the project's \
-         version-script declaration is not routed into the evidence inputs"
+        "this project declares no symbol-version tags. For most libraries \
+         that is the truth rather than an omission — a library built \
+         without a version script has no version nodes to check — so \
+         setting [native_api.versioned_symbols] is right only where the \
+         build really uses one"
   | Some [] ->
       Inconclusive "the declared tag list is empty; nothing to compare"
   | Some declared -> (
@@ -379,7 +384,8 @@ let consumer_record_inputs first m l w =
     the consumer's recorded identity. The library half used to be the
     constant build-step path, which is wrong in every world whose
     library is not Built. *)
-let consumer_record_inputs_native m l w =
+let consumer_record_inputs_native
+    ({ ac_mechanism = m; ac_lang = l; ac_world = w; _ } : action_context) =
   consumer_record_inputs (Native_lib (lib_evidence_paths w "inspect.json")) m l w
 
 (* ── the agreements ── *)
@@ -406,7 +412,11 @@ let soname_matches_declaration : agreement =
     ag_methods =
       [ checking_method ~name:"declared_soname_vs_library" ~kind:Compare
           ~reference:Declared_facts ~firing:firing_built_lib_only
-          ~inputs:(fun _ _ w -> [ Native_lib (lib_evidence_paths w "inspect.json") ])
+          ~inputs:(fun { ac_world = w; ac_declared = d; _ } ->
+            (* the DECLARED identity is the reference half; without it
+               there is nothing to hold the artifact against *)
+            declared_soname_input d
+            @ [ Native_lib (lib_evidence_paths w "inspect.json") ])
           ~eval:soname_declaration_eval
           ~limits:
             "matching a name does not identify a unique implementation: two \
@@ -505,8 +515,9 @@ let declared_versions_exported : agreement =
     ag_methods =
       [ checking_method ~name:"declared_tags_vs_library_exports" ~kind:Compare
           ~reference:Declared_facts ~firing:firing_built_lib_only
-          ~inputs:(fun _ _ w ->
-            [ Versioned_exports (lib_evidence_paths w "inspect.json") ])
+          ~inputs:(fun { ac_world = w; ac_declared = d; _ } ->
+            declared_version_tags_input d
+            @ [ Versioned_exports (lib_evidence_paths w "inspect.json") ])
           ~eval:declared_versions_eval
           ~limits:
             "presence of a tag says nothing about the symbols inside it, nor \
@@ -557,7 +568,7 @@ let required_versions_exported : agreement =
       [ checking_method ~name:"required_tags_vs_provider_exports" ~kind:Compare
           ~reference:Peer_artifact ~applicable:needs_consumer_record
           ~firing:pair_firing
-          ~inputs:(fun m l w ->
+          ~inputs:(fun { ac_mechanism = m; ac_lang = l; ac_world = w; _ } ->
             if consumer_records_needed m then
               [ Versioned_exports (lib_evidence_paths w "inspect.json");
                 Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]

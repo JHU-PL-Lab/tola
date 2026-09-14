@@ -139,8 +139,9 @@ let declared_exports_eval ~resolve inputs : outcome =
   match declared_exports inputs with
   | None ->
       Unavailable
-        "no declared export list reaches this action — the project's c_api \
-         declaration is not routed into the evidence inputs"
+        "this project declares no c_api export list, so there is nothing to \
+         hold the library's exports against. A project to-do, not a gap in \
+         canary: set [native_api.stable_symbols] and this decides"
   | Some declared -> (
       match native_path ~resolve inputs with
       | None -> Unavailable "no native library inspection in this world"
@@ -234,10 +235,14 @@ let declared_symbols_exported : agreement =
       [ checking_method ~name:"declared_exports_vs_library" ~kind:Compare
           ~reference:Declared_facts
           ~firing:firing_built_lib_only
-          ~inputs:(fun _ _ w ->
+          ~inputs:(fun { ac_world = w; ac_declared = d; _ } ->
             (* the library half is located by the WORLD; the declaration
-               half is NOT routed by any action today, which is why the
-               evaluator reports [Unavailable] rather than holding *)
+               half comes from the project's own c_api, routed onto the
+               context since 2026-09-14 — before that it reached no
+               action and this comparison had no reference to hold the
+               artifact against *)
+            declared_exports_input d
+            @
             [ Native_lib (lib_evidence_paths w "inspect.json") ])
           ~eval:declared_exports_eval
           ~limits:
@@ -301,7 +306,7 @@ let required_symbols_exported : agreement =
                  requirement set; the probe's own failure is the evidence"
             else Applicable)
           ~firing:firing_default
-          ~inputs:(fun m l w ->
+          ~inputs:(fun { ac_mechanism = m; ac_lang = l; ac_world = w; _ } ->
             if is_dynamic m then []
             else
               let tag = binding_evidence_tag w l in

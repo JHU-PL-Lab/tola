@@ -297,6 +297,22 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
                ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ] ())
             libdir stamp libdir
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) };
+    (* THE BUILD STEP SUMMARIZES ITS OWN OUTPUT (2026-09-14). The
+       three declaration agreements fire at [build_lib], and until now
+       the only native summary in the world was the one [probe_lib]
+       writes — a LATER step. They decided only on a warm tree, by
+       reading the previous run's file, and reported `unavailable` on
+       a cold one. A post-check reads the copy its own action made. *)
+    (* UNGATED: an Installed world builds the library and THEN stages
+       it, so its build tree is just as real and its build_lib just as
+       worth summarizing. Gating this on [Built] left the four
+       Installed scenarios reporting `unavailable` at an action they
+       had actually run. *)
+    { ar_action = Canary_basic.Build_lib; ar_needs = None;
+      ar_template =
+        Inspect_native_build
+          { lib = workspace ^ "/lib/libsqlite3.so";
+            prefixes = [ "sqlite3_" ] } };
     { ar_action = Canary_basic.Probe_lib; ar_needs = None;
       ar_template = Native_lib_probe
                 { location = Build_tree_lib { lib = workspace ^ "/lib/libsqlite3.so" };

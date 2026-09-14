@@ -193,6 +193,7 @@ let is_disabled ~(disabled : agreement_id list) (r : agreement_row) : bool =
     nobody has implemented yet. *)
 let evaluate_in_context ?(disabled = []) ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
+    ?(declared : Canary_artifact.t option)
     ~(action : Canary_basic.action) ~(resolve : string -> string) () :
     evaluation list =
   List.concat_map agreement_registry ~f:(fun r ->
@@ -205,7 +206,8 @@ let evaluate_in_context ?(disabled = []) ~(mechanism : Canary_mechanism.mechanis
           if not fires then None
           else
             let outcome =
-              evaluate_method ~disabled:off ~mechanism ~lang ~world ~resolve m
+              evaluate_method ~disabled:off ~mechanism ~lang ~world ?declared
+                ~resolve m
             in
             Some
               { ev_id = r.ag_id;
@@ -332,7 +334,8 @@ let evaluate_step ?(disabled = []) ?(context : action_context option)
     match (context, action) with
     | Some ctx, Some a ->
         evaluate_in_context ~disabled ~mechanism:ctx.ac_mechanism
-          ~lang:ctx.ac_lang ~world:ctx.ac_world ~action:a ~resolve ()
+          ~lang:ctx.ac_lang ~world:ctx.ac_world ?declared:ctx.ac_declared
+          ~action:a ~resolve ()
     | _ -> []
   in
   let declared =
@@ -376,7 +379,7 @@ let evaluate_step ?(disabled = []) ?(context : action_context option)
                 if
                   List.exists (m.m_firing ctx.ac_mechanism ctx.ac_lang ctx.ac_world)
                     ~f:(fun x -> Poly.equal x a)
-                then m.m_inputs ctx.ac_mechanism ctx.ac_lang ctx.ac_world
+                then m.m_inputs ctx
                 else []))
     | _ -> []
   in
@@ -447,7 +450,9 @@ let inputs_of_agreement ?mechanism ?(world = []) (c : agreement_id)
            (Canary_mechanism.default_mechanism_of_lang l)
            ~default:Canary_mechanism.Cstubs)
   in
-  List.concat_map (row_of c).ag.ag_methods ~f:(fun mm -> mm.m_inputs m l world)
+  List.concat_map (row_of c).ag.ag_methods ~f:(fun mm ->
+      mm.m_inputs
+        { ac_mechanism = m; ac_lang = l; ac_world = world; ac_declared = None })
 
 (* ── FACTS IN, CHECKS OUT ──────────────────────────────────────────
    A project declares what it IS — its language, its binding mechanism,
@@ -476,7 +481,9 @@ let agreements_for ~(mechanism : Canary_mechanism.mechanism)
         Some
           ( r,
             List.concat_map firing_methods ~f:(fun m ->
-                m.m_inputs mechanism lang world) )
+                m.m_inputs
+                  { ac_mechanism = mechanism; ac_lang = lang; ac_world = world;
+                    ac_declared = None }) )
       else None)
 
 (* ── the counterexamples, GATHERED ────────────────────────────────
@@ -925,8 +932,11 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
                   (Printf.sprintf "fires at %s"
                      (String.concat ~sep:", "
                         (List.map sites ~f:Canary_basic.string_of_action)));
-                List.iter (m.m_inputs mech lang world) ~f:(fun i ->
-                    field "  reads" (string_of_input i)));
+                List.iter
+                  (m.m_inputs
+                     { ac_mechanism = mech; ac_lang = lang; ac_world = world;
+                       ac_declared = None })
+                  ~f:(fun i -> field "  reads" (string_of_input i)));
       field "limits" m.m_limits;
       match m.m_counterexamples with
       | [] -> field "counterexamples" "none — nothing shows it can fail"

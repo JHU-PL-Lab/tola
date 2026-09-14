@@ -972,13 +972,18 @@ let dummy_reason_of_action (spec : runner_spec) (a : action) : string option =
     has yet. Named here rather than guessed at the call site. *)
 let agreement_ctx_of_action ~(world : Canary_artifact.assignment)
     ~(mechanism_of : Canary_lang.lang -> Canary_mechanism.mechanism)
+    ~(declared : Canary_artifact.t option)
     ~(langs : Canary_lang.lang list) (a : action) :
     Canary_step_model.agreement_ctx option =
   let ctx l =
     Some
       { Canary_agreement_common.ac_mechanism = mechanism_of l;
         ac_lang = l;
-        ac_world = world }
+        ac_world = world;
+        (* the project's own declared C API, which [Canary_pipeline]
+           routed onto the spec — it is the reference half of every
+           declaration comparison and reached no evaluator before *)
+        ac_declared = declared }
   in
   match a with
   | Build_binding l | Probe_binding l | Fetch (Binding l)
@@ -1297,7 +1302,8 @@ let derive_steps ~root ~project ?(cache_project = project)
       { s with
         check_pre;
         agreement_ctx =
-          agreement_ctx_of_action ~world ~mechanism_of ~langs s.action;
+          agreement_ctx_of_action ~world ~mechanism_of
+            ~declared:spec.api_source ~langs s.action;
         (* only the BASE step of a dummy action is a dummy. An
            attached inspector shares the parent's action but does real
            work — it runs the inspector and writes the summary an

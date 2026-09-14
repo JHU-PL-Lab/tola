@@ -190,7 +190,7 @@ let signatures_agree : agreement =
                 Inapplicable
                   "no signature extractor for this language's stub surface yet")
           ~firing:firing_default
-          ~inputs:(fun m l _ ->
+          ~inputs:(fun { ac_mechanism = m; ac_lang = l; _ } ->
             match (l, is_dynamic m) with
             | Canary_lang.OCaml, false ->
                 (* the header is the NATIVE side and language-neutral; the

@@ -173,6 +173,10 @@ let realize_template (tpl : action_template) : runner_spec =
                    Some (fun ~output_dir ~variant_key ->
                        Canary_build_cmd.cc_shared_lib_cmd ~c_src ~out ~ldlibs ()
                        |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) }
+  (* An inspect row answers for the ONE action it names and [None]
+     otherwise — [realize_from_rows]'s [merge_inspect] composes it over
+     whatever is already there, so "None" here means "not mine", not
+     "there is no inspector". *)
   | Inspect_opam { pkg } ->
       { spec with inspect = (fun action _loc ->
                     match action with
@@ -187,6 +191,13 @@ let realize_template (tpl : action_template) : runner_spec =
                         Some (fun ~output_dir ~variant_key ->
                             Canary_artifact_lang.python_inspect_cmd ~pkg ~output_dir ~variant_key ())
                     | _ -> None) }
+  (* THE BUILD STEP SUMMARIZES WHAT IT MADE. Declared since the typed
+     templates landed and never used by anything, which is why
+     [declared_symbols_exported] could not decide on a cold tree: it
+     fires at [build_lib] and the only native summary was the one
+     [probe_lib] writes AFTERWARDS. It decided on a warm tree by
+     reading the previous run's file — the same false pass the binding
+     probes had. A post-check reads the copy its own action produced. *)
   | Inspect_native_build { lib; prefixes } ->
       { spec with inspect = (fun action _loc ->
                     match action with
@@ -573,11 +584,28 @@ let realize_from_rows ?(base = empty_runner_spec)
          (e.g. probe_lib with build_tree + pm, fetch_binding with OCaml + Python).
          The old replace-iff-nonempty behaviour dropped earlier rows. *)
       let merge_list a b = a @ b in
+      (* COMPOSE, don't choose (2026-09-14). This used to pick one of
+         the two closures using [inspect_note] as a proxy for "this row
+         set an inspector", because [Poly.equal] on a function crashes
+         and there was no other way to tell. The proxy was wrong in
+         both directions: a row that set [inspect] without a note was
+         silently DISCARDED, and a row that set a note without an
+         inspector threw the accumulated one away.
+
+         [Inspect_native_build] was the casualty. It has existed since
+         the typed templates landed, sets no note, and was therefore
+         unusable — which is why nothing had ever used it, and why
+         [declared_symbols_exported] had no summary to read at the
+         action it fires on.
+
+         Composing needs no proxy: ask the row first, fall back to what
+         is already there. Per ACTION, which is the granularity that
+         actually collides — two rows inspecting different actions were
+         never in conflict. *)
       let merge_inspect a b =
-        (* [Poly.equal] on closures crashes — the inspect field is a
-           function. Use [inspect_note] as proxy: only templates that set
-           inspect also set inspect_note. *)
-        if Option.is_none row_spec.inspect_note then a else b in
+       fun action loc ->
+        match b action loc with Some c -> Some c | None -> a action loc
+      in
       { acc with
         fetch_source = merge_opt acc.fetch_source row_spec.fetch_source;
         fetch_lib = merge_opt acc.fetch_lib row_spec.fetch_lib;

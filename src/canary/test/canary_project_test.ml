@@ -2752,7 +2752,8 @@ let agreement_action_path_pin : pure_test =
               Some
                 { Canary_agreement_common.ac_mechanism = Canary_mechanism.Cstubs;
                   ac_lang = Canary_lang.OCaml;
-                  ac_world = world };
+                  ac_world = world;
+                  ac_declared = None };
             dummy = None }
         in
         let status = Canary_local_runner.run_step logger ~root ~project step in
@@ -2909,7 +2910,8 @@ let agreement_acceptance_pin : pure_test =
               Some
                 { Canary_agreement_common.ac_mechanism = Canary_mechanism.Cstubs;
                   ac_lang = Canary_lang.OCaml;
-                  ac_world = world };
+                  ac_world = world;
+                  ac_declared = None };
             dummy = None }
         in
         let status = Canary_local_runner.run_step logger ~root ~project step in
@@ -2997,7 +2999,8 @@ let agreement_acceptance_pin : pure_test =
           ~context:
             { Canary_agreement_common.ac_mechanism = Canary_mechanism.Cstubs;
               ac_lang = Canary_lang.OCaml;
-              ac_world = world }
+              ac_world = world;
+              ac_declared = None }
           ~action:(Canary_basic.Probe_binding Canary_lang.OCaml)
           ~declared_inputs:
             Canary_agreement_common.

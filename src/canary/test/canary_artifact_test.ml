@@ -244,7 +244,7 @@ let compat_pure_tests =
         let witnessless =
           C.checking_method ~name:"fx" ~kind:C.Compare ~reference:C.Peer_artifact
             ~firing:C.firing_probe_only
-            ~inputs:(fun _ _ _ -> [])
+            ~inputs:(fun _ -> [])
             ~eval:(fun ~resolve:_ _ -> C.Violated [])
             ~limits:"fixture" ()
         in

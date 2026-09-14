@@ -37,28 +37,33 @@ The planned column used to be repeated here beside the effective one, which
 put the registry's status in two files and made this one go stale first
 (2026-09-13). It is one column now, and the catalogue holds the other.
 
-## Effective — 2026-09-13
+## Effective — 2026-09-14
 
 Regenerate with `canary checks --landing`; this is a dated copy so the
 tracker is readable without a checkout.
 
 | | agreement | effective |
 | --- | --- | --- |
+| **LANDED** | `declared_symbols_exported` | **`holds` ×8 / `violated` ×8 on sqlite (2026-09-14) — and the falsification is the project's OWN 2×2, not a synthetic break: the dev channel builds 3.46.1 and exports the declared modern API; the stable channel builds 3.43.2 and is missing `sqlite3_get_clientdata`, `sqlite3_set_clientdata`. That forward cell was created deliberately on 2026-08-19 and had gone undetected since** |
+| **LANDED** | `staged_interface_preserved` | **`holds` ×4 on sqlite. The first distance-0 agreement to decide: it needed a summary of the BUILD-TREE copy, which arrived when `build_lib` began inspecting its own output. An empty diff is the finding — sqlite's copy-out staging is interface-preserving** |
 | **LANDED** | `api_names_present` | **decided in sqlite (OCaml and Python), ssl** |
 | **LANDED** | `required_symbols_exported` | **decided in cairo, libffi, sqlite, ssl, zarith. `holds` ×6 on sqlite's OCaml probe (2026-09-13); falsified by injecting a bogus required symbol → `violated: sqlite3_canary_not_a_real_symbol` on exactly that scenario. `unavailable` ×6 on the Python probe: CPython's `_sqlite3` extension is never inspected for its undefined references** |
 | | `signatures_agree` | reported as `not_applicable`/`unavailable` |
 | | `soname_matches_requirement` | reported as `not_applicable`/`unavailable` |
 | | `required_versions_exported` | reported as `not_applicable`/`unavailable` |
 | | `dependencies_provided` | reported as `not_applicable`/`unavailable` |
-| | `declared_symbols_exported` | absent from every log |
-| | `soname_matches_declaration` | absent from every log |
-| | `declared_versions_exported` | absent from every log |
-| | `staged_interface_preserved` | new 2026-09-12 — a lift of `install_diff_note`; needs native inspections of both copies |
+| | `soname_matches_declaration` | `unavailable` — **the project declares no soname.** Not a gap in canary: sqlite's `native_api.soname` is `None`, and its binding declaration claims `libsqlite3.so.0` while the built library records no SONAME at all (`gcc -shared` with no `-Wl,-soname`; the `.so.0` is a bare symlink). Declaring one would make this decide, and probably `violated` |
+| | `declared_versions_exported` | `unavailable` — **the project declares no version tags, and that is the truth.** sqlite builds without a version script, so there are no version nodes to check. The projects that do use one (openssl) fetch their lib, so `build_lib` never fires for them |
 | | `behavior_matches` | reported as `not_implemented` |
 | | `repack_preserves_api` | reported as `not_implemented` |
 | | `repack_complete` | reported as `not_implemented` |
 
-One landed. Note the four rows that now read `not_applicable`/`unavailable`
+**Four landed of thirteen.** The two that arrived on 2026-09-14 came from one
+change — routing the project's own declared C API onto the agreement context —
+and one consequence of it: once `build_lib` summarised its own output, the
+staging comparison had a build-tree copy to compare against and decided too.
+
+Note the four rows that now read `not_applicable`/`unavailable`
 rather than `not_applicable` alone: sqlite grew a Python chain on 2026-09-12,
 and a compiled extension is a shared object, so the mechanism that could not
 carry those claims under OCaml's static archive *can* carry them under Python.
@@ -92,13 +97,26 @@ only the inspection is missing. What they need is a native summary of the
 extension — the same wiring as the `unavailable` group above, on a different
 artifact.
 
-**`absent from every log` — the step was never observed.** The three
-declaration agreements fire only at `build_lib`, and no run has emitted an
-outcome there: either the step was warm-skipped, or no project with a Built
-lib has run since the context path landed. They additionally need the
-declaration routed into the step's evidence (`Declared_exports`,
-`Declared_soname`, `Declared_version_tags`) — see `registry.md` §7.4.2
-item 3.
+**~~`absent from every log`~~ — closed 2026-09-14.** The three declaration
+agreements fire only at `build_lib`, and that column read `0/3` for three
+stacked reasons, only the first of which was visible:
+
+1. the step is nearly always warm-skipped, so nothing was logged. Forcing it
+   cold showed the real blockers;
+2. **the declaration reached no evaluator.** `m_inputs` saw the mechanism, the
+   language and the world, and a declaration is none of those — so the
+   reference half of every `Declared_facts` comparison was unreachable.
+   `action_context` carries `ac_declared` now;
+3. **the evidence was written by a later step.** The agreements fire at
+   `build_lib` and the only native summary was the one `probe_lib` writes
+   afterwards, so they decided only on a warm tree by reading the previous
+   run's file. `build_lib` inspects its own output now.
+
+Behind (3) sat a fourth: `Inspect_native_build` had existed unused since the
+typed templates landed, because `merge_inspect` decided whether to take a
+row's inspector by checking whether the row also set `inspect_note` — a proxy
+that silently discarded any inspect row without a note. The closures compose
+now, so no proxy is needed.
 
 **`not_implemented` — there is no evaluator, and that is a catalogue
 decision.** `behavior_matches` needs the project to state expected results

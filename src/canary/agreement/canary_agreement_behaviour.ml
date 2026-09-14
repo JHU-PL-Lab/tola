@@ -40,7 +40,7 @@ let behavior_matches : agreement =
     ag_methods =
       [ checking_method ~name:"probe_assertions" ~kind:Run_program
           ~reference:Declared_facts ~firing:firing_probe_only
-          ~inputs:(fun _ _ _ -> [])
+          ~inputs:(fun _ -> [])
           ~planned:
             "the expected values live inside the probe's source as embedded \
              assertions, and the observation is the probe's own exit code; \

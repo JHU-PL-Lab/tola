@@ -67,11 +67,13 @@ canary-tiny1-bridge:
 # probes' own output) is what stops a warm tree from answering: the
 # evidence has to be produced by THIS run, in an order where the step
 # that reads it runs second.
-CANARY_LANDED_AGREEMENTS = api_names_present required_symbols_exported
+CANARY_LANDED_AGREEMENTS = api_names_present required_symbols_exported \
+                           declared_symbols_exported staged_interface_preserved
 
 canary-agreement-roundtrip:
 	@rm -f _out/canary/projects/sqlite/probe_binding/*/*.ok
 	@rm -f _out/canary/projects/sqlite/probe_lib*/*.ok _out/canary/projects/sqlite/probe_lib*/*.json
+	@rm -f _out/canary/projects/sqlite/build_lib/*.ok
 	$(CANARY) action sqlite --thin
 	$(CANARY) checks sqlite --observed
 	@for a in $(CANARY_LANDED_AGREEMENTS); do \

@@ -157,7 +157,7 @@ let staged_interface_preserved : agreement =
                    which is the honest answer rather than a silence. *)
                 [ Canary_basic.Install_lib; Canary_basic.Probe_lib ]
             | _ -> [])
-          ~inputs:(fun _ _ _ ->
+          ~inputs:(fun _ ->
             (* BOTH SIDES ARE NAMED, and neither goes through
                [lib_evidence_paths] (2026-09-13). That derivation
                answers "where is this world's library" and an Installed
