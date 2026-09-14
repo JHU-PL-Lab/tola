@@ -1,55 +1,28 @@
-(** Identity agreements — the soname a consumer records, and the version nodes it needs
+(** Identity agreements — what an object calls itself, what a consumer
+    recorded needing, and the version namespaces attached to symbols.
 
-    One module per check family (design: the per-check module pattern).
-    Each check states its CATEGORY (descriptive), its STANDING, and a
-    falsifier-phrased sentence; the function keeps whatever signature
-    suits it, and the caller supplies the inputs. *)
+    FIVE agreements since 2026-09-12, where there were three ids with
+    "solo" and "pair" cells inside them. Comparing a built library with
+    the project's declaration and comparing it with a consumer's
+    recorded requirement are different claims, with different
+    references and different attribution on failure, so they are
+    different agreements with different names. *)
 
 open Base
 open Canary_agreement_common
-module Cat = Canary_agreement_common
-
-(* ── what this module is about ── *)
-
-(** The PAIR checks: this lib against what this consumer recorded. *)
-let soname : about =
-  { cat = Cat.Identity `Soname;
-    standing = Cat.Declared;
-    says = "the lib's soname is the one the consumer recorded it needs" }
-
-let version : about =
-  { cat = Cat.Identity `Version_node;
-    standing = Cat.Declared;
-    says = "the provider exports every version node the consumer requires" }
-
-(** The SOLO checks: the built lib against the project's declaration —
-    same two categories, different claims, no consumer involved. *)
-let soname_declared : about =
-  { cat = Cat.Identity `Soname;
-    standing = Cat.Declared;
-    says = "the built lib's elf soname is the soname the project declared" }
-
-let version_declared : about =
-  { cat = Cat.Identity `Version_node;
-    standing = Cat.Declared;
-    says =
-      "every version tag the project declares appears among the built lib's \
-       versioned exports" }
-
-let checks : (string * about) list =
-  [ ("soname_denotes_needed/pair", soname);
-    ("soname_denotes_needed/solo", soname_declared);
-    ("symbol_versions_present/pair", version);
-    ("symbol_versions_present/solo", version_declared) ]
 
 (* ── the evidence this family reads ── *)
 
-(** ELF surface view of an inspect JSON — what {!check_abi} needs.
-    The producing inspector ([inspect_native.py] for the lib;
-    [inspect_binding.py --kind stub] for shared-lib consumers) emits an
-    [elf] sub-object with [soname] (string or null) and [needed] (list
-    of strings). Either may be empty/None on archives or platforms
-    without readelf. *)
+(** ELF/Mach-O identity view of an inspect JSON. The producing
+    inspector ([inspect_native.py] for the library;
+    [inspect_binding.py --kind stub] for shared-object consumers) emits
+    an [elf] sub-object with [soname] (string or null) and [needed]
+    (list of strings). Either may be empty on archives or on platforms
+    without readelf.
+
+    The fields are normalized across formats; the resolution semantics
+    behind them are NOT the same, which is why a name match here is
+    never a statement about which object will be loaded. *)
 type abi_surface_inspect = {
   path : string;
   soname : string option;
@@ -74,11 +47,8 @@ let load_abi_surface path =
     [inspect_native.py] (which reads [@@VER] / [@VER] suffixes from
     [nm -D]); fields are non-empty when the ELF artifact carries
     GNU symbol versioning.
-    - [exports] map: defined symbol → exported version tag (provider
-      side, populated for libs built with a version script).
-    - [req_counts] map: required version tag → reference count
-      (consumer side, populated for binaries linked against a
-      versioned provider). *)
+    - [exports]: defined symbol → exported version tag (provider side).
+    - [req_counts]: required version tag → reference count (consumer). *)
 type versioned_symbols_inspect = {
   path : string;
   exports : (string * string) list;
@@ -101,89 +71,54 @@ let load_versioned_symbols path : versioned_symbols_inspect =
     | _ -> [] in
   { path = get_string j "path"; exports; req_counts }
 
-(* ── the SOLO cells: the lib against the DECLARATION ──
+(* Selected BY KIND — see the note in [Canary_agreement_symbols]. The
+   identity and version records both live in a "native" summary, on the
+   provider side and (for a shared-object consumer) on the consumer
+   side, so both ask for the same kind from different paths. *)
+let native_kinds = [ "native" ]
 
-   Same two agreements as below, asked of ONE artifact instead of two:
-   is the built lib's soname the declared one, are the declared version
-   tags exported. They lived in [canary_agreement_lib_declares] until
-   2026-09-02 — a module split by evidence source rather than by
-   category, which put two [Identity] checks outside the identity
-   family. The version-script application and the linker are black
-   boxes, so neither trusts an exit code: each reads the artifact. *)
+let native_path ~resolve inputs =
+  List.find_map inputs ~f:(function
+    | Native_lib ps -> pick_existing_of_kind ~resolve ~kinds:native_kinds ps
+    | _ -> None)
 
-(** c4 lib-only: the BUILT lib's own elf soname vs the declared soname
-    (the linker's -Wl,-soname application is the black box; the
-    artifact's elf is the evidence). *)
-let soname_matches ~declared_soname ~resolve
-    (inputs : inspect_input list) : string list =
-  let lib_path =
-    List.find_map inputs ~f:(function
-        | Native_lib ps -> pick_existing ~resolve ps
-        | _ -> None)
-  in
-  match lib_path with
-  | None -> []
-  | Some p -> (
-      match (load_abi_surface p).soname with
-      | Some s when not (String.equal s declared_soname) ->
-          [ Printf.sprintf "soname %s != declared %s" s declared_soname ]
-      | _ -> [])
+let consumer_abi_path ~resolve inputs =
+  List.find_map inputs ~f:(function
+    | Abi_surface ps -> pick_existing_of_kind ~resolve ~kinds:native_kinds ps
+    | _ -> None)
 
-let version_tags_exported ~declared_tags ~resolve
-    (inputs : inspect_input list) : string list =
-  let lib_path =
-    List.find_map inputs ~f:(function
-        | Versioned_exports ps -> pick_existing ~resolve ps
-        | _ -> None)
-  in
-  match lib_path with
-  | None -> []
-  | Some p ->
-      let vs = load_versioned_symbols p in
-      let exported =
-        List.map vs.exports ~f:snd |> List.dedup_and_sort ~compare:String.compare
-      in
-      List.filter_map declared_tags ~f:(fun tag ->
-          if List.mem exported tag ~equal:String.equal then None
-          else Some (Printf.sprintf "version %s not exported" tag))
+let versioned_exports_path ~resolve inputs =
+  List.find_map inputs ~f:(function
+    | Versioned_exports ps ->
+        pick_existing_of_kind ~resolve ~kinds:native_kinds ps
+    | _ -> None)
 
-(* ── c4: the soname ── *)
+let versioned_req_path ~resolve inputs =
+  List.find_map inputs ~f:(function
+    | Versioned_req ps -> pick_existing_of_kind ~resolve ~kinds:native_kinds ps
+    | _ -> None)
 
-(** [c4 cmp_abi] result type. Distinct from [compat_result] because the
-    failure shape differs — mismatched SONAME (single name we expected)
-    rather than missing symbols (a set). *)
+let declared_soname inputs =
+  List.find_map inputs ~f:(function Declared_soname s -> Some s | _ -> None)
+
+let declared_version_tags inputs =
+  List.find_map inputs ~f:(function
+    | Declared_version_tags t -> Some t
+    | _ -> None)
+
+(* ── the comparators ── *)
+
+(** Provider exports a SONAME; consumer records a NEEDED list.
+    Compatible iff [consumer_needed] contains [provider_soname].
+
+    Catches the SONAME bump: the provider flips libtiny.so.1 →
+    libtiny.so.2 while the consumer's NEEDED still names the old one —
+    at static check time, before the loader fails the load. *)
 type abi_result =
   | Abi_compatible
   | Abi_mismatch of { expected_soname : string; consumer_needed : string list }
   | Abi_unknown
 
-(** [c4 cmp_abi] implementation. Provider exports a SONAME; consumer has
-    a NEEDED list. Compatible iff [consumer_needed] contains
-    [provider_soname].
-
-    Inputs in tiny's vocabulary:
-    - [provider_soname] from {i n4 lib_native.so}'s [elf.soname] field
-      (produced by [inspect_native.py] + [readelf -d]).
-    - [consumer_needed] from {i bpe3 compiled_binding_cext.so}'s
-      [elf.needed] field (same script, different artifact). OCaml
-      bindings don't surface NEEDED on their [.cmxa] / [.stub-a] — it
-      lives on the final linked exe — so [check_abi] only handles the
-      cext (and, generally, any [.so]-shaped consumer artifact) for
-      now; OCaml-side ABI checks would need an inspect of the linked
-      probe exe.
-
-    Catches tiny scenario {i e2 abi_soname_bump}: provider's SONAME
-    flips libtiny.so.1 → libtiny.so.2; consumer's NEEDED still lists
-    libtiny.so.1. {check_abi} returns [Abi_mismatch] — at static check
-    time, before the OS dynamic loader fails the load.
-
-    Returns:
-    - [Abi_compatible] — [provider_soname] ∈ [consumer_needed]
-    - [Abi_mismatch] — provider exports a SONAME the consumer doesn't
-      reference (or, by symmetry, the consumer requires a SONAME the
-      provider doesn't export). The [consumer_needed] list is carried
-      forward for diagnostic strings.
-    - [Abi_unknown] — one side lacks the data. *)
 let check_abi ~(provider_soname : string option) ~(consumer_needed : string list)
     : abi_result =
   match provider_soname with
@@ -193,51 +128,20 @@ let check_abi ~(provider_soname : string option) ~(consumer_needed : string list
       else if List.mem consumer_needed sn ~equal:String.equal then Abi_compatible
       else Abi_mismatch { expected_soname = sn; consumer_needed }
 
-(* ── c5: the version nodes ── *)
+(** Set inclusion on version tags: every version the consumer requires
+    must be exported by the provider.
 
-(** [c5 cmp_sym_version] result type. The "missing versions" failure
-    shape carries the version tags the consumer required that the
-    provider doesn't export — typically [@@GLIBC_2.31] when running on
-    an older glibc, or the deferred tiny scenario e9
-    [symbol_version_floor]'s [TINY_FUTURE_99.0]. *)
+    End-to-end, this is the glibc case: a binary built on a newer
+    distribution references [malloc@GLIBC_2.31]; on an older host the
+    system libc exports only [@@GLIBC_2.17], so the required tag is
+    missing from the provider's exported set. Exact string match on the
+    tag — the linker normally records the specific version it built
+    against, so floor comparison is a refinement, not a correction. *)
 type sym_version_result =
   | Sym_version_compatible
   | Sym_version_missing of { missing_versions : string list }
   | Sym_version_unknown
 
-(** [c5 cmp_sym_version] implementation. Set-inclusion check on version
-    tags: every version the consumer requires must be exported by the
-    provider.
-
-    Inputs from cached JSON ([inspect_native.py] emits both):
-    - [provider_versioned_exports]: list of [(symbol, version)] pairs
-      drawn from {i n4}'s [versioned_exports] field (defined symbols
-      carrying [@@VER] suffixes, e.g. [malloc@@GLIBC_2.31]).
-    - [consumer_required_versions]: list of version tags drawn from
-      consumer-side [versioned_req] field keys (e.g.
-      [{"GLIBC_2.31": 3, "GLIBC_2.17": 5}] → [["GLIBC_2.31"; "GLIBC_2.17"]]).
-
-    Catches the deferred tiny scenario e9 [symbol_version_floor]
-    and, end-to-end, the §4.2 glibc/musl case: binary built on
-    Ubuntu 22.04 has [malloc@GLIBC_2.31] in its NEEDED references;
-    running on a glibc-2.17 host the system libc only exports
-    [@@GLIBC_2.17] — the version tag [GLIBC_2.31] is missing from the
-    provider's exported set, hence [Sym_version_missing].
-
-    Today's check is exact-match on the version tag string. A future
-    refinement could parse version components and do floor-comparison
-    (provider must export ≥ consumer's required version). Exact-match
-    is the common case for [@@GLIBC_X.YY] annotations because the
-    linker normally records the specific version it was built against.
-
-    Returns:
-    - [Sym_version_compatible] — every consumer-required version tag
-      ∈ provider's exported version set.
-    - [Sym_version_missing] — consumer requires tags the provider
-      doesn't export. The list is the missing tags.
-    - [Sym_version_unknown] — one side lacks the data (empty
-      versioned_req on the consumer, or empty versioned_exports on the
-      provider when we'd otherwise need to compare). *)
 let check_sym_version
     ~(provider_versioned_exports : (string * string) list)
     ~(consumer_required_versions : string list)
@@ -255,116 +159,185 @@ let check_sym_version
     if List.is_empty missing then Sym_version_compatible
     else Sym_version_missing { missing_versions = missing }
 
-(** c4 cmp_abi (L4). Reads provider's SONAME from a [Native_lib]
-    input's [elf.soname] and consumer's NEEDED list from an
-    [Abi_surface] input's [elf.needed]. When [check_abi] returns
-    [Abi_mismatch], the predicted substring set is the consumer's
-    NEEDED entries that share the provider's family-stem
-    (e.g. [libtiny] from [libtiny.so.1]) — at runtime, dyld's error
-    mentions the missing NEEDED entry verbatim, so that's what we want
-    to grep for. *)
+(* ── dependency names and where they are answered from ── *)
 
-let c4_predict ~resolve (inputs : inspect_input list) : string list =
-  let provider_path =
-    List.find_map inputs
-      ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None) in
-  let consumer_path =
-    List.find_map inputs
-      ~f:(function Abi_surface ps -> pick_existing ~resolve ps | _ -> None) in
-  match provider_path, consumer_path with
-  | Some pp, Some cp ->
+(** The runtime libraries a world neither provides nor is asked to.
+    They resolve from the ambient system — libc through the program
+    interpreter that ships as its own sibling, the rest through
+    [/etc/ld.so.cache] — so a consumer naming one of these says nothing
+    about this world's artifacts.
+
+    This is the DEFAULT exclusion, not a law, and it is currently CODE
+    rather than a per-world policy parameter — the standing limitation
+    recorded on the agreement. A world that ships its own C++ runtime
+    should take [libstdc++] off this list, and then an ambient
+    resolution IS a finding there. *)
+let ambient_runtime =
+  [ (* ELF *)
+    "libc.so.6"; "libm.so.6"; "libdl.so.2"; "libpthread.so.0";
+    "librt.so.1"; "libgcc_s.so.1"; "libstdc++.so.6";
+    "ld-linux-x86-64.so.2"; "ld-linux-aarch64.so.1";
+    (* Mach-O records an install name, so these are paths *)
+    "/usr/lib/libSystem.B.dylib"; "/usr/lib/libc++.1.dylib" ]
+
+(** Where a recorded name is answered from. Three-valued on purpose:
+    which of the three counts as a violation is policy, and a run
+    record that keeps the origin of every dependency is derivation
+    data attribution can read later. *)
+type needed_origin =
+  | Provided_by_world of string    (** this world's provider exports it *)
+  | Provided_by_ambient of string  (** a runtime library the system answers *)
+  | Unprovided of string           (** nothing here offers it *)
+
+let classify_needed ~(provider_soname : string option)
+    ~(needed : string list) : needed_origin list =
+  List.map needed ~f:(fun n ->
+      match provider_soname with
+      | Some sn when String.equal sn n -> Provided_by_world n
+      | _ ->
+          if List.mem ambient_runtime n ~equal:String.equal then
+            Provided_by_ambient n
+          else Unprovided n)
+
+(* ── the evaluators ── *)
+
+let soname_declaration_eval ~resolve inputs : outcome =
+  match declared_soname inputs with
+  | None ->
+      Unavailable
+        "no declared soname reaches this action — the project's library \
+         identity declaration is not routed into the evidence inputs"
+  | Some declared -> (
+      match native_path ~resolve inputs with
+      | None -> Unavailable "no native library inspection in this world"
+      | Some p -> (
+          match (load_abi_surface p).soname with
+          | None ->
+              Inconclusive
+                "the library records no identity (an archive, or a format \
+                 without one)"
+          | Some s when String.equal s declared -> Holds
+          | Some s ->
+              Violated
+                [ Printf.sprintf "soname %s != declared %s" s declared ]))
+
+let soname_requirement_eval ~resolve inputs : outcome =
+  match (native_path ~resolve inputs, consumer_abi_path ~resolve inputs) with
+  | None, _ -> Unavailable "no native library inspection in this world"
+  | _, None -> Unavailable "no consumer dependency record in this world"
+  | Some pp, Some cp -> (
       let prov = load_abi_surface pp in
       let cons = load_abi_surface cp in
-      (match check_abi
-               ~provider_soname:prov.soname
-               ~consumer_needed:cons.needed with
-       | Abi_mismatch _ ->
-           (* Stem = strip trailing ".so.X" / ".so.X.Y" so libtiny.so.1
-              and libtiny.so.2 share stem "libtiny". *)
-           let stem name =
-             match String.index name '.' with
-             | None -> name
-             | Some i -> String.sub name ~pos:0 ~len:i in
-           (match prov.soname with
-            | None -> []
-            | Some sn ->
-                let prov_stem = stem sn in
-                List.filter cons.needed
-                  ~f:(fun n -> String.equal (stem n) prov_stem))
-       | Abi_compatible | Abi_unknown -> [])
-  | _ -> []
+      match check_abi ~provider_soname:prov.soname ~consumer_needed:cons.needed with
+      | Abi_compatible -> Holds
+      | Abi_unknown ->
+          Inconclusive
+            "the provider records no identity, or the consumer records no \
+             dependency"
+      | Abi_mismatch _ ->
+          (* Stem = strip at the first dot so libtiny.so.1 and
+             libtiny.so.2 share the stem "libtiny". At runtime the
+             loader's error names the missing NEEDED entry verbatim, so
+             the same-family entries are what a log will show. *)
+          let stem name =
+            match String.index name '.' with
+            | None -> name
+            | Some i -> String.sub name ~pos:0 ~len:i
+          in
+          let prov_stem =
+            match prov.soname with None -> "" | Some sn -> stem sn
+          in
+          Violated
+            (List.filter cons.needed ~f:(fun n ->
+                 String.equal (stem n) prov_stem)))
 
-(** c3 cmp_behavior is structurally different from c1/c2/c4/c5.
-    There's no static input to predict over — behavioral truth lives
-    in the {b running} binary, and expected values live inside the
-    probe's source as embedded assertions. The comparator IS the
-    probe's exit-code check; canary surfaces it via
-    [Expect_failure { contains_any = ["FAIL "] }] on Probe steps (the
-    tiny probe prints [FAIL …] on assertion mismatch).
-    See [Canary_tiny_scenario.make_lib_behavior_broken_runner_spec]
-    for the demo against harness scenario [e7 behavior_silent].
-    [c3_predict] returns [] honestly: there's nothing static to
-    predict. Status stays [Blocked []] to reflect the {b predict} side
-    being a no-op; coverage is via the probe runner.
+let declared_versions_eval ~resolve inputs : outcome =
+  match declared_version_tags inputs with
+  | None ->
+      Unavailable
+        "no declared symbol-version tags reach this action — the project's \
+         version-script declaration is not routed into the evidence inputs"
+  | Some [] ->
+      Inconclusive "the declared tag list is empty; nothing to compare"
+  | Some declared -> (
+      match versioned_exports_path ~resolve inputs with
+      | None -> Unavailable "no versioned-export inspection in this world"
+      | Some p ->
+          let vs = load_versioned_symbols p in
+          let exported =
+            List.map vs.exports ~f:snd
+            |> List.dedup_and_sort ~compare:String.compare
+          in
+          if List.is_empty exported then
+            Inconclusive
+              "the library carries no symbol versioning, so no declared tag \
+               can be located in it"
+          else (
+            match
+              List.filter_map declared ~f:(fun tag ->
+                  if List.mem exported tag ~equal:String.equal then None
+                  else Some (Printf.sprintf "version %s not exported" tag))
+            with
+            | [] -> Holds
+            | missing -> Violated missing))
 
-    c7 [api_sound_repack] is structurally analogous to c3 — same
-    probe-runner mechanism, different Contract attribution (binding-
-    repack-layer bug vs native-behavior bug). Variants declaring c7
-    use [Expect_failure { contains_any = ["FAIL "] }] same as c3.
-    [c7_predict] returns []; registry entry stays in place for
-    documentation only (status = Stubbed, enabled = false). See
-    [Canary_tiny_scenario.make_binding_repack_broken_runner_spec] and
-    [make_binding_python_repack_broken_runner_spec] for live demos
-    against scenarios [api_repack] and [api_repack_python].
-
-    c8 is disabled — no Contract for canary to maintain. Each binding
-    is independent; cross-binding consistency isn't a canary-side
-    agreement. Candidate for removal in a future registry cleanup. *)
-
-(** c5 cmp_sym_version (L1b) — the PREDICT side. Reads provider's
-    versioned_exports map from a [Versioned_exports] input and
-    consumer's versioned_req map from a [Versioned_req] input; runs
-    [check_sym_version] and on mismatch returns the version tags the
-    consumer requires that the provider doesn't export. dyld's runtime
-    error mentions those tags verbatim ("version `TINY_1.0' not
-    found"), so they're the right substrings to grep probe.log for.
-    (This comment was stranded in [Canary_agreement_api_surface] by the
-    per-family split; it belongs with the check it describes.) *)
-
-let c5_predict ~resolve (inputs : inspect_input list) : string list =
-  let provider_path =
-    List.find_map inputs
-      ~f:(function
-        | Versioned_exports ps -> pick_existing ~resolve ps
-        | _ -> None) in
-  let consumer_path =
-    List.find_map inputs
-      ~f:(function
-        | Versioned_req ps -> pick_existing ~resolve ps
-        | _ -> None) in
-  match provider_path, consumer_path with
-  | Some pp, Some cp ->
+let required_versions_eval ~resolve inputs : outcome =
+  match
+    (versioned_exports_path ~resolve inputs, versioned_req_path ~resolve inputs)
+  with
+  | None, _ -> Unavailable "no provider versioned-export inspection in this world"
+  | _, None -> Unavailable "no consumer versioned-requirement record in this world"
+  | Some pp, Some cp -> (
       let prov = load_versioned_symbols pp in
       let cons = load_versioned_symbols cp in
       let consumer_required = List.map cons.req_counts ~f:fst in
-      (match check_sym_version
-               ~provider_versioned_exports:prov.exports
-               ~consumer_required_versions:consumer_required with
-       | Sym_version_missing { missing_versions } -> missing_versions
-       | Sym_version_compatible | Sym_version_unknown -> [])
-  | _ -> []
+      match
+        check_sym_version ~provider_versioned_exports:prov.exports
+          ~consumer_required_versions:consumer_required
+      with
+      | Sym_version_compatible -> Holds
+      | Sym_version_missing { missing_versions } -> Violated missing_versions
+      | Sym_version_unknown ->
+          Inconclusive
+            "one side carries no symbol versioning; an empty requirement set \
+             decides nothing")
 
-(* ── what a CONSUMER has to offer these two ──
+(** The falsifier for [dependencies_provided]: a recorded name with no
+    provider. The unprovided names are exactly the strings the loader
+    prints when it gives up ("libtinfo.so.6: cannot open shared object
+    file"), so they are the right substrings to grep a probe log for.
 
-   Both identity agreements read the consumer's recorded NEEDED /
-   version requirements, so they fire only where the consumer keeps
-   those in an artifact canary can read. This family used to spell that
-   [| Canary_lang.Python, false ->] — the branch rather than the reason
-   for it — and the reason is a MECHANISM fact: it is a question about
-   the artifact a mechanism produces. Language is the wrong axis, which
-   the two OCaml mechanisms show: cstubs archives a .a that records
-   nothing, dynlink produces nothing at all, and Python's cext is a .so
-   that records both.
+    NOT the ncurses case. There, the name IS present in both worlds and
+    denotes a different implementation in each — same soname, same
+    symbols, same version nodes, and a segfault. This one is the other
+    half of that story: the name is not there at all. *)
+let dependencies_provided_eval ~resolve inputs : outcome =
+  match (native_path ~resolve inputs, consumer_abi_path ~resolve inputs) with
+  | None, _ -> Unavailable "no native library inspection in this world"
+  | _, None -> Unavailable "no consumer dependency record in this world"
+  | Some pp, Some cp -> (
+      let prov = load_abi_surface pp in
+      let cons = load_abi_surface cp in
+      if List.is_empty cons.needed then
+        Inconclusive "the consumer records no dependencies"
+      else
+        match
+          classify_needed ~provider_soname:prov.soname ~needed:cons.needed
+          |> List.filter_map ~f:(function
+               | Unprovided n -> Some n
+               | Provided_by_world _ | Provided_by_ambient _ -> None)
+        with
+        | [] -> Holds
+        | unprovided -> Violated unprovided)
+
+(* ── what a CONSUMER has to offer the pair agreements ──
+
+   All three read the consumer's recorded dependency or version
+   requirements, so they apply only where the consumer keeps those in
+   an artifact canary can read. That is a MECHANISM fact, not a
+   language one, which the two OCaml mechanisms show: cstubs archives a
+   .a that records nothing, dynlink produces nothing at all, and
+   Python's cext is a .so that records both.
 
    The mechanisms without a module of their own answer by discipline
    until they get one — dynamic means no compiled artifact, so nothing
@@ -375,55 +348,328 @@ let consumer_records_needed (m : Canary_mechanism.mechanism) : bool =
       Canary_agreement_cstubs.records_needed_in_a_readable_artifact
   | _ -> not (is_dynamic m)
 
-let c4 : description =
-  { about = soname;
-    claim = Structural;
-    evidence = Compare_several;
-    provenance = Added;
-    reads = [ ("Sf.2", "native"); ("Sf.5", "binding") ];
-    fault_tags = [ "abi_soname" ];
-    firing = firing_with_build_lib;
-    inputs =
-      (fun m l w ->
-        if consumer_records_needed m && not (is_dynamic m) then
-          [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
-            Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
-        else []);
-    counterexamples =
-      [ (* the SOLO cell: the built lib's elf soname vs the declared
-           one — the linker's -Wl,-soname is the black box, the elf is
-           the evidence *)
-        { fx_predict = Some (soname_matches ~declared_soname:"libtiny.so.1");
-          fx_inputs = [ Native_lib [ "lib.json" ] ];
-          fx_bodies =
-            [ ("lib.json",
-               {|{"kind": "native", "path": "fx",
+let needs_consumer_record m _ _ =
+  if consumer_records_needed m then Applicable
+  else
+    Inapplicable
+      "this binding mechanism produces no artifact carrying a dependency or \
+       symbol-version record (a static archive has neither; a dynamic \
+       binding compiles nothing)"
+
+(** WHERE A PAIR CHECK FIRES: wherever the consumer artifact exists,
+    and not before.
+
+    These three used to fire at [Build_lib] as well, through a
+    [firing_with_build_lib] derivation written when each shared one id
+    with its declaration counterpart: the [Build_lib] cell WAS the
+    declaration comparison, and it stayed behind when the ids split
+    (2026-09-12 audit). At [Build_lib] there is no consumer record to
+    compare against — the binding has not been built yet — so the cell
+    could only ever report [unavailable]. The declaration agreements
+    keep that site, which is theirs. *)
+let pair_firing = firing_default
+
+let consumer_record_inputs first m l w =
+  if consumer_records_needed m then
+    [ first; Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+  else []
+
+(** The pair shape both dependency agreements read: the library's own
+    native summary, located by the world ([lib_evidence_paths]), beside
+    the consumer's recorded identity. The library half used to be the
+    constant build-step path, which is wrong in every world whose
+    library is not Built. *)
+let consumer_record_inputs_native m l w =
+  consumer_record_inputs (Native_lib (lib_evidence_paths w "inspect.json")) m l w
+
+(* ── the agreements ── *)
+
+let soname_matches_declaration : agreement =
+  { ag_subject = Identity;
+    ag_claim = Structural;
+    ag_basis = Project_declaration;
+    ag_says = "the built lib's recorded identity is the soname the project declared";
+    ag_expects =
+      "the project's declared soname. The linker's -Wl,-soname application \
+       is the black box; the artifact's own record is the evidence";
+    ag_rooted_in =
+      rooted ~action:"build_lib" ~tool:"linker (-Wl,-soname)"
+        ~artifact:"the library's SONAME record"
+        ~note:
+          "the -soname flag is the only thing that puts an identity into the \
+           object. The linker is a black box here: it either recorded what \
+           was asked for or it did not, and the artifact is the evidence"
+        ();
+    ag_fault_tag = "abi_soname";
+    ag_methods =
+      [ checking_method ~name:"declared_soname_vs_library" ~kind:Compare
+          ~reference:Declared_facts ~firing:firing_built_lib_only
+          ~inputs:(fun _ _ w -> [ Native_lib (lib_evidence_paths w "inspect.json") ])
+          ~eval:soname_declaration_eval
+          ~limits:
+            "matching a name does not identify a unique implementation: two \
+             objects can advertise one soname and mean different things \
+             (the ncurses case)."
+          ~counterexamples:
+            [ { fx_method = "declared_soname_vs_library";
+                fx_inputs =
+                  [ Declared_soname "libtiny.so.1"; Native_lib [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
     "symbols": ["tiny_sum"],
     "elf": {"soname": "libtiny.so.2", "needed": []}}|}) ];
-          fx_expect = [ "soname libtiny.so.2 != declared libtiny.so.1" ] } ] }
+                fx_outcome = "violated";
+                fx_findings = [ "soname libtiny.so.2 != declared libtiny.so.1" ] };
+              { fx_method = "declared_soname_vs_library";
+                fx_inputs = [ Native_lib [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
+    "elf": {"soname": "libtiny.so.1", "needed": []}}|}) ];
+                fx_outcome = "unavailable";
+                fx_findings = [] } ]
+          () ] }
 
-let c5 : description =
-  { about = version;
-    claim = Structural;
-    evidence = Compare_several;
-    provenance = Added;
-    reads = [ ("Sf.2", "native"); ("Sf.5", "binding") ];
-    fault_tags = [ "sym_version" ];
-    firing = firing_with_build_lib;
-    inputs =
-      (fun m l w ->
-        if consumer_records_needed m && not (is_dynamic m) then
-          [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
-            Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
-        else []);
-    counterexamples =
-      [ (* the SOLO cell: the version script applied — a declared tag
-           must appear among the built lib's @@VER annotations *)
-        { fx_predict =
-            Some (version_tags_exported ~declared_tags:[ "TINY_2.0" ]);
-          fx_inputs = [ Versioned_exports [ "lib.json" ] ];
-          fx_bodies =
-            [ ("lib.json",
-               {|{"kind": "native", "path": "fx",
+let soname_matches_requirement : agreement =
+  { ag_subject = Identity;
+    ag_claim = Structural;
+    ag_basis = Toolchain_rule;
+    ag_says = "the lib's soname is the one the consumer recorded it needs";
+    ag_expects =
+      "the consumer's own recorded dependency list. A provider advertising a \
+       name the consumer never recorded will not be selected for it";
+    ag_rooted_in =
+      rooted ~action:"the link that produced the consumer" ~tool:"linker"
+        ~artifact:"the consumer's NEEDED record"
+        ~note:
+          "the linker's rule is that a recorded dependency names something \
+           it resolved against. It ran in whatever world built that \
+           consumer; this asks whether the name it wrote down is the one \
+           THIS world's provider answers to"
+        ();
+    ag_fault_tag = "abi_soname";
+    ag_methods =
+      [ checking_method ~name:"library_identity_vs_consumer_record" ~kind:Compare
+          ~reference:Peer_artifact ~applicable:needs_consumer_record
+          ~firing:pair_firing
+          ~inputs:
+            consumer_record_inputs_native
+          ~eval:soname_requirement_eval
+          ~limits:
+            "name equality only. It does not establish which object the \
+             loader will select, nor that the selected object means the same \
+             thing as the one linked against."
+          ~counterexamples:
+            [ { fx_method = "library_identity_vs_consumer_record";
+                fx_inputs =
+                  [ Native_lib [ "lib.json" ]; Abi_surface [ "consumer.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
+    "elf": {"soname": "libtiny.so.2", "needed": []}}|});
+                    ("consumer.json",
+                     {|{"kind": "native", "path": "fx",
+    "elf": {"soname": null, "needed": ["libtiny.so.1", "libc.so.6"]}}|}) ];
+                fx_outcome = "violated";
+                fx_findings = [ "libtiny.so.1" ] } ]
+          () ] }
+
+let declared_versions_exported : agreement =
+  { ag_subject = Symbol_versions;
+    ag_claim = Structural;
+    ag_basis = Project_declaration;
+    ag_says =
+      "every version tag the project declares appears among the built lib's \
+       versioned exports";
+    ag_expects =
+      "the project's declared version-script tags. The version script's \
+       application is the black box; the artifact's export annotations are \
+       the evidence";
+    ag_rooted_in =
+      rooted ~action:"build_lib" ~tool:"linker (version script)"
+        ~artifact:"the library's symbol-version nodes"
+        ~note:
+          "a version script is what attaches version nodes to exported \
+           symbols. As with the soname, the tool is a black box and the \
+           annotations it wrote are the evidence"
+        ();
+    ag_fault_tag = "sym_version";
+    ag_methods =
+      [ checking_method ~name:"declared_tags_vs_library_exports" ~kind:Compare
+          ~reference:Declared_facts ~firing:firing_built_lib_only
+          ~inputs:(fun _ _ w ->
+            [ Versioned_exports (lib_evidence_paths w "inspect.json") ])
+          ~eval:declared_versions_eval
+          ~limits:
+            "presence of a tag says nothing about the symbols inside it, nor \
+             about compatibility beyond the declared tags."
+          ~counterexamples:
+            [ { fx_method = "declared_tags_vs_library_exports";
+                fx_inputs =
+                  [ Declared_version_tags [ "TINY_2.0" ];
+                    Versioned_exports [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
     "versioned_exports": {"tiny_sum": "TINY_1.0"}}|}) ];
-          fx_expect = [ "version TINY_2.0 not exported" ] } ] }
+                fx_outcome = "violated";
+                fx_findings = [ "version TINY_2.0 not exported" ] };
+              { fx_method = "declared_tags_vs_library_exports";
+                fx_inputs = [ Versioned_exports [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
+    "versioned_exports": {"tiny_sum": "TINY_1.0"}}|}) ];
+                fx_outcome = "unavailable";
+                fx_findings = [] } ]
+          () ] }
+
+let required_versions_exported : agreement =
+  { ag_subject = Symbol_versions;
+    ag_claim = Structural;
+    ag_basis = Toolchain_rule;
+    ag_says = "the provider exports every version node the consumer requires";
+    ag_expects =
+      "the consumer's own recorded version requirements. A required tag the \
+       provider does not export is what the loader reports as \
+       \"version `X' not found\"";
+    ag_rooted_in =
+      rooted ~action:"the link that produced the consumer" ~tool:"linker"
+        ~artifact:"the consumer's versioned symbol references"
+        ~note:
+          "the linker's rule is that a versioned reference binds to a \
+           version node the provider exports. The LOADER re-checks it at \
+           every load, and says so verbatim when it fails — which is why \
+           this agreement can predict its diagnostic text"
+        ();
+    ag_fault_tag = "sym_version";
+    ag_methods =
+      [ checking_method ~name:"required_tags_vs_provider_exports" ~kind:Compare
+          ~reference:Peer_artifact ~applicable:needs_consumer_record
+          ~firing:pair_firing
+          ~inputs:(fun m l w ->
+            if consumer_records_needed m then
+              [ Versioned_exports (lib_evidence_paths w "inspect.json");
+                Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+            else [])
+          ~eval:required_versions_eval
+          ~limits:
+            "exact tag match, direct requirements only. It does not model \
+             version ordering, and a world without symbol versioning is \
+             inconclusive rather than compatible."
+          ~counterexamples:
+            [ (* THE GLIBC SHAPE, which is the case this agreement was
+                 written for: a consumer linked where malloc carried
+                 @@GLIBC_2.31, deployed where the provider exports only
+                 @@GLIBC_2.17. The loader prints the missing tag
+                 verbatim ("version `GLIBC_2.31' not found"), so the
+                 tag is both the finding and the diagnostic. *)
+              { fx_method = "required_tags_vs_provider_exports";
+                fx_inputs =
+                  [ Versioned_exports [ "prov.json" ];
+                    Versioned_req [ "cons.json" ] ];
+                fx_bodies =
+                  [ ("prov.json",
+                     {|{"kind": "native", "path": "fx",
+    "versioned_exports": {"malloc": "GLIBC_2.17", "memcpy": "GLIBC_2.17"}}|});
+                    ("cons.json",
+                     {|{"kind": "native", "path": "fx",
+    "versioned_req": {"GLIBC_2.31": 3, "GLIBC_2.17": 5}}|}) ];
+                fx_outcome = "violated";
+                fx_findings = [ "GLIBC_2.31" ] };
+              (* the consumer's requirements are a subset of what the
+                 provider exports — the outcome the substring API could
+                 not express *)
+              { fx_method = "required_tags_vs_provider_exports";
+                fx_inputs =
+                  [ Versioned_exports [ "prov.json" ];
+                    Versioned_req [ "ok.json" ] ];
+                fx_bodies =
+                  [ ("prov.json",
+                     {|{"kind": "native", "path": "fx",
+    "versioned_exports": {"malloc": "GLIBC_2.17", "memcpy": "GLIBC_2.17"}}|});
+                    ("ok.json",
+                     {|{"kind": "native", "path": "fx",
+    "versioned_req": {"GLIBC_2.17": 5}}|}) ];
+                fx_outcome = "holds";
+                fx_findings = [] };
+              (* NEITHER SIDE carries symbol versioning. An empty
+                 requirement set is not an inclusion that holds
+                 vacuously — the distinction that makes this
+                 inconclusive rather than a pass. *)
+              { fx_method = "required_tags_vs_provider_exports";
+                fx_inputs =
+                  [ Versioned_exports [ "prov.json" ];
+                    Versioned_req [ "bare.json" ] ];
+                fx_bodies =
+                  [ ("prov.json",
+                     {|{"kind": "native", "path": "fx",
+    "versioned_exports": {"malloc": "GLIBC_2.17"}}|});
+                    ("bare.json", {|{"kind": "native", "path": "fx"}|}) ];
+                fx_outcome = "inconclusive";
+                fx_findings = [] } ]
+          () ] }
+
+let dependencies_provided : agreement =
+  { ag_subject = Dependencies;
+    ag_claim = Structural;
+    ag_basis = Toolchain_rule;
+    ag_says =
+      "every library name the consumer records as NEEDED has a provider in \
+       this world";
+    ag_expects =
+      "this world's modeled provider plus the family's fixed ambient-runtime \
+       list. A recorded name answered by neither is the falsifier — which is \
+       what a consumer linked where an implementation was split out, and \
+       deployed where it is folded in, produces";
+    ag_rooted_in =
+      rooted ~action:"the link, then every load"
+        ~tool:"linker, then the dynamic loader"
+        ~artifact:"the consumer's NEEDED list"
+        ~note:
+          "the linker recorded a set of dependency names, and the loader's \
+           rule is that each resolves to an object. This recovers the \
+           LOADER'S rule statically, for the names recorded, against the \
+           providers this world models"
+        ();
+    ag_fault_tag = "needed_unprovided";
+    ag_methods =
+      [ checking_method ~name:"recorded_dependencies_vs_world_providers"
+          ~kind:Compare ~reference:Peer_artifact
+          ~applicable:needs_consumer_record ~firing:pair_firing
+          ~inputs:
+            consumer_record_inputs_native
+          ~eval:dependencies_provided_eval
+          ~limits:
+            "ONE modeled provider, direct dependencies only, and an ambient \
+             list that is code rather than a per-world policy. It does not \
+             enumerate every provider, traverse transitive dependencies, \
+             verify the ambient libraries exist, or run a loader — so a name \
+             supplied by a second unmodeled library is reported unprovided."
+          ~counterexamples:
+            [ (* the closure-shape case: the consumer was linked where the
+                 implementation was split out, the provider here folds it in
+                 and ships no such object. libc is ambient and must NOT be
+                 reported; the split-out name must be. *)
+              { fx_method = "recorded_dependencies_vs_world_providers";
+                fx_inputs =
+                  [ Native_lib [ "lib.json" ]; Abi_surface [ "consumer.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
+    "elf": {"soname": "libncursesw.so.6", "needed": []}}|});
+                    ("consumer.json",
+                     {|{"kind": "native", "path": "fx",
+    "elf": {"soname": null,
+            "needed": ["libncursesw.so.6", "libtinfo.so.6", "libc.so.6"]}}|}) ];
+                fx_outcome = "violated";
+                fx_findings = [ "libtinfo.so.6" ] } ]
+          () ] }
+
+let checks : (agreement_id * agreement) list =
+  [ (Soname_matches_declaration, soname_matches_declaration);
+    (Soname_matches_requirement, soname_matches_requirement);
+    (Declared_versions_exported, declared_versions_exported);
+    (Required_versions_exported, required_versions_exported);
+    (Dependencies_provided, dependencies_provided) ]

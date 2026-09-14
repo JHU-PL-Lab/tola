@@ -57,20 +57,42 @@ let is_verdict = function
   | "done" | "failed" | "blocked" | "skip" | "unexpected_success" -> true
   | _ -> false
 
-(* A7 phase 2: the confirming-contract suffix the runner appends to xfail
-   details (" [c2]" / " [c2,c5]") — extracted so the mark itself can name
-   the contract ("xfail[c2]"). "" when the detail carries none (an
-   unattributed xfail, or a pre-phase-2 log line). *)
+(* The confirming-agreement suffix the runner appends to xfail details
+   (" [api_names_present]" / " [a,b]") — extracted so the mark itself
+   can name the agreement ("xfail[api_names_present]"). "" when the
+   detail carries none (an unattributed xfail, or an older log line).
+
+   It used to search for the literal "[c", which was the c1..c9
+   numbering baked into a parser (2026-09-12). Now it takes the
+   trailing bracket group and keeps it only if every name inside is a
+   REGISTERED agreement — so a log line ending in some other bracketed
+   text is not mistaken for an attribution, and a line naming a retired
+   id shows as an unattributed xfail rather than citing something that
+   no longer exists. *)
 let agreement_suffix (detail : string option) : string =
   match detail with
   | None -> ""
   | Some d -> (
-      match String.substr_index d ~pattern:"[c" with
+      (* the LAST bracket group in the line — the detail may still be
+         wrapped in the log's own parentheses, so this does not anchor
+         at the end *)
+      match String.rindex d ']' with
       | None -> ""
-      | Some i -> (
-          match String.index_from d i ']' with
-          | Some j -> String.sub d ~pos:i ~len:(j - i + 1)
-          | None -> ""))
+      | Some j -> (
+          match String.rindex (String.sub d ~pos:0 ~len:j) '[' with
+          | None -> ""
+          | Some i ->
+              let inner = String.sub d ~pos:(i + 1) ~len:(j - i - 1) in
+              let names =
+                String.split inner ~on:',' |> List.map ~f:String.strip
+              in
+              if
+                (not (List.is_empty names))
+                && List.for_all names ~f:(fun s ->
+                       Option.is_some
+                         (Canary_agreement_common.agreement_id_of_string s))
+              then String.sub d ~pos:i ~len:(j - i + 1)
+              else ""))
 
 (* Compact mark from (event, detail). `xfail` = an *expected* failure that
    was confirmed (a pass) — the "done (expected failure confirmed)" text is
@@ -440,3 +462,352 @@ let print_status ?(verbose = false) ~root ~project () =
             if verbose then
               print_witness ~root ~project ~variant:name ~tag ~mark:m))
   end
+
+(* ── OBSERVED AGREEMENTS (2026-09-12) ──────────────────────────────
+
+   The round-trip. Everything else in the agreement layer describes
+   what WOULD be checked: the registry lists the methods, the firing
+   table says where they apply, the checking index reports what a
+   project's actions would select. None of that is evidence that a
+   check ran, and the first real project this was pointed at turned out
+   to evaluate ten agreements into `unavailable` at every step, because
+   the inspectors it declared were wired into a spec the run path never
+   used.
+
+   So this reads the other direction: parse a run's own [actions.log]
+   and report, per agreement, the outcomes it actually reached. A
+   catalogue row is CONCRETE when a real project's log shows it
+   `holds` or `violated`; anything else is a declaration. *)
+
+type observed = {
+  ob_agreement : string;
+  ob_method : string;
+  ob_outcomes : (string * int) list;  (** outcome label → how many times *)
+}
+
+(** What the last run did, as a whole: the agreements it evaluated, and
+    how many steps it SKIPPED. The second number is not a footnote — a
+    warm step reports nothing, so a run that skipped everything shows
+    an empty agreement table and means "nothing was re-checked", not
+    "nothing applies". Reading one without the other is how a stale
+    report passes for a current one. *)
+type run_observation = {
+  ro_agreements : observed list;
+  ro_skipped_steps : int;
+  ro_ran_steps : int;
+}
+
+(** Parse the [agreement_outcome] detail the runner writes, which is
+    ["<agreement>/<method>: <label>[: reason]"]. Returns [None] for the
+    "no agreement fires at this action" line, which names no agreement. *)
+let parse_agreement_outcome (detail : string) : (string * string * string) option
+    =
+  let d = strip_parens (String.strip detail) in
+  match String.lsplit2 d ~on:':' with
+  | None -> None
+  | Some (head, rest) -> (
+      match String.lsplit2 head ~on:'/' with
+      | None -> None
+      | Some (agreement, meth) ->
+          let label =
+            String.strip rest |> fun r ->
+            match String.lsplit2 r ~on:':' with
+            | Some (l, _) -> String.strip l
+            | None -> r
+          in
+          if String.is_empty agreement || String.is_empty meth then None
+          else Some (String.strip agreement, String.strip meth, label))
+
+(** The lines belonging to the LAST run — everything after the final
+    [run_start] marker. [actions.log] is append-only across
+    invocations, so without this a reader reports the union of every
+    run the file has ever held, and a step that was warm-skipped today
+    still shows the outcome it produced a week ago. A log with no
+    marker at all predates the marker and is read whole, which is the
+    only honest thing to do with it. *)
+let is_run_start l =
+  match parse_line l with Some (_, "run_start", _) -> true | _ -> false
+
+(** The log split into RUNS, newest first. [actions.log] is append-only
+    across invocations; a [run_start] marker delimits them. A log with
+    no marker predates the marker and is one block, which is the only
+    honest thing to do with it. *)
+let run_blocks ~root ~project : string list list =
+  let path = log_path ~root ~project in
+  let all =
+    try
+      Stdlib.In_channel.with_open_text path (fun ic ->
+          let rec loop acc =
+            match Stdlib.In_channel.input_line ic with
+            | None -> List.rev acc
+            | Some l -> loop (l :: acc)
+          in
+          loop [])
+    with _ -> []
+  in
+  if List.is_empty all then []
+  else if not (List.exists all ~f:is_run_start) then [ all ]
+  else
+    let blocks, last =
+      List.fold all ~init:([], []) ~f:(fun (blocks, cur) l ->
+          if is_run_start l then
+            ((if List.is_empty cur then blocks else List.rev cur :: blocks), [])
+          else (blocks, l :: cur))
+    in
+    let blocks = if List.is_empty last then blocks else List.rev last :: blocks in
+    (* [blocks] accumulated newest-first already *)
+    blocks
+
+let last_run_lines ~root ~project : string list =
+  match run_blocks ~root ~project with b :: _ -> b | [] -> []
+
+(** What one run's lines say. Ordered by agreement name so two runs
+    diff cleanly. *)
+let observe_lines (lines : string list) : run_observation =
+  let tbl : (string * string, (string, int) Hashtbl.t) Hashtbl.t =
+    Hashtbl.Poly.create ()
+  in
+  let skipped = ref 0 and ran = ref 0 in
+  List.iter lines ~f:(fun line ->
+      match parse_line line with
+      | Some (_, "agreement_outcome", Some detail) -> (
+          match parse_agreement_outcome detail with
+          | None -> ()
+          | Some (ag, meth, label) ->
+              let counts =
+                Hashtbl.find_or_add tbl (ag, meth) ~default:(fun () ->
+                    Hashtbl.create (module String))
+              in
+              Hashtbl.update counts label ~f:(function
+                | None -> 1
+                | Some n -> n + 1))
+      | Some (_, "skip", _) -> Int.incr skipped
+      | Some (tag, "done", _) when not (String.equal tag "*") -> Int.incr ran
+      | _ -> ());
+  let agreements =
+    Hashtbl.to_alist tbl
+  |> List.map ~f:(fun ((ag, meth), counts) ->
+         { ob_agreement = ag;
+           ob_method = meth;
+           ob_outcomes =
+             Hashtbl.to_alist counts
+             |> List.sort ~compare:(fun (a, _) (b, _) -> String.compare a b) })
+    |> List.sort ~compare:(fun a b ->
+           match String.compare a.ob_agreement b.ob_agreement with
+           | 0 -> String.compare a.ob_method b.ob_method
+           | c -> c)
+  in
+  { ro_agreements = agreements; ro_skipped_steps = !skipped; ro_ran_steps = !ran }
+
+let observe_run ~root ~project : run_observation =
+  observe_lines (last_run_lines ~root ~project)
+
+let observed_agreements ~root ~project : observed list =
+  (observe_run ~root ~project).ro_agreements
+
+(** THE MOST RECENT RUN THAT ACTUALLY EVALUATED each agreement, and how
+    many runs ago that was (0 = the latest run).
+
+    Scanning only the latest run was wrong, and the way it was wrong is
+    worth keeping in mind: a warm run evaluates nothing, so re-running
+    anything made a landed agreement look unlanded. "Has a real run
+    decided this" is not a property of the newest run, it is a property
+    of the newest run THAT LOOKED. Reporting the age alongside keeps it
+    from drifting into "was true once": a regression still shows,
+    because the run that regressed is the newest one that looked. *)
+let latest_observation ~root ~project (slug : string) :
+    (observed list * int) option =
+  List.find_mapi (run_blocks ~root ~project) ~f:(fun age lines ->
+      match
+        List.filter (observe_lines lines).ro_agreements ~f:(fun o ->
+            String.equal o.ob_agreement slug)
+      with
+      | [] -> None
+      | os -> Some (os, age))
+
+(** Did this run DECIDE the agreement anywhere — reach [holds] or
+    [violated] rather than only reporting why it could not? The
+    predicate a round-trip assertion uses. *)
+let decided_in_run (o : observed) : bool =
+  List.exists o.ob_outcomes ~f:(fun (label, _) ->
+      String.equal label "holds" || String.equal label "violated")
+
+let pp_observed ~root ~project : string =
+  let r = observe_run ~root ~project in
+  let obs = r.ro_agreements in
+  let warm =
+    if r.ro_skipped_steps > 0 then
+      Printf.sprintf
+        "\n  NOTE: %d step(s) were warm-skipped and re-checked nothing; %d ran."
+        r.ro_skipped_steps r.ro_ran_steps
+    else ""
+  in
+  if List.is_empty obs then
+    Printf.sprintf
+      "%s — the last run evaluated no agreement.%s" project warm
+  else
+    let line (o : observed) =
+      Printf.sprintf "  %-28s %-40s %s%s" o.ob_agreement o.ob_method
+        (String.concat ~sep:", "
+           (List.map o.ob_outcomes ~f:(fun (l, n) ->
+                Printf.sprintf "%s x%d" l n)))
+        (if decided_in_run o then "   ← decided" else "")
+    in
+    let decided = List.count obs ~f:decided_in_run in
+    String.concat ~sep:"\n"
+      ((Printf.sprintf "%s — agreements OBSERVED in the last run" project)
+       :: List.map obs ~f:line
+      @ [ Printf.sprintf
+            "\n  %d of %d evaluated methods reached a decided outcome \
+             (holds/violated) in this run.%s"
+            decided (List.length obs) warm ])
+
+(* ── THE LANDING TRACKER (2026-09-12) ──────────────────────────────
+
+   Two columns, and the whole point is that they are different
+   questions answered from different places:
+
+   - PLANNED comes from the REGISTRY. Does this agreement have a
+     method with an evaluator, and does that evaluator ship a
+     counterexample? It is a fact about the code and is true in a fresh
+     checkout with no runs at all.
+   - EFFECTIVE comes from RUN LOGS. Has a real project ever decided
+     this agreement — reached `holds` or `violated` rather than only
+     reporting why it could not? It is a fact about what happened.
+
+   An agreement can be fully planned and never effective, and that gap
+   is the thing worth tracking: it is what "the comparator exists" felt
+   like before anyone read a log. Nothing derives one column from the
+   other, which is why both are worth printing side by side. *)
+
+type effective =
+  | Decided of string list       (** projects whose last run decided it *)
+  | Reported of string list      (** selected, never decided — with the reason *)
+  | Never_selected
+
+let string_of_effective = function
+  | Decided ps -> "decided in " ^ String.concat ~sep:"," ps
+  | Reported ps -> "reported only (" ^ String.concat ~sep:"," ps ^ ")"
+  | Never_selected -> "never selected"
+
+type landing_row = {
+  la_agreement : string;
+  la_planned : string;        (** the registry's own status word *)
+  la_has_counterexample : bool;
+  la_effective : effective;
+  la_undecided_reasons : string list;  (** the outcome labels seen instead *)
+}
+
+let is_landed (r : landing_row) : bool =
+  match r.la_effective with Decided _ -> true | _ -> false
+
+(** The tracker. [projects] defaults to every project under [root] with
+    a run to read. *)
+let landing ?projects ~root () : landing_row list =
+  let projects =
+    match projects with Some p -> p | None -> projects_with_runs ~root
+  in
+  List.map Canary_agreement.agreement_registry ~f:(fun r ->
+      let slug = r.Canary_agreement.ag_slug in
+      (* per project, the most recent run that LOOKED at this agreement *)
+      let hits =
+        List.filter_map projects ~f:(fun p ->
+            match latest_observation ~root ~project:p slug with
+            | None -> None
+            | Some (os, age) -> Some (p, os, age))
+      in
+      let label p age = if age = 0 then p else Printf.sprintf "%s(-%d)" p age in
+      let decided_in =
+        List.filter_map hits ~f:(fun (p, os, age) ->
+            if List.exists os ~f:decided_in_run then Some (label p age) else None)
+      in
+      let reasons =
+        List.concat_map hits ~f:(fun (_, os, _) ->
+            List.concat_map os ~f:(fun o -> List.map o.ob_outcomes ~f:fst))
+        |> List.dedup_and_sort ~compare:String.compare
+      in
+      { la_agreement = slug;
+        la_planned =
+          Canary_agreement.string_of_status (Canary_agreement.status_of_row r);
+        la_has_counterexample =
+          Canary_agreement.has_fixture r.Canary_agreement.ag_id;
+        la_effective =
+          (if not (List.is_empty decided_in) then Decided decided_in
+           else if List.is_empty hits then Never_selected
+           else Reported (List.map hits ~f:(fun (p, _, age) -> label p age)));
+        la_undecided_reasons = reasons })
+
+let pp_landing ?projects ~root () : string =
+  let rows = landing ?projects ~root () in
+  let projects =
+    match projects with Some p -> p | None -> projects_with_runs ~root
+  in
+  let landed = List.count rows ~f:is_landed in
+  let line (r : landing_row) =
+    Printf.sprintf "%s %-28s %-17s %-3s %s"
+      (if is_landed r then "LANDED " else "       ")
+      r.la_agreement r.la_planned
+      (if r.la_has_counterexample then "fx" else "- ")
+      (match r.la_effective with
+       | Decided ps -> "decided in " ^ String.concat ~sep:", " ps
+       | Reported ps ->
+           Printf.sprintf "reported in %s as %s"
+             (String.concat ~sep:", " ps)
+             (String.concat ~sep:"/" r.la_undecided_reasons)
+       | Never_selected ->
+           (* NOT the same as "does not apply": a warm-skipped step
+              re-checks nothing, so an agreement can be absent from a
+              log simply because the step that selects it was cached *)
+           "absent from every log read (never fired, or its step was \
+            warm-skipped)")
+  in
+  String.concat ~sep:"\n"
+    ([ "agreement landing — PLANNED (from the registry) vs EFFECTIVE (from run logs)";
+       Printf.sprintf "  reading runs of: %s"
+         (if List.is_empty projects then "(none)"
+          else String.concat ~sep:", " projects);
+       "  effective = the most recent run that LOOKED at the agreement, not";
+       "  the most recent run — a warm run evaluates nothing. `p(-n)` means";
+       "  n runs back in p's log.";
+       "";
+       Printf.sprintf "%s %-28s %-17s %-3s %s" "       " "agreement" "planned"
+         "fx" "effective" ]
+    @ List.map rows ~f:line
+    @ [ "";
+        Printf.sprintf
+          "  %d of %d agreements are LANDED — decided by a real run. \
+           `fx` = ships a counterexample."
+          landed (List.length rows);
+        "  Planned is a fact about the code; effective is a fact about what ran.";
+        "  Neither is derived from the other." ])
+
+(** The EFFECTIVE half of one agreement's record: what real runs did
+    with it. The registry can describe an agreement completely and
+    still not know whether anything ever looked; this is the part only
+    a log can answer, kept separate for exactly that reason. *)
+let pp_agreement_effective ~root ~name : string =
+  let rows = landing ~root () in
+  match List.find rows ~f:(fun r -> String.equal r.la_agreement name) with
+  | None -> ""
+  | Some r ->
+      let per_project =
+        List.filter_map (projects_with_runs ~root) ~f:(fun p ->
+            match latest_observation ~root ~project:p name with
+            | None -> None
+            | Some (os, age) ->
+                Some
+                  (Printf.sprintf "    %-14s %s%s" p
+                     (String.concat ~sep:", "
+                        (List.concat_map os ~f:(fun o ->
+                             List.map o.ob_outcomes ~f:(fun (l, n) ->
+                                 Printf.sprintf "%s x%d" l n))))
+                     (if age = 0 then "" else Printf.sprintf "  (%d run(s) ago)" age)))
+      in
+      String.concat ~sep:"\n"
+        ([ "  EFFECTIVE — what real runs did (the registry cannot know this)";
+           Printf.sprintf "    %-12s %s"
+             (if is_landed r then "LANDED" else "not landed")
+             (string_of_effective r.la_effective) ]
+        @ (if List.is_empty per_project then
+             [ "    no run has selected it" ]
+           else per_project))

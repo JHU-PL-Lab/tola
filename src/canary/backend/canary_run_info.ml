@@ -206,6 +206,10 @@ let load_run_state ~dir =
       check_post   = (fun ~output_dir:_ ~variant_key:_ -> false);
       expectation; symbol_check = None;
       disabled_agreements = [];
+      (* a reloaded run state is a VIEW of what already ran; it selects
+         no agreements, so it carries no action context *)
+      agreement_ctx = None;
+      dummy = None;
     } in
     (step, status_str)
   in

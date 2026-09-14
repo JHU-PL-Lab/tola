@@ -1,34 +1,19 @@
-(** Symbol agreements — what the consumer requires, what the provider exports
+(** Symbol agreements — what a library exports, against a declaration
+    and against a consumer's requirements.
 
-    One module per check family (design: the per-check module pattern).
-    Each check states its CATEGORY (descriptive), its STANDING, and a
-    falsifier-phrased sentence; the function keeps whatever signature
-    suits it, and the caller supplies the inputs. *)
+    TWO agreements, not one with two cells (2026-09-12). They were
+    [symbol_exported/solo] and [symbol_exported/pair] under a single id,
+    which meant one implementation status and one attribution covered
+    two different claims with two different references. Splitting them
+    is what makes "the declaration comparison has no production caller"
+    a fact the registry can state.
+
+    One module per family: it holds both agreements' claims, the
+    evidence records it reads, the comparators, and the counterexamples
+    that falsify them. It refers only to [Canary_agreement_common]. *)
 
 open Base
 open Canary_agreement_common
-module Cat = Canary_agreement_common
-
-(* ── what this module is about ── *)
-
-(** The PAIR check: this binding against this lib. *)
-let required : about =
-  { cat = Cat.Symbols `Required;
-    standing = Cat.Declared;
-    says = "every symbol the binding's stub references is exported by the lib" }
-
-(** The SOLO check: the lib against the project's declaration. A
-    different claim, so a different [about] — [Symbols `Exported], not
-    [`Required], and no binding is involved. *)
-let exported : about =
-  { cat = Cat.Symbols `Exported;
-    standing = Cat.Declared;
-    says =
-      "every function the project declares in c_api is exported by the \
-       built lib" }
-
-let checks : (string * about) list =
-  [ ("symbol_exported/pair", required); ("symbol_exported/solo", exported) ]
 
 (* ── the evidence this family reads ── *)
 
@@ -60,35 +45,25 @@ let load_native path =
              it produced with --emit-symbols? (%s)@." path;
   { path = get_string j "path"; symbols }
 
-(* ── the SOLO cell: the lib against the DECLARATION ──
+(* Selected BY KIND: the same relative name means different artifacts
+   in different projects (the framework writes its compiled-stub
+   summary to inspect_stub.json and tiny writes its to inspect.json),
+   so a candidate that exists but holds an OCaml surface summary is not
+   this family's evidence. *)
+let native_path ~resolve inputs =
+  List.find_map inputs ~f:(function
+    | Native_lib ps -> pick_existing_of_kind ~resolve ~kinds:[ "native" ] ps
+    | _ -> None)
 
-   One agreement has two targets — the lib alone (does it export what the
-   project declared?) and the pair (does it export what this consumer
-   requires?). Both live here, because they are the same agreement asked
-   of one artifact and of two. They were in a [canary_agreement_lib_declares]
-   module until 2026-09-02, which split the families by EVIDENCE SOURCE
-   while every other module splits them by CATEGORY — so this check
-   declared [Symbols `Exported] two files away from the symbols family.
-   The tools that produce the artifact are black boxes, so this does not
-   trust an exit code: it reads the lib and compares it to the decl. *)
+let stub_path ~resolve inputs =
+  List.find_map inputs ~f:(function
+    | C_stub ps -> pick_existing_of_kind ~resolve ~kinds:[ "c_stub" ] ps
+    | _ -> None)
 
-(** c1 lib-only: every DECLARED c_api function is exported by the
-    built lib — the lib's own completeness falsifier, no binding
-    involved. (The status-level watchlist verdict is this same
-    comparison, currently recorded rather than predicted.) *)
-let symbol_exported ~declared_functions ~resolve
-    (inputs : inspect_input list) : string list =
-  let lib_path =
-    List.find_map inputs ~f:(function
-        | Native_lib ps -> pick_existing ~resolve ps
-        | _ -> None)
-  in
-  match lib_path with
-  | None -> []
-  | Some p ->
-      let symbols = (load_native p).symbols in
-      List.filter declared_functions ~f:(fun f ->
-          not (List.mem symbols f ~equal:String.equal))
+let declared_exports inputs =
+  List.find_map inputs ~f:(function Declared_exports d -> Some d | _ -> None)
+
+(* ── the comparators ── *)
 
 type compat_result =
   | Compatible
@@ -101,24 +76,18 @@ type compat_result =
   | Missing of { symbols : string list }
   | Unknown   (* one side lacks the data needed to decide *)
 
-(** [c1 cmp_symbol] implementation. Set-inclusion check: every C symbol the
-    consumer requires must be defined by the provider.
+(** Set-inclusion: every C symbol the consumer requires must be defined
+    by the provider.
 
-    {!check_c_compat} takes:
-    - [binding_stub]: consumer-side undefined refs, from one of
-      {ul
-        {- {i bo7 compiled_binding_ocaml.stub-a} via
-           [inspect_binding.py --kind stub] on [libtiny_stubs.a], or}
-        {- {i bpe3 compiled_binding_cext.so} via [nm -u] on the cext [.so]
-           reshaped to [c_stub] form (run.sh handles the coercion).}
-      }
-    - [native_lib]: provider-side defined symbols, from {i n4 lib_native.so}
-      via [inspect_native.py] on the [.so].
+    - [binding_stub]: consumer-side undefined refs, from the compiled
+      stub archive ([inspect_binding.py --kind stub]) or from a cext
+      [.so] reshaped to [c_stub] form.
+    - [native_lib]: provider-side defined symbols, from
+      [inspect_native.py --emit-symbols].
 
-    Returns:
-    - [Compatible] — every required symbol present.
-    - [Missing { symbols }] — at least one required symbol absent.
-    - [Unknown] — one side has no symbol data (treat as inconclusive). *)
+    [Unknown] when either side carries no symbol data — an empty
+    [requires] is not an inclusion that holds vacuously, it is an
+    inspection that told us nothing. *)
 let check_c_compat ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
     : compat_result =
   if List.is_empty binding_stub.requires then Unknown
@@ -141,9 +110,7 @@ let check_c_compat ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
 (** The lag's CONCRETE witnesses (2026-08-17, user): one required symbol
     (the consumer's surface — IN) and one provided-but-unrequired symbol
     (the rest of the provider — OUT), so the warning can show "some are
-    in and some are out" instead of bare counts. [None] = can't pick
-    (the inclusion already holds, so the IN pick always exists; the OUT
-    pick needs at least one unused symbol). *)
+    in and some are out" instead of bare counts. *)
 let lag_examples ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
     : (string * string) option =
   match binding_stub.requires with
@@ -153,43 +120,70 @@ let lag_examples ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
       List.find_map native_lib.symbols ~f:(fun s ->
           if Set.mem required_set s then None else Some (in_example, s))
 
+(** Declared exports minus actual exports. The tools that produce the
+    library are black boxes, so this does not trust an exit code: it
+    reads the library and compares it with what the project said. *)
+let check_declared_exports ~(declared : string list)
+    ~(native_lib : native_inspect) : compat_result =
+  if List.is_empty declared then Unknown
+  else if List.is_empty native_lib.symbols then Unknown
+  else
+    let provided = Set.of_list (module String) native_lib.symbols in
+    match List.filter declared ~f:(fun f -> not (Set.mem provided f)) with
+    | [] -> Compatible
+    | missing -> Missing { symbols = missing }
+
+(* ── the evaluators ── *)
+
+let declared_exports_eval ~resolve inputs : outcome =
+  match declared_exports inputs with
+  | None ->
+      Unavailable
+        "no declared export list reaches this action — the project's c_api \
+         declaration is not routed into the evidence inputs"
+  | Some declared -> (
+      match native_path ~resolve inputs with
+      | None -> Unavailable "no native library inspection in this world"
+      | Some p -> (
+          match check_declared_exports ~declared ~native_lib:(load_native p) with
+          | Compatible -> Holds
+          | Missing { symbols } -> Violated symbols
+          | Compatible_lag _ -> Holds
+          | Unknown ->
+              Inconclusive
+                "the declaration or the export list is empty; nothing to \
+                 compare (an empty declaration is not coverage)"))
+
+let required_symbols_eval ~resolve inputs : outcome =
+  match (stub_path ~resolve inputs, native_path ~resolve inputs) with
+  | None, _ -> Unavailable "no compiled-stub inspection in this world"
+  | _, None -> Unavailable "no native library inspection in this world"
+  | Some s, Some l -> (
+      let stub = load_stub s and lib = load_native l in
+      match check_c_compat ~binding_stub:stub ~native_lib:lib with
+      | Compatible | Compatible_lag _ -> Holds
+      | Missing { symbols } -> Violated symbols
+      | Unknown ->
+          Inconclusive
+            "one side carries no symbol data (an empty requires/symbols set \
+             decides nothing)")
+
 (** The c1 input pair: the existing C_stub + Native_lib summaries among
-    [inputs], loaded. [None] = either side missing (the check can't
-    decide — [c1_predict]/[c1_lag_note] both report nothing). *)
+    [inputs], loaded. [None] = either side missing. Kept for the
+    on-demand [canary compat] report, which prints the loaded records
+    rather than an outcome. *)
 let c1_pair ~resolve (inputs : inspect_input list) :
     (stub_inspect * native_inspect) option =
-  let stub_path =
-    List.find_map inputs
-      ~f:(function C_stub ps -> pick_existing ~resolve ps | _ -> None)
-  in
-  let lib_path =
-    List.find_map inputs
-      ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None)
-  in
-  match stub_path, lib_path with
+  match (stub_path ~resolve inputs, native_path ~resolve inputs) with
   | Some s, Some l -> Some (load_stub s, load_native l)
   | _ -> None
 
-(** c1 cmp_symbol (L0). Pairs C_stub + Native_lib paths and returns
-    the missing C symbols from {!check_c_compat}. *)
-
-let c1_predict ~resolve (inputs : inspect_input list) : string list =
-  match c1_pair ~resolve inputs with
-  | Some (stub, lib) -> (
-      match check_c_compat ~binding_stub:stub ~native_lib:lib with
-      | Missing { symbols } -> symbols
-      | Compatible | Compatible_lag _ | Unknown -> [])
-  | None -> []
-
-(** The c1 coverage NOTE (2026-08-17, user): when the check passes but
-    the consumer's required set covers a small fraction of the
-    provider's surface, warn POSSIBLY OUT-OF-DATE — inclusion alone
-    can't tell wrapping-a-subset (by design) from a stale binding (by
-    accident). A WARNING, never a failure: [None] when the data is
-    missing or the coverage is healthy. Logged by the runner as a
-    [compat_note] event. *)
-
-let c1_lag_note ~resolve (inputs : inspect_input list) : string option =
+(** The coverage NOTE (2026-08-17, user): when the check passes but the
+    consumer's required set covers a small fraction of the provider's
+    surface, warn POSSIBLY OUT-OF-DATE. A WARNING, never a failure, and
+    deliberately NOT an outcome — it is a note about a [Holds], not a
+    weaker verdict. *)
+let lag_note ~resolve (inputs : inspect_input list) : string option =
   match c1_pair ~resolve inputs with
   | Some (stub, lib) -> (
       match check_c_compat ~binding_stub:stub ~native_lib:lib with
@@ -203,58 +197,163 @@ let c1_lag_note ~resolve (inputs : inspect_input list) : string option =
           in
           Some
             (Printf.sprintf
-               "c1 cmp_symbol: consumer requires %d of the provider's %d \
-                symbols%s — POSSIBLY OUT-OF-DATE (a small consumer surface may \
-                be by design or lag)"
+               "required_symbols_exported: consumer requires %d of the \
+                provider's %d symbols%s — POSSIBLY OUT-OF-DATE (a small \
+                consumer surface may be by design or lag)"
                required provided witness)
       | Compatible | Missing _ | Unknown -> None)
   | None -> None
 
-(** c2 cmp_api_completeness (L3). Reads watchlist_missing from
-    Ocaml_mli / Python_attrs JSONs and expands each missing name into
-    its observable variants (e.g. [Llvm.Opcode.UncondBr] →
-    [Opcode.UncondBr], [UncondBr]). *)
+(* ── what each agreement hands the registry ── *)
 
-(** How c1 describes itself to the registry (2026-09-02). The [says]
-    here is THE sentence — the registry no longer writes a second one. *)
-let c1 : description =
-  { about = required;
-    claim = Structural;
-    evidence = Compare_several;
-    provenance = Added;
-    reads = [ ("Sf.3", "binding"); ("Sf.2", "native") ];
-    fault_tags = [ "sym_missing" ];
-    firing = firing_with_build_lib;
-    inputs =
-      (fun m l w ->
-        (* dynamic: no compiled stub to inspect — the runtime fallback
-           (probe.log presence) catches missing-symbol failures *)
-        if is_dynamic m then []
-        else
-          [ C_stub [ binding_evidence_tag w l ^ "/inspect.json" ];
-            Native_lib [ build_lib_tag ^ "/inspect.json" ] ]);
-    counterexamples =
-      [ (* the SOLO cell: a declared c_api function the built lib does
-           not export. Takes the declared facts, so it is a cell
-           predict rather than the row's own closure. *)
-        { fx_predict =
-            Some
-              (symbol_exported
-                 ~declared_functions:[ "tiny_sum"; "tiny_diff"; "tiny_offset" ]);
-          fx_inputs = [ Native_lib [ "lib.json" ] ];
-          fx_bodies =
-            [ ("lib.json",
-               {|{"kind": "native", "path": "fx",
+let declared_symbols_exported : agreement =
+  { ag_subject = Symbols;
+    ag_claim = Structural;
+    ag_basis = Project_declaration;
+    ag_says =
+      "every function the project declares in c_api is exported by the built \
+       lib";
+    ag_expects =
+      "the project's declared c_api export set; a name in the declaration \
+       that the built library does not export is the falsifier";
+    ag_rooted_in =
+      rooted ~action:"build_lib" ~tool:"compiler + linker"
+        ~artifact:"the library's exported symbols"
+        ~note:
+          "the compiler and linker turned declarations into definitions and \
+           exported them. The declaration this checks against is the \
+           project's rather than the header's, so it recovers a WEAKER rule \
+           than the compiler's own: it asks whether what the project said it \
+           ships is there, not whether every declaration agreed with its \
+           definition"
+        ();
+    ag_fault_tag = "sym_missing";
+    ag_methods =
+      [ checking_method ~name:"declared_exports_vs_library" ~kind:Compare
+          ~reference:Declared_facts
+          ~firing:firing_built_lib_only
+          ~inputs:(fun _ _ w ->
+            (* the library half is located by the WORLD; the declaration
+               half is NOT routed by any action today, which is why the
+               evaluator reports [Unavailable] rather than holding *)
+            [ Native_lib (lib_evidence_paths w "inspect.json") ])
+          ~eval:declared_exports_eval
+          ~limits:
+            "only declared names are covered; signatures, versions and \
+             behaviour are not. A name present says nothing about what it \
+             does."
+          ~counterexamples:
+            [ { fx_method = "declared_exports_vs_library";
+                fx_inputs =
+                  [ Declared_exports [ "tiny_sum"; "tiny_diff"; "tiny_offset" ];
+                    Native_lib [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
     "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
-          fx_expect = [ "tiny_offset" ] };
-        (* the PAIR cell: the stub requires what the lib does not export *)
-        { fx_predict = None;
-          fx_inputs = [ C_stub [ "stub.json" ]; Native_lib [ "lib.json" ] ];
-          fx_bodies =
-            [ ("stub.json",
-               {|{"kind": "c_stub", "path": "fx",
+                fx_outcome = "violated";
+                fx_findings = [ "tiny_offset" ] };
+              (* the missing-declaration case: the library is there and
+                 the declaration is not, which must NOT read as a pass *)
+              { fx_method = "declared_exports_vs_library";
+                fx_inputs = [ Native_lib [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
+                fx_outcome = "unavailable";
+                fx_findings = [] } ]
+          () ] }
+
+let required_symbols_exported : agreement =
+  { ag_subject = Symbols;
+    ag_claim = Structural;
+    ag_basis = Toolchain_rule;
+    ag_says =
+      "every symbol the binding's stub references is exported by the lib";
+    ag_expects =
+      "the consumer's own recorded requirements: the undefined references in \
+       its compiled stub. A required symbol the provider does not export is \
+       the falsifier, and the linker or loader would say the same";
+    ag_rooted_in =
+      rooted ~action:"the link that built the binding" ~tool:"linker"
+        ~artifact:"the stub archive's undefined references"
+        ~note:
+          "the linker's rule is that every referenced symbol has a \
+           definition. It ran once, when the binding was built against some \
+           library; this re-derives it, for names, against whichever library \
+           THIS world actually holds"
+        ();
+    ag_fault_tag = "sym_missing";
+    ag_methods =
+      [ checking_method ~name:"stub_requirements_vs_library_exports"
+          ~kind:Compare ~reference:Peer_artifact
+          ~applicable:(fun m _ _ ->
+            if is_dynamic m then
+              Inapplicable
+                "a dynamic binding compiles no stub archive, so it records no \
+                 requirement set; the probe's own failure is the evidence"
+            else Applicable)
+          ~firing:firing_default
+          ~inputs:(fun m l w ->
+            if is_dynamic m then []
+            else
+              let tag = binding_evidence_tag w l in
+              (* BOTH SPELLINGS, as for the user surface (2026-09-12).
+                 The framework's [auto_binding_summaries] writes a
+                 compiled-stub summary to [inspect_stub.json]; tiny
+                 writes its stub to [inspect.json] and keeps
+                 [inspect_mli.json] for the surface. Listing both is
+                 safe because the reader selects on the declared
+                 [kind], so a surface summary sitting at one of these
+                 paths is simply not this method's evidence. *)
+              [ C_stub [ tag ^ "/inspect_stub.json"; tag ^ "/inspect.json" ];
+                Native_lib (lib_evidence_paths w "inspect.json") ])
+          ~eval:required_symbols_eval
+          ~limits:
+            "set inclusion only: it does not check signatures, symbol \
+             versions, or which definition the loader will actually bind. \
+             Inclusion over a very small requirement set may also mean the \
+             binding is stale rather than deliberately narrow."
+          ~counterexamples:
+            [ { fx_method = "stub_requirements_vs_library_exports";
+                fx_inputs = [ C_stub [ "stub.json" ]; Native_lib [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("stub.json",
+                     {|{"kind": "c_stub", "path": "fx",
     "requires": ["tiny_sum", "tiny_offset"]}|});
-              ("lib.json",
-               {|{"kind": "native", "path": "fx",
+                    ("lib.json",
+                     {|{"kind": "native", "path": "fx",
     "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
-          fx_expect = [ "tiny_offset" ] } ] }
+                fx_outcome = "violated";
+                fx_findings = [ "tiny_offset" ] };
+              (* requirements met — the outcome a substring list could
+                 never express *)
+              { fx_method = "stub_requirements_vs_library_exports";
+                fx_inputs = [ C_stub [ "stub.json" ]; Native_lib [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("stub.json",
+                     {|{"kind": "c_stub", "path": "fx",
+    "requires": ["tiny_sum", "tiny_diff"]}|});
+                    ("lib.json",
+                     {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
+                fx_outcome = "holds";
+                fx_findings = [] };
+              (* evidence absent: the library was never inspected *)
+              { fx_method = "stub_requirements_vs_library_exports";
+                fx_inputs =
+                  [ C_stub [ "stub.json" ]; Native_lib [ "absent.json" ] ];
+                fx_bodies =
+                  [ ("stub.json",
+                     {|{"kind": "c_stub", "path": "fx",
+    "requires": ["tiny_sum"]}|}) ];
+                fx_outcome = "unavailable";
+                fx_findings = [] } ]
+          () ] }
+
+(** Every agreement this family owns. The registry gathers these; the
+    module pattern pin keys on the binding's presence. *)
+let checks : (agreement_id * agreement) list =
+  [ (Declared_symbols_exported, declared_symbols_exported);
+    (Required_symbols_exported, required_symbols_exported) ]

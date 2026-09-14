@@ -76,7 +76,7 @@ let app_nlv =
 let ssl_agreement_bindings : Canary_scenario.agreement_binding list =
   let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
-  [ { contract = CC.C2; lang = Canary_lang.OCaml;
+  [ { contract = CC.Api_names_present; lang = Canary_lang.OCaml;
       firings =
         [ { site = CS.At_probe_binding Canary_lang.OCaml;
             loc_filter = CS.Any;

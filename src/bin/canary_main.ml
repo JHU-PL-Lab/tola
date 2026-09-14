@@ -153,11 +153,14 @@ let action_cmd =
       value & opt string ""
       & info [ "disable-agreement"; "disable-contract" ] ~docv:"CSV"
           ~doc:
-            "Comma-separated agreements to skip for this run, e.g. \
-             \"c4,c5\" (the c1..c8 ids are provisional — see the \
-             catalogue's §0). Layered on top of each project's \
-             runner_spec.disabled_agreements and the registry's enabled \
-             flag. [--disable-contract] is kept as an alias.")
+            "Comma-separated agreements to skip for this run, by their \
+             canonical names, e.g. \
+             \"soname_matches_requirement,required_versions_exported\" \
+             (`canary checks` lists them; the retired c1..c9 ids no \
+             longer parse and are reported as unknown). Layered on top \
+             of each project's runner_spec.disabled_agreements and the \
+             registry's enabled flag. [--disable-contract] is kept as \
+             an alias.")
   in
   let thin_arg =
     Arg.(
@@ -202,7 +205,16 @@ let action_cmd =
      the flag stays parsed so existing invocations don't break. *)
   let run project _quick failfast cache_path disable_agreement_csv thin refs () =
     let root = "_out" in
-    let cli_disabled = Canary_agreement_common.agreement_ids_of_csv disable_agreement_csv in
+    let cli_disabled, unknown_agreements =
+      Canary_agreement_common.agreement_ids_of_csv disable_agreement_csv
+    in
+    (* an unrecognised name is REPORTED (2026-09-12). The old parser
+       dropped it silently, so a run asking to skip "c5" skipped
+       nothing and said nothing — and after the rename every old name
+       is unrecognised. *)
+    if unknown_agreements <> [] then
+      Fmt.epr "[disable-agreement] unknown agreement(s): %s (see `canary checks`)@."
+        (String.concat ", " unknown_agreements);
     if cli_disabled <> [] then
       Fmt.pr "[disable-agreement] skipping: %s@."
         (String.concat ", "
@@ -653,9 +665,130 @@ let checks_cmd =
               index — where each agreement takes effect, and whether \
               that cell ships a counterexample.")
   in
-  let run project firing () =
-    match (project, firing) with
-    | _, true ->
+  let agreement =
+    Arg.(value & opt (some string) None
+         & info [ "agreement" ] ~docv:"NAME"
+             ~doc:
+               "The COMPLETE record of one agreement: what it claims, what \
+                it is held against, where it looks in each world, what \
+                falsifies it, what a pass does not establish, and whether \
+                a real run has ever decided it. One place, generated from \
+                the registry.")
+  in
+  let md =
+    Arg.(value & flag & info [ "md" ]
+           ~doc:"Emit markdown (with --catalogue: the generated catalogue file).")
+  in
+  let dummies =
+    Arg.(value & flag & info [ "dummies" ]
+           ~doc:
+             "List every DUMMY ACTION across the registry's projects — a \
+              step that holds a place in the action graph and performs \
+              no work, with the reason it is empty. A dummy exists so \
+              that evidence has somewhere to attach when an artifact \
+              needs no installing; this is how they stay countable as \
+              they accumulate.")
+  in
+  let landing =
+    Arg.(value & flag & info [ "landing" ]
+           ~doc:
+             "The LANDING TRACKER: every agreement with its PLANNED \
+              status (from the registry — does it have an evaluator, does \
+              it ship a counterexample) beside its EFFECTIVE status (from \
+              run logs — has a real project ever decided it). The two are \
+              answered from different places and neither is derived from \
+              the other.")
+  in
+  let observed =
+    Arg.(value & flag & info [ "observed" ]
+           ~doc:
+             "Read the project's LAST RUN back: which agreements it \
+              actually evaluated, and to what outcome. The index and the \
+              firing table say what WOULD be checked; this says what did. \
+              An agreement is concretely landed when a real run shows it \
+              holds or violated.")
+  in
+  let catalogue =
+    Arg.(value & flag & info [ "catalogue" ]
+           ~doc:
+             "Print the full CATALOGUE instead of the one-line table: \
+              every agreement with its claim, the reference expectation \
+              it is held against, and each checking method — what it \
+              compares, where its evidence appears, whether it is \
+              implemented, and what a pass does not establish.")
+  in
+  let run project firing catalogue observed landing dummies agreement md () =
+    match (project, firing, catalogue) with
+    | _, _, _ when Option.is_some agreement -> (
+        let name = Option.get agreement in
+        match Canary_agreement.agreement_named name with
+        | None ->
+            Fmt.epr "unknown agreement: %s@.known:@." name;
+            List.iter
+              (fun (r : Canary_agreement.agreement_row) ->
+                Fmt.epr "  %s@." r.Canary_agreement.ag_slug)
+              Canary_agreement.agreement_registry;
+            Stdlib.exit 2
+        | Some r ->
+            Fmt.pr "%s@." (Canary_agreement.pp_agreement ~markdown:md r);
+            (* the one thing the registry cannot know: what ran *)
+            Fmt.pr "%s@."
+              (Canary_status.pp_agreement_effective ~root:"_out" ~name))
+    | _, _, true when md ->
+        Fmt.pr "%s" (Canary_agreement.pp_catalogue_md ())
+    | _, _, _ when dummies ->
+        let names =
+          match project with
+          | Some p -> [ p ]
+          | None -> List.map fst Canary_registry.all_projects
+        in
+        let rows =
+          List.concat_map
+            (fun name ->
+              match List.assoc_opt name Canary_registry.all_projects with
+              | None -> []
+              | Some pr -> (
+                  try
+                    List.concat_map
+                      (fun a ->
+                        let ctx = Canary_pipeline.ctx_of pr a in
+                        Canary_pipeline.steps_of ~root:"_out" pr ~ctx a
+                        |> List.filter_map (fun (s : Canary_step_model.step) ->
+                               match s.Canary_step_model.dummy with
+                               | Some why ->
+                                   Some (name, s.Canary_step_model.tag, why)
+                               | None -> None))
+                      (Canary_pipeline.ordered pr)
+                  with _ -> []))
+            names
+          |> List.sort_uniq compare
+        in
+        if rows = [] then Fmt.pr "no dummy actions declared@."
+        else begin
+          Fmt.pr "DUMMY ACTIONS — a place in the graph with nothing to do@.";
+          List.iter
+            (fun (p, tag, why) -> Fmt.pr "  %-14s %-28s %s@." p tag why)
+            rows;
+          Fmt.pr "@.  %d dummy step(s).@." (List.length rows);
+          Fmt.pr
+            "  Each asserts there is genuinely nothing to do here, not that a \
+             command is unwritten.@."
+        end
+    | _, _, _ when landing ->
+        let projects =
+          match project with Some p -> Some [ p ] | None -> None
+        in
+        Fmt.pr "%s@." (Canary_status.pp_landing ?projects ~root:"_out" ())
+    | Some name, _, _ when observed ->
+        Fmt.pr "%s@." (Canary_status.pp_observed ~root:"_out" ~project:name)
+    | None, _, _ when observed ->
+        List.iter
+          (fun p ->
+            Fmt.pr "%s@.@."
+              (Canary_status.pp_observed ~root:"_out" ~project:p))
+          (Canary_status.projects_with_runs ~root:"_out")
+    | _, false, true -> Fmt.pr "%s@." (Canary_agreement.pp_catalogue ())
+    | _, true, _ ->
         (* Appendix A.2 tells the reader to read this from the code
            rather than from a transcribed table; this is where. *)
         Fmt.pr "%s@." (Canary_agreement.pp_firing_table ());
@@ -668,10 +801,10 @@ let checks_cmd =
               (Canary_agreement_common.string_of_agreement_id id)
               (Canary_basic.string_of_action a))
           fill
-    | None, false ->
+    | None, false, false ->
         (* no project: the registry itself *)
         Fmt.pr "%s@." (Canary_agreement.pp_agreements ())
-    | Some name, false -> (
+    | Some name, false, false -> (
         match List.assoc_opt name Canary_registry.all_projects with
         | Some pr ->
             let idx = Canary_check_index.of_project pr in
@@ -685,9 +818,12 @@ let checks_cmd =
     (Cmd.info "checks"
        ~doc:
          "The checking index: with no argument, every agreement the \
-          registry declares; with a project, the checks that apply to \
-          each of its actions and where each comes from. No execution.")
-    Term.(const run $ project $ firing $ const ())
+          registry declares; with --catalogue, each one's reference \
+          expectation and checking methods in full; with a project, the \
+          checks that apply to each of its actions and where each comes \
+          from. No execution.")
+    Term.(const run $ project $ firing $ catalogue $ observed $ landing
+          $ dummies $ agreement $ md $ const ())
 
 let spec_check_cmd =
   let project =

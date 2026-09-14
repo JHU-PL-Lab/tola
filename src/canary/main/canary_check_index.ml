@@ -22,7 +22,11 @@ module R = Canary_agreement
 type entry = {
   en_action    : Canary_basic.action;
   en_intrinsic : string;                     (** the action's own postcondition *)
-  en_added     : (string * Canary_agreement_common.claim * Canary_agreement_common.evidence) list;  (** slug, claim, evidence *)
+  en_added : (string * Canary_agreement_common.claim * string) list;
+      (** agreement name, claim, and the method summary — "2 methods,
+          1 planned" (2026-09-12). It used to be one [evidence] tag per
+          agreement, which stopped being expressible when an agreement
+          gained several methods with different kinds. *)
 }
 
 (** The agreements that fire at [action] for a binding of this mechanism
@@ -33,20 +37,34 @@ type entry = {
     from being read off its lib's. *)
 let added_at ~(mechanism : Canary_mechanism.mechanism) ~(lang : Canary_lang.lang)
     ~(worlds : Canary_artifact.assignment list) (action : Canary_basic.action) :
-    (string * Canary_agreement_common.claim * Canary_agreement_common.evidence) list =
+    (string * Canary_agreement_common.claim * string) list =
+  let module C = Canary_agreement_common in
   List.filter_map R.agreement_registry ~f:(fun r ->
-      let fires =
-        List.exists worlds ~f:(fun w ->
-            List.exists (r.R.ag_desc.Canary_agreement_common.firing mechanism lang w) ~f:(fun a ->
-                Poly.equal a action))
+      (* the METHODS that fire here, in any of the group's worlds. An
+         agreement can reach an action through one method and not
+         another, so the index counts methods rather than rows
+         (2026-09-12). *)
+      let firing =
+        List.filter r.R.ag.C.ag_methods ~f:(fun m ->
+            List.exists worlds ~f:(fun w ->
+                List.exists (m.C.m_firing mechanism lang w) ~f:(fun a ->
+                    Poly.equal a action)))
       in
-      let enabled = r.R.ag_check.Canary_agreement_common.enabled in
-      if fires then
+      if List.is_empty firing then None
+      else
+        let planned =
+          List.count firing ~f:(fun m -> Option.is_none m.C.m_eval)
+        in
+        let how =
+          match (List.length firing, planned) with
+          | n, 0 -> Printf.sprintf "%d evaluated" n
+          | n, p when n = p -> Printf.sprintf "%d planned" p
+          | n, p -> Printf.sprintf "%d evaluated, %d planned" (n - p) p
+        in
         Some
-          ( (if enabled then r.R.ag_slug else r.R.ag_slug ^ " (off)"),
-            r.R.ag_desc.Canary_agreement_common.claim,
-            r.R.ag_desc.Canary_agreement_common.evidence )
-      else None)
+          ( (if r.R.ag_enabled then r.R.ag_slug else r.R.ag_slug ^ " (off)"),
+            r.R.ag.C.ag_claim,
+            how ))
 
 (** The index for one project: every action its scenarios derive, paired
     with the checks that apply. [mechanism]/[lang] default to the
@@ -113,14 +131,12 @@ let pp (pr : Canary_project_run.project_run)
             if List.is_empty e.en_added then "—"
             else
               String.concat ~sep:", "
-                (List.map e.en_added ~f:(fun (slug, cl, ev) ->
+                (List.map e.en_added ~f:(fun (slug, cl, how) ->
                      Printf.sprintf "%s [%s/%s]" slug
-                       (match cl with Canary_agreement_common.Structural -> "struct" | Canary_agreement_common.Semantic -> "sem")
-                       (match ev with
-                        | Canary_agreement_common.Inspect_one -> "inspect"
-                        | Canary_agreement_common.Compare_several -> "compare"
-                        | Canary_agreement_common.Run_tool -> "tool"
-                        | Canary_agreement_common.Run_program -> "run")))
+                       (match cl with
+                        | Canary_agreement_common.Structural -> "struct"
+                        | Canary_agreement_common.Behavioral -> "behav")
+                       how))
           in
           Buffer.add_string buf
             (Printf.sprintf "  %-22s intrinsic %-12s added %s\n"

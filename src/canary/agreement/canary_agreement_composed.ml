@@ -2,13 +2,16 @@
 
     Not a check family. A family reads artifacts; this reads other
     families' VERDICTS, which is why it sits above them and why it is
-    the one module here allowed to name its siblings (2026-09-02, from
-    the user's tier model: a concrete family refers only to
+    the one module here allowed to name its siblings (from the user's
+    tier model: a concrete family refers only to
     [Canary_agreement_common], so a composition cannot be one).
 
-    The registry says the same thing in its own vocabulary — c8's
-    status is [Blocked [C6; C7]] — and this module is where that
-    blocking relation is executable rather than merely recorded. *)
+    [repack_complete] keeps a PROVISIONAL name and a PLANNED method.
+    Its claim — "the repack loses nothing the original had" — has no
+    agreed scope: a binding may deliberately expose only part of a
+    provider, so "loses nothing" needs a statement of what it is
+    allowed to omit before it can be checked. Two of the three
+    agreements it would compose are themselves unevaluated. *)
 
 open Base
 open Canary_agreement_common
@@ -24,36 +27,16 @@ open Canary_agreement_types
 open Canary_agreement_symbols
 open Canary_agreement_api_surface
 
-(* ── what this module is about ── *)
+(* ── the composition, as a pure function over three verdicts ── *)
 
-let complete : about =
-  { cat = Api `Repacked;
-    standing = Declared;
-    says = "the repack loses nothing the original had" }
+(** The derived claim: "the user-facing API is faithful to the
+    underlying C API", by the decomposition
 
-let checks : (string * about) list = [ ("repack_complete", complete) ]
+      faithfulness ⇐ signatures ∧ symbols ∧ repacking
 
-(* ── c8: is the user-facing API faithful to the C one (the composition) ── *)
-
-(** [c8 cmp_api_faithfulness] result type. The derived contract:
-    "user-facing API is faithful to the underlying C API." By the
-    decomposition in surface_draft/implementation.md §2.5:
-
-      API-faithfulness ⇐ Type (c6) ∧ Symbol (c1) ∧ API-repacking (c7)
-
-    Each constituent is checked separately; c8 reports the
-    composition. [Faithful] iff all three are compatible.
-    [Unfaithful] iff at least one disagrees, with each disagreement
-    surfaced separately (so the caller can attribute blame).
-
-    Catches tiny scenario {i e4 api_faithful}: C adds [tiny_max], the
-    binding doesn't expose it. Today's e4 expected outcomes are all
-    "ok" (silent). When c8 is wired into the action pipeline, the
-    static check surfaces the unfaithfulness — `n3.functions`
-    includes `tiny_max` (via the new c6 inspector path) but the
-    binding's `bo1.externals` doesn't list a corresponding wrapper.
-    The verdict materializes as a `Type_unmapped` issue carried by
-    `Unfaithful`. *)
+    Each constituent is checked separately; this reports the
+    composition with per-constituent attribution, so a caller can say
+    which part failed. *)
 type faithfulness_result =
   | Faithful
   | Unfaithful of {
@@ -63,10 +46,6 @@ type faithfulness_result =
     }
   | Faithfulness_unknown
 
-(** [c8 cmp_api_faithfulness] — pure composition. Takes the three
-    constituent verdicts (c6 [type_result], c1 [compat_result],
-    c7 [repack_result]) and reports the worst-case verdict with
-    per-constituent attribution. *)
 let check_api_faithfulness
     ~(type_verdict : type_result)
     ~(symbol_verdict : compat_result)
@@ -95,17 +74,37 @@ let check_api_faithfulness
           ; symbol_issue = symbol_bad
           ; repack_issue = repack_bad }
 
-(* c8 is UNWIRED: it can only compose verdicts, and two of the three it
-   composes are themselves unwired. [] until they are not. *)
-let c8_predict ~resolve:_ _ = []
+let repack_complete : agreement =
+  { ag_subject = Repacking;
+    ag_claim = Behavioral;
+    ag_basis = Behavioral_spec;
+    ag_says = "the repack loses nothing the original had";
+    ag_expects =
+      "a statement of what the binding is allowed to omit. Without one there \
+       is no reference: a binding that deliberately wraps a subset is \
+       indistinguishable from one that dropped something";
+    ag_rooted_in =
+      unrooted
+        ~note:
+          "unrooted TWICE OVER: it composes one agreement that has a rule \
+           (the linker's) with two that do not. A composition cannot be \
+           better rooted than its weakest part"
+        ();
+    ag_fault_tag = "api_add";
+    ag_methods =
+      [ checking_method ~name:"composed_faithfulness" ~kind:Run_program
+          ~reference:Declared_facts ~firing:firing_default
+          ~inputs:(fun _ _ _ -> [])
+          ~planned:
+            "the claim's scope is unsettled (\"loses nothing\" needs an \
+             allowed-omission policy), and two of the three agreements it \
+             composes — repacking and behaviour — have no evaluator either. \
+             check_api_faithfulness composes three verdicts and is ready for \
+             the day they exist"
+          ~limits:
+            "not evaluated. The composition function exists and is pure; \
+             what it would mean is the open decision."
+          () ] }
 
-let c8 : description =
-  { about = complete;
-    claim = Semantic;
-    evidence = Run_program;
-    provenance = Added;
-    reads = [ ("Sf.4", "binding") ];
-    fault_tags = [ "api_add" ];
-    firing = firing_default;
-    inputs = (fun _ _ _ -> []);
-    counterexamples = [] }
+let checks : (agreement_id * agreement) list =
+  [ (Repack_complete, repack_complete) ]

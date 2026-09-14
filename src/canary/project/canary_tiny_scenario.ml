@@ -199,8 +199,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
-                        ~detector:(Wired C1))
-      ~violates:[ C1 ]
+                        ~detector:(Wired Required_symbols_exported))
+      ~violates:[ Required_symbols_exported ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
         "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
@@ -221,8 +221,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Definite "Sc.2.OCaml")
-                        ~detector:(Wired C6))
-      ~violates:[ C6 ]
+                        ~detector:(Wired Signatures_agree))
+      ~violates:[ Signatures_agree ]
       ~expected:[
         "ocaml_build", Fail; "ocaml_probe", Skip;
         "ocaml_app_binding", Skip; "ocaml_app_helper", Skip;
@@ -244,8 +244,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Definite "Sc.4.Python")
-                        ~detector:(Wired C5))
-      ~violates:[ C5 ]
+                        ~detector:(Wired Required_versions_exported))
+      ~violates:[ Required_versions_exported ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
         "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
@@ -266,8 +266,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:Canary_basic.Lib
                         ~kind:(On_artifact Lib)
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
-                        ~detector:(Wired C4))
-      ~violates:[ C4 ]
+                        ~detector:(Wired Soname_matches_requirement))
+      ~violates:[ Soname_matches_requirement ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
         "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
@@ -287,8 +287,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
-                        ~detector:(Wired C6))
-      ~violates:[ C6; C3 ]
+                        ~detector:(Wired Signatures_agree))
+      ~violates:[ Signatures_agree; Behavior_matches ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
         "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
@@ -309,7 +309,7 @@ let scenario_specs : scenario_spec list =
                         ~kind:(On_artifact Source)
                         ~manifest:Unknown_gap
                         ~detector:Detector_gap)
-      ~violates:[ C8 ]
+      ~violates:[ Repack_complete ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
         "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
@@ -330,8 +330,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:On_behavior
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
-                        ~detector:(Wired C3))
-      ~violates:[ C3 ]
+                        ~detector:(Wired Behavior_matches))
+      ~violates:[ Behavior_matches ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
         "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
@@ -351,8 +351,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:(Definite "Sc.4.OCaml")
-                        ~detector:(Wired C3))
-      ~violates:[ C7; C3 ]
+                        ~detector:(Wired Behavior_matches))
+      ~violates:[ Repack_preserves_api; Behavior_matches ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
         "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
@@ -373,8 +373,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:(Definite "Sc.3.OCaml")
-                        ~detector:(Wired C2))
-      ~violates:[ C2 ]
+                        ~detector:(Wired Api_names_present))
+      ~violates:[ Api_names_present ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
         "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
@@ -396,8 +396,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:(Possible [ "Sc.2.OCaml"; "Sc.4.OCaml" ])
-                        ~detector:(Wired C1))
-      ~violates:[ C1 ]
+                        ~detector:(Wired Required_symbols_exported))
+      ~violates:[ Required_symbols_exported ]
       ~expected:[
         "ocaml_build", Fail; "ocaml_probe", Skip;
         "ocaml_app_binding", Skip; "ocaml_app_helper", Skip;
@@ -418,8 +418,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:a_python
                         ~kind:(On_artifact a_python)
                         ~manifest:(Definite "Sc.4.Python")
-                        ~detector:(Wired C3))
-      ~violates:[ C7; C3 ]
+                        ~detector:(Wired Behavior_matches))
+      ~violates:[ Repack_preserves_api; Behavior_matches ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
         "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
@@ -440,8 +440,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:a_python
                         ~kind:(On_artifact a_python)
                         ~manifest:(Definite "Sc.4.Python")
-                        ~detector:(Wired C2))
-      ~violates:[ C2 ]
+                        ~detector:(Wired Api_names_present))
+      ~violates:[ Api_names_present ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
         "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
@@ -464,8 +464,8 @@ let scenario_specs : scenario_spec list =
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:Unknown_gap
-                        ~detector:(Wired C7))
-      ~violates:[ C7 ]
+                        ~detector:(Wired Repack_preserves_api))
+      ~violates:[ Repack_preserves_api ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
         "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
@@ -680,57 +680,63 @@ let tiny_agreement_bindings : Canary_scenario.agreement_binding list =
   let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
   [
-    (* c1 — symbol set. Fires at Probe_binding: stub link (Python
-       cext import / OCaml stub load) fails when a referenced
+    (* required_symbols_exported. Fires at Probe_binding: stub link
+       (Python cext import / OCaml stub load) fails when a referenced
        symbol vanished from the native lib. *)
-    { contract = CC.C1; lang = Canary_lang.OCaml;
+    { contract = CC.Required_symbols_exported; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_agreement.inputs_of_agreement CC.C1 Canary_lang.OCaml;
+              Canary_agreement.inputs_of_agreement
+                CC.Required_symbols_exported Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
-    { contract = CC.C1; lang = Canary_lang.Python;
+    { contract = CC.Required_symbols_exported; lang = Canary_lang.Python;
       firings = [
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_agreement.inputs_of_agreement CC.C1 Canary_lang.Python;
+              Canary_agreement.inputs_of_agreement
+                CC.Required_symbols_exported Canary_lang.Python;
             version_info = None;
           }};
       ]};
 
-    (* c2 — API completeness. Probe references a name the binding
-       no longer exports. OCaml: undefined value at compile;
+    (* api_names_present. Probe references a name the binding no
+       longer exports. OCaml: undefined value at compile;
        Python: AttributeError at import. Both surface at Probe. *)
-    { contract = CC.C2; lang = Canary_lang.OCaml;
+    { contract = CC.Api_names_present; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_agreement.inputs_of_agreement CC.C2 Canary_lang.OCaml;
+              Canary_agreement.inputs_of_agreement CC.Api_names_present
+                Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
-    { contract = CC.C2; lang = Canary_lang.Python;
+    { contract = CC.Api_names_present; lang = Canary_lang.Python;
       firings = [
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_agreement.inputs_of_agreement CC.C2 Canary_lang.Python;
+              Canary_agreement.inputs_of_agreement CC.Api_names_present
+                Canary_lang.Python;
             version_info = None;
           }};
       ]};
 
-    (* c3 — API repack. Behavioral; probe emits "FAIL …" when the
-       user-facing name maps to the wrong native symbol. *)
-    { contract = CC.C3; lang = Canary_lang.OCaml;
+    (* behavior_matches. The probe emits "FAIL …" when the user-facing
+       name maps to the wrong native symbol. The registry has no
+       evaluator for this claim (the expected values live in the
+       probe's own source), so tiny states the grep itself. *)
+    { contract = CC.Behavior_matches; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
@@ -738,7 +744,7 @@ let tiny_agreement_bindings : Canary_scenario.agreement_binding list =
             contains_any = [ "FAIL " ]; version_info = None;
           }};
       ]};
-    { contract = CC.C3; lang = Canary_lang.Python;
+    { contract = CC.Behavior_matches; lang = Canary_lang.Python;
       firings = [
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
@@ -747,70 +753,76 @@ let tiny_agreement_bindings : Canary_scenario.agreement_binding list =
           }};
       ]};
 
-    (* c4 — ABI (SONAME). Python cext is cached from baseline; on
-       lib SONAME bump the cached NEEDED still points at the old
-       filename, dyld fails to load. OCaml binding rebuilds fresh
-       against the current lib and picks up the new SONAME — c4
-       is silent for OCaml under tiny's current store convention.
-       See §7.1 remaining blocker: switching to a "packed .a" OCaml
-       binding would let c4 fire (Placeholder documents that). *)
-    { contract = CC.C4; lang = Canary_lang.Python;
+    (* soname_matches_requirement. Python cext is cached from
+       baseline; on a lib SONAME bump the cached NEEDED still points
+       at the old filename, and the loader fails. The OCaml binding
+       rebuilds fresh against the current lib and picks up the new
+       SONAME, so this is silent for OCaml under tiny's current store
+       convention — which is the same fact the agreement states as
+       inapplicability under cstubs (a static archive records no
+       NEEDED). Switching tiny to a packed .a would change both. *)
+    { contract = CC.Soname_matches_requirement; lang = Canary_lang.Python;
       firings = [
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_agreement.inputs_of_agreement CC.C4 Canary_lang.Python;
+              Canary_agreement.inputs_of_agreement
+                CC.Soname_matches_requirement Canary_lang.Python;
             version_info = None;
           }};
       ]};
-    { contract = CC.C4; lang = Canary_lang.OCaml;
+    { contract = CC.Soname_matches_requirement; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.Placeholder { reason =
             "OCaml ABI-analogue: packed .a NEEDED vs libtiny.so \
-             SONAME. Awaiting SSOT §? — decide whether tiny's OCaml \
-             store convention rebuilds fresh (current: c4 silent) or \
-             caches the packed .a (future: c4 fires at Probe_binding \
-             OCaml or Build_app OCaml, depending on link timing)." }};
+             SONAME. Decide whether tiny's OCaml store convention \
+             rebuilds fresh (current: silent) or caches the packed .a \
+             (future: fires at Probe_binding OCaml or Build_app \
+             OCaml, depending on link timing)." }};
       ]};
 
-    (* c5 — versioned symbol floor. Same store-convention lang scope
-       as c4 (cached Python cext carries stale @VER references). *)
-    { contract = CC.C5; lang = Canary_lang.Python;
+    (* required_versions_exported — the versioned symbol floor. Same
+       store-convention language scope as the soname pair (the cached
+       Python cext carries stale @VER references). *)
+    { contract = CC.Required_versions_exported; lang = Canary_lang.Python;
       firings = [
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_agreement.inputs_of_agreement CC.C5 Canary_lang.Python;
+              Canary_agreement.inputs_of_agreement
+                CC.Required_versions_exported Canary_lang.Python;
             version_info = None;
           }};
       ]};
 
-    (* c6 — type/arity. Only OCaml binding rebuilds against the
-       mutated header; cstub compile fails at Build_binding OCaml.
+    (* signatures_agree. Only the OCaml binding rebuilds against the
+       mutated header; the cstub compile fails at Build_binding OCaml.
        The Probe_binding step of tiny's factory also rebuilds the
        same cstub via dune, so the same failure surfaces there too. *)
-    { contract = CC.C6; lang = Canary_lang.OCaml;
+    { contract = CC.Signatures_agree; lang = Canary_lang.OCaml;
       firings =
-        (let c6_inputs =
-           Canary_agreement.inputs_of_agreement CC.C6 Canary_lang.OCaml in
+        (let sig_inputs =
+           Canary_agreement.inputs_of_agreement CC.Signatures_agree
+             Canary_lang.OCaml in
          [
            { site = CS.At_build_binding Canary_lang.OCaml;
              loc_filter = CS.Any;
              source = CS.From_artifact {
-               inputs = c6_inputs; version_info = None } };
+               inputs = sig_inputs; version_info = None } };
            { site = CS.At_probe_binding Canary_lang.OCaml;
              loc_filter = CS.Any;
              source = CS.From_artifact {
-               inputs = c6_inputs; version_info = None } };
+               inputs = sig_inputs; version_info = None } };
          ])};
 
-    (* c7 — stub orphan. Behavioral: static-only mismatch surfaces
-       as probe "FAIL …" line (per api_repack_stub_orphan). *)
-    { contract = CC.C7; lang = Canary_lang.OCaml;
+    (* repack_preserves_api — stub orphan. Behavioural: the
+       static-only mismatch surfaces as a probe "FAIL …" line (per
+       api_repack_stub_orphan). *)
+    { contract = CC.Repack_preserves_api; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
@@ -819,18 +831,20 @@ let tiny_agreement_bindings : Canary_scenario.agreement_binding list =
           }};
       ]};
 
-    (* c8 — API faithfulness. Blocked on c6+c7 per SSOT §3.4
-       agreement_status (Blocked [C6; C7]). Placeholder here so the
-       shape commits; today's api_faithful Bs enters as
-       Expect_success. *)
-    { contract = CC.C8; lang = Canary_lang.OCaml;
+    (* repack_complete. The registry reports it not_implemented: its
+       claim has no agreed scope and two of the three agreements it
+       composes have no evaluator. Placeholder here so the shape
+       commits; today's api_faithful Bs enters as Expect_success. *)
+    { contract = CC.Repack_complete; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.Placeholder { reason =
-            "c8 dormant — blocked on c6 + c7 detecting the cases c8 \
-             would need. Corresponds to Bs.6 api_faithful, which \
-             runs Expect_success everywhere today." }};
+            "repack_complete is dormant — it composes \
+             signatures_agree, required_symbols_exported and \
+             repack_preserves_api, and the last has no evaluator. \
+             Corresponds to Bs.6 api_faithful, which runs \
+             Expect_success everywhere today." }};
       ]};
   ]
 
@@ -857,7 +871,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_source (Source.rename_c_symbol
              ~file ~from_:"tiny_sum" ~to_:"tiny_total"));
            expected = [];
-           violates = [ Canary_agreement_common.C1 ];
+           violates = [ Canary_agreement_common.Required_symbols_exported ];
          }
      | Source, On_behavior ->
          (* No parametric behavior-change primitive. behavior_silent
@@ -870,24 +884,25 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
      | Lib, On_artifact Lib ->
          (* Binary SONAME bump. Default: libtiny.so.1.0 →
             libtiny.so.2.0. Mirrors Bs.4 (abi_soname_bump).
-            Skips when c4 has no live firing for any of this
-            cell's languages — the C4/OCaml binding is a
+            Skips when soname_matches_requirement has no live firing
+            for any of this cell's languages — its OCaml binding is a
             Placeholder today (see tiny_agreement_bindings), so
             Sc.2/4/6.OCaml Lib cells synthesize None until the
             placeholder is wired. Sc.1 (langs = [OCaml; Python])
-            and Sc.*.Python still synthesize because C4/Python
-            has a live From_artifact firing. *)
+            and Sc.*.Python still synthesize because the Python
+            binding has a live From_artifact firing. *)
          let langs = Canary_scenario.langs_of_scenario cell in
          let live = List.exists langs ~f:(fun l ->
            Canary_scenario.binding_has_live_firing
-             tiny_agreement_bindings Canary_agreement_common.C4 l) in
+             tiny_agreement_bindings
+             Canary_agreement_common.Soname_matches_requirement l) in
          if live then
            Some {
              mutates = [ "c/build/libtiny.so.1.0" ];
              mutation = Some (Of_native (Native.soname_bump
                ~from_so:"libtiny.so.1.0" ~to_so:"libtiny.so.2.0"));
              expected = [];
-             violates = [ Canary_agreement_common.C4 ];
+             violates = [ Canary_agreement_common.Soname_matches_requirement ];
            }
          else None
      | Binding Canary_lang.OCaml, On_artifact (Binding Canary_lang.OCaml) ->
@@ -899,7 +914,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_binding (Binding.drop_ocaml_val
              ~file ~name:"sum"));
            expected = [];
-           violates = [ Canary_agreement_common.C2 ];
+           violates = [ Canary_agreement_common.Api_names_present ];
          }
      | Binding Canary_lang.Python, On_artifact (Binding Canary_lang.Python) ->
          (* Drop a top-level def from tiny_cext/__init__.py. Default:
@@ -913,7 +928,7 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            mutation = Some (Of_binding (Binding.drop_python_attr
              ~file ~name:"sum"));
            expected = [];
-           violates = [ Canary_agreement_common.C2 ];
+           violates = [ Canary_agreement_common.Api_names_present ];
          }
      | Binding Canary_lang.Python, _ -> None
      | App, _ ->
@@ -1369,21 +1384,15 @@ let canary_expected_of (entry : scenario_spec) : canary_expected =
    - fault: concise tag for the violated contract (absent for good)
    - artifact: which artifact the fault targets
 
-   Fault tags (contract → tag):
-     c1 sym_missing   c2 api_drop      c3 behavior
-     c4 abi_soname    c5 sym_version   c6 type_arity
-     c7 api_repack    c8 api_add *)
+   Fault tags: the AGREEMENT'S own tag, read from the registry rather
+   than restated here (2026-09-12). It was a second copy of the same
+   table, and the registry pin checks that table, so a drift between
+   the two would have been green on both sides. *)
 
-(** Concise fault tag for a contract. *)
-let fault_tag_of_contract : Canary_agreement_common.agreement_id -> string = function
-  | Canary_agreement_common.C1 -> "sym_missing"
-  | C2 -> "api_drop"
-  | C3 -> "behavior"
-  | C4 -> "abi_soname"
-  | C5 -> "sym_version"
-  | C6 -> "type_arity"
-  | C7 -> "api_repack"
-  | C8 -> "api_add"
+(** Concise fault tag for an agreement — the registry's [ag_fault_tag]. *)
+let fault_tag_of_contract (id : Canary_agreement_common.agreement_id) : string =
+  (Canary_agreement.row_of id).Canary_agreement.ag
+    .Canary_agreement_common.ag_fault_tag
 
 (** Which artifact a fault targets, using short names.
     The binding language (OCaml/Python) is implicit from the stage. *)
@@ -1696,14 +1705,19 @@ let name_of_string (n : string) : string =
     Used by tiny's [confirm_ill.json] and [tiny expected] output for legacy
     parity with the Python harness. *)
 let violates_label = function
-  | Canary_agreement_common.C1 -> "Symbol"
-  | C2 -> "API-completeness"
-  | C3 -> "Behavior"
-  | C4 -> "ABI"
-  | C5 -> "SymbolVersion"
-  | C6 -> "Type"
-  | C7 -> "API-repacking"
-  | C8 -> "API-faithfulness"
+  | Canary_agreement_common.Required_symbols_exported -> "Symbol"
+  | Declared_symbols_exported -> "DeclaredSymbol"
+  | Api_names_present -> "API-completeness"
+  | Behavior_matches -> "Behavior"
+  | Soname_matches_requirement -> "ABI"
+  | Soname_matches_declaration -> "DeclaredABI"
+  | Required_versions_exported -> "SymbolVersion"
+  | Declared_versions_exported -> "DeclaredSymbolVersion"
+  | Signatures_agree -> "Type"
+  | Repack_preserves_api -> "API-repacking"
+  | Repack_complete -> "API-faithfulness"
+  | Dependencies_provided -> "NeededProvided"
+  | Staged_interface_preserved -> "StagedInterface"
 
 let json_of_entry (e : scenario_spec) : Yojson.Basic.t =
   `Assoc [

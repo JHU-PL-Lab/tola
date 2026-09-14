@@ -361,7 +361,7 @@ let derived_evidence_matches_projects : Canary_project_test.pure_test =
       in
       let tags l = List.map l ~f:tag in
       let derived_tag lang provision =
-        match derived lang provision Canary_agreement_common.C2 with
+        match derived lang provision Canary_agreement_common.Api_names_present with
         | p :: _ -> tag p
         | [] -> "«none»"
       in
@@ -1675,7 +1675,7 @@ let canary_switch_pin : Canary_project_test.pure_test =
               check_pre = (fun () -> true);
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
-              disabled_agreements = [] }
+              disabled_agreements = []; agreement_ctx = None; dummy = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -1776,7 +1776,7 @@ let platform_single_source_pin : Canary_project_test.pure_test =
               check_pre = (fun () -> true);
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
-              disabled_agreements = [] }
+              disabled_agreements = []; agreement_ctx = None; dummy = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -1853,7 +1853,8 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
             cmd = (fun ~output_dir:_ ~variant_key:_ -> "run it");
             check_pre = (fun () -> true);
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
-            expectation = exp; symbol_check = None; disabled_agreements = [] }
+            expectation = exp; symbol_check = None; disabled_agreements = [];
+            agreement_ctx = None; dummy = None }
         in
         let rendered exp =
           String.concat ~sep:"\n"
@@ -2344,11 +2345,22 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
           String.equal
             (Canary_basic.step_dir_of_tag binding_tag)
             "build_binding/ocaml"
-          && (match Canary_agreement.inputs_of_agreement Canary_agreement_common.C1 Canary_lang.OCaml with
-              | [ Canary_agreement_common.C_stub [ stub_rel ];
-                  Canary_agreement_common.Native_lib [ lib_rel ] ] ->
-                  String.is_prefix stub_rel ~prefix:(binding_tag ^ "/")
-                  && String.equal lib_rel "build_lib/inspect.json"
+          && (match
+                Canary_agreement.inputs_of_agreement
+                  Canary_agreement_common.Required_symbols_exported
+                  Canary_lang.OCaml
+              with
+              (* the stub carries BOTH filename conventions since
+                 2026-09-12 (the framework's inspect_stub.json and
+                 tiny's inspect.json); what this pins is unchanged —
+                 every candidate resolves under the BINDING's step dir,
+                 which is the lang-less-tag bug it was written for *)
+              | [ Canary_agreement_common.C_stub stub_rels;
+                  Canary_agreement_common.Native_lib lib_rels ] ->
+                  (not (List.is_empty stub_rels))
+                  && List.for_all stub_rels
+                       ~f:(String.is_prefix ~prefix:(binding_tag ^ "/"))
+                  && String.equal (List.hd_exn lib_rels) "build_lib/inspect.json"
               | _ -> false)
         in
         inputs_resolve_to_step_dir
@@ -3971,7 +3983,15 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                   "fetch_binding_source_ocaml"; "build_binding_ocaml";
                   "fetch_binding_ocaml"; "pack_binding_ocaml";
                   "probe_binding_ocaml"; "probe_app_ocaml";
-                  "build_binding_python"; "probe_binding_python" ])
+                  (* fetch_binding_python appeared 2026-09-12 when sqlite
+                     declared a DUMMY install for CPython's stdlib
+                     sqlite3 — the step that stands for a binding the
+                     interpreter already provides, so the derivation has
+                     somewhere to look for its surface inspection. The
+                     order key puts it in the python block beside its
+                     OCaml twin. *)
+                  "build_binding_python"; "fetch_binding_python";
+                  "probe_binding_python" ])
         (* the OFF-TREE binding-source slot (2026-08-18, user): the
            order key places fetch_binding_source at the FRONT of its
            language's block — the column appears once a project wires

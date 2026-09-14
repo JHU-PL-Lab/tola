@@ -364,7 +364,7 @@ let z3_agreement_bindings : Canary_scenario.agreement_binding list =
   let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
   [
-    { contract = CC.C2; lang = Canary_lang.Python;
+    { contract = CC.Api_names_present; lang = Canary_lang.Python;
       firings = [
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.At_pm_lang Canary_lang.Python;

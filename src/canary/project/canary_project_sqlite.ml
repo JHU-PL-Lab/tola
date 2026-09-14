@@ -349,25 +349,67 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
    The action rows above provide the per-action closures on top. *)
 let base_spec : Canary_step_builder.runner_spec =
   { Canary_step_builder.empty_runner_spec with
+    (* THE DECLARED SURFACE, reaching the runner at last (2026-09-13).
+
+       [sqlite_api_source] has been declared since the project landed,
+       and the source record and the CI renderer both read it — but
+       the RUNNER spec never carried it, so every derivation that asks
+       "what does this project say it exports" got [None]. It is what
+       makes the auto-generated summaries possible at all: the stub
+       inspection needs the native prefix, and the lib summary takes
+       its watchlist from [stable_symbols]. Third instance of the
+       decorative-declaration class on this project. *)
+    api_source = Some sqlite_api_source;
     stores =
       { Canary_store_config.empty_store_config with
         lib = Some
           { Canary_store_config.provider =
               Canary_store_config.Sys_pkg prebuilt.system_package;
             components = []; headers = None } };
+    (* WHERE THE BINDING'S SURFACE IS INSPECTED (2026-09-12).
+
+       The OCaml inspection moved from [Probe_binding] to
+       [Fetch (Binding OCaml)] — the step that installs the opam
+       package, which is both the earliest point the evidence exists
+       (design §1.3) and the step the framework's own derivation names
+       for a Fetched binding. While it sat on the probe, the derived
+       input path pointed at the fetch step, found nothing, and
+       `api_names_present` reported `unavailable` on every sqlite
+       scenario.
+
+       Python's stays on the probe: sqlite3 is stdlib, so there is no
+       fetch step to attach it to. Its derived path therefore still
+       misses, which is the next thing to route. *)
     inspect = (fun action _loc -> match action with
-      | Canary_basic.Probe_binding Canary_lang.Python ->
+      | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python) ->
+          (* on the DUMMY install step (see [fetch_binding] below): the
+             module is importable from the moment the interpreter
+             exists, so the earliest place its surface can be inspected
+             is the step that stands for its provisioning *)
           Some (fun ~output_dir ~variant_key ->
               Canary_artifact_lang.python_inspect_cmd
                 ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist
                 ~expect_missing:sqlite_python_expect_missing
                 ~output_dir ~variant_key ())
-      | Canary_basic.Probe_binding _ ->
+      | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml) ->
           Some (fun ~output_dir ~variant_key ->
               Canary_artifact_lang.inspect_opam_pkg_cmd
                 ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist
                 ~output_dir ~variant_key ())
       | _ -> None);
+    (* WHICH PACKAGE THE BINDING IS (2026-09-13). It drives the
+       auto-generated summaries — for OCaml, the compiled STUB
+       archive's undefined references, which is the consumer half of
+       [required_symbols_exported] and the only thing that can say
+       what this binding requires of libsqlite3.
+
+       [inspect] above still names the surface inspection; the two now
+       compose rather than the override winning outright. Python is
+       listed for symmetry but adds nothing: its auto summary is the
+       same surface inspection the override already supplies, so the
+       override keeps it. *)
+    binding_user_facing_pkg =
+      [ (Canary_lang.OCaml, "sqlite3"); (Canary_lang.Python, "sqlite3") ];
     artifact_name = (function
       | Canary_basic.Lib -> Some "libsqlite3.so"
       | Canary_basic.Binding Canary_lang.OCaml -> Some "sqlite3"
@@ -384,7 +426,19 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
         Canary_enumerate.channel_of a Canary_artifact.a_lib
     | _ -> Canary_basic.Stable
   in
-  let spec = Canary_action_templates.realize (sqlite_table_rows ~workspace chan) a in
+  (* ~base:base_spec, not [realize] (2026-09-12). [base_spec] carries
+     this project's [api_source] and its inspector closures, and the
+     run path had been dropping it on the floor: [realize] defaults
+     [?base] to [empty_runner_spec], so only [sqlite_ci_spec] — the
+     YAML renderer — ever saw them. The visible consequence was that a
+     real sqlite run produced no inspection JSON at all and every
+     agreement reported `unavailable`; the inspectors were declared,
+     reviewed and dead. Found by reading a run's log rather than the
+     spec. *)
+  let spec =
+    Canary_action_templates.realize_from_rows ~assignment:a ~base:base_spec
+      (sqlite_table_rows ~workspace chan)
+  in
   let dotted, _, _ = sqlite_amalg chan in
   let version_line = "sqlite_version=" ^ dotted in
   let ocaml = sqlite_ocaml_config.ocaml in
@@ -414,12 +468,31 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
   let pinned = String.length pin > 0 in
   { spec with
     fetch_binding =
+      (* THE PYTHON DUMMY (2026-09-12). CPython's `sqlite3` is part of
+         the interpreter: nothing is fetched and nothing is installed,
+         so there is no install step — and the framework's derivation
+         looks for a binding's inspection at exactly that step. Rather
+         than teach every consumer that an ambient binding is the
+         exception, the graph gets a place to hang things: a step that
+         states plainly that there is nothing to do, and carries the
+         Python surface inspection so `api_names_present` can find it
+         where it expects to.
+
+         The claim this asserts is real and worth asserting: no action
+         provisions this binding. If that ever stops being true (a
+         venv, a pip build of pysqlite3), the dummy is wrong and should
+         become a real fetch. *)
       (if pinned then
          [ ( Canary_lang.OCaml,
              Canary_step_builder.Raw
                (Canary_step_builder.fetch_binding_cmd
                   (Canary_toolchain.mk_opam_package_spec
-                     ~install_name:(prebuilt.opam_package ^ "." ^ pin) ())) )
+                     ~install_name:(prebuilt.opam_package ^ "." ^ pin) ())) );
+           ( Canary_lang.Python,
+             Canary_step_builder.Dummy
+               "CPython ships sqlite3 in the standard library — the \
+                interpreter already provides this binding, so there is \
+                nothing to fetch or install" )
          ]
        else spec.fetch_binding);
     check_post =
@@ -432,7 +505,30 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
                  ~pin ~marker:"binding.ok")
         | _ -> spec.check_post action);
     probe_binding =
-      [ ( Canary_lang.OCaml,
+      [ (* PYTHON (2026-09-12). sqlite declared a Python watchlist, an
+           expect-missing list and a Python provider, and realized NONE
+           of them: with no [probe_binding] entry for Python there was
+           no Python step at all, so [drop_unread_fetches] removed the
+           binding fetch as unread and the surface inspection never
+           ran. The declarations were decorative — the same shape as
+           the [base_spec] finding, one layer up.
+
+           The probe is deliberately the smallest real thing: import
+           the module and report the libsqlite version it is bound to.
+           That is enough to make the binding an artifact this world
+           READS, which is what keeps its chain alive. *)
+        ( Canary_lang.Python,
+          Canary_store.Pm
+            (Canary_store.Lang_pm
+               { lang = Canary_lang.Python; pm = Canary_store.Pip }),
+          fun ~output_dir ~variant_key ->
+            Canary_toolchain.python_probe_only_cmd ~env:probe_env
+              { Canary_toolchain.probe_snippet =
+                  "import sqlite3; print('sqlite_version=' + \
+                   sqlite3.sqlite_version)";
+                pip_package = None }
+              ~output_dir ~variant_key );
+        ( Canary_lang.OCaml,
           Canary_store.Pm
             (Canary_store.Lang_pm
                { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),

@@ -808,36 +808,67 @@ let source_fetch_local_pin : pure_test =
       && (not (String.is_substring with_local ~substring:"git clone"))
       && String.is_substring without_local ~substring:"git clone") }
 
+(* The derived evidence paths. Renamed 2026-09-12: it was
+   [matches_tiny_convention], and that was the bug — the derivation
+   spelled TINY's private filenames, so on every other project it
+   resolved nothing and the agreements reported `unavailable`. A
+   surface input now carries both spellings (the framework's
+   inspect.json and tiny's inspect_mli.json / inspect_attrs.json) and
+   the reader selects by the [kind] the inspector declared, so listing
+   both cannot read a stub summary as a surface. *)
 let inputs_template_pin : pure_test =
-  { name = "mechanism.inputs_template_matches_tiny_convention";
+  { name = "mechanism.inputs_template_covers_both_conventions";
     check = (fun () ->
       let module CC = Canary_agreement_common in
       let template = Canary_agreement.inputs_of_agreement in
       let eq c l expected =
         Poly.equal (template c l) expected
       in
-      eq CC.C1 L.OCaml
-        CC.[ C_stub [ "build_binding_ocaml/inspect.json" ];
-             Native_lib [ "build_lib/inspect.json" ] ]
-      && eq CC.C1 L.Python
-        CC.[ C_stub [ "build_binding_python/inspect.json" ];
-             Native_lib [ "build_lib/inspect.json" ] ]
-      && eq CC.C2 L.OCaml
-        CC.[ Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ] ]
-      && eq CC.C2 L.Python
-        CC.[ Python_attrs [ "build_binding_python/inspect_attrs.json" ] ]
-      && eq CC.C4 L.Python
-        CC.[ Native_lib [ "build_lib/inspect.json" ];
+      eq CC.Required_symbols_exported L.OCaml
+        CC.[ C_stub [ "build_binding_ocaml/inspect_stub.json";
+                      "build_binding_ocaml/inspect.json" ];
+             Native_lib [ "build_lib/inspect.json"; "probe_lib/inspect.json" ] ]
+      && eq CC.Required_symbols_exported L.Python
+        CC.[ C_stub [ "build_binding_python/inspect_stub.json";
+                      "build_binding_python/inspect.json" ];
+             Native_lib [ "build_lib/inspect.json"; "probe_lib/inspect.json" ] ]
+      && eq CC.Api_names_present L.OCaml
+        CC.[ Ocaml_mli [ "build_binding_ocaml/inspect.json";
+                         "build_binding_ocaml/inspect_mli.json" ] ]
+      && eq CC.Api_names_present L.Python
+        CC.[ Python_attrs [ "build_binding_python/inspect.json";
+                            "build_binding_python/inspect_attrs.json" ] ]
+      && eq CC.Soname_matches_requirement L.Python
+        CC.[ Native_lib [ "build_lib/inspect.json"; "probe_lib/inspect.json" ];
              Abi_surface [ "build_binding_python/inspect.json" ] ]
-      && eq CC.C5 L.Python
-        CC.[ Versioned_exports [ "build_lib/inspect.json" ];
+      && eq CC.Required_versions_exported L.Python
+        CC.[ Versioned_exports [ "build_lib/inspect.json";
+                                 "probe_lib/inspect.json" ];
              Versioned_req [ "build_binding_python/inspect.json" ] ]
-      && eq CC.C6 L.OCaml
+      && eq CC.Signatures_agree L.OCaml
         CC.[ Typed_header [ "scan_sources/inspect_typed_header.json" ];
              Typed_binding_stub
                [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
-      && List.is_empty (template CC.C4 L.OCaml)  (* placeholder — no inputs *)
-      && List.is_empty (template CC.C8 L.OCaml)) (* blocked — no inputs *) }
+      (* the SOLO agreements read the library alone — the declaration
+         half is not routed by any action, which their evaluator
+         reports as `unavailable` rather than silently holding *)
+      (* the lib-side paths are WORLD-AWARE since 2026-09-12
+         ([lib_evidence_paths]): a Built world prefers the build step, a
+         Fetched world the probe, and both are offered because the
+         reader selects on the inspector's declared kind. The template
+         is asked with no world, which reads as Absent → build first. *)
+      && eq CC.Declared_symbols_exported L.OCaml
+           CC.[ Native_lib [ "build_lib/inspect.json"; "probe_lib/inspect.json" ] ]
+      && eq CC.Soname_matches_declaration L.OCaml
+           CC.[ Native_lib [ "build_lib/inspect.json"; "probe_lib/inspect.json" ] ]
+      && eq CC.Declared_versions_exported L.OCaml
+           CC.[ Versioned_exports [ "build_lib/inspect.json";
+                                    "probe_lib/inspect.json" ] ]
+      (* cstubs archives no dependency record, so the identity PAIR
+         agreements read nothing under OCaml *)
+      && List.is_empty (template CC.Soname_matches_requirement L.OCaml)
+      (* planned — no evaluator, and nothing to read *)
+      && List.is_empty (template CC.Repack_complete L.OCaml)) }
 
 (* M2 step 3 pin (2026-08-12): a spec whose ONLY binding is Dynamic_ffi
    (ctypes) gets NO build_binding chain — the enumeration derives the
@@ -1143,13 +1174,13 @@ let deploy_mismatch_test : pure_test =
    inputs at the OCaml probe (canary discovers c1, nobody tells it), and
    Expect_success at a non-firing action. *)
 let agnostic_expectation_test : pure_test =
-  { name = "scenario.lower_expectation_agnostic_c1";
+  { name = "scenario.lower_expectation_agnostic_symbols";
     check = (fun () ->
       let module CS = Canary_scenario in
       let module CC = Canary_agreement_common in
       let module SM = Canary_step_model in
       let bindings =
-        CS.[ { contract = CC.C1; lang = ocaml;
+        CS.[ { contract = CC.Required_symbols_exported; lang = ocaml;
                firings =
                  [ { site = At_probe_binding ocaml; loc_filter = Any;
                      source = From_artifact {
@@ -1334,171 +1365,321 @@ let tool_routing_ratchet_test : pure_test =
                     end));
           !ok) }
 
-(* M2 step 6 (2026-08-17): the contract registry — the producer's own
-   pins. Every contract has exactly one complete row (invariant,
-   role, tags), every registered check is referenced exactly once,
-   the fault-tag mapping matches scenario.md's catalogue, and the
-   firing derivation follows mechanism × provision. *)
+(* The agreement registry — the producer's own pins. Every id has
+   exactly one row, every row's claim and reference expectation are
+   stated, every method is either implemented or says why it is not,
+   and the fault-tag mapping matches the scenario catalogue.
+
+   Rewritten 2026-09-12 for the named agreements. What it gained: the
+   TOTALITY check (every constructor of [agreement_id] has a row, so a
+   new agreement cannot be added to the type and forgotten in the
+   list), and the planned-method invariant (a method with no evaluator
+   must carry a non-empty reason — a silent placeholder is exactly what
+   [not_implemented] exists to prevent). *)
 let agreement_registry_complete_pin : pure_test =
-  { name = "contracts.registry_complete";
+  { name = "agreements.registry_complete";
     check =
       (fun () ->
         let module CR = Canary_agreement in
-        let ids = Canary_agreement_common.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
+        let module C = Canary_agreement_common in
         let rows = CR.agreement_registry in
-        (* one row per id, non-empty invariant, exactly one tag *)
+        (* TOTAL: one row per declared id, and no row without an id *)
+        let total_ok =
+          List.for_all C.all_agreement_ids ~f:(fun id ->
+              List.count rows ~f:(fun r -> Poly.equal r.CR.ag_id id) = 1)
+          && List.length rows = List.length C.all_agreement_ids
+        in
+        (* every row states its claim, its reference expectation, a
+           fault tag and at least one method *)
         let rows_ok =
-          List.for_all ids ~f:(fun id ->
-              match List.filter rows ~f:(fun r ->
-                  Poly.equal r.CR.ag_check.Canary_agreement_common.id id) with
-              | [ r ] ->
-                  (not (String.is_empty r.CR.ag_desc.Canary_agreement_common.about.Canary_agreement_common.says))
-                  && List.length r.CR.ag_desc.Canary_agreement_common.fault_tags = 1
-              | _ -> false)
+          List.for_all rows ~f:(fun r ->
+              (not (String.is_empty r.CR.ag.C.ag_says))
+              && (not (String.is_empty r.CR.ag.C.ag_expects))
+              (* every agreement says WHOSE RULE it recovers, or that no
+                 action has one — the distinction between waiting on
+                 wiring and waiting on a specification (2026-09-13).
+                 Structured since the same day, so the summary table can
+                 have columns: a ROOTED agreement must fill all three,
+                 or the table prints a blank cell and the reader cannot
+                 tell "no tool" from "nobody wrote it down". *)
+              && (let rt = r.CR.ag.C.ag_rooted_in in
+                  (not (String.is_empty rt.C.rt_note))
+                  && (not (String.is_empty rt.C.rt_tool))
+                  && (not (String.is_empty rt.C.rt_artifact))
+                  && Bool.equal (C.is_rooted rt)
+                       (not (String.is_empty rt.C.rt_action)))
+              && (not (String.is_empty r.CR.ag.C.ag_fault_tag))
+              && (not (List.is_empty r.CR.ag.C.ag_methods))
+              && String.equal r.CR.ag_slug (C.string_of_agreement_id r.CR.ag_id))
         in
-        (* every registered check referenced exactly once *)
-        let checks_ok =
-          List.for_all Canary_agreement.registered_checks
-            ~f:(fun ck ->
-              List.count rows ~f:(fun r ->
-                  Poly.equal r.CR.ag_check.Canary_agreement_common.id ck.id)
-              = 1)
-          && List.length rows = List.length Canary_agreement.registered_checks
+        (* every method names itself, states what a pass does not
+           establish, and — if it has no evaluator — WHY. A placeholder
+           with an empty reason would report "not_implemented:" and say
+           nothing. *)
+        let methods_ok =
+          List.for_all rows ~f:(fun r ->
+              List.for_all r.CR.ag.C.ag_methods ~f:(fun m ->
+                  (not (String.is_empty m.C.m_name))
+                  && (not (String.is_empty m.C.m_limits))
+                  &&
+                  match m.C.m_eval with
+                  | Some _ -> String.is_empty m.C.m_planned
+                  | None -> not (String.is_empty m.C.m_planned)))
         in
-        (* the tag mapping (scenario.md's catalogue) *)
-        let tag id =
-          match CR.row_of id with r -> List.hd_exn r.CR.ag_desc.Canary_agreement_common.fault_tags
-        in
+        (* the fault-tag mapping (the scenario catalogue's) *)
+        let tag id = (CR.row_of id).CR.ag.C.ag_fault_tag in
         let tags_ok =
-          String.equal (tag C1) "sym_missing"
-          && String.equal (tag C2) "api_drop"
-          && String.equal (tag C3) "behavior"
-          && String.equal (tag C4) "abi_soname"
-          && String.equal (tag C5) "sym_version"
-          && String.equal (tag C6) "type_arity"
-          && String.equal (tag C7) "api_repack"
-          && String.equal (tag C8) "api_add"
+          String.equal (tag C.Declared_symbols_exported) "sym_missing"
+          && String.equal (tag C.Required_symbols_exported) "sym_missing"
+          && String.equal (tag C.Api_names_present) "api_drop"
+          && String.equal (tag C.Behavior_matches) "behavior"
+          && String.equal (tag C.Soname_matches_declaration) "abi_soname"
+          && String.equal (tag C.Soname_matches_requirement) "abi_soname"
+          && String.equal (tag C.Declared_versions_exported) "sym_version"
+          && String.equal (tag C.Required_versions_exported) "sym_version"
+          && String.equal (tag C.Signatures_agree) "type_arity"
+          && String.equal (tag C.Dependencies_provided) "needed_unprovided"
+          && String.equal (tag C.Staged_interface_preserved) "staged_drift"
+          && String.equal (tag C.Repack_preserves_api) "api_repack"
+          && String.equal (tag C.Repack_complete) "api_add"
         in
-(* the two typed axes (design §1.5/§1.6): a claim is structural or
-           semantic, and the evidence varies independently — a link
-           verdict is Run_tool yet structural *)
-        let claim_is r exp = Poly.equal r.CR.ag_desc.Canary_agreement_common.claim exp in
-        let ev_is r exp = Poly.equal r.CR.ag_desc.Canary_agreement_common.evidence exp in
+        (* the descriptive axes: a claim is structural or behavioral,
+           and the method kind varies independently — a link verdict is
+           Run_tool yet structural *)
+        let claim_is id exp = Poly.equal (CR.row_of id).CR.ag.C.ag_claim exp in
+        let kind_is id exp =
+          Poly.equal (List.hd_exn (CR.row_of id).CR.ag.C.ag_methods).C.m_kind exp
+        in
         let axes_ok =
-          claim_is (CR.row_of C1) Canary_agreement_common.Structural
-          && ev_is (CR.row_of C1) Canary_agreement_common.Compare_several
-          && claim_is (CR.row_of C2) Canary_agreement_common.Structural
-          && ev_is (CR.row_of C2) Canary_agreement_common.Inspect_one
-          && claim_is (CR.row_of C3) Canary_agreement_common.Semantic
-          && ev_is (CR.row_of C3) Canary_agreement_common.Run_program
-          && claim_is (CR.row_of C6) Canary_agreement_common.Structural
-          && claim_is (CR.row_of C7) Canary_agreement_common.Semantic
-          && (* every agreement row is an ADDED check; the intrinsic ones
-                are the actions' own outcomes *)
-          List.for_all CR.agreement_registry ~f:(fun r ->
-              Poly.equal r.CR.ag_desc.Canary_agreement_common.provenance Canary_agreement_common.Added)
+          claim_is C.Required_symbols_exported C.Structural
+          && kind_is C.Required_symbols_exported C.Compare
+          && claim_is C.Api_names_present C.Structural
+          && kind_is C.Api_names_present C.Inspect
+          && claim_is C.Behavior_matches C.Behavioral
+          && kind_is C.Behavior_matches C.Run_program
+          && claim_is C.Signatures_agree C.Structural
+          && claim_is C.Repack_preserves_api C.Behavioral
         in
-        (* A row carries the description its family declares — the same
-           VALUE, not a copy of some of its fields. The old form of this
-           compared the row's cat against the module's, which stopped
-           being falsifiable once the row started holding the module's
-           whole description; what can still go wrong is the WIRING, so
-           that is what this now pins. Physical equality on purpose:
-           a description carries closures, which polymorphic compare
-           raises on. *)
+        (* THE OBLIGATION BASIS distinguishes what the old
+           Declared/Convention pair could not: comparing against a
+           project's declaration and comparing against a consumer's own
+           recorded requirement rest on different authorities, and the
+           split agreements make that visible per row. *)
+        let basis_ok =
+          Poly.equal
+            (CR.row_of C.Declared_symbols_exported).CR.ag.C.ag_basis
+            C.Project_declaration
+          && Poly.equal
+               (CR.row_of C.Required_symbols_exported).CR.ag.C.ag_basis
+               C.Toolchain_rule
+          && Poly.equal
+               (CR.row_of C.Soname_matches_declaration).CR.ag.C.ag_basis
+               C.Project_declaration
+          && Poly.equal
+               (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_basis
+               C.Toolchain_rule
+        in
+        (* A row carries the agreement its family declares — the same
+           VALUE, not a copy of some of its fields. Physical equality on
+           purpose: an agreement carries closures, which polymorphic
+           compare raises on. *)
         let wiring_ok =
-          phys_equal (CR.row_of C1).CR.ag_desc Canary_agreement_symbols.c1
-          && phys_equal (CR.row_of C2).CR.ag_desc Canary_agreement_api_surface.c2
-          && phys_equal (CR.row_of C3).CR.ag_desc Canary_agreement_behaviour.c3
-          && phys_equal (CR.row_of C4).CR.ag_desc Canary_agreement_identity.c4
-          && phys_equal (CR.row_of C5).CR.ag_desc Canary_agreement_identity.c5
-          && phys_equal (CR.row_of C6).CR.ag_desc Canary_agreement_types.c6
-          && phys_equal (CR.row_of C7).CR.ag_desc Canary_agreement_api_surface.c7
-          && phys_equal (CR.row_of C8).CR.ag_desc Canary_agreement_composed.c8
+          phys_equal (CR.row_of C.Required_symbols_exported).CR.ag
+            Canary_agreement_symbols.required_symbols_exported
+          && phys_equal (CR.row_of C.Declared_symbols_exported).CR.ag
+               Canary_agreement_symbols.declared_symbols_exported
+          && phys_equal (CR.row_of C.Api_names_present).CR.ag
+               Canary_agreement_api_surface.api_names_present
+          && phys_equal (CR.row_of C.Behavior_matches).CR.ag
+               Canary_agreement_behaviour.behavior_matches
+          && phys_equal (CR.row_of C.Soname_matches_requirement).CR.ag
+               Canary_agreement_identity.soname_matches_requirement
+          && phys_equal (CR.row_of C.Dependencies_provided).CR.ag
+               Canary_agreement_identity.dependencies_provided
+          && phys_equal (CR.row_of C.Signatures_agree).CR.ag
+               Canary_agreement_types.signatures_agree
+          && phys_equal (CR.row_of C.Repack_complete).CR.ag
+               Canary_agreement_composed.repack_complete
         in
-        rows_ok && checks_ok && tags_ok && axes_ok && wiring_ok) }
+        (* names ROUND-TRIP, and the retired spellings do NOT: a cache
+           entry or a CLI word naming c1 must fail to parse rather than
+           resolve to something *)
+        let names_ok =
+          List.for_all C.all_agreement_ids ~f:(fun id ->
+              match C.agreement_id_of_string (C.string_of_agreement_id id) with
+              | Some back -> Poly.equal back id
+              | None -> false)
+          && List.for_all [ "c1"; "c2"; "c5"; "c9"; "ag1" ] ~f:(fun s ->
+                 Option.is_none (C.agreement_id_of_string s))
+          &&
+          let known, unknown = C.agreement_ids_of_csv "api_names_present,c2" in
+          List.length known = 1 && List.equal String.equal unknown [ "c2" ]
+        in
+        total_ok && rows_ok && methods_ok && tags_ok && axes_ok && basis_ok
+        && wiring_ok && names_ok) }
 
 let agreement_registry_firing_pin : pure_test =
-  { name = "contracts.firing_defaults";
+  { name = "agreements.firing_defaults";
     check =
       (fun () ->
         let module CR = Canary_agreement in
-        let f = (CR.row_of C1).CR.ag_desc.Canary_agreement_common.firing in
+        let module C = Canary_agreement_common in
         let eq got want = Poly.equal got want in
+        (* where an agreement fires is now a property of each METHOD,
+           and an agreement's sites are their union *)
+        let sites id m l w =
+          List.concat_map (CR.row_of id).CR.ag.C.ag_methods ~f:(fun mm ->
+              mm.C.m_firing m l w)
+        in
         (* the uniform worlds these cases were written against: firing
-           takes an assignment now, so a "Built world" has to be said in
+           takes an assignment, so a "Built world" has to be said in
            full rather than named by one provision *)
-        let ml = Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
+        let ml = C.uniform_world ~lang:Canary_lang.OCaml
                    ~mechanism:Canary_mechanism.Cstubs in
         let built_ml = ml Canary_store.Built
         and fetched_ml = ml Canary_store.Fetched in
         let built_py =
-          Canary_agreement_common.uniform_world ~lang:Canary_lang.Python
+          C.uniform_world ~lang:Canary_lang.Python
             ~mechanism:Canary_mechanism.Ctypes Canary_store.Built
         in
-        (* Static + Built → build_lib + build + probe (C1 carries the
-           lib-only cell); Static + Fetched → probe; Dynamic → probe —
-           over the ACTION catalogue *)
-        eq (f Canary_mechanism.Cstubs Canary_lang.OCaml built_ml)
-          [ Canary_basic.Build_lib;
-            Canary_basic.Build_binding Canary_lang.OCaml;
+        (* Static + Built → build + probe; Static + Fetched → probe;
+           Dynamic → probe — over the ACTION catalogue *)
+        eq
+          (sites C.Required_symbols_exported Canary_mechanism.Cstubs
+             Canary_lang.OCaml built_ml)
+          [ Canary_basic.Build_binding Canary_lang.OCaml;
             Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && eq (f Canary_mechanism.Cstubs Canary_lang.OCaml fetched_ml)
+        && eq
+             (sites C.Required_symbols_exported Canary_mechanism.Cstubs
+                Canary_lang.OCaml fetched_ml)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && eq (f Canary_mechanism.Ctypes Canary_lang.Python built_py)
+        && eq
+             (sites C.Required_symbols_exported Canary_mechanism.Ctypes
+                Canary_lang.Python built_py)
              [ Canary_basic.Probe_binding Canary_lang.Python ]
         && (* behavior fires at probe in every world *)
-        eq ((CR.row_of C3).CR.ag_desc.Canary_agreement_common.firing Canary_mechanism.Cstubs
-              Canary_lang.OCaml built_ml)
-             [ Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && (* c4/c5 also gain the Build_lib cell in Built worlds *)
-        eq ((CR.row_of C4).CR.ag_desc.Canary_agreement_common.firing Canary_mechanism.Cstubs
-              Canary_lang.OCaml built_ml)
-             [ Canary_basic.Build_lib;
-               Canary_basic.Build_binding Canary_lang.OCaml;
-               Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && eq ((CR.row_of C4).CR.ag_desc.Canary_agreement_common.firing Canary_mechanism.Cstubs
-                 Canary_lang.OCaml fetched_ml)
-             [ Canary_basic.Probe_binding Canary_lang.OCaml ]) }
+        eq
+          (sites C.Behavior_matches Canary_mechanism.Cstubs Canary_lang.OCaml
+             built_ml)
+          [ Canary_basic.Probe_binding Canary_lang.OCaml ]
+        && (* THE SOLO SPLIT (2026-09-12): a declaration comparison has
+              evidence exactly where the lib was produced, and nowhere
+              else. It used to ride the pair's firing and so claimed the
+              binding's build and probe steps, where no declaration
+              comparison can happen. *)
+        eq
+          (sites C.Soname_matches_declaration Canary_mechanism.Cstubs
+             Canary_lang.OCaml built_ml)
+          [ Canary_basic.Build_lib ]
+        && List.is_empty
+             (sites C.Soname_matches_declaration Canary_mechanism.Cstubs
+                Canary_lang.OCaml fetched_ml)
+        && (* A PAIR CHECK FIRES WHERE THE CONSUMER EXISTS, AND NOT
+              BEFORE (2026-09-12 audit). These three used to claim
+              Build_lib too — a leftover from sharing an id with their
+              declaration counterpart, whose cell that was. At
+              Build_lib the binding has not been built, so the cell
+              could only ever report `unavailable`. *)
+        eq
+          (sites C.Soname_matches_requirement Canary_mechanism.Cstubs
+             Canary_lang.OCaml built_ml)
+          [ Canary_basic.Build_binding Canary_lang.OCaml;
+            Canary_basic.Probe_binding Canary_lang.OCaml ]
+        && List.for_all
+             C.[ Soname_matches_requirement; Required_versions_exported;
+                 Dependencies_provided ]
+             ~f:(fun id ->
+               not
+                 (List.mem
+                    (sites id Canary_mechanism.Cstubs Canary_lang.OCaml built_ml)
+                    Canary_basic.Build_lib ~equal:Poly.equal))
+        && (* a DECLARATION comparison does not consult the binding
+              mechanism: whether the built library exports what the
+              project declared is the same question under ctypes *)
+        eq
+          (sites C.Declared_symbols_exported Canary_mechanism.Ctypes
+             Canary_lang.Python
+             (C.uniform_world ~lang:Canary_lang.Python
+                ~mechanism:Canary_mechanism.Ctypes Canary_store.Built))
+          [ Canary_basic.Build_lib ]
+        && (* … and the pair identity agreement is INAPPLICABLE under
+              cstubs, because a static archive records no dependency.
+              Firing and applicability are different questions and the
+              model says so separately. *)
+        (match
+           (List.hd_exn (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_methods)
+             .C.m_applicable Canary_mechanism.Cstubs Canary_lang.OCaml built_ml
+         with
+         | C.Inapplicable _ -> true
+         | C.Applicable -> false)) }
 
-(* M2 step 6 (2026-08-17): the spec fixtures execute AHEAD of any
-   project run — every fixture's synthetic inputs go through the
-   row's predict and must yield the expected failure substrings. A
-   new contract lands WITH its fixture; a changed predict breaks
-   this pin. *)
+(* The counterexamples execute AHEAD of any project run — every
+   fixture's synthetic evidence goes through the METHOD the registry
+   would run, and must reach the stated OUTCOME with the stated
+   diagnostics. A new agreement lands with its counterexample; a
+   changed evaluator breaks the pin.
+
+   2026-09-12: fixtures now assert an outcome LABEL as well as the
+   substrings, which is what lets a "requirements met" case and an
+   "evidence absent" case be fixtures at all — under the old
+   substring-list contract both were the empty list and neither could
+   be distinguished from the other or from a passing check. *)
 let agreement_fixture_tests : pure_test list =
   let module CR = Canary_agreement in
-  let tmp_root = "_out/canary/test/contract-fixtures" in
+  let module C = Canary_agreement_common in
+  let tmp_root = "_out/canary/test/agreement-fixtures" in
   let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
-  let execute (_id, (fx : Canary_agreement_common.fixture)) : bool =
+  let execute (id, (m : C.checking_method), (fx : C.fixture)) : bool =
     (* [resolve] maps input-file names to REAL files (the loaders
        read from disk), so the fixture bodies are written out *)
     let resolve rel = [%string "%{tmp_root}/%{rel}"] in
-    List.iter fx.Canary_agreement_common.fx_bodies ~f:(fun (rel, body) ->
+    List.iter fx.C.fx_bodies ~f:(fun (rel, body) ->
         let oc = Stdlib.open_out (resolve rel) in
         Stdlib.output_string oc body;
         Stdlib.close_out oc);
-    let predict =
-      Option.value fx.Canary_agreement_common.fx_predict
-        ~default:(CR.row_of _id).ag_check.Canary_agreement_common.predict
+    (* the fixture names its method; the method must be the one the
+       registry holds for this agreement *)
+    let registered =
+      Option.value_map
+        (C.method_of (CR.row_of id).CR.ag fx.C.fx_method)
+        ~default:false ~f:(fun mm -> phys_equal mm m)
     in
-    let got = predict ~resolve fx.Canary_agreement_common.fx_inputs in
-    List.for_all fx.Canary_agreement_common.fx_expect ~f:(fun s ->
-        List.mem got s ~equal:String.equal)
+    match m.C.m_eval with
+    | None -> false
+    | Some ev ->
+        let outcome = ev ~resolve fx.C.fx_inputs in
+        let got = m.C.m_diagnostics outcome in
+        registered
+        && String.equal (C.outcome_label outcome) fx.C.fx_outcome
+        && List.for_all fx.C.fx_findings ~f:(fun s ->
+               List.mem got s ~equal:String.equal)
   in
   let covered =
-    List.map CR.agreement_fixtures ~f:fst
+    List.map CR.agreement_fixtures ~f:(fun (id, _, _) -> id)
     |> List.dedup_and_sort ~compare:(fun a b ->
-           String.compare (Canary_agreement_common.string_of_agreement_id a)
-             (Canary_agreement_common.string_of_agreement_id b))
+           String.compare (C.string_of_agreement_id a)
+             (C.string_of_agreement_id b))
   in
-  [ { name = "contracts.fixtures_execute";
+  [ { name = "agreements.fixtures_execute";
       check = (fun () -> List.for_all CR.agreement_fixtures ~f:execute) };
-    (* the visible coverage set: C1, C2 + C4/C5's LIB-ONLY cells
-       (their pair cells, C3/C7 blocked, C6 pend their fixtures) *)
-    { name = "contracts.fixtures_complete";
+    (* the visible coverage set: EVERY agreement with an evaluator.
+       Absent, with their reason: behavior_matches,
+       repack_preserves_api and repack_complete have no evaluator, so
+       there is nothing to falsify — a fixture for them would be a
+       fixture for the placeholder. *)
+    { name = "agreements.fixtures_complete";
       check = (fun () ->
-          Poly.equal covered Canary_agreement_common.[ C1; C2; C4; C5 ]) } ]
+          Poly.equal covered
+            C.[ Api_names_present; Declared_symbols_exported;
+                Declared_versions_exported; Dependencies_provided;
+                Required_symbols_exported; Required_versions_exported;
+                Signatures_agree; Soname_matches_declaration;
+                Soname_matches_requirement; Staged_interface_preserved ]
+          && List.for_all CR.agreement_registry ~f:(fun r ->
+                 (* the invariant the set above is an instance of *)
+                 Bool.equal
+                   (C.has_evaluator r.CR.ag)
+                   (CR.has_fixture r.CR.ag_id))) } ]
 
 (* The matrix's mark extraction (2026-08-17, the result table): a
    synthetic actions.log (variant_start-scoped verdict events) drives
@@ -1524,7 +1705,7 @@ let matrix_marks_from_log_pin : pure_test =
         "[2026-08-17 10:00:00.000] *                          variant_start  (scenA)\n\
          [2026-08-17 10:00:01.000] fetch_source                 done  \n\
          [2026-08-17 10:00:02.000] probe_binding_ocaml          failed  (postcondition failed)\n\
-         [2026-08-17 10:00:03.000] probe_binding_ocaml          done  (expected failure confirmed (derived) [c2])\n\
+         [2026-08-17 10:00:03.000] probe_binding_ocaml          done  (expected failure confirmed (derived) [api_names_present])\n\
          [2026-08-17 10:00:04.000] *                          variant_start  (scenB)\n\
          [2026-08-17 10:00:05.000] fetch_source                 done  \n\
          [2026-08-17 10:00:06.000] probe_binding_ocaml          done  \n";
@@ -1542,7 +1723,7 @@ let matrix_marks_from_log_pin : pure_test =
            String.is_substring d ~substring:"expected failure"
            && String.equal
                 (Canary_status.mark "done" (Some d))
-                "xfail[c2]"
+                "xfail[api_names_present]"
            && String.equal
                 (Canary_status.mark "done" None)
                 "✓"
@@ -1570,7 +1751,9 @@ let marker_stale_on_spec_change_pin : pure_test =
           check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
           expectation = Canary_step_model.Expect_success;
           symbol_check = None;
-          disabled_agreements = [] }
+          disabled_agreements = [];
+          agreement_ctx = None;
+          dummy = None }
       in
       let s1 = mk_step "echo build v1" in
       let marker = Canary_local_runner.verdict_marker s1 in
@@ -1607,7 +1790,30 @@ let marker_stale_on_spec_change_pin : pure_test =
       let expectation_drifted =
         not (Canary_local_runner.verdict_matches_spec s3)
       in
-      old_format && fresh && stable && drifted && expectation_drifted) }
+      (* THE AGREEMENT EPOCH (2026-09-12). A verdict decided by the
+         agreement registry — and only such a verdict — is invalidated
+         when the agreements are renamed. The two compat forms carry
+         the schema tag; nothing else does, so a build's or a fetch's
+         marker stays warm across the migration. This is the targeted
+         alternative to deleting output trees. *)
+      let form = Canary_local_runner.expectation_form in
+      let epoch = Canary_agreement_common.evaluation_schema in
+      let has_epoch e = String.is_substring (form e) ~substring:epoch in
+      let epoch_ok =
+        has_epoch
+          (Canary_step_model.Expect_compat_failure
+             { inputs = []; version_info = None })
+        && has_epoch
+             (Canary_step_model.Expect_compat_derived
+                { inputs = []; version_info = None })
+        && (not (has_epoch Canary_step_model.Expect_success))
+        && not
+             (has_epoch
+                (Canary_step_model.Expect_failure
+                   { contains_any = [ "SIG" ]; version_info = None }))
+      in
+      old_format && fresh && stable && drifted && expectation_drifted
+      && epoch_ok) }
 
 (* The pinned-ref freshness check_post (2026-08-17, the warm-mask
    fix's residual class): a pinned Source_fetch carries a check_post
@@ -1715,7 +1921,7 @@ let lib_name_optional_pin : pure_test =
    than something noticed later. *)
 let agreement_bridge_pins : pure_test list =
   let module CR = Canary_agreement in
-  let doc = "doc/canary/design/agreement_registry.md" in
+  let doc = "doc/canary/design/agreement/registry.md" in
   [ { name = "agreements.slugs_unique_and_named";
       check =
         (fun () ->
@@ -1725,13 +1931,28 @@ let agreement_bridge_pins : pure_test list =
           && List.for_all CR.all_agreements ~f:(fun e ->
                  (not (String.is_empty e.CR.e_slug))
                  && (not (String.is_empty e.CR.e_claim))
-                 && String.is_prefix e.CR.e_doc ~prefix:"\xc2\xa7")) };
+                 && (not (String.is_empty e.CR.e_expects))
+                 && String.is_prefix e.CR.e_doc ~prefix:"\xc2\xa7")
+          (* NO NUMBERED IDENTIFIERS (2026-09-12). The rename is only
+             done if it cannot be undone by habit: a slug spelled c1,
+             ag1 or check3 fails here. *)
+          && List.for_all slugs ~f:(fun s ->
+                 (not (Char.is_digit s.[0]))
+                 && (not (String.is_prefix s ~prefix:"ag"))
+                 && String.for_all s ~f:(fun ch ->
+                        Char.is_lowercase ch || Char.equal ch '_'))) };
     { name = "agreements.every_agreement_has_an_entry";
       check =
         (fun () ->
-          (* the eight implemented rows + at least the four §6 proposals *)
-          List.length CR.agreement_registry = 8
-          && List.length CR.proposed_agreements >= 4
+          (* STRUCTURAL, not a magic number (2026-09-12, user: "the
+             number may be increasing"). It used to assert a literal
+             count, which made every new agreement a two-place edit and
+             told the reader nothing. What is actually invariant: the
+             registry covers the id type exactly, and the combined view
+             is the rows plus the proposals with nothing lost. *)
+          List.length CR.agreement_registry
+          = List.length Canary_agreement_common.all_agreement_ids
+          && List.length CR.proposed_agreements >= 3
           && List.length CR.all_agreements
              = List.length CR.agreement_registry
                + List.length CR.proposed_agreements) };
@@ -1808,7 +2029,16 @@ let agreement_bridge_pins : pure_test list =
                other than a definition in src/. *)
             let doc_vocabulary =
               [ "native_header"; "binding_header"; "app_direct";
-                "app_via_helper"; "cur_term" ]
+                "app_via_helper"; "cur_term";
+                (* ELF and Mach-O vocabulary (§6.3.4, 2026-09-09): these
+                   are the object formats' own names, not ours. The doc
+                   has to spell them to say what NEEDED is and how
+                   Mach-O differs. *)
+                "DT_NEEDED"; "DT_SONAME"; "DT_RPATH"; "DT_RUNPATH";
+                "LC_LOAD_DYLIB"; "LC_ID_DYLIB"; "LC_RPATH";
+                "compatibility_version"; "@loader_path";
+                "@executable_path"; "LD_LIBRARY_PATH"; "--as-needed";
+                "/etc/ld.so.cache"; "dlopen" ]
             in
             let backticked =
               let lines = String.split_lines text in
@@ -1944,6 +2174,112 @@ let agreement_bridge_pins : pure_test list =
               Fmt.pr "    unresolved doc refs: %s@."
                 (String.concat ~sep:", " (List.map bad ~f:(fun r -> "\xc2\xa7" ^ r)));
             List.is_empty bad) };
+    (* THE CATALOGUE IS A BUILD PRODUCT (2026-09-12, user: "they should
+       be in one file which having this info").
+
+       "What is api_names_present?" used to have six answers in six
+       places — the claim in the family module, the doc anchor and the
+       enabled flag on the registry row, the evidence paths behind a
+       closure, the counterexamples inside the method, the fault tag
+       wherever scenario naming needed it. catalogue.md is the one
+       place, and it is GENERATED, so it cannot become a seventh copy
+       that disagrees with the rest. This fails when the file on disk
+       differs from what the registry would emit today. *)
+    { name = "agreements.catalogue_doc_is_generated";
+      check =
+        (fun () ->
+          let path = "doc/canary/design/agreement/catalogue.md" in
+          if not (Stdlib.Sys.file_exists path) then true
+          else
+            let on_disk =
+              Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
+            in
+            let generated = Canary_agreement.pp_catalogue_md () in
+            (* COMPARE CONTENT, NOT BYTES (2026-09-12). The first version
+               of this compared the file to the generator's output
+               exactly, and a markdown formatter — the user's editor,
+               opening the file — realigned every table and failed it.
+               The drift that matters is a changed claim, not a changed
+               column width, so both sides are normalized: runs of
+               whitespace collapse and trailing space is dropped. A file
+               a human might open cannot be pinned byte-for-byte. *)
+            let normalize t =
+              (* a table SEPARATOR line — only pipes, dashes, colons and
+                 space — carries no content at all, and a formatter
+                 widens its dashes to match the column. Collapsed to a
+                 single token so column widths cannot fail the pin.
+                 Matched on the whole line rather than on dash runs,
+                 because the prose contains `--flag` names that must
+                 survive intact. *)
+              let is_separator l =
+                (not (String.is_empty (String.strip l)))
+                && String.exists l ~f:(Char.equal '|')
+                && String.for_all l ~f:(fun c ->
+                       Char.equal c '|' || Char.equal c '-' || Char.equal c ':'
+                       || Char.equal c ' ')
+              in
+              String.split_lines t
+              |> List.map ~f:(fun l ->
+                     if is_separator l then "|SEP|"
+                     else
+                       String.split l ~on:' '
+                       |> List.filter ~f:(fun w -> not (String.is_empty w))
+                       |> String.concat ~sep:" ")
+              |> List.filter ~f:(fun l -> not (String.is_empty l))
+              |> String.concat ~sep:"\n"
+            in
+            if String.equal (normalize on_disk) (normalize generated) then true
+            else (
+              Fmt.pr
+                "    catalogue.md is stale — run `make agreement-catalogue`@.";
+              false)) };
+    (* THE LANDING TRACKER'S PLANNED COLUMN (2026-09-12).
+
+       [landing.md] carries a dated snapshot of two columns. The
+       EFFECTIVE one comes from run logs and cannot be pinned without
+       either skipping in a fresh checkout or forcing a heavy run in
+       the unit suite. The PLANNED one comes from the registry and can
+       be: this checks that the table names exactly the registered
+       agreements, each with the status the registry computes for it.
+       A new agreement, or one that gains an evaluator, therefore
+       cannot land without the tracker being updated. *)
+    { name = "agreements.landing_doc_lists_every_agreement";
+      check =
+        (fun () ->
+          let path = "doc/canary/design/agreement/landing.md" in
+          if not (Stdlib.Sys.file_exists path) then true
+          else
+            let text =
+              Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
+            in
+            (* COMPLETENESS ONLY, since 2026-09-13. The table used to
+               repeat the registry's planned status beside the
+               effective one, and this pin compared that word. The
+               planned column now lives in the GENERATED catalogue —
+               where it cannot drift, and is already pinned by
+               [agreements.catalogue_doc_is_generated] — so comparing
+               it here would pin one derived copy against another.
+
+               What is still worth pinning is what no generator can
+               produce: the effective column is written by hand from
+               run logs, so a new agreement can be added and silently
+               never tracked. Every registered agreement must have a
+               row. *)
+            let row_of slug =
+              List.find (String.split_lines text) ~f:(fun l ->
+                  String.is_substring l ~substring:("`" ^ slug ^ "`")
+                  && String.is_prefix (String.lstrip l) ~prefix:"|")
+            in
+            let bad =
+              List.filter_map CR.agreement_registry ~f:(fun r ->
+                  match row_of r.CR.ag_slug with
+                  | None -> Some (r.CR.ag_slug ^ " (missing from the table)")
+                  | Some _ -> None)
+            in
+            if not (List.is_empty bad) then
+              Fmt.pr "    landing.md out of date: %s@."
+                (String.concat ~sep:", " bad);
+            List.is_empty bad) };
     (* the harness proper: the doc anchors resolve *)
     { name = "agreements.doc_anchors_exist";
       check =
@@ -2042,13 +2378,18 @@ let agreement_module_shape_pin : pure_test =
             && List.for_all families ~f:(fun (_, code) ->
                    match
                      ( String.substr_index code ~pattern:"let checks",
-                       String.substr_index code ~pattern:": description" )
+                       String.substr_index code ~pattern:": agreement =" )
                    with
                    | Some at_checks, Some at_desc ->
-                       (* about first … *)
-                       at_checks < at_desc
+                       (* the agreements' declarations come FIRST and the
+                          [checks] list that gathers them LAST — the
+                          order flipped on 2026-09-12, because a family
+                          now publishes [(agreement_id * agreement) list]
+                          and cannot name a value it has not defined *)
+                       at_desc < at_checks
                        &&
-                       (* … and descriptions last *)
+                       (* … and no evidence or type is declared after the
+                          agreements start *)
                        let tail = String.subo code ~pos:at_desc in
                        (not (String.is_substring tail ~substring:"\ntype "))
                        && not (String.is_substring tail ~substring:"\nlet load_")
@@ -2141,54 +2482,54 @@ let surface_facts_pin : pure_test =
               Fmt.pr "    %s@." (String.concat ~sep:" | " bad);
             List.is_empty bad) }
 
-(* The per-check MODULE pattern (2026-09-02, user): a check lives in its
-   own module with a descriptive category, a falsifier-phrased
-   statement, and whatever function signature suits it. This pins the
-   pattern rather than the contents — that a check family states its
-   category and its claim, and that the categories are the descriptive
-   type, not a dispatch. *)
+(* The per-family MODULE pattern: a family publishes the agreements it
+   owns, each with a subject, a falsifier-phrased claim, a reference
+   expectation and its methods. This pins the pattern rather than the
+   contents.
+
+   Rewritten 2026-09-12. What it used to pin was that
+   [symbol_exported/solo] carried the subject [Symbols `Exported] and
+   [symbol_exported/pair] carried [Symbols `Required] — two claims
+   inside one id, told apart by a refinement of the category. Both are
+   agreements now, and what is worth pinning is that the union of the
+   families' declarations IS the registry's domain. *)
 let check_module_pattern_pin : pure_test =
-  { name = "checks.module_pattern";
+  { name = "agreements.families_declare_the_catalogue";
     check =
       (fun () ->
         let module C = Canary_agreement_common in
-        (* every family publishes the same shape now — a [checks] list
-           of (name, about) — so this iterates rather than naming each
-           binding. It used to list nine of them by hand, which is what
-           made a family's naming convention nobody's problem
-           (2026-09-02, user: "then the category content for each chk
-           file can be unified"). *)
         let families =
           [ ("symbols", Canary_agreement_symbols.checks);
             ("api_surface", Canary_agreement_api_surface.checks);
             ("identity", Canary_agreement_identity.checks);
             ("types", Canary_agreement_types.checks);
             ("behaviour", Canary_agreement_behaviour.checks);
+            ("staging", Canary_agreement_staging.checks);
             ("composed", Canary_agreement_composed.checks) ]
         in
         let all = List.concat_map families ~f:snd in
-        (* the six families cover more CHECKS than the registry has
-           rows: c1/c4/c5 each state a solo cell as well as a pair *)
-        List.length all >= 8
+        let ids = List.map all ~f:fst in
+        (* every declared id appears exactly once across the families,
+           and the families declare every id there is *)
+        List.for_all C.all_agreement_ids ~f:(fun id ->
+            List.count ids ~f:(Poly.equal id) = 1)
+        && List.length all = List.length C.all_agreement_ids
         && List.for_all families ~f:(fun (_, cs) -> not (List.is_empty cs))
-        && List.for_all all ~f:(fun (name, a) ->
-               (not (String.is_empty name))
-               && not (String.is_empty a.C.says))
-        (* the solo checks state the claim they actually make, which is
-           not the pair's: exported-as-declared, not required-by-a-stub *)
-        && Poly.equal
-             (List.Assoc.find_exn Canary_agreement_symbols.checks
-                "symbol_exported/solo" ~equal:String.equal)
-               .C.cat (C.Symbols `Exported)
-        && Poly.equal
-             (List.Assoc.find_exn Canary_agreement_symbols.checks
-                "symbol_exported/pair" ~equal:String.equal)
-               .C.cat (C.Symbols `Required)
-        && (* every one is a DECLARED agreement, not a convention — the
-              toolchain says nothing about which symbols a project ought
-              to export *)
-        List.for_all all ~f:(fun (_, a) -> Poly.equal a.C.standing C.Declared)
-        && String.equal (C.string_of_cat C.Action_succeeded) "action-succeeded") }
+        && List.for_all all ~f:(fun (_, a) ->
+               (not (String.is_empty a.C.ag_says))
+               && (not (String.is_empty a.C.ag_expects))
+               && not (List.is_empty a.C.ag_methods))
+        (* the SPLIT claims say different things — the point of the
+           split, and the thing a shared id could not express *)
+        && (not
+              (String.equal
+                 Canary_agreement_symbols.declared_symbols_exported.C.ag_says
+                 Canary_agreement_symbols.required_symbols_exported.C.ag_says))
+        && (not
+              (String.equal
+                 Canary_agreement_identity.soname_matches_declaration.C.ag_says
+                 Canary_agreement_identity.soname_matches_requirement.C.ag_says))
+        && String.equal (C.string_of_subject C.Action_outcome) "action-outcome") }
 
 (* Facts in, checks out (2026-09-02): a project declares its language,
    its mechanism and how the artifact was provisioned; the registry says
@@ -2221,14 +2562,18 @@ let agreements_for_pin : pure_test =
         in
         let built = got all_built in
         let at_build_lib = got ~action:Canary_basic.Build_lib all_built in
-        (* a Built world reaches the solo cells at build_lib … *)
-        List.mem (slugs at_build_lib) "symbol_exported" ~equal:String.equal
-        && List.mem (slugs at_build_lib) "soname_denotes_needed"
+        (* a Built world reaches the DECLARATION agreements at
+           build_lib — by their own names, which is the thing the
+           solo/pair cells could not be selected by *)
+        List.mem (slugs at_build_lib) "declared_symbols_exported"
+          ~equal:String.equal
+        && List.mem (slugs at_build_lib) "soname_matches_declaration"
+             ~equal:String.equal
+        && List.mem (slugs at_build_lib) "declared_versions_exported"
              ~equal:String.equal
         (* … and every returned row is enabled and carries its inputs
            without the caller naming an id *)
-        && List.for_all built ~f:(fun (r, _) ->
-               r.R.ag_check.Canary_agreement_common.enabled)
+        && List.for_all built ~f:(fun (r, _) -> r.R.ag_enabled)
         (* a Fetched world has no build_lib checks at all *)
         && List.is_empty
              (got ~action:Canary_basic.Build_lib
@@ -2259,6 +2604,429 @@ let agreements_for_pin : pure_test =
              (got ~action:Canary_basic.Build_lib
                 (world ~lib:Canary_store.Fetched ~binding:Canary_store.Built))) }
 
+(* ── THE PRODUCTION PATH, END TO END (2026-09-12) ──
+
+   §7.4 item 3's acceptance criterion, made executable: "show its
+   action caller, the evidence produced in that world, a failing
+   example and a corresponding non-failing example. Comparator
+   fixtures establish the comparison; an action-level test establishes
+   the connection. Neither replaces the other."
+
+   The fixtures above run evaluators directly. This runs a STEP —
+   through [Canary_local_runner.run_step], the same function a real
+   scenario's chain goes through — and reads the actions.log the run
+   produced. Nothing here supplies an input list: the step carries its
+   [agreement_ctx] (mechanism, language, world), the action is its own,
+   and the registry selects from those facts.
+
+   Four cases, which are the four things an empty substring list used
+   to mean indistinguishably:
+     1. requirements met                    → holds
+     2. a required symbol missing           → violated, naming it
+     3. the library was never inspected     → unavailable
+     4. an applicable agreement with no evaluator → not_implemented *)
+let agreement_action_path_pin : pure_test =
+  { name = "agreements.action_path_reports_outcomes";
+    check = (fun () ->
+      let root = "_out/canary/test" in
+      let write path body =
+        let dir = Stdlib.Filename.dirname path in
+        ignore (Stdlib.Sys.command (Printf.sprintf "mkdir -p %s" dir) : int);
+        let oc = Stdlib.open_out path in
+        Stdlib.output_string oc body;
+        Stdlib.close_out oc
+      in
+      (* one OCaml/cstubs world with everything built here — the
+         representative compiled-stub context *)
+      let world =
+        Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
+          ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
+      in
+      (* [case] lays out a project dir, runs ONE probe step through the
+         runner, and returns the actions.log it wrote *)
+      let case name ~lib_symbols =
+        let project = "agreement-path-" ^ name in
+        let project_dir = root ^ "/canary/projects/" ^ project in
+        ignore (Stdlib.Sys.command (Printf.sprintf "rm -rf %s" project_dir) : int);
+        (* the consumer's recorded requirements … *)
+        write (project_dir ^ "/build_binding/ocaml/inspect.json")
+          {|{"kind": "c_stub", "path": "fx",
+    "requires": ["tiny_sum", "tiny_offset"]}|};
+        (* … its user-facing surface, with the watchlist satisfied … *)
+        write (project_dir ^ "/build_binding/ocaml/inspect_mli.json")
+          {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": ["Tiny.sum"], "missing": []}}|};
+        (* … and the provider's exports, when this case has them *)
+        (match lib_symbols with
+         | None -> ()
+         | Some syms ->
+             write (project_dir ^ "/build_lib/inspect.json")
+               (Printf.sprintf
+                  {|{"kind": "native", "path": "fx", "symbols": [%s]}|}
+                  (String.concat ~sep:", "
+                     (List.map syms ~f:(fun s -> "\"" ^ s ^ "\"")))));
+        let log_path = project_dir ^ "/actions.log" in
+        let logger = Canary_step_model.create_logger ~log_path in
+        let step : Canary_step_model.step =
+          { tag = "probe_binding_ocaml";
+            cache_key = project ^ ":probe_binding_ocaml";
+            output_tag = "probe_binding_ocaml";
+            output_dir = project_dir ^ "/probe_binding/ocaml";
+            project_dir;
+            variant_id = "";
+            action = Canary_basic.Probe_binding Canary_lang.OCaml;
+            deps = [];
+            cmd = (fun ~output_dir:_ ~variant_key:_ -> "true");
+            check_pre = (fun () -> true);
+            check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+            expectation = Canary_step_model.Expect_success;
+            symbol_check = None;
+            disabled_agreements = [];
+            agreement_ctx =
+              Some
+                { Canary_agreement_common.ac_mechanism = Canary_mechanism.Cstubs;
+                  ac_lang = Canary_lang.OCaml;
+                  ac_world = world };
+            dummy = None }
+        in
+        let status = Canary_local_runner.run_step logger ~root ~project step in
+        logger.Canary_step_model.close ();
+        let log =
+          try Stdlib.In_channel.with_open_text log_path Stdlib.In_channel.input_all
+          with _ -> ""
+        in
+        (status, log)
+      in
+      let has log s = String.is_substring log ~substring:s in
+      (* 1 — requirements met *)
+      let ok_status, ok_log =
+        case "holds" ~lib_symbols:(Some [ "tiny_sum"; "tiny_offset" ])
+      in
+      let holds_ok =
+        Poly.equal ok_status Canary_step_model.Step_done
+        && has ok_log
+             "required_symbols_exported/stub_requirements_vs_library_exports: \
+              holds"
+        && has ok_log "api_names_present/watchlist_vs_user_surface: holds"
+      in
+      (* 2 — a deliberately missing required symbol. The STEP still
+         passes (its own command succeeded and its expectation was
+         success) and the agreement still reports the counterexample:
+         an agreement outcome is a finding about artifacts, not a
+         verdict on the command.
+
+         And because the step passed, the disagreement is UNCONFIRMED —
+         detected in the artifacts, not surfaced by this action. That
+         is the distinction: a violated agreement and an
+         expected-failure test succeeding are different facts, and
+         here the first holds without the second. *)
+      let bad_status, bad_log = case "violated" ~lib_symbols:(Some [ "tiny_sum" ]) in
+      let violated_ok =
+        has bad_log
+          "required_symbols_exported/stub_requirements_vs_library_exports: \
+           violated: tiny_offset"
+        && Poly.equal bad_status Canary_step_model.Step_done
+        && has bad_log
+             "agreement_unconfirmed  (required_symbols_exported: disagreement \
+              detected, not surfaced by this action)"
+        && not (has bad_log "agreement_confirmed")
+      in
+      (* 3 — evidence that was never produced *)
+      let _, missing_log = case "unavailable" ~lib_symbols:None in
+      let unavailable_ok =
+        has missing_log
+          "required_symbols_exported/stub_requirements_vs_library_exports: \
+           unavailable: no native library inspection in this world"
+      in
+      (* 4 — an APPLICABLE agreement with no evaluator is visible, with
+         its reason, in every one of them. This is the placeholder
+         invariant at the action level: selection does not drop it and
+         it never reports a synthetic success. *)
+      let planned_ok =
+        List.for_all [ ok_log; bad_log; missing_log ] ~f:(fun l ->
+            has l "behavior_matches/probe_assertions: not_implemented:"
+            && has l
+                 "repack_preserves_api/declared_repacking_relation: \
+                  not_implemented:")
+      in
+      (* and the mechanism's own limit is reported as INAPPLICABLE, not
+         as a pass and not as missing evidence — a cstubs archive
+         records no dependency, so the identity pair has no claim here *)
+      let inapplicable_ok =
+        has ok_log
+          "soname_matches_requirement/library_identity_vs_consumer_record: \
+           not_applicable:"
+      in
+      holds_ok && violated_ok && unavailable_ok && planned_ok
+      && inapplicable_ok) }
+
+(* ── ONE RECORD, TWO CONSUMERS (2026-09-12) ──
+
+   The other half of the action path: a step whose ACCEPTANCE consults
+   the evaluation. An [Expect_compat_derived] step follows the record —
+   a detected disagreement means the command must fail with that
+   signature — so this pins the full chain on one run:
+
+     evidence → evaluation → detected disagreement
+              → predicted diagnostics → acceptance
+              → CONFIRMED attribution in the verdict
+
+   and, against the previous pin's unconfirmed case, the distinction:
+   the same violated agreement is `unconfirmed` where the step passes
+   and `confirmed` where the step's own output shows it. *)
+let agreement_acceptance_pin : pure_test =
+  { name = "agreements.one_record_serves_reporting_and_acceptance";
+    check = (fun () ->
+      let root = "_out/canary/test" in
+      let write path body =
+        let dir = Stdlib.Filename.dirname path in
+        ignore (Stdlib.Sys.command (Printf.sprintf "mkdir -p %s" dir) : int);
+        let oc = Stdlib.open_out path in
+        Stdlib.output_string oc body;
+        Stdlib.close_out oc
+      in
+      let world =
+        Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
+          ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
+      in
+      (* [route] decides WHERE the library evidence lives: `Derived puts
+         it where the registry looks, `Declared puts it somewhere only a
+         project-supplied input list names. The merge must reach a
+         decided outcome either way — that is what makes the declared
+         route worth keeping (llvm's packed binding) and what makes it
+         one record rather than two. *)
+      let case name ~route ~cmd =
+        let project = "agreement-accept-" ^ name in
+        let project_dir = root ^ "/canary/projects/" ^ project in
+        ignore (Stdlib.Sys.command (Printf.sprintf "rm -rf %s" project_dir) : int);
+        write (project_dir ^ "/build_binding/ocaml/inspect.json")
+          {|{"kind": "c_stub", "path": "fx",
+    "requires": ["tiny_sum", "tiny_offset"]}|};
+        write (project_dir ^ "/build_binding/ocaml/inspect_mli.json")
+          {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": ["Tiny.sum"], "missing": []}}|};
+        let lib_body =
+          {|{"kind": "native", "path": "fx", "symbols": ["tiny_sum"]}|}
+        in
+        let declared_inputs =
+          match route with
+          | `Derived ->
+              write (project_dir ^ "/build_lib/inspect.json") lib_body;
+              []
+          | `Declared ->
+              (* only a place the derivation never looks *)
+              write (project_dir ^ "/pack_lib/inspect.json") lib_body;
+              Canary_agreement_common.
+                [ C_stub [ "build_binding_ocaml/inspect.json" ];
+                  Native_lib [ "pack_lib/inspect.json" ] ]
+        in
+        let log_path = project_dir ^ "/actions.log" in
+        let logger = Canary_step_model.create_logger ~log_path in
+        let step : Canary_step_model.step =
+          { tag = "probe_binding_ocaml";
+            cache_key = project ^ ":probe_binding_ocaml";
+            output_tag = "probe_binding_ocaml";
+            output_dir = project_dir ^ "/probe_binding/ocaml";
+            project_dir;
+            variant_id = "";
+            action = Canary_basic.Probe_binding Canary_lang.OCaml;
+            deps = [];
+            cmd = (fun ~output_dir:_ ~variant_key:_ -> cmd);
+            check_pre = (fun () -> true);
+            check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+            expectation =
+              Canary_step_model.Expect_compat_derived
+                { inputs = declared_inputs; version_info = None };
+            symbol_check = None;
+            disabled_agreements = [];
+            agreement_ctx =
+              Some
+                { Canary_agreement_common.ac_mechanism = Canary_mechanism.Cstubs;
+                  ac_lang = Canary_lang.OCaml;
+                  ac_world = world };
+            dummy = None }
+        in
+        let status = Canary_local_runner.run_step logger ~root ~project step in
+        logger.Canary_step_model.close ();
+        let log =
+          try Stdlib.In_channel.with_open_text log_path Stdlib.In_channel.input_all
+          with _ -> ""
+        in
+        let marker_ids = Canary_local_runner.step_xfail_contracts step in
+        (status, log, marker_ids)
+      in
+      let has log s = String.is_substring log ~substring:s in
+      (* the command fails AND prints what the agreement predicted:
+         the acceptance policy accepts it, and the attribution is the
+         CONFIRMED agreement *)
+      let failing_cmd =
+        "echo 'undefined reference to tiny_offset' >&2; exit 1"
+      in
+      let st, log, ids = case "confirmed" ~route:`Derived ~cmd:failing_cmd in
+      let confirmed_ok =
+        Poly.equal st Canary_step_model.Step_done_xfail
+        && has log
+             "required_symbols_exported/stub_requirements_vs_library_exports: \
+              violated: tiny_offset"
+        && has log "agreement_confirmed  (required_symbols_exported:"
+        && (not (has log "agreement_unconfirmed"))
+        && has log "expected failure confirmed (derived) [required_symbols_exported]"
+        (* the attribution PERSISTS: the verdict marker is what a warm
+           run and every display layer read it back from *)
+        && List.equal String.equal ids [ "required_symbols_exported" ]
+      in
+      (* the SAME artifacts, the same evaluation, a command that
+         succeeds: the agnostic policy rejects it, because the record
+         predicted a failure and none happened. The disagreement is
+         still the record's; the rejection is the step's. *)
+      let st_ok, log_ok, ids_ok =
+        case "unexpected-success" ~route:`Derived ~cmd:"true"
+      in
+      let polarity_ok =
+        Poly.equal st_ok Canary_step_model.Step_failed
+        && has log_ok "compat failure predicted (derived) but command succeeded"
+        && List.is_empty ids_ok
+      in
+      (* the DECLARED route reaches evidence the derivation cannot see.
+         Merged into the same record, it decides the same way — which is
+         the property that lets both routes coexist without two
+         evaluations. *)
+      let st_d, log_d, ids_d = case "declared" ~route:`Declared ~cmd:failing_cmd in
+      let declared_ok =
+        Poly.equal st_d Canary_step_model.Step_done_xfail
+        && has log_d
+             "required_symbols_exported/stub_requirements_vs_library_exports: \
+              violated: tiny_offset"
+        (* the derived route found nothing there — its own input path
+           has no library inspection — so the record's DECIDED outcome
+           came from the declared one, and the undecided derived entry
+           was replaced rather than logged alongside it *)
+        && (not
+              (has log_d
+                 "unavailable: no native library inspection in this world"))
+        && List.equal String.equal ids_d [ "required_symbols_exported" ]
+      in
+      (* BOTH ROUTES DECIDE, AND THEY DISAGREE. The derived route sees
+         a complete library at build_lib and says `holds`; the declared
+         route names a different object that is missing the symbol and
+         says `violated`. The merge keeps the FINDING — a checking tool
+         that preferred the good news would be the wrong kind of
+         tool — and the acceptance follows it. *)
+      let both_project = "agreement-accept-both" in
+      let both_dir = root ^ "/canary/projects/" ^ both_project in
+      ignore (Stdlib.Sys.command (Printf.sprintf "rm -rf %s" both_dir) : int);
+      write (both_dir ^ "/build_binding/ocaml/inspect.json")
+        {|{"kind": "c_stub", "path": "fx",
+    "requires": ["tiny_sum", "tiny_offset"]}|};
+      write (both_dir ^ "/build_binding/ocaml/inspect_mli.json")
+        {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": ["Tiny.sum"], "missing": []}}|};
+      write (both_dir ^ "/build_lib/inspect.json")
+        {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum", "tiny_offset"]}|};
+      write (both_dir ^ "/pack_lib/inspect.json")
+        {|{"kind": "native", "path": "fx", "symbols": ["tiny_sum"]}|};
+      let both_eval =
+        Canary_agreement.evaluate_step
+          ~context:
+            { Canary_agreement_common.ac_mechanism = Canary_mechanism.Cstubs;
+              ac_lang = Canary_lang.OCaml;
+              ac_world = world }
+          ~action:(Canary_basic.Probe_binding Canary_lang.OCaml)
+          ~declared_inputs:
+            Canary_agreement_common.
+              [ C_stub [ "build_binding_ocaml/inspect.json" ];
+                Native_lib [ "pack_lib/inspect.json" ] ]
+          ~resolve:(fun rel ->
+            match String.lsplit2 rel ~on:'/' with
+            | Some (tag, file) ->
+                both_dir ^ "/" ^ Canary_basic.step_dir_of_tag tag ^ "/" ^ file
+            | None -> both_dir ^ "/" ^ rel)
+          ()
+      in
+      let precedence_ok =
+        (* ONE entry for the method, and it is the violation *)
+        List.count both_eval.Canary_agreement.sv_all ~f:(fun e ->
+            String.equal e.Canary_agreement.ev_method
+              "stub_requirements_vs_library_exports")
+        = 1
+        && List.exists both_eval.Canary_agreement.sv_violations ~f:(fun e ->
+               Poly.equal e.Canary_agreement.ev_id
+                 Canary_agreement_common.Required_symbols_exported)
+        && List.mem both_eval.Canary_agreement.sv_diagnostics "tiny_offset"
+             ~equal:String.equal
+      in
+      confirmed_ok && polarity_ok && declared_ok && precedence_ok) }
+
+(* ── THE DUMMY ACTION (2026-09-12, user) ──
+
+   A step that holds a place in the action graph and does no work,
+   carrying the reason it is empty. It exists because the graph is
+   where EVIDENCE attaches: a derivation looks for a binding's
+   inspection at the step that installs it, and an artifact the
+   interpreter already provides has no such step.
+
+   Three properties, and the third is the one that makes them
+   countable rather than a quiet exception: a dummy still writes its
+   marker (so "nothing to do" stays distinguishable from "did not
+   run"), an inspector attached to it is NOT a dummy (it does the real
+   work the dummy exists to host), and every dummy is marked on the
+   step so `canary checks --dummies` can enumerate them. *)
+let dummy_action_pin : pure_test =
+  { name = "steps.dummy_action_holds_a_place";
+    check = (fun () ->
+      let module SB = Canary_step_builder in
+      let why = "the interpreter already provides this binding" in
+      let out = "_out/canary/test/dummy-fixture" in
+      ignore (Stdlib.Sys.command (Printf.sprintf "rm -rf %s" out) : int);
+      (* the command a Dummy resolves to writes the action's marker *)
+      let cmd =
+        SB.command_of_step ~store_config:Canary_store_config.empty_store_config
+          ~marker:"binding.ok" (SB.Dummy why)
+      in
+      let sh = cmd ~output_dir:out ~variant_key:"" in
+      let ran = Stdlib.Sys.command (sh ^ " >/dev/null 2>&1") in
+      let marker_written =
+        ran = 0 && Stdlib.Sys.file_exists (out ^ "/binding.ok")
+      in
+      (* the reason travels with it, so a log reader never has to infer
+         emptiness from the command text *)
+      let says_why = String.is_substring sh ~substring:why in
+      (* and a real spec: the base step is a dummy, its attached
+         inspector is not *)
+      let spec =
+        { SB.empty_runner_spec with
+          fetch_binding = [ (Canary_lang.Python, SB.Dummy why) ];
+          probe_binding =
+            [ ( Canary_lang.Python,
+                Canary_store.Build_tree,
+                fun ~output_dir:_ ~variant_key:_ -> "true" ) ];
+          inspect =
+            (fun action _ ->
+              match action with
+              | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python) ->
+                  Some (fun ~output_dir:_ ~variant_key:_ -> "true")
+              | _ -> None) }
+      in
+      let steps =
+        SB.derive_steps ~root:"_out" ~project:"dummy-fixture"
+          ~langs:[ Canary_lang.Python ] spec
+      in
+      let dummy_tags =
+        List.filter_map steps ~f:(fun (s : Canary_step_model.step) ->
+            match s.Canary_step_model.dummy with
+            | Some _ -> Some s.Canary_step_model.tag
+            | None -> None)
+      in
+      let has tag =
+        List.exists steps ~f:(fun (s : Canary_step_model.step) ->
+            String.equal s.Canary_step_model.tag tag)
+      in
+      marker_written && says_why
+      (* exactly the base step, and the inspector it hosts is real *)
+      && List.equal String.equal dummy_tags [ "fetch_binding_python" ]
+      && has "fetch_binding_python_inspect") }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ binding_source_vocabulary_pin; lib_name_optional_pin;
@@ -2285,7 +3053,8 @@ let all_tests : pure_test list =
   @ agreement_bridge_pins
   @ [ check_module_pattern_pin; agreement_tiers_pin;
       agreement_module_shape_pin; surface_facts_pin;
-      agreements_for_pin ]
+      agreements_for_pin; agreement_action_path_pin;
+      agreement_acceptance_pin; dummy_action_pin ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the

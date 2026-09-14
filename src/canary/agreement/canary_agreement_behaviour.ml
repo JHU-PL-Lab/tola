@@ -1,43 +1,52 @@
 (** Behavioural agreements — claims about what running it does
 
-    One module per check family (design: the per-check module pattern).
-    Each check states its CATEGORY (descriptive), its STANDING, and a
-    falsifier-phrased sentence; the function keeps whatever signature
-    suits it, and the caller supplies the inputs.
+    [behavior_matches] has no registry-side evaluator and says so. Its
+    single method is PLANNED: behavioural truth lives in the running
+    binary, and the expected values live inside the probe's own source
+    as embedded assertions, so there is nothing static to compare. The
+    probe's exit code is the observation today.
 
-    c3 is UNWIRED: its predict returns [] by construction, because
-    behavioural truth lives in the running binary and there is nothing
-    static to predict over. The registry marks it disabled rather than
-    pretending it checks something.
-
-    c7 moved to [Canary_agreement_api_surface] and c8 to
-    [Canary_agreement_composed] (2026-09-02): c7's own declared category is
-    [Api `Repacked], and c8 is a composition rather than a family. *)
+    The point of registering it anyway is that it is APPLICABLE at
+    every probe action, and a selection that omitted it would report
+    full coverage of a probe step while saying nothing about
+    behaviour. It reports [not_implemented] with its reason instead. *)
 
 open Canary_agreement_common
-module Cat = Canary_agreement_common
 
-(* ── what this module is about ── *)
+let behavior_matches : agreement =
+  { ag_subject = Behavior;
+    ag_claim = Behavioral;
+    ag_basis = Behavioral_spec;
+    ag_says = "the probe's trace matches what was recorded for it";
+    ag_expects =
+      "the probe's own embedded assertions. There is no project-independent \
+       statement of what a binding should compute, so the expectation is \
+       whatever the probe asserts — which bounds this agreement to the \
+       inputs that probe exercises";
+    ag_rooted_in =
+      unrooted
+        ~note:
+          "no toolchain enforces that a function returns what a project \
+           expected — a compiler checks types, a linker checks names, and \
+           neither has an opinion about results. There is no relation here \
+           to recover, only one to STATE, which is why this is unimplemented \
+           in a different sense from an agreement that merely lacks evidence"
+        ();
+    ag_fault_tag = "behavior";
+    ag_methods =
+      [ checking_method ~name:"probe_assertions" ~kind:Run_program
+          ~reference:Declared_facts ~firing:firing_probe_only
+          ~inputs:(fun _ _ _ -> [])
+          ~planned:
+            "the expected values live inside the probe's source as embedded \
+             assertions, and the observation is the probe's own exit code; \
+             the registry has no evaluator that could read them. Wiring one \
+             means giving the project a place to state expected results \
+             outside the probe"
+          ~limits:
+            "not evaluated here. The probe's assertions cover the inputs \
+             that probe runs and nothing else."
+          () ] }
 
-let trace : about =
-  { cat = Cat.Behaviour `Trace;
-    standing = Cat.Declared;
-    says = "the probe's trace matches what was recorded for it" }
-
-(** Every check this family states, for the module-pattern pin and the
-    catalogue. One entry per CHECK, not per agreement. *)
-let checks : (string * about) list = [ ("behavior_matches", trace) ]
-
-let c3_predict ~resolve:_ _ = []
-
-let c3 : description =
-  { about = trace;
-    claim = Semantic;
-    evidence = Run_program;
-    provenance = Added;
-    reads = [ ("Trace", "run") ];
-    fault_tags = [ "behavior" ];
-    firing = firing_probe_only;
-    inputs = (fun _ _ _ -> []);
-    (* nothing static to predict over, so nothing to falsify here *)
-    counterexamples = [] }
+let checks : (agreement_id * agreement) list =
+  [ (Behavior_matches, behavior_matches) ]

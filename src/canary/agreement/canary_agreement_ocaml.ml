@@ -23,11 +23,23 @@
 
 open Canary_agreement_common
 
-(** The USER-FACING surface (Sf.4): the installed [.mli], inspected
-    into [inspect_mli.json] in the binding's install step — [tag] is
-    that step, which the world decides ([binding_evidence_tag]). *)
+(** The USER-FACING surface: what an OCaml consumer's installed package
+    offers, inspected in the binding's install step — [tag] is that
+    step, which the world decides ([binding_evidence_tag]).
+
+    TWO SPELLINGS, because there are two inspectors and both are in use
+    (2026-09-12). The framework's own binding summaries land in
+    [inspect.json]: that is what [auto_binding_summaries] writes, what
+    [inspect_ocaml.py] writes, and what ssl, llvm and sqlite all name by
+    hand. Tiny writes [inspect_mli.json], to keep it apart from the
+    compiled-stub summary it puts in [inspect.json].
+
+    Listing both was previously unsafe — the first existing path won,
+    so on tiny the stub summary could have been read as a surface. It is
+    safe now because the reader selects by the [kind] the inspector
+    declared, not by the name it happened to be written under. *)
 let user_surface (tag : string) : inspect_input =
-  Ocaml_mli [ tag ^ "/inspect_mli.json" ]
+  Ocaml_mli [ tag ^ "/inspect.json"; tag ^ "/inspect_mli.json" ]
 
 (* Its MECHANISMS' facts live with the mechanism: the typed stub
    surface and whether a compiled artifact records NEEDED are both

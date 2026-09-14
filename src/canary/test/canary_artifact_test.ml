@@ -105,9 +105,10 @@ let compat_pure_tests =
     { name = "compat.empty_inputs";
       check = fun () ->
         List.is_empty (Canary_agreement.predicted_contains_any ~resolve:Fn.id []) };
-    (* A7 phase 1 — the per-contract form. Both fixture inputs are L3
-       completeness, so exactly ONE registry row fires (c2) and it carries
-       the union of both inputs' expansions. *)
+    (* A7 phase 1 — the per-agreement form. Both fixture inputs are
+       user-facing surfaces, so exactly ONE registry row fires
+       (api_names_present) and it carries the union of both inputs'
+       expansions. *)
     { name = "compat.by_agreement_attribution";
       check = fun () ->
         match
@@ -115,8 +116,9 @@ let compat_pure_tests =
             [ Canary_agreement_common.Ocaml_mli [ mli_path ];
               Canary_agreement_common.Python_attrs [ py_path ] ]
         with
-        | [ (c, subs) ] ->
-            Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C2
+        | [ (r, subs) ] ->
+            Poly.equal r.Canary_agreement.ag_id
+              Canary_agreement_common.Api_names_present
             && mem subs "UncondBr" && mem subs "BitVec"
         | _ -> false };
     (* the flat form is exactly the flatten of the per-contract form *)
@@ -130,10 +132,17 @@ let compat_pure_tests =
           |> List.dedup_and_sort ~compare:String.compare
         in
         List.equal String.equal flat mixed };
-    (* A7 phase 2 — verdict-marker content round-trip: "xfail c2 c5" is
-       still an xfail to the prefix parser AND yields its contract ids;
-       a plain "xfail" yields []; an empty (plain-success) marker is not
-       an xfail. Pins the cross-run persistence format. *)
+    (* A7 phase 2 — verdict-marker content round-trip: an xfail line
+       naming agreements is still an xfail to the prefix parser AND
+       yields those names; a plain "xfail" yields []; an empty
+       (plain-success) marker is not an xfail. Pins the cross-run
+       persistence format.
+
+       The RETIRED-NAME case is the 2026-09-12 addition: a marker
+       written before the rename says "xfail c2", and c2 is not an
+       agreement any more, so it must not come back out — a stale
+       marker cannot attribute a verdict to something that does not
+       exist. *)
     { name = "compat.verdict_xfail_agreement_roundtrip";
       check = fun () ->
         let write name content =
@@ -143,34 +152,185 @@ let compat_pure_tests =
           Stdlib.close_out oc;
           p
         in
-        let attributed = write "verdict_attr.ok" "xfail c2 c5\n" in
+        let attributed =
+          write "verdict_attr.ok"
+            "xfail api_names_present required_versions_exported\n"
+        in
         let plain = write "verdict_plain.ok" "xfail\n" in
         let success = write "verdict_success.ok" "" in
+        let legacy = write "verdict_legacy.ok" "xfail c2 c5\n" in
         Canary_local_runner.verdict_is_xfail attributed
         && List.equal String.equal
              (Canary_local_runner.verdict_xfail_agreements attributed)
-             [ "c2"; "c5" ]
+             [ "api_names_present"; "required_versions_exported" ]
         && Canary_local_runner.verdict_is_xfail plain
         && List.is_empty (Canary_local_runner.verdict_xfail_agreements plain)
         && not (Canary_local_runner.verdict_is_xfail success)
-        && List.is_empty (Canary_local_runner.verdict_xfail_agreements success) };
+        && List.is_empty (Canary_local_runner.verdict_xfail_agreements success)
+        && List.is_empty (Canary_local_runner.verdict_xfail_agreements legacy) };
     (* per-call disable drops the row AND shows up as a skip with the
-       per-call reason (registry-disabled rows carry their status) *)
+       per-call reason. What is NOT a skip any more: a PLANNED
+       agreement. It used to be reported as "disabled in registry
+       (stubbed)", which put "nobody implemented this" in the same
+       bucket as "you switched this off"; a planned agreement is
+       selected and reports not_implemented instead. *)
     { name = "compat.by_agreement_disabled_skips";
       check = fun () ->
+        let c2 = Canary_agreement_common.Api_names_present in
         List.is_empty
-          (Canary_agreement.predicted_by_agreement
-             ~disabled:[ Canary_agreement_common.C2 ] ~resolve:Fn.id
+          (Canary_agreement.predicted_by_agreement ~disabled:[ c2 ]
+             ~resolve:Fn.id
              [ Canary_agreement_common.Ocaml_mli [ mli_path ] ])
         && List.exists
-             (Canary_agreement.skipped_checks ~disabled:[ Canary_agreement_common.C2 ] ())
-             ~f:(fun (c, reason) ->
-               Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C2
+             (Canary_agreement.skipped_checks ~disabled:[ c2 ] ())
+             ~f:(fun ((r : Canary_agreement.agreement_row), reason) ->
+               Poly.equal r.Canary_agreement.ag_id c2
                && String.equal reason "disabled per call")
-        && List.exists (Canary_agreement.skipped_checks ())
-             ~f:(fun (c, reason) ->
-               Poly.equal c.Canary_agreement_common.id Canary_agreement_common.C3
-               && String.is_substring reason ~substring:"registry") };
+        && List.is_empty (Canary_agreement.skipped_checks ()) };
+    (* THE OUTCOME DISTINCTION (2026-09-12). The same evaluator on the
+       same agreement reaches three different answers, and the old
+       substring-list API could express only one of them. *)
+    { name = "agreement.outcomes_are_distinguished";
+      check = fun () ->
+        let module C = Canary_agreement_common in
+        let ag = Canary_agreement_symbols.required_symbols_exported in
+        let m = List.hd_exn ag.C.ag_methods in
+        let ev = Option.value_exn m.C.m_eval in
+        let write name body =
+          let p = tmp_root ^ "/" ^ name in
+          let oc = Stdlib.open_out p in
+          Stdlib.output_string oc body;
+          Stdlib.close_out oc;
+          p
+        in
+        let stub =
+          write "sym_stub.json"
+            {|{"kind": "c_stub", "path": "fx", "requires": ["a", "b"]}|}
+        in
+        let good =
+          write "sym_lib_good.json"
+            {|{"kind": "native", "path": "fx", "symbols": ["a", "b"]}|}
+        in
+        let bad =
+          write "sym_lib_bad.json"
+            {|{"kind": "native", "path": "fx", "symbols": ["a"]}|}
+        in
+        let out ins = ev ~resolve:Fn.id ins in
+        String.equal
+          (C.outcome_label
+             (out [ C.C_stub [ stub ]; C.Native_lib [ good ] ]))
+          "holds"
+        && (match out [ C.C_stub [ stub ]; C.Native_lib [ bad ] ] with
+            | C.Violated [ "b" ] -> true
+            | _ -> false)
+        && String.equal
+             (C.outcome_label
+                (out [ C.C_stub [ stub ]; C.Native_lib [ tmp_root ^ "/nope" ] ]))
+             "unavailable" };
+    (* A VIOLATION ALWAYS CARRIES A WITNESS (2026-09-12 audit).
+       Everything downstream assumes it: the diagnostics a failing run
+       is greppable for, the confirmed/unconfirmed split, and the
+       acceptance policy that requires a step to fail "with that
+       signature". An empty finding list would strengthen a step's
+       requirement while supplying nothing to check it against, so it
+       is normalized to the honest answer instead. *)
+    { name = "agreement.violation_carries_a_witness";
+      check = fun () ->
+        let module C = Canary_agreement_common in
+        let world =
+          C.uniform_world ~lang:Canary_lang.OCaml
+            ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
+        in
+        let witnessless =
+          C.checking_method ~name:"fx" ~kind:C.Compare ~reference:C.Peer_artifact
+            ~firing:C.firing_probe_only
+            ~inputs:(fun _ _ _ -> [])
+            ~eval:(fun ~resolve:_ _ -> C.Violated [])
+            ~limits:"fixture" ()
+        in
+        String.equal
+          (C.outcome_label (C.normalize_outcome (C.Violated [])))
+          "inconclusive"
+        && String.equal
+             (C.outcome_label
+                (C.evaluate_method ~mechanism:Canary_mechanism.Cstubs
+                   ~lang:Canary_lang.OCaml ~world ~resolve:Fn.id witnessless))
+             "inconclusive"
+        (* and a real finding is left exactly as it was *)
+        && Poly.equal
+             (C.normalize_outcome (C.Violated [ "tiny_offset" ]))
+             (C.Violated [ "tiny_offset" ]) };
+    (* EVIDENCE IS SELECTED BY KIND, NOT BY FILENAME (2026-09-12).
+       The surface inputs list two candidate spellings because two
+       inspectors are in use — the framework writes inspect.json and
+       tiny writes inspect_mli.json, while tiny's inspect.json is its
+       COMPILED STUB. Picking the first path that exists would hand the
+       stub summary to the watchlist check on tiny. The kind the
+       inspector declared decides instead, so the order of the
+       candidates cannot matter. *)
+    { name = "agreement.evidence_selected_by_kind";
+      check = fun () ->
+        let module C = Canary_agreement_common in
+        let write name body =
+          let p = tmp_root ^ "/" ^ name in
+          let oc = Stdlib.open_out p in
+          Stdlib.output_string oc body;
+          Stdlib.close_out oc;
+          p
+        in
+        (* tiny's shape: a stub at inspect.json, a surface beside it *)
+        let stub =
+          write "kind_stub.json"
+            {|{"kind": "c_stub", "path": "fx", "requires": ["tiny_sum"]}|}
+        in
+        let surface =
+          write "kind_mli.json"
+            {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": ["Tiny.sum"], "missing": []}}|}
+        in
+        (* the watchlist check, handed BOTH with the stub first, must
+           reach the surface and hold — not read the stub and go
+           inconclusive *)
+        let ag = Canary_agreement_api_surface.api_names_present in
+        let m = List.hd_exn ag.C.ag_methods in
+        let ev = Option.value_exn m.C.m_eval in
+        String.equal
+          (C.outcome_label (ev ~resolve:Fn.id [ C.Ocaml_mli [ stub; surface ] ]))
+          "holds"
+        (* and with ONLY the stub offered, it is not this method's
+           evidence at all *)
+        && String.equal
+             (C.outcome_label (ev ~resolve:Fn.id [ C.Ocaml_mli [ stub ] ]))
+             "unavailable"
+        (* symmetrically, the symbol check will not read a surface
+           summary as a compiled stub *)
+        && String.equal
+             (C.outcome_label
+                (Option.value_exn
+                   (List.hd_exn
+                      Canary_agreement_symbols.required_symbols_exported
+                        .C.ag_methods)
+                     .C.m_eval
+                   ~resolve:Fn.id
+                   [ C.C_stub [ surface ]; C.Native_lib [ surface ] ]))
+             "unavailable" };
+    (* a PLANNED method reports not_implemented WITH a reason, never a
+       synthetic success — the placeholder invariant *)
+    { name = "agreement.planned_method_reports_not_implemented";
+      check = fun () ->
+        let module C = Canary_agreement_common in
+        let ag = Canary_agreement_behaviour.behavior_matches in
+        let m = List.hd_exn ag.C.ag_methods in
+        let world =
+          C.uniform_world ~lang:Canary_lang.OCaml
+            ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
+        in
+        match
+          C.evaluate_method ~mechanism:Canary_mechanism.Cstubs
+            ~lang:Canary_lang.OCaml ~world ~resolve:Fn.id m
+        with
+        | C.Not_implemented reason -> not (String.is_empty reason)
+        | _ -> false };
   ]
 
 (* Step 3b — Unit-test layer for primitives.

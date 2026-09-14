@@ -40,7 +40,9 @@ let mk_step ~(dir : string) ~(rc : int) : SM.step =
         Stdlib.Sys.file_exists (output_dir ^ "/probe.log"));
     expectation = SM.Expect_success;
     symbol_check = None;
-    disabled_agreements = [] }
+    disabled_agreements = [];
+    agreement_ctx = None;
+    dummy = None }
 
 (* How many times the step's command actually ran (one "x" line per run). *)
 let run_count ~dir : int =

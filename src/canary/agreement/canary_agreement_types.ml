@@ -1,37 +1,27 @@
-(** Type agreements — the C signatures at the header/stub boundary
+(** Signature agreements — the types at the header/stub boundary
 
-    One module per check family (design: the per-check module pattern).
-    Each check states its CATEGORY (descriptive), its STANDING, and a
-    falsifier-phrased sentence; the function keeps whatever signature
-    suits it, and the caller supplies the inputs. *)
+    One agreement, [signatures_agree], with one implemented method that
+    compares signature SUMMARIES textually. The arity comparator below
+    is a second, unregistered way of asking a related question; it is
+    kept because the tiny factory uses it, and it is deliberately NOT
+    the agreement's evaluator (they disagree about what they compare:
+    one matches names that appear on both sides, the other applies a
+    declared name mapping). *)
 
 open Base
 open Canary_agreement_common
-module Cat = Canary_agreement_common
-
-(* ── what this module is about ── *)
-
-let signature : about =
-  { cat = Cat.Types `Signature;
-    standing = Cat.Declared;
-    says = "the types a stub declares agree with the header it wraps" }
-
-let checks : (string * about) list = [ ("c_types_agree", signature) ]
 
 (* ── the evidence this family reads ── *)
 
 (** Typed-signature view of an inspect JSON. The producing inspector
     ([canary/scripts/inspect_tiny_typed.py] today; AST-based
     replacements later) emits one [functions] dict keyed by name with
-    typed return / arg lists. [layer] preserves which surface this
-    came from (header / stub_ocaml / user_ocaml / stub_python /
-    user_python) so c6/c7/c8 predicates can sanity-check the inputs
-    they were handed.
+    typed return / arg lists. [layer] preserves which surface this came
+    from (header / stub_ocaml / user_ocaml / stub_python / user_python)
+    so a comparator can sanity-check the inputs it was handed.
 
     Provider and consumer sides share this shape — what differs is
-    which file the inspector ran on. The diff happens in the
-    comparator (c6 checks header vs stub agreement; c7 checks
-    stub vs user repack consistency; c8 combines both). *)
+    which file the inspector ran on. *)
 type typed_signature = {
   return_type : string;
   arg_types : string list;
@@ -67,67 +57,25 @@ let load_typed_signatures path : typed_signatures_inspect =
     | _ -> [] in
   { path = get_string j "path"; layer; functions }
 
-(** [c6 cmp_type] result type. Pins {i s1 native_header} ↔ {i s3
-    binding_stub} at the function-signature level. Today's check is
-    arity-only (compare number of args after applying the project's
-    declared name mapping); full type-equivalence comparison is a
-    later refinement. *)
+(* ── the comparators ── *)
+
+(** Arity comparison under a project-declared name mapping. NOT the
+    registered evaluator: it answers a different question from the
+    textual signature comparison below (which compares names present on
+    both sides and ignores the mapping), and conflating the two is one
+    of the audit findings this split records. Consumed by tiny's
+    factory. *)
 type type_result =
   | Type_compatible
   | Type_arity_mismatch of {
       mismatches : (string * int * int) list;
-        (** Each entry is [(binding_external_name, binding_arity, header_arity)]
-            where the two arities disagree. *)
+        (** [(binding_external_name, binding_arity, header_arity)] *)
     }
   | Type_unmapped of { externals : string list }
-        (** Binding externals that have no entry in the name mapping,
-            i.e. we can't tell which header function they correspond to.
-            Treated as a separate verdict (not "Unknown") so the caller
-            can distinguish "no header function with that mapped name"
-            from "mapping is incomplete." *)
+        (** Binding externals with no entry in the name mapping: we
+            cannot tell which header function they correspond to. *)
   | Type_unknown
-        (** One side is empty (no externals to check, or no header data). *)
 
-(** [c6 cmp_type] implementation. For each binding external, look up
-    its corresponding header function via [name_mapping], then compare
-    arities.
-
-    Inputs in tiny's vocabulary:
-    - [header_functions]: list of [(name, arity)] from {i n3}'s
-      [functions] field (e.g.
-      [[("tiny_sum", 2); ("tiny_diff", 2)]] from tiny.h).
-    - [binding_externals]: list of [(name, arity)] from {i bo1}'s
-      [externals_detail] field (e.g.
-      [[("sum", 2); ("diff", 2); ("get_offset", 1)]] from
-      Tiny_raw.mli).
-    - [name_mapping]: list of [(external_name, header_name)] pairs the
-      project declares. For tiny this is
-      [[("sum", "tiny_sum"); ("diff", "tiny_diff")]] —
-      [get_offset] is intentionally excluded because it maps to an
-      extern var (s1 vars, not s1 functions; outside c6's scope).
-
-    Behavior:
-    - Externals NOT in [name_mapping] go to [Type_unmapped]. The caller
-      can either widen the mapping or accept that those externals
-      aren't covered by c6.
-    - Externals mapped to a header function name that doesn't exist
-      in [header_functions] would be a different gap (binding claims a
-      function the header doesn't declare) — currently we treat the
-      mapping as authoritative and just record it as a 0-vs-binding-arity
-      mismatch via [Type_arity_mismatch] with header_arity = -1.
-
-    Returns:
-    - [Type_compatible] — every mapped external's arity matches its
-      header function's arity. [Type_unmapped] externals don't block
-      [Type_compatible]; they're informational.
-    - [Type_arity_mismatch] — at least one mapping where arities
-      disagree.
-    - [Type_unmapped] — emitted only when there are NO mapped
-      externals at all (i.e. the mapping is empty for these
-      bindings). Coexists with [Type_arity_mismatch] when both
-      conditions apply (mismatches reported; unmapped externals
-      listed as a separate sub-issue not currently expressed).
-    - [Type_unknown] — empty inputs. *)
 let check_type
     ~(header_functions : (string * int) list)
     ~(binding_externals : (string * int) list)
@@ -159,20 +107,16 @@ let check_type
     else
       Type_compatible
 
-(** c6 cmp_type (L2). Pairs a [Typed_header] input (provider's C
-    signatures, n3) with a [Typed_binding_stub] input (consumer's
-    stub-facing typed surface, bo1 / bpe1 — the binding's expectation
-    of the C ABI). For each function present on both sides, checks
-    whether the signatures agree (same return type, same arg type
-    list). Mismatching names are returned as predicted substrings —
-    the compiler error message for an arity / type clash mentions the
-    function name verbatim (e.g.
-    `error: too few arguments to function 'tiny_sum'`).
+(* ── the evaluator ── *)
 
-    Names present in only one side aren't c6 — they're c1
-    (cmp_symbol's domain). c6 only fires when both sides claim the
-    function but disagree on its signature. *)
-let c6_predict ~resolve (inputs : inspect_input list) : string list =
+(** Compare return-type strings and argument-type lists for every
+    function name present on BOTH sides. A name on only one side is not
+    a signature disagreement — that is the symbol agreements' question.
+
+    On a mismatch the finding is the function name, because that is
+    what the compiler's message names verbatim ("too few arguments to
+    function 'tiny_sum'"). *)
+let signatures_eval ~resolve inputs : outcome =
   let header_path =
     List.find_map inputs
       ~f:(function Typed_header ps -> pick_existing ~resolve ps | _ -> None) in
@@ -180,44 +124,115 @@ let c6_predict ~resolve (inputs : inspect_input list) : string list =
     List.find_map inputs
       ~f:(function Typed_binding_stub ps -> pick_existing ~resolve ps
                  | _ -> None) in
-  match header_path, stub_path with
+  match (header_path, stub_path) with
+  | None, _ -> Unavailable "no header signature summary in this world"
+  | _, None -> Unavailable "no binding signature summary in this world"
   | Some hp, Some sp ->
       let h = load_typed_signatures hp in
       let s = load_typed_signatures sp in
-      List.filter_map h.functions ~f:(fun (name, h_sig) ->
-        match List.Assoc.find s.functions name ~equal:String.equal with
-        | None -> None
-        | Some s_sig ->
-            if String.equal h_sig.return_type s_sig.return_type
-               && List.equal String.equal h_sig.arg_types s_sig.arg_types
-            then None
-            else Some name)
-  | _ -> []
+      let shared =
+        List.filter h.functions ~f:(fun (name, _) ->
+            Option.is_some (List.Assoc.find s.functions name ~equal:String.equal))
+      in
+      if List.is_empty shared then
+        Inconclusive
+          "no function name occurs in both summaries; there is no pair to \
+           compare"
+      else (
+        match
+          List.filter_map shared ~f:(fun (name, h_sig) ->
+              match List.Assoc.find s.functions name ~equal:String.equal with
+              | None -> None
+              | Some s_sig ->
+                  if
+                    String.equal h_sig.return_type s_sig.return_type
+                    && List.equal String.equal h_sig.arg_types s_sig.arg_types
+                  then None
+                  else Some name)
+        with
+        | [] -> Holds
+        | names -> Violated names)
 
-(* Best-effort: ".ok" marker file alongside cmd success implies probe step
-   succeeded. probe.log non-empty + no .ok marker implies cmd failed (which
-   for Expect_failure cases is the GOAL — see step_expectation in
-   canary_action.ml). We're not re-implementing the runner's verdict; just
-   distinguishing "log has compile error text" from "log shows runtime ok". *)
+(* ── the agreement ── *)
 
-let c6 : description =
-  { about = signature;
-    claim = Structural;
-    evidence = Compare_several;
-    provenance = Added;
-    reads = [ ("Sf.1", "native"); ("Sf.3", "binding") ];
-    fault_tags = [ "type_arity" ];
-    firing = firing_default;
-    inputs =
-      (fun m l _ ->
-        match (l, is_dynamic m) with
-        | Canary_lang.OCaml, false ->
-            (* the header is the NATIVE side and language-neutral; the
-               stub surface is the MECHANISM's — [external] is how
-               cstubs spells the boundary — and says so there *)
-            [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
-              Canary_agreement_cstubs.typed_stub_surface ]
-        | _ -> []);
-    (* pends its fixture: the typed-signature JSON shape is the one
-       loader with no synthetic body written for it yet *)
-    counterexamples = [] }
+let signatures_agree : agreement =
+  { ag_subject = Signatures;
+    ag_claim = Structural;
+    ag_basis = Toolchain_rule;
+    ag_says = "the types a stub declares agree with the header it wraps";
+    ag_expects =
+      "the provider's header signatures, for the function names the binding \
+       also declares. A disagreeing return type or argument list is what the \
+       C compiler would reject if it saw both";
+    ag_rooted_in =
+      rooted ~action:"build_binding" ~tool:"the C compiler"
+        ~artifact:"the stub's calls against the header's declarations"
+        ~note:
+          "the compiler's rule is that a call agrees with the declaration in \
+           scope. It ran when the stub was compiled against some header; \
+           this re-derives it from signature summaries, TEXTUALLY, for the \
+           names both sides mention"
+        ();
+    ag_fault_tag = "type_arity";
+    ag_methods =
+      [ checking_method ~name:"header_vs_stub_signature_summaries" ~kind:Compare
+          ~reference:Peer_artifact
+          ~applicable:(fun m l _ ->
+            match (l, is_dynamic m) with
+            | Canary_lang.OCaml, false -> Applicable
+            | _, true ->
+                Inapplicable
+                  "a dynamic binding declares its types as values rather than \
+                   as a compiled boundary; it needs its own extractor"
+            | _ ->
+                Inapplicable
+                  "no signature extractor for this language's stub surface yet")
+          ~firing:firing_default
+          ~inputs:(fun m l _ ->
+            match (l, is_dynamic m) with
+            | Canary_lang.OCaml, false ->
+                (* the header is the NATIVE side and language-neutral; the
+                   stub surface is the MECHANISM's — [external] is how
+                   cstubs spells the boundary — and says so there *)
+                [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
+                  Canary_agreement_cstubs.typed_stub_surface ]
+            | _ -> [])
+          ~eval:signatures_eval
+          ~limits:
+            "textual comparison of type SPELLINGS, not semantic type \
+             equivalence, representation or ownership. Names on only one \
+             side are skipped. The current extractor parses known C header \
+             declarations and supplies fixed binding signatures where their \
+             names occur in the binding source — general binding-signature \
+             extraction is the next step."
+          ~counterexamples:
+            [ { fx_method = "header_vs_stub_signature_summaries";
+                fx_inputs =
+                  [ Typed_header [ "hdr.json" ];
+                    Typed_binding_stub [ "stub.json" ] ];
+                fx_bodies =
+                  [ ("hdr.json",
+                     {|{"kind": "typed_header", "path": "fx",
+    "functions": {"tiny_sum": {"return": "int", "args": ["int", "int"]}}}|});
+                    ("stub.json",
+                     {|{"kind": "typed_stub_ocaml", "path": "fx",
+    "functions": {"tiny_sum": {"return": "int", "args": ["int"]}}}|}) ];
+                fx_outcome = "violated";
+                fx_findings = [ "tiny_sum" ] };
+              { fx_method = "header_vs_stub_signature_summaries";
+                fx_inputs =
+                  [ Typed_header [ "hdr.json" ];
+                    Typed_binding_stub [ "agree.json" ] ];
+                fx_bodies =
+                  [ ("hdr.json",
+                     {|{"kind": "typed_header", "path": "fx",
+    "functions": {"tiny_sum": {"return": "int", "args": ["int", "int"]}}}|});
+                    ("agree.json",
+                     {|{"kind": "typed_stub_ocaml", "path": "fx",
+    "functions": {"tiny_sum": {"return": "int", "args": ["int", "int"]}}}|}) ];
+                fx_outcome = "holds";
+                fx_findings = [] } ]
+          () ] }
+
+let checks : (agreement_id * agreement) list =
+  [ (Signatures_agree, signatures_agree) ]

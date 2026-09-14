@@ -337,12 +337,14 @@ let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
 let opam_binding_agreement_bindings : Canary_scenario.agreement_binding list =
   let module CC = Canary_agreement_common in
   let module CS = Canary_scenario in
-  [ { contract = CC.C1; lang = Canary_lang.OCaml;
+  [ { contract = CC.Required_symbols_exported; lang = Canary_lang.OCaml;
       firings = [
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = Canary_agreement.inputs_of_agreement CC.C1 Canary_lang.OCaml;
+            inputs =
+              Canary_agreement.inputs_of_agreement
+                CC.Required_symbols_exported Canary_lang.OCaml;
             version_info = None;
           }};
       ]} ]

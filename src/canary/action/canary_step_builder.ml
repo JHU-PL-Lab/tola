@@ -127,9 +127,30 @@ type store_slot =
   | Probe_binding of Canary_lang.lang
   | Scan_source
 
+(** A DUMMY ACTION (2026-09-12, user).
+
+    A step that occupies its place in the action graph and performs no
+    work, carrying the reason it is empty. It exists because the graph
+    is also where EVIDENCE is attached: an inspector hangs off the step
+    that produces the artifact it reads, and a derivation looks for a
+    binding's inspection at the step that installs it. When an artifact
+    needs no installing — Python's [sqlite3] is part of the interpreter
+    — there is no such step, and the choice is between teaching every
+    consumer about the exception and giving the graph a place to hang
+    things. This is the second.
+
+    It is NOT a stub, a skip, or a not-yet-written command. It asserts
+    that there is genuinely nothing to do here, and the string says
+    why. A dummy that turns out to have work to do is a bug in the
+    declaration, not a TODO.
+
+    Every dummy is marked on the step, logged when it runs, and
+    listable (`canary checks --dummies`), so "what is real in this
+    graph" stays answerable as they accumulate. *)
 type step_source =
   | Derived of store_slot
   | Raw of (output_dir:string -> variant_key:string -> string)
+  | Dummy of string  (** why there is nothing to do *)
 
 type runner_spec = {
   (* Provenance the store owns (S3) — drives [Derived] step slots. Empty
@@ -354,10 +375,36 @@ let fetch_binding_cmd (spec : Canary_toolchain.opam_package_spec) ~output_dir ~v
    reusing the same command templates a hand-written [Raw] closure would
    call — so a Derived slot is byte-identical to the old closure. Only the
    two fetch slots are wired; probe/scan slots follow in a later seam. *)
+let marker_of_action = function
+  | Fetch Source -> "source.ok"
+  | Fetch (Binding_source _) -> "binding_source.ok"
+  | Configure -> "conf.ok"
+  | Scan_sources -> "scan.ok"
+  | Build_headers | Fetch Headers -> "headers.ok"
+  | Fetch Lib -> "lib.ok"
+  | Fetch (Binding _) -> "binding.ok"
+  | Fetch App -> "app.ok"
+  | Build_lib | Build_binding _ | Build_app _ -> "build.ok"
+  | Install_lib -> "install.ok"
+  | Publish _ -> "pack.ok"
+  | Probe_lib | Probe_binding _ | Probe_app _ -> "probe.log"
+
+(** Resolve a step source to a command. [~marker] is the file the
+    action's default [check_post] looks for; a [Dummy] has to create it
+    itself, because "nothing to do" still has to be distinguishable
+    from "did not run". *)
 let command_of_step ~(store_config : Canary_store_config.store_config)
-    (s : step_source) : output_dir:string -> variant_key:string -> string =
+    ?(marker = "step.ok") (s : step_source) :
+    output_dir:string -> variant_key:string -> string =
   match s with
   | Raw f -> f
+  | Dummy why ->
+      fun ~output_dir ~variant_key ->
+        let m = Canary_basic.variant_file ~variant_key marker in
+        Printf.sprintf
+          "mkdir -p \"%s\" && echo 'DUMMY ACTION — nothing to do here: %s' \
+           && : > \"%s/%s\""
+          output_dir why output_dir m
   | Derived Fetch_lib -> (
       match store_config.lib with
       | Some { provider = Canary_store_config.Sys_pkg spec; _ } ->
@@ -397,10 +444,13 @@ let script_of_action spec = function
   | Build_headers -> spec.build_headers
   | Fetch Headers -> spec.fetch_headers
   | Fetch Lib ->
-      Option.map spec.fetch_lib ~f:(command_of_step ~store_config:spec.stores)
+      Option.map spec.fetch_lib
+        ~f:(command_of_step ~store_config:spec.stores
+              ~marker:(marker_of_action (Fetch Lib)))
   | Fetch (Binding lang) ->
       Option.map (List.Assoc.find spec.fetch_binding ~equal:Poly.equal lang)
-        ~f:(command_of_step ~store_config:spec.stores)
+        ~f:(command_of_step ~store_config:spec.stores
+              ~marker:(marker_of_action (Fetch (Binding lang))))
   | Fetch App -> spec.fetch_app
   | Build_lib -> spec.build_lib
   | Build_binding lang -> List.Assoc.find spec.build_binding ~equal:Poly.equal lang
@@ -545,19 +595,10 @@ let opam_world_check ~(pkg : string) ~(pin : string) : string =
    | Probe _       | probe.log   | Test ran and produced output |
 *)
 
-let marker_of_action = function
-  | Fetch Source -> "source.ok"
-  | Fetch (Binding_source _) -> "binding_source.ok"
-  | Configure -> "conf.ok"
-  | Scan_sources -> "scan.ok"
-  | Build_headers | Fetch Headers -> "headers.ok"
-  | Fetch Lib -> "lib.ok"
-  | Fetch (Binding _) -> "binding.ok"
-  | Fetch App -> "app.ok"
-  | Build_lib | Build_binding _ | Build_app _ -> "build.ok"
-  | Install_lib -> "install.ok"
-  | Publish _ -> "pack.ok"
-  | Probe_lib | Probe_binding _ | Probe_app _ -> "probe.log"
+(* [marker_of_action] moved above [command_of_step] (2026-09-12): a
+   Dummy step has to write its own marker, so resolving a step source
+   to a command needs to know which file the action's default
+   check_post will look for. It is a pure function of the action. *)
 
 let default_check_post action ~output_dir ~variant_key =
   has_file ~output_dir (Canary_basic.variant_file ~variant_key (marker_of_action action))
@@ -584,6 +625,10 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~action ~deps ~cmd
     action; deps;
     expectation; symbol_check;
     disabled_agreements;
+    (* filled in by [derive_steps] once, from the scenario's world —
+       see [agreement_ctx_of_action] *)
+    agreement_ctx = None;
+    dummy = None;
     check_pre = (fun () ->
       List.for_all deps ~f:(fun dep ->
           let out = output_dir_for ~root ~project ~tag:dep in
@@ -593,6 +638,17 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~action ~deps ~cmd
   }
 
 (* ── Derive action steps from store_actions + runner_spec ── *)
+
+(** The tags the lib probes actually run under. One entry keeps the
+    canonical [probe_lib]; several suffix themselves by location, which
+    is what [derive_steps] does when it expands them. Factored out here
+    (2026-09-13) so a consumer can DEPEND on the lib probes without
+    re-deriving the naming rule and getting it subtly wrong. *)
+let probe_lib_tags (spec : runner_spec) : string list =
+  match spec.probe_lib with
+  | [] -> []
+  | [ _ ] -> [ string_of_action Probe_lib ]
+  | entries -> List.map entries ~f:(fun (loc, _) -> tag_of_probe_lib_location loc)
 
 let deps_of_action spec action =
   let has r = Option.is_some (script_of_action spec r) in
@@ -720,7 +776,24 @@ let deps_of_action spec action =
         else if has Build_lib then Some (tag Build_lib)
         else None
       in
-      List.filter_opt [ produce_dep; runtime_lib_dep ]
+      (* AFTER THE LIB PROBE, not merely after the lib (2026-09-13).
+
+         The binding probe is where the lib-vs-consumer agreements are
+         evaluated, and the library's half of that comparison is a
+         summary the LIB PROBE writes. Depending on the provisioning
+         step orders this after the library exists, which is not the
+         same thing as after anybody looked at it.
+
+         It showed up as [required_symbols_exported] deciding in
+         sqlite's Built and Installed worlds and reporting
+         `unavailable` in its Fetched one — for the worst possible
+         reason: the two orders differed by accident, and where it
+         worked, it worked because a PREVIOUS run had left the file on
+         disk. A check that passes only on a warm tree is not a check.
+
+         It is also true as a runtime claim: this probe loads the
+         library the lib probe just validated. *)
+      List.filter_opt [ produce_dep; runtime_lib_dep ] @ probe_lib_tags spec
   | Probe_app { lang } ->
       let produce_dep =
         if has (Build_app { lang }) then Some (tag (Build_app { lang }))
@@ -752,7 +825,10 @@ let deps_of_probe_entry spec ~lang loc =
     else if has Build_lib then Some (tag Build_lib)
     else None
   in
-  List.filter_opt [ produce_dep; runtime_lib_dep ]
+  (* the same lib-probe ordering as [deps_of_action]'s Probe_binding —
+     this is the per-LOCATION twin of it, and a per-location probe
+     reads the same evidence *)
+  List.filter_opt [ produce_dep; runtime_lib_dep ] @ probe_lib_tags spec
 
 let deps_of_probe_lib_entry spec loc =
   let has r = Option.is_some (script_of_action spec r) in
@@ -829,7 +905,55 @@ let drop_unread_fetches (steps : step list) : step list =
           List.exists (produces_of_action s.action) ~f:is_consumed
       | _ -> true)
 
-let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang.[ OCaml ]) (spec : runner_spec) : step list =
+(** Is this action declared a DUMMY by the spec, and why? Reads the
+    same [step_source] fields [script_of_action] does, so a dummy
+    cannot be declared in one place and missed in the other. *)
+let dummy_reason_of_action (spec : runner_spec) (a : action) : string option =
+  let of_source = function Dummy why -> Some why | Derived _ | Raw _ -> None in
+  match a with
+  | Fetch Lib -> Option.bind spec.fetch_lib ~f:of_source
+  | Fetch (Binding lang) ->
+      Option.bind
+        (List.Assoc.find spec.fetch_binding ~equal:Poly.equal lang)
+        ~f:of_source
+  | _ -> None
+
+(** The binding facts an agreement selection needs, attached to the
+    steps that have them (2026-09-12). Computed once per derivation
+    from the world the scenario assigned, then mapped over the finished
+    step list — so every [mk_step] call site stays as it was and there
+    is one place that decides which actions carry a context.
+
+    The LIB actions take the first declared language. Their firing
+    derivations either ignore the language ([firing_built_lib_only]) or
+    use it only to locate the binding side of a pair, and a lib step
+    that also wants a second language's pair check is a case no project
+    has yet. Named here rather than guessed at the call site. *)
+let agreement_ctx_of_action ~(world : Canary_artifact.assignment)
+    ~(mechanism_of : Canary_lang.lang -> Canary_mechanism.mechanism)
+    ~(langs : Canary_lang.lang list) (a : action) :
+    Canary_step_model.agreement_ctx option =
+  let ctx l =
+    Some
+      { Canary_agreement_common.ac_mechanism = mechanism_of l;
+        ac_lang = l;
+        ac_world = world }
+  in
+  match a with
+  | Build_binding l | Probe_binding l | Fetch (Binding l)
+  | Fetch (Binding_source l) | Publish (Binding l) ->
+      ctx l
+  | Build_lib | Install_lib | Probe_lib | Fetch Lib | Publish Lib -> (
+      match langs with l :: _ -> ctx l | [] -> None)
+  | _ -> None
+
+let derive_steps ~root ~project ?(cache_project = project)
+    ?(langs = Canary_lang.[ OCaml ]) ?(world = [])
+    ?(mechanism_of =
+      fun l ->
+        Option.value
+          (Canary_mechanism.default_mechanism_of_lang l)
+          ~default:Canary_mechanism.Cstubs) (spec : runner_spec) : step list =
   check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
   let mk_one ~tag ~action ~deps ~cmd =
@@ -939,21 +1063,39 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
              | Some pkg -> python_install_inspect pkg)
         | _ -> []
   in
-  (* spec.inspect is the explicit override (legacy, single-summary). When
-     present, it wins and we skip auto generation entirely. *)
+  (* spec.inspect is the explicit override. It REPLACES the auto
+     summary with the same output name and leaves the others alone
+     (2026-09-13). It used to suppress auto generation entirely, which
+     is a different and much stronger claim: a project that wanted to
+     spell its own surface inspection silently lost the stub
+     inspection it never mentioned. sqlite did exactly that, and
+     [required_symbols_exported] had nothing to read on it as a
+     result.
+
+     Replacement is keyed on the output BASE NAME rather than the
+     action, because that is what actually collides — two summaries
+     writing [inspect.json] into one directory is the conflict, and
+     [inspect_stub.json] beside it is not. *)
   let attach_inspect ~parent_tag ~action ?loc base_step =
-    match spec.inspect action loc with
-    | Some c ->
-        [ base_step;
-          mk_inspect ~parent_tag ~action ~tag_suffix:"_inspect"
-            ~base_name:"inspect" ~inspect_cmd:c ]
-    | None ->
-        let summaries = auto_binding_summaries action in
-        if List.is_empty summaries then [ base_step ]
-        else
-          base_step ::
-          List.map summaries ~f:(fun (tag_suffix, base_name, inspect_cmd) ->
-              mk_inspect ~parent_tag ~action ~tag_suffix ~base_name ~inspect_cmd)
+    let explicit =
+      match spec.inspect action loc with
+      | None -> []
+      | Some c -> [ ("_inspect", "inspect", c) ]
+    in
+    let auto =
+      List.filter (auto_binding_summaries action)
+        ~f:(fun (_, base_name, _) ->
+          not
+            (List.exists explicit ~f:(fun (_, taken, _) ->
+                 String.equal taken base_name)))
+    in
+    match explicit @ auto with
+    | [] -> [ base_step ]
+    | summaries ->
+        base_step
+        :: List.map summaries ~f:(fun (tag_suffix, base_name, inspect_cmd) ->
+               mk_inspect ~parent_tag ~action ~tag_suffix ~base_name
+                 ~inspect_cmd)
   in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
@@ -1070,7 +1212,20 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 Stdlib.Sys.file_exists
                   (output_dir_for ~root ~project ~tag:dep))
       in
-      { s with check_pre })
+      { s with
+        check_pre;
+        agreement_ctx =
+          agreement_ctx_of_action ~world ~mechanism_of ~langs s.action;
+        (* only the BASE step of a dummy action is a dummy. An
+           attached inspector shares the parent's action but does real
+           work — it runs the inspector and writes the summary an
+           agreement reads, which is the entire reason the dummy
+           exists. Keyed on the tag being the action's canonical one,
+           so the [_inspect] siblings are excluded. *)
+        dummy =
+          (if String.equal s.tag (string_of_action s.action) then
+             dummy_reason_of_action spec s.action
+           else None) })
   |> drop_unread_fetches
 
 

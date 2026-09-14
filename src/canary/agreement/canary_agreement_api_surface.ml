@@ -1,102 +1,88 @@
-(** API-surface agreements — the user-facing names a binding promises
+(** API-surface agreements — the user-facing names a binding offers
 
-    One module per check family (design: the per-check module pattern). Each
-    check states its CATEGORY (descriptive), its STANDING, and a
-    falsifier-phrased sentence; the function keeps whatever signature suits it,
-    and the caller supplies the inputs. *)
+    Two agreements: the watchlisted names are present on the surface a
+    user imports ([api_names_present]), and the user-facing layer
+    preserves the stub-facing one ([repack_preserves_api]). The second
+    keeps a PROVISIONAL name: what "preserves" permits is undecided
+    (design §6.3.1), and a name should not settle a claim the catalogue
+    has not. *)
 
 open Base
 open Canary_agreement_common
-module Cat = Canary_agreement_common
 
-(* ── what this module is about ── *)
+(* ── the evidence this family reads ── *)
 
-let complete : about =
-  {
-    cat = Cat.Api `Complete;
-    standing = Cat.Declared;
-    says =
-      "every watchlisted name is present on the binding's user-facing surface";
-  }
+(** The kinds that ARE a user-facing surface. Three inspectors produce
+    one: [inspect_binding.py --kind mli] (["ocaml_mli"]),
+    [inspect_ocaml.py] over an installed findlib package (["ocaml"]),
+    and [inspect_python.py] over an imported module (["python"]).
+    Selecting by these rather than by filename is what lets one
+    candidate list cover both the framework's spelling and tiny's
+    without ever reading a compiled-stub summary as a surface. *)
+let user_surface_kinds = [ "ocaml_mli"; "ocaml"; "python" ]
 
-let repack : about =
-  {
-    cat = Cat.Api `Repacked;
-    standing = Cat.Declared;
-    says = "the user-facing layer is a sound repacking of the stub-facing one";
-  }
+(** Every watchlist inspection among [inputs] that actually resolved.
+    Plural because a project may hand both its OCaml and its Python
+    surface to one step, and the claim is the same for each — only the
+    surface differs, which is what the per-language modules own. *)
+let watchlist_paths ~resolve inputs =
+  List.filter_map inputs ~f:(function
+    | Ocaml_mli ps | Python_attrs ps ->
+        pick_existing_of_kind ~resolve ~kinds:user_surface_kinds ps
+    | _ -> None)
 
-let checks : (string * about) list =
-  [ ("api_surface_complete", complete); ("repack_preserves_api", repack) ]
+(* ── is every watchlisted name present ── *)
 
-(* ── c2: is every watchlisted name present ── *)
+let api_names_eval ~resolve inputs : outcome =
+  match watchlist_paths ~resolve inputs with
+  | [] -> Unavailable "no user-facing surface inspection in this world"
+  | paths -> (
+      let loaded = List.filter_map paths ~f:load_watchlist in
+      if List.is_empty loaded then
+        Inconclusive
+          "the surface inspection carries no watchlist section (the inspector \
+           ran without one)"
+      else
+        let present = List.concat_map loaded ~f:fst in
+        let missing = List.concat_map loaded ~f:snd in
+        match (present, missing) with
+        | [], [] ->
+            (* the distinction the design insists on: an empty
+               declaration is not coverage *)
+            Inconclusive
+              "the watchlist is empty — nothing was asked of this surface"
+        | _, [] -> Holds
+        | _, missing -> Violated missing)
 
-let c2_predict ~resolve (inputs : inspect_input list) : string list =
-  List.concat_map inputs ~f:(function
-    | Ocaml_mli ps | Python_attrs ps -> (
-        match pick_existing ~resolve ps with
-        | None -> []
-        | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants
-        )
-    | _ -> [])
+(** The names a failing run's log will actually print. An OCaml
+    compiler says [Opcode.UncondBr] or [UncondBr] where the watchlist
+    said [Llvm.Opcode.UncondBr], so the diagnostic prediction expands
+    each finding into its observable spellings. Kept separate from the
+    evaluation on purpose: the VERDICT is "these names are missing";
+    how a tool spells them is a property of the tool. *)
+let api_names_diagnostics o = List.concat_map (findings_of_outcome o) ~f:name_variants
 
-(* ── c7: is the user-facing layer a sound repacking of the stub one ── *)
+(* ── the repacking relation ── *)
 
-(** [c7 cmp_api_repack] result type. The contract pins {i s3 binding_stub} ↔
-    {i s4 binding_header} within a single binding — every user-facing name
-    should correspond to a stub-facing name (modulo declared renames), and vice
-    versa. *)
+(** Result type for the name-based repacking helper. It pins the
+    stub-facing layer against the user-facing one within a single
+    binding — every user-facing name should correspond to a stub-facing
+    name (modulo declared renames), and vice versa. *)
 type repack_result =
   | Repack_compatible
   | Repack_stub_orphan of { externals_not_exposed : string list }
   | Repack_user_phantom of { vals_without_external : string list }
   | Repack_unknown
 
-(** [c7 cmp_api_repack] implementation. Compares the stub-facing
-    externals against the user-facing vals (both from a single
-    binding's two .mli files in tiny's setup, or wider in other
-    bindings). Strict name-equality after filtering out declared
-    rename pairs.
+(** Compare the stub-facing externals against the user-facing vals.
+    Strict name equality after filtering out declared rename pairs.
 
-    Inputs in tiny's vocabulary:
-    - [stub_externals] from {i bo1}'s [externals] field (e.g.
-      [["sum"; "diff"; "get_offset"]] from Tiny_raw.mli)
-    - [user_vals] from {i bo4}'s [vals] field (e.g.
-      [["sum"; "diff"; "offset"]] from Tiny.mli)
-    - [renames] declares allowed (external, val) pairs the binding
-      author intentionally renamed. Empty list = strict match. Tiny
-      passes [[("get_offset", "offset")]] so baseline reports
-      [Repack_compatible] despite the asymmetric name.
-
-    What c7 catches: stub-side orphan — a binding author wrote
-    [external new_thing : ...] in Tiny_raw.mli (and the C stub) but
-    forgot the corresponding [val new_thing : ...] in Tiny.mli.
-    Tiny scenario {i e14 api_repack_stub_orphan} is the live witness:
-    the patch adds [external alias_sum] to Tiny_raw without surfacing
-    it in Tiny. Runtime probe is silent ({c3 cmp_behavior} sees
-    nothing wrong); c1 cmp_symbol passes (no new tiny_* undef refs);
-    c2 cmp_api_completeness passes (vals still cover the watchlist).
-    Only c7 surfaces it.
-
-    What c7 does NOT catch: tiny scenario {i e5 api_repack}. e5
-    patches the [.ml] implementation (swaps [diff] arguments) but
-    leaves both [.mli] files unchanged. c7 only sees [.mli] surfaces;
-    the .ml repack drift is invisible to static check and is c3's
-    territory.
-
-    User-phantom shape: a val without any backing external. In
-    well-typed OCaml this is unreachable (the .ml won't compile if
-    no external/let backs the val). Kept as a result variant for
-    Python parity later, where dir(pkg) can claim attrs without
-    underlying bindings.
-
-    Returns:
-    - [Repack_compatible] — both sides agree (modulo renames).
-    - [Repack_stub_orphan] — externals present in stub-facing but
-      not exposed via user-facing.
-    - [Repack_user_phantom] — vals present in user-facing without a
-      backing external.
-    - [Repack_unknown] — both sides empty. *)
+    What it catches: a stub-side orphan — the author wrote
+    [external new_thing] and forgot the corresponding [val new_thing].
+    What it does NOT catch: a repack whose [.ml] is wrong while both
+    interfaces are unchanged. That drift is invisible to any name
+    comparison, which is why this helper is not by itself the
+    agreement's evaluator. *)
 let check_api_repack ~(stub_externals : string list) ~(user_vals : string list)
     ~(renames : (string * string) list) : repack_result =
   if List.is_empty stub_externals && List.is_empty user_vals then Repack_unknown
@@ -116,75 +102,118 @@ let check_api_repack ~(stub_externals : string list) ~(user_vals : string list)
     | _, false ->
         Repack_user_phantom { vals_without_external = Set.to_list phantoms }
 
-(* c7 is UNWIRED on the predict side: the repack drift shows up by
-   RUNNING the binding probe, not in any static input, so this returns
-   [] honestly and the registry keeps the row disabled. *)
-let c7_predict ~resolve:_ _ = []
-
 (* ── what each agreement hands the registry ── *)
 
-let c2 : description =
-  {
-    about = complete;
-    claim = Structural;
-    evidence = Inspect_one;
-    provenance = Added;
-    reads = [ ("Sf.4", "binding") ];
-    fault_tags = [ "api_drop" ];
-    firing = firing_default;
-    inputs =
-      (fun _ l w ->
-        let tag = binding_evidence_tag w l in
-        match l with
-        (* the CLAIM is identical across languages; only the surface
-           differs, so each language says where its own is (2026-09-03) *)
-        | Canary_lang.OCaml -> [ Canary_agreement_ocaml.user_surface tag ]
-        | Canary_lang.Python -> [ Python_attrs [ tag ^ "/inspect_attrs.json" ] ]
-        | _ -> []);
-    counterexamples =
-      [
-        (* the OCaml watchlist, echoing llvm's Opcode.UncondBr — the
-           expectation is the dotted-name expansion, which is what a
-           probe log actually prints *)
-        {
-          fx_predict = None;
-          fx_inputs = [ Ocaml_mli [ "mli.json" ] ];
-          fx_bodies =
-            [
-              ( "mli.json",
-                {|{"kind": "ocaml_mli", "path": "fx",
-    "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}|}
-              );
-            ];
-          fx_expect = [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ];
-        };
-        (* the Python one, echoing z3's wheel surface *)
-        {
-          fx_predict = None;
-          fx_inputs = [ Python_attrs [ "py.json" ] ];
-          fx_bodies =
-            [
-              ( "py.json",
-                {|{"kind": "python", "path": "fx",
-    "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}|}
-              );
-            ];
-          fx_expect = [ "Solver.add"; "add"; "BitVec" ];
-        };
-      ];
-  }
+let api_names_present : agreement =
+  { ag_subject = Api_names;
+    ag_claim = Structural;
+    ag_basis = Project_declaration;
+    ag_says =
+      "every watchlisted name is present on the binding's user-facing surface";
+    ag_expects =
+      "the project's watchlist for this binding; a watched name absent from \
+       the inspected surface is the falsifier. An empty watchlist asks \
+       nothing and is reported as inconclusive, never as a pass";
+    ag_rooted_in =
+      rooted ~action:"build_app" ~tool:"the language compiler"
+        ~artifact:"the binding's user-facing interface"
+        ~note:
+          "the compiler's rule is that every name a consumer uses resolves \
+           on the interface it compiles against. The watchlist stands in for \
+           the application's actual uses, which makes this a hand-written \
+           APPROXIMATION of a real rule rather than a derivation of it"
+        ();
+    ag_fault_tag = "api_drop";
+    ag_methods =
+      [ checking_method ~name:"watchlist_vs_user_surface" ~kind:Inspect
+          ~reference:Declared_facts ~firing:firing_default
+          ~inputs:(fun _ l w ->
+            let tag = binding_evidence_tag w l in
+            match l with
+            (* the CLAIM is identical across languages; only the surface
+               differs, so each language says where its own is *)
+            | Canary_lang.OCaml -> [ Canary_agreement_ocaml.user_surface tag ]
+            | Canary_lang.Python ->
+                (* both spellings, as for OCaml: the framework's
+                   [inspect_python.py] writes inspect.json, tiny writes
+                   inspect_attrs.json, and the kind decides *)
+                [ Python_attrs
+                    [ tag ^ "/inspect.json"; tag ^ "/inspect_attrs.json" ] ]
+            | _ -> [])
+          ~eval:api_names_eval ~diagnostics:api_names_diagnostics
+          ~limits:
+            "coverage is bounded by the watchlist: names outside it are not \
+             checked, and a name being present says nothing about the \
+             signature or behaviour behind it. Obtaining the Python surface \
+             already imports the module."
+          ~counterexamples:
+            [ (* the OCaml watchlist, echoing llvm's Opcode.UncondBr — the
+                 expectation is the dotted-name expansion, which is what a
+                 probe log actually prints *)
+              { fx_method = "watchlist_vs_user_surface";
+                fx_inputs = [ Ocaml_mli [ "mli.json" ] ];
+                fx_bodies =
+                  [ ("mli.json",
+                     {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}|}) ];
+                fx_outcome = "violated";
+                fx_findings =
+                  [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ] };
+              (* the Python one, echoing z3's wheel surface *)
+              { fx_method = "watchlist_vs_user_surface";
+                fx_inputs = [ Python_attrs [ "py.json" ] ];
+                fx_bodies =
+                  [ ("py.json",
+                     {|{"kind": "python", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}|}) ];
+                fx_outcome = "violated";
+                fx_findings = [ "Solver.add"; "add"; "BitVec" ] };
+              (* an EMPTY watchlist is not coverage *)
+              { fx_method = "watchlist_vs_user_surface";
+                fx_inputs = [ Ocaml_mli [ "empty.json" ] ];
+                fx_bodies =
+                  [ ("empty.json",
+                     {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": [], "missing": []}}|}) ];
+                fx_outcome = "inconclusive";
+                fx_findings = [] } ]
+          () ] }
 
-let c7 : description =
-  {
-    about = repack;
-    claim = Semantic;
-    evidence = Run_program;
-    provenance = Added;
-    reads = [ ("Sf.4", "binding") ];
-    fault_tags = [ "api_repack" ];
-    firing = firing_probe_only;
-    inputs = (fun _ _ _ -> []);
-    (* the repack drift shows up by RUNNING, so there is no static
-       counterexample to write — the registry keeps c7 stubbed *)
-    counterexamples = [];
-  }
+let repack_preserves_api : agreement =
+  { ag_subject = Repacking;
+    ag_claim = Behavioral;
+    ag_basis = Behavioral_spec;
+    ag_says = "the user-facing layer is a sound repacking of the stub-facing one";
+    ag_expects =
+      "an explicit statement of which transformations a wrapper may make. \
+       Until the project supplies one, there is no reference to compare \
+       against: a wrapper may rename, combine, restrict or extend, and none \
+       of those is refuted by a name comparison";
+    ag_rooted_in =
+      unrooted
+        ~note:
+          "a binding's two layers are both written by the author, and \
+           nothing compiles one against the other in a way that could reject \
+           a rename, a merge or a deliberate omission. This is a claim about \
+           INTENT, and it needs stating before it can be checked"
+        ();
+    ag_fault_tag = "api_repack";
+    ag_methods =
+      [ checking_method ~name:"declared_repacking_relation" ~kind:Run_program
+          ~reference:Declared_facts ~firing:firing_probe_only
+          ~inputs:(fun _ _ _ -> [])
+          ~planned:
+            "the repacking relation is not specified: \"preserves\" has no \
+             agreed scope, so there is nothing to compare a binding against. \
+             check_api_repack compares names and declared renames, which \
+             refutes a stub-side orphan but not a wrapper whose \
+             implementation drifted; the probe's own assertions carry that \
+             case today"
+          ~limits:
+            "not evaluated. The name-based helper, when it is connected, \
+             will refute orphaned externals only."
+          () ] }
+
+let checks : (agreement_id * agreement) list =
+  [ (Api_names_present, api_names_present);
+    (Repack_preserves_api, repack_preserves_api) ]

@@ -39,6 +39,21 @@ let run_project_spec ?policy (pr : project_run) ~root
      consecutively, so a pinned package is installed once per distinct pin
      instead of once per row. Stable, so the enumeration's order survives
      inside each group. *)
+  (* MARK THE RUN (2026-09-12). [actions.log] is append-only across
+     invocations, and until now nothing in it said where one invocation
+     ended and the next began: a reader asking "what did the last run
+     check?" was really reading every run since the file was created.
+     One marker per [canary action <project>] makes the log
+     self-delimiting, which is what [Canary_status.observed_agreements]
+     scopes to. *)
+  (let run_dir = Printf.sprintf "%s/canary/projects/%s/-run" root pr.pr_name in
+   (try Canary_step_model.ensure_dir run_dir with _ -> ());
+   let logger =
+     Canary_step_model.create_logger ~log_path:(run_dir ^ "/actions.log")
+   in
+   logger.Canary_step_model.log ~tag:"*" ~event:"run_start"
+     ~detail:(Some pr.pr_name);
+   logger.Canary_step_model.close ());
   let scenarios = Canary_pipeline.ordered ?policy pr in
   let baseline =
     try List.find all_good scenarios

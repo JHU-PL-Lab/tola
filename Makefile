@@ -48,8 +48,53 @@ canary-llvm:
 canary-tiny1-bridge:
 	$(CANARY) action tiny1/symbol_missing
 
-canary-post-check: canary-sqlite canary-tiny1-bridge
-	@echo "post-check: sqlite + tiny1 bridge both passed"
+# THE ROUND TRIP: run a real project, then read its own log back and
+# require that a named agreement actually reached a decided outcome.
+# Everything else in the agreement layer describes what WOULD be
+# checked; this is the only thing that shows a check ran. Pointing it
+# at sqlite for the first time is what revealed that the project's
+# inspectors were wired into a spec the run path never used, so every
+# agreement had been reporting `unavailable`.
+# It DROPS the probe's verdict markers first, then runs. That is not a
+# workaround for the cache — it is what the assertion is about. A warm
+# step re-checks nothing and emits no agreement outcome, so a gate that
+# accepted a warm run would pass on a log written weeks ago. Only the
+# markers of the step that READS the evidence are removed; the build,
+# the fetch and the install stay warm, so this costs one probe.
+# The LANDED agreements, one name per line. A row is added here only
+# after a real run decided it AND a deliberate break flipped it; the
+# gate then keeps it decided. Dropping the probe markers (and the lib
+# probes' own output) is what stops a warm tree from answering: the
+# evidence has to be produced by THIS run, in an order where the step
+# that reads it runs second.
+CANARY_LANDED_AGREEMENTS = api_names_present required_symbols_exported
+
+canary-agreement-roundtrip:
+	@rm -f _out/canary/projects/sqlite/probe_binding/*/*.ok
+	@rm -f _out/canary/projects/sqlite/probe_lib*/*.ok _out/canary/projects/sqlite/probe_lib*/*.json
+	$(CANARY) action sqlite --thin
+	$(CANARY) checks sqlite --observed
+	@for a in $(CANARY_LANDED_AGREEMENTS); do \
+	  $(CANARY) checks sqlite --observed | grep -q "$$a .* \(holds\|violated\)" \
+	  || { echo "ROUND-TRIP FAIL: sqlite's last run did not decide $$a." ; \
+	       echo "  A decided outcome means the evidence was produced AND read," ; \
+	       echo "  by steps ordered so the reader runs after the writer." ; \
+	       echo "  Check 'canary emit sqlite --stage realize' for the inspect step," ; \
+	       echo "  and doc/canary/design/agreement/pipeline.md for the reasons" ; \
+	       echo "  an agreement reports unavailable." ; \
+	       exit 1; }; \
+	done
+	@echo "round-trip: sqlite decided $(CANARY_LANDED_AGREEMENTS) from a real run"
+
+# The generated per-agreement catalogue. `make agreement-catalogue`
+# rewrites it; `agreements.catalogue_doc_is_generated` fails if the file
+# on disk differs from what the registry would emit, so it cannot drift.
+agreement-catalogue:
+	@$(CANARY) checks --catalogue --md > doc/canary/design/agreement/catalogue.md
+	@echo "wrote doc/canary/design/agreement/catalogue.md"
+
+canary-post-check: canary-sqlite canary-agreement-roundtrip canary-tiny1-bridge
+	@echo "post-check: sqlite + round-trip + tiny1 bridge all passed"
 
 canary_local:
 	$(CANARY) local

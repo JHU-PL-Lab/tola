@@ -315,12 +315,22 @@ let verdict_marker (step : step) : string =
     greps are computed at runtime from the inputs (whose paths ride the
     cmd, which the fingerprint also covers). *)
 let expectation_form (e : step_expectation) : string =
+  (* THE AGREEMENT EPOCH (2026-09-12). The two compat variants are the
+     only expectations whose verdict is decided by the agreement
+     registry, and the only markers whose CONTENT names agreements (the
+     confirming ids on the xfail line). Renaming the agreements
+     therefore invalidates exactly these, which is what mixing the
+     schema tag in here does: the existing warm-skip gate re-runs the
+     affected steps and leaves every build, fetch and hand-written
+     Expect_failure warm. The alternative — deleting output trees —
+     would throw away verdicts the rename says nothing about. *)
+  let epoch = Canary_agreement_common.evaluation_schema in
   match e with
   | Expect_success -> "success"
   | Expect_failure { contains_any; _ } ->
       "failure:" ^ String.concat ~sep:"," contains_any
-  | Expect_compat_failure _ -> "compat_failure"
-  | Expect_compat_derived _ -> "compat_derived"
+  | Expect_compat_failure _ -> "compat_failure/" ^ epoch
+  | Expect_compat_derived _ -> "compat_derived/" ^ epoch
 
 (** The step's spec fingerprint: the FULL realized cmd (it embeds every
     spec-derived bit — the assert_staged tests, prefixes, row order)
@@ -401,8 +411,16 @@ let verdict_is_xfail (path : string) : bool =
         | None -> false)
   with _ -> false
 
-(** The contract ids a marker's xfail line names ("xfail c2" → ["c2"]);
-    [] for a plain / non-xfail / absent marker. *)
+(** The agreement names a marker's xfail line records
+    ("xfail api_names_present" → ["api_names_present"]); [] for a
+    plain / non-xfail / absent marker.
+
+    Names that no longer PARSE are dropped (2026-09-12). A marker
+    written before the rename says "xfail c2", and c2 is not an
+    agreement any more — displaying it would attribute a verdict to
+    something that does not exist. The fingerprint epoch already
+    invalidates these markers, so the filter only covers the window
+    between reading one and re-running its step. *)
 let verdict_xfail_agreements (path : string) : string list =
   try
     Stdlib.In_channel.with_open_text path (fun ic ->
@@ -410,7 +428,10 @@ let verdict_xfail_agreements (path : string) : string list =
         | Some l -> (
             match String.split (String.strip l) ~on:' ' with
             | "xfail" :: ids ->
-                List.filter ids ~f:(fun s -> not (String.is_empty s))
+                List.filter ids ~f:(fun s ->
+                    (not (String.is_empty s))
+                    && Option.is_some
+                         (Canary_agreement_common.agreement_id_of_string s))
             | _ -> [])
         | None -> [])
   with _ -> []
@@ -490,6 +511,14 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
        log ~event:"skip" ~detail:(Some "verdict marker (prior success)");
        Step_done))
   else (
+    (* A DUMMY step says so in the log. It succeeds, it writes its
+       marker, and nothing about that is interesting — what IS
+       interesting is that a place in the graph is deliberately empty,
+       and a reader scanning a log for real work should be able to tell
+       without reading the command. *)
+    (match step.dummy with
+     | Some why -> log ~event:"dummy" ~detail:(Some why)
+     | None -> ());
     let pre_ok = step.check_pre () in
     log ~event:"check_pre" ~detail:(Some (if pre_ok then "pass" else "FAIL"));
     let result =
@@ -526,61 +555,120 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                   ~variant_key:step.variant_id rel in
               step.project_dir ^ "/" ^ vk_rel
         in
-        (* A7 phase 1 (was plan.md Step 6c): per-contract prediction — one
-           [compat_predicted] event per FIRED contract row ("c1 cmp_symbol:
-           3 substring(s)") + one [agreement_skipped] per disabled/stubbed
-           entry, instead of a single collapsed count. Returns the fired
-           rows; [flat_predictions] is the substring union the expectation
-           check greps for (identical to the old
-           [predicted_contains_any] result). *)
-        let derived_predictions inputs =
-          let fired =
-            Canary_agreement.predicted_by_agreement
-              ~disabled:step.disabled_agreements ~resolve:resolve_input inputs
-          in
-          List.iter fired
-            ~f:(fun ((c : Canary_agreement_common.agreement_check), subs) ->
-              log ~event:"compat_predicted"
-                ~detail:(Some (Printf.sprintf "%s %s: %d substring(s)"
-                                 (Canary_agreement_common.string_of_agreement_id c.id)
-                                 c.name (List.length subs))));
-          if List.is_empty fired then
-            log ~event:"compat_predicted" ~detail:(Some "no contract fired");
-          (* the c1 coverage WARNING (2026-08-17): a passing c1 whose
-             consumer surface covers a small fraction of the provider's
-             may be out-of-date — a note, never a failure *)
-          (match Canary_agreement_symbols.c1_lag_note ~resolve:resolve_input inputs with
-           | Some note -> log ~event:"compat_note" ~detail:(Some note)
-           | None -> ());
-          List.iter
-            (Canary_agreement.skipped_checks
-               ~disabled:step.disabled_agreements ())
-            ~f:(fun ((c : Canary_agreement_common.agreement_check), reason) ->
-              log ~event:"agreement_skipped"
-                ~detail:(Some (Printf.sprintf "%s %s: %s"
-                                 (Canary_agreement_common.string_of_agreement_id c.id)
-                                 c.name reason)));
-          fired
+        (* ── ONE EVALUATION RECORD PER STEP (2026-09-12) ──
+           action context → selection → evidence resolution →
+           evaluation → the record BOTH reporting and acceptance read.
+
+           It used to be two evaluations: the context path to report
+           and the input path to decide, each re-running the same
+           comparators over (usually) the same files. Two evaluations
+           of one question is how a log comes to say one thing while a
+           verdict says another, so there is now one.
+
+           The step carries the three facts the registry needs
+           ([agreement_ctx], set by [derive_steps] from the scenario's
+           world); the action is the step's own; and a compat
+           expectation may ALSO name evidence, for the layouts whose
+           routing is not derived yet (llvm's packed binding, z3's
+           fetch-step attribute inspection). [evaluate_step] merges the
+           two routes. *)
+        let declared_inputs = match step.expectation with
+          | Expect_compat_failure { inputs; _ }
+          | Expect_compat_derived { inputs; _ } -> inputs
+          | Expect_success | Expect_failure _ -> []
         in
-        let flat_predictions fired =
-          List.concat_map fired ~f:snd
+        let step_eval =
+          if Option.is_none step.agreement_ctx && List.is_empty declared_inputs
+          then Canary_agreement.empty_step_evaluation
+          else
+            Canary_agreement.evaluate_step
+              ~disabled:step.disabled_agreements ?context:step.agreement_ctx
+              ~action:step.action ~declared_inputs ~resolve:resolve_input ()
+        in
+        (* REPORTING — every selected method, whatever its outcome. A
+           step whose log showed only the checks that found something
+           would read as full coverage; a planned method logs
+           [not_implemented] with its reason. *)
+        (if Option.is_some step.agreement_ctx || not (List.is_empty declared_inputs)
+         then
+           if List.is_empty step_eval.Canary_agreement.sv_all then
+             log ~event:"agreement_outcome"
+               ~detail:(Some "no agreement fires at this action")
+           else
+             List.iter step_eval.Canary_agreement.sv_all
+               ~f:(fun (e : Canary_agreement.evaluation) ->
+                 log ~event:"agreement_outcome"
+                   ~detail:(Some (Canary_agreement.pp_evaluation e))));
+        (* the symbol coverage WARNING (2026-08-17): a passing
+           required_symbols_exported whose consumer surface covers a
+           small fraction of the provider's may be out-of-date — a
+           note, never a failure, and deliberately not an outcome. It
+           re-reads the record's own evidence rather than riding the
+           evaluation, because it qualifies a [holds] rather than
+           replacing it. *)
+        (match
+           Canary_agreement_symbols.lag_note ~resolve:resolve_input
+             step_eval.Canary_agreement.sv_inputs
+         with
+         | Some note -> log ~event:"compat_note" ~detail:(Some note)
+         | None -> ());
+        (if Option.is_some step.agreement_ctx || not (List.is_empty declared_inputs)
+         then
+           List.iter
+             (Canary_agreement.skipped_checks
+                ~disabled:step.disabled_agreements ())
+             ~f:(fun ((r : Canary_agreement.agreement_row), reason) ->
+               log ~event:"agreement_skipped"
+                 ~detail:(Some (Printf.sprintf "%s: %s"
+                                  r.Canary_agreement.ag_slug reason))));
+        (* ACCEPTANCE — the same record, read for what this step must
+           do. [sv_diagnostics] is the union of the detected
+           disagreements' predicted output text; the expectation forms
+           below decide what to make of it, because the POLICY is the
+           project's (oracle: must fail regardless; agnostic: follow
+           the prediction) while the FINDING is the artifacts'. *)
+        let derived = step_eval.Canary_agreement.sv_diagnostics in
+        (* A DETECTED DISAGREEMENT AND A CONFIRMED EXPECTED FAILURE ARE
+           DIFFERENT FACTS. Confirmed = the artifacts disagree AND this
+           run's output shows it; those are what the verdict marker
+           records, because they are what the expected-failure test
+           observed. Unconfirmed = the artifacts disagree and this
+           action did not surface it — the finding stands, the step was
+           simply not where it shows. Logged either way, so neither can
+           be read off the other. *)
+        let confirmed, unconfirmed =
+          Canary_agreement.partition_confirmation step_eval
+            ~matches:(fun subs -> output_contains_any ~output_dir:out subs)
+        in
+        let report_confirmation () =
+          List.iter confirmed ~f:(fun (e : Canary_agreement.evaluation) ->
+              log ~event:"agreement_confirmed"
+                ~detail:(Some (e.Canary_agreement.ev_slug
+                               ^ ": predicted text present in this run's output")));
+          List.iter unconfirmed ~f:(fun (e : Canary_agreement.evaluation) ->
+              log ~event:"agreement_unconfirmed"
+                ~detail:(Some (e.Canary_agreement.ev_slug
+                               ^ ": disagreement detected, not surfaced by this \
+                                  action")))
+        in
+        let confirming_agreements () =
+          List.map confirmed ~f:(fun (e : Canary_agreement.evaluation) ->
+              e.Canary_agreement.ev_slug)
           |> List.dedup_and_sort ~compare:String.compare
-        in
-        (* A7 phase 2: which fired contracts does the failing output
-           actually match? Those are the CONFIRMING contracts — recorded in
-           the verdict + named in the done event. Evaluated only on a
-           confirmed expected failure. *)
-        let confirming_contracts fired =
-          List.filter_map fired
-            ~f:(fun ((c : Canary_agreement_common.agreement_check), subs) ->
-              if output_contains_any ~output_dir:out subs then
-                Some (Canary_agreement_common.string_of_agreement_id c.id)
-              else None)
         in
         let expectation_ok = match step.expectation with
           | Expect_success ->
               let ok = cmd_ok && step.check_post ~output_dir:out ~variant_key:step.variant_id in
               log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
+              (* A DETECTED DISAGREEMENT DOES NOT DECIDE THIS STEP.
+                 The step's acceptance policy is "the command succeeds
+                 and its postcondition holds"; a violated agreement
+                 here is a finding about artifacts that this action was
+                 never asked to fail on. It is reported (above, and as
+                 an unconfirmed disagreement below) and deliberately
+                 not turned into a failure — doing so would change what
+                 every existing project's steps accept. *)
+              report_confirmation ();
               log ~event:(if ok then "done" else "failed")
                 ~detail:(if ok then None else Some "postcondition failed");
               ok
@@ -598,19 +686,27 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                       Printf.sprintf "expected failure confirmed: %s predates %s%s"
                         vi.provider_version vi.consumer_requires since
                 in
+                (* a HAND-WRITTEN expected failure: the project stated
+                   the substrings itself, so the step's acceptance does
+                   not consult an agreement and the marker records no
+                   attribution. Any disagreement the record found is
+                   still reported. *)
+                report_confirmation ();
                 if found then xfail := true;
                 log ~event:(if found then "done" else "failed")
                   ~detail:(Some (if found then confirmed_msg
                     else "command failed but output didn't match expected strings"));
                 found
-          | Expect_compat_failure { inputs; version_info } ->
+          | Expect_compat_failure { inputs = _; version_info } ->
               if cmd_ok then (
                 log ~event:"unexpected_success"
                   ~detail:(Some "expected failure (derived) but command succeeded");
                 false)
               else
-                let fired = derived_predictions inputs in
-                let derived = flat_predictions fired in
+                (* the ORACLE policy: this world was declared a
+                   mismatch, so the step must fail whatever the
+                   evaluation found. [derived] is the record's
+                   diagnostics — the inputs were already read into it. *)
                 let found =
                   if List.is_empty derived then
                     (* No prediction available — fall back to "any failure
@@ -637,24 +733,24 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                         "expected failure confirmed (derived): %s predates %s%s"
                         vi.provider_version vi.consumer_requires since
                 in
+                report_confirmation ();
                 if found then begin
                   xfail := true;
-                  xfail_ids := confirming_contracts fired
+                  xfail_ids := confirming_agreements ()
                 end;
                 log ~event:(if found then "done" else "failed")
                   ~detail:(Some (if found
                     then confirmed_msg ^ xfail_id_suffix !xfail_ids
                     else "command failed but output didn't match derived predictions"));
                 found
-          | Expect_compat_derived { inputs; version_info = _ } ->
-              (* Mutation-AGNOSTIC: the inspection decides. Compute the
-                 prediction FIRST; if it is empty the artifact is fine here, so
-                 a SUCCESS is correct (unlike the oracle variant, which always
-                 expects the failure). If non-empty, the step must fail with
-                 that signature. Lets tiny-full run without being told which
-                 contract breaks — canary discovers it. *)
-              let fired = derived_predictions inputs in
-              let derived = flat_predictions fired in
+          | Expect_compat_derived { inputs = _; version_info = _ } ->
+              (* Mutation-AGNOSTIC: the evaluation decides. If the
+                 record found no disagreement the artifacts are fine
+                 here, so a SUCCESS is correct (unlike the oracle
+                 variant, which always expects the failure). If it
+                 found one, the step must fail with that signature.
+                 Lets tiny-full run without being told which agreement
+                 breaks — canary discovers it. *)
               if List.is_empty derived then begin
                 (* inspection predicts no failure. BUT the command failed —
                    this is a behavioral failure (c3/c7) where artifact
@@ -697,9 +793,10 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
               end
               else begin
                 let found = output_contains_any ~output_dir:out derived in
+                report_confirmation ();
                 if found then begin
                   xfail := true;
-                  xfail_ids := confirming_contracts fired
+                  xfail_ids := confirming_agreements ()
                 end;
                 log ~event:(if found then "done" else "failed")
                   ~detail:(Some (if found

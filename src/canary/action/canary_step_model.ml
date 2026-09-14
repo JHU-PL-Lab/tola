@@ -84,6 +84,25 @@ type step_expectation =
       version_info : version_info option;
     }
 
+(** THE ACTION CONTEXT an agreement selection needs (2026-09-12).
+
+    Three facts the enumeration already knows by the time a step
+    exists: which binding mechanism this chain uses, which language it
+    is, and the world the scenario assigned. Together with
+    [step.action] they are enough for {!Canary_agreement.evaluate_step}
+    to select every applicable checking method, resolve what each
+    reads, and evaluate it — with no project naming an agreement and no
+    caller supplying an input list.
+
+    The type is {!Canary_agreement_common.action_context}, declared
+    there because the registry's selection consumes one too and a type
+    two layers share belongs in the lower of them.
+
+    [None] on a step means the derivation had no binding facts to
+    attach (a source fetch, a configure). Such a step still runs its
+    own postcondition; it just has no agreement to select. *)
+type agreement_ctx = Canary_agreement_common.action_context
+
 type step = {
   tag : string;
   cache_key : string;
@@ -98,11 +117,19 @@ type step = {
   check_post : output_dir:string -> variant_key:string -> bool;
   expectation : step_expectation;
   symbol_check : symbol_check option;
-  (* Per-project surface-theory contract opt-outs (set by derive_steps
-     from runner_spec.disabled_agreements). The runner combines this
-     with the CLI's --disable-contract list before evaluating
-     Expect_compat_failure. *)
+  (* Per-project agreement opt-outs (set by derive_steps from
+     runner_spec.disabled_agreements). The runner combines this with
+     the CLI's --disable-agreement list before evaluating. *)
   disabled_agreements : Canary_agreement_common.agreement_id list;
+  (* The action context, when the step has binding facts to attach.
+     Drives the context-driven agreement evaluation in the runner. *)
+  agreement_ctx : agreement_ctx option;
+  (* A DUMMY step (2026-09-12): it holds a place in the action graph
+     and performs no work; the string says why. Carried on the step
+     rather than inferred from the command so that "what is real in
+     this graph" stays a question the step list can answer — see
+     [Canary_step_builder.Dummy]. *)
+  dummy : string option;
 }
 
 type logger = {

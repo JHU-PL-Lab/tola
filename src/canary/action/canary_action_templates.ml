@@ -330,21 +330,70 @@ let realize_template (tpl : action_template) : runner_spec =
                          (if String.is_empty staged_checks then "" else "\n" ^ staged_checks)
                          output_dir install_ok) }
   | Native_lib_probe { location; prefix } ->
+      (* THE LIB-SIDE SUMMARY, emitted beside the probe log (2026-09-13).
+
+         A probe answered one question — are there symbols with this
+         prefix — and wrote a count to [probe.log]. That is not evidence
+         any agreement can read: every lib-side comparison wants the
+         exported NAMES, the recorded identity and the version tags,
+         which is what [inspect_cmd] writes.
+
+         Emitting it here rather than asking each project for an
+         [inspect] closure is the point. The template already holds the
+         two things the summary needs — the resolved library and the
+         prefix — so a project that declares a probe cannot end up with
+         a probe whose evidence nobody wrote. That gap is why
+         [required_symbols_exported] reported `unavailable` on every
+         project that was not ssl: ssl hand-wrote the closure and no
+         one else had.
+
+         The nm pass runs twice, once per question. Not worth fusing:
+         the probe's exit status is the step's verdict, and folding the
+         summary into it would make a malformed JSON write fail the
+         probe. *)
+      (* the project's DECLARED native surface, when it has one: the
+         symbols it says must be exported become the summary's
+         watchlist, and its prefixes join the row's so the per-prefix
+         counts cover what the project cares about and not only what
+         this one probe asked about *)
+      let declared_prefixes, native_watchlist =
+        match spec.api_source with
+        | None -> ([], [])
+        | Some api ->
+            let n = (Canary_surface.surface_of_api api).native in
+            (n.symbol_prefixes, n.stable_symbols)
+      in
+      let prefixes =
+        List.dedup_and_sort ~compare:String.compare
+          (List.filter (prefix :: declared_prefixes) ~f:(fun p ->
+               not (String.is_empty p)))
+      in
+      let with_summary ~lib ~output_dir ~variant_key probe =
+        Printf.sprintf "%s\n%s" probe
+          (Canary_artifact_native.inspect_cmd ~lib ~prefixes
+             ~watchlist:native_watchlist ~output_dir ~variant_key ())
+      in
       let cmd =
         match location with
         | Build_tree_lib { lib } ->
             fun ~output_dir ~variant_key ->
-              Canary_artifact_native.native_lib_probe_cmd ~lib ~prefix ~output_dir ~variant_key
+              with_summary ~lib ~output_dir ~variant_key
+                (Canary_artifact_native.native_lib_probe_cmd ~lib ~prefix
+                   ~output_dir ~variant_key)
         | Build_tree_glob { lib_glob; build } ->
             fun ~output_dir ~variant_key ->
               let resolve =
                 Printf.sprintf "LIB=$(ls %s/%s 2>/dev/null | head -1)\ntest -n \"$LIB\"" build lib_glob
               in
               Printf.sprintf "%s\n%s" resolve
-                (Canary_artifact_native.native_lib_probe_cmd ~lib:"$LIB" ~prefix ~output_dir ~variant_key)
+                (with_summary ~lib:"$LIB" ~output_dir ~variant_key
+                   (Canary_artifact_native.native_lib_probe_cmd ~lib:"$LIB"
+                      ~prefix ~output_dir ~variant_key))
         | Staged_lib { lib } ->
             fun ~output_dir ~variant_key ->
-              Canary_artifact_native.native_lib_probe_cmd ~lib ~prefix ~output_dir ~variant_key
+              with_summary ~lib ~output_dir ~variant_key
+                (Canary_artifact_native.native_lib_probe_cmd ~lib ~prefix
+                   ~output_dir ~variant_key)
         | Pm_lib { pm_pkg; lib_name; dpkg_pkg; ldconfig_name; brew_pkg } ->
             let extra_fallbacks =
               let open Printf in
@@ -384,8 +433,13 @@ let realize_template (tpl : action_template) : runner_spec =
                    test -f \"$LIB\""
                   pm_pkg lib_name pm_pkg lib_name extra_fallbacks
               in
+              (* the FETCHED world's library, and the only inspection of
+                 it there is: nothing builds or stages a system package,
+                 so if this probe does not summarize it nothing will *)
               Printf.sprintf "%s\n%s" resolve
-                (Canary_artifact_native.native_lib_probe_cmd ~lib:"$LIB" ~prefix ~output_dir ~variant_key)
+                (with_summary ~lib:"$LIB" ~output_dir ~variant_key
+                   (Canary_artifact_native.native_lib_probe_cmd ~lib:"$LIB"
+                      ~prefix ~output_dir ~variant_key))
       in
       { spec with probe_lib = [ (location_of_probe_location location, cmd) ] }
   | Cmake_install_component { build; prefix; component } ->

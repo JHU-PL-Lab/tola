@@ -134,10 +134,36 @@ let langs = Canary_lang.[ OCaml; Python ]
     rather than recomputed so a caller that already has it (the runner,
     which needs the workspace for other reasons) cannot drift from one
     that does not. *)
+(** The binding mechanism the project declares for a language, or the
+    language's default. This is the fact [derive_steps] needs in order
+    to attach an action context to a step, and the project already has
+    it — [pr_binding_decls] is where a project says what its binding IS
+    (2026-09-12). *)
+let mechanism_of_project (pr : project_run) (l : Canary_lang.lang) :
+    Canary_mechanism.mechanism =
+  match
+    List.find_opt
+      (fun (d : Canary_binding_decl.binding_decl) ->
+        Stdlib.( = )
+          (Canary_mechanism.info_of_mechanism d.Canary_binding_decl.mechanism)
+            .Canary_mechanism.mi_lang
+          l)
+      pr.pr_binding_decls
+  with
+  | Some d -> d.Canary_binding_decl.mechanism
+  | None ->
+      Option.value
+        (Canary_mechanism.default_mechanism_of_lang l)
+        ~default:Canary_mechanism.Cstubs
+
 let steps_of ~(root : string) (pr : project_run) ~(ctx : scenario_ctx)
     (a : Canary_artifact.assignment) : Canary_step_model.step list =
   let spec = pr.pr_runner_spec a ~workspace:ctx.sc_workspace () in
-  Canary_step_builder.derive_steps ~root ~project:ctx.sc_project ~langs spec
+  (* [~world:a] is what turns the registry's context query on for this
+     scenario's steps: the assignment records how every artifact was
+     provisioned, which is exactly what a firing derivation asks. *)
+  Canary_step_builder.derive_steps ~root ~project:ctx.sc_project ~langs
+    ~world:a ~mechanism_of:(mechanism_of_project pr) spec
 
 (** The ACTIONS one scenario's steps carry, for callers that want the
     chain shape and not the commands (the result matrix). Uses a
