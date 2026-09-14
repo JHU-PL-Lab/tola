@@ -207,8 +207,10 @@ order (also in [`src/canary/dune`](src/canary/dune)):
 base/      vocabulary — types every other layer uses (incl. API-surface
            claim types and output-tree naming conventions)
 agreement/ THE AGREEMENT LAYER (was surface/, 2026-09-01) — the agreement
-           registry + c1..c8 comparators/predicts; a check is an agreement
-           beyond a tool's direct result, so tool wrappers stay in tool/
+           registry + the 12 NAMED agreements' comparators/evaluators
+           (descriptive names since 2026-09-12; the c1..c9 ids are gone and
+           deliberately do not parse); a check is an agreement beyond a
+           tool's direct result, so tool wrappers stay in tool/
 tool/      real-world wrappers — PM drivers, inspector drivers, build cmds,
            toolchain config (incl. per-language probe specs)
 action/    action graph — rules, step model, step builder, paths
@@ -278,12 +280,12 @@ reconciling with, not duplicating.
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
 | `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
-| `src/canary/agreement/canary_agreement.ml`           | **TIER 3 — THE LIST AND THE VIEWS** (was `canary_agreement_registry.ml`, renamed 2026-09-02 for reading: it names the thing, not the shape of it, and sorts ahead of the families). A row is a slug + doc anchor + the family module describing it; everything else is derived — the predict dispatch (`predicted_by_agreement` / `predicted_contains_any`), `inputs_of_agreement` (a lookup), `agreement_fixtures` (gathered from each family's `counterexamples`), the firing table + fill list, `proposed_agreements`, `all_agreements`/`pp_agreements`, `agreements_for`. Holds NO per-agreement description of any kind. Design: `doc/canary/design/agreement_registry.md` |
-| `src/canary/agreement/canary_agreement_common.ml`     | **TIER 1 — what every family needs** (was `canary_agreement.ml`): the descriptive types a check uses to describe itself (`cat`, `standing`, `claim`, `evidence`, `provenance`, and the `description` record gathering them), the `inspect_input` ADT that NAMES evidence, the registry vocabulary (`agreement_id`/`agreement_status`/`agreement_check`), the shared firing derivations + `binding_evidence_tag` + `uniform_world`, and the JSON primitives. Membership rule: a family owns what is only about its topic; this owns what more than one family needs |
-| `src/canary/agreement/canary_agreement_<topic>.ml`   | **TIER 2 — ONE MODULE PER CHECK FAMILY** (was `canary_chk_*`, renamed 2026-09-02: the FILE names the agreement, the FUNCTION names the act — it had been backwards on both sides). symbols · api_surface · identity · types · behaviour, each referring only to tier 1. One shape, top to bottom: what it is ABOUT (`about` records + `checks : (string * about) list`) → the EVIDENCE it reads (records + loaders) → the CHECKS (comparators + predicts) → the DESCRIPTIONS it hands the registry. A family holds BOTH cells of its agreements — solo (artifact vs the declaration) and pair (artifact vs a peer) — and its own counterexamples. `canary_agreement_composed.ml` is NOT a family: it declares `composes` and reads other families' verdicts (c8 = c6 ∧ c1 ∧ c7). **A family is DEFINED as a module publishing `checks` and no `composes`** — a property, not a filename, so renames cannot blind the pins: `agreements.families_do_not_reach_sideways` + `agreements.families_share_one_shape` + `checks.module_pattern` |
+| `src/canary/agreement/canary_agreement.ml`           | **TIER 3 — THE LIST AND THE VIEWS** (was `canary_agreement_registry.ml`, renamed 2026-09-02 for reading: it names the thing, not the shape of it, and sorts ahead of the families). A row is a NAME + doc anchor + enabled flag; the agreement itself comes from the family. Everything else is derived — `evaluate_in_context` (THE production path: action + mechanism + lang + world → selected methods → resolved evidence → `outcome`), `evaluate_over_inputs` / `predicted_by_agreement` / `predicted_contains_any` (the project-supplied-input path the compat expectations still use), `inputs_of_agreement`, `agreement_fixtures`, the firing table + fill list, `proposed_agreements`, `all_agreements`/`pp_agreements`/`pp_catalogue`, `agreements_for`. Holds NO per-agreement description of any kind. Design: `doc/canary/design/agreement/registry.md` |
+| `src/canary/agreement/canary_agreement_common.ml`     | **TIER 1 — what every family needs** (was `canary_agreement.ml`): the descriptive types an agreement uses to describe itself (`subject`, `claim`, `basis`, and the `agreement` record), the `checking_method` record (kind · reference · applicability · firing · inputs · evaluator-or-planned-reason · diagnostics · limits · counterexamples) and `evaluate_method`, the `outcome` type (holds/violated/unavailable/inconclusive/not_implemented/not_applicable/disabled/error), the `inspect_input` ADT that NAMES evidence — including the `Declared_*` constructors that make a declaration comparison the same shape as a peer comparison — `agreement_id` (12 descriptive constructors), the `evaluation_schema` cache epoch, the shared firing derivations + `binding_evidence_tag` + `uniform_world`, and the JSON primitives. Membership rule: a family owns what is only about its topic; this owns what more than one family needs |
+| `src/canary/agreement/canary_agreement_<topic>.ml`   | **TIER 2 — ONE MODULE PER CHECK FAMILY** (was `canary_chk_*`, renamed 2026-09-02: the FILE names the agreement, the FUNCTION names the act — it had been backwards on both sides). symbols · api_surface · identity · types · behaviour, each referring only to tier 1. One shape, top to bottom: the EVIDENCE it reads (records + loaders) → the COMPARATORS → the EVALUATORS → the AGREEMENTS it hands the registry, gathered last as `checks : (agreement_id * agreement) list`. A family holds every agreement about its topic, INCLUDING what used to be a second "cell" of one id: an artifact-vs-declaration claim and an artifact-vs-peer claim are two agreements with two names (2026-09-12). `canary_agreement_composed.ml` is NOT a family: it declares `composes` and reads other families' verdicts (`repack_complete` = `signatures_agree` ∧ `required_symbols_exported` ∧ `repack_preserves_api`, and reports `not_implemented` until they exist). **A family is DEFINED as a module publishing `checks` and no `composes`** — a property, not a filename, so renames cannot blind the pins: `agreements.families_do_not_reach_sideways` + `agreements.families_share_one_shape` + `agreements.families_declare_the_catalogue` |
 | `src/canary/agreement/canary_agreement_ocaml.ml`     | **TIER 1, per LANGUAGE** (2026-09-03, the first of these): what every OCaml binding has whatever its mechanism — `user_surface` (the installed `.mli` → `inspect_mli.json`). Read by a family, so it sits below them and publishes no `checks` — not a family. A family states the CLAIM (neutral); the language states its SURFACE |
 | `src/canary/agreement/canary_agreement_cstubs.ml`    | **TIER 1, per MECHANISM**: everything about the compiled consumer artifact — `produces_a_compiled_stub`, `records_needed_in_a_readable_artifact = false` (a `.a` archive carries no NEEDED/SONAME; those appear at link time), `typed_stub_surface` (the `external` decls, scanned from SOURCE). The axis is the MECHANISM, not the language: OCaml's cstubs and dynlink share no artifact, and cstubs has more in common with Python's cext. The four `is_dynamic` guards in the families approximate that table with one bit; a gathering module is the natural next step when a second mechanism lands. Both files pinned by `agreements.surface_facts_live_with_their_owner` |
-| `src/canary/main/canary_agreement_report.ml`        | `canary compat` / `canary verify` — the two on-demand reports, plus the output-tree navigation they alone use (which is canary's LAYOUT convention, not agreement material). Moved out of the agreement layer 2026-09-02 (was `canary_compat_run.ml`): cached-summary lookup + per-agreement predict closures (`c1_predict`, …, plus the decl-comparison predicts) + CLI run/verify. The TABLE and its iterators moved to the registry 2026-09-01, so this file holds no agreement list |
+| `src/canary/main/canary_agreement_report.ml`        | `canary compat` / `canary verify` — the two on-demand reports, plus the output-tree navigation they alone use (which is canary's LAYOUT convention, not agreement material). Moved out of the agreement layer 2026-09-02 (was `canary_compat_run.ml`): cached-summary lookup + the family comparators it prints (`load_stub`/`load_native`/`check_c_compat`, the watchlist loader) + CLI run/verify. The TABLE and its iterators moved to the registry 2026-09-01, so this file holds no agreement list |
 | `src/canary/tool/canary_toolchain.ml`               | OCaml toolchain types, opam packaging helpers, `pip_install_cmd` / `python_probe_only_cmd`             |
 | `src/canary/tool/canary_build_cmd.ml`               | Generic build-tool primitives: `cmake_configure_cmd`, `ninja_build_cmd`, `dune_build_cmd`, `with_marker` |
 | `src/canary/tool/canary_store_config.ml`            | `provision_spec` — ONE origin per admissible provision (`Fetched of provider` \| `Built_from of artifact_info` \| `Installed` \| `Vendored_at` \| `Absent`; 2026-08-25, replacing the coarse-universe + separate-provider pair) + `provision_of_spec` / `producing_action_of` / `fetch_provider_of`; `provider` (the fetch origins) + `store_config` + `binding_store` / `lib_store` + `binding_pm` |
@@ -385,10 +387,15 @@ renders GH Actions YAML; `backend/canary_diagram.ml` renders Mermaid;
 `actions.log`. Probe expectations come from `Expect_success` |
 `Expect_failure { contains_any }` | `Expect_compat_failure { inputs;
 version_info }` — the compat-failure inputs are read at runtime by
-`agreement/canary_agreement.ml`'s `predicted_contains_any_v2 ~resolve`
-which iterates the registered contracts over the inputs bag to compute
-predicted failure substrings (L0 C-symbol diff + L3 watchlist-missing
-etc.). The top-level project identity is `Canary_project_run.project_run`
+`agreement/canary_agreement.ml`'s `predicted_contains_any ~resolve`
+which evaluates the registered agreements over the inputs bag and turns
+each violation into its predicted failure substrings. That is the
+INPUT-DRIVEN path. Since 2026-09-12 a step also carries an
+`agreement_ctx` (mechanism, lang, world) and the runner calls
+`evaluate_in_context`, which SELECTS by action + applicability, resolves
+each method's own evidence, evaluates, and logs one `agreement_outcome`
+per method — including the planned ones, as `not_implemented` with their
+reason. The top-level project identity is `Canary_project_run.project_run`
 for generic projects (A6 2026-08-05: the never-read `Canary_project.project`
 bundle was deleted); each project's module owns its scenarios directly
 (tiny1 has 22 via factory). `run_project_multi`'s last consumer is ssl
@@ -479,6 +486,259 @@ missing from the z3-solver pip wheel) using
 See `surface_draft/implementation.md` §2.7.
 
 ### Current state
+
+Agreement catalogue review (2026-09-09):
+[`agreement/registry.md`](doc/canary/design/agreement/registry.md) now separates
+current checks from proposals; §7.4 collects open decisions.
+`signatures_agree` compares textual signatures, `dependencies_provided`
+reads one provider plus a fixed ambient list, and firing-table fixture
+marks do not establish coverage of each mechanism/action cell.
+The agreed seven-section layout is now the actual document order: agreement
+model; common artifact foundation; language bindings (OCaml/Python, mechanisms
+within each); versions; packaging/provenance; deployment/execution; registry
+integration/coverage. Start with fixed artifacts available at known locations.
+§2 opens with authoring questions; registry anchors follow the new numbering.
+Unified action-hook integration remains
+planned; `agreements_for` has test callers only (the RUN path is
+`evaluate_in_context`).
+The paper draft's §§4.3–4.7 now contain prose prompts following this layout;
+§§4.1–4.2 were preserved verbatim at the user's request.
+2026-09-11: the agreement doc now explains concrete checks directly. The
+standalone surface taxonomy/correspondence sections were removed; existing
+Sf labels and evidence names are confined to the implementation appendix.
+§7.4 prioritizes a traceable working subset (claim → evidence → comparator →
+action result), with the remaining integrations and proposals explicitly open.
+The user absorbed/deleted the grammar suggestions and moved holding material
+to `doc/canary/research/draft_commemt.md`.
+**2026-09-12 — the naming migration + one production path.** Agreements
+carry DESCRIPTIVE names (`required_symbols_exported`, `api_names_present`,
+…) in code, logs, verdict markers, `--disable-agreement` and the doc; the
+retired `c1`..`c9` spellings do not parse, so a stale marker or old flag
+fails visibly. Solo/pair left the identity: the three declaration
+comparisons are their own agreements (12 rows, was 9). A claim is now
+separate from its CHECKING METHODS (`checking_method`), and evaluation
+returns an `outcome` — holds / violated / unavailable / inconclusive /
+not_implemented / not_applicable / disabled / error — instead of a
+substring list that meant all eight at once. Diagnostic-text prediction
+is a separate step (`m_diagnostics`). Cache invalidation was TARGETED:
+`evaluation_schema` rides `expectation_form` for the two compat
+expectations only, so agreement-derived verdicts re-ran and nothing else
+did. `canary checks --catalogue` prints the generated catalogue.
+`required_symbols_exported` is verified end to end through the action
+path (`agreements.action_path_reports_outcomes`). The ordered backlog is
+`agreement/registry.md` §7.4.2.
+**Same day, the audit pass.** ONE evaluation record per step
+(`Canary_agreement.evaluate_step` → `step_evaluation`) now feeds BOTH
+the report and the step's acceptance; a compat step used to evaluate
+its comparators twice, once to log and once to decide. The merge of the
+derived and declared evidence routes keeps the finding —
+`violated` > `holds` > undecided — so it cannot lose one. A disagreement
+and a confirmed expected failure are recorded separately
+(`agreement_confirmed` / `agreement_unconfirmed`): a violated agreement
+at a passing step stays a finding and does NOT fail the step. Audit
+fixes: the three identity/version PAIR agreements no longer claim
+`build_lib` (leftover from the solo/pair split — no consumer record
+exists there); `firing_built_lib_only` stopped consulting the mechanism;
+`load` raises instead of `exit 2`, so a bad inspection is an `error`
+outcome rather than a dead process; `load_watchlist` no longer swallows
+a malformed file as "no watchlist"; a `Violated []` normalizes to
+`inconclusive`. Epoch `named-agreements-2`.
+**THE ROUND TRIP (2026-09-12).** `canary checks <p> --observed` parses a
+project's own `actions.log` (scoped to the last `run_start` marker) and
+reports which agreements the last run ACTUALLY evaluated and to what
+outcome. An agreement is landed when a REAL project's log shows it
+`holds`/`violated` — not when a fixture passes. Gated by
+`make canary-agreement-roundtrip`, inside `make canary-post-check`.
+Pointing it at sqlite found three reasons every agreement had been
+reporting `unavailable` there: (1) sqlite's `realize` used the template
+default instead of its own `base_spec`, so its declared `api_source`
+and inspectors were reachable only from the CI renderer and the run
+produced NO inspect JSON; (2) the derived evidence paths spelled TINY's
+filenames (framework: `inspect.json` surface + `inspect_stub.json`
+stub; tiny: `inspect.json` stub + `inspect_mli.json` surface), so they
+resolved on no other project; (3) sqlite inspected its binding at the
+probe step, not at the install step the derivation names. All fixed:
+`api_names_present` now `holds` on all 6 sqlite scenarios and flips to
+`violated` when a bogus name is added to the watchlist. Evidence is now
+selected by the inspector's declared `kind`, not by first-path-wins,
+which is what makes listing both filename conventions safe. NEXT, one
+at a time, verified from the log each time: Python `api_names_present`,
+then `required_symbols_exported` (needs a stub + native inspect on
+sqlite), then `signatures_agree`. See `agreement/registry.md` §7.1.1.
+**The agreement docs are a DIRECTORY now** (2026-09-12):
+`doc/canary/design/agreement/` — `README.md` (the map: what an agreement
+is, then which file for which job), `pipeline.md` (**a project end to
+end** — the 7 points where a run touches the registry, the 4 failure
+modes behind an `unavailable`, and the landing checklist),
+`landing.md` (**the tracker**: PLANNED from the registry vs EFFECTIVE
+from run logs, per agreement, with what each is waiting on), and
+`registry.md` (the model + catalogue + component walk; moved from
+`design/agreement_registry.md`). `canary checks --landing` is the live
+tracker; `--observed` is one project's last run. Pinned by
+`agreements.landing_doc_lists_every_agreement` (the planned column must
+match the registry, so a new agreement cannot land without the tracker
+being updated). **Current: 1 landed** (`api_names_present`, on sqlite for
+BOTH OCaml and Python, and on ssl; falsified both ways).
+**DUMMY ACTIONS** (2026-09-12, user): `Canary_step_builder.Dummy of
+string` — a step that holds a place in the action graph, does no work,
+and carries the reason it is empty. It exists because the graph is
+where EVIDENCE attaches: a derivation looks for a binding's inspection
+at the step that INSTALLS it, and CPython's stdlib `sqlite3` has no
+such step. It still writes its marker ("nothing to do" ≠ "did not
+run"), logs a `dummy` event, and an inspector attached to it is NOT a
+dummy. NOT a stub or a TODO — it asserts that no action provisions
+this artifact; if that stops being true it should become a real fetch.
+List them with `canary checks --dummies`; pinned by
+`steps.dummy_action_holds_a_place`. CAVEAT that cost a round: a binding
+with no consumer is pruned by `drop_unread_fetches`, so the dummy needed
+a Python PROBE beside it — sqlite's whole Python side (watchlist,
+expect_missing, provider) had been decorative, with no `probe_binding`
+entry and therefore no Python step at all.
+**ONE PLACE FOR "WHAT IS <agreement>?"** (2026-09-12, user): it used to
+have six answers — claim in the family module, doc anchor + enabled on
+the registry row, evidence paths behind a closure, counterexamples
+inside the method, fault tag wherever scenario naming needed it,
+effective state only in logs. Now `canary checks --agreement NAME`
+prints the COMPLETE record (subject · claim · obligation basis ·
+status · fault tag · the falsifier sentence · what it is held against ·
+per method: what it compares, against what, where it fires and what it
+READS per world, what falsifies it, what a pass does not establish) and
+appends the EFFECTIVE half from run logs. `doc/canary/design/agreement/
+catalogue.md` is the same content as markdown, GENERATED by `make
+agreement-catalogue` and pinned by
+`agreements.catalogue_doc_is_generated` — edit the code, not the file.
+`canary checks` itself now groups the catalogue BY SUBJECT. NOTE the
+catalogue pin compares CONTENT not bytes (whitespace + markdown table
+separators normalized) — a markdown formatter opening the file would
+otherwise fail it, and a file a human opens cannot be pinned
+byte-for-byte.
+**THE THEORY DOC** (2026-09-12, user): `agreement/theory.md` — paper
+material, not a description of what runs. An action `A : I₁×…×Iₙ → O`
+embodies a relation `R_A` over its inputs, and RUNNING it is the only
+witness that a tuple is in `R_A`; the tuple is then discarded and only
+a PROJECTION survives in `O`. So an agreement = **a necessary
+condition for membership in some action's input relation, decidable
+from what survived** — which is why a pass can never mean
+"compatible". Two losses with different ceilings: IDENTITY (which
+tuple) closes exactly by recording; RELATION (what `R_A` required)
+only ever converges, since completeness = re-implementing the
+compiler. Three levels: edge → agreements (one per surviving
+projection) → methods. §5 walks EVERY action in the catalogue with
+the full-information agreement the real tool established and what
+post-fact checking recovers; §6 is a generative procedure for finding
+the next agreement, sanity-checked by re-deriving two known holes.
+§7 states what the frame does NOT cover (set properties, cross-world
+properties).
+**THE DISTANCE-0 BACKLOG** (`agreement/landing.md`): walking theory §5
+against the registry gives a second backlog ordered by DISTANCE — how
+far apart the two sides of a comparison are. d0 = both sides available
+at one action (build tree beside staged tree; lib beside its
+declaration; a re-resolvable ref); d1 = adjacent actions; d2+ =
+cross-world. Every registered agreement is d1 or planned, and SIX d0
+checks have no row. Three of those six ALREADY RUN and the registry
+cannot see them — the source-ref `check_post`, `install_diff_note`,
+and the hand-listed pack assertions — which is the inverse of the
+usual problem and means coverage is understated.
+⚠ **PRECONDITION, a real bug:** the lib-side evidence path is
+WORLD-BLIND. `binding_evidence_tag` reads the world's provision;
+the library's path is the constant `build_lib_tag` everywhere. So a
+non-Built lib's native summary is looked for where nothing writes it —
+ssl/cairo/libffi/zstd/torch all write `probe_lib/inspect.json` and
+nothing reads it. Third instance of the path-mismatch class. Fix =
+`lib_evidence_tag` mirroring the binding's. Does not land anything
+alone (the other side is missing too) but everything depends on it.
+**DONE 2026-09-12 (steps 1+2):** `lib_evidence_tags` /
+`lib_evidence_paths` in common — the lib-side twin of
+`binding_evidence_tag`, world-aware (Fetched → probe_lib first, else
+build_lib first), returning a LIST so the kind guard picks. Verified
+against ssl that it lands nothing alone. AND a new 13th agreement
+`staged_interface_preserved` (subject `Staging`, doc §6.1, new family
+`canary_agreement_staging.ml`, new input `Staged_lib`) — the first
+DISTANCE-0 agreement, both copies of the library still present. It is a
+LIFT of `Canary_status.install_diff_note`, which had been running as a
+status line: same fields (symbol count, soname, needed, runpath,
+rpath), now registered and counted. Needs native inspections of BOTH
+copies to decide.
+⚠ CORRECTION to the earlier plan: only §5.4 was a liftable comparator.
+§5.1 (source ref) and §5.7 (pack completeness) run as SHELL ASSERTIONS
+inside commands, not comparators over evidence — registering them needs
+the fact RECORDED first, so they belong in the inspector tier, not the
+free one. "Already runs" ≠ "already produces evidence".
+**`ag_rooted_in`** (2026-09-13, user): every agreement now states WHOSE
+RULE it recovers — theory §2's central concept, in the code. 10 of 13
+recover a real tool's rule (linker, C compiler, install tool, version
+script); **3 do not** — `behavior_matches`, `repack_preserves_api`,
+`repack_complete`. That is not a coincidence: those 3 are exactly the
+ones with no evaluator. No tool enforced the relation ⇒ nothing to
+re-derive ⇒ they wait on somebody to STATE a spec, not on wiring. Prefer
+landing the tool-rooted ones. The catalogue also now prints WORKED
+EXAMPLES per agreement, generated from the counterexample fixtures
+(synthetic evidence + the outcome it reaches), so `catalogue.md` is the
+one doc to read for "what is <agreement>". **Structured 2026-09-13**
+into a `rooting` record — `rt_action` / `rt_tool` / `rt_artifact` /
+`rt_note` — because a sentence cannot be a column. `catalogue.md` now
+OPENS with the generated summary table (agreement × action × tool ×
+artifact × status), plus a second table for the 3 unrooted ones. An
+action name is backticked only when `action_of_string` parses it, so a
+reader can tell a step in this graph from prose standing in for a link
+that ran in a world we never modelled. `landing.md` dropped its
+`planned`/`fx` columns (the catalogue generates them) and keeps only
+`effective`; its pin is completeness now, not the status word.
+**`required_symbols_exported` IS LANDED** (2026-09-13) — 2 of 13.
+`holds` ×6 on sqlite's OCaml probe, cold; falsified by injecting a bogus
+name into one scenario's stub summary (that scenario alone → `violated`,
+naming the symbol, recorded as `agreement_unconfirmed`: a disagreement
+the action did not itself surface). Then **cairo, libffi, ssl and zarith
+with NO per-project change** — the universality answer. Four fixes, and
+only the first was predicted:
+- an explicit `inspect` override suppressed ALL auto-generated
+  summaries, not the one it replaced. Replacement is keyed on the
+  output BASE NAME now;
+- `Native_lib_probe` wrote a probe log and no summary, so the lib half
+  existed only where a project hand-wrote the closure. It already held
+  the resolved lib and the prefix;
+- `lib_evidence_tags` named only `probe_lib` — the BUILD-TREE probe's
+  tag. Staged and PM probes suffix themselves (`probe_lib_staged`,
+  `probe_lib_apt`), so Installed/Fetched worlds looked where only a
+  Built world writes;
+- **`probe_binding` did not depend on `probe_lib`.** Where it decided,
+  it decided by reading a file a PREVIOUS run left behind; the Fetched
+  world ordered them the other way and said `unavailable`. A check that
+  passes only on a warm tree is not a check — the round-trip gate now
+  clears the lib probes' output too, and takes a LIST of landed names
+  (`CANARY_LANDED_AGREEMENTS`).
+**THE DECORATIVE DECLARATION, closed generically** (2026-09-13):
+`Canary_pipeline.with_declared_facts` routes a project's `api_source`
+(source repo record) and its binding's package (artifact table's
+binding row) into the runner spec. Both were read only by `spec-check`
+and the CI renderer, so at run time every project had
+`api_source = None` and the auto summaries were tiny-only. ⚠ TWO TRAPS
+this sprang, both kept: (1) a DERIVED package earns the STUB inspection
+only — `binding_store_pkg` vs `binding_user_facing_pkg` are separate
+fields because merging them generated an mli scan beside each project's
+own, and zarith's `Zarith_version` / libffi's `Ctypes_foreign_basis`
+ship with no `.mli`, so the generated summary reported missing what
+ocamlobjinfo lists → a false `violated`; (2) `check_api_consistency`'s
+`failwith` (build_binding without a declared `source_dir`) killed
+zarith's run the moment its api_source arrived — now a warning, with
+`spec-check`'s "binding dev source" item reporting the real gap.
+⚠ The staging agreement names BOTH sides positionally rather than via
+`lib_evidence_paths`: an Installed world's "the library" IS the staged
+copy, so the derivation would have compared it against itself and held
+on every relocation. It is the one agreement whose two sides are two
+copies of one artifact.
+Pinned: `ag_rooted_in` well-formed in `agreements.registry_complete`
+(a rooted row must fill all three columns).
+**DEFERRED** (`registry.md` §7.4.3): the action-unit perspective — can
+`canary result`'s action columns carry agreements BETWEEN actions? Not
+blocked by the medium (`--firing` is already that grid) but by missing
+data: `m_firing` is where an agreement is DETECTED; nothing typed
+records where it is ROOTED. Cheap version when it earns its place: a
+second mark letter (`R`) in the firing table. Also recorded there: TWO
+action-column lists exist — `canary result` uses
+`Canary_matrix.compare_column` (artifact group, then lifecycle stage),
+`--firing` uses `Canary_basic.actions_of_lang`; they cannot share until
+`compare_column` moves down to `base/` (layering).
 
 See [`doc/canary/status.md`](doc/canary/status.md) for current implementation
 state and open items. Lower-priority items live in
