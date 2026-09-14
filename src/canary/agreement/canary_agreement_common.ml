@@ -390,6 +390,16 @@ type action_context = {
           somebody rather than a bug. *)
 }
 
+(** The candidate paths an evidence reference names. A declaration
+    carries values rather than paths, so it names none. *)
+let paths_of_input (i : inspect_input) : string list =
+  match i with
+  | C_stub ps | Native_lib ps | Ocaml_mli ps | Python_attrs ps
+  | Versioned_exports ps | Versioned_req ps | Abi_surface ps | Typed_header ps
+  | Typed_binding_stub ps | Typed_binding_user ps | Staged_lib ps ->
+      ps
+  | Declared_exports _ | Declared_soname _ | Declared_version_tags _ -> []
+
 (** WHICH ARTIFACT AN EVIDENCE REFERENCE IS ABOUT (2026-09-14, user).
 
     A failing check should be able to point at what it was reading, and

@@ -107,6 +107,14 @@ type t = {
           sits next to the action it names, so the action half of its
           label is redundant on screen and merely widens an already
           wide table. *)
+  artifact_columns : string list;
+      (** which of [columns] hold an ARTIFACT SUMMARY rather than a
+          verdict or a check. Named for the same reason
+          [check_columns] is: a renderer should ask, not parse a
+          suffix. Their cells carry a summary in [mark] and use
+          [detail] only to say a check that read them failed, so
+          "is this cell red" is a different question here than
+          anywhere else in the table. *)
   rows : row list;
 }
 
@@ -602,19 +610,34 @@ let compare_column (x : Canary_basic.action) (y : Canary_basic.action) : int =
 type col =
   | Act of Canary_basic.action
   | Check of Canary_basic.action * Canary_agreement_common.stage
+  | Artifact of Canary_basic.action
+      (** WHAT THE ACTION LEFT BEHIND (2026-09-14, user). The chain
+          reads [action, artifact, action, artifact …] and until now
+          the table showed only the first of each pair, plus the
+          world's placements in the leading block. Those say what a
+          scenario IS; this says what each step actually produced, read
+          back off the inspection the step wrote.
+
+          Only where an inspection EXISTS — same omit-empty rule as the
+          check columns. A column of blanks would be worse than no
+          column, and an artifact with nothing recorded about it has
+          nothing concise to show. *)
 
 let label_of_col = function
   | Act a -> Canary_basic.string_of_action a
   | Check (a, s) -> Canary_agreement_common.string_of_slot (a, s)
+  | Artifact a -> Canary_basic.string_of_action a ^ "_out"
 
-let action_of_col = function Act a -> a | Check (a, _) -> a
+let action_of_col = function Act a | Check (a, _) | Artifact a -> a
 
-(** [pre] before its action, [post] after it — so one action's three
-    columns read in the order they mean. *)
+(** [pre], the action, [post], then what it made — one action's columns
+    in the order they mean: what it needs, the run, the verdict on the
+    result, the result. *)
 let col_rank = function
   | Check (_, Canary_agreement_common.Pre) -> 0
   | Act _ -> 1
   | Check (_, Canary_agreement_common.Post) -> 2
+  | Artifact _ -> 3
 
 let compare_col (x : col) (y : col) : int =
   let a = action_of_col x and b = action_of_col y in
@@ -675,6 +698,115 @@ let check_cols_of_chain (chain : Canary_basic.action list) : col list =
                ~chain)
             ~f:(fun (a, s) -> Check (a, s))))
   |> List.dedup_and_sort ~compare:Stdlib.compare
+
+(** WHICH ACTIONS LEAVE AN INSPECTABLE ARTIFACT — an action that
+    produces something, and whose own step tag some agreement reads
+    evidence from. Both halves matter: a probe produces nothing
+    ([produces_of_action] is empty for every [Probe_*] — they verify,
+    they do not create), and an action nobody reads evidence from has
+    no inspection to show.
+
+    Derived from the registry's evidence paths rather than from disk,
+    for the same reason the check columns are: the table's shape must
+    not depend on what happened to be run. *)
+let artifact_cols_of_chain (chain : Canary_basic.action list)
+    ~(world : Canary_artifact.assignment)
+    ~(declared : Canary_artifact.t option) : col list =
+  let read_tags =
+    List.concat_map (langs_of_chain chain) ~f:(fun lang ->
+        List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
+            List.concat_map
+              r.Canary_agreement.ag.Canary_agreement_common.ag_methods
+              ~f:(fun m ->
+                List.concat_map
+                  (m.Canary_agreement_common.m_inputs
+                     { Canary_agreement_common.ac_mechanism =
+                         Option.value
+                           (Canary_mechanism.default_mechanism_of_lang lang)
+                           ~default:Canary_mechanism.Cstubs;
+                       ac_lang = lang;
+                       ac_world = world;
+                       ac_declared = declared })
+                  ~f:Canary_agreement_common.paths_of_input)))
+    |> List.filter_map ~f:(fun p ->
+           match String.lsplit2 p ~on:'/' with
+           | Some (t, _) -> Some t
+           | None -> None)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  List.filter chain ~f:(fun a ->
+      (not (List.is_empty (Canary_action.produces_of_action a)))
+      && List.mem read_tags
+           (Canary_basic.string_of_action a)
+           ~equal:String.equal)
+  |> List.map ~f:(fun a -> Artifact a)
+
+(** THE ONE LINE AN INSPECTION IS WORTH, per kind. Concise because the
+    column is 14 characters wide and because the point is a glance:
+    what this artifact is and how much of it there is. The full record
+    is what [canary artifact-summary] and the tooltip are for.
+
+    Kind-dispatched rather than generic — a library's headline is its
+    identity and export count, a binding surface's is how many names it
+    offers, a compiled stub's is how many it demands. Printing
+    "counts.total" for all three would be uniform and useless. *)
+let summarize_inspection (j : Yojson.Basic.t) : string option =
+  let str k = match Canary_agreement_common.field j k with
+    | Some (`String s) -> Some s | _ -> None
+  in
+  let int_at path =
+    match
+      List.fold path ~init:(Some j) ~f:(fun acc k ->
+          Option.bind acc ~f:(fun x -> Canary_agreement_common.field x k))
+    with
+    | Some (`Int n) -> Some n
+    | _ -> None
+  in
+  let len k =
+    match Canary_agreement_common.field j k with
+    | Some (`List xs) -> Some (List.length xs)
+    | _ -> None
+  in
+  match str "kind" with
+  | Some "native" ->
+      let n = Option.value (int_at [ "counts"; "total" ]) ~default:0 in
+      let soname =
+        match Canary_agreement_common.field j "elf" with
+        | Some e -> (
+            match Canary_agreement_common.field e "soname" with
+            | Some (`String s) when not (String.is_empty s) -> (
+                (* the VERSIONED TAIL is the part that varies and the
+                   part a mismatch turns on — the library's name is
+                   already the setting column beside it, so repeating
+                   "libsqlite3" costs ten characters to say nothing *)
+                match String.substr_index s ~pattern:".so" with
+                | Some i -> String.drop_prefix s (i + 1)
+                | None -> s)
+            | _ -> "-")
+        | None -> "-"
+      in
+      Some (Printf.sprintf "%s %d" soname n)
+  | Some ("ocaml" | "ocaml_mli") ->
+      Option.map (len "modules") ~f:(Printf.sprintf "%d mod")
+  | Some "c_stub" -> Option.map (len "requires") ~f:(Printf.sprintf "%d req")
+  | Some "python" -> Option.map (len "attrs") ~f:(Printf.sprintf "%d attr")
+  | _ -> None
+
+(** The inspection a step wrote, if it wrote one. [attach_inspect]
+    puts a step's summary in the step's OWN output dir, so this needs
+    no per-project knowledge and cannot drift from where the inspector
+    actually writes. *)
+let inspection_of_step ~(root : string) ~(project : string)
+    ~(scenario : string) (tag : string) : Yojson.Basic.t option =
+  let file =
+    Canary_basic.filename ~variant_key:scenario ~base:"inspect" ~ext:"json"
+  in
+  let path =
+    Printf.sprintf "%s/canary/projects/%s/%s/%s" root project
+      (Canary_basic.step_dir_of_tag tag)
+      file
+  in
+  try Some (Yojson.Basic.from_file path) with _ -> None
 
 (** The language a step tag speaks for. A lib-side tag speaks for none,
     and the slots that resolve there ignore the parameter anyway. *)
@@ -854,7 +986,20 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
   let cols =
     List.concat_map projects ~f:(fun (_, pr) ->
         let acts = Canary_project_run.covered_actions_of pr in
-        List.map acts ~f:(fun a -> Act a) @ check_cols_of_chain acts)
+        let declared = Canary_pipeline.declared_api_of pr in
+        (* one representative world for the SHAPE: which artifacts are
+           inspectable is a property of the project's chain and its
+           declarations, not of a particular scenario's placements *)
+        let world =
+          match Canary_project_run.scenarios_of pr with
+          | w :: _ -> Some w
+          | [] -> None
+        in
+        List.map acts ~f:(fun a -> Act a)
+        @ check_cols_of_chain acts
+        @ (match world with
+           | None -> []
+           | Some w -> artifact_cols_of_chain acts ~world:w ~declared))
     |> Stdlib.List.sort_uniq Stdlib.compare
     |> List.stable_sort ~compare:compare_col
   in
@@ -993,6 +1138,44 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                 List.map cols ~f:(fun col ->
                   let tag = label_of_col col in
                   match col with
+                  | Artifact aa ->
+                      (* what this step left behind, read off the
+                         inspection it wrote. No cell where the action
+                         is not in this row's chain, and none where it
+                         ran but recorded nothing — an artifact column
+                         with no summary has nothing to say, and the
+                         renderers drop a column no row fills. *)
+                      ( tag,
+                        if not (List.mem chain_acts aa ~equal:Poly.equal) then
+                          None
+                        else
+                          Option.bind
+                            (inspection_of_step ~root ~project ~scenario
+                               (Canary_basic.string_of_action aa))
+                            ~f:(fun j ->
+                              Option.map (summarize_inspection j) ~f:(fun s ->
+                                  let kinds =
+                                    Canary_action.produces_of_action aa
+                                  in
+                                  let blamed =
+                                    List.filter_map implicated_kinds
+                                      ~f:(fun (k, slug) ->
+                                        if
+                                          List.mem kinds k ~equal:Poly.equal
+                                        then Some slug
+                                        else None)
+                                    |> List.dedup_and_sort
+                                         ~compare:String.compare
+                                  in
+                                  { mark = s;
+                                    provision = "";
+                                    detail =
+                                      (match blamed with
+                                       | [] -> None
+                                       | bs ->
+                                           Some
+                                             ("implicated by "
+                                            ^ String.concat ~sep:", " bs)) })) )
                   | Check _ ->
                       (* computed above, because the settings needed
                          the violations first. A check column belongs
@@ -1050,9 +1233,15 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
   let check_columns =
     List.filter_map cols ~f:(function
       | Check _ as c -> Some (label_of_col c)
-      | Act _ -> None)
+      | Act _ | Artifact _ -> None)
   in
-  { setting_columns = List.map setting_cols ~f:fst; columns; check_columns; rows }
+  let artifact_columns =
+    List.filter_map cols ~f:(function
+      | Artifact _ as c -> Some (label_of_col c)
+      | Act _ | Check _ -> None)
+  in
+  { setting_columns = List.map setting_cols ~f:fst; columns; check_columns;
+    artifact_columns; rows }
 
 (* ── text renderer ── *)
 
@@ -1107,6 +1296,8 @@ let pp_text (m : t) : unit =
            let header tag =
              if List.mem m.check_columns tag ~equal:String.equal then
                if String.is_suffix tag ~suffix:"_post" then "»post" else "»pre"
+             else if List.mem m.artifact_columns tag ~equal:String.equal then
+               "⇒out"
              else tag
            in
            Fmt.pr "@.%s — %d scenario(s)@." r.project (List.length group);
@@ -1128,6 +1319,12 @@ let pp_text (m : t) : unit =
                      | Some (Some c)
                        when List.mem m.check_columns tag ~equal:String.equal ->
                          pad (c.mark ^ " " ^ c.provision)
+                     (* an artifact a failing check read: marked, not
+                        coloured, because the terminal has no red *)
+                     | Some (Some c)
+                       when List.mem m.artifact_columns tag ~equal:String.equal
+                            && Option.is_some c.detail ->
+                         pad (fit ("!" ^ c.mark))
                      | Some (Some c) -> pad c.mark
                      | Some None -> pad ""
                      | None -> pad "")
@@ -1358,11 +1555,24 @@ let render_html (m : t) ~(generated_at : string) : string =
                         let is_check =
                           List.mem m.check_columns tag ~equal:String.equal
                         in
+                        (* an ARTIFACT cell holds a summary, not a
+                           verdict, so [cell_cls] would read its text
+                           as an unknown mark; it gets its own class,
+                           and turns red only when a check that read
+                           it failed *)
+                        let is_artifact =
+                          List.mem m.artifact_columns tag ~equal:String.equal
+                        in
+                        let cls =
+                          if is_artifact then
+                            if Option.is_some c.detail then "art blamed"
+                            else "art"
+                          else cell_cls c.mark ^ if is_check then " chk" else ""
+                        in
                         Printf.sprintf
-                          "<td class=\"%s%s\" title=\"%s · %s · %s%s\"><span class=\"mk\">%s</span></td>"
-                          (cell_cls c.mark)
-                          (if is_check then " chk" else "")
-                          (esc r.scenario) (esc tag) (esc c.provision) (esc why)
+                          "<td class=\"%s\" title=\"%s · %s · %s%s\"><span class=\"mk\">%s</span></td>"
+                          cls (esc r.scenario) (esc tag) (esc c.provision)
+                          (esc why)
                           (esc
                              (if is_check then c.mark ^ " " ^ c.provision
                               else c.mark))
@@ -1417,6 +1627,12 @@ td.chk { font-size: .72rem; opacity: .85; background: #fbfcfd; letter-spacing: -
    cell, because it is the same finding seen from the other end — the
    check says what disagreed, this says what it disagreed about. */
 td.set.blamed { background: #ffebe9; box-shadow: inset 2px 0 0 #cf222e; }
+/* an ARTIFACT cell: what the step left behind, as the inspector
+   recorded it. Monospace because the contents line up column-wise
+   (a soname tail, then a count), and quiet because it is context for
+   the verdicts around it rather than a verdict itself. */
+td.art { font-family: ui-monospace, monospace; font-size: .72rem; color: #57606a; background: #f6f8fa55; }
+td.art.blamed { background: #ffebe9; color: #82071e; box-shadow: inset 2px 0 0 #cf222e; }
 th.seth { background: #eef1f4; }
 td.platform { color: #57606a; font-size: .75rem; }
 td.idx { color: #57606a; font-size: .75rem; text-align: right; }
@@ -1428,7 +1644,7 @@ td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; 
 td.blank { background: #f6f8fa; }
 </style></head><body>
 <h1>canary result matrix</h1>
-<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). The <b>_pre</b> and <b>_post</b> columns are AGREEMENT CHECKS, placed either side of the action they speak for: _pre states what that action needs, _post validates what it made. Their mark is the worst outcome of the claims that belong there and the count is how many of them a real run decided — <b>2/6</b> means six claims belong at that point and two reached a verdict. Hover for the per-agreement list.</div>
+<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). The <b>_pre</b> and <b>_post</b> columns are AGREEMENT CHECKS, placed either side of the action they speak for: _pre states what that action needs, _post validates what it made. Their mark is the worst outcome of the claims that belong there and the count is how many of them a real run decided — <b>2/6</b> means six claims belong at that point and two reached a verdict. Hover for the per-agreement list. The <b>_out</b> columns are what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count), and they turn red when a check that read them failed — so a finding names both the claim that broke and the artifact it was about.</div>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
     (esc generated_at) header body

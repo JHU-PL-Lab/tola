@@ -4060,26 +4060,34 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            sits INSIDE the ocaml block, not at the end.
 
            CHECK SLOTS joined it 2026-09-14: [_pre] immediately before
-           its action and [_post] immediately after, so one action's
-           columns read in the order they mean — what it needs, the
-           action, what it made. The set is derived from the registry's
-           [ag_slot] over each project's chain, so a new agreement
-           whose slot names a new action adds a column here and fails
-           this ratchet, which is the point. *)
+           its action and [_post] immediately after, and [_out] after
+           that — so one action's columns read in the order they mean:
+           what it needs, the run, the verdict on the result, the
+           result. Both derived sets come from the registry — [_pre]
+           and [_post] from [ag_slot], [_out] from the evidence paths
+           the methods name — so a new agreement can add a column here
+           and fail this ratchet, which is the point.
+
+           An [_out] column appears only where the action PRODUCES
+           something (no probe does) and some agreement reads evidence
+           at that action's own tag. That is why probe_lib has none
+           despite writing an inspection, and why pack_binding_ocaml
+           has none despite producing an artifact. *)
         && String.equal
              (String.concat ~sep:"," m.Canary_matrix.columns)
              (String.concat ~sep:","
                 [ "fetch_source"; "configure"; "scan_sources";
                   "build_headers"; "build_lib"; "build_lib_post";
-                  "install_lib"; "install_lib_post"; "fetch_lib";
-                  "probe_lib";
+                  "build_lib_out"; "install_lib"; "install_lib_post";
+                  "install_lib_out"; "fetch_lib"; "probe_lib";
                   (* the off-tree binding-source fetch (2026-08-19): the
                      column appears now that zarith declares its binding's
                      repo as [Binding_source ocaml], and the order key puts
                      it at the FRONT of the ocaml block *)
                   "fetch_binding_source_ocaml"; "build_binding_ocaml_pre";
                   "build_binding_ocaml"; "build_binding_ocaml_post";
-                  "fetch_binding_ocaml"; "pack_binding_ocaml";
+                  "build_binding_ocaml_out"; "fetch_binding_ocaml";
+                  "fetch_binding_ocaml_out"; "pack_binding_ocaml";
                   "probe_binding_ocaml_pre"; "probe_binding_ocaml";
                   (* NOT build_app_ocaml_pre: no registry project
                      declares [build_app], so [api_names_present]'s
@@ -4095,7 +4103,8 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                      order key puts it in the python block beside its
                      OCaml twin. *)
                   "build_binding_python_pre"; "build_binding_python";
-                  "build_binding_python_post"; "fetch_binding_python";
+                  "build_binding_python_post"; "build_binding_python_out";
+                  "fetch_binding_python"; "fetch_binding_python_out";
                   "probe_binding_python_pre"; "probe_binding_python";
                   "probe_binding_python_post" ])
         (* the OFF-TREE binding-source slot (2026-08-18, user): the
