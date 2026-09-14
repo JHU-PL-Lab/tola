@@ -95,7 +95,7 @@ Theory / writing (**author**):
       §5.6's own note says the real-project sections cannot be written
       honestly until the specs are lifted through the post-A5 framework.
 - [ ] Related work against linking calculi, manifest contracts, and ABI
-      tooling. Notes in [`literature.md`](research/literature.md).
+      tooling. Notes in [`literature.md`](research/related/literature.md).
 - [ ] Coverage / blame story (§4 stage 4) lifted into a contribution
       rather than a status table.
 - [ ] Manuscript §5.7 (typed calculus) formalised to "applied PL paper"
@@ -110,9 +110,9 @@ Tool / empirical (**agent-ownable**):
       runner side lands projects fine; what a landing *checks* is still
       per-project tables plus c1..c8. This is
       [`../status.md`](status.md) M2 step 6 and its catalogue is
-      [`agreement_registry_audit.md`](design/agreement_registry.md)
-      (3 of 20 outline sections confirmed; resume at §2 *Artifact
-      surfaces*). **Not descopable** (user, 2026-08-26).
+      [`agreement/registry.md`](design/agreement/registry.md)
+      (§2 develops the artifact foundation; §7.4 collects open
+      implementation work). **Not descopable** (user, 2026-08-26).
 - [ ] **Depth, not count** — the library count M2 originally asked for
       (3 → 5–8) is **met**: ten registry projects plus tiny1. The honest
       gap is the 2×2: two projects have the full matrix (sqlite —
@@ -259,7 +259,7 @@ the witness in [`tiny.md`](research/surface_draft/tiny.md).
 - [ ] **Related work** — linking calculi (Cardelli's units,
       Flatt–Felleisen, MixML), manifest contracts, ABI tools
       (`abigail`, `abi-compliance-checker`), SemVer literature. Notes in
-      [`literature.md`](research/literature.md).
+      [`literature.md`](research/related/literature.md).
 - [ ] **Evaluation section** — the matrix as evidence: what was checked,
       what fired, what was fixed. Depends on §4 stages 4–5.
 - [ ] **Full paper draft.**
@@ -346,14 +346,14 @@ all three. Proposed shape:
 **Checking (§4 stage 2)**
 
 - [ ] **Agreement catalogue** — resume at
-      [`agreement_registry_audit.md`](design/agreement_registry.md)
-      §2 *Artifact surfaces*; 17 of 20 sections open. The per-project
+      [`agreement/registry.md`](design/agreement/registry.md)
+      §2 *Common artifact foundation* and §7.4's open work. The per-project
       contract-binding tables converge onto it and get deleted
       ([`../status.md`](status.md) M2 steps 6–7).
 - [ ] **Closure-shape contract** — no c1..c8 states it, and ncurses is
       the specimen: two packagers agree on every symbol, soname and ELF
       version node and still segfault.
-      [`agreement_registry.md`](design/agreement_registry.md) §6. First contract
+      [`agreement/registry.md`](design/agreement/registry.md) §5.5. First contract
       addition since the registry landed.
 - [ ] **Real AST inspectors for `bpc1` / `bpe1`** — ctypes `argtypes`
       parse and cext `PyMethodDef` parse; today's stand-ins are grep.

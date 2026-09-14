@@ -1,11 +1,11 @@
 %% view: binding_ocaml
 graph LR
-    source_node@{ shape: docs, label: "source [1]" }
+    source_node@{ shape: docs, label: "source" }
     headers_node@{ shape: docs, label: "headers" }
-    lib_node@{ shape: docs, label: "lib [2]" }
+    lib_node@{ shape: docs, label: "lib [1]" }
     app_node@{ shape: docs, label: "app" }
     subgraph ocaml_binding_sg ["ocaml binding"]
-      ocaml_binding_fetch_node@{ shape: doc, label: "ocaml binding (scenario) [3]" }
+      ocaml_binding_fetch_node@{ shape: doc, label: "ocaml binding (scenario) [2]" }
     end
 
     A_configure{{"configure"}}
@@ -20,7 +20,8 @@ graph LR
     A_probe_binding_ocaml(["probe_binding_ocaml [5]"])
     A_probe_app_ocaml(["probe_app_ocaml [6]"])
     A_probe_lib(["probe_lib [7][8]"])
-    A_fetch_binding_ocaml_inspect(["inspect_ocaml [4]"])
+    A_fetch_binding_ocaml_inspect(["inspect_ocaml [3]"])
+    A_fetch_binding_ocaml_stub_inspect(["inspect_ocaml_stub [4]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers
@@ -44,6 +45,7 @@ graph LR
     lib_node -.->|runtime| A_probe_app_ocaml
     lib_node -->|test| A_probe_lib
     ocaml_binding_fetch_node -.-> A_fetch_binding_ocaml_inspect
+    ocaml_binding_fetch_node -.-> A_fetch_binding_ocaml_stub_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
     classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
@@ -67,6 +69,7 @@ graph LR
     class A_probe_app_ocaml st_done_ctx
     class A_probe_lib st_done_ctx
     class A_fetch_binding_ocaml_inspect st_done
+    class A_fetch_binding_ocaml_stub_inspect st_done
     linkStyle 0 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
@@ -89,3 +92,4 @@ graph LR
     linkStyle 19 stroke:#4caf50,stroke-width:3px
     linkStyle 20 stroke:#4caf50,stroke-width:3px
     linkStyle 21 stroke:#4caf50,stroke-width:3px
+    linkStyle 22 stroke:#4caf50,stroke-width:3px

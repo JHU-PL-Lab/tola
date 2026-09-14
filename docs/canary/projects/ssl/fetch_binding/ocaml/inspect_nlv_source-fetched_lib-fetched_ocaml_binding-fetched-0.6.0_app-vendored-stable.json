@@ -1,6 +1,6 @@
 {
   "kind": "ocaml_mli",
-  "path": "/home/red/.opam/default/lib/ssl",
+  "path": "/home/red/.opam/canary/lib/ssl",
   "counts": {
     "vals": 91,
     "externals": 0,

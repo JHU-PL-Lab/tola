@@ -1,7 +1,7 @@
 # Vocabulary — scenario naming & classification
 
 **Kind: reference.** Not a pass: the words every pass reuses. Four senses
-of "scenario", the canonical name structure, the fault tags, the c1..c8
+of "scenario", the canonical name structure, the fault tags, the agreement
 catalogue. The pipeline map is [`README.md`](README.md).
 
 > 2026-08-10. Replaces `scenario_terms.md` (retired). Canonical naming scheme,
@@ -62,16 +62,16 @@ Bad:   Sc.<primary-stage>.<terminal-action>_on_<dep-artifacts>.<fault>_on_<artif
 
 ### Fault tags (contract ↔ fault)
 
-| Contract | Fault tag     | What it detects                                  |
-| -------- | ------------- | ------------------------------------------------ |
-| c1       | `sym_missing` | Symbol present in binding, absent from lib       |
-| c2       | `api_drop`    | API surface entry dropped (mli val, Python attr) |
-| c3       | `behavior`    | Probe output mismatch (runtime behavior)         |
-| c4       | `abi_soname`  | SONAME bump breaks dynamic link                  |
-| c5       | `sym_version` | Versioned symbol floor mismatch                  |
-| c6       | `type_arity`  | Header type/arity mismatch                       |
-| c7       | `api_repack`  | Repackaging breaks API (intra-binding)           |
-| c8       | `api_add`     | API addition not propagated to binding (dormant) |
+| Agreement                     | Fault tag     | What it detects                                  |
+| ----------------------------- | ------------- | ------------------------------------------------ |
+| `required_symbols_exported`   | `sym_missing` | Symbol present in binding, absent from lib       |
+| `api_names_present`           | `api_drop`    | API surface entry dropped (mli val, Python attr) |
+| `behavior_matches`            | `behavior`    | Probe output mismatch (runtime behavior)         |
+| `soname_matches_requirement`  | `abi_soname`  | SONAME bump breaks dynamic link                  |
+| `required_versions_exported`  | `sym_version` | Versioned symbol floor mismatch                  |
+| `signatures_agree`            | `type_arity`  | Header type/arity mismatch                       |
+| `repack_preserves_api`        | `api_repack`  | Repackaging breaks API (intra-binding)           |
+| `repack_complete`             | `api_add`     | API addition not propagated to binding (dormant) |
 
 ### Example names
 
@@ -132,18 +132,28 @@ Bad scenarios come in two flavors:
 | Implementation | tiny1's 20 bad scenarios               | Machinery built, not yet wired to live run  |
 | Canonical name | `<good-name>.<fault>_on_<artifact>`    | `<good-name>.deploy_mismatch_on_<consumer>` |
 
-## Contract catalogue (c1..c8)
+## Agreement catalogue
 
-| Contract | Fault tag     | What it checks                                       |
-| -------- | ------------- | ---------------------------------------------------- |
-| c1       | `sym_missing` | C symbols exported by lib vs expected by binding     |
-| c2       | `api_drop`    | API surface entries (mli vals, Python attrs) present |
-| c3       | `behavior`    | Probe output matches expected                        |
-| c4       | `abi_soname`  | Shared library version name matches                  |
-| c5       | `sym_version` | `@@GLIBC_2.31` annotations                           |
-| c6       | `type_arity`  | C type compatibility                                 |
-| c7       | `api_repack`  | Repackaging preserves API                            |
-| c8       | `api_add`     | Repackaging is complete (dormant, blocked on c6+c7)  |
+The names are the registry's; the tags are what a scenario name carries.
+`canary checks` prints the live list, and the twelve agreements plus their
+reference expectations are in
+[`agreement/registry.md`](../agreement/registry.md) §1.7. The numbered
+`c1`..`c9` identifiers were retired on 2026-09-12, and the three that compared
+an artifact against a DECLARATION became agreements of their own
+(`declared_symbols_exported`, `soname_matches_declaration`,
+`declared_versions_exported`) — they share a fault tag with their peer
+comparison but not a claim, and no scenario names them yet.
+
+| Agreement                     | Fault tag     | What it checks                                       |
+| ----------------------------- | ------------- | ---------------------------------------------------- |
+| `required_symbols_exported`   | `sym_missing` | C symbols exported by lib vs expected by binding     |
+| `api_names_present`           | `api_drop`    | API surface entries (mli vals, Python attrs) present |
+| `behavior_matches`            | `behavior`    | Probe output matches expected                        |
+| `soname_matches_requirement`  | `abi_soname`  | Shared library version name matches                  |
+| `required_versions_exported`  | `sym_version` | `@@GLIBC_2.31` annotations                           |
+| `signatures_agree`            | `type_arity`  | C type compatibility                                 |
+| `repack_preserves_api`        | `api_repack`  | Repackaging preserves API (provisional name)         |
+| `repack_complete`             | `api_add`     | Repackaging is complete (provisional; no evaluator)  |
 
 ## Stage coverage (`canary stages`)
 

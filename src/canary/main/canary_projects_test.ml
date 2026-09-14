@@ -3791,6 +3791,64 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
         in
         (not (List.is_empty labels)) && no_dups && declared_ok && identifies) }
 
+(* THE CHECK CELL (2026-09-14): the three things it must get right,
+   each of which it got wrong at least once while being written.
+
+   (a) the DENOMINATOR counts what the registry slots at that point,
+   not what the log mentioned — a cell that counted only what ran would
+   read 2/2 and look like full coverage;
+   (b) a VIOLATION at one firing site outranks a pass at another, so a
+   finding cannot be lost to a later [unavailable];
+   (c) an undecided outcome that WAS evaluated ([not_applicable]) is
+   distinguishable from one that was never evaluated at all — those
+   ranked equal at first, and the fold silently kept its own initial
+   value for every rank-0 outcome. *)
+let matrix_check_cell_pin : Canary_project_test.pure_test =
+  { name = "matrix.check_cell_merges_worst";
+    check =
+      (fun () ->
+        let module S = Canary_status in
+        let chain =
+          Canary_basic.
+            [ Probe_binding Canary_lang.OCaml;
+              Fetch (Binding Canary_lang.OCaml) ]
+        in
+        let ob ag outcome =
+          { S.ao_tag = "probe_binding_ocaml"; ao_agreement = ag;
+            ao_method = "m"; ao_outcome = outcome }
+        in
+        let cell obs =
+          Canary_matrix.check_cell ~chain ~obs
+            (Canary_basic.Probe_binding Canary_lang.OCaml)
+            Canary_agreement_common.Pre
+        in
+        match
+          ( cell
+              [ ob "required_symbols_exported" "holds";
+                ob "api_names_present" "holds";
+                ob "soname_matches_requirement" "not_applicable" ],
+            cell
+              [ ob "required_symbols_exported" "holds";
+                ob "required_symbols_exported" "violated" ],
+            cell [] )
+        with
+        | Some good, Some bad, Some silent ->
+            (* (a) six claims belong at the OCaml probe's pre slot, and
+               the denominator says so whatever the log holds *)
+            String.equal good.Canary_matrix.provision "2/6"
+            && String.equal silent.Canary_matrix.provision "0/6"
+            && String.equal good.Canary_matrix.mark "✓"
+            (* (b) the violation wins *)
+            && String.equal bad.Canary_matrix.mark "✗"
+            (* (c) evaluated-but-undecided is not silence *)
+            && Option.value_map good.Canary_matrix.detail ~default:false
+                 ~f:(fun d ->
+                   String.is_substring d
+                     ~substring:"soname_matches_requirement: not_applicable")
+            && Option.value_map silent.Canary_matrix.detail ~default:false
+                 ~f:(fun d -> String.is_substring d ~substring:"not evaluated")
+        | _ -> false) }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -3979,20 +4037,36 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         (* the CANONICAL column order (ratchet, 2026-08-18): the
            native/lib group, then per language a same-shaped block
            (binding build/fetch/pack/probe + its app) — probe_app_ocaml
-           sits INSIDE the ocaml block, not at the end *)
+           sits INSIDE the ocaml block, not at the end.
+
+           CHECK SLOTS joined it 2026-09-14: [_pre] immediately before
+           its action and [_post] immediately after, so one action's
+           columns read in the order they mean — what it needs, the
+           action, what it made. The set is derived from the registry's
+           [ag_slot] over each project's chain, so a new agreement
+           whose slot names a new action adds a column here and fails
+           this ratchet, which is the point. *)
         && String.equal
              (String.concat ~sep:"," m.Canary_matrix.columns)
              (String.concat ~sep:","
                 [ "fetch_source"; "configure"; "scan_sources";
-                  "build_headers"; "build_lib"; "install_lib"; "fetch_lib";
+                  "build_headers"; "build_lib"; "build_lib_post";
+                  "install_lib"; "install_lib_post"; "fetch_lib";
                   "probe_lib";
                   (* the off-tree binding-source fetch (2026-08-19): the
                      column appears now that zarith declares its binding's
                      repo as [Binding_source ocaml], and the order key puts
                      it at the FRONT of the ocaml block *)
-                  "fetch_binding_source_ocaml"; "build_binding_ocaml";
+                  "fetch_binding_source_ocaml"; "build_binding_ocaml_pre";
+                  "build_binding_ocaml"; "build_binding_ocaml_post";
                   "fetch_binding_ocaml"; "pack_binding_ocaml";
-                  "probe_binding_ocaml"; "probe_app_ocaml";
+                  "probe_binding_ocaml_pre"; "probe_binding_ocaml";
+                  (* NOT build_app_ocaml_pre: no registry project
+                     declares [build_app], so [api_names_present]'s
+                     first candidate is absent from every chain and it
+                     falls through to the probe — which is the
+                     candidate list doing its job. *)
+                  "probe_binding_ocaml_post"; "probe_app_ocaml";
                   (* fetch_binding_python appeared 2026-09-12 when sqlite
                      declared a DUMMY install for CPython's stdlib
                      sqlite3 — the step that stands for a binding the
@@ -4000,8 +4074,10 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                      somewhere to look for its surface inspection. The
                      order key puts it in the python block beside its
                      OCaml twin. *)
-                  "build_binding_python"; "fetch_binding_python";
-                  "probe_binding_python" ])
+                  "build_binding_python_pre"; "build_binding_python";
+                  "build_binding_python_post"; "fetch_binding_python";
+                  "probe_binding_python_pre"; "probe_binding_python";
+                  "probe_binding_python_post" ])
         (* the OFF-TREE binding-source slot (2026-08-18, user): the
            order key places fetch_binding_source at the FRONT of its
            language's block — the column appears once a project wires
@@ -4078,6 +4154,7 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
       matrix_registry_shape_pin;
+      matrix_check_cell_pin;
       platform_single_source_pin;
       run_info_session_pin;
       machine_roots_pin;

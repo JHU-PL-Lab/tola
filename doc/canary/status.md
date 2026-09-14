@@ -23,7 +23,7 @@
 - **tiny1 via general path** — `project_run_of_tiny1` converts any tiny1 scenario into a
   `project_run`. `canary action tiny1/<name>` runs through the general pipeline (agnostic
   expectation). All 22 scenarios pass (re-verified `tiny run`: 22 PASS, 0 FAIL,
-  2026-08-16). Behavioral detection (c3/c7) fixed via probe.log
+  2026-08-16). Behavioral detection (`behavior_matches` / `repack_preserves_api`) fixed via probe.log
   fallback in `Expect_compat_derived` runtime resolution.
 - **Canonical scenario naming** — `canonical_name_of` in `canary_tiny_scenario.ml`.
   Format: `Sc.<stage>.<terminal-action>_on_<deps>[.<fault>_on_<artifact>]`. `canary tiny
@@ -63,7 +63,7 @@
   45–199s per job — rendered from the LIVE pipeline (`Canary_ci` over
   `Canary_pipeline.steps_of`) rather than from the per-project
   `*_ci_spec` values that had drifted. Two red cells reproduce there:
-  llvm's `Opcode.UncondBr` and ssl's c2 on `probe_app_ocaml`. A `.github/actions/canary-setup`
+  llvm's `Opcode.UncondBr` and ssl's `api_names_present` on `probe_app_ocaml`. A `.github/actions/canary-setup`
   composite action carries the shared setup, and each job also renders as
   a shell twin under `_out/canary/ci/<job>.sh` so a CI job can be
   debugged without pushing. The pre-A5 `canary_ci.yml` (5 jobs, all red
@@ -176,7 +176,7 @@ Steps (each step keeps the suite green before the next):
    2026-08-15). Remaining: the raw-override warning; delete
    `mi_artifact_shape` prose.
 6. [ ] **Contract registry unification** — design in
-   [`agreement_registry_audit.md`](design/agreement_registry.md)
+   [`agreement/registry.md`](design/agreement/registry.md)
    (2026-08-17, merged 2026-08-21): one
    statement per contract (invariant as a FALSIFIER, tool-based inputs,
    evidence kind, firing derived from mechanism × provision); the
@@ -193,17 +193,20 @@ Steps (each step keeps the suite green before the next):
    `Build_binding` / `Probe_binding`, plus `Build_lib` for the three
    solo-artifact cells. Declared but unwired: `Probe_lib`,
    `Build_app`/`Probe_app` (tiny's oracle covers app firings today),
-   `Scan_sources` (c6 READS its JSONs but fires elsewhere), and the
-   fetch/configure/install/publish actions. Expectation forms: 5
-   Inspection, 2 Behavior_grep, 1 Placeholder (c8, whose registered
-   status still needs the `Blocked [C6; C7]` reconciliation), plus the
+   `Scan_sources` (`signatures_agree` READS its JSONs but fires
+   elsewhere), and the fetch/configure/install/publish actions.
+   Expectation forms: 5 Inspection, 2 Behavior_grep, 1 Placeholder
+   (`repack_complete`, which now reports `not_implemented` with its
+   reason rather than carrying a blocked status), plus the
    `Postcondition` form reserved for the check_post families. Cffi /
    Dynlink and the Rust/Java/Cpp/CSharp langs have no cells yet. The
    catalogue's own view of all of this is its §0.6c.
-7. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
-   OCaml probe not predicted); `symbol_orphan`'s build failure has no
-   contract. Known in `canary_expected_of` table. (Closes inside
-   step 6 — these rows land on the typed ground.)
+7. [ ] **Agreement wiring gaps** — `soname_matches_requirement` under
+   OCaml is a Placeholder in tiny (abi_soname_bump's OCaml probe is not
+   predicted), which is the same fact the agreement reports as
+   `not_applicable` for a compiled-stub archive; `symbol_orphan`'s build
+   failure has no agreement. Known in `canary_expected_of` table.
+   (Closes inside step 6 — these rows land on the typed ground.)
 8. [ ] **Richer inspectors** — L1b/L2/L4 fields declared but no inspectors.
    Each needs: inspector → predict closure → binding rows.
 9. [ ] **Fault tags ↔ contracts sync** — `sym_missing`, `api_drop`,
@@ -223,6 +226,36 @@ Steps (each step keeps the suite green before the next):
    original slow-mode idea needs anything beyond today's
    default-marker table + per-action overrides (e.g. deeper artifact
    verification on a slow-mode flag).
+
+11. [ ] **Attribution — from "which check failed" to "who is to blame"**
+   (2026-09-03; the draft promotes attribution to a first-class
+   operation, so the code owes it). What EXISTS: which *agreement*
+   confirmed a failure is persisted in the verdict marker
+   (`write_verdict ~xfail_contracts`, pinned by
+   `compat.by_agreement_attribution`), and `mismatch_direction_of`
+   computes Forward/Backward per scenario and displays it for declared
+   mismatch probes. What DOES NOT: any mapping from a failure to a
+   responsible *party*. `Canary_detect.finding` is still
+   `errored? / output_present?` — its own header calls the real
+   detector "postponed to a later seam" — and the obligation axis is
+   typed `Intrinsic | Added` where
+   [`agreement/registry.md`](design/agreement/registry.md) §1.6 has
+   seven sources of belief, each with a blame column. Two steps, in
+   order:
+   - **(a)** `Canary_detect.finding` carries what the registry already
+     knows — the agreement, its category, its source. Record change
+     plus filling it from the row; the transport and call site exist.
+   - **(b)** type the seven sources beside `Intrinsic | Added`, with
+     the blamed party a function of the source (§1.6 has the table, so
+     this is transcription). That also answers §9.4's open question:
+     if the source carries blame, no per-row blame field is needed.
+
+   **Scope guard** (user, 2026-09-03): this is NOT a general fault
+   localizer. The merit claimed is integration — carrying a world's
+   derivation far enough to name a party — not per-artifact strictness,
+   where the existing checkers are already stronger. A per-artifact
+   localizer puts us back in competition with the FFI checkers, which
+   is a different paper.
 
 Deferred (design directions, not M2):
 

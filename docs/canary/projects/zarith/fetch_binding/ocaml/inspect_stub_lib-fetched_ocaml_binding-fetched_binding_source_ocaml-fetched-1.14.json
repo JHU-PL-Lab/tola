@@ -1,0 +1,37 @@
+{
+  "kind": "c_stub",
+  "path": "/home/red/.opam/canary/lib/zarith/libzarith.a",
+  "counts": {
+    "required": 23
+  },
+  "requires": [
+    "__gmpz_2fac_ui",
+    "__gmpz_bin_ui",
+    "__gmpz_clear",
+    "__gmpz_congruent_p",
+    "__gmpz_divisible_p",
+    "__gmpz_fac_ui",
+    "__gmpz_fib_ui",
+    "__gmpz_init",
+    "__gmpz_invert",
+    "__gmpz_jacobi",
+    "__gmpz_lucnum_ui",
+    "__gmpz_mfac_uiui",
+    "__gmpz_nextprime",
+    "__gmpz_perfect_power_p",
+    "__gmpz_pow_ui",
+    "__gmpz_powm",
+    "__gmpz_powm_sec",
+    "__gmpz_primorial_ui",
+    "__gmpz_probab_prime_p",
+    "__gmpz_realloc2",
+    "__gmpz_remove",
+    "__gmpz_root",
+    "__gmpz_rootrem"
+  ],
+  "versioned_req": {},
+  "watchlist": {
+    "present": [],
+    "missing": []
+  }
+}

@@ -220,7 +220,7 @@ the provider's objects. Sweep script:
 across every prebuilt canary tracks, cairo / libffi / zlib / zstd score
 zero on both forms; only ncurses and sundials fire.
 
-Design note: [`../design/closure_shape.md`](../design/closure_shape.md).
+Design note: [`../design/agreement/registry.md`](../design/agreement/registry.md) §5.6 — the four closure-shape agreements (`denotation_stable_across_worlds`, `no_duplicate_implementation`, `needed_names_provided`, `interposition_binds_build_target`) that this finding proposed; `closure_shape.md` was absorbed there 2026-09.
 
 ## 9. Environment
 

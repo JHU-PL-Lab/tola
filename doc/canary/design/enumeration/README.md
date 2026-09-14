@@ -61,23 +61,23 @@ behind it is the one to distrust first.
 
 **Three IRs, five passes** — and the counts deliberately do not match.
 
-| IR | type | what it is |
-| --- | --- | --- |
+| IR          | type                | what it is                                                      |
+| ----------- | ------------------- | --------------------------------------------------------------- |
 | *(surface)* | `artifact_row list` | the project's own words: what it declares, one row per artifact |
-| **spec** | `project_spec` | the declared universe, fused into one table |
-| **worlds** | `assignment list` | one placement per artifact — a world the project has |
-| **steps** | `step list` | the object code |
+| **spec**    | `project_spec`      | the declared universe, fused into one table                     |
+| **worlds**  | `assignment list`   | one placement per artifact — a world the project has            |
+| **steps**   | `step list`         | the object code                                                 |
 
 Each pass, with the IR it takes and the IR it hands on:
 
-| # | pass | IR | in | out | function |
-| --- | --- | --- | --- | --- | --- |
-| 1 | **declare** | surface → spec | `artifact_row list` | `project_spec` | `project_spec_of_rows` |
-| | *(branch)* | spec → chains | `project_spec` | applicable chains | `chain_applicable` over the 38 |
-| 2 | **enumerate** | spec → worlds | `project_spec` | `assignment list` — every world the project HAS | `enumerate_product` ∘ 5 constraints |
-| 3 | **select** | worlds → worlds | `assignment list` | `assignment list` — what this RUN asked for | `select` |
-| 4 | **order** | worlds → worlds | `assignment list` | `assignment list` — same elements, resequenced | `scenarios_in_run_order` |
-| 5 | **realize** | world → steps | one `assignment` | `step list` | `realize ∘ dispatch` then `derive_steps` |
+| #   | pass          | IR              | in                  | out                                             | function                                 |
+| --- | ------------- | --------------- | ------------------- | ----------------------------------------------- | ---------------------------------------- |
+| 1   | **declare**   | surface → spec  | `artifact_row list` | `project_spec`                                  | `project_spec_of_rows`                   |
+|     | *(branch)*    | spec → chains   | `project_spec`      | applicable chains                               | `chain_applicable` over the 38           |
+| 2   | **enumerate** | spec → worlds   | `project_spec`      | `assignment list` — every world the project HAS | `enumerate_product` ∘ 5 constraints      |
+| 3   | **select**    | worlds → worlds | `assignment list`   | `assignment list` — what this RUN asked for     | `select`                                 |
+| 4   | **order**     | worlds → worlds | `assignment list`   | `assignment list` — same elements, resequenced  | `scenarios_in_run_order`                 |
+| 5   | **realize**   | world → steps   | one `assignment`    | `step list`                                     | `realize ∘ dispatch` then `derive_steps` |
 
 ```
 artifact_row list    (surface)
@@ -182,15 +182,15 @@ One row per pass. Everything about a pass is reachable from its row: the
 doc that explains it, the code that is it, and the pins that would fail
 if the two drifted apart.
 
-| # | pass | what happens | doc | code | pins |
-| --- | --- | --- | --- | --- | --- |
-| — | *vocabulary* (not a pass) | the types every pass reuses: `artifact_kind`, `provision`, `channel`, `version`, `build_id`, `artifact_info`, `placement`, `assignment`, `dep_mode` | [`stage0_naming.md`](stage0_naming.md) (the four senses of "scenario"), [`../ssot.md`](../ssot.md) (IDs) | `base/canary_basic.ml`, `base/canary_store.ml`, `base/canary_artifact.ml` | `vocab.binding_source_off_tree`, `vocab.lib_name_optional`, `surface.split_keeps_checks_drops_provenance`, `scenario.lower_expectation_agnostic_c1` |
-| 1 | **declare** | a project states which artifacts exist, at which provisions and versions, and who provides each | [`stage1_declare_spec.md`](stage1_declare_spec.md) | `action/canary_project_spec.ml` (`artifact_row`, `project_spec_of_rows`), `base/canary_artifact.ml` (`artifact_axes`), `tool/canary_store_config.ml` (`provision_spec`) | `enumerate.project_spec_sqlite_shape`, `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`, `enumerate.per_provision_versions`, `repo_model.axes_pins`, `repo_model.contents_invariant`, `spec.vendored_prebuilt_pair`, `spec.pm_dep_gate_groups`, `sqlite.provider_rows`, `z3.provider_rows` |
-| 2 | **enumerate** | the product, then the five constraints that prune it | [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) | `action/canary_enumerate.ml` (`enumerate_product`, then `assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`) | `enumerate.config_levels`, `enumerate.subset_intersects_universe`, `enumerate.shadow_policy_drops_same_cell_built`, `enumerate.point_to_assignment_fold`, `enumerate.two_projections_and_filter`, `enumerate.version_axis`, `enumerate.built_from_of_assignment`, `enumerate.mismatch_direction`, `enumerate.deploy_mismatch`, `shadow.policy_ladder` |
-| 3 | **select** | narrow to what THIS run asked for — `--thin`, `--refs` | [`stage3_select_worlds.md`](stage3_select_worlds.md) | `action/canary_enumerate.ml` (`select`, `selection_of_policy`, `unselected`, `ref_filter`) | `select.is_a_subset_of_stage2`, `select.full_policy_selects_everything`, `select.thin_post_filter_equals_universe_restriction`, `enumerate.thin_is_version_subset`, `enumerate.refs_subset` |
-| 4 | **order** | which assignments are the SAME scenario, and in what order they run | [`stage4_order_worlds.md`](stage4_order_worlds.md) | `project/canary_project_run.ml` (`scenarios_of`, `scenario_dir_of`, `store_state_key`, `scenarios_in_run_order`) | `run_order.groups_by_store_state`, `world.one_vocabulary`, `matrix.registry_shape`, `z3.install_prefix_isolated`, `z3.env_guard_paths` |
-| 5 | **realize** | assignment → commands → steps; then a backend consumes them | [`stage5_realize_steps.md`](stage5_realize_steps.md), [`../action_playbook.md`](../action_playbook.md) to add an action | `project/*` (`pr_runner_spec = realize ∘ dispatch`), `action/canary_step_builder.ml` (`derive_steps`), `action/canary_action.ml` (`node_of_assignment`, `close_deps`, `execution_plan`) | `action.node_of_assignment_chain`, `action.close_deps_deploy_mismatch`, `action.execution_plan_topo_and_edges`, `arrow.providing_action_total_and_consistent`, `enumerate.dispatch_coordinate_reads`, `z3.dispatch_reads_source_placement`, `derive.fetch_lib_matches_helper`, `probe_invariant.consumes_eq_artifacts` |
-| *(consumer)* | reporting | what a row is and what names it — READS `actions.log`, so not a pass | [`../matrix.md`](../matrix.md) | `main/canary_matrix.ml`, `backend/canary_status.ml`, `backend/canary_html.ml` | `matrix.row_index`, `matrix.row_order`, `matrix.cell_stage_progression`, `matrix.setting_block_identifies_world`, `matrix.marks_from_log` |
+| #            | pass                      | what happens                                                                                                                                        | doc                                                                                                                     | code                                                                                                                                                                                    | pins                                                                                                                                                                                                                                                                                                                                                  |
+| ------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —            | *vocabulary* (not a pass) | the types every pass reuses: `artifact_kind`, `provision`, `channel`, `version`, `build_id`, `artifact_info`, `placement`, `assignment`, `dep_mode` | [`stage0_naming.md`](stage0_naming.md) (the four senses of "scenario"), [`../ssot.md`](../ssot.md) (IDs)                | `base/canary_basic.ml`, `base/canary_store.ml`, `base/canary_artifact.ml`                                                                                                               | `vocab.binding_source_off_tree`, `vocab.lib_name_optional`, `surface.split_keeps_checks_drops_provenance`, `scenario.lower_expectation_agnostic_c1`                                                                                                                                                                                                   |
+| 1            | **declare**               | a project states which artifacts exist, at which provisions and versions, and who provides each                                                     | [`stage1_declare_spec.md`](stage1_declare_spec.md)                                                                      | `action/canary_project_spec.ml` (`artifact_row`, `project_spec_of_rows`), `base/canary_artifact.ml` (`artifact_axes`), `tool/canary_store_config.ml` (`provision_spec`)                 | `enumerate.project_spec_sqlite_shape`, `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`, `enumerate.per_provision_versions`, `repo_model.axes_pins`, `repo_model.contents_invariant`, `spec.vendored_prebuilt_pair`, `spec.pm_dep_gate_groups`, `sqlite.provider_rows`, `z3.provider_rows`                                      |
+| 2            | **enumerate**             | the product, then the five constraints that prune it                                                                                                | [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md)                                                              | `action/canary_enumerate.ml` (`enumerate_product`, then `assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`)                                             | `enumerate.config_levels`, `enumerate.subset_intersects_universe`, `enumerate.shadow_policy_drops_same_cell_built`, `enumerate.point_to_assignment_fold`, `enumerate.two_projections_and_filter`, `enumerate.version_axis`, `enumerate.built_from_of_assignment`, `enumerate.mismatch_direction`, `enumerate.deploy_mismatch`, `shadow.policy_ladder` |
+| 3            | **select**                | narrow to what THIS run asked for — `--thin`, `--refs`                                                                                              | [`stage3_select_worlds.md`](stage3_select_worlds.md)                                                                    | `action/canary_enumerate.ml` (`select`, `selection_of_policy`, `unselected`, `ref_filter`)                                                                                              | `select.is_a_subset_of_stage2`, `select.full_policy_selects_everything`, `select.thin_post_filter_equals_universe_restriction`, `enumerate.thin_is_version_subset`, `enumerate.refs_subset`                                                                                                                                                           |
+| 4            | **order**                 | which assignments are the SAME scenario, and in what order they run                                                                                 | [`stage4_order_worlds.md`](stage4_order_worlds.md)                                                                      | `project/canary_project_run.ml` (`scenarios_of`, `scenario_dir_of`, `store_state_key`, `scenarios_in_run_order`)                                                                        | `run_order.groups_by_store_state`, `world.one_vocabulary`, `matrix.registry_shape`, `z3.install_prefix_isolated`, `z3.env_guard_paths`                                                                                                                                                                                                                |
+| 5            | **realize**               | assignment → commands → steps; then a backend consumes them                                                                                         | [`stage5_realize_steps.md`](stage5_realize_steps.md), [`../action_playbook.md`](../action_playbook.md) to add an action | `project/*` (`pr_runner_spec = realize ∘ dispatch`), `action/canary_step_builder.ml` (`derive_steps`), `action/canary_action.ml` (`node_of_assignment`, `close_deps`, `execution_plan`) | `action.node_of_assignment_chain`, `action.close_deps_deploy_mismatch`, `action.execution_plan_topo_and_edges`, `arrow.providing_action_total_and_consistent`, `enumerate.dispatch_coordinate_reads`, `z3.dispatch_reads_source_placement`, `derive.fetch_lib_matches_helper`, `probe_invariant.consumes_eq_artifacts`                                |
+| *(consumer)* | reporting                 | what a row is and what names it — READS `actions.log`, so not a pass                                                                                | [`../matrix.md`](../matrix.md)                                                                                          | `main/canary_matrix.ml`, `backend/canary_status.ml`, `backend/canary_html.ml`                                                                                                           | `matrix.row_index`, `matrix.row_order`, `matrix.cell_stage_progression`, `matrix.setting_block_identifies_world`, `matrix.marks_from_log`                                                                                                                                                                                                             |
 
 **Reporting is not a pass.** It was numbered 6 until 2026-08-24; the
 matrix is built by `canary result`, which reads `actions.log` *after* a
@@ -221,11 +221,11 @@ N hands to pass N+1** — not a rendering of it, and not a join with a
 neighbour. (`spec` is deliberately a joined human snapshot; both are
 useful, for different questions.)
 
-| flag | what it gives |
-| --- | --- |
-| *(default)* | a compact reading form |
-| `--json` | one encoder per pass, for diffing two runs. Keys are canonical |
-| `--raw` | the derived `show` form — faithful, verbose |
+| flag        | what it gives                                                  |
+| ----------- | -------------------------------------------------------------- |
+| *(default)* | a compact reading form                                         |
+| `--json`    | one encoder per pass, for diffing two runs. Keys are canonical |
+| `--raw`     | the derived `show` form — faithful, verbose                    |
 
 Two properties hold by construction, and they are the reason to reach for
 `emit` rather than reasoning about the code:
@@ -289,7 +289,7 @@ Short list, each learned from something that went wrong:
   [`stage5_realize_steps.md`](stage5_realize_steps.md) §4 (what exists).
 - **Adding an action** — `../action_playbook.md`.
 - The **checking** side (what a probe asserts, which contract fires) —
-  `../agreement_registry_audit.md` and `surface/`.
+  `../agreement/registry.md` and `surface/`.
 - Anything **per project** — `../../project/`.
 
 ## The alignment rule

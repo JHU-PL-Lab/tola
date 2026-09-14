@@ -17,10 +17,11 @@ graph LR
     A_pack_binding_ocaml{{"pack_binding_ocaml"}}
     A_pack_lib{{"pack_lib"}}
     A_pack_app{{"pack_app"}}
-    A_probe_binding_ocaml(["probe_binding_ocaml [3]"])
+    A_probe_binding_ocaml(["probe_binding_ocaml [4]"])
     A_probe_app_ocaml(["probe_app_ocaml"])
-    A_probe_lib(["probe_lib [5][6]"])
-    A_probe_binding_ocaml_inspect(["inspect_ocaml [4]"])
+    A_probe_lib(["probe_lib [6][7]"])
+    A_fetch_binding_ocaml_stub_inspect(["inspect_ocaml_stub [3]"])
+    A_probe_binding_ocaml_inspect(["inspect_ocaml [5]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers
@@ -43,6 +44,7 @@ graph LR
     app_node -->|test| A_probe_app_ocaml
     lib_node -.->|runtime| A_probe_app_ocaml
     lib_node -->|test| A_probe_lib
+    ocaml_binding_fetch_node -.-> A_fetch_binding_ocaml_stub_inspect
     A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
@@ -66,6 +68,7 @@ graph LR
     class A_probe_binding_ocaml st_done
     class A_probe_app_ocaml st_nospec
     class A_probe_lib st_done_ctx
+    class A_fetch_binding_ocaml_stub_inspect st_done
     class A_probe_binding_ocaml_inspect st_done
     linkStyle 0 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
@@ -89,3 +92,4 @@ graph LR
     linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 20 stroke:#4caf50,stroke-width:3px
     linkStyle 21 stroke:#4caf50,stroke-width:3px
+    linkStyle 22 stroke:#4caf50,stroke-width:3px

@@ -2,14 +2,6 @@
   "project_name": "ssl",
   "steps": [
     {
-      "tag": "fetch_source",
-      "output_tag": "fetch_source",
-      "action": "fetch_source",
-      "variant_id": "source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable",
-      "expect": "success",
-      "status": "done"
-    },
-    {
       "tag": "fetch_lib",
       "output_tag": "fetch_lib",
       "action": "fetch_lib",
@@ -27,6 +19,14 @@
     },
     {
       "tag": "fetch_binding_ocaml_inspect",
+      "output_tag": "fetch_binding_ocaml",
+      "action": "fetch_binding_ocaml",
+      "variant_id": "source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "fetch_binding_ocaml_stub_inspect",
       "output_tag": "fetch_binding_ocaml",
       "action": "fetch_binding_ocaml",
       "variant_id": "source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable",

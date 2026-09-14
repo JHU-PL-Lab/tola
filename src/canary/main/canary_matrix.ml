@@ -80,6 +80,15 @@ type t = {
       (** the leading block: one artifact label per declared artifact,
           union across the table's projects in kind order *)
   columns : string list;
+  check_columns : string list;
+      (** which of [columns] are CHECK slots rather than actions. The
+          labels are self-describing ([probe_binding_ocaml_pre]), but a
+          renderer should not have to parse a suffix to find that out —
+          that is how the xfail reader came to look for a literal "[c".
+          Text mode also uses it to abbreviate: a check column always
+          sits next to the action it names, so the action half of its
+          label is redundant on screen and merely widens an already
+          wide table. *)
   rows : row list;
 }
 
@@ -558,6 +567,43 @@ let compare_column (x : Canary_basic.action) (y : Canary_basic.action) : int =
   let k a = (column_group a, column_stage a) in
   Stdlib.compare (k x) (k y)
 
+(** A COLUMN IS AN ACTION OR A CHECK SLOT (2026-09-14, user).
+
+    The chain reads [action, artifact, action, artifact …], so a check
+    has a place in it: [Check (a, Pre)] states what [a] needs before it
+    runs, [Check (a, Post)] validates what it made. Both sit adjacent
+    to [a], which is what makes a failing check legible — the reader
+    does not have to work out which step it was talking about.
+
+    The check columns are DERIVED from the registry's [ag_slot], not
+    from the log: a scenario that has never run still shows its check
+    columns, all [·], exactly as it shows its action columns. Filling
+    them from the log instead would make the table's shape depend on
+    what happened to be run, which is the property this table has
+    always avoided. *)
+type col =
+  | Act of Canary_basic.action
+  | Check of Canary_basic.action * Canary_agreement_common.stage
+
+let label_of_col = function
+  | Act a -> Canary_basic.string_of_action a
+  | Check (a, s) -> Canary_agreement_common.string_of_slot (a, s)
+
+let action_of_col = function Act a -> a | Check (a, _) -> a
+
+(** [pre] before its action, [post] after it — so one action's three
+    columns read in the order they mean. *)
+let col_rank = function
+  | Check (_, Canary_agreement_common.Pre) -> 0
+  | Act _ -> 1
+  | Check (_, Canary_agreement_common.Post) -> 2
+
+let compare_col (x : col) (y : col) : int =
+  let a = action_of_col x and b = action_of_col y in
+  match compare_column a b with
+  | 0 -> Stdlib.compare (col_rank x) (col_rank y)
+  | n -> n
+
 (** The SETTING block's columns: one per declared artifact, union across
     the table's projects in kind order ([kind_order] — source, headers,
     lib, binding, binding-source, app), labelled by {!kind_label}. A
@@ -580,20 +626,183 @@ let setting_columns_of
            (Canary_basic.kind_order y))
   |> List.map ~f:(fun k -> (kind_label k, k))
 
+(** The languages a chain's actions mention — the ones whose slots can
+    resolve in it. A project with no per-language action still needs
+    one entry, because a lib-side slot ignores the language entirely. *)
+let langs_of_chain (chain : Canary_basic.action list) : Canary_lang.lang list =
+  let ls =
+    List.filter_map chain ~f:(fun a ->
+        match a with
+        | Canary_basic.Build_binding l
+        | Canary_basic.Probe_binding l
+        | Canary_basic.Fetch (Canary_basic.Binding l)
+        | Canary_basic.Build_app { lang = l } ->
+            Some l
+        | _ -> None)
+    |> List.dedup_and_sort ~compare:Stdlib.compare
+  in
+  if List.is_empty ls then [ Canary_lang.OCaml ] else ls
+
+(** Which check columns this chain offers: every registered agreement's
+    slot, resolved against the actions this scenario actually contains,
+    for each language the chain mentions. An agreement whose candidates
+    are all absent contributes nothing — which is how a project that
+    builds no app avoids a [build_app_ocaml_pre] column. *)
+let check_cols_of_chain (chain : Canary_basic.action list) : col list =
+  List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
+      List.filter_map (langs_of_chain chain) ~f:(fun lang ->
+          Option.map
+            (Canary_agreement_common.slot_in_chain
+               r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
+               ~chain)
+            ~f:(fun (a, s) -> Check (a, s))))
+  |> List.dedup_and_sort ~compare:Stdlib.compare
+
+(** The language a step tag speaks for. A lib-side tag speaks for none,
+    and the slots that resolve there ignore the parameter anyway. *)
+let lang_of_tag ~(chain : Canary_basic.action list) (tag : string) :
+    Canary_lang.lang =
+  match Canary_basic.action_of_string tag with
+  | Some
+      ( Canary_basic.Build_binding l
+      | Canary_basic.Probe_binding l
+      | Canary_basic.Fetch (Canary_basic.Binding l)
+      | Canary_basic.Build_app { lang = l } ) ->
+      l
+  | _ -> List.hd_exn (langs_of_chain chain)
+
+(** WORST FIRST — the merge an agreement column needs when several
+    methods, or several firing sites, report on one claim. The same
+    ordering [evaluate_step] uses to merge evidence routes: a finding
+    outranks a pass, and a pass outranks an undecided, so a cell can
+    never lose a violation to a later [unavailable].
+
+    [""] is NOT an outcome — it is the absence of one, and it ranks
+    BELOW every real outcome including the undecided ones. Ranking it
+    equal to [unavailable] (which it was, briefly) made a fold that
+    never replaces its own initial value, so every rank-0 outcome read
+    back as "not evaluated" — the one confusion this column exists to
+    prevent. *)
+let outcome_rank = function
+  | "violated" -> 4
+  | "error" -> 3
+  | "inconclusive" -> 2
+  | "holds" -> 1
+  | "" -> -1
+  | _ -> 0 (* unavailable | not_implemented | not_applicable | disabled *)
+
+let mark_of_outcome = function
+  | "violated" | "error" -> "✗"
+  | "inconclusive" -> "?"
+  | "holds" -> "✓"
+  | _ -> "·"
+
+(** One check cell: the worst outcome as the mark, [decided/slotted] as
+    the annotation, and the per-agreement list as the tooltip.
+
+    The DENOMINATOR is what the registry slots here, not what the log
+    happened to mention — so a cell reading [2/6] says plainly that six
+    claims belong at this point and two of them reached a verdict. A
+    cell that only counted what ran would read [2/2] and look like full
+    coverage, which is the reporting failure this whole layer exists to
+    avoid. *)
+let check_cell ~(chain : Canary_basic.action list)
+    ~(obs : Canary_status.agreement_obs list) (a : Canary_basic.action)
+    (s : Canary_agreement_common.stage) : cell option =
+  let slotted =
+    List.filter_map Canary_agreement.agreement_registry ~f:(fun r ->
+        let here =
+          List.exists (langs_of_chain chain) ~f:(fun lang ->
+              match
+                Canary_agreement_common.slot_in_chain
+                  r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
+                  ~chain
+              with
+              | Some (a', s') -> Poly.equal a' a && Poly.equal s' s
+              | None -> false)
+        in
+        if here then Some r.Canary_agreement.ag_slug else None)
+  in
+  if List.is_empty slotted then None
+  else begin
+    (* each observation routes to ITS OWN column: the slot is where a
+       claim is read, the tag is where it was evaluated, and for a
+       consumer-side claim those differ by design *)
+    let mine =
+      List.filter obs ~f:(fun (o : Canary_status.agreement_obs) ->
+          List.mem slotted o.Canary_status.ao_agreement ~equal:String.equal
+          &&
+          let lang = lang_of_tag ~chain o.Canary_status.ao_tag in
+          match Canary_agreement.agreement_named o.Canary_status.ao_agreement with
+          | None -> false
+          | Some r -> (
+              match
+                Canary_agreement_common.slot_in_chain
+                  r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
+                  ~chain
+              with
+              | Some (a', s') -> Poly.equal a' a && Poly.equal s' s
+              | None -> false))
+    in
+    (* one outcome per agreement — worst of its methods and sites *)
+    let per_agreement =
+      List.map slotted ~f:(fun slug ->
+          let best =
+            List.filter mine ~f:(fun o ->
+                String.equal o.Canary_status.ao_agreement slug)
+            |> List.fold ~init:"" ~f:(fun acc o ->
+                   if outcome_rank o.Canary_status.ao_outcome > outcome_rank acc
+                   then o.Canary_status.ao_outcome
+                   else acc)
+          in
+          (slug, best))
+    in
+    let decided =
+      List.count per_agreement ~f:(fun (_, o) ->
+          String.equal o "holds" || String.equal o "violated")
+    in
+    let worst =
+      List.fold per_agreement ~init:"" ~f:(fun acc (_, o) ->
+          if outcome_rank o > outcome_rank acc then o else acc)
+    in
+    let observed = List.filter per_agreement ~f:(fun (_, o) ->
+        not (String.is_empty o))
+    in
+    Some
+      { mark = (if List.is_empty observed then "·" else mark_of_outcome worst);
+        provision =
+          Printf.sprintf "%d/%d" decided (List.length slotted);
+        detail =
+          (if List.is_empty observed then
+             Some
+               (Printf.sprintf "%s — not evaluated in any recorded run"
+                  (String.concat ~sep:", " slotted))
+           else
+             Some
+               (String.concat ~sep:"; "
+                  (List.map per_agreement ~f:(fun (slug, o) ->
+                       slug ^ ": "
+                       ^ (if String.is_empty o then "not evaluated" else o)))))
+      }
+  end
+
 let matrix_of (projects : (string * Canary_project_run.project_run) list) :
     t =
   let root = "_out" in
   let setting_cols = setting_columns_of projects in
-  let columns =
+  let cols =
     List.concat_map projects ~f:(fun (_, pr) ->
-        Canary_project_run.covered_actions_of pr)
+        let acts = Canary_project_run.covered_actions_of pr in
+        List.map acts ~f:(fun a -> Act a) @ check_cols_of_chain acts)
     |> Stdlib.List.sort_uniq Stdlib.compare
-    |> List.stable_sort ~compare:compare_column
-    |> List.map ~f:Canary_basic.string_of_action
+    |> List.stable_sort ~compare:compare_col
   in
+  let columns = List.map cols ~f:label_of_col in
   let rows =
     List.concat_map projects ~f:(fun (project, pr) ->
         let runs = Canary_status.project_matrix ~root ~project in
+        (* the agreement half of the same log, read once per project *)
+        let agmts = Canary_status.project_agreements ~root ~project in
         let platform = platform_label () in
         (* rows ordered by ref → c lib → bindings ({!row_key}) *)
         let scenarios =
@@ -610,6 +819,11 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                 (Canary_project_run.scenario_dir_of ~pr_name:project a)
             in
             let run = run_of_scenario ~scenario runs in
+            let scenario_obs =
+              match List.Assoc.find agmts scenario ~equal:String.equal with
+              | Some o -> o
+              | None -> []
+            in
             let repo = source_repo_of pr a in
             let src_id =
               (Canary_enumerate.version_of a Canary_artifact.a_source)
@@ -679,7 +893,20 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                                     r.Canary_artifact_source.name ^ " @ "
                                     ^ r.Canary_artifact_source.ref_) } ));
               cells =
-                List.map columns ~f:(fun tag ->
+                List.map cols ~f:(fun col ->
+                  let tag = label_of_col col in
+                  match col with
+                  | Check (ca, cs) ->
+                      (* a check column belongs to this row only when
+                         the row's own chain offers the slot — a
+                         project that fetches its binding has no
+                         build_binding_ocaml_pre, and the renderers
+                         drop a column no row fills *)
+                      ( tag,
+                        if List.mem chain_acts ca ~equal:Poly.equal then
+                          check_cell ~chain:chain_acts ~obs:scenario_obs ca cs
+                        else None )
+                  | Act _ ->
                     if List.mem chain_tags tag ~equal:String.equal then
                       (* the cell's provision choice: the action's
                          primary artifact in THIS scenario (the same
@@ -721,7 +948,12 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
             Stdlib.Digest.string (r.project ^ "/" ^ r.scenario)
             |> Stdlib.Digest.to_hex |> fun s -> String.prefix s 6 })
   in
-  { setting_columns = List.map setting_cols ~f:fst; columns; rows }
+  let check_columns =
+    List.filter_map cols ~f:(function
+      | Check _ as c -> Some (label_of_col c)
+      | Act _ -> None)
+  in
+  { setting_columns = List.map setting_cols ~f:fst; columns; check_columns; rows }
 
 (* ── text renderer ── *)
 
@@ -769,16 +1001,34 @@ let pp_text (m : t) : unit =
                      | Some (Some _) -> true
                      | _ -> false))
            in
+           (* a check column is rendered by its STAGE alone: it is
+              always adjacent to the action it names, so repeating
+              [probe_binding_python] in the header buys nothing and
+              costs 20 columns of width *)
+           let header tag =
+             if List.mem m.check_columns tag ~equal:String.equal then
+               if String.is_suffix tag ~suffix:"_post" then "»post" else "»pre"
+             else tag
+           in
            Fmt.pr "@.%s — %d scenario(s)@." r.project (List.length group);
            Fmt.pr "  %s%s| %s@." (pad "#")
              (String.concat ~sep:"" (List.map set_used ~f:pad))
-             (String.concat ~sep:"" (List.map used ~f:pad));
+             (String.concat ~sep:""
+                (List.map used ~f:(fun t -> pad (header t))));
            List.iter group ~f:(fun (rr : row) ->
                let cells =
                  List.map used ~f:(fun tag ->
                      match
                        List.Assoc.find rr.cells tag ~equal:String.equal
                      with
+                     (* a check cell carries its COVERAGE beside the
+                        mark — [✓ 2/6] says two of the six claims that
+                        belong here reached a verdict, which is the
+                        number a reader actually wants and the one a
+                        bare tick would hide *)
+                     | Some (Some c)
+                       when List.mem m.check_columns tag ~equal:String.equal ->
+                         pad (c.mark ^ " " ^ c.provision)
                      | Some (Some c) -> pad c.mark
                      | Some None -> pad ""
                      | None -> pad "")
@@ -984,10 +1234,21 @@ let render_html (m : t) ~(generated_at : string) : string =
                            it stays in the tooltip, where the per-STEP
                            stage still distinguishes "built it" from
                            "staged it" *)
+                        (* a CHECK cell shows its coverage beside the
+                           mark, and carries a class of its own so the
+                           page can set it apart from the actions it
+                           sits between *)
+                        let is_check =
+                          List.mem m.check_columns tag ~equal:String.equal
+                        in
                         Printf.sprintf
-                          "<td class=\"%s\" title=\"%s · %s · %s%s\"><span class=\"mk\">%s</span></td>"
-                          (cell_cls c.mark) (esc r.scenario) (esc tag)
-                          (esc c.provision) (esc why) (esc c.mark)
+                          "<td class=\"%s%s\" title=\"%s · %s · %s%s\"><span class=\"mk\">%s</span></td>"
+                          (cell_cls c.mark)
+                          (if is_check then " chk" else "")
+                          (esc r.scenario) (esc tag) (esc c.provision) (esc why)
+                          (esc
+                             (if is_check then c.mark ^ " " ^ c.provision
+                              else c.mark))
                     | _ -> "<td class=\"blank\"></td>"))
            in
            Printf.sprintf
@@ -1031,6 +1292,10 @@ th.idx, th.proj { background: #f6f8fa; z-index: 3; }
 td.set { font-family: ui-monospace, monospace; font-size: .78rem; background: #f6f8fa88; }
 td.set a { color: #0969da; text-decoration: none; }
 td.set a:hover { text-decoration: underline; }
+/* a CHECK column reads as an annotation on the action beside it, not
+   as another step: lighter, smaller, and visually subordinate so the
+   chain of actions still scans as the spine of the row */
+td.chk { font-size: .72rem; opacity: .85; background: #fbfcfd; letter-spacing: -.02em; }
 th.seth { background: #eef1f4; }
 td.platform { color: #57606a; font-size: .75rem; }
 td.idx { color: #57606a; font-size: .75rem; text-align: right; }
@@ -1042,7 +1307,7 @@ td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; 
 td.blank { background: #f6f8fa; }
 </style></head><body>
 <h1>canary result matrix</h1>
-<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). Pre/post-check columns: future.</div>
+<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). The <b>_pre</b> and <b>_post</b> columns are AGREEMENT CHECKS, placed either side of the action they speak for: _pre states what that action needs, _post validates what it made. Their mark is the worst outcome of the claims that belong there and the count is how many of them a real run decided — <b>2/6</b> means six claims belong at that point and two reached a verdict. Hover for the per-agreement list.</div>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
     (esc generated_at) header body

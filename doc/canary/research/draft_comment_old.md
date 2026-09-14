@@ -289,7 +289,7 @@ the framework that scales the witness to
   `surface_draft/versioning.md` (versioning cross-cuts);
   `surface_draft/surface.md` §4 (hidden deps);
   `surface_draft/main.md` §5 (related work) + §6 (calculus
-  sketch); [`literature.md`](literature.md).
+  sketch); [`literature.md`](related/literature.md).
 
 ## §7 Implementation (Impl) — how the theory is realised in
    code: the two engines (mutation, combinator), inspectors and

@@ -2,14 +2,6 @@
   "project_name": "libffi",
   "steps": [
     {
-      "tag": "fetch_source",
-      "output_tag": "fetch_source",
-      "action": "fetch_source",
-      "variant_id": "source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched",
-      "expect": "success",
-      "status": "done"
-    },
-    {
       "tag": "fetch_lib",
       "output_tag": "fetch_lib",
       "action": "fetch_lib",
@@ -19,6 +11,14 @@
     },
     {
       "tag": "fetch_binding_ocaml",
+      "output_tag": "fetch_binding_ocaml",
+      "action": "fetch_binding_ocaml",
+      "variant_id": "source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "fetch_binding_ocaml_stub_inspect",
       "output_tag": "fetch_binding_ocaml",
       "action": "fetch_binding_ocaml",
       "variant_id": "source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched",

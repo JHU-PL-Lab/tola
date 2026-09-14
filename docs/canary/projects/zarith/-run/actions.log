@@ -1959,3 +1959,631 @@ opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
 [2026-08-27 22:06:09.127] *                          index  (_out/canary/projects/index.html)
 [2026-08-27 22:06:09.127] !                          invariant  (full.mmd: missing [2])
 [2026-08-27 22:06:09.127] !                          invariant  (SOME FAILED)
+[2026-09-13 20:18:33.171] *                          run_start  (zarith)
+[2026-09-13 20:18:33.180] *                          variant_start  (lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14)
+[2026-09-13 20:18:33.180] *                          graph_start  (8 steps)
+[2026-09-13 20:18:33.181] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:18:33.181] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-13 20:18:33.181] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:18:33.181] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-13 20:18:33.181] fetch_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:18:33.183] fetch_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
+  --watchlist 'Z,Q,Big_int_Z,Zarith_version' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:18:33.183] fetch_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:18:33.183] fetch_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:18:33.245] fetch_binding_ocaml_inspect  cmd_log  (fetch_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:18:33.245] fetch_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:18:33.245] fetch_binding_ocaml_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:18:33.245] fetch_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:18:33.245] fetch_binding_ocaml_inspect  done
+[2026-09-13 20:18:33.247] fetch_binding_ocaml_stub_inspect  check_pre  (pass)
+[2026-09-13 20:18:33.249] fetch_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
+  --prefix '__gmpz_' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:18:33.249] fetch_binding_ocaml_stub_inspect  opam_switch  (canary)
+[2026-09-13 20:18:33.249] fetch_binding_ocaml_stub_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:18:33.350] fetch_binding_ocaml_stub_inspect  cmd_log  (fetch_binding_ocaml_stub_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:18:33.350] fetch_binding_ocaml_stub_inspect  detect  (ok, output present)
+[2026-09-13 20:18:33.350] fetch_binding_ocaml_stub_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:18:33.350] fetch_binding_ocaml_stub_inspect  check_post  (pass)
+[2026-09-13 20:18:33.350] fetch_binding_ocaml_stub_inspect  done
+[2026-09-13 20:18:33.352] probe_lib                  check_pre  (pass)
+[2026-09-13 20:18:33.354] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+test "$COUNT" -gt 0)
+[2026-09-13 20:18:33.354] probe_lib                  opam_switch  (canary)
+[2026-09-13 20:18:33.354] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-13 20:18:33.400] probe_lib                  cmd_log  (probe_lib.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:18:33.400] probe_lib                  detect  (ok, output present)
+[2026-09-13 20:18:33.400] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:18:33.400] probe_lib                  check_post  (pass)
+[2026-09-13 20:18:33.400] probe_lib                  done
+[2026-09-13 20:18:33.402] probe_lib_inspect          check_pre  (pass)
+[2026-09-13 20:18:33.404] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:18:33.404] probe_lib_inspect          opam_switch  (canary)
+[2026-09-13 20:18:33.404] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-13 20:18:33.456] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:18:33.456] probe_lib_inspect          detect  (ok, output present)
+[2026-09-13 20:18:33.457] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:18:33.457] probe_lib_inspect          check_post  (pass)
+[2026-09-13 20:18:33.457] probe_lib_inspect          done
+[2026-09-13 20:18:33.459] probe_binding_ocaml        check_pre  (pass)
+[2026-09-13 20:18:33.461] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+exit $RC)
+[2026-09-13 20:18:33.461] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-13 20:18:33.461] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-13 20:18:38.424] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:18:38.424] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: violated: Zarith_version)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:18:38.425] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:18:38.426] probe_binding_ocaml        compat_note  (required_symbols_exported: consumer requires 23 of the provider's 620 symbols (e.g. __gmpz_2fac_ui in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:18:38.718] probe_binding_ocaml        check_post  (pass)
+[2026-09-13 20:18:38.718] probe_binding_ocaml        agreement_confirmed  (api_names_present: predicted text present in this run's output)
+[2026-09-13 20:18:38.718] probe_binding_ocaml        done
+[2026-09-13 20:18:38.721] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:18:38.723] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:18:38.723] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:18:38.723] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:18:38.781] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:18:38.781] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: violated: Zarith_version)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:18:38.782] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:18:38.783] probe_binding_ocaml_inspect  compat_note  (required_symbols_exported: consumer requires 23 of the provider's 620 symbols (e.g. __gmpz_2fac_ui in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:18:38.783] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:18:38.783] probe_binding_ocaml_inspect  agreement_confirmed  (api_names_present: predicted text present in this run's output)
+[2026-09-13 20:18:38.783] probe_binding_ocaml_inspect  done
+[2026-09-13 20:18:38.785] *                          graph_end  (8/8 completed)
+[2026-09-13 20:18:38.785] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-09-13 20:18:38.786] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-09-13 20:18:38.786] *                          view  (lib (3 steps))
+[2026-09-13 20:18:38.786] *                          view  (probes (4 steps))
+[2026-09-13 20:18:38.786] *                          view  (binding_ocaml (5 steps))
+[2026-09-13 20:18:38.787] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-09-13 20:18:38.788] *                          index  (_out/canary/projects/index.html)
+[2026-09-13 20:18:38.788] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-09-13 20:18:38.788] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
+[2026-09-13 20:18:38.788] !                          invariant  (source.mmd: missing [8])
+[2026-09-13 20:18:38.788] !                          invariant  (SOME FAILED)
+[2026-09-13 20:22:10.258] *                          run_start  (zarith)
+[2026-09-13 20:22:10.267] *                          variant_start  (lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14)
+[2026-09-13 20:22:10.267] *                          graph_start  (8 steps)
+[2026-09-13 20:22:10.267] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:22:10.267] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-13 20:22:10.267] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:22:10.267] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-13 20:22:10.267] fetch_binding_ocaml_inspect  warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-09-13 20:22:10.267] fetch_binding_ocaml_stub_inspect  warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-09-13 20:22:10.267] fetch_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:22:10.269] fetch_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
+  --watchlist 'Z,Q,Big_int_Z,Zarith_version' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:22:10.269] fetch_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:22:10.269] fetch_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:22:10.333] fetch_binding_ocaml_inspect  cmd_log  (fetch_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:22:10.333] fetch_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:22:10.333] fetch_binding_ocaml_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:10.333] fetch_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:22:10.333] fetch_binding_ocaml_inspect  done
+[2026-09-13 20:22:10.335] fetch_binding_ocaml_stub_inspect  check_pre  (pass)
+[2026-09-13 20:22:10.337] fetch_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
+  --prefix '__gmpz_' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:22:10.337] fetch_binding_ocaml_stub_inspect  opam_switch  (canary)
+[2026-09-13 20:22:10.337] fetch_binding_ocaml_stub_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:22:10.439] fetch_binding_ocaml_stub_inspect  cmd_log  (fetch_binding_ocaml_stub_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:22:10.439] fetch_binding_ocaml_stub_inspect  detect  (ok, output present)
+[2026-09-13 20:22:10.439] fetch_binding_ocaml_stub_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:10.439] fetch_binding_ocaml_stub_inspect  check_post  (pass)
+[2026-09-13 20:22:10.439] fetch_binding_ocaml_stub_inspect  done
+[2026-09-13 20:22:10.441] probe_lib                  check_pre  (pass)
+[2026-09-13 20:22:10.443] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+test "$COUNT" -gt 0)
+[2026-09-13 20:22:10.443] probe_lib                  opam_switch  (canary)
+[2026-09-13 20:22:10.443] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-13 20:22:10.490] probe_lib                  cmd_log  (probe_lib.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:22:10.490] probe_lib                  detect  (ok, output present)
+[2026-09-13 20:22:10.490] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:10.490] probe_lib                  check_post  (pass)
+[2026-09-13 20:22:10.490] probe_lib                  done
+[2026-09-13 20:22:10.492] probe_lib_inspect          check_pre  (pass)
+[2026-09-13 20:22:10.494] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:22:10.494] probe_lib_inspect          opam_switch  (canary)
+[2026-09-13 20:22:10.494] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-13 20:22:10.547] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:22:10.547] probe_lib_inspect          detect  (ok, output present)
+[2026-09-13 20:22:10.547] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:10.547] probe_lib_inspect          check_post  (pass)
+[2026-09-13 20:22:10.547] probe_lib_inspect          done
+[2026-09-13 20:22:10.549] probe_binding_ocaml        check_pre  (pass)
+[2026-09-13 20:22:10.551] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+exit $RC)
+[2026-09-13 20:22:10.551] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-13 20:22:10.551] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-13 20:22:11.395] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:22:11.396] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: violated: Zarith_version)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:22:11.397] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:22:11.398] probe_binding_ocaml        compat_note  (required_symbols_exported: consumer requires 23 of the provider's 620 symbols (e.g. __gmpz_2fac_ui in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:22:11.649] probe_binding_ocaml        check_post  (pass)
+[2026-09-13 20:22:11.649] probe_binding_ocaml        agreement_confirmed  (api_names_present: predicted text present in this run's output)
+[2026-09-13 20:22:11.649] probe_binding_ocaml        done
+[2026-09-13 20:22:11.652] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:22:11.654] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:22:11.654] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:22:11.654] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:22:11.709] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:22:11.709] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: violated: Zarith_version)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:22:11.710] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:22:11.711] probe_binding_ocaml_inspect  compat_note  (required_symbols_exported: consumer requires 23 of the provider's 620 symbols (e.g. __gmpz_2fac_ui in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:22:11.711] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:22:11.711] probe_binding_ocaml_inspect  agreement_confirmed  (api_names_present: predicted text present in this run's output)
+[2026-09-13 20:22:11.711] probe_binding_ocaml_inspect  done
+[2026-09-13 20:22:11.713] *                          graph_end  (8/8 completed)
+[2026-09-13 20:22:11.713] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-09-13 20:22:11.713] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-09-13 20:22:11.713] *                          view  (lib (3 steps))
+[2026-09-13 20:22:11.714] *                          view  (probes (4 steps))
+[2026-09-13 20:22:11.714] *                          view  (binding_ocaml (5 steps))
+[2026-09-13 20:22:11.715] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-09-13 20:22:11.716] *                          index  (_out/canary/projects/index.html)
+[2026-09-13 20:22:11.716] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-09-13 20:22:11.716] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
+[2026-09-13 20:22:11.716] !                          invariant  (source.mmd: missing [8])
+[2026-09-13 20:22:11.716] !                          invariant  (SOME FAILED)
+[2026-09-13 20:22:11.736] *                          variant_start  (lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master)
+[2026-09-13 20:22:11.736] *                          graph_start  (10 steps)
+[2026-09-13 20:22:11.736] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:22:11.737] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-13 20:22:11.737] fetch_binding_source_ocaml  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:22:11.737] fetch_binding_source_ocaml  skip  (verdict marker (prior success))
+[2026-09-13 20:22:11.737] build_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:22:11.737] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-13 20:22:11.987] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-09-13 20:22:11.987] pack_binding_ocaml         check_pre  (pass)
+[2026-09-13 20:22:11.989] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.ok)
+[2026-09-13 20:22:11.989] pack_binding_ocaml         opam_switch  (canary)
+[2026-09-13 20:22:11.989] pack_binding_ocaml         platform  (wsl_ubuntu)
+[2026-09-13 20:22:21.887] pack_binding_ocaml         cmd_log  (pack_binding_ocaml.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:21.887] pack_binding_ocaml         detect  (ok, output present)
+[2026-09-13 20:22:21.887] pack_binding_ocaml         agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:22.142] pack_binding_ocaml         check_post  (pass)
+[2026-09-13 20:22:22.142] pack_binding_ocaml         done
+[2026-09-13 20:22:22.145] pack_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:22:22.147] pack_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
+  --watchlist 'Z,Q,Big_int_Z,Zarith_version' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-09-13 20:22:22.147] pack_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:22:22.147] pack_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:22:22.210] pack_binding_ocaml_inspect  cmd_log  (pack_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:22.210] pack_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:22:22.210] pack_binding_ocaml_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:22.210] pack_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:22:22.210] pack_binding_ocaml_inspect  done
+[2026-09-13 20:22:22.212] pack_binding_ocaml_stub_inspect  check_pre  (pass)
+[2026-09-13 20:22:22.214] pack_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
+  --prefix '__gmpz_' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-09-13 20:22:22.214] pack_binding_ocaml_stub_inspect  opam_switch  (canary)
+[2026-09-13 20:22:22.214] pack_binding_ocaml_stub_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:22:22.315] pack_binding_ocaml_stub_inspect  cmd_log  (pack_binding_ocaml_stub_inspect.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:22.315] pack_binding_ocaml_stub_inspect  detect  (ok, output present)
+[2026-09-13 20:22:22.315] pack_binding_ocaml_stub_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:22.315] pack_binding_ocaml_stub_inspect  check_post  (pass)
+[2026-09-13 20:22:22.315] pack_binding_ocaml_stub_inspect  done
+[2026-09-13 20:22:22.317] probe_lib                  check_pre  (pass)
+[2026-09-13 20:22:22.319] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log
+test "$COUNT" -gt 0)
+[2026-09-13 20:22:22.319] probe_lib                  opam_switch  (canary)
+[2026-09-13 20:22:22.319] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-13 20:22:22.366] probe_lib                  cmd_log  (probe_lib.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:22.366] probe_lib                  detect  (ok, output present)
+[2026-09-13 20:22:22.366] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:22.366] probe_lib                  check_post  (pass)
+[2026-09-13 20:22:22.366] probe_lib                  done
+[2026-09-13 20:22:22.368] probe_lib_inspect          check_pre  (pass)
+[2026-09-13 20:22:22.370] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-09-13 20:22:22.370] probe_lib_inspect          opam_switch  (canary)
+[2026-09-13 20:22:22.370] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-13 20:22:22.424] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:22.424] probe_lib_inspect          detect  (ok, output present)
+[2026-09-13 20:22:22.424] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:22:22.424] probe_lib_inspect          check_post  (pass)
+[2026-09-13 20:22:22.424] probe_lib_inspect          done
+[2026-09-13 20:22:22.426] probe_binding_ocaml        check_pre  (pass)
+[2026-09-13 20:22:22.428] probe_binding_ocaml        cmd  (eval $(opam env) && export LD_LIBRARY_PATH=/home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master: && ocamlfind ocamlopt -I /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master/zarith.cmxa canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log 2>&1 && cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:22.428] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-13 20:22:22.428] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-13 20:22:22.551] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:22.551] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:22:22.552] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:22:22.553] probe_binding_ocaml        compat_note  (required_symbols_exported: consumer requires 42 of the provider's 620 symbols (e.g. __gmpn_add_n in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:22:22.553] probe_binding_ocaml        done  (no compat failure predicted; success expected)
+[2026-09-13 20:22:22.555] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:22:22.558] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-09-13 20:22:22.558] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:22:22.558] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:22:22.618] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:22:22.618] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  compat_note  (required_symbols_exported: consumer requires 42 of the provider's 620 symbols (e.g. __gmpn_add_n in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:22:22.619] probe_binding_ocaml_inspect  done
+[2026-09-13 20:22:22.621] *                          graph_end  (10/10 completed)
+[2026-09-13 20:22:22.622] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-09-13 20:22:22.622] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-09-13 20:22:22.622] *                          view  (lib (3 steps))
+[2026-09-13 20:22:22.622] *                          view  (probes (4 steps))
+[2026-09-13 20:22:22.622] *                          view  (binding_ocaml (6 steps))
+[2026-09-13 20:22:22.623] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-09-13 20:22:22.624] *                          index  (_out/canary/projects/index.html)
+[2026-09-13 20:22:22.624] !                          invariant  (full.mmd: missing [2])
+[2026-09-13 20:22:22.624] !                          invariant  (SOME FAILED)
+[2026-09-13 20:23:57.758] *                          run_start  (zarith)
+[2026-09-13 20:23:57.767] *                          variant_start  (lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14)
+[2026-09-13 20:23:57.767] *                          graph_start  (7 steps)
+[2026-09-13 20:23:57.767] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:23:57.767] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-13 20:23:57.767] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:23:57.767] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-13 20:23:57.767] fetch_binding_ocaml_stub_inspect  warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-09-13 20:23:57.767] fetch_binding_ocaml_stub_inspect  check_pre  (pass)
+[2026-09-13 20:23:57.769] fetch_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
+  --prefix '__gmpz_' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:23:57.769] fetch_binding_ocaml_stub_inspect  opam_switch  (canary)
+[2026-09-13 20:23:57.769] fetch_binding_ocaml_stub_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:23:57.878] fetch_binding_ocaml_stub_inspect  cmd_log  (fetch_binding_ocaml_stub_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:23:57.879] fetch_binding_ocaml_stub_inspect  detect  (ok, output present)
+[2026-09-13 20:23:57.879] fetch_binding_ocaml_stub_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:23:57.879] fetch_binding_ocaml_stub_inspect  check_post  (pass)
+[2026-09-13 20:23:57.879] fetch_binding_ocaml_stub_inspect  done
+[2026-09-13 20:23:57.882] probe_lib                  check_pre  (pass)
+[2026-09-13 20:23:57.884] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+test "$COUNT" -gt 0)
+[2026-09-13 20:23:57.884] probe_lib                  opam_switch  (canary)
+[2026-09-13 20:23:57.884] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-13 20:23:57.931] probe_lib                  cmd_log  (probe_lib.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:23:57.931] probe_lib                  detect  (ok, output present)
+[2026-09-13 20:23:57.931] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:23:57.931] probe_lib                  check_post  (pass)
+[2026-09-13 20:23:57.931] probe_lib                  done
+[2026-09-13 20:23:57.933] probe_lib_inspect          check_pre  (pass)
+[2026-09-13 20:23:57.936] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:23:57.936] probe_lib_inspect          opam_switch  (canary)
+[2026-09-13 20:23:57.936] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-13 20:23:57.994] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:23:57.994] probe_lib_inspect          detect  (ok, output present)
+[2026-09-13 20:23:57.994] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:23:57.994] probe_lib_inspect          check_post  (pass)
+[2026-09-13 20:23:57.994] probe_lib_inspect          done
+[2026-09-13 20:23:57.996] probe_binding_ocaml        check_pre  (pass)
+[2026-09-13 20:23:57.998] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+exit $RC)
+[2026-09-13 20:23:57.998] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-13 20:23:57.998] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-13 20:24:04.431] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:24:04.431] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:24:04.432] probe_binding_ocaml        compat_note  (required_symbols_exported: consumer requires 23 of the provider's 620 symbols (e.g. __gmpz_2fac_ui in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:24:04.708] probe_binding_ocaml        check_post  (pass)
+[2026-09-13 20:24:04.709] probe_binding_ocaml        done
+[2026-09-13 20:24:04.711] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:24:04.713] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-09-13 20:24:04.713] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:24:04.713] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:24:04.767] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:24:04.769] probe_binding_ocaml_inspect  compat_note  (required_symbols_exported: consumer requires 23 of the provider's 620 symbols (e.g. __gmpz_2fac_ui in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:24:04.769] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:24:04.769] probe_binding_ocaml_inspect  done
+[2026-09-13 20:24:04.771] *                          graph_end  (7/7 completed)
+[2026-09-13 20:24:04.771] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-09-13 20:24:04.771] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-09-13 20:24:04.771] *                          view  (lib (3 steps))
+[2026-09-13 20:24:04.772] *                          view  (probes (4 steps))
+[2026-09-13 20:24:04.772] *                          view  (binding_ocaml (4 steps))
+[2026-09-13 20:24:04.772] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-09-13 20:24:04.773] *                          index  (_out/canary/projects/index.html)
+[2026-09-13 20:24:04.773] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-09-13 20:24:04.774] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-09-13 20:24:04.774] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-09-13 20:24:04.774] *                          invariant  (lib.mmd: OK (5 nodes, 7 IDs))
+[2026-09-13 20:24:04.774] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
+[2026-09-13 20:24:04.774] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-09-13 20:24:04.774] *                          invariant  (ALL OK)
+[2026-09-13 20:24:04.794] *                          variant_start  (lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master)
+[2026-09-13 20:24:04.794] *                          graph_start  (9 steps)
+[2026-09-13 20:24:04.794] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:24:04.794] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-13 20:24:04.794] fetch_binding_source_ocaml  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:24:04.794] fetch_binding_source_ocaml  skip  (verdict marker (prior success))
+[2026-09-13 20:24:04.794] build_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:24:04.794] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-13 20:24:05.052] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-09-13 20:24:05.052] pack_binding_ocaml_stub_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-13 20:24:05.052] pack_binding_ocaml_stub_inspect  skip  (verdict marker (prior success))
+[2026-09-13 20:24:05.052] pack_binding_ocaml         check_pre  (pass)
+[2026-09-13 20:24:05.055] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.ok)
+[2026-09-13 20:24:05.055] pack_binding_ocaml         opam_switch  (canary)
+[2026-09-13 20:24:05.055] pack_binding_ocaml         platform  (wsl_ubuntu)
+[2026-09-13 20:24:13.490] pack_binding_ocaml         cmd_log  (pack_binding_ocaml.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:24:13.490] pack_binding_ocaml         detect  (ok, output present)
+[2026-09-13 20:24:13.490] pack_binding_ocaml         agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:24:13.751] pack_binding_ocaml         check_post  (pass)
+[2026-09-13 20:24:13.751] pack_binding_ocaml         done
+[2026-09-13 20:24:13.753] probe_lib                  check_pre  (pass)
+[2026-09-13 20:24:13.755] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log
+test "$COUNT" -gt 0)
+[2026-09-13 20:24:13.755] probe_lib                  opam_switch  (canary)
+[2026-09-13 20:24:13.755] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-13 20:24:13.801] probe_lib                  cmd_log  (probe_lib.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:24:13.801] probe_lib                  detect  (ok, output present)
+[2026-09-13 20:24:13.801] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:24:13.801] probe_lib                  check_post  (pass)
+[2026-09-13 20:24:13.801] probe_lib                  done
+[2026-09-13 20:24:13.803] probe_lib_inspect          check_pre  (pass)
+[2026-09-13 20:24:13.805] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-09-13 20:24:13.805] probe_lib_inspect          opam_switch  (canary)
+[2026-09-13 20:24:13.805] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-13 20:24:13.864] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:24:13.864] probe_lib_inspect          detect  (ok, output present)
+[2026-09-13 20:24:13.864] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-13 20:24:13.864] probe_lib_inspect          check_post  (pass)
+[2026-09-13 20:24:13.864] probe_lib_inspect          done
+[2026-09-13 20:24:13.866] probe_binding_ocaml        check_pre  (pass)
+[2026-09-13 20:24:13.868] probe_binding_ocaml        cmd  (eval $(opam env) && export LD_LIBRARY_PATH=/home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master: && ocamlfind ocamlopt -I /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master/zarith.cmxa canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log 2>&1 && cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:24:13.868] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-13 20:24:13.868] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-13 20:24:13.987] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:24:13.987] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:24:13.988] probe_binding_ocaml        compat_note  (required_symbols_exported: consumer requires 42 of the provider's 620 symbols (e.g. __gmpn_add_n in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:24:13.988] probe_binding_ocaml        done  (no compat failure predicted; success expected)
+[2026-09-13 20:24:13.990] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-13 20:24:13.992] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-09-13 20:24:13.992] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-13 20:24:13.992] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: not_applicable: this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive h…)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-13 20:24:14.048] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-13 20:24:14.049] probe_binding_ocaml_inspect  compat_note  (required_symbols_exported: consumer requires 42 of the provider's 620 symbols (e.g. __gmpn_add_n in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-13 20:24:14.049] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-13 20:24:14.049] probe_binding_ocaml_inspect  done
+[2026-09-13 20:24:14.051] *                          graph_end  (9/9 completed)
+[2026-09-13 20:24:14.051] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-09-13 20:24:14.051] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-09-13 20:24:14.051] *                          view  (lib (3 steps))
+[2026-09-13 20:24:14.051] *                          view  (probes (4 steps))
+[2026-09-13 20:24:14.052] *                          view  (binding_ocaml (5 steps))
+[2026-09-13 20:24:14.053] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-09-13 20:24:14.054] *                          index  (_out/canary/projects/index.html)
+[2026-09-13 20:24:14.054] !                          invariant  (full.mmd: missing [2])
+[2026-09-13 20:24:14.054] !                          invariant  (SOME FAILED)

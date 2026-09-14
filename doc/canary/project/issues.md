@@ -38,7 +38,8 @@
 bad)*, and the last run executed 1 scenario. CLAUDE.md line 13 says
 "6 spec-derived scenarios = {lib V:S,B:S,B:D} × {ocaml binding V:S,V:D};
 binding@dev over stable lib = the forward API mismatch (undefined
-`tiny_scale`), c1-predicted xfail". Only the first of those six exists.
+`tiny_scale`), a `required_symbols_exported`-predicted xfail". Only the
+first of those six exists.
 
 **Why.** `tiny_artifact_table` (`canary_project_tiny.ml`) builds every row
 with one universe cell:
@@ -64,7 +65,8 @@ and the Built/Dev cells did not come across.
 - `pr_mismatch_probes` declares the OCaml Cstubs `@Dev` `Forward` probe.
   It can never fire. **This was tiny-full's whole point** — the in-tree
   witness that the general path detects a forward API mismatch.
-- The `c1`-predicted `tiny_scale` xfail CLAUDE.md advertises.
+- The `required_symbols_exported`-predicted `tiny_scale` xfail CLAUDE.md
+  advertises.
 
 **Measured counterfactual** (2026-08-25, experiment reverted): declaring
 the two axes on the live table yields **4** worlds, not 6 —
@@ -107,7 +109,7 @@ Either way `general_spec` goes.
 ### D6's landing is PAUSED on the contract it needs (2026-08-25)
 
 The instance behind
-[`../design/agreement_registry.md`](../design/agreement_registry.md) §6. apt 6.4 and
+[`../design/agreement/registry.md`](../design/agreement/registry.md) §5.5. apt 6.4 and
 conda-forge 6.6 agree on the soname (`libncursesw.so.6`), on all 463
 exported symbols (diff empty both ways) and on all ten `NCURSESW6_*` ELF
 version nodes — and the `LD_LIBRARY_PATH` repoint crashes, because the
@@ -172,8 +174,8 @@ against one object, so the recommended fix changes only `ncursesw.pc` —
 at the cost that binaries built on the new Debian will not run on an
 older one lacking the alias.
 
-**Pickable as:** [`../design/agreement_registry.md`](../design/agreement_registry.md)
-§6.8 steps 2–5 (the finding was absorbed there 2026-09-01; `closure_shape.md`
+**Pickable as:** [`../design/agreement/registry.md`](../design/agreement/registry.md)
+§5.6 and its open work in §7.4 (the finding was absorbed there 2026-09-01; `closure_shape.md`
 is gone), after which the vendored world is `xfail[cN]` with a
 derived reason and D6 lands at Level B. Landing it stable-only first is
 possible but takes a (correct) `lib_pair` warn and throws the finding
@@ -264,7 +266,8 @@ cmake produces the same shape it does on Linux: `libtiny.1.0.dylib` ←
 `nm -g` showing the three `_tiny_*` symbols.
 
 **What is not.** `libtiny.so.1` is written out in ~40 places — tiny's
-scenario recipes, the workspace materializer, the c4 SONAME fixtures, the
+scenario recipes, the workspace materializer, the `soname_matches_requirement`
+SONAME fixtures, the
 `Dlopen` coupling, several pins. `Canary_basic.shared_lib_name` exists
 now and knows both conventions (ELF puts the version AFTER the
 extension, Mach-O BEFORE: `libtiny.so.1` vs `libtiny.1.dylib`), but
@@ -281,11 +284,13 @@ This is the largest single remaining piece of the macOS port and it is
 self-contained: give tiny a name-building function, route the ~40 sites
 through it, and decide what the fixtures assert per format.
 
-### Open — c5 (symbol versioning) has no Mach-O referent; the nearest
+### Open — `required_versions_exported` (symbol versioning) has no Mach-O
+### referent; the nearest
 ### analogue is a FLOOR at library granularity (2026-08-26)
 
 Mach-O has no symbol versioning at all. `tiny.map`, `tiny_sum@@TINY_1.0`,
-the `symbol_version_floor` mutation and the c5 comparator have nothing to
+the `symbol_version_floor` mutation and the `required_versions_exported`
+comparator have nothing to
 range over there — that is a fact about the object format, not a gap in
 the witness, and guarding the version script states it.
 
@@ -298,8 +303,10 @@ SYMBOL granularity. `inspect_native.py`'s Mach-O L4 branch already
 extracts both `compatibility_version` and `current_version`, so the
 inputs are on hand.
 
-**The decision, not yet taken:** is this a *port* of c5 at a coarser
-granularity, or a NEW contract (c9?) that happens to be the only
+**The decision, not yet taken:** is this a *port* of
+`required_versions_exported` at a coarser granularity, or a NEW agreement
+(a `compatibility_version` floor, which would need its own name) that
+happens to be the only
 version-floor mechanism one of our two platforms has? The second reading
 is more interesting for the manuscript: the same checking-point exists
 on both platforms with different resolution, which is a statement about
@@ -732,4 +739,3 @@ the worktree model exists to share.
 - [ ] **Real-world PRs** — find a bug with canary, fix it, submit
   upstream PR, link from the results page (the z3 PR above is the first
   candidate).
-

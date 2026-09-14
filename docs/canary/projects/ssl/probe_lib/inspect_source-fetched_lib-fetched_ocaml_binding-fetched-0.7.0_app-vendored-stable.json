@@ -8,6 +8,7 @@
     "total": 519
   },
   "elf": {
+    "format": "elf",
     "needed": [
       "libcrypto.so.3",
       "libc.so.6"

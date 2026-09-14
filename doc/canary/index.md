@@ -38,10 +38,11 @@ closing its gap.
 | File                                                  | Topic                                                                                                                                                                                                                |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [draft.md](research/draft.md)                     | **Manuscript-in-progress.** Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM). Backbone framing (**rules / traces / worlds**), PL notation, implementation slots. The authoritative current framing.                                                                                                       |
+| [draft_commemt.md](research/draft_commemt.md) | Holding material moved out of the working manuscript. Grammar suggestions were absorbed and their companion file removed. |
 | [surface_draft/](research/surface_draft/)             | **Materials collection** (split 2026-06-04; roster refreshed 2026-08-27). `surface.md` (theory primitives, syntactic/semantic, the gap); `surface_why.md` (what tools check, descriptive-not-prescriptive); `principle.md` (P1–P6); `versioning.md` (intrinsic vs extrinsic); `hidden_dep.md` (undeclared NEEDED, glibc/musl); `package.md` (provider matrix, co-providers); `on_agreement_contract_boundary.md` (why *agreement*; boundary ≠ surface); `notation.md` + `future_impl.md` (parked PL scaffold + typed calculus); `implementation.md` (§2.7 inspector coverage); `ids.md` (the retired ssot's tables); `tiny.md` (the witness). Mine for content; not authoritative. Fates per file are recorded in `draft.md`'s header |
 | [tiny.md](research/surface_draft/tiny.md)                           | Witness. Minimal C lib + 3 bindings + downstream helper; 13-variant matrix exercising every active contract. The doc to read alongside the code.                                                                     |
 | [plan.md](plan.md)                           | Venues + milestones + roadmap, and **§4 the delivery pipeline** (theory → checker → world → finding → merged PR, with a status and an owner per stage). OOPSLA primary, PLDI optional; POPL purged 2026-08-26. Open `[ ]` items only; chronicled work lives in `worklog/`. |
-| [literature.md](research/literature.md)               | Companion bibliography. Compiler correctness, type-preserving compilation, linking calculi, ELF semantics, FFI semantics, ABI tooling — each entry with an "Inherits / Departs" note tying it back to surface theory. |
+| [literature.md](research/related/literature.md)               | Companion bibliography. Compiler correctness, type-preserving compilation, linking calculi, ELF semantics, FFI semantics, ABI tooling — each entry with an "Inherits / Departs" note tying it back to surface theory. |
 
 Packaging lives in [`surface_draft/package.md`](research/surface_draft/package.md)
 in the materials collection; the manuscript covers it in §4.2.
@@ -81,7 +82,7 @@ done.
 | File | Stage / topic |
 | ---- | ------------- |
 | [README.md](design/enumeration/README.md) | **The stage map.** Read first; also records the known drift (two dependency relations; mechanism/app-wiring are not config axes) |
-| [stage0_naming.md](design/enumeration/stage0_naming.md) | **Stage 0** — the four senses of "scenario", the canonical naming scheme, short names, fault tags, the c1..c8 catalogue |
+| [stage0_naming.md](design/enumeration/stage0_naming.md) | **Stage 0** — the four senses of "scenario", the canonical naming scheme, short names, fault tags, the agreement catalogue |
 | [stage1_declare_spec.md](design/enumeration/stage1_declare_spec.md) | **Pass 1, declare** — what a project declares: rows, artifact identity, the provision × version universe, providers and what is derived from them, versions, repo lifecycle, the channel pair, what cannot be declared |
 | [stage2_enumerate_worlds.md](design/enumeration/stage2_enumerate_worlds.md) | **Pass 2, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against. Ends with *Attribution*, the `--why` per-candidate-ledger **proposal** (absorbed from `why_ledger.md`) |
 | [stage3_select_worlds.md](design/enumeration/stage3_select_worlds.md) | **Pass 3, select** — what a RUN asked for. Settles where config/policy sit: model constraints, SELECTION, and run configuration are three different things |
@@ -107,7 +108,7 @@ All six stages now have a standalone doc.
 | [matrix.md](design/matrix.md) | The result matrix — what a row is and what names it, plus why a `·` cell is not neutral. NOT an enumeration pass: `canary result` reads `actions.log` after a run |
 | [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation. Moved out of `enumeration/` 2026-08-24: not a stage |
 | [platform.md](design/platform.md) | **The platform** (2026-08-26) — where it enters (only pass 5 and the tool wrappers; passes 1–4 must stay blind to it), the three consumption modes, the Linux↔macOS tool sibling table, what a project spec may declare per platform, and how the WSL side should re-check this branch |
-| [project/report_ncurses_libtinfo.md](project/report_ncurses_libtinfo.md) | **The first bug report** (2026-08-25) — `libtinfo.so.6` denotes the WIDE terminfo ABI on Debian and the NARROW one on conda-forge, so a Debian-built consumer segfaults on a conda prefix with identical sonames, symbols and version nodes. Mechanism, reproducer, backtrace, verified fix, remediation per party. The generalization lives in [agreement_registry.md](design/agreement_registry.md) §6 |
+| [project/report_ncurses_libtinfo.md](project/report_ncurses_libtinfo.md) | **The first bug report** (2026-08-25) — `libtinfo.so.6` denotes the WIDE terminfo ABI on Debian and the NARROW one on conda-forge, so a Debian-built consumer segfaults on a conda prefix with identical sonames, symbols and version nodes. Mechanism, reproducer, backtrace, verified fix, remediation per party. The generalization lives in [agreement/registry.md](design/agreement/registry.md) §5.5 |
 | [diagram.md](design/diagram.md) | The diagram pipeline and the design ideas its output implements |
 | [tiny.md](design/tiny.md) | Tiny — how the witness works. Carries a stale reframing banner; read it first |
 | [mechanism_payload.md](design/mechanism_payload.md) | The typed binding declaration (steps 1–4, 6 landed; step 5 partial) |
@@ -122,14 +123,19 @@ All six stages now have a standalone doc.
 | [check_evaluation.md](design/check_evaluation.md) | … `canary_gh.ml` holds no verdict logic — a check is an action the runner interprets and every backend merely renders. Records the live finding that CI evaluates NO `check_pre`/`check_post`, so a green job means only "every command exited 0" |
 | [step_identity.md](design/step_identity.md) | … a step tag is (action × location KIND) alone — `tag_of_probe_lib_location` called unconditionally, and no tag anywhere containing a PM name |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
-| [agreement_registry_audit.md](design/agreement_registry.md) | … every agreement in the catalogue resolves to a check that can ground it. The producer landed (`agreement/canary_agreement.ml`); the rungs did not. Absorbed `contract_registry.md` 2026-08-21 |
+| [agreement/README.md](design/agreement/README.md) | **The agreement map** — what an agreement is in twenty lines, then which of the four files for which job. Start here. |
+| [agreement/theory.md](design/agreement/theory.md) | **Where agreements come from** — an action embodies a relation over its inputs and running it is the only witness; the tuple is discarded and a projection survives, so an agreement is a necessary condition decidable from what survived. §5 gives, per action in the catalogue, the full-information agreement the real tool established and what post-fact checking recovers; §6 is a procedure for finding the next one. Paper material. |
+| [agreement/catalogue.md](design/agreement/catalogue.md) | **One agreement, everything** — GENERATED per-agreement records: claim, obligation, where it fires and what it READS in each world, what falsifies it, what a pass does not establish. `make agreement-catalogue` rewrites it; a pin fails if it drifts. |
+| [agreement/pipeline.md](design/agreement/pipeline.md) | **A project end to end** — the seven points where a run touches the registry, the four failure modes behind an `unavailable`, and the checklist for landing an agreement on a project. |
+| [agreement/landing.md](design/agreement/landing.md) | **The landing tracker** — planned (from the registry) beside effective (from run logs), per agreement, with what each is waiting on. `canary checks --landing` is the live form. |
+| [agreement/registry.md](design/agreement/registry.md) | Agreement model and catalogue; common artifacts; language bindings; versions; packaging/provenance; deployment; registry integration and coverage. Working checks and proposed observations are distinguished. |
 
 ### Retired
 
 | File | |
 | ---- | --- |
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
-| ~~contract_registry.md~~ | Merged into `agreement_registry_audit.md` (2026-08-21) |
+| ~~contract_registry.md~~ | Merged into `agreement/registry.md` (2026-08-21) |
 | ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage5_realize_steps.md` (2026-08-24) |
 | ~~enumeration/algorithm_explainer.md~~ | Purged 2026-08-24 — the walkthrough that predated the stage map; its sections went to the stage docs they belonged to |
 | ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `matrix.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |
