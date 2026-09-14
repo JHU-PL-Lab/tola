@@ -1575,8 +1575,11 @@ let render_html (m : t) ~(generated_at : string) : string =
      carry its own key; taking it from [Canary_agreement.summary_rows]
      rather than restating it is what stops the two from drifting.
 
-     Collapsed by default: it is a reference for a reader who meets an
-     unfamiliar code, not something to scroll past on every visit. *)
+     ALWAYS VISIBLE (2026-09-14, user). It was behind a disclosure
+     first, on the theory that a key is for a reader who meets an
+     unfamiliar code. That was wrong the moment the code became the
+     column's only name: the table is unreadable without it, so hiding
+     it behind a click hides the table. *)
   (* GROUPED BY ACTION, as the terminal view is: a rule down the left
      edge of each action's first column, so a reader can see where one
      action's pre-checks, run, result and verdicts begin and end. *)
@@ -1814,9 +1817,10 @@ td.ok { background: #dafbe1; } td.xfail { background: #fff8c5; }
 td.fail { background: #ffebe9; } td.fail .mk { font-weight: 800; }
 td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; }
 td.blank { background: #f6f8fa; }
-/* the CHECK KEY: a reference a reader opens once, not a banner. */
-details.key { margin: 0 0 .8rem; font-size: .8rem; }
-details.key summary { cursor: pointer; color: #0969da; }
+/* the CHECK KEY: the column heads are codes, so this is how the table
+   is read at all — shown, not hidden behind a disclosure. */
+div.key { margin: 0 0 .9rem; font-size: .8rem; }
+div.keyh { font-weight: 600; margin-bottom: .3rem; }
 table.keytbl { border-collapse: collapse; margin-top: .5rem; }
 table.keytbl th, table.keytbl td { border: 1px solid #d0d7de; padding: .2rem .5rem; text-align: left; font-weight: 400; }
 table.keytbl th { background: #f6f8fa; font-weight: 600; }
@@ -1829,7 +1833,7 @@ th.gs, td.gs { border-left: 1px solid #afb8c1; }
 </style></head><body>
 <h1>canary result matrix</h1>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
-<details class="key"><summary>check key — what each short code means</summary>%s</details>
+<div class="key"><div class="keyh">check key — what each short code means</div>%s</div>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
     (esc generated_at) check_key header body
