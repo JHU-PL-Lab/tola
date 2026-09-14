@@ -32,6 +32,10 @@ let behavior_matches : agreement =
            to recover, only one to STATE, which is why this is unimplemented \
            in a different sense from an agreement that merely lacks evidence"
         ();
+    (* POST of the probe: it is about what RUNNING produced, which is
+       the one thing in the registry that no static artifact carries. *)
+    ag_slot =
+      (fun l -> [ (Canary_basic.Probe_binding l, Post) ]);
     ag_fault_tag = "behavior";
     ag_methods =
       [ checking_method ~name:"probe_assertions" ~kind:Run_program

@@ -127,6 +127,14 @@ let staged_interface_preserved : agreement =
            strongly as it was applied: both copies are still on disk, so \
            nothing had to be inferred from a projection"
         ();
+    (* POST, and it can be nothing else (2026-09-14, user asked
+       whether it belonged before the install): before install_lib runs
+       there is ONE copy of the library, and this agreement compares
+       two. The question behind the question — "was the lib already
+       wrong before we staged it?" — is a different agreement,
+       [declared_symbols_exported], which sits at [build_lib_post] two
+       columns to the left. That pair IS the diagnostic ladder. *)
+    ag_slot = at_lib Canary_basic.Install_lib Post;
     ag_fault_tag = "staged_drift";
     ag_methods =
       [ checking_method ~name:"staged_vs_build_tree_summary" ~kind:Compare

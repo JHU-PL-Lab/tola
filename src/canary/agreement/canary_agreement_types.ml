@@ -173,6 +173,8 @@ let signatures_agree : agreement =
            this re-derives it from signature summaries, TEXTUALLY, for the \
            names both sides mention"
         ();
+    (* PRE: the stub only compiles if the header agrees with it. *)
+    ag_slot = before_binding;
     ag_fault_tag = "type_arity";
     ag_methods =
       [ checking_method ~name:"header_vs_stub_signature_summaries" ~kind:Compare

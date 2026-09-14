@@ -14,18 +14,18 @@ Every row is one action's rule, re-derived from what survived it. **Action** is 
 
 A `code-set` action is one THIS graph contains, so the row can be read against `canary paths`. A plain-prose one is not: the link that built a consumer ran in a world this graph never modelled, and "the link" is several actions depending on who is linking. Naming those in the action type would be a lie in both directions; drawing them needs the action-unit view, which is deferred in [`registry.md`](registry.md) §7.4.3.
 
-| agreement | action | tool | artifact | status |
-| --- | --- | --- | --- | --- |
-| [`declared_symbols_exported`](#declared_symbols_exported) | `build_lib` | compiler + linker | the library's exported symbols | evaluated |
-| [`required_symbols_exported`](#required_symbols_exported) | the link that built the binding | linker | the stub archive's undefined references | evaluated |
-| [`api_names_present`](#api_names_present) | build_app | the language compiler | the binding's user-facing interface | evaluated |
-| [`soname_matches_declaration`](#soname_matches_declaration) | `build_lib` | linker (-Wl,-soname) | the library's SONAME record | evaluated |
-| [`soname_matches_requirement`](#soname_matches_requirement) | the link that produced the consumer | linker | the consumer's NEEDED record | evaluated |
-| [`declared_versions_exported`](#declared_versions_exported) | `build_lib` | linker (version script) | the library's symbol-version nodes | evaluated |
-| [`required_versions_exported`](#required_versions_exported) | the link that produced the consumer | linker | the consumer's versioned symbol references | evaluated |
-| [`signatures_agree`](#signatures_agree) | build_binding | the C compiler | the stub's calls against the header's declarations | evaluated |
-| [`dependencies_provided`](#dependencies_provided) | the link, then every load | linker, then the dynamic loader | the consumer's NEEDED list | evaluated |
-| [`staged_interface_preserved`](#staged_interface_preserved) | `install_lib` | the install tool | the staged copy of the library | evaluated |
+| agreement | action | tool | artifact | checked at | status |
+| --- | --- | --- | --- | --- | --- |
+| [`declared_symbols_exported`](#declared_symbols_exported) | `build_lib` | compiler + linker | the library's exported symbols | `build_lib_post` | evaluated |
+| [`required_symbols_exported`](#required_symbols_exported) | the link that built the binding | linker | the stub archive's undefined references | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
+| [`api_names_present`](#api_names_present) | build_app | the language compiler | the binding's user-facing interface | `build_app_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
+| [`soname_matches_declaration`](#soname_matches_declaration) | `build_lib` | linker (-Wl,-soname) | the library's SONAME record | `build_lib_post` | evaluated |
+| [`soname_matches_requirement`](#soname_matches_requirement) | the link that produced the consumer | linker | the consumer's NEEDED record | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
+| [`declared_versions_exported`](#declared_versions_exported) | `build_lib` | linker (version script) | the library's symbol-version nodes | `build_lib_post` | evaluated |
+| [`required_versions_exported`](#required_versions_exported) | the link that produced the consumer | linker | the consumer's versioned symbol references | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
+| [`signatures_agree`](#signatures_agree) | build_binding | the C compiler | the stub's calls against the header's declarations | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
+| [`dependencies_provided`](#dependencies_provided) | the link, then every load | linker, then the dynamic loader | the consumer's NEEDED list | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
+| [`staged_interface_preserved`](#staged_interface_preserved) | `install_lib` | the install tool | the staged copy of the library | `install_lib_post` | evaluated |
 
 ### Rooted in no action's rule
 
@@ -61,6 +61,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Held against:** the project's declared c_api export set; a name in the declaration that the built library does not export is the falsifier
 
 **Recovers:** build_lib — compiler + linker, over the library's exported symbols. the compiler and linker turned declarations into definitions and exported them. The declaration this checks against is the project's rather than the header's, so it recovers a WEAKER rule than the compiler's own: it asks whether what the project said it ships is there, not whether every declaration agreed with its definition
+
+**Checked at:** ocaml: build_lib_post; python: build_lib_post
 
 ### Method: declared_exports_vs_library
 
@@ -116,6 +118,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Held against:** the consumer's own recorded requirements: the undefined references in its compiled stub. A required symbol the provider does not export is the falsifier, and the linker or loader would say the same
 
 **Recovers:** the link that built the binding — linker, over the stub archive's undefined references. the linker's rule is that every referenced symbol has a definition. It ran once, when the binding was built against some library; this re-derives it, for names, against whichever library THIS world actually holds
+
+**Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 
 ### Method: stub_requirements_vs_library_exports
 
@@ -197,6 +201,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Recovers:** build_app — the language compiler, over the binding's user-facing interface. the compiler's rule is that every name a consumer uses resolves on the interface it compiles against. The watchlist stands in for the application's actual uses, which makes this a hand-written APPROXIMATION of a real rule rather than a derivation of it
 
+**Checked at:** ocaml: build_app_ocaml_pre → probe_binding_ocaml_pre; python: build_app_python_pre → probe_binding_python_pre
+
 ### Method: watchlist_vs_user_surface
 
 | | |
@@ -261,6 +267,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Recovers:** NO ACTION'S RULE. no toolchain enforces that a function returns what a project expected — a compiler checks types, a linker checks names, and neither has an opinion about results. There is no relation here to recover, only one to STATE, which is why this is unimplemented in a different sense from an agreement that merely lacks evidence
 
+**Checked at:** ocaml: probe_binding_ocaml_post; python: probe_binding_python_post
+
 ### Method: probe_assertions
 
 | | |
@@ -294,6 +302,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Held against:** the project's declared soname. The linker's -Wl,-soname application is the black box; the artifact's own record is the evidence
 
 **Recovers:** build_lib — linker (-Wl,-soname), over the library's SONAME record. the -soname flag is the only thing that puts an identity into the object. The linker is a black box here: it either recorded what was asked for or it did not, and the artifact is the evidence
+
+**Checked at:** ocaml: build_lib_post; python: build_lib_post
 
 ### Method: declared_soname_vs_library
 
@@ -351,6 +361,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Recovers:** the link that produced the consumer — linker, over the consumer's NEEDED record. the linker's rule is that a recorded dependency names something it resolved against. It ran in whatever world built that consumer; this asks whether the name it wrote down is the one THIS world's provider answers to
 
+**Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
+
 ### Method: library_identity_vs_consumer_record
 
 | | |
@@ -403,6 +415,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Held against:** the project's declared version-script tags. The version script's application is the black box; the artifact's export annotations are the evidence
 
 **Recovers:** build_lib — linker (version script), over the library's symbol-version nodes. a version script is what attaches version nodes to exported symbols. As with the soname, the tool is a black box and the annotations it wrote are the evidence
+
+**Checked at:** ocaml: build_lib_post; python: build_lib_post
 
 ### Method: declared_tags_vs_library_exports
 
@@ -458,6 +472,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Held against:** the consumer's own recorded version requirements. A required tag the provider does not export is what the loader reports as "version `X' not found"
 
 **Recovers:** the link that produced the consumer — linker, over the consumer's versioned symbol references. the linker's rule is that a versioned reference binds to a version node the provider exports. The LOADER re-checks it at every load, and says so verbatim when it fails — which is why this agreement can predict its diagnostic text
+
+**Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 
 ### Method: required_tags_vs_provider_exports
 
@@ -543,6 +559,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Recovers:** build_binding — the C compiler, over the stub's calls against the header's declarations. the compiler's rule is that a call agrees with the declaration in scope. It ran when the stub was compiled against some header; this re-derives it from signature summaries, TEXTUALLY, for the names both sides mention
 
+**Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
+
 ### Method: header_vs_stub_signature_summaries
 
 | | |
@@ -612,6 +630,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Recovers:** the link, then every load — linker, then the dynamic loader, over the consumer's NEEDED list. the linker recorded a set of dependency names, and the loader's rule is that each resolves to an object. This recovers the LOADER'S rule statically, for the names recorded, against the providers this world models
 
+**Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
+
 ### Method: recorded_dependencies_vs_world_providers
 
 | | |
@@ -665,6 +685,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Held against:** the build-tree copy of the same library, which is still present. A relocation is allowed to move files and rewrite embedded paths; it is not allowed to change what the object exports, what it calls itself, or what it depends on
 
 **Recovers:** install_lib — the install tool, over the staged copy of the library. the install tool's rule is that staging relocates without altering the interface. Unusually, it can be checked almost as strongly as it was applied: both copies are still on disk, so nothing had to be inferred from a projection
+
+**Checked at:** ocaml: install_lib_post; python: install_lib_post
 
 ### Method: staged_vs_build_tree_summary
 
@@ -758,6 +780,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Recovers:** NO ACTION'S RULE. a binding's two layers are both written by the author, and nothing compiles one against the other in a way that could reject a rename, a merge or a deliberate omission. This is a claim about INTENT, and it needs stating before it can be checked
 
+**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
+
 ### Method: declared_repacking_relation
 
 | | |
@@ -791,6 +815,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Held against:** a statement of what the binding is allowed to omit. Without one there is no reference: a binding that deliberately wraps a subset is indistinguishable from one that dropped something
 
 **Recovers:** NO ACTION'S RULE. unrooted TWICE OVER: it composes one agreement that has a rule (the linker's) with two that do not. A composition cannot be better rooted than its weakest part
+
+**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
 
 ### Method: composed_faithfulness
 

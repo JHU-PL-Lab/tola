@@ -605,6 +605,86 @@ let observe_run ~root ~project : run_observation =
 let observed_agreements ~root ~project : observed list =
   (observe_run ~root ~project).ro_agreements
 
+(** ONE AGREEMENT OUTCOME, WITH THE TWO COORDINATES THE OTHER READERS
+    DROP (2026-09-14).
+
+    [observe_lines] answers "what did this run check, and to what" and
+    aggregates over the whole run — it discards both the step tag and
+    the scenario, which is right for a landing tracker and useless for
+    a table whose rows ARE scenarios. [project_matrix] keeps the
+    scenario and the tag but ignores [agreement_outcome] entirely.
+    Neither produces (scenario, tag, agreement, outcome), which is
+    what a per-cell view needs. *)
+type agreement_obs = {
+  ao_tag : string;  (** the step that evaluated it *)
+  ao_agreement : string;
+  ao_method : string;
+  ao_outcome : string;  (** holds | violated | unavailable | … *)
+}
+
+(** Every agreement outcome in the log, per scenario.
+
+    It reads the WHOLE file, last-wins, exactly as {!project_matrix}
+    does — the result table is a view of "the last thing known about
+    each cell", not of one invocation. The consequence is worth stating
+    because it differs from a verdict's: a warm-skipped step logs no
+    agreement line at all, so a warm scenario keeps showing the
+    outcomes of whenever it last ran cold, with nothing in the cell to
+    say so. A verdict at least logs [skip (prior success)]. Accepted
+    deliberately (2026-09-14, user): the landed agreements are verified
+    on projects that run cold in [canary-post-check], and a stale cell
+    elsewhere is a display question rather than a soundness one. *)
+let project_agreements ~root ~project :
+    (string * agreement_obs list) list =
+  let path = log_path ~root ~project in
+  if not (Stdlib.Sys.file_exists path) then []
+  else begin
+    let lines =
+      Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_lines
+    in
+    let order = ref [] in
+    let table : (string, agreement_obs list ref) Hashtbl.t =
+      Hashtbl.create (module String)
+    in
+    let cur = ref "(run)" in
+    let ensure name =
+      match Hashtbl.find table name with
+      | Some r -> r
+      | None ->
+          let r = ref [] in
+          Hashtbl.set table ~key:name ~data:r;
+          order := name :: !order;
+          r
+    in
+    List.iter lines ~f:(fun line ->
+        match parse_line line with
+        | Some (_, "variant_start", detail) ->
+            cur := Option.value_map detail ~default:"(run)" ~f:strip_parens
+        | Some (tag, "agreement_outcome", Some detail) -> (
+            match parse_agreement_outcome detail with
+            | None -> ()  (* the "no agreement fires here" line *)
+            | Some (ag, meth, label) ->
+                let r = ensure !cur in
+                let o =
+                  { ao_tag = tag; ao_agreement = ag; ao_method = meth;
+                    ao_outcome = label }
+                in
+                (* last wins per (tag, agreement, method), first-seen
+                   order preserved — the same rule the verdict table
+                   uses, so a re-run replaces rather than appends *)
+                r :=
+                  List.filter !r ~f:(fun p ->
+                      not
+                        (String.equal p.ao_tag tag
+                        && String.equal p.ao_agreement ag
+                        && String.equal p.ao_method meth))
+                  @ [ o ])
+        | _ -> ());
+    List.map (List.rev !order) ~f:(fun name ->
+        ( name,
+          match Hashtbl.find table name with Some r -> !r | None -> [] ))
+  end
+
 (** THE MOST RECENT RUN THAT ACTUALLY EVALUATED each agreement, and how
     many runs ago that was (0 = the latest run).
 

@@ -400,6 +400,8 @@ let soname_matches_declaration : agreement =
            object. The linker is a black box here: it either recorded what \
            was asked for or it did not, and the artifact is the evidence"
         ();
+    (* POST: it validates the identity build_lib's linker recorded. *)
+    ag_slot = at_lib Canary_basic.Build_lib Post;
     ag_fault_tag = "abi_soname";
     ag_methods =
       [ checking_method ~name:"declared_soname_vs_library" ~kind:Compare
@@ -448,6 +450,9 @@ let soname_matches_requirement : agreement =
            consumer; this asks whether the name it wrote down is the one \
            THIS world's provider answers to"
         ();
+    (* PRE: the consumer can only be linked or loaded if the name it
+       recorded is the one this world's library answers to. *)
+    ag_slot = before_binding;
     ag_fault_tag = "abi_soname";
     ag_methods =
       [ checking_method ~name:"library_identity_vs_consumer_record" ~kind:Compare
@@ -494,6 +499,8 @@ let declared_versions_exported : agreement =
            symbols. As with the soname, the tool is a black box and the \
            annotations it wrote are the evidence"
         ();
+    (* POST: it validates the version nodes build_lib attached. *)
+    ag_slot = at_lib Canary_basic.Build_lib Post;
     ag_fault_tag = "sym_version";
     ag_methods =
       [ checking_method ~name:"declared_tags_vs_library_exports" ~kind:Compare
@@ -543,6 +550,8 @@ let required_versions_exported : agreement =
            every load, and says so verbatim when it fails — which is why \
            this agreement can predict its diagnostic text"
         ();
+    (* PRE: a versioned reference must bind before the consumer runs. *)
+    ag_slot = before_binding;
     ag_fault_tag = "sym_version";
     ag_methods =
       [ checking_method ~name:"required_tags_vs_provider_exports" ~kind:Compare
@@ -633,6 +642,11 @@ let dependencies_provided : agreement =
            LOADER'S rule statically, for the names recorded, against the \
            providers this world models"
         ();
+    (* PRE, and of the PROBE specifically: this recovers the loader's
+       rule, and the loader runs when the probe runs. Naming the build
+       first anyway, because a world that builds its binding resolves
+       the same names at link time. *)
+    ag_slot = before_binding;
     ag_fault_tag = "needed_unprovided";
     ag_methods =
       [ checking_method ~name:"recorded_dependencies_vs_world_providers"

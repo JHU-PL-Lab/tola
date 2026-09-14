@@ -874,6 +874,18 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
            Printf.sprintf "%s — %s, over %s. %s" rt.rt_action rt.rt_tool
              rt.rt_artifact rt.rt_note
          else "NO ACTION'S RULE. " ^ rt.rt_note)));
+  (* WHERE A READER LOOKS FOR IT — the slot, per language, as the
+     result table will label the column. Candidates in preference
+     order: the first one this world's chain contains wins, so a
+     project that fetches its binding falls through to the probe. *)
+  para
+    (bold "Checked at"
+       (String.concat ~sep:"; "
+          (List.map record_worlds ~f:(fun (lang, _) ->
+               Printf.sprintf "%s: %s"
+                 (Canary_lang.string_of_lang lang)
+                 (String.concat ~sep:" → "
+                    (List.map (r.ag.ag_slot lang) ~f:string_of_slot))))));
   List.iter r.ag.ag_methods ~f:(fun m ->
       sub ("Method: " ^ m.m_name);
       if markdown then add "| | |\n| --- | --- |\n";
@@ -994,8 +1006,8 @@ let pp_rooting_table_md () : string =
      type would be a lie in both directions; drawing them needs the \
      action-unit view, which is deferred in [`registry.md`](registry.md) \
      §7.4.3.\n\n";
-  add "| agreement | action | tool | artifact | status |\n";
-  add "| --- | --- | --- | --- | --- |\n";
+  add "| agreement | action | tool | artifact | checked at | status |\n";
+  add "| --- | --- | --- | --- | --- | --- |\n";
   List.iter rooted_rows ~f:(fun r ->
       let rt = r.ag.ag_rooted_in in
       (* backtick only what the action type actually parses, so the
@@ -1006,8 +1018,18 @@ let pp_rooting_table_md () : string =
         | Some _ -> "`" ^ rt.rt_action ^ "`"
         | None -> rt.rt_action
       in
-      add "| [`%s`](#%s) | %s | %s | %s | %s |\n" r.ag_slug r.ag_slug action
-        rt.rt_tool rt.rt_artifact
+      (* the OCaml slot stands for the row: the actions are
+         per-language but the SHAPE is not, and printing both would
+         double every cell to say the same thing twice. The record
+         prints every language. *)
+      let slot =
+        String.concat ~sep:" → "
+          (List.map
+             (r.ag.ag_slot Canary_lang.OCaml)
+             ~f:(fun s -> "`" ^ string_of_slot s ^ "`"))
+      in
+      add "| [`%s`](#%s) | %s | %s | %s | %s | %s |\n" r.ag_slug r.ag_slug action
+        rt.rt_tool rt.rt_artifact slot
         (string_of_status (status_of_row r)));
   add
     "\n### Rooted in no action's rule\n\n\

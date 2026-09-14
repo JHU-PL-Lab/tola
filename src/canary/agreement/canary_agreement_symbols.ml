@@ -227,6 +227,8 @@ let declared_symbols_exported : agreement =
            ships is there, not whether every declaration agreed with its \
            definition"
         ();
+    (* POST: it validates what build_lib exported. *)
+    ag_slot = at_lib Canary_basic.Build_lib Post;
     ag_fault_tag = "sym_missing";
     ag_methods =
       [ checking_method ~name:"declared_exports_vs_library" ~kind:Compare
@@ -284,6 +286,10 @@ let required_symbols_exported : agreement =
            library; this re-derives it, for names, against whichever library \
            THIS world actually holds"
         ();
+    (* PRE: the link can only succeed if the lib defines them. Falls
+       through to the probe where the binding is fetched rather than
+       built, which is every Pattern A project and sqlite. *)
+    ag_slot = before_binding;
     ag_fault_tag = "sym_missing";
     ag_methods =
       [ checking_method ~name:"stub_requirements_vs_library_exports"

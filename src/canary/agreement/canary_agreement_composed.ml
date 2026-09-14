@@ -90,6 +90,10 @@ let repack_complete : agreement =
            (the linker's) with two that do not. A composition cannot be \
            better rooted than its weakest part"
         ();
+    (* POST: it composes both pre- and post-claims, and what it asserts
+       is a property of the finished binding, so it lands where the
+       product does. *)
+    ag_slot = after_binding;
     ag_fault_tag = "api_add";
     ag_methods =
       [ checking_method ~name:"composed_faithfulness" ~kind:Run_program

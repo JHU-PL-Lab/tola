@@ -830,6 +830,83 @@ let unrooted ~note () =
 
 let is_rooted (r : rooting) : bool = not (String.is_empty r.rt_action)
 
+(** WHERE A CHECK BELONGS IN THE ACTION SEQUENCE (2026-09-14, user).
+
+    Canary's chain alternates [action, artifact, action, artifact …],
+    so every check has a slot even when the artifact it examines sits
+    between two actions: a [Post] check validates what an action just
+    MADE, a [Pre] check states a requirement the next action DEPENDS
+    ON. Those read differently and attribute differently —
+    [build_lib_post] failing blames the compiler, [build_binding_pre]
+    failing blames the pair about to be combined.
+
+    THIS IS NOT [m_firing], and the distinction is the whole point.
+    Firing is where an outcome is physically produced, which is
+    wherever the evidence happened to land and is an accident of
+    inspector placement; [required_symbols_exported] fires at two
+    actions and would occupy two cells. The SLOT is where a reader
+    should look for it, and there is one.
+
+    Nor is it derivable. The obvious rule — a [Declared_facts]
+    reference is [Post] (artifact against its own declaration), a
+    [Peer_artifact] one is [Pre] (artifact against what it will meet)
+    — holds for nine of the thirteen and breaks in both directions:
+    [staged_interface_preserved] compares two peers yet validates
+    [install_lib]'s own output, and [api_names_present] compares
+    against a declaration yet is a precondition for [build_app]. So
+    each agreement states it. *)
+type stage = Pre | Post
+
+let string_of_stage = function Pre -> "pre" | Post -> "post"
+
+(** A slot is a LIST of candidates, first present in this world's chain
+    winning — the same shape as evidence paths and firing sites, and
+    for the same reason. A world need not contain the action an
+    agreement would most like to sit before: sqlite FETCHES its OCaml
+    binding, so there is no [build_binding_ocaml] to precede, and
+    [required_symbols_exported] falls through to the probe.
+
+    It is a FUNCTION OF THE LANGUAGE because most of these actions are
+    per-language ([Build_binding OCaml] and [Build_binding Python] are
+    different columns), and a project with two bindings genuinely wants
+    two cells: sqlite's [required_symbols_exported] holds on the OCaml
+    side and is unavailable on the Python one, which is two facts. The
+    mechanism is deliberately NOT a parameter — it changes what an
+    agreement can claim, never where in the graph the claim sits. *)
+type check_slot = Canary_lang.lang -> (Canary_basic.action * stage) list
+
+let string_of_slot ((a, s) : Canary_basic.action * stage) : string =
+  Canary_basic.string_of_action a ^ "_" ^ string_of_stage s
+
+(** The slot this world's chain actually offers for one language.
+    [None] = none of the candidates is in the chain, so the agreement
+    has no column there. *)
+let slot_in_chain (slot : check_slot) ~(lang : Canary_lang.lang)
+    ~(chain : Canary_basic.action list) :
+    (Canary_basic.action * stage) option =
+  List.find (slot lang) ~f:(fun (a, _) ->
+      List.exists chain ~f:(fun c -> Poly.equal c a))
+
+(** The slot shorthands the families use. [at_lib] is for a claim about
+    the library itself, which no language parameterizes. *)
+let at_lib (a : Canary_basic.action) (s : stage) : check_slot =
+ fun _ -> [ (a, s) ]
+
+(** A consumer-side claim: it belongs before the action that BUILDS the
+    binding, and before the one that PROBES it where the binding is
+    fetched rather than built. *)
+let before_binding : check_slot =
+ fun l ->
+  [ (Canary_basic.Build_binding l, Pre);
+    (Canary_basic.Probe_binding l, Pre) ]
+
+(** A claim about the binding artifact itself, rather than about what
+    it will be combined with. *)
+let after_binding : check_slot =
+ fun l ->
+  [ (Canary_basic.Build_binding l, Post);
+    (Canary_basic.Probe_binding l, Post) ]
+
 (** HOW AN AGREEMENT DESCRIBES ITSELF. Every field is a fact only the
     agreement knows, so every field is stated by the family's own
     module. The registry adds what is not self-knowledge — the doc
@@ -878,6 +955,10 @@ type agreement = {
           The FIRING sites remain [m_firing]. An agreement is rooted
           where the rule ran and detected wherever evidence survives,
           and those are usually different actions. *)
+  ag_slot : check_slot;
+      (** WHERE A READER LOOKS FOR THIS — see {!check_slot}. The
+          column in [canary result]; one per agreement however many
+          actions it fires at. *)
   ag_fault_tag : string;
   ag_methods : checking_method list;
 }

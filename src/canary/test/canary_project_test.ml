@@ -1410,6 +1410,20 @@ let agreement_registry_complete_pin : pure_test =
                        (not (String.is_empty rt.C.rt_action)))
               && (not (String.is_empty r.CR.ag.C.ag_fault_tag))
               && (not (List.is_empty r.CR.ag.C.ag_methods))
+              (* NO AGREEMENT IS HOMELESS (2026-09-14). Every one
+                 declares where a reader should look for it, and at
+                 least one of its candidate slots must be an action
+                 that language's chain can contain — otherwise the
+                 agreement evaluates, logs an outcome, and has no
+                 column to appear in. The LAST candidate is the
+                 fallback and is what this really checks: a slot
+                 naming only [build_binding] would vanish on every
+                 project that fetches its binding. *)
+              && List.for_all [ Canary_lang.OCaml; Canary_lang.Python ]
+                   ~f:(fun l ->
+                     let chain = Canary_basic.actions_of_lang l in
+                     Option.is_some
+                       (C.slot_in_chain r.CR.ag.C.ag_slot ~lang:l ~chain))
               && String.equal r.CR.ag_slug (C.string_of_agreement_id r.CR.ag_id))
         in
         (* every method names itself, states what a pass does not
@@ -1728,6 +1742,58 @@ let matrix_marks_from_log_pin : pure_test =
                 (Canary_status.mark "done" None)
                 "✓"
        | _ -> false)) }
+
+(* The AGREEMENT half of the same log (2026-09-14): the result table's
+   check columns need (scenario, tag, agreement, outcome), and the two
+   existing readers each drop half of that. The fixture pins the three
+   things that were easy to get wrong — the scenario scoping, the
+   last-wins rule when one step re-evaluates, and that the
+   "no agreement fires at this action" line (which names no agreement)
+   is skipped rather than parsed into a row. *)
+let matrix_agreements_from_log_pin : pure_test =
+  { name = "matrix.agreements_from_log";
+    check = (fun () ->
+      let root = "_out/canary/test" in
+      let run_dir = root ^ "/canary/projects/agmt-fixture/-run" in
+      let rec mkdir_p dir =
+        let parent = Stdlib.Filename.dirname dir in
+        if String.equal dir parent || Stdlib.Sys.file_exists dir then ()
+        else begin
+          mkdir_p parent;
+          (try Stdlib.Sys.mkdir dir 0o755 with _ -> ())
+        end
+      in
+      mkdir_p run_dir;
+      let oc = Stdlib.open_out (run_dir ^ "/actions.log") in
+      Stdlib.output_string oc
+        "[2026-09-14 10:00:00.000] *                          variant_start  (scenA)\n\
+         [2026-09-14 10:00:01.000] build_lib                    agreement_outcome  (declared_symbols_exported/declared_exports_vs_library: holds)\n\
+         [2026-09-14 10:00:02.000] probe_binding_ocaml          agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: unavailable: no native library inspection in this world)\n\
+         [2026-09-14 10:00:03.000] probe_binding_ocaml          agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: violated: tiny_offset)\n\
+         [2026-09-14 10:00:04.000] fetch_source                 agreement_outcome  (no agreement fires at this action)\n\
+         [2026-09-14 10:00:05.000] *                          variant_start  (scenB)\n\
+         [2026-09-14 10:00:06.000] probe_binding_ocaml          agreement_outcome  (api_names_present/watchlist_vs_user_surface: holds)\n";
+      Stdlib.close_out oc;
+      let m = Canary_status.project_agreements ~root ~project:"agmt-fixture" in
+      match m with
+      | [ ("scenA", a); ("scenB", b) ] ->
+          let open Canary_status in
+          (* scenA: two rows, not three — the re-evaluation REPLACED
+             the earlier unavailable, and the fires-nowhere line added
+             nothing *)
+          (match a with
+           | [ { ao_tag = "build_lib";
+                 ao_agreement = "declared_symbols_exported";
+                 ao_outcome = "holds"; _ };
+               { ao_tag = "probe_binding_ocaml";
+                 ao_agreement = "required_symbols_exported";
+                 ao_outcome = "violated"; _ } ] -> true
+           | _ -> false)
+          && (match b with
+              | [ { ao_agreement = "api_names_present";
+                    ao_outcome = "holds"; _ } ] -> true
+              | _ -> false)
+      | _ -> false) }
 
 (* The warm-mask fix's fingerprint (2026-08-17): a verdict marker is
    trusted for a warm skip only when its recorded spec fingerprint
@@ -3047,6 +3113,7 @@ let all_tests : pure_test list =
       tool_routing_ratchet_test;
       agreement_registry_complete_pin; agreement_registry_firing_pin;
       matrix_marks_from_log_pin;
+      matrix_agreements_from_log_pin;
       marker_stale_on_spec_change_pin;
       source_fetch_pinned_ref_check_post_pin ]
   @ agreement_fixture_tests

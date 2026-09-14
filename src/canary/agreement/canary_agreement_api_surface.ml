@@ -123,6 +123,14 @@ let api_names_present : agreement =
            the application's actual uses, which makes this a hand-written \
            APPROXIMATION of a real rule rather than a derivation of it"
         ();
+    (* PRE, and of build_app rather than of the binding: the claim is
+       that an APPLICATION compiling against this interface will
+       resolve its names. Most projects have no build_app, so in
+       practice it renders before the probe. *)
+    ag_slot =
+      (fun l ->
+        [ (Canary_basic.Build_app { lang = l }, Pre);
+          (Canary_basic.Probe_binding l, Pre) ]);
     ag_fault_tag = "api_drop";
     ag_methods =
       [ checking_method ~name:"watchlist_vs_user_surface" ~kind:Inspect
@@ -197,6 +205,9 @@ let repack_preserves_api : agreement =
            a rename, a merge or a deliberate omission. This is a claim about \
            INTENT, and it needs stating before it can be checked"
         ();
+    (* POST: about the binding artifact itself — whether its two layers
+       agree — not about anything it will be combined with. *)
+    ag_slot = after_binding;
     ag_fault_tag = "api_repack";
     ag_methods =
       [ checking_method ~name:"declared_repacking_relation" ~kind:Run_program
