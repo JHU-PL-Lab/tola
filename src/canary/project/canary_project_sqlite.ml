@@ -397,19 +397,14 @@ let base_spec : Canary_step_builder.runner_spec =
                 ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist
                 ~output_dir ~variant_key ())
       | _ -> None);
-    (* WHICH PACKAGE THE BINDING IS (2026-09-13). It drives the
-       auto-generated summaries — for OCaml, the compiled STUB
-       archive's undefined references, which is the consumer half of
-       [required_symbols_exported] and the only thing that can say
-       what this binding requires of libsqlite3.
-
-       [inspect] above still names the surface inspection; the two now
-       compose rather than the override winning outright. Python is
-       listed for symmetry but adds nothing: its auto summary is the
-       same surface inspection the override already supplies, so the
-       override keeps it. *)
-    binding_user_facing_pkg =
-      [ (Canary_lang.OCaml, "sqlite3"); (Canary_lang.Python, "sqlite3") ];
+    (* NOT [binding_user_facing_pkg] (2026-09-13): the artifact table
+       already names the opam package as the binding row's provider,
+       and the pipeline routes it to [binding_store_pkg], which is what
+       generates the compiled-stub inspection — the consumer half of
+       [required_symbols_exported], and the only evidence that can say
+       what this binding requires of libsqlite3. Declaring it a second
+       time here would ALSO ask for a generated surface inspection,
+       which [inspect] above already supplies and supplies better. *)
     artifact_name = (function
       | Canary_basic.Lib -> Some "libsqlite3.so"
       | Canary_basic.Binding Canary_lang.OCaml -> Some "sqlite3"

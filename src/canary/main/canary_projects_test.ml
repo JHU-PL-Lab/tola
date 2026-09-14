@@ -1361,8 +1361,18 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
         (* zarith's lib_pair warn is PERMANENT and correct: GMP's newest
            release is three years old and apt already ships it, so the
            axis has one point as a fact about the world (landing.md §3).
-           The row's rationale says so and the warn prints it. *)
-        && want ~errs:[] ~warns:[ "lib_pair"; "python_binding" ] ~na:[] "zarith"
+           The row's rationale says so and the warn prints it.
+
+           binding_dev_source joined it 2026-09-13, and it is NEW
+           INFORMATION rather than a regression: zarith builds its
+           binding from source and no binding_api says where that
+           source is, so the source-scanning inspectors cannot run
+           against it. The gap always existed; it was invisible while
+           the runner never saw this project's api_source, and it used
+           to be a [failwith] the moment it could. *)
+        && want ~errs:[]
+             ~warns:[ "binding_dev_source"; "lib_pair"; "python_binding" ]
+             ~na:[] "zarith"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "cairo"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "libffi"
         (* zlib/zstd (landed 2026-08-20) join the ratchet here — they had

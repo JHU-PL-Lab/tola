@@ -45,7 +45,7 @@ tracker is readable without a checkout.
 | | agreement | effective |
 | --- | --- | --- |
 | **LANDED** | `api_names_present` | **decided in sqlite (OCaml and Python), ssl** |
-| **LANDED** | `required_symbols_exported` | **`holds` ×6 on sqlite's OCaml probe (2026-09-13); falsified by injecting a bogus required symbol → `violated: sqlite3_canary_not_a_real_symbol` on exactly that scenario. `unavailable` ×6 on the Python probe: CPython's `_sqlite3` extension is never inspected for its undefined references** |
+| **LANDED** | `required_symbols_exported` | **decided in cairo, libffi, sqlite, ssl, zarith. `holds` ×6 on sqlite's OCaml probe (2026-09-13); falsified by injecting a bogus required symbol → `violated: sqlite3_canary_not_a_real_symbol` on exactly that scenario. `unavailable` ×6 on the Python probe: CPython's `_sqlite3` extension is never inspected for its undefined references** |
 | | `signatures_agree` | reported as `not_applicable`/`unavailable` |
 | | `soname_matches_requirement` | reported as `not_applicable`/`unavailable` |
 | | `required_versions_exported` | reported as `not_applicable`/`unavailable` |
@@ -145,11 +145,46 @@ From `registry.md` §7.4.2, narrowed to what this table says is closest:
    that scenario alone flipped to `violated`, naming the symbol, and the
    run recorded it as a disagreement the action did not itself surface.
 
-3. The identity and dependency rows, now reachable through sqlite's Python
+   **It then landed on cairo, libffi, ssl and zarith with no per-project
+   change at all** — which is the answer to "is this universal". It is,
+   once the two facts a project already declares actually reach the
+   runner: its `api_source` (on the source repo record) and the package
+   its binding is (on the artifact table's binding row). Both were read
+   only by `spec-check` and the CI renderer; `Canary_pipeline.with_declared_facts`
+   routes them now. The remaining per-project work is zero for any project
+   whose binding comes from a language PM.
+
+   Two things that routing surfaced, both kept rather than papered over:
+
+   - a **derived** package earns the stub inspection and *not* a surface
+     one. Merging the two channels generated an mli scan beside each
+     project's own inspection, and zarith's `Zarith_version` and libffi's
+     `Ctypes_foreign_basis` ship without a `.mli` — so the generated
+     summary reported missing what the project's own ocamlobjinfo summary
+     lists, turning a holding agreement into a false `violated`.
+     `binding_store_pkg` and `binding_user_facing_pkg` are separate fields
+     for exactly this reason;
+   - `check_api_consistency` used to `failwith` when a spec built a binding
+     without a declared `source_dir`. Defensible while `api_source` was set
+     only deliberately; fatal to zarith once every project's arrived. It is
+     a warning now, and `spec-check`'s "binding dev source" item reports the
+     gap — which is a real one, and newly visible rather than newly created.
+
+3. `api_names_present` on the Pattern A projects (cairo, libffi, zarith,
+   zstd). They report `unavailable`, and for the reason sqlite did before
+   2026-09-12: the project inspects its binding's surface at
+   `probe_binding`, and the derivation looks at the step that PROVISIONS
+   the binding. Their evidence is good — better than a generated mli scan,
+   since it is ocamlobjinfo's module list — it is simply at the wrong tag.
+   Moving the template's inspect from `Probe_binding` to
+   `Fetch (Binding OCaml)` is the same one-line relocation sqlite took, and
+   it lands four projects at once. A Built binding axis (zarith has one)
+   needs `Build_binding` covered as well.
+4. The identity and dependency rows, now reachable through sqlite's Python
    extension — they need a native summary of the `.so`. **The lib half of
    this is now free** (every `Native_lib_probe` emits one); what is left is
    the consumer's recorded NEEDED/versioned references.
-4. `signatures_agree` on a project that scans sources.
+5. `signatures_agree` on a project that scans sources.
 
 Each one ends the same way: run it, read the log, **falsify it**, and edit
 the effective table above.

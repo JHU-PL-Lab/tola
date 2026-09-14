@@ -350,3 +350,26 @@ let empty_store_config = { source = None; lib = None; bindings = [] }
     (rather than being built from source). *)
 let binding_pm (b : binding_store) : Canary_store.package_manager option =
   match b.provider with Lang_pkg { pm; _ } -> Some pm | _ -> None
+
+(** THE PACKAGE A BINDING IS, per language (2026-09-13).
+
+    It is the name an inspector needs in order to find the installed
+    artifact — [ocamlfind query <pkg>] and its Python equivalent — and
+    every project that fetches its binding from a language PM has
+    already said it, here, as the store's provider. It was being asked
+    for a second time as [runner_spec.binding_user_facing_pkg], which
+    only tiny ever filled in; every other project left it empty and
+    silently got no auto-generated summaries, which is why the stub
+    inspection that [required_symbols_exported] reads existed nowhere
+    but tiny.
+
+    A binding built from source is deliberately absent: there is no
+    package to query, and the inspectors that take a path rather than a
+    name are the ones that apply. *)
+let binding_packages (c : store_config) : (Canary_lang.lang * string) list =
+  List.filter_map
+    (fun ((lang : Canary_lang.lang), (b : binding_store)) ->
+      match b.provider with
+      | Lang_pkg { package; _ } -> Some (lang, package)
+      | _ -> None)
+    c.bindings

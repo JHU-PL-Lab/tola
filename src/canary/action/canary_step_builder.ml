@@ -235,6 +235,22 @@ type runner_spec = {
       the old name reflected the pre-Phase-2 "summary" terminology
       that became "inspect" everywhere else. *)
   binding_user_facing_pkg : (Canary_lang.lang * string) list;
+  (** THE SAME NAME, DERIVED rather than authored (2026-09-13), filled
+      by [Canary_pipeline.with_declared_facts] from the artifact table's
+      binding row — where a project already names its opam/pip package
+      as that store's provider.
+
+      It is a separate field from [binding_user_facing_pkg] because the
+      two earn different summaries, and merging them lost that
+      distinction the first time. A package the project NAMED HERE
+      means "inspect this binding for me", surface included. A package
+      merely derived from the store means only "here is what it is
+      called" — enough to read the compiled stub, which nothing else
+      produces, and not a reason to add a surface inspection beside the
+      one the project already writes its own way. zarith and libffi
+      both have modules with no [.mli], so an mli scan reports missing
+      what their own ocamlobjinfo summaries list. *)
+  binding_store_pkg : (Canary_lang.lang * string) list;
   (* Optional note prepended to auto-generated binding summaries (shell echo).
      Used by stable-fetch specs to warn that watchlists were declared for the
      dev version. Ignored when the explicit [summary] override is used. *)
@@ -288,6 +304,7 @@ let empty_runner_spec = {
   expectation = (fun _ _ -> Expect_success);
   symbol_check = (fun _ -> None);
   binding_user_facing_pkg = [];
+  binding_store_pkg = [];
   inspect_note = None;
   inspect = (fun _ _ -> None);
   artifact_name = (fun _ -> None);
@@ -840,20 +857,44 @@ let deps_of_probe_lib_entry spec loc =
   in
   List.filter_opt [ produce_dep ]
 
+(** A WARNING SINCE 2026-09-13, and it used to be a [failwith].
+
+    One-directional: build_binding being wired wants a declared
+    source_dir, so the source-scanning inspectors know where to look.
+    The reverse is not required — source may exist in the repo but a
+    given run configuration may use a prebuilt binding instead of
+    building it.
+
+    It killed the process when it was written, which was defensible
+    while [api_source] was set only by a project that had deliberately
+    reached for it: then this fires on an authoring mistake, in the
+    project you are editing. It stopped being defensible when the
+    pipeline began routing every project's DECLARED api_source into its
+    runner spec — the same fact, now arriving everywhere — because the
+    condition then holds for projects that never opted in and were
+    running fine. zarith is one: it builds its binding from source and
+    records no source_dir, and aborting its run taught nobody anything
+    it could not have learned from [canary spec-check zarith].
+
+    Nothing at RUN time reads source_dir: the inspectors that want it
+    are the source-scanning ones, which a project without it does not
+    wire. So this is a spec-quality claim, and spec-quality claims
+    belong to spec-check, which reports the same gap under "binding dev
+    source". The warning keeps it visible where it happens. *)
 let check_api_consistency (spec : runner_spec) =
   match spec.api_source with
   | None -> ()
   | Some api ->
-      (* One-directional: build_binding being wired requires a declared source_dir.
-         The reverse is not required — source may exist in the repo but a given
-         run configuration may use a prebuilt binding instead of building it. *)
       if not (List.is_empty spec.build_binding) then
         let any_source_dir =
           List.exists api.Canary_artifact.binding_apis
             ~f:(fun b -> Option.is_some b.Canary_artifact.source_dir)
         in
         if not any_source_dir then
-          failwith "api_source: runner_spec has build_binding but no binding_api declares source_dir"
+          Stdlib.prerr_endline
+            "warning: this world builds a binding but no binding_api declares \
+             source_dir — the source-scanning inspectors cannot run. See \
+             `canary spec-check <project>`, item \"binding dev source\"."
 
 (* ── An unread fetch is not realized ────────────────────────────────────
 
@@ -1007,7 +1048,7 @@ let derive_steps ~root ~project ?(cache_project = project)
            from api_source for now; becomes a stored field when api_source
            is removed in a later seam). *)
         let surf = Canary_surface.surface_of_api api in
-        let ocaml_install_summaries pkg =
+        let ocaml_install_summaries ~surface_too pkg =
           (* mli summary: vals + constructors + module nesting at L3.
              stub summary: C symbols required by the binding at L0/L1.
              Both are functions of the installed binding (independent of
@@ -1032,8 +1073,8 @@ let derive_steps ~root ~project ?(cache_project = project)
               Canary_artifact_lang.stub_inspect_opam_pkg_cmd
                 ~pkg ~prefix ~watchlist:[] ~output_dir ~variant_key ())
           in
-          [ ("_inspect", "inspect", mli);
-            ("_stub_inspect", "inspect_stub", stub) ]
+          (if surface_too then [ ("_inspect", "inspect", mli) ] else [])
+          @ [ ("_stub_inspect", "inspect_stub", stub) ]
         in
         let python_install_inspect pkg =
           (* Python summary attaches at Fetch (Binding Python) — the install
@@ -1050,17 +1091,58 @@ let derive_steps ~root ~project ?(cache_project = project)
           in
           [ ("_inspect", "inspect", py) ]
         in
+        (* THE PACKAGE, asked for once (2026-09-13) — and WHO SAID SO,
+           which turns out to matter.
+
+           A project whose binding comes from a language PM has already
+           named the package as that store's provider, and making it
+           repeat itself as [binding_user_facing_pkg] is why every real
+           project ended up with no auto-generated summaries at all.
+           So the store answers when the spec does not.
+
+           But the two answers do not earn the same summaries. A
+           DERIVED package gets the STUB summary only. That is evidence
+           nothing else produces — no project writes an [inspect_stub]
+           — so deriving it is pure gain. The SURFACE summary is
+           different: most projects already inspect their binding's
+           surface their own way, and the mli scan this would add is
+           not strictly better than what they have. zarith proved it
+           the hard way — [Zarith_version] ships with no [.mli], so the
+           mli scan reports it missing while the project's own
+           ocamlobjinfo summary lists it, and an auto summary landing
+           at the fetch step SHADOWED the good one at the probe and
+           turned a holding agreement into a false `violated`.
+
+           So: a surface summary is generated only where the project
+           explicitly asked for one by naming the package itself. *)
+        let derived =
+          spec.binding_store_pkg
+          @ Canary_store_config.binding_packages spec.stores
+        in
+        let explicit_pkg lang =
+          List.Assoc.find spec.binding_user_facing_pkg ~equal:Poly.equal lang
+        in
+        let any_pkg lang =
+          match explicit_pkg lang with
+          | Some _ as p -> p
+          | None -> List.Assoc.find derived ~equal:Poly.equal lang
+        in
         match action with
-        | Fetch (Binding OCaml) | Publish (Binding OCaml) ->
-            (match List.Assoc.find spec.binding_user_facing_pkg
-                     ~equal:Poly.equal Canary_lang.OCaml with
-             | None -> []
-             | Some pkg -> ocaml_install_summaries pkg)
-        | Fetch (Binding Python) ->
-            (match List.Assoc.find spec.binding_user_facing_pkg
-                     ~equal:Poly.equal Canary_lang.Python with
-             | None -> []
-             | Some pkg -> python_install_inspect pkg)
+        | Fetch (Binding OCaml) | Publish (Binding OCaml) -> (
+            match any_pkg Canary_lang.OCaml with
+            | None -> []
+            | Some pkg ->
+                let surface_too =
+                  Option.is_some (explicit_pkg Canary_lang.OCaml)
+                in
+                ocaml_install_summaries ~surface_too pkg)
+        | Fetch (Binding Python) -> (
+            (* Python has no stub summary to derive — [inspect_binding.py
+               --kind stub] reads an OCaml stub archive — so the whole
+               of it is surface, and the explicit gate covers it. *)
+            match explicit_pkg Canary_lang.Python with
+            | None -> []
+            | Some pkg -> python_install_inspect pkg)
         | _ -> []
   in
   (* spec.inspect is the explicit override. It REPLACES the auto

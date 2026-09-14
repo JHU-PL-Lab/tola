@@ -526,11 +526,35 @@ let check_binding_dev_source (pr : Canary_project_run.project_run) : item =
         | Canary_basic.Binding _ -> true
         | _ -> false)
   in
+  (* A Built axis is half the claim (2026-09-13). If a binding is built
+     from source, SOMETHING has to say where that source is, or the
+     source-scanning inspectors have nothing to scan and the binding's
+     declared surface can never be verified against it. That used to be
+     a [failwith] inside [derive_steps]; it belongs here, where a spec
+     gap is reported rather than fatal. *)
+  let declares_source_dir =
+    match
+      match source_repo_of pr with
+      | Some r -> r.Canary_artifact_source.api_source
+      | None -> pr.pr_api_source
+    with
+    | None -> false
+    | Some api ->
+        List.exists api.Canary_artifact.binding_apis ~f:(fun b ->
+            Option.is_some b.Canary_artifact.source_dir)
+  in
   match List.find all_binding_rows ~f:has_built_axis with
-  | Some d ->
+  | Some d when declares_source_dir ->
       { item_id = "binding_dev_source"; label; severity = Ok;
         detail =
-          Printf.sprintf "Built axis on %s"
+          Printf.sprintf "Built axis on %s, with a declared source_dir"
+            (Canary_artifact.string_of_id d.Canary_project_spec.ar_artifact) }
+  | Some d ->
+      { item_id = "binding_dev_source"; label; severity = Warn;
+        detail =
+          Printf.sprintf
+            "Built axis on %s but no binding_api declares source_dir — the \
+             source-scanning inspectors cannot run against it"
             (Canary_artifact.string_of_id d.Canary_project_spec.ar_artifact) }
   | None ->
       { item_id = "binding_dev_source"; label; severity = Warn;
