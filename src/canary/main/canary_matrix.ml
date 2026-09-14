@@ -526,72 +526,23 @@ let row_key (pr : Canary_project_run.project_run)
     registry). Columns = the sorted union of every project's covered
     actions (the action variant's declaration order); rows = every
     enumerated scenario in the {!row_key} order. *)
-(* ── the CANONICAL column order (2026-08-18, user): grouped by the
-   ARTIFACT — the native/lib group first, then per LANGUAGE a block of
-   the SAME shape (making + fetching + packing + probing the binding,
-   then its app), hardcoded since the supported language/mechanism set
-   is small — and within each group from the source to the built /
-   fetched artifact. Explicit, not the variant's declaration order
-   (which interleaves the groups: Probe_lib sits after the binding
-   constructors there). The scenario chains follow [store_actions]
-   (the catalogue [derive_steps] walks), which is almost this shape —
-   the deviations (Probe_lib last, Publish Lib in the tail) are
-   recorded for a future catalogue alignment. *)
+(* ── the CANONICAL column order (2026-08-18, user) ──
 
-let binding_group (l : Canary_lang.lang) : int =
-  match l with
-  | Canary_lang.OCaml -> 1
-  | Canary_lang.Python -> 2
-  | _ -> 3
+   MOVED TO [Canary_basic] on 2026-09-14. It is a pure function of
+   [action] and two orderings existed — this one and the agreement
+   views' — which could not share while it lived in [main/]; that is
+   the layering [registry.md] §7.4.3 recorded. The agreement catalogue
+   now sorts its summary table by the same key, so the two tables list
+   their rows in one order.
 
-let column_group (act : Canary_basic.action) : int =
-  match act with
-  | Canary_basic.Fetch Canary_basic.Source | Canary_basic.Configure
-  | Canary_basic.Scan_sources | Canary_basic.Build_headers
-  | Canary_basic.Fetch Canary_basic.Headers | Canary_basic.Build_lib
-  | Canary_basic.Fetch Canary_basic.Lib | Canary_basic.Install_lib
-  | Canary_basic.Publish Canary_basic.Lib | Canary_basic.Probe_lib
-  | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 0
-  | Canary_basic.Fetch (Canary_basic.Binding_source l)
-  | Canary_basic.Build_binding l
-  | Canary_basic.Fetch (Canary_basic.Binding l)
-  | Canary_basic.Publish (Canary_basic.Binding l)
-  | Canary_basic.Probe_binding l
-  | Canary_basic.Build_app { Canary_basic.lang = l; _ }
-  | Canary_basic.Probe_app { Canary_basic.lang = l; _ } -> binding_group l
-  | Canary_basic.Fetch Canary_basic.App
-  | Canary_basic.Publish Canary_basic.App -> 4
-  | Canary_basic.Publish (Canary_basic.Binding_source _) -> 4
+   The shape it encodes: grouped by the ARTIFACT, the native/lib group
+   first, then per LANGUAGE a block of the same shape, and within each
+   group from the source to the built/fetched artifact. The scenario
+   chains follow [store_actions], which is almost this shape — the
+   deviations (Probe_lib last, Publish Lib in the tail) are recorded
+   for a future catalogue alignment. *)
 
-let column_stage (act : Canary_basic.action) : int =
-  match act with
-  | Canary_basic.Fetch Canary_basic.Source -> 0
-  | Canary_basic.Configure -> 1
-  | Canary_basic.Scan_sources -> 2
-  | Canary_basic.Build_headers -> 3
-  | Canary_basic.Fetch Canary_basic.Headers -> 4
-  | Canary_basic.Build_lib -> 5
-  | Canary_basic.Install_lib -> 6
-  | Canary_basic.Fetch Canary_basic.Lib -> 7
-  | Canary_basic.Publish Canary_basic.Lib -> 8
-  | Canary_basic.Probe_lib -> 9
-  | Canary_basic.Fetch (Canary_basic.Binding_source _) -> 10
-  | Canary_basic.Build_binding _ -> 11
-  | Canary_basic.Fetch (Canary_basic.Binding _) -> 12
-  | Canary_basic.Publish (Canary_basic.Binding _) -> 13
-  | Canary_basic.Probe_binding _ -> 14
-  | Canary_basic.Build_app _ -> 15
-  | Canary_basic.Probe_app _ -> 16
-  | Canary_basic.Fetch Canary_basic.App -> 17
-  | Canary_basic.Publish Canary_basic.App -> 18
-  | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 8
-  | Canary_basic.Publish (Canary_basic.Binding_source _) -> 13
-
-(** The canonical column ordering: artifact group, then the source →
-    built/fetched stage. *)
-let compare_column (x : Canary_basic.action) (y : Canary_basic.action) : int =
-  let k a = (column_group a, column_stage a) in
-  Stdlib.compare (k x) (k y)
+let compare_column = Canary_basic.compare_column
 
 (** A COLUMN IS AN ACTION OR A CHECK SLOT (2026-09-14, user).
 

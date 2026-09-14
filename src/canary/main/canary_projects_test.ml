@@ -3866,6 +3866,31 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
         && List.for_all bad_impl ~f:(fun (_, slug) ->
                String.equal slug "required_symbols_exported")) }
 
+(* THE KEY EXPLAINS EVERY CODE THE TABLE USES (2026-09-14, user asked
+   what harness keeps the page's key and the generated catalogue in
+   step). Sharing [Canary_agreement.summary_rows] is the mechanism;
+   this is the check. A check column is headed by a code and NOTHING
+   else names it, so a column whose code has no key row is unreadable —
+   and the failure is silent, because the table still renders.
+
+   It pins the direction that can actually break: every code in use is
+   explained. The reverse — a key row for a code no column uses — is
+   fine and expected, since the key lists what the registry can decide
+   while the columns list what this project's chain reaches. *)
+let matrix_key_covers_codes_pin : Canary_project_test.pure_test =
+  { name = "matrix.key_explains_every_check_column";
+    check =
+      (fun () ->
+        let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+        let known =
+          List.map (Canary_agreement.summary_rows ())
+            ~f:(fun r -> r.Canary_agreement.sr_code)
+        in
+        List.for_all m.Canary_matrix.check_columns ~f:(fun c ->
+            match String.lsplit2 c ~on:':' with
+            | Some (_, code) -> List.mem known code ~equal:String.equal
+            | None -> false)) }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -4209,6 +4234,7 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_setting_block_pin;
       matrix_registry_shape_pin;
       matrix_check_cell_pin;
+      matrix_key_covers_codes_pin;
       platform_single_source_pin;
       run_info_session_pin;
       machine_roots_pin;

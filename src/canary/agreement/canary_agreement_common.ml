@@ -928,9 +928,31 @@ type checking_method = {
     state. Three of the registry's agreements are like this, and they
     are exactly the three with no evaluator. *)
 type rooting = {
-  rt_action : string;    (** the action whose rule this recovers; "" = none *)
+  rt_action : string;
+      (** THE ACTION whose rule this recovers, and it is an ACTION —
+          one [Canary_basic.action_of_string] parses — or [""] for an
+          agreement no tool's rule roots (2026-09-14, user: "the cell
+          must be an action").
+
+          It held prose at first: "the link that built the binding",
+          "the link, then every load". True, and unusable as a column —
+          half the cells named a step and half described one, so the
+          column could not be sorted, matched against [canary paths],
+          or read at a glance. The qualification moved to
+          [rt_artifact], which is prose by nature.
+
+          The lang-parameterised actions are spelled for OCaml, as
+          [ag_slot] is in the same table: the claim is language-neutral
+          but a column has to pick, and picking consistently is what
+          lets the two columns be read together.
+
+          Pinned by [agreements.rooting_names_an_action]. *)
   rt_tool : string;      (** what enforced it when it ran *)
-  rt_artifact : string;  (** what the rule is about *)
+  rt_artifact : string;
+      (** what the rule is about — and where the action alone would
+          mislead, why. This is the column that carries "it ran in
+          whatever world built that consumer, which this graph need not
+          contain". *)
   rt_note : string;      (** the qualifier a column cannot hold *)
 }
 

@@ -454,8 +454,11 @@ let soname_matches_requirement : agreement =
       "the consumer's own recorded dependency list. A provider advertising a \
        name the consumer never recorded will not be selected for it";
     ag_rooted_in =
-      rooted ~action:"the link that produced the consumer" ~tool:"linker"
-        ~artifact:"the consumer's NEEDED record"
+      rooted ~action:"build_binding_ocaml" ~tool:"linker"
+        ~artifact:
+          "the consumer's NEEDED record. The link that wrote it ran in \
+           whatever world built that consumer, which this graph need not \
+           contain"
         ~note:
           "the linker's rule is that a recorded dependency names something \
            it resolved against. It ran in whatever world built that \
@@ -555,8 +558,10 @@ let required_versions_exported : agreement =
        provider does not export is what the loader reports as \
        \"version `X' not found\"";
     ag_rooted_in =
-      rooted ~action:"the link that produced the consumer" ~tool:"linker"
-        ~artifact:"the consumer's versioned symbol references"
+      rooted ~action:"build_binding_ocaml" ~tool:"linker"
+        ~artifact:
+          "the consumer's versioned symbol references, written by the link \
+           that produced it — in whatever world that was"
         ~note:
           "the linker's rule is that a versioned reference binds to a \
            version node the provider exports. The LOADER re-checks it at \
@@ -646,9 +651,12 @@ let dependencies_provided : agreement =
        what a consumer linked where an implementation was split out, and \
        deployed where it is folded in, produces";
     ag_rooted_in =
-      rooted ~action:"the link, then every load"
+      rooted ~action:"probe_binding_ocaml"
         ~tool:"linker, then the dynamic loader"
-        ~artifact:"the consumer's NEEDED list"
+        ~artifact:
+          "the consumer's NEEDED list. The linker wrote it and the LOADER \
+           re-checks it at every load, which is why the probe is the \
+           action named here rather than the link"
         ~note:
           "the linker recorded a set of dependency names, and the loader's \
            rule is that each resolves to an object. This recovers the \

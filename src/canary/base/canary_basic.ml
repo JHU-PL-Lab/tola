@@ -433,6 +433,71 @@ let string_of_action = function
   | Probe_binding lang -> [%string "probe_binding_%{Canary_lang.string_of_lang lang}"]
   | Probe_app a -> [%string "probe_app_%{string_of_app_info a}"]
 
+(* ── THE CANONICAL ACTION ORDER ────────────────────────────────────
+
+   Moved down from [Canary_matrix] on 2026-09-14, which is exactly the
+   move [registry.md] §7.4.3 said it would take: two action-column
+   orderings existed, the result table's and the agreement views', and
+   they could not share while this lived in [main/]. It is a pure
+   function of [action] and belongs in the vocabulary.
+
+   Grouped by the ARTIFACT — the native/lib group first, then per
+   LANGUAGE a block of the same shape (making, fetching, packing,
+   probing the binding, then its app), hardcoded since the supported
+   language set is small — and within each group from the source to the
+   built/fetched artifact. Explicit, not the declaration order, which
+   interleaves the groups. *)
+
+let binding_group (l : Canary_lang.lang) : int =
+  match l with Canary_lang.OCaml -> 1 | Canary_lang.Python -> 2 | _ -> 3
+
+let column_group (act : action) : int =
+  match act with
+  | Fetch Source | Configure | Scan_sources | Build_headers | Fetch Headers
+  | Build_lib | Fetch Lib | Install_lib | Publish Lib | Probe_lib
+  | Publish (Source | Headers) ->
+      0
+  | Fetch (Binding_source l)
+  | Build_binding l
+  | Fetch (Binding l)
+  | Publish (Binding l)
+  | Probe_binding l
+  | Build_app { lang = l; _ }
+  | Probe_app { lang = l; _ } ->
+      binding_group l
+  | Fetch App | Publish App -> 4
+  | Publish (Binding_source _) -> 4
+
+let column_stage (act : action) : int =
+  match act with
+  | Fetch Source -> 0
+  | Configure -> 1
+  | Scan_sources -> 2
+  | Build_headers -> 3
+  | Fetch Headers -> 4
+  | Build_lib -> 5
+  | Install_lib -> 6
+  | Fetch Lib -> 7
+  | Publish Lib -> 8
+  | Probe_lib -> 9
+  | Fetch (Binding_source _) -> 10
+  | Build_binding _ -> 11
+  | Fetch (Binding _) -> 12
+  | Publish (Binding _) -> 13
+  | Probe_binding _ -> 14
+  | Build_app _ -> 15
+  | Probe_app _ -> 16
+  | Fetch App -> 17
+  | Publish App -> 18
+  | Publish (Source | Headers) -> 8
+  | Publish (Binding_source _) -> 13
+
+(** The canonical column ordering: artifact group, then the source →
+    built/fetched stage. *)
+let compare_column (x : action) (y : action) : int =
+  let k a = (column_group a, column_stage a) in
+  Stdlib.compare (k x) (k y)
+
 let action_of_string s =
   let module A = Canary_lang in
   let lang_of_str = function

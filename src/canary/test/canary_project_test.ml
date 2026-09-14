@@ -1687,6 +1687,21 @@ let agreement_fixture_tests : pure_test list =
        another agreement — the reader would have no way to tell. The
        code is DERIVED from the slug, so this is the price of not
        having to declare it. *)
+    (* THE RECOVERS COLUMN NAMES AN ACTION (2026-09-14, user: "the cell
+       must be an action"). It held prose for six of the thirteen —
+       "the link that built the binding", "the link, then every load" —
+       which is true and unusable as a column: half the cells named a
+       step and half described one, so it could not be sorted or
+       matched against `canary paths`. The qualification lives in
+       [rt_artifact] now, which is prose by nature. *)
+    { name = "agreements.rooting_names_an_action";
+      check = (fun () ->
+          List.for_all CR.agreement_registry ~f:(fun r ->
+              let rt = r.CR.ag.C.ag_rooted_in in
+              if String.is_empty rt.C.rt_action then
+                (* unrooted: no tool's rule, so no action to name *)
+                not (C.is_rooted rt)
+              else Option.is_some (Canary_basic.action_of_string rt.C.rt_action))) };
     { name = "agreements.short_codes_are_unique";
       check = (fun () ->
           let codes =

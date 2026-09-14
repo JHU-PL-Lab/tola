@@ -17,15 +17,15 @@ A `code-set` action is one THIS graph contains, so the row can be read against `
 | code | agreement | action | tool | artifact | checked at | status |
 | --- | --- | --- | --- | --- | --- | --- |
 | `dse` | [`declared_symbols_exported`](#declared_symbols_exported) | `build_lib` | compiler + linker | the library's exported symbols | `build_lib_post` | evaluated |
-| `rse` | [`required_symbols_exported`](#required_symbols_exported) | the link that built the binding | linker | the stub archive's undefined references | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
-| `anp` | [`api_names_present`](#api_names_present) | build_app | the language compiler | the binding's user-facing interface | `build_app_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
 | `smd` | [`soname_matches_declaration`](#soname_matches_declaration) | `build_lib` | linker (-Wl,-soname) | the library's SONAME record | `build_lib_post` | evaluated |
-| `smr` | [`soname_matches_requirement`](#soname_matches_requirement) | the link that produced the consumer | linker | the consumer's NEEDED record | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
 | `dve` | [`declared_versions_exported`](#declared_versions_exported) | `build_lib` | linker (version script) | the library's symbol-version nodes | `build_lib_post` | evaluated |
-| `rve` | [`required_versions_exported`](#required_versions_exported) | the link that produced the consumer | linker | the consumer's versioned symbol references | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
-| `sa` | [`signatures_agree`](#signatures_agree) | build_binding | the C compiler | the stub's calls against the header's declarations | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
-| `dp` | [`dependencies_provided`](#dependencies_provided) | the link, then every load | linker, then the dynamic loader | the consumer's NEEDED list | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
 | `sip` | [`staged_interface_preserved`](#staged_interface_preserved) | `install_lib` | the install tool | the staged copy of the library | `install_lib_post` | evaluated |
+| `rse` | [`required_symbols_exported`](#required_symbols_exported) | `build_binding_ocaml` | linker | the stub archive's undefined references. The link that made them ran in whatever world built the consumer, which this graph need not contain — so where the binding is fetched rather than built, the check falls to the probe | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `smr` | [`soname_matches_requirement`](#soname_matches_requirement) | `build_binding_ocaml` | linker | the consumer's NEEDED record. The link that wrote it ran in whatever world built that consumer, which this graph need not contain | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `rve` | [`required_versions_exported`](#required_versions_exported) | `build_binding_ocaml` | linker | the consumer's versioned symbol references, written by the link that produced it — in whatever world that was | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `sa` | [`signatures_agree`](#signatures_agree) | `build_binding_ocaml` | the C compiler | the stub's calls against the header's declarations | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `dp` | [`dependencies_provided`](#dependencies_provided) | `probe_binding_ocaml` | linker, then the dynamic loader | the consumer's NEEDED list. The linker wrote it and the LOADER re-checks it at every load, which is why the probe is the action named here rather than the link | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `anp` | [`api_names_present`](#api_names_present) | `build_app_ocaml` | the language compiler | the binding's user-facing interface. Most projects declare no app, so the rule's own action is absent and the check falls to the binding probe | `build_app_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
 
 ### Rooted in no action's rule
 
@@ -117,7 +117,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Held against:** the consumer's own recorded requirements: the undefined references in its compiled stub. A required symbol the provider does not export is the falsifier, and the linker or loader would say the same
 
-**Recovers:** the link that built the binding — linker, over the stub archive's undefined references. the linker's rule is that every referenced symbol has a definition. It ran once, when the binding was built against some library; this re-derives it, for names, against whichever library THIS world actually holds
+**Recovers:** build_binding_ocaml — linker, over the stub archive's undefined references. The link that made them ran in whatever world built the consumer, which this graph need not contain — so where the binding is fetched rather than built, the check falls to the probe. the linker's rule is that every referenced symbol has a definition. It ran once, when the binding was built against some library; this re-derives it, for names, against whichever library THIS world actually holds
 
 **Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 
@@ -199,7 +199,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Held against:** the project's watchlist for this binding; a watched name absent from the inspected surface is the falsifier. An empty watchlist asks nothing and is reported as inconclusive, never as a pass
 
-**Recovers:** build_app — the language compiler, over the binding's user-facing interface. the compiler's rule is that every name a consumer uses resolves on the interface it compiles against. The watchlist stands in for the application's actual uses, which makes this a hand-written APPROXIMATION of a real rule rather than a derivation of it
+**Recovers:** build_app_ocaml — the language compiler, over the binding's user-facing interface. Most projects declare no app, so the rule's own action is absent and the check falls to the binding probe. the compiler's rule is that every name a consumer uses resolves on the interface it compiles against. The watchlist stands in for the application's actual uses, which makes this a hand-written APPROXIMATION of a real rule rather than a derivation of it
 
 **Checked at:** ocaml: build_app_ocaml_pre → probe_binding_ocaml_pre; python: build_app_python_pre → probe_binding_python_pre
 
@@ -359,7 +359,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Held against:** the consumer's own recorded dependency list. A provider advertising a name the consumer never recorded will not be selected for it
 
-**Recovers:** the link that produced the consumer — linker, over the consumer's NEEDED record. the linker's rule is that a recorded dependency names something it resolved against. It ran in whatever world built that consumer; this asks whether the name it wrote down is the one THIS world's provider answers to
+**Recovers:** build_binding_ocaml — linker, over the consumer's NEEDED record. The link that wrote it ran in whatever world built that consumer, which this graph need not contain. the linker's rule is that a recorded dependency names something it resolved against. It ran in whatever world built that consumer; this asks whether the name it wrote down is the one THIS world's provider answers to
 
 **Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 
@@ -471,7 +471,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Held against:** the consumer's own recorded version requirements. A required tag the provider does not export is what the loader reports as "version `X' not found"
 
-**Recovers:** the link that produced the consumer — linker, over the consumer's versioned symbol references. the linker's rule is that a versioned reference binds to a version node the provider exports. The LOADER re-checks it at every load, and says so verbatim when it fails — which is why this agreement can predict its diagnostic text
+**Recovers:** build_binding_ocaml — linker, over the consumer's versioned symbol references, written by the link that produced it — in whatever world that was. the linker's rule is that a versioned reference binds to a version node the provider exports. The LOADER re-checks it at every load, and says so verbatim when it fails — which is why this agreement can predict its diagnostic text
 
 **Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 
@@ -557,7 +557,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Held against:** the provider's header signatures, for the function names the binding also declares. A disagreeing return type or argument list is what the C compiler would reject if it saw both
 
-**Recovers:** build_binding — the C compiler, over the stub's calls against the header's declarations. the compiler's rule is that a call agrees with the declaration in scope. It ran when the stub was compiled against some header; this re-derives it from signature summaries, TEXTUALLY, for the names both sides mention
+**Recovers:** build_binding_ocaml — the C compiler, over the stub's calls against the header's declarations. the compiler's rule is that a call agrees with the declaration in scope. It ran when the stub was compiled against some header; this re-derives it from signature summaries, TEXTUALLY, for the names both sides mention
 
 **Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 
@@ -628,7 +628,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **Held against:** this world's modeled provider plus the family's fixed ambient-runtime list. A recorded name answered by neither is the falsifier — which is what a consumer linked where an implementation was split out, and deployed where it is folded in, produces
 
-**Recovers:** the link, then every load — linker, then the dynamic loader, over the consumer's NEEDED list. the linker recorded a set of dependency names, and the loader's rule is that each resolves to an object. This recovers the LOADER'S rule statically, for the names recorded, against the providers this world models
+**Recovers:** probe_binding_ocaml — linker, then the dynamic loader, over the consumer's NEEDED list. The linker wrote it and the LOADER re-checks it at every load, which is why the probe is the action named here rather than the link. the linker recorded a set of dependency names, and the loader's rule is that each resolves to an object. This recovers the LOADER'S rule statically, for the names recorded, against the providers this world models
 
 **Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 

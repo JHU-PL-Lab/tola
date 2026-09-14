@@ -115,8 +115,11 @@ let api_names_present : agreement =
        the inspected surface is the falsifier. An empty watchlist asks \
        nothing and is reported as inconclusive, never as a pass";
     ag_rooted_in =
-      rooted ~action:"build_app" ~tool:"the language compiler"
-        ~artifact:"the binding's user-facing interface"
+      rooted ~action:"build_app_ocaml" ~tool:"the language compiler"
+        ~artifact:
+          "the binding's user-facing interface. Most projects declare no \
+           app, so the rule's own action is absent and the check falls to \
+           the binding probe"
         ~note:
           "the compiler's rule is that every name a consumer uses resolves \
            on the interface it compiles against. The watchlist stands in for \

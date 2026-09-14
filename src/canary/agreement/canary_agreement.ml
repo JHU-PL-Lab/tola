@@ -1016,8 +1016,22 @@ type summary_row = {
   sr_note : string;  (** for an unrooted row, why there is no rule *)
 }
 
+(** Sorted by the CANONICAL ACTION ORDER (2026-09-14, user), the same
+    key the result table's columns use — [Canary_basic.compare_column],
+    which moved down to [base/] for exactly this so the two orderings
+    could be one. A reader going from this table to that one now finds
+    the rows in the same sequence, and an unrooted agreement (no
+    action) sorts last rather than wherever the registry happened to
+    put it. *)
 let summary_rows () : summary_row list =
-  List.map agreement_registry ~f:(fun r ->
+  let rank (r : agreement_row) =
+    match Canary_basic.action_of_string r.ag.ag_rooted_in.rt_action with
+    | Some a -> (0, Canary_basic.column_group a, Canary_basic.column_stage a)
+    | None -> (1, 0, 0)
+  in
+  List.stable_sort agreement_registry ~compare:(fun x y ->
+      Stdlib.compare (rank x) (rank y))
+  |> List.map ~f:(fun r ->
       let rt = r.ag.ag_rooted_in in
       { sr_code = short_code_of_slug r.ag_slug;
         sr_slug = r.ag_slug;

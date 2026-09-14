@@ -165,7 +165,7 @@ let signatures_agree : agreement =
        also declares. A disagreeing return type or argument list is what the \
        C compiler would reject if it saw both";
     ag_rooted_in =
-      rooted ~action:"build_binding" ~tool:"the C compiler"
+      rooted ~action:"build_binding_ocaml" ~tool:"the C compiler"
         ~artifact:"the stub's calls against the header's declarations"
         ~note:
           "the compiler's rule is that a call agrees with the declaration in \

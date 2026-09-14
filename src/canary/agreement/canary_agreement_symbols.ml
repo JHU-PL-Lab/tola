@@ -283,8 +283,12 @@ let required_symbols_exported : agreement =
        its compiled stub. A required symbol the provider does not export is \
        the falsifier, and the linker or loader would say the same";
     ag_rooted_in =
-      rooted ~action:"the link that built the binding" ~tool:"linker"
-        ~artifact:"the stub archive's undefined references"
+      rooted ~action:"build_binding_ocaml" ~tool:"linker"
+        ~artifact:
+          "the stub archive's undefined references. The link that made \
+           them ran in whatever world built the consumer, which this \
+           graph need not contain — so where the binding is fetched \
+           rather than built, the check falls to the probe"
         ~note:
           "the linker's rule is that every referenced symbol has a \
            definition. It ran once, when the binding was built against some \
