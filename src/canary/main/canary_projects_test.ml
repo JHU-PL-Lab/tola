@@ -4057,10 +4057,12 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            sits INSIDE the ocaml block, not at the end.
 
            CHECK SLOTS joined it 2026-09-14: [_pre] immediately before
-           its action and [_post] immediately after, and [_out] after
-           that — so one action's columns read in the order they mean:
-           what it needs, the run, the verdict on the result, the
-           result. Both derived sets come from the registry — [_pre]
+           its action, then what the action MADE, then the verdicts on
+           it — so one action's columns read in the order they mean:
+           what it needs, the run, the result, the verdict on the
+           result. The artifact precedes the post-checks because a
+           verdict printed left of the thing it judges reads
+           backwards. Both derived sets come from the registry — [_pre]
            and [_post] from [ag_slot], [_out] from the evidence paths
            the methods name — so a new agreement can add a column here
            and fail this ratchet, which is the point.
@@ -4074,13 +4076,13 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
              (String.concat ~sep:"," m.Canary_matrix.columns)
              (String.concat ~sep:","
                 [ "fetch_source"; "configure"; "scan_sources";
-                  "build_headers"; "build_lib";
+                  "build_headers"; "build_lib"; "build_lib=lib";
                   "build_lib_post:declared_symbols_exported";
                   "build_lib_post:declared_versions_exported";
-                  "build_lib_post:soname_matches_declaration";
-                  "build_lib=lib"; "install_lib";
-                  "install_lib_post:staged_interface_preserved";
-                  "install_lib=lib"; "fetch_lib"; "probe_lib";
+                  "build_lib_post:soname_matches_declaration"; "install_lib";
+                  "install_lib=lib";
+                  "install_lib_post:staged_interface_preserved"; "fetch_lib";
+                  "probe_lib";
                   (* the off-tree binding-source fetch (2026-08-19): the
                      column appears now that zarith declares its binding's
                      repo as [Binding_source ocaml], and the order key puts

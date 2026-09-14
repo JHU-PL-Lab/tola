@@ -14,28 +14,28 @@ Every row is one action's rule, re-derived from what survived it. **Action** is 
 
 A `code-set` action is one THIS graph contains, so the row can be read against `canary paths`. A plain-prose one is not: the link that built a consumer ran in a world this graph never modelled, and "the link" is several actions depending on who is linking. Naming those in the action type would be a lie in both directions; drawing them needs the action-unit view, which is deferred in [`registry.md`](registry.md) §7.4.3.
 
-| agreement | action | tool | artifact | checked at | status |
-| --- | --- | --- | --- | --- | --- |
-| [`declared_symbols_exported`](#declared_symbols_exported) | `build_lib` | compiler + linker | the library's exported symbols | `build_lib_post` | evaluated |
-| [`required_symbols_exported`](#required_symbols_exported) | the link that built the binding | linker | the stub archive's undefined references | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
-| [`api_names_present`](#api_names_present) | build_app | the language compiler | the binding's user-facing interface | `build_app_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
-| [`soname_matches_declaration`](#soname_matches_declaration) | `build_lib` | linker (-Wl,-soname) | the library's SONAME record | `build_lib_post` | evaluated |
-| [`soname_matches_requirement`](#soname_matches_requirement) | the link that produced the consumer | linker | the consumer's NEEDED record | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
-| [`declared_versions_exported`](#declared_versions_exported) | `build_lib` | linker (version script) | the library's symbol-version nodes | `build_lib_post` | evaluated |
-| [`required_versions_exported`](#required_versions_exported) | the link that produced the consumer | linker | the consumer's versioned symbol references | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
-| [`signatures_agree`](#signatures_agree) | build_binding | the C compiler | the stub's calls against the header's declarations | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
-| [`dependencies_provided`](#dependencies_provided) | the link, then every load | linker, then the dynamic loader | the consumer's NEEDED list | `build_binding_ocaml_pre` → `probe_binding_ocaml_pre` | evaluated |
-| [`staged_interface_preserved`](#staged_interface_preserved) | `install_lib` | the install tool | the staged copy of the library | `install_lib_post` | evaluated |
+| code | agreement | action | tool | artifact | checked at | status |
+| --- | --- | --- | --- | --- | --- | --- |
+| `dse` | [`declared_symbols_exported`](#declared_symbols_exported) | `build_lib` | compiler + linker | the library's exported symbols | `build_lib_post` | evaluated |
+| `rse` | [`required_symbols_exported`](#required_symbols_exported) | the link that built the binding | linker | the stub archive's undefined references | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `anp` | [`api_names_present`](#api_names_present) | build_app | the language compiler | the binding's user-facing interface | `build_app_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `smd` | [`soname_matches_declaration`](#soname_matches_declaration) | `build_lib` | linker (-Wl,-soname) | the library's SONAME record | `build_lib_post` | evaluated |
+| `smr` | [`soname_matches_requirement`](#soname_matches_requirement) | the link that produced the consumer | linker | the consumer's NEEDED record | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `dve` | [`declared_versions_exported`](#declared_versions_exported) | `build_lib` | linker (version script) | the library's symbol-version nodes | `build_lib_post` | evaluated |
+| `rve` | [`required_versions_exported`](#required_versions_exported) | the link that produced the consumer | linker | the consumer's versioned symbol references | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `sa` | [`signatures_agree`](#signatures_agree) | build_binding | the C compiler | the stub's calls against the header's declarations | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `dp` | [`dependencies_provided`](#dependencies_provided) | the link, then every load | linker, then the dynamic loader | the consumer's NEEDED list | `build_binding_ocaml_pre → probe_binding_ocaml_pre` | evaluated |
+| `sip` | [`staged_interface_preserved`](#staged_interface_preserved) | `install_lib` | the install tool | the staged copy of the library | `install_lib_post` | evaluated |
 
 ### Rooted in no action's rule
 
 These 3 are not checks waiting on evidence. No toolchain enforces them, so there is no relation to recover — only one to state. They are exactly the rows with no evaluator, which is what tells "nobody implemented this" apart from "nobody has said what it means".
 
-| agreement | why there is no rule | status |
-| --- | --- | --- |
-| [`behavior_matches`](#behavior_matches) | no toolchain enforces that a function returns what a project expected — a compiler checks types, a linker checks names, and neither has an opinion about results. There is no relation here to recover, only one to STATE, which is why this is unimplemented in a different sense from an agreement that merely lacks evidence | planned |
-| [`repack_preserves_api`](#repack_preserves_api) | a binding's two layers are both written by the author, and nothing compiles one against the other in a way that could reject a rename, a merge or a deliberate omission. This is a claim about INTENT, and it needs stating before it can be checked | planned |
-| [`repack_complete`](#repack_complete) | unrooted TWICE OVER: it composes one agreement that has a rule (the linker's) with two that do not. A composition cannot be better rooted than its weakest part | planned |
+| code | agreement | why there is no rule | status |
+| --- | --- | --- | --- |
+| `bm` | [`behavior_matches`](#behavior_matches) | no toolchain enforces that a function returns what a project expected — a compiler checks types, a linker checks names, and neither has an opinion about results. There is no relation here to recover, only one to STATE, which is why this is unimplemented in a different sense from an agreement that merely lacks evidence | planned |
+| `rpa` | [`repack_preserves_api`](#repack_preserves_api) | a binding's two layers are both written by the author, and nothing compiles one against the other in a way that could reject a rename, a merge or a deliberate omission. This is a claim about INTENT, and it needs stating before it can be checked | planned |
+| `rc` | [`repack_complete`](#repack_complete) | unrooted TWICE OVER: it composes one agreement that has a rule (the linker's) with two that do not. A composition cannot be better rooted than its weakest part | planned |
 
 ---
 

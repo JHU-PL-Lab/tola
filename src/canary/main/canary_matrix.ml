@@ -659,14 +659,15 @@ let label_of_col = function
 
 let action_of_col = function Act a | Check (a, _, _) | Artifact a -> a
 
-(** [pre], the action, [post], then what it made — one action's columns
-    in the order they mean: what it needs, the run, the verdict on the
-    result, the result. *)
+(** [pre], the action, what it MADE, then the verdict on it
+    (2026-09-14, user). The artifact comes before the post-check
+    because the check is a verdict ABOUT the artifact, and a verdict
+    printed to the left of the thing it judges reads backwards. *)
 let col_rank = function
   | Check (_, Canary_agreement_common.Pre, _) -> 0
   | Act _ -> 1
-  | Check (_, Canary_agreement_common.Post, _) -> 2
-  | Artifact _ -> 3
+  | Artifact _ -> 2
+  | Check (_, Canary_agreement_common.Post, _) -> 3
 
 let compare_col (x : col) (y : col) : int =
   let a = action_of_col x and b = action_of_col y in
@@ -1326,19 +1327,12 @@ let pp_text (m : t) : unit =
               the header carries the STAGE and the agreement's
               initials: »pre·rse. The initials are unique across the
               thirteen, and the legend below names them. *)
-           let initials slug =
-             String.split slug ~on:'_'
-             |> List.filter_map ~f:(fun w ->
-                    if String.is_empty w then None
-                    else Some (String.sub w ~pos:0 ~len:1))
-             |> String.concat
-           in
            let header tag =
              if List.mem m.check_columns tag ~equal:String.equal then
                match String.lsplit2 tag ~on:':' with
                | Some (slot, slug) ->
                    (if String.is_suffix slot ~suffix:"_post" then "»" else "›")
-                   ^ initials slug
+                   ^ Canary_agreement_common.short_code_of_slug slug
                | None -> tag
              else if List.mem m.artifact_columns tag ~equal:String.equal then
                match String.lsplit2 tag ~on:'=' with
@@ -1346,25 +1340,49 @@ let pp_text (m : t) : unit =
                | None -> tag
              else tag
            in
+           (* GROUP BY ACTION (2026-09-14, user). A row is
+              [›pre … action …=out …»post] repeated, and with nothing
+              between groups the eye cannot tell where one action's
+              columns stop. A bar before each action's leading column
+              is the same device the setting block already uses to
+              separate the world from the run. *)
+           let group_of tag =
+             if List.mem m.check_columns tag ~equal:String.equal then
+               Option.value_map (String.lsplit2 tag ~on:':') ~default:tag
+                 ~f:(fun (slot, _) ->
+                   Option.value
+                     (String.chop_suffix slot ~suffix:"_post")
+                     ~default:
+                       (Option.value
+                          (String.chop_suffix slot ~suffix:"_pre")
+                          ~default:slot))
+             else if List.mem m.artifact_columns tag ~equal:String.equal then
+               Option.value_map (String.lsplit2 tag ~on:'=') ~default:tag ~f:fst
+             else tag
+           in
+           let with_bars f =
+             let _, out =
+               List.fold used ~init:(None, []) ~f:(fun (prev, acc) tag ->
+                   let g = group_of tag in
+                   let sep =
+                     match prev with
+                     | Some p when not (String.equal p g) -> [ "| " ]
+                     | _ -> []
+                   in
+                   (Some g, acc @ sep @ [ f tag ]))
+             in
+             String.concat ~sep:"" out
+           in
            Fmt.pr "@.%s — %d scenario(s)@." r.project (List.length group);
            Fmt.pr "  %s%s| %s@." (pad "#")
              (String.concat ~sep:"" (List.map set_used ~f:pad))
-             (String.concat ~sep:""
-                (List.map used ~f:(fun t -> pad (header t))));
+             (with_bars (fun t -> pad (header t)));
            List.iter group ~f:(fun (rr : row) ->
                let cells =
-                 List.map used ~f:(fun tag ->
+                 with_bars (fun tag ->
                      match
                        List.Assoc.find rr.cells tag ~equal:String.equal
                      with
-                     (* a check cell carries its COVERAGE beside the
-                        mark — [✓ 2/6] says two of the six claims that
-                        belong here reached a verdict, which is the
-                        number a reader actually wants and the one a
-                        bare tick would hide *)
-                     | Some (Some c)
-                       when List.mem m.check_columns tag ~equal:String.equal ->
-                         pad (c.mark ^ " " ^ c.provision)
                      (* an artifact a failing check read: marked, not
                         coloured, because the terminal has no red *)
                      | Some (Some c)
@@ -1393,7 +1411,7 @@ let pp_text (m : t) : unit =
                Fmt.pr "  %s%s| %s@."
                  (pad (Printf.sprintf "#%d" rr.index))
                  (String.concat ~sep:"" sets)
-                 (String.concat ~sep:"" cells))));
+                 cells)));
   let total = List.length m.rows in
   Fmt.pr "@.legend: ✓ done · not run ⊘ blocked xfail[cN] expected failure (cN confirming contracts) ✗ failed@.";
   (* the CHECK legend, printed only when there are check columns to
@@ -1407,18 +1425,12 @@ let pp_text (m : t) : unit =
            Option.map (String.lsplit2 c ~on:':') ~f:snd)
        |> List.dedup_and_sort ~compare:String.compare
      in
-     let initials slug =
-       String.split slug ~on:'_'
-       |> List.filter_map ~f:(fun w ->
-              if String.is_empty w then None
-              else Some (String.sub w ~pos:0 ~len:1))
-       |> String.concat
-     in
      Fmt.pr
        "checks: › needed before the action  » verdict on what it made  = the \
         artifact@.        %s@."
        (String.concat ~sep:"  "
-          (List.map seen ~f:(fun s -> initials s ^ "=" ^ s))));
+          (List.map seen ~f:(fun s ->
+               Canary_agreement_common.short_code_of_slug s ^ " " ^ s))));
   Fmt.pr "%d scenario(s) across %d project(s)@." total
     (List.length (List.dedup_and_sort ~compare:String.compare (List.map m.rows ~f:(fun r -> r.project))))
 
@@ -1540,6 +1552,70 @@ let render_html (m : t) ~(generated_at : string) : string =
      is gone: the source artifacts' own setting cells carry the ref and
      its link, so a project with two sources shows two labelled refs
      instead of one column that meant a different artifact per project. *)
+  (* THE CHECK KEY — the same rows the generated catalogue prints
+     (2026-09-14, user: "we can just use the same table in both the doc
+     and the html"). The page's check columns are headed by three-letter
+     codes, which are compact and not guessable, so the page has to
+     carry its own key; taking it from [Canary_agreement.summary_rows]
+     rather than restating it is what stops the two from drifting.
+
+     Collapsed by default: it is a reference for a reader who meets an
+     unfamiliar code, not something to scroll past on every visit. *)
+  (* GROUPED BY ACTION, as the terminal view is: a rule down the left
+     edge of each action's first column, so a reader can see where one
+     action's pre-checks, run, result and verdicts begin and end. *)
+  let group_of c =
+    if List.mem m.check_columns c ~equal:String.equal then
+      Option.value_map (String.lsplit2 c ~on:':') ~default:c ~f:(fun (slot, _) ->
+          Option.value
+            (String.chop_suffix slot ~suffix:"_post")
+            ~default:
+              (Option.value (String.chop_suffix slot ~suffix:"_pre")
+                 ~default:slot))
+    else if List.mem m.artifact_columns c ~equal:String.equal then
+      Option.value_map (String.lsplit2 c ~on:'=') ~default:c ~f:fst
+    else c
+  in
+  let group_starts =
+    let _, acc =
+      List.fold m.columns ~init:(None, []) ~f:(fun (prev, acc) c ->
+          let g = group_of c in
+          let starts =
+            match prev with Some p -> not (String.equal p g) | None -> true
+          in
+          (Some g, if starts then c :: acc else acc))
+    in
+    acc
+  in
+  let is_group_start c = List.mem group_starts c ~equal:String.equal in
+  let check_key =
+    let rows =
+      List.filter (Canary_agreement.summary_rows ()) ~f:(fun r ->
+          List.exists m.check_columns ~f:(fun c ->
+              match String.lsplit2 c ~on:':' with
+              | Some (_, slug) ->
+                  String.equal slug r.Canary_agreement.sr_slug
+              | None -> false))
+    in
+    if List.is_empty rows then ""
+    else
+      "<table class=\"keytbl\"><thead><tr><th>code</th><th>agreement</th>\
+       <th>recovers</th><th>tool</th><th>about</th><th>status</th></tr>\
+       </thead><tbody>"
+      ^ String.concat ~sep:""
+          (List.map rows ~f:(fun r ->
+               Printf.sprintf
+                 "<tr><td class=\"kc\">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+                 (esc r.Canary_agreement.sr_code)
+                 (esc r.Canary_agreement.sr_slug)
+                 (esc
+                    (if String.is_empty r.Canary_agreement.sr_action then "—"
+                     else r.Canary_agreement.sr_action))
+                 (esc r.Canary_agreement.sr_tool)
+                 (esc r.Canary_agreement.sr_artifact)
+                 (esc r.Canary_agreement.sr_status)))
+      ^ "</tbody></table>"
+  in
   let header =
     (* the two identity columns are FROZEN (2026-08-20, user: the page is
        too wide): they stay put while the action columns scroll, so a row
@@ -1551,7 +1627,10 @@ let render_html (m : t) ~(generated_at : string) : string =
              "<th class=\"seth\">" ^ esc c ^ "</th>"))
     ^ "<th class=\"platform\">platform</th>"
     ^ String.concat ~sep:""
-        (List.map m.columns ~f:(fun c -> "<th>" ^ esc c ^ "</th>"))
+        (List.map m.columns ~f:(fun c ->
+             Printf.sprintf "<th class=\"%s\">%s</th>"
+               (if is_group_start c then "gs" else "")
+               (esc c)))
   in
   let body =
     String.concat ~sep:""
@@ -1633,10 +1712,12 @@ let render_html (m : t) ~(generated_at : string) : string =
                           List.mem m.artifact_columns tag ~equal:String.equal
                         in
                         let cls =
-                          if is_artifact then
-                            if Option.is_some c.detail then "art blamed"
-                            else "art"
-                          else cell_cls c.mark ^ if is_check then " chk" else ""
+                          (if is_artifact then
+                             if Option.is_some c.detail then "art blamed"
+                             else "art"
+                           else
+                             cell_cls c.mark ^ if is_check then " chk" else "")
+                          ^ if is_group_start tag then " gs" else ""
                         in
                         Printf.sprintf
                           "<td class=\"%s\" title=\"%s · %s · %s%s\"><span class=\"mk\">%s</span></td>"
@@ -1711,12 +1792,22 @@ td.ok { background: #dafbe1; } td.xfail { background: #fff8c5; }
 td.fail { background: #ffebe9; } td.fail .mk { font-weight: 800; }
 td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; }
 td.blank { background: #f6f8fa; }
+/* the CHECK KEY: a reference a reader opens once, not a banner. */
+details.key { margin: 0 0 .8rem; font-size: .8rem; }
+details.key summary { cursor: pointer; color: #0969da; }
+table.keytbl { border-collapse: collapse; margin-top: .5rem; }
+table.keytbl th, table.keytbl td { border: 1px solid #d0d7de; padding: .2rem .5rem; text-align: left; font-weight: 400; }
+table.keytbl th { background: #f6f8fa; font-weight: 600; }
+table.keytbl td.kc { font-family: ui-monospace, monospace; font-weight: 700; }
+/* the left edge of one action's group of columns */
+th.gs, td.gs { border-left: 2px solid #8c959f; }
 </style></head><body>
 <h1>canary result matrix</h1>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
+<details class="key"><summary>check key — what each short code means</summary>%s</details>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
-    (esc generated_at) header body
+    (esc generated_at) check_key header body
 
 (* The web file locations (the docs copy is the GH Pages view).
 

@@ -992,6 +992,22 @@ type check_slot = Canary_lang.lang -> (Canary_basic.action * stage) list
 let string_of_slot ((a, s) : Canary_basic.action * stage) : string =
   Canary_basic.string_of_action a ^ "_" ^ string_of_stage s
 
+(** THE SHORT CODE a narrow column head can carry — the initial of each
+    underscored word, so [declared_symbols_exported] is [dse]
+    (2026-09-14, user).
+
+    DERIVED, not declared, so it cannot drift from the name. The risk
+    of deriving is collision, which is why
+    [agreements.short_codes_are_unique] pins it: two agreements sharing
+    a code would make one column silently stand for the other, and the
+    thirteen happen to be distinct. A future name that collides fails
+    the pin rather than the reader. *)
+let short_code_of_slug (slug : string) : string =
+  String.split slug ~on:'_'
+  |> List.filter_map ~f:(fun w ->
+         if String.is_empty w then None else Some (String.prefix w 1))
+  |> String.concat
+
 (** The slot this world's chain actually offers for one language.
     [None] = none of the candidates is in the chain, so the agreement
     has no column there. *)

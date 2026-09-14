@@ -995,13 +995,53 @@ let agreement_named (name : string) : agreement_row option =
     and the two are indistinguishable in a flat list. That the
     unrooted rows are EXACTLY the rows with no evaluator is a finding,
     not a coincidence, and the table is where it shows. *)
+(** ONE SUMMARY ROW, rendered by more than one medium (2026-09-14,
+    user: "we can just use the same table in both the doc and the
+    html"). The generated catalogue prints these as markdown and the
+    result page prints them as its key — and the result page NEEDS a
+    key, because its check columns are headed by short codes and three
+    letters with no legend is a puzzle rather than a table.
+
+    Sharing the rows rather than the rendered text is what keeps the
+    two honest: a markdown table pasted into a web page would drift the
+    first time either changed. *)
+type summary_row = {
+  sr_code : string;  (** the short code a narrow column head carries *)
+  sr_slug : string;
+  sr_action : string;  (** whose rule; "" when no tool's rule roots it *)
+  sr_tool : string;
+  sr_artifact : string;
+  sr_slot : string;  (** where a reader looks for it, OCaml's spelling *)
+  sr_status : string;
+  sr_note : string;  (** for an unrooted row, why there is no rule *)
+}
+
+let summary_rows () : summary_row list =
+  List.map agreement_registry ~f:(fun r ->
+      let rt = r.ag.ag_rooted_in in
+      { sr_code = short_code_of_slug r.ag_slug;
+        sr_slug = r.ag_slug;
+        sr_action = rt.rt_action;
+        sr_tool = rt.rt_tool;
+        sr_artifact = rt.rt_artifact;
+        (* the OCaml slot stands for the row: the actions are
+           per-language but the SHAPE is not, and printing both would
+           double every cell to say the same thing twice. The record
+           prints every language. *)
+        sr_slot =
+          String.concat ~sep:" → "
+            (List.map (r.ag.ag_slot Canary_lang.OCaml) ~f:string_of_slot);
+        sr_status = string_of_status (status_of_row r);
+        sr_note = rt.rt_note })
+
 let pp_rooting_table_md () : string =
   let b = Buffer.create 4096 in
   let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
   let rooted_rows, unrooted_rows =
-    ( List.filter agreement_registry ~f:(fun r -> is_rooted r.ag.ag_rooted_in),
-      List.filter agreement_registry ~f:(fun r ->
-          not (is_rooted r.ag.ag_rooted_in)) )
+    ( List.filter (summary_rows ()) ~f:(fun r ->
+          not (String.is_empty r.sr_action)),
+      List.filter (summary_rows ()) ~f:(fun r ->
+          String.is_empty r.sr_action) )
   in
   add
     "## What each agreement recovers\n\n\
@@ -1016,31 +1056,20 @@ let pp_rooting_table_md () : string =
      type would be a lie in both directions; drawing them needs the \
      action-unit view, which is deferred in [`registry.md`](registry.md) \
      §7.4.3.\n\n";
-  add "| agreement | action | tool | artifact | checked at | status |\n";
-  add "| --- | --- | --- | --- | --- | --- |\n";
+  add "| code | agreement | action | tool | artifact | checked at | status |\n";
+  add "| --- | --- | --- | --- | --- | --- | --- |\n";
   List.iter rooted_rows ~f:(fun r ->
-      let rt = r.ag.ag_rooted_in in
       (* backtick only what the action type actually parses, so the
          column distinguishes an action in this graph from prose
          standing in for one that is not *)
       let action =
-        match Canary_basic.action_of_string rt.rt_action with
-        | Some _ -> "`" ^ rt.rt_action ^ "`"
-        | None -> rt.rt_action
+        match Canary_basic.action_of_string r.sr_action with
+        | Some _ -> "`" ^ r.sr_action ^ "`"
+        | None -> r.sr_action
       in
-      (* the OCaml slot stands for the row: the actions are
-         per-language but the SHAPE is not, and printing both would
-         double every cell to say the same thing twice. The record
-         prints every language. *)
-      let slot =
-        String.concat ~sep:" → "
-          (List.map
-             (r.ag.ag_slot Canary_lang.OCaml)
-             ~f:(fun s -> "`" ^ string_of_slot s ^ "`"))
-      in
-      add "| [`%s`](#%s) | %s | %s | %s | %s | %s |\n" r.ag_slug r.ag_slug action
-        rt.rt_tool rt.rt_artifact slot
-        (string_of_status (status_of_row r)));
+      add "| `%s` | [`%s`](#%s) | %s | %s | %s | `%s` | %s |\n" r.sr_code
+        r.sr_slug r.sr_slug action r.sr_tool r.sr_artifact r.sr_slot
+        r.sr_status);
   add
     "\n### Rooted in no action's rule\n\n\
      These %d are not checks waiting on evidence. No toolchain enforces \
@@ -1048,12 +1077,11 @@ let pp_rooting_table_md () : string =
      exactly the rows with no evaluator, which is what tells \"nobody \
      implemented this\" apart from \"nobody has said what it means\".\n\n"
     (List.length unrooted_rows);
-  add "| agreement | why there is no rule | status |\n";
-  add "| --- | --- | --- |\n";
+  add "| code | agreement | why there is no rule | status |\n";
+  add "| --- | --- | --- | --- |\n";
   List.iter unrooted_rows ~f:(fun r ->
-      add "| [`%s`](#%s) | %s | %s |\n" r.ag_slug r.ag_slug
-        r.ag.ag_rooted_in.rt_note
-        (string_of_status (status_of_row r)));
+      add "| `%s` | [`%s`](#%s) | %s | %s |\n" r.sr_code r.sr_slug r.sr_slug
+        r.sr_note r.sr_status);
   Buffer.contents b
 
 (** The generated catalogue: every agreement's full record, as

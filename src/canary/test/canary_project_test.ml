@@ -1681,6 +1681,22 @@ let agreement_fixture_tests : pure_test list =
        repack_preserves_api and repack_complete have no evaluator, so
        there is nothing to falsify — a fixture for them would be a
        fixture for the placeholder. *)
+    (* A SHORT CODE STANDS FOR A NAME, so two names must not share one
+       (2026-09-14). The result table heads its check columns with
+       these, and a collision would make one column silently mean
+       another agreement — the reader would have no way to tell. The
+       code is DERIVED from the slug, so this is the price of not
+       having to declare it. *)
+    { name = "agreements.short_codes_are_unique";
+      check = (fun () ->
+          let codes =
+            List.map CR.agreement_registry ~f:(fun r ->
+                C.short_code_of_slug r.CR.ag_slug)
+          in
+          List.for_all codes ~f:(fun c -> not (String.is_empty c))
+          && List.length
+               (List.dedup_and_sort codes ~compare:String.compare)
+             = List.length codes) };
     { name = "agreements.fixtures_complete";
       check = (fun () ->
           Poly.equal covered
