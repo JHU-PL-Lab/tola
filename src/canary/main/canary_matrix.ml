@@ -1615,10 +1615,43 @@ let render_html (m : t) ~(generated_at : string) : string =
               | Some (_, code) -> String.equal code r.Canary_agreement.sr_code
               | None -> false))
     in
+    (* WHAT THESE ROWS DECIDED, counted off the table itself
+       (2026-09-14, user: "now all the agreement check are evaluated?
+       it doesn't match the previous number").
+
+       The column here used to be [status], and it was tautological:
+       the key lists only agreements that CAN be decided — that is the
+       filter above — and then said of each that it was "evaluated".
+       Worse, it read as the landing count and disagreed with it,
+       because the two are different halves. [status] answers "does an
+       evaluator exist", which is a fact about the code;
+       [canary checks --landing] answers "did a real run decide it",
+       which is a fact about runs, and only the second belongs beside a
+       table of runs.
+
+       Counted from the rendered cells rather than re-read from the
+       logs, so the key cannot disagree with the table it explains: if
+       a reader can see eight ticks in the [dse] column, the key says
+       eight. *)
+    let tally code =
+      let held = ref 0 and broke = ref 0 in
+      List.iter m.rows ~f:(fun (rr : row) ->
+          List.iter rr.cells ~f:(fun (tag, cell) ->
+              match (String.lsplit2 tag ~on:':', cell) with
+              | Some (_, c), Some cc when String.equal c code ->
+                  if String.equal cc.mark "✓" then Int.incr held
+                  else if String.equal cc.mark "✗" then Int.incr broke
+              | _ -> ()));
+      match (!held, !broke) with
+      | 0, 0 -> "<span class=\"kq\">not decided in any row</span>"
+      | h, 0 -> Printf.sprintf "%d ✓" h
+      | 0, b -> Printf.sprintf "%d ✗" b
+      | h, b -> Printf.sprintf "%d ✓ · %d ✗" h b
+    in
     if List.is_empty rows then ""
     else
       "<table class=\"keytbl\"><thead><tr><th>code</th><th>agreement</th>\
-       <th>recovers</th><th>tool</th><th>about</th><th>status</th></tr>\
+       <th>recovers</th><th>tool</th><th>about</th><th>decided here</th></tr>\
        </thead><tbody>"
       ^ String.concat ~sep:""
           (List.map rows ~f:(fun r ->
@@ -1631,7 +1664,7 @@ let render_html (m : t) ~(generated_at : string) : string =
                      else r.Canary_agreement.sr_action))
                  (esc r.Canary_agreement.sr_tool)
                  (esc r.Canary_agreement.sr_artifact)
-                 (esc r.Canary_agreement.sr_status)))
+                 (tally r.Canary_agreement.sr_code)))
       ^ "</tbody></table>"
   in
   let header =
@@ -1825,6 +1858,7 @@ table.keytbl { border-collapse: collapse; margin-top: .5rem; }
 table.keytbl th, table.keytbl td { border: 1px solid #d0d7de; padding: .2rem .5rem; text-align: left; font-weight: 400; }
 table.keytbl th { background: #f6f8fa; font-weight: 600; }
 table.keytbl td.kc { font-family: ui-monospace, monospace; font-weight: 700; }
+span.kq { color: #8c959f; }
 /* the left edge of one action's group of columns — on EVERY cell in
    the column including the blanks, so it reads as a rule down the
    table rather than a scatter of ticks. Thin, because it separates
