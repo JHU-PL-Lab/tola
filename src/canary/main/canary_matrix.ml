@@ -609,7 +609,20 @@ let compare_column (x : Canary_basic.action) (y : Canary_basic.action) : int =
     always avoided. *)
 type col =
   | Act of Canary_basic.action
-  | Check of Canary_basic.action * Canary_agreement_common.stage
+  | Check of Canary_basic.action * Canary_agreement_common.stage * string
+      (** ONE AGREEMENT PER COLUMN (2026-09-14, user: "not 2/3 in one
+          cell, but one check per cell"). The aggregate cell said two
+          of the three claims here reached a verdict and would not say
+          WHICH — so a reader who wanted the answer had to hover, and a
+          reader scanning a column could not compare rows.
+
+          The cost is width, and it is paid down by only giving a
+          column to a claim that can actually be decided at that point:
+          one with an evaluator, applicable in at least one of the
+          project's worlds. A planned agreement would be a column of
+          dots forever, and a claim the mechanism cannot carry — three
+          of the six at an OCaml cstubs probe — would be a column of
+          [not_applicable]. Neither is worth 14 characters. *)
   | Artifact of Canary_basic.action
       (** WHAT THE ACTION LEFT BEHIND (2026-09-14, user). The chain
           reads [action, artifact, action, artifact …] and until now
@@ -625,18 +638,34 @@ type col =
 
 let label_of_col = function
   | Act a -> Canary_basic.string_of_action a
-  | Check (a, s) -> Canary_agreement_common.string_of_slot (a, s)
-  | Artifact a -> Canary_basic.string_of_action a ^ "_out"
+  | Check (a, s, slug) ->
+      Canary_agreement_common.string_of_slot (a, s) ^ ":" ^ slug
+  | Artifact a ->
+      (* NAMES THE ARTIFACT, not another stage (2026-09-14, user asked
+         when [build_lib_out] "runs" — it does not, and a label that
+         reads like a stage suffix beside [build_lib_post] invited
+         exactly that). A check column is a verdict; this is a THING,
+         so the label says which thing: [build_lib=lib] reads as "and
+         build_lib produced the lib".
 
-let action_of_col = function Act a | Check (a, _) | Artifact a -> a
+         The action stays in the label because it is what makes the
+         column UNIQUE — two actions can produce the same kind
+         ([build_lib] and [fetch_lib] both yield [Lib]) and the cells
+         are keyed by label. *)
+      Canary_basic.string_of_action a ^ "="
+      ^ (match Canary_action.produces_of_action a with
+        | k :: _ -> kind_label k
+        | [] -> "?")
+
+let action_of_col = function Act a | Check (a, _, _) | Artifact a -> a
 
 (** [pre], the action, [post], then what it made — one action's columns
     in the order they mean: what it needs, the run, the verdict on the
     result, the result. *)
 let col_rank = function
-  | Check (_, Canary_agreement_common.Pre) -> 0
+  | Check (_, Canary_agreement_common.Pre, _) -> 0
   | Act _ -> 1
-  | Check (_, Canary_agreement_common.Post) -> 2
+  | Check (_, Canary_agreement_common.Post, _) -> 2
   | Artifact _ -> 3
 
 let compare_col (x : col) (y : col) : int =
@@ -689,14 +718,41 @@ let langs_of_chain (chain : Canary_basic.action list) : Canary_lang.lang list =
     for each language the chain mentions. An agreement whose candidates
     are all absent contributes nothing — which is how a project that
     builds no app avoids a [build_app_ocaml_pre] column. *)
-let check_cols_of_chain (chain : Canary_basic.action list) : col list =
+let check_cols_of_chain (chain : Canary_basic.action list)
+    ~(worlds : Canary_artifact.assignment list) : col list =
   List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
-      List.filter_map (langs_of_chain chain) ~f:(fun lang ->
-          Option.map
-            (Canary_agreement_common.slot_in_chain
-               r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
-               ~chain)
-            ~f:(fun (a, s) -> Check (a, s))))
+      List.concat_map (langs_of_chain chain) ~f:(fun lang ->
+          let mech =
+            Option.value
+              (Canary_mechanism.default_mechanism_of_lang lang)
+              ~default:Canary_mechanism.Cstubs
+          in
+          (* CAN THIS CLAIM BE DECIDED HERE AT ALL? Two filters, and
+             both are about not spending a column on a cell that can
+             never say anything. A method with no evaluator reports
+             [not_implemented] forever; a method the mechanism cannot
+             carry reports [not_applicable] in every world this project
+             has. Applicability is asked of EVERY world, not a
+             representative one — [staged_interface_preserved] applies
+             only where the lib is Installed, and a Built representative
+             would have dropped it. *)
+          let decidable =
+            List.exists r.Canary_agreement.ag.Canary_agreement_common.ag_methods
+              ~f:(fun m ->
+                Option.is_some m.Canary_agreement_common.m_eval
+                && List.exists worlds ~f:(fun w ->
+                       match m.Canary_agreement_common.m_applicable mech lang w with
+                       | Canary_agreement_common.Applicable -> true
+                       | Canary_agreement_common.Inapplicable _ -> false))
+          in
+          if not (decidable && r.Canary_agreement.ag_enabled) then []
+          else
+            Option.to_list
+              (Option.map
+                 (Canary_agreement_common.slot_in_chain
+                    r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
+                    ~chain)
+                 ~f:(fun (a, s) -> Check (a, s, r.Canary_agreement.ag_slug)))))
   |> List.dedup_and_sort ~compare:Stdlib.compare
 
 (** WHICH ACTIONS LEAVE AN INSPECTABLE ARTIFACT — an action that
@@ -847,137 +903,107 @@ let mark_of_outcome = function
   | "holds" -> "✓"
   | _ -> "·"
 
-(** One check cell: the worst outcome as the mark, [decided/slotted] as
-    the annotation, and the per-agreement list as the tooltip.
+(** ONE CELL, ONE CLAIM (2026-09-14, user). The cell used to aggregate
+    every agreement slotted at a point and report [2/3] — which said
+    how many had been decided and would not say which, so the answer
+    was always one hover away and two rows could not be compared by
+    eye. A column is one agreement at one slot now, and the cell is
+    that agreement's outcome.
 
-    The DENOMINATOR is what the registry slots here, not what the log
-    happened to mention — so a cell reading [2/6] says plainly that six
-    claims belong at this point and two of them reached a verdict. A
-    cell that only counted what ran would read [2/2] and look like full
-    coverage, which is the reporting failure this whole layer exists to
-    avoid. *)
+    [None] when the claim was never observed in any recorded run, which
+    the caller renders as a dot: the column still exists, because its
+    existence says the claim BELONGS here, and that is true whether or
+    not anything has run. *)
 let check_cell ~(chain : Canary_basic.action list)
     ~(obs : Canary_status.agreement_obs list)
     ~(world : Canary_artifact.assignment)
     ~(declared : Canary_artifact.t option) (a : Canary_basic.action)
-    (s : Canary_agreement_common.stage) :
-    (cell * (Canary_basic.artifact_kind * string) list) option =
-  let slotted =
-    List.filter_map Canary_agreement.agreement_registry ~f:(fun r ->
-        let here =
-          List.exists (langs_of_chain chain) ~f:(fun lang ->
-              match
-                Canary_agreement_common.slot_in_chain
-                  r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
-                  ~chain
-              with
-              | Some (a', s') -> Poly.equal a' a && Poly.equal s' s
-              | None -> false)
-        in
-        if here then Some r.Canary_agreement.ag_slug else None)
+    (s : Canary_agreement_common.stage) (slug : string) :
+    cell * (Canary_basic.artifact_kind * string) list =
+  (* an observation belongs to THIS column when its agreement slots
+     here under the language its own step tag speaks for — the slot is
+     where a claim is read, the tag is where it was evaluated, and for
+     a consumer-side claim those differ by design *)
+  let mine =
+    List.filter obs ~f:(fun (o : Canary_status.agreement_obs) ->
+        String.equal o.Canary_status.ao_agreement slug
+        &&
+        let lang = lang_of_tag ~chain o.Canary_status.ao_tag in
+        match Canary_agreement.agreement_named slug with
+        | None -> false
+        | Some r -> (
+            match
+              Canary_agreement_common.slot_in_chain
+                r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
+                ~chain
+            with
+            | Some (a', s') -> Poly.equal a' a && Poly.equal s' s
+            | None -> false))
   in
-  if List.is_empty slotted then None
-  else begin
-    (* each observation routes to ITS OWN column: the slot is where a
-       claim is read, the tag is where it was evaluated, and for a
-       consumer-side claim those differ by design *)
-    let mine =
-      List.filter obs ~f:(fun (o : Canary_status.agreement_obs) ->
-          List.mem slotted o.Canary_status.ao_agreement ~equal:String.equal
-          &&
-          let lang = lang_of_tag ~chain o.Canary_status.ao_tag in
-          match Canary_agreement.agreement_named o.Canary_status.ao_agreement with
-          | None -> false
-          | Some r -> (
-              match
-                Canary_agreement_common.slot_in_chain
-                  r.Canary_agreement.ag.Canary_agreement_common.ag_slot ~lang
-                  ~chain
-              with
-              | Some (a', s') -> Poly.equal a' a && Poly.equal s' s
-              | None -> false))
-    in
-    (* one outcome per agreement — worst of its methods and sites *)
-    let per_agreement =
-      List.map slotted ~f:(fun slug ->
-          let best =
-            List.filter mine ~f:(fun o ->
-                String.equal o.Canary_status.ao_agreement slug)
-            |> List.fold ~init:"" ~f:(fun acc o ->
-                   if outcome_rank o.Canary_status.ao_outcome > outcome_rank acc
-                   then o.Canary_status.ao_outcome
-                   else acc)
-          in
-          (slug, best))
-    in
-    let decided =
-      List.count per_agreement ~f:(fun (_, o) ->
-          String.equal o "holds" || String.equal o "violated")
-    in
-    let worst =
-      List.fold per_agreement ~init:"" ~f:(fun acc (_, o) ->
-          if outcome_rank o > outcome_rank acc then o else acc)
-    in
-    let observed = List.filter per_agreement ~f:(fun (_, o) ->
-        not (String.is_empty o))
-    in
-    let c =
-      { mark = (if List.is_empty observed then "·" else mark_of_outcome worst);
-        provision =
-          Printf.sprintf "%d/%d" decided (List.length slotted);
-        detail =
-          (if List.is_empty observed then
-             Some
-               (Printf.sprintf "%s — not evaluated in any recorded run"
-                  (String.concat ~sep:", " slotted))
-           else
-             Some
-               (String.concat ~sep:"; "
-                  (List.map per_agreement ~f:(fun (slug, o) ->
-                       slug ^ ": "
-                       ^ (if String.is_empty o then "not evaluated" else o)))))
-      }
-    in
-    (* WHAT A VIOLATION HERE WAS READING. Only violations implicate:
-       an [unavailable] read nothing and a [holds] found nothing wrong,
-       so neither has an artifact to point at. The evidence is asked
-       for with THIS column's language, which is the one its action
-       names. *)
-    let lang =
-      match a with
-      | Canary_basic.Build_binding l
-      | Canary_basic.Probe_binding l
-      | Canary_basic.Build_app { lang = l } ->
-          l
-      | _ -> List.hd_exn (langs_of_chain chain)
-    in
-    let implicated =
-      List.concat_map per_agreement ~f:(fun (slug, o) ->
-          if not (String.equal o "violated") then []
-          else
-            match Canary_agreement.agreement_named slug with
-            | None -> []
-            | Some r ->
-                List.concat_map
-                  r.Canary_agreement.ag.Canary_agreement_common.ag_methods
-                  ~f:(fun m ->
-                    List.filter_map
-                      (m.Canary_agreement_common.m_inputs
-                         { Canary_agreement_common.ac_mechanism =
-                             Option.value
-                               (Canary_mechanism.default_mechanism_of_lang lang)
-                               ~default:Canary_mechanism.Cstubs;
-                           ac_lang = lang;
-                           ac_world = world;
-                           ac_declared = declared })
-                      ~f:(fun i ->
-                        Option.map
-                          (Canary_agreement_common.artifact_of_input ~lang i)
-                          ~f:(fun k -> (k, slug)))))
-      |> List.dedup_and_sort ~compare:Stdlib.compare
-    in
-    Some (c, implicated)
-  end
+  (* worst of this claim's methods and firing sites — a finding cannot
+     be lost to a later [unavailable] *)
+  let outcome =
+    List.fold mine ~init:"" ~f:(fun acc o ->
+        if outcome_rank o.Canary_status.ao_outcome > outcome_rank acc then
+          o.Canary_status.ao_outcome
+        else acc)
+  in
+  let c =
+    { mark = mark_of_outcome outcome;
+      provision = "";
+      detail =
+        Some
+          (slug ^ ": "
+          ^ (if String.is_empty outcome then
+               "not evaluated in any recorded run"
+             else
+               (* the reason, where the log carried one — "unavailable"
+                  alone never told anybody what was missing *)
+               match
+                 List.find mine ~f:(fun o ->
+                     String.equal o.Canary_status.ao_outcome outcome)
+               with
+               | Some o ->
+                   outcome ^ " (at " ^ o.Canary_status.ao_tag ^ ")"
+               | None -> outcome)) }
+  in
+  (* WHAT A VIOLATION WAS READING. Only a violation implicates: an
+     [unavailable] read nothing and a [holds] found nothing wrong, so
+     neither has an artifact to point at. The evidence is asked for
+     with THIS column's language, which is the one its action names. *)
+  let lang =
+    match a with
+    | Canary_basic.Build_binding l
+    | Canary_basic.Probe_binding l
+    | Canary_basic.Build_app { lang = l } ->
+        l
+    | _ -> List.hd_exn (langs_of_chain chain)
+  in
+  let implicated =
+    if not (String.equal outcome "violated") then []
+    else
+      match Canary_agreement.agreement_named slug with
+      | None -> []
+      | Some r ->
+          List.concat_map
+            r.Canary_agreement.ag.Canary_agreement_common.ag_methods
+            ~f:(fun m ->
+              List.filter_map
+                (m.Canary_agreement_common.m_inputs
+                   { Canary_agreement_common.ac_mechanism =
+                       Option.value
+                         (Canary_mechanism.default_mechanism_of_lang lang)
+                         ~default:Canary_mechanism.Cstubs;
+                     ac_lang = lang;
+                     ac_world = world;
+                     ac_declared = declared })
+                ~f:(fun i ->
+                  Option.map
+                    (Canary_agreement_common.artifact_of_input ~lang i)
+                    ~f:(fun k -> (k, slug))))
+          |> List.dedup_and_sort ~compare:Stdlib.compare
+  in
+  (c, implicated)
 
 let matrix_of (projects : (string * Canary_project_run.project_run) list) :
     t =
@@ -995,8 +1021,9 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
           | w :: _ -> Some w
           | [] -> None
         in
+        let worlds = Canary_project_run.scenarios_of pr in
         List.map acts ~f:(fun a -> Act a)
-        @ check_cols_of_chain acts
+        @ check_cols_of_chain acts ~worlds
         @ (match world with
            | None -> []
            | Some w -> artifact_cols_of_chain acts ~world:w ~declared))
@@ -1066,12 +1093,12 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
             let check_cells =
               List.filter_map cols ~f:(fun col ->
                   match col with
-                  | Check (ca, cs)
+                  | Check (ca, cs, slug)
                     when List.mem chain_acts ca ~equal:Poly.equal ->
-                      Option.map
-                        (check_cell ~chain:chain_acts ~obs:scenario_obs
-                           ~world:a ~declared ca cs)
-                        ~f:(fun r -> (label_of_col col, r))
+                      Some
+                        ( label_of_col col,
+                          check_cell ~chain:chain_acts ~obs:scenario_obs
+                            ~world:a ~declared ca cs slug )
                   | _ -> None)
             in
             let implicated_kinds =
@@ -1293,11 +1320,30 @@ let pp_text (m : t) : unit =
               always adjacent to the action it names, so repeating
               [probe_binding_python] in the header buys nothing and
               costs 20 columns of width *)
+           (* A CHECK column is one agreement, and its full label
+              ([probe_binding_ocaml_pre:required_symbols_exported]) is
+              far too wide for a terminal. The action is adjacent, so
+              the header carries the STAGE and the agreement's
+              initials: »pre·rse. The initials are unique across the
+              thirteen, and the legend below names them. *)
+           let initials slug =
+             String.split slug ~on:'_'
+             |> List.filter_map ~f:(fun w ->
+                    if String.is_empty w then None
+                    else Some (String.sub w ~pos:0 ~len:1))
+             |> String.concat
+           in
            let header tag =
              if List.mem m.check_columns tag ~equal:String.equal then
-               if String.is_suffix tag ~suffix:"_post" then "»post" else "»pre"
+               match String.lsplit2 tag ~on:':' with
+               | Some (slot, slug) ->
+                   (if String.is_suffix slot ~suffix:"_post" then "»" else "›")
+                   ^ initials slug
+               | None -> tag
              else if List.mem m.artifact_columns tag ~equal:String.equal then
-               "⇒out"
+               match String.lsplit2 tag ~on:'=' with
+               | Some (_, kind) -> "=" ^ kind
+               | None -> tag
              else tag
            in
            Fmt.pr "@.%s — %d scenario(s)@." r.project (List.length group);
@@ -1350,6 +1396,29 @@ let pp_text (m : t) : unit =
                  (String.concat ~sep:"" cells))));
   let total = List.length m.rows in
   Fmt.pr "@.legend: ✓ done · not run ⊘ blocked xfail[cN] expected failure (cN confirming contracts) ✗ failed@.";
+  (* the CHECK legend, printed only when there are check columns to
+     explain. The initials are unambiguous but not guessable, and a
+     three-letter column head with no key is a puzzle rather than a
+     table. [›] is a requirement the next action depends on, [»] a
+     verdict on what the last one made, [=] the artifact itself. *)
+  (if not (List.is_empty m.check_columns) then
+     let seen =
+       List.filter_map m.check_columns ~f:(fun c ->
+           Option.map (String.lsplit2 c ~on:':') ~f:snd)
+       |> List.dedup_and_sort ~compare:String.compare
+     in
+     let initials slug =
+       String.split slug ~on:'_'
+       |> List.filter_map ~f:(fun w ->
+              if String.is_empty w then None
+              else Some (String.sub w ~pos:0 ~len:1))
+       |> String.concat
+     in
+     Fmt.pr
+       "checks: › needed before the action  » verdict on what it made  = the \
+        artifact@.        %s@."
+       (String.concat ~sep:"  "
+          (List.map seen ~f:(fun s -> initials s ^ "=" ^ s))));
   Fmt.pr "%d scenario(s) across %d project(s)@." total
     (List.length (List.dedup_and_sort ~compare:String.compare (List.map m.rows ~f:(fun r -> r.project))))
 
@@ -1644,7 +1713,7 @@ td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; 
 td.blank { background: #f6f8fa; }
 </style></head><body>
 <h1>canary result matrix</h1>
-<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). The <b>_pre</b> and <b>_post</b> columns are AGREEMENT CHECKS, placed either side of the action they speak for: _pre states what that action needs, _post validates what it made. Their mark is the worst outcome of the claims that belong there and the count is how many of them a real run decided — <b>2/6</b> means six claims belong at that point and two reached a verdict. Hover for the per-agreement list. The <b>_out</b> columns are what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count), and they turn red when a check that read them failed — so a finding names both the claim that broke and the artifact it was about.</div>
+<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
     (esc generated_at) header body

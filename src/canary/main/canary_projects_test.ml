@@ -3821,53 +3821,50 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
           Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
             ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
         in
-        let cell obs =
+        let cell obs slug =
           Canary_matrix.check_cell ~chain ~obs ~world ~declared:None
             (Canary_basic.Probe_binding Canary_lang.OCaml)
-            Canary_agreement_common.Pre
+            Canary_agreement_common.Pre slug
         in
-        let bad_cell =
+        let good, _ =
+          cell [ ob "required_symbols_exported" "holds" ]
+            "required_symbols_exported"
+        in
+        let na, na_impl =
+          cell [ ob "soname_matches_requirement" "not_applicable" ]
+            "soname_matches_requirement"
+        in
+        let bad, bad_impl =
           cell
             [ ob "required_symbols_exported" "holds";
               ob "required_symbols_exported" "violated" ]
+            "required_symbols_exported"
         in
-        match
-          ( cell
-              [ ob "required_symbols_exported" "holds";
-                ob "api_names_present" "holds";
-                ob "soname_matches_requirement" "not_applicable" ],
-            bad_cell,
-            cell [] )
-        with
-        | Some (good, _), Some (bad, bad_impl), Some (silent, silent_impl) ->
-            (* (a) six claims belong at the OCaml probe's pre slot, and
-               the denominator says so whatever the log holds *)
-            String.equal good.Canary_matrix.provision "2/6"
-            && String.equal silent.Canary_matrix.provision "0/6"
-            && String.equal good.Canary_matrix.mark "✓"
-            (* (b) the violation wins *)
-            && String.equal bad.Canary_matrix.mark "✗"
-            (* (c) evaluated-but-undecided is not silence *)
-            && Option.value_map good.Canary_matrix.detail ~default:false
-                 ~f:(fun d ->
-                   String.is_substring d
-                     ~substring:"soname_matches_requirement: not_applicable")
-            && Option.value_map silent.Canary_matrix.detail ~default:false
-                 ~f:(fun d -> String.is_substring d ~substring:"not evaluated")
-            (* (d) a VIOLATION implicates the artifacts its evidence
-               named, and nothing else does. required_symbols_exported
-               is a PEER comparison — the stub and the library — so it
-               implicates two artifacts and blames neither. A cell with
-               no violation implicates nothing at all. *)
-            && List.is_empty silent_impl
-            && Poly.equal
-                 (List.map bad_impl ~f:fst
-                 |> List.dedup_and_sort ~compare:Stdlib.compare)
-                 [ Canary_basic.Lib;
-                   Canary_basic.Binding Canary_lang.OCaml ]
-            && List.for_all bad_impl ~f:(fun (_, slug) ->
-                   String.equal slug "required_symbols_exported")
-        | _ -> false) }
+        let silent, silent_impl = cell [] "required_symbols_exported" in
+        (* (a) one cell, one claim — its own outcome, not a count *)
+        String.equal good.Canary_matrix.mark "✓"
+        && String.equal silent.Canary_matrix.mark "·"
+        (* (b) the violation wins over a pass at another firing site *)
+        && String.equal bad.Canary_matrix.mark "✗"
+        (* (c) evaluated-but-undecided is not silence: not_applicable
+           reads as itself, never as "not evaluated" *)
+        && String.equal na.Canary_matrix.mark "·"
+        && Option.value_map na.Canary_matrix.detail ~default:false ~f:(fun d ->
+               String.is_substring d ~substring:"not_applicable")
+        && Option.value_map silent.Canary_matrix.detail ~default:false
+             ~f:(fun d -> String.is_substring d ~substring:"not evaluated")
+        (* (d) a VIOLATION implicates the artifacts its evidence named,
+           and nothing else does. required_symbols_exported is a PEER
+           comparison — the stub and the library — so it implicates two
+           artifacts and blames neither. *)
+        && List.is_empty silent_impl
+        && List.is_empty na_impl
+        && Poly.equal
+             (List.map bad_impl ~f:fst
+             |> List.dedup_and_sort ~compare:Stdlib.compare)
+             [ Canary_basic.Lib; Canary_basic.Binding Canary_lang.OCaml ]
+        && List.for_all bad_impl ~f:(fun (_, slug) ->
+               String.equal slug "required_symbols_exported")) }
 
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
@@ -4077,24 +4074,46 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
              (String.concat ~sep:"," m.Canary_matrix.columns)
              (String.concat ~sep:","
                 [ "fetch_source"; "configure"; "scan_sources";
-                  "build_headers"; "build_lib"; "build_lib_post";
-                  "build_lib_out"; "install_lib"; "install_lib_post";
-                  "install_lib_out"; "fetch_lib"; "probe_lib";
+                  "build_headers"; "build_lib";
+                  "build_lib_post:declared_symbols_exported";
+                  "build_lib_post:declared_versions_exported";
+                  "build_lib_post:soname_matches_declaration";
+                  "build_lib=lib"; "install_lib";
+                  "install_lib_post:staged_interface_preserved";
+                  "install_lib=lib"; "fetch_lib"; "probe_lib";
                   (* the off-tree binding-source fetch (2026-08-19): the
                      column appears now that zarith declares its binding's
                      repo as [Binding_source ocaml], and the order key puts
                      it at the FRONT of the ocaml block *)
-                  "fetch_binding_source_ocaml"; "build_binding_ocaml_pre";
-                  "build_binding_ocaml"; "build_binding_ocaml_post";
-                  "build_binding_ocaml_out"; "fetch_binding_ocaml";
-                  "fetch_binding_ocaml_out"; "pack_binding_ocaml";
-                  "probe_binding_ocaml_pre"; "probe_binding_ocaml";
+                  "fetch_binding_source_ocaml";
+                  (* OCAML CSTUBS drops three of the six consumer-side
+                     claims: a [.a] archive records no NEEDED and no
+                     symbol versions, so identity, versioned-reference
+                     and dependency claims are [not_applicable] in
+                     every world this project has and get no column.
+                     The Python block below keeps all three, because a
+                     compiled extension is a shared object that records
+                     both — the same registry, two mechanisms, two
+                     column sets. *)
+                  "build_binding_ocaml_pre:required_symbols_exported";
+                  "build_binding_ocaml_pre:signatures_agree";
+                  "build_binding_ocaml"; "build_binding_ocaml=ocaml";
+                  "fetch_binding_ocaml"; "fetch_binding_ocaml=ocaml";
+                  "pack_binding_ocaml";
+                  "probe_binding_ocaml_pre:api_names_present";
+                  "probe_binding_ocaml_pre:required_symbols_exported";
+                  "probe_binding_ocaml_pre:signatures_agree";
+                  "probe_binding_ocaml";
                   (* NOT build_app_ocaml_pre: no registry project
                      declares [build_app], so [api_names_present]'s
                      first candidate is absent from every chain and it
                      falls through to the probe — which is the
                      candidate list doing its job. *)
-                  "probe_binding_ocaml_post"; "probe_app_ocaml";
+                  (* no [_post] column on any binding: all three
+                     claims that slot there — behavior_matches and the
+                     repacking pair — are planned, and a column of
+                     dots forever is worse than no column *)
+                  "probe_app_ocaml";
                   (* fetch_binding_python appeared 2026-09-12 when sqlite
                      declared a DUMMY install for CPython's stdlib
                      sqlite3 — the step that stands for a binding the
@@ -4102,11 +4121,18 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                      somewhere to look for its surface inspection. The
                      order key puts it in the python block beside its
                      OCaml twin. *)
-                  "build_binding_python_pre"; "build_binding_python";
-                  "build_binding_python_post"; "build_binding_python_out";
-                  "fetch_binding_python"; "fetch_binding_python_out";
-                  "probe_binding_python_pre"; "probe_binding_python";
-                  "probe_binding_python_post" ])
+                  "build_binding_python_pre:dependencies_provided";
+                  "build_binding_python_pre:required_symbols_exported";
+                  "build_binding_python_pre:required_versions_exported";
+                  "build_binding_python_pre:soname_matches_requirement";
+                  "build_binding_python"; "build_binding_python=py";
+                  "fetch_binding_python"; "fetch_binding_python=py";
+                  "probe_binding_python_pre:api_names_present";
+                  "probe_binding_python_pre:dependencies_provided";
+                  "probe_binding_python_pre:required_symbols_exported";
+                  "probe_binding_python_pre:required_versions_exported";
+                  "probe_binding_python_pre:soname_matches_requirement";
+                  "probe_binding_python" ])
         (* the OFF-TREE binding-source slot (2026-08-18, user): the
            order key places fetch_binding_source at the FRONT of its
            language's block — the column appears once a project wires
