@@ -639,7 +639,14 @@ type col =
 let label_of_col = function
   | Act a -> Canary_basic.string_of_action a
   | Check (a, s, slug) ->
-      Canary_agreement_common.string_of_slot (a, s) ^ ":" ^ slug
+      (* THE SHORT CODE IS THE NAME (2026-09-14, user), not a terminal
+         abbreviation of a longer one. [build_lib_post:dse] is exactly
+         as unique as [build_lib_post:declared_symbols_exported] — the
+         slot already disambiguates — so carrying both meant one column
+         had two names, and which you saw depended on the renderer.
+         One name, in every medium, with the key explaining it. *)
+      Canary_agreement_common.string_of_slot (a, s) ^ ":"
+      ^ Canary_agreement_common.short_code_of_slug slug
   | Artifact a ->
       (* NAMES THE ARTIFACT, not another stage (2026-09-14, user asked
          when [build_lib_out] "runs" — it does not, and a label that
@@ -1327,12 +1334,15 @@ let pp_text (m : t) : unit =
               the header carries the STAGE and the agreement's
               initials: »pre·rse. The initials are unique across the
               thirteen, and the legend below names them. *)
+           (* the terminal drops only the ACTION half — it is the
+              column immediately to the left — and keeps the code, which
+              is already the name *)
            let header tag =
              if List.mem m.check_columns tag ~equal:String.equal then
                match String.lsplit2 tag ~on:':' with
-               | Some (slot, slug) ->
+               | Some (slot, code) ->
                    (if String.is_suffix slot ~suffix:"_post" then "»" else "›")
-                   ^ Canary_agreement_common.short_code_of_slug slug
+                   ^ code
                | None -> tag
              else if List.mem m.artifact_columns tag ~equal:String.equal then
                match String.lsplit2 tag ~on:'=' with
@@ -1429,8 +1439,14 @@ let pp_text (m : t) : unit =
        "checks: › needed before the action  » verdict on what it made  = the \
         artifact@.        %s@."
        (String.concat ~sep:"  "
-          (List.map seen ~f:(fun s ->
-               Canary_agreement_common.short_code_of_slug s ^ " " ^ s))));
+          (List.filter_map (Canary_agreement.summary_rows ()) ~f:(fun r ->
+               if
+                 List.mem seen r.Canary_agreement.sr_code ~equal:String.equal
+               then
+                 Some
+                   (r.Canary_agreement.sr_code ^ " "
+                  ^ r.Canary_agreement.sr_slug)
+               else None))));
   Fmt.pr "%d scenario(s) across %d project(s)@." total
     (List.length (List.dedup_and_sort ~compare:String.compare (List.map m.rows ~f:(fun r -> r.project))))
 
@@ -1593,8 +1609,7 @@ let render_html (m : t) ~(generated_at : string) : string =
       List.filter (Canary_agreement.summary_rows ()) ~f:(fun r ->
           List.exists m.check_columns ~f:(fun c ->
               match String.lsplit2 c ~on:':' with
-              | Some (_, slug) ->
-                  String.equal slug r.Canary_agreement.sr_slug
+              | Some (_, code) -> String.equal code r.Canary_agreement.sr_code
               | None -> false))
     in
     if List.is_empty rows then ""
@@ -1726,7 +1741,14 @@ let render_html (m : t) ~(generated_at : string) : string =
                           (esc
                              (if is_check then c.mark ^ " " ^ c.provision
                               else c.mark))
-                    | _ -> "<td class=\"blank\"></td>"))
+                    (* a BLANK still carries the group rule: the border
+                       is a line down the table separating one action's
+                       columns from the next, and a line that skips the
+                       empty cells is not a line, it is a scatter of
+                       ticks (2026-09-14, user) *)
+                    | _ ->
+                        Printf.sprintf "<td class=\"blank%s\"></td>"
+                          (if is_group_start tag then " gs" else "")))
            in
            Printf.sprintf
              "<tr><td class=\"idx\" title=\"%s\">%d</td><td class=\"proj\">%s</td>%s<td class=\"platform\">%s</td>%s</tr>"
@@ -1799,8 +1821,11 @@ table.keytbl { border-collapse: collapse; margin-top: .5rem; }
 table.keytbl th, table.keytbl td { border: 1px solid #d0d7de; padding: .2rem .5rem; text-align: left; font-weight: 400; }
 table.keytbl th { background: #f6f8fa; font-weight: 600; }
 table.keytbl td.kc { font-family: ui-monospace, monospace; font-weight: 700; }
-/* the left edge of one action's group of columns */
-th.gs, td.gs { border-left: 2px solid #8c959f; }
+/* the left edge of one action's group of columns — on EVERY cell in
+   the column including the blanks, so it reads as a rule down the
+   table rather than a scatter of ticks. Thin, because it separates
+   rather than emphasises. */
+th.gs, td.gs { border-left: 1px solid #afb8c1; }
 </style></head><body>
 <h1>canary result matrix</h1>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>

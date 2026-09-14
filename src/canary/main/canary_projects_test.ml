@@ -4077,12 +4077,14 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
              (String.concat ~sep:","
                 [ "fetch_source"; "configure"; "scan_sources";
                   "build_headers"; "build_lib"; "build_lib=lib";
-                  "build_lib_post:declared_symbols_exported";
-                  "build_lib_post:declared_versions_exported";
-                  "build_lib_post:soname_matches_declaration"; "install_lib";
-                  "install_lib=lib";
-                  "install_lib_post:staged_interface_preserved"; "fetch_lib";
-                  "probe_lib";
+                  (* dse/dve/smd = declared_symbols_exported,
+                     declared_versions_exported,
+                     soname_matches_declaration. The code IS the column
+                     name; [agreements.short_codes_are_unique] keeps it
+                     from meaning two things. *)
+                  "build_lib_post:dse"; "build_lib_post:dve";
+                  "build_lib_post:smd"; "install_lib"; "install_lib=lib";
+                  "install_lib_post:sip"; "fetch_lib"; "probe_lib";
                   (* the off-tree binding-source fetch (2026-08-19): the
                      column appears now that zarith declares its binding's
                      repo as [Binding_source ocaml], and the order key puts
@@ -4097,15 +4099,12 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                      compiled extension is a shared object that records
                      both — the same registry, two mechanisms, two
                      column sets. *)
-                  "build_binding_ocaml_pre:required_symbols_exported";
-                  "build_binding_ocaml_pre:signatures_agree";
+                  "build_binding_ocaml_pre:rse"; "build_binding_ocaml_pre:sa";
                   "build_binding_ocaml"; "build_binding_ocaml=ocaml";
                   "fetch_binding_ocaml"; "fetch_binding_ocaml=ocaml";
-                  "pack_binding_ocaml";
-                  "probe_binding_ocaml_pre:api_names_present";
-                  "probe_binding_ocaml_pre:required_symbols_exported";
-                  "probe_binding_ocaml_pre:signatures_agree";
-                  "probe_binding_ocaml";
+                  "pack_binding_ocaml"; "probe_binding_ocaml_pre:anp";
+                  "probe_binding_ocaml_pre:rse";
+                  "probe_binding_ocaml_pre:sa"; "probe_binding_ocaml";
                   (* NOT build_app_ocaml_pre: no registry project
                      declares [build_app], so [api_names_present]'s
                      first candidate is absent from every chain and it
@@ -4123,18 +4122,16 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                      somewhere to look for its surface inspection. The
                      order key puts it in the python block beside its
                      OCaml twin. *)
-                  "build_binding_python_pre:dependencies_provided";
-                  "build_binding_python_pre:required_symbols_exported";
-                  "build_binding_python_pre:required_versions_exported";
-                  "build_binding_python_pre:soname_matches_requirement";
-                  "build_binding_python"; "build_binding_python=py";
-                  "fetch_binding_python"; "fetch_binding_python=py";
-                  "probe_binding_python_pre:api_names_present";
-                  "probe_binding_python_pre:dependencies_provided";
-                  "probe_binding_python_pre:required_symbols_exported";
-                  "probe_binding_python_pre:required_versions_exported";
-                  "probe_binding_python_pre:soname_matches_requirement";
-                  "probe_binding_python" ])
+                  "build_binding_python_pre:dp";
+                  "build_binding_python_pre:rse";
+                  "build_binding_python_pre:rve";
+                  "build_binding_python_pre:smr"; "build_binding_python";
+                  "build_binding_python=py"; "fetch_binding_python";
+                  "fetch_binding_python=py"; "probe_binding_python_pre:anp";
+                  "probe_binding_python_pre:dp";
+                  "probe_binding_python_pre:rse";
+                  "probe_binding_python_pre:rve";
+                  "probe_binding_python_pre:smr"; "probe_binding_python" ])
         (* the OFF-TREE binding-source slot (2026-08-18, user): the
            order key places fetch_binding_source at the FRONT of its
            language's block — the column appears once a project wires

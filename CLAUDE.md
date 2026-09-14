@@ -874,15 +874,27 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   in this file: **an assertion that compares tool OUTPUT must state the
   format it wants**, because the environment will otherwise choose one.
   Nothing sets `OPAMCOLOR` locally, so only CI could find this.
-- **NEVER use sed or python on OCaml source.** Use the `Edit` tool exclusively.
-  sed cannot distinguish match-case scope, `let`/`in` boundaries, or which
-  `| _ -> None` is the intended anchor.  Append commands match multiple
-  locations, line numbers drift after earlier edits, and one bad deletion
-  can silently remove adjacent code.  `git checkout` recovery costs hours.
-  Examples from this project: `_summary→_inspect` sed corrupted
-  `binding_summary`; Python line-number-based removals cut into
-  `_counts_from_log` and `save_run_state`.  Edit → build → diff → commit
-  after each working tier.
+- **`.ml` / `.mli` are edited with `Edit` or `Write`, and with nothing else.**
+  Stated as a whitelist on purpose: the old wording named sed and python, and
+  the ways round it are endless — a `python3` heredoc doing an index-based
+  block replace is not "python line-number editing", a `perl -0pi` is not
+  "sed", `cat > file` is not "an edit". All of them are the same act and all
+  of them are prohibited. Reading is unrestricted: `cat`, `sed -n`, `grep`,
+  `python3` over a `.json` are all fine. The line is WRITING to OCaml source.
+
+  Why the rule is absolute rather than a preference: a text tool cannot see
+  match-case scope, `let`/`in` boundaries, or which `| _ -> None` is the
+  intended anchor. It matches in several places when you meant one, it drifts
+  after an earlier edit moved the lines, and a bad deletion takes adjacent
+  code silently — the build may still pass. `git checkout` recovery costs
+  hours. Real damage in this repo: a `_summary→_inspect` sed corrupted
+  `binding_summary`; python line-number removals cut into `_counts_from_log`
+  and `save_run_state`.
+
+  `Edit` fails loudly instead: a stale or ambiguous anchor is an error, not a
+  silent half-edit. When a change feels too big for `Edit`, that is a signal
+  to split it, not to reach for a script. Edit → build → diff → commit after
+  each working tier.
 - **Catch-all ordering in `match`**: `| _ -> ...` or `| e -> ...` must come
   LAST.  Putting it first makes all patterns below unreachable.  The
   compiler warns `redundant-case` but doesn't error — the match silently
