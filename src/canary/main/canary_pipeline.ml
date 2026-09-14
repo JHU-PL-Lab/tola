@@ -179,25 +179,32 @@ let mechanism_of_project (pr : project_run) (l : Canary_lang.lang) :
     the field itself wins, then the artifact table / source repo, then
     the project's own [pr_api_source]. Several places may say it; they
     now agree about which one answers. *)
+(** The project's declared C API, wherever it declared it. The same
+    walk [Canary_spec_check.source_repo_of] does — a project's source
+    repo is whichever artifact row declares one — then its own
+    [pr_api_source]. Exposed because the RESULT TABLE needs it too: to
+    say which artifact a violated agreement was reading, it has to ask
+    the agreement's methods what they read, and they now ask the
+    context, which carries this. *)
+let declared_api_of (pr : project_run) : Canary_artifact.t option =
+  let from_source =
+    List.find_map
+      (fun d ->
+        match Canary_project_spec.provider_of_row d with
+        | Some (Canary_store_config.Repo r)
+        | Some (Canary_store_config.Repo_axes (r :: _)) ->
+            r.Canary_artifact_source.api_source
+        | _ -> None)
+      pr.pr_artifacts
+  in
+  match from_source with Some _ -> from_source | None -> pr.pr_api_source
+
 let with_declared_facts (pr : project_run)
     (spec : Canary_step_builder.runner_spec) : Canary_step_builder.runner_spec =
   let api_source =
     match spec.Canary_step_builder.api_source with
     | Some _ as a -> a
-    | None -> (
-        (* the same walk [Canary_spec_check.source_repo_of] does — a
-           project's source repo is whichever artifact row declares one *)
-        let from_source =
-          List.find_map
-            (fun d ->
-              match Canary_project_spec.provider_of_row d with
-              | Some (Canary_store_config.Repo r)
-              | Some (Canary_store_config.Repo_axes (r :: _)) ->
-                  r.Canary_artifact_source.api_source
-              | _ -> None)
-            pr.pr_artifacts
-        in
-        match from_source with Some _ -> from_source | None -> pr.pr_api_source)
+    | None -> declared_api_of pr
   in
   (* AND THE PACKAGE EACH BINDING IS. Same story, different field: the
      artifact table names the opam/pip package as the binding row's

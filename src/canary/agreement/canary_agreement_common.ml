@@ -390,6 +390,32 @@ type action_context = {
           somebody rather than a bug. *)
 }
 
+(** WHICH ARTIFACT AN EVIDENCE REFERENCE IS ABOUT (2026-09-14, user).
+
+    A failing check should be able to point at what it was reading, and
+    the evidence already says: a native summary is about the library, a
+    stub or a surface is about the binding, a header signature set is
+    about the headers.
+
+    [None] FOR A DECLARATION, and that is the interesting case rather
+    than a gap. A declaration is the project's word, not an artifact,
+    and it has no column to colour. So the artifacts a violation
+    implicates are exactly one for a [Declared_facts] comparison and
+    exactly two for a [Peer_artifact] one — which means "red" means two
+    different things, and the difference is readable off
+    [m_reference]: this artifact is wrong, versus these two disagree.
+    Seven of the thirteen agreements are declaration comparisons and
+    six are peer ones, so both cases are live. *)
+let artifact_of_input ~(lang : Canary_lang.lang) (i : inspect_input) :
+    Canary_basic.artifact_kind option =
+  match i with
+  | Native_lib _ | Staged_lib _ | Versioned_exports _ -> Some Canary_basic.Lib
+  | C_stub _ | Ocaml_mli _ | Python_attrs _ | Versioned_req _ | Abi_surface _
+  | Typed_binding_stub _ | Typed_binding_user _ ->
+      Some (Canary_basic.Binding lang)
+  | Typed_header _ -> Some Canary_basic.Headers
+  | Declared_exports _ | Declared_soname _ | Declared_version_tags _ -> None
+
 (** THE DECLARED HALF, AS EVIDENCE (2026-09-14).
 
     Each returns [] when the project declares nothing of that kind,

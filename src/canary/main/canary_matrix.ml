@@ -42,6 +42,24 @@ type setting = {
       (** the placement, e.g. [F pre-10549] / [B:dev] / [apt sqlite3.3.45.1] *)
   url : string option;  (** the commit/tree link, for source artifacts *)
   title : string option;  (** hover detail (the full ref label) *)
+  implicated : string option;
+      (** WHICH CHECK IN THIS ROW READ THIS ARTIFACT AND FAILED
+          (2026-09-14, user: "if any check fails, we can mark the check
+          and the involved artifact in the same red").
+
+          A failing action cell says a step went wrong; it does not say
+          which of the artifacts the step combined is at fault. A
+          failing AGREEMENT does better, because its evidence names
+          what it read — so the row can colour the artifacts that
+          violation was about.
+
+          It says WHICH check rather than just "bad", because the two
+          reference kinds mean different things here: a declaration
+          comparison implicates one artifact ("this is not what you
+          said you ship") and a peer comparison implicates two ("these
+          disagree", with no claim about which is wrong). The text
+          carries the agreement name so the distinction survives into
+          the tooltip. *)
 }
 
 type row = {
@@ -707,8 +725,11 @@ let mark_of_outcome = function
     coverage, which is the reporting failure this whole layer exists to
     avoid. *)
 let check_cell ~(chain : Canary_basic.action list)
-    ~(obs : Canary_status.agreement_obs list) (a : Canary_basic.action)
-    (s : Canary_agreement_common.stage) : cell option =
+    ~(obs : Canary_status.agreement_obs list)
+    ~(world : Canary_artifact.assignment)
+    ~(declared : Canary_artifact.t option) (a : Canary_basic.action)
+    (s : Canary_agreement_common.stage) :
+    (cell * (Canary_basic.artifact_kind * string) list) option =
   let slotted =
     List.filter_map Canary_agreement.agreement_registry ~f:(fun r ->
         let here =
@@ -768,7 +789,7 @@ let check_cell ~(chain : Canary_basic.action list)
     let observed = List.filter per_agreement ~f:(fun (_, o) ->
         not (String.is_empty o))
     in
-    Some
+    let c =
       { mark = (if List.is_empty observed then "·" else mark_of_outcome worst);
         provision =
           Printf.sprintf "%d/%d" decided (List.length slotted);
@@ -784,6 +805,46 @@ let check_cell ~(chain : Canary_basic.action list)
                        slug ^ ": "
                        ^ (if String.is_empty o then "not evaluated" else o)))))
       }
+    in
+    (* WHAT A VIOLATION HERE WAS READING. Only violations implicate:
+       an [unavailable] read nothing and a [holds] found nothing wrong,
+       so neither has an artifact to point at. The evidence is asked
+       for with THIS column's language, which is the one its action
+       names. *)
+    let lang =
+      match a with
+      | Canary_basic.Build_binding l
+      | Canary_basic.Probe_binding l
+      | Canary_basic.Build_app { lang = l } ->
+          l
+      | _ -> List.hd_exn (langs_of_chain chain)
+    in
+    let implicated =
+      List.concat_map per_agreement ~f:(fun (slug, o) ->
+          if not (String.equal o "violated") then []
+          else
+            match Canary_agreement.agreement_named slug with
+            | None -> []
+            | Some r ->
+                List.concat_map
+                  r.Canary_agreement.ag.Canary_agreement_common.ag_methods
+                  ~f:(fun m ->
+                    List.filter_map
+                      (m.Canary_agreement_common.m_inputs
+                         { Canary_agreement_common.ac_mechanism =
+                             Option.value
+                               (Canary_mechanism.default_mechanism_of_lang lang)
+                               ~default:Canary_mechanism.Cstubs;
+                           ac_lang = lang;
+                           ac_world = world;
+                           ac_declared = declared })
+                      ~f:(fun i ->
+                        Option.map
+                          (Canary_agreement_common.artifact_of_input ~lang i)
+                          ~f:(fun k -> (k, slug)))))
+      |> List.dedup_and_sort ~compare:Stdlib.compare
+    in
+    Some (c, implicated)
   end
 
 let matrix_of (projects : (string * Canary_project_run.project_run) list) :
@@ -803,6 +864,10 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
         let runs = Canary_status.project_matrix ~root ~project in
         (* the agreement half of the same log, read once per project *)
         let agmts = Canary_status.project_agreements ~root ~project in
+        (* what this project says it ships — the reference half of the
+           declaration comparisons, needed here to ask a method what it
+           reads *)
+        let declared = Canary_pipeline.declared_api_of pr in
         let platform = platform_label () in
         (* rows ordered by ref → c lib → bindings ({!row_key}) *)
         let scenarios =
@@ -849,6 +914,24 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                   (if String.is_empty src_id then "(ambient)" else src_id)
             in
             let ref_url = Option.bind repo ~f:ref_url_of in
+            (* the CHECK cells first, because a violation is what tells
+               the setting block which artifact to flag — the answer
+               runs backwards along the row, from the check that failed
+               to the artifact it was reading *)
+            let check_cells =
+              List.filter_map cols ~f:(fun col ->
+                  match col with
+                  | Check (ca, cs)
+                    when List.mem chain_acts ca ~equal:Poly.equal ->
+                      Option.map
+                        (check_cell ~chain:chain_acts ~obs:scenario_obs
+                           ~world:a ~declared ca cs)
+                        ~f:(fun r -> (label_of_col col, r))
+                  | _ -> None)
+            in
+            let implicated_kinds =
+              List.concat_map check_cells ~f:(fun (_, (_, impl)) -> impl)
+            in
             { project;
               scenario;
               index = 0;
@@ -891,21 +974,37 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                               title =
                                 Option.map repo_here ~f:(fun r ->
                                     r.Canary_artifact_source.name ^ " @ "
-                                    ^ r.Canary_artifact_source.ref_) } ));
+                                    ^ r.Canary_artifact_source.ref_);
+                              (* every check in this row that failed
+                                 while reading THIS artifact *)
+                              implicated =
+                                (match
+                                   List.filter_map implicated_kinds
+                                     ~f:(fun (k, slug) ->
+                                       if Poly.equal k kind then Some slug
+                                       else None)
+                                   |> List.dedup_and_sort
+                                        ~compare:String.compare
+                                 with
+                                 | [] -> None
+                                 | slugs ->
+                                     Some (String.concat ~sep:", " slugs)) } ));
               cells =
                 List.map cols ~f:(fun col ->
                   let tag = label_of_col col in
                   match col with
-                  | Check (ca, cs) ->
-                      (* a check column belongs to this row only when
-                         the row's own chain offers the slot — a
-                         project that fetches its binding has no
-                         build_binding_ocaml_pre, and the renderers
-                         drop a column no row fills *)
+                  | Check _ ->
+                      (* computed above, because the settings needed
+                         the violations first. A check column belongs
+                         to this row only when the row's own chain
+                         offers the slot — a project that fetches its
+                         binding has no build_binding_ocaml_pre, and
+                         the renderers drop a column no row fills *)
                       ( tag,
-                        if List.mem chain_acts ca ~equal:Poly.equal then
-                          check_cell ~chain:chain_acts ~obs:scenario_obs ca cs
-                        else None )
+                        Option.map
+                          (List.Assoc.find check_cells tag
+                             ~equal:String.equal)
+                          ~f:fst )
                   | Act _ ->
                     if List.mem chain_tags tag ~equal:String.equal then
                       (* the cell's provision choice: the action's
@@ -1038,6 +1137,11 @@ let pp_text (m : t) : unit =
                      match
                        List.Assoc.find rr.settings label ~equal:String.equal
                      with
+                     (* the terminal has no red, so an implicated
+                        artifact is marked rather than coloured — the
+                        same information, in the medium that carries *)
+                     | Some (Some s) when Option.is_some s.implicated ->
+                         pad ("!" ^ fit s.text)
                      | Some (Some s) -> pad (fit s.text)
                      | _ -> pad "—")
                in
@@ -1194,9 +1298,19 @@ let render_html (m : t) ~(generated_at : string) : string =
                     with
                     | Some (Some s) ->
                         let title =
-                          match s.title with
-                          | Some t -> t ^ " · " ^ r.scenario
-                          | None -> r.scenario
+                          let base =
+                            match s.title with
+                            | Some t -> t ^ " · " ^ r.scenario
+                            | None -> r.scenario
+                          in
+                          (* WHY it is red — the agreement that failed
+                             while reading this artifact. Without the
+                             name the colour would say "something about
+                             this is wrong", which is the vagueness the
+                             failing-action cell already had *)
+                          match s.implicated with
+                          | None -> base
+                          | Some slugs -> base ^ " · implicated by " ^ slugs
                         in
                         let inner =
                           match s.url with
@@ -1206,8 +1320,11 @@ let render_html (m : t) ~(generated_at : string) : string =
                           | None -> esc s.text
                         in
                         Printf.sprintf
-                          "<td class=\"set\" title=\"%s\">%s</td>" (esc title)
-                          inner
+                          "<td class=\"set%s\" title=\"%s\">%s</td>"
+                          (match s.implicated with
+                           | None -> ""
+                           | Some _ -> " blamed")
+                          (esc title) inner
                     (* the project doesn't declare this artifact — an
                        honest blank, not a glyph *)
                     | _ -> "<td class=\"blank\"></td>"))
@@ -1296,6 +1413,10 @@ td.set a:hover { text-decoration: underline; }
    as another step: lighter, smaller, and visually subordinate so the
    chain of actions still scans as the spine of the row */
 td.chk { font-size: .72rem; opacity: .85; background: #fbfcfd; letter-spacing: -.02em; }
+/* an artifact a failing CHECK was reading. The same red as a failed
+   cell, because it is the same finding seen from the other end — the
+   check says what disagreed, this says what it disagreed about. */
+td.set.blamed { background: #ffebe9; box-shadow: inset 2px 0 0 #cf222e; }
 th.seth { background: #eef1f4; }
 td.platform { color: #57606a; font-size: .75rem; }
 td.idx { color: #57606a; font-size: .75rem; text-align: right; }

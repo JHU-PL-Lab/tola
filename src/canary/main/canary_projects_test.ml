@@ -3817,22 +3817,29 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
           { S.ao_tag = "probe_binding_ocaml"; ao_agreement = ag;
             ao_method = "m"; ao_outcome = outcome }
         in
+        let world =
+          Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
+            ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
+        in
         let cell obs =
-          Canary_matrix.check_cell ~chain ~obs
+          Canary_matrix.check_cell ~chain ~obs ~world ~declared:None
             (Canary_basic.Probe_binding Canary_lang.OCaml)
             Canary_agreement_common.Pre
+        in
+        let bad_cell =
+          cell
+            [ ob "required_symbols_exported" "holds";
+              ob "required_symbols_exported" "violated" ]
         in
         match
           ( cell
               [ ob "required_symbols_exported" "holds";
                 ob "api_names_present" "holds";
                 ob "soname_matches_requirement" "not_applicable" ],
-            cell
-              [ ob "required_symbols_exported" "holds";
-                ob "required_symbols_exported" "violated" ],
+            bad_cell,
             cell [] )
         with
-        | Some good, Some bad, Some silent ->
+        | Some (good, _), Some (bad, bad_impl), Some (silent, silent_impl) ->
             (* (a) six claims belong at the OCaml probe's pre slot, and
                the denominator says so whatever the log holds *)
             String.equal good.Canary_matrix.provision "2/6"
@@ -3847,6 +3854,19 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
                      ~substring:"soname_matches_requirement: not_applicable")
             && Option.value_map silent.Canary_matrix.detail ~default:false
                  ~f:(fun d -> String.is_substring d ~substring:"not evaluated")
+            (* (d) a VIOLATION implicates the artifacts its evidence
+               named, and nothing else does. required_symbols_exported
+               is a PEER comparison — the stub and the library — so it
+               implicates two artifacts and blames neither. A cell with
+               no violation implicates nothing at all. *)
+            && List.is_empty silent_impl
+            && Poly.equal
+                 (List.map bad_impl ~f:fst
+                 |> List.dedup_and_sort ~compare:Stdlib.compare)
+                 [ Canary_basic.Lib;
+                   Canary_basic.Binding Canary_lang.OCaml ]
+            && List.for_all bad_impl ~f:(fun (_, slug) ->
+                   String.equal slug "required_symbols_exported")
         | _ -> false) }
 
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
