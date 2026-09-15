@@ -23,7 +23,23 @@ open Base
     cell's tooltip). The cell is [None] when the action is NOT part
     of the scenario's chain (distinct from [·] = in the chain, never
     run). *)
-type cell = { mark : string; provision : string; detail : string option }
+type cell = {
+  mark : string;
+  provision : string;
+  detail : string option;
+  blame : string option;
+      (** WHY this cell carries no verdict, or why the verdict is
+          suspect (2026-09-15, user: "before we fix that, can we
+          attribute it as one thing to blame in the table, so we can
+          see how eager we need to fix it").
+
+          A closed vocabulary, because the point is to COUNT it. See
+          {!blame_of} for what each word means and how it is derived —
+          the important property is that every one of them is a static
+          scan of the project spec plus the cell's recorded outcome, so
+          a blame can be attributed before the thing it blames is
+          fixed. [None] on a cell that is simply fine. *)
+}
 
 (** One SETTING cell (2026-08-19, user: "move all the provider ahead, so
     we have source ref, fetched lib and ocaml ones … more clear to
@@ -847,11 +863,167 @@ let outcome_rank = function
   | "" -> -1
   | _ -> 0 (* unavailable | not_implemented | not_applicable | disabled *)
 
+(** A VERDICT IS A SYMBOL; A GAP IS A WORD (2026-09-15, user: "I am good
+    to have hold/violated/(expected) error as symbols, but for the
+    gapped cases, if we use the symbol, we need to explain them ahead;
+    otherwise we can use simple english directly").
+
+    Five distinct states used to render as one dot — [unavailable],
+    [not_applicable], [not_implemented], [disabled] and "never recorded"
+    were indistinguishable, so the table said "nothing here" where the
+    honest answers were "nothing wrote the evidence", "your log is
+    stale" and "this has never run cold". That is the same collapse the
+    [2/3] cell had, one level down: the answer was always one hover
+    away.
+
+    Words rather than glyphs for the gaps, and the split is the
+    semantics: a symbol means the check reached a verdict, a word means
+    it did not. A reader can therefore tell a non-verdict from a verdict
+    without consulting anything, which no pair of glyphs achieves. The
+    key table glosses the four words anyway, since they are also the
+    blame vocabulary.
+
+    [·] stays a dot deliberately: "no run has recorded this cell" is a
+    true ABSENCE, not a state the run reached. *)
 let mark_of_outcome = function
   | "violated" | "error" -> "✗"
-  | "inconclusive" -> "?"
   | "holds" -> "✓"
+  | "inconclusive" -> "no-ref"
+  | "unavailable" -> "no-evid"
+  | "not_applicable" -> "stale"
+  | "disabled" -> "off"
+  | "not_implemented" -> "planned"
   | _ -> "·"
+
+(** Is this mark a verdict the check actually reached? *)
+let is_verdict = function "✓" | "✗" -> true | _ -> false
+
+(* ── BLAME (2026-09-15, user) ──────────────────────────────────────
+
+   A check column exists only when some method has an EVALUATOR and the
+   project's declarations PERMIT it ([check_cols_of_chain]'s two
+   filters). So every cell in an existing column is supposed to be
+   decidable, and a cell that is not decided is a DEFECT rather than a
+   legitimate blank. Naming which defect is what makes it countable,
+   and countable is what tells you how eager to be.
+
+   Four words, and they point at three different owners:
+
+   - [evidence]   nothing wrote the inspection the method reads. The
+                  WIRING is incomplete — an inspector is missing, or
+                  the reader is ordered before the writer;
+   - [declaration] the evidence was read and the project declared
+                  nothing to compare it against. The SPEC is
+                  incomplete;
+   - [version]    the project declared ONE value where its own version
+                  axis has several. Also the spec, but a different
+                  repair, and it is the only blame that attaches to a
+                  DECIDED cell — see below;
+   - [stale]      the log predates the current registry. Nobody's
+                  fault; re-run.
+
+   WHY [version] ALSO BLAMES A ✗. sqlite's [declared_symbols_exported]
+   is `violated` on its built-Stable worlds because the lib there is
+   3.43.2, chosen as the last release BEFORE 3.44.0 added
+   `sqlite3_get_clientdata`, while the project declares both clientdata
+   symbols once for every version point. The agreement is right and the
+   world is wrong on purpose; what is actually broken is that the
+   declaration cannot say "these two symbols exist from 3.44". A red
+   cell that may be the spec's fault rather than the world's has to say
+   so, or the count of real findings is wrong.
+
+   EVERY WORD IS A STATIC SCAN of the project spec plus the cell's
+   recorded outcome. Nothing here waits on a fix, which is the property
+   the request turned on. *)
+
+(** How many distinct versions this project's worlds give an artifact of
+    this kind. Read off the ENUMERATED worlds rather than the declared
+    universe: the universe is what a project wrote down, the worlds are
+    what the enumeration kept, and only the second is what a run can
+    disagree about. One point = a genuinely thin axis (zarith's lib:
+    apt already ships GMP's newest), so a single-valued declaration is
+    exactly right there and must not be blamed. *)
+let version_points_of_kind (scenarios : Canary_artifact.assignment list)
+    (k : Canary_basic.artifact_kind) : int =
+  List.concat_map scenarios ~f:(fun a ->
+      List.filter_map a ~f:(fun (info, (pl : Canary_artifact.placement)) ->
+          if Poly.equal (Canary_artifact.kind_of info) k then
+            (* [string_of_build_id], not the bare [id]: an UNPINNED
+               placement has [id = ""] ([Canary_basic.good]), so keying
+               on the id alone collapsed sqlite's Built@Stable and
+               Built@Dev into one point and no project was ever version-
+               blind. The printed form falls back to the channel, which
+               is the identity the enumeration actually ranges over. *)
+            Some (Canary_basic.string_of_build_id pl.Canary_artifact.version)
+          else None))
+  |> List.dedup_and_sort ~compare:String.compare
+  |> List.length
+
+(** The artifact kinds a [Declared_facts] method of this agreement holds
+    its declaration against — i.e. the kinds whose version axis decides
+    whether the declaration is single-valued for a moving target. Empty
+    when the agreement makes no declaration comparison at all, which is
+    what makes a peer comparison unblameable on these grounds. *)
+let declared_against ~(lang : Canary_lang.lang)
+    ~(world : Canary_artifact.assignment)
+    ~(declared : Canary_artifact.t option) (slug : string) :
+    Canary_basic.artifact_kind list =
+  match Canary_agreement.agreement_named slug with
+  | None -> []
+  | Some r ->
+      List.concat_map r.Canary_agreement.ag.Canary_agreement_common.ag_methods
+        ~f:(fun m ->
+          match m.Canary_agreement_common.m_reference with
+          | Canary_agreement_common.Declared_facts ->
+              List.filter_map
+                (m.Canary_agreement_common.m_inputs
+                   { Canary_agreement_common.ac_mechanism =
+                       Canary_mechanism.mechanism_of_lang_exn lang;
+                     ac_lang = lang;
+                     ac_world = world;
+                     ac_declared = declared })
+                ~f:(Canary_agreement_common.artifact_of_input ~lang)
+          (* every other reference kind holds the artifact against
+             something that is not a project declaration, so a
+             single-valued declaration cannot be what is wrong *)
+          | Canary_agreement_common.Artifact_itself
+          | Canary_agreement_common.Peer_artifact
+          | Canary_agreement_common.Sibling_world
+          | Canary_agreement_common.Test_suite ->
+              [])
+      |> List.dedup_and_sort ~compare:Poly.compare
+
+let blame_of ~(outcome : string) ~(is_declaration : bool)
+    ~(version_blind : bool) : string option =
+  match outcome with
+  | "unavailable" -> Some "evidence"
+  | "inconclusive" ->
+      (* AND HERE THE TWO REFERENCE KINDS PART WAYS. A DECLARATION
+         comparison that reaches [inconclusive] found the declaration
+         empty — the project did not say what it ships, which is a spec
+         gap. A PEER comparison that reaches it read both artifacts and
+         neither carried anything of this kind, which is a fact about
+         the WORLD and nobody's fault: sqlite's libsqlite3 has no symbol
+         versioning, so [required_versions_exported] has nothing to
+         compare and never will. Counting that as a defect would put ten
+         permanent rows on a work queue. *)
+      Some
+        (if not is_declaration then "vacuous"
+         else if version_blind then "version"
+         else "declaration")
+  | "not_applicable" -> Some "stale"
+  | "violated" | "error" -> if version_blind then Some "version" else None
+  | _ -> None
+
+(** What each blame word means, for the key table and the terminal
+    legend. Kept beside {!blame_of} so a new word cannot ship unglossed.
+    Ordered work-first: the last row is the one that asks nothing. *)
+let blame_gloss : (string * string) list =
+  [ ("evidence", "nothing wrote the inspection this reads — wiring");
+    ("declaration", "read, but the project declared nothing to compare");
+    ("version", "one declared value, several version points — spec");
+    ("stale", "the log predates the registry — re-run");
+    ("vacuous", "both sides read, neither has anything of this kind — fine") ]
 
 (** ONE CELL, ONE CLAIM (2026-09-14, user). The cell used to aggregate
     every agreement slotted at a point and report [2/3] — which said
@@ -867,9 +1039,22 @@ let mark_of_outcome = function
 let check_cell ~(chain : Canary_basic.action list)
     ~(obs : Canary_status.agreement_obs list)
     ~(world : Canary_artifact.assignment)
+    ~(version_points : Canary_basic.artifact_kind -> int)
     ~(declared : Canary_artifact.t option) (a : Canary_basic.action)
     (s : Canary_agreement_common.stage) (slug : string) :
     cell * (Canary_basic.artifact_kind * string) list =
+  (* THE LANGUAGE THIS COLUMN SPEAKS FOR — the one its action names,
+     falling back to the chain's for a lib-side action that names
+     none. Every question below that asks a method what it reads has to
+     be asked in it. *)
+  let lang =
+    match a with
+    | Canary_basic.Build_binding l
+    | Canary_basic.Probe_binding l
+    | Canary_basic.Build_app { lang = l } ->
+        l
+    | _ -> List.hd_exn (langs_of_chain chain)
+  in
   (* an observation belongs to THIS column when its agreement slots
      here under the language its own step tag speaks for — the slot is
      where a claim is read, the tag is where it was evaluated, and for
@@ -898,9 +1083,22 @@ let check_cell ~(chain : Canary_basic.action list)
           o.Canary_status.ao_outcome
         else acc)
   in
+  (* IS THIS CLAIM HELD AGAINST A SINGLE-VALUED DECLARATION WHILE THE
+     THING IT DESCRIBES MOVES? Static: it asks the registry what kind
+     of comparison this is and the enumeration how many version points
+     that artifact has. Neither question needs a run, which is why this
+     can be attributed before it is fixed. *)
+  let against = declared_against ~lang ~world ~declared slug in
+  let version_blind = List.exists against ~f:(fun k -> version_points k > 1) in
+  let blame =
+    blame_of ~outcome
+      ~is_declaration:(not (List.is_empty against))
+      ~version_blind
+  in
   let c =
     { mark = mark_of_outcome outcome;
       provision = "";
+      blame;
       detail =
         Some
           (slug ^ ": "
@@ -915,20 +1113,20 @@ let check_cell ~(chain : Canary_basic.action list)
                with
                | Some o ->
                    outcome ^ " (at " ^ o.Canary_status.ao_tag ^ ")"
-               | None -> outcome)) }
+               | None -> outcome)
+          ^
+          match blame with
+          | None -> ""
+          | Some b ->
+              " — blame: " ^ b ^ " ("
+              ^ Option.value
+                  (List.Assoc.find blame_gloss b ~equal:String.equal)
+                  ~default:""
+              ^ ")") }
   in
   (* WHAT A VIOLATION WAS READING. Only a violation implicates: an
      [unavailable] read nothing and a [holds] found nothing wrong, so
-     neither has an artifact to point at. The evidence is asked for
-     with THIS column's language, which is the one its action names. *)
-  let lang =
-    match a with
-    | Canary_basic.Build_binding l
-    | Canary_basic.Probe_binding l
-    | Canary_basic.Build_app { lang = l } ->
-        l
-    | _ -> List.hd_exn (langs_of_chain chain)
-  in
+     neither has an artifact to point at. *)
   let implicated =
     if not (String.equal outcome "violated") then []
     else
@@ -993,6 +1191,10 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
           List.stable_sort (Canary_project_run.scenarios_of pr)
             ~compare:(fun x y -> Stdlib.compare (row_key pr x) (row_key pr y))
         in
+        (* how far each artifact kind MOVES in this project, computed
+           once per project rather than per cell — it is a property of
+           the enumeration, and every row of the project shares it *)
+        let version_points = version_points_of_kind scenarios in
         List.map scenarios ~f:(fun a ->
             let chain_acts = actions_of pr a in
             let chain_tags =
@@ -1045,7 +1247,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                       Some
                         ( label_of_col col,
                           check_cell ~chain:chain_acts ~obs:scenario_obs
-                            ~world:a ~declared ca cs slug )
+                            ~world:a ~version_points ~declared ca cs slug )
                   | _ -> None)
             in
             let implicated_kinds =
@@ -1143,6 +1345,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                                   in
                                   { mark = s;
                                     provision = "";
+                                    blame = None;
                                     detail =
                                       (match blamed with
                                        | [] -> None
@@ -1188,6 +1391,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                         Some
                           { mark = mark_of_run ~run tag;
                             provision;
+                            blame = None;
                             detail = detail_of_run ~run tag } )
                     else (tag, None)) }))
   in
@@ -1386,6 +1590,43 @@ let pp_text (m : t) : unit =
                    (r.Canary_agreement.sr_code ^ " "
                   ^ r.Canary_agreement.sr_slug)
                else None))));
+  (* AND WHAT A NON-VERDICT CELL SAYS. A symbol means the check reached
+     a verdict, a word means it did not — the words are meant to read
+     without a key, but [no-ref] is the one that does not quite, so the
+     whole set is glossed rather than the odd one out. *)
+  (if
+     List.exists m.rows ~f:(fun (r : row) ->
+         List.exists r.cells ~f:(function
+           | _, Some c -> not (is_verdict c.mark || String.equal c.mark "·")
+           | _ -> false))
+   then
+     Fmt.pr
+       "        no-evid nothing wrote the evidence  no-ref nothing to \
+        compare against  stale log predates the registry  off disabled@.");
+  (* THE GAP, COUNTED (2026-09-15, user). A check column exists only
+     where the claim CAN be decided, so every non-verdict cell in one is
+     a defect rather than a blank — and the blame says whose. Printed
+     only when there is a gap, because a clean table should not carry a
+     paragraph explaining an empty set. *)
+  (let counts : (string, int) Hashtbl.t = Hashtbl.create (module String) in
+   List.iter m.rows ~f:(fun (r : row) ->
+       List.iter r.cells ~f:(fun (_, cell) ->
+           match cell with
+           | Some { blame = Some b; _ } ->
+               Hashtbl.update counts b ~f:(function None -> 1 | Some n -> n + 1)
+           | _ -> ()));
+   let rows =
+     Hashtbl.to_alist counts
+     |> List.sort ~compare:(fun (_, a) (_, b) -> Int.compare b a)
+   in
+   if not (List.is_empty rows) then begin
+     Fmt.pr "@.gap: %s@."
+       (String.concat ~sep:"  "
+          (List.map rows ~f:(fun (b, n) -> Printf.sprintf "%d %s" n b)));
+     List.iter blame_gloss ~f:(fun (w, g) ->
+         if List.Assoc.mem rows w ~equal:String.equal then
+           Fmt.pr "     %-12s %s@." w g)
+   end);
   Fmt.pr "%d scenario(s) across %d project(s)@." total
     (List.length (List.dedup_and_sort ~compare:String.compare (List.map m.rows ~f:(fun r -> r.project))))
 
@@ -1587,15 +1828,46 @@ let render_html (m : t) ~(generated_at : string) : string =
       | 0, b -> Printf.sprintf "%d ✗" b
       | h, b -> Printf.sprintf "%d ✓ · %d ✗" h b
     in
+    (* AND WHAT THOSE ROWS BLAME (2026-09-15, user: "before we fix that,
+       can we attribute it as one thing to blame in the table, so we can
+       see how eager we need to fix it").
+
+       Counted off the same rendered cells as [tally], for the same
+       reason: a key that re-derived its numbers could disagree with the
+       table it explains. A blank cell here means this agreement's rows
+       are all fine — which is the only row of the key a reader can skip. *)
+    let blame_tally code =
+      let counts : (string, int) Hashtbl.t = Hashtbl.create (module String) in
+      List.iter m.rows ~f:(fun (rr : row) ->
+          List.iter rr.cells ~f:(fun (tag, cell) ->
+              match (String.lsplit2 tag ~on:':', cell) with
+              | Some (_, c), Some cc when String.equal c code -> (
+                  match cc.blame with
+                  | None -> ()
+                  | Some b ->
+                      Hashtbl.update counts b ~f:(function
+                        | None -> 1
+                        | Some n -> n + 1))
+              | _ -> ()));
+      Hashtbl.to_alist counts
+      |> List.sort ~compare:(fun (_, a) (_, b) -> Int.compare b a)
+      |> List.map ~f:(fun (b, n) ->
+             Printf.sprintf "<span title=\"%s\">%d %s</span>" (esc
+               (Option.value
+                  (List.Assoc.find blame_gloss b ~equal:String.equal)
+                  ~default:""))
+               n (esc b))
+      |> String.concat ~sep:" · "
+    in
     if List.is_empty rows then ""
     else
       "<table class=\"keytbl\"><thead><tr><th>code</th><th>agreement</th>\
-       <th>recovers</th><th>tool</th><th>about</th><th>decided here</th></tr>\
-       </thead><tbody>"
+       <th>recovers</th><th>tool</th><th>about</th><th>decided here</th>\
+       <th>blame</th></tr></thead><tbody>"
       ^ String.concat ~sep:""
           (List.map rows ~f:(fun r ->
                Printf.sprintf
-                 "<tr><td class=\"kc\">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+                 "<tr><td class=\"kc\">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
                  (esc r.Canary_agreement.sr_code)
                  (esc r.Canary_agreement.sr_slug)
                  (esc
@@ -1603,8 +1875,16 @@ let render_html (m : t) ~(generated_at : string) : string =
                      else r.Canary_agreement.sr_action))
                  (esc r.Canary_agreement.sr_tool)
                  (esc r.Canary_agreement.sr_artifact)
-                 (tally r.Canary_agreement.sr_code)))
+                 (tally r.Canary_agreement.sr_code)
+                 (blame_tally r.Canary_agreement.sr_code)))
       ^ "</tbody></table>"
+      (* the vocabulary, once, under the key it annotates — four words
+         and what each one asks of the reader *)
+      ^ "<p class=\"kq\">blame: "
+      ^ String.concat ~sep:" · "
+          (List.map blame_gloss ~f:(fun (w, g) ->
+               "<b>" ^ esc w ^ "</b> " ^ esc g))
+      ^ "</p>"
   in
   let header =
     (* the two identity columns are FROZEN (2026-08-20, user: the page is

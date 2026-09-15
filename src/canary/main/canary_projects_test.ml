@@ -1905,6 +1905,113 @@ let strict_mode_pin : Canary_project_test.pure_test =
         && String.equal f_lax expected_lax
         && not (String.equal f_lax f_strict)) }
 
+(* BLAME IS A STATIC SCAN, AND IT HAS TO BE RIGHT TO BE WORTH COUNTING
+   (2026-09-15, user: "before we fix that, can we attribute it as one
+   thing to blame in the table, so we can see how eager we need to fix
+   it").
+
+   A check column exists only where the claim CAN be decided, so a
+   non-verdict cell in one is a defect and the blame says whose. The
+   number is meant to be a work queue, which means a wrong blame is
+   worse than no blame — it either hides work or invents it. Both
+   failure modes happened while this was being written, and both are
+   pinned:
+
+   1. EVERY PROJECT WAS VERSION-BLIND-FREE, because the first cut keyed
+      version points on [build_id.id] — which is [""] for an unpinned
+      placement ([Canary_basic.good]). sqlite's Built@Stable and
+      Built@Dev collapsed to one point and nothing was ever flagged.
+      Pinned on the pair that distinguishes: sqlite's lib genuinely
+      moves (3.43.2 built, 3.46.1 built, apt's), zarith's genuinely does
+      not (apt already ships GMP's newest — a permanently thin axis, and
+      a single-valued declaration is CORRECT there).
+
+   2. TEN PERMANENT ROWS ON THE WORK QUEUE, because [inconclusive] was
+      blamed [declaration] whatever the comparison was. A DECLARATION
+      comparison that reaches it found the declaration empty — a spec
+      gap. A PEER comparison that reaches it read both artifacts and
+      neither carried anything of this kind: sqlite's libsqlite3 has no
+      symbol versioning, so [required_versions_exported] has nothing to
+      compare and never will. That is [vacuous], and it is the one blame
+      that asks for nothing.
+
+   Also pinned: every word [blame_of] can produce is glossed. The gloss
+   is what the key table and the terminal legend print, so an unglossed
+   word would reach a reader as a bare noun. *)
+let blame_attribution_pin : Canary_project_test.pure_test =
+  { name = "matrix.blame_is_static_and_glossed";
+    check =
+      (fun () ->
+        let points name =
+          match
+            List.Assoc.find Canary_registry.all_projects name
+              ~equal:String.equal
+          with
+          | None -> 0
+          | Some pr ->
+              Canary_matrix.version_points_of_kind
+                (Canary_project_run.scenarios_of pr)
+                Canary_basic.Lib
+        in
+        (* (1) a moving axis is seen as moving, a thin one as thin *)
+        let sqlite_moves = points "sqlite" > 1 in
+        let zarith_is_thin = points "zarith" = 1 in
+        (* (2) inconclusive splits on the reference kind *)
+        let peer_is_vacuous =
+          Poly.equal
+            (Canary_matrix.blame_of ~outcome:"inconclusive"
+               ~is_declaration:false ~version_blind:false)
+            (Some "vacuous")
+        in
+        let decl_is_spec =
+          Poly.equal
+            (Canary_matrix.blame_of ~outcome:"inconclusive"
+               ~is_declaration:true ~version_blind:false)
+            (Some "declaration")
+        in
+        (* a VIOLATION is a finding, not a defect — unless the
+           declaration it contradicts cannot follow the version *)
+        let plain_violation_is_a_finding =
+          Poly.equal
+            (Canary_matrix.blame_of ~outcome:"violated" ~is_declaration:true
+               ~version_blind:false)
+            None
+        in
+        let blind_violation_is_suspect =
+          Poly.equal
+            (Canary_matrix.blame_of ~outcome:"violated" ~is_declaration:true
+               ~version_blind:true)
+            (Some "version")
+        in
+        (* a passing cell blames nothing, whatever its shape *)
+        let holds_blames_nothing =
+          List.for_all [ true; false ] ~f:(fun d ->
+              List.for_all [ true; false ] ~f:(fun v ->
+                  Option.is_none
+                    (Canary_matrix.blame_of ~outcome:"holds"
+                       ~is_declaration:d ~version_blind:v)))
+        in
+        (* (3) nothing reaches a reader unglossed *)
+        let all_glossed =
+          List.for_all
+            [ "holds"; "violated"; "error"; "inconclusive"; "unavailable";
+              "not_applicable"; "not_implemented"; "disabled"; "" ]
+            ~f:(fun outcome ->
+              List.for_all [ true; false ] ~f:(fun d ->
+                  List.for_all [ true; false ] ~f:(fun v ->
+                      match
+                        Canary_matrix.blame_of ~outcome ~is_declaration:d
+                          ~version_blind:v
+                      with
+                      | None -> true
+                      | Some b ->
+                          List.Assoc.mem Canary_matrix.blame_gloss b
+                            ~equal:String.equal)))
+        in
+        sqlite_moves && zarith_is_thin && peer_is_vacuous && decl_is_spec
+        && plain_violation_is_a_finding && blind_violation_is_suspect
+        && holds_blames_nothing && all_glossed) }
+
 (* THE CHECKING INDEX IS ASKED IN EACH ACTION'S OWN LANGUAGE
    (2026-09-15).
 
@@ -3977,8 +4084,9 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
           Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
             ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
         in
-        let cell obs slug =
-          Canary_matrix.check_cell ~chain ~obs ~world ~declared:None
+        let cell ?(version_points = fun _ -> 1) obs slug =
+          Canary_matrix.check_cell ~chain ~obs ~world ~version_points
+            ~declared:None
             (Canary_basic.Probe_binding Canary_lang.OCaml)
             Canary_agreement_common.Pre slug
         in
@@ -4003,8 +4111,14 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
         (* (b) the violation wins over a pass at another firing site *)
         && String.equal bad.Canary_matrix.mark "✗"
         (* (c) evaluated-but-undecided is not silence: not_applicable
-           reads as itself, never as "not evaluated" *)
-        && String.equal na.Canary_matrix.mark "·"
+           reads as itself, never as "not evaluated". STRENGTHENED
+           2026-09-15 — it used to be true only of the tooltip, because
+           the MARK was the same dot as silence and the distinction was
+           one hover away. The mark carries it now: [stale] for a cell
+           whose log predates the registry, [·] for one no run has
+           touched. If those two ever collapse back to one glyph this
+           goes red, which is the whole point of the pair below. *)
+        && String.equal na.Canary_matrix.mark "stale"
         && Option.value_map na.Canary_matrix.detail ~default:false ~f:(fun d ->
                String.is_substring d ~substring:"not_applicable")
         && Option.value_map silent.Canary_matrix.detail ~default:false
@@ -4407,6 +4521,7 @@ let base_tests : Canary_project_test.pure_test list =
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;
+      blame_attribution_pin;
       run_info_session_pin;
       machine_roots_pin;
       platform_enumeration_pin;

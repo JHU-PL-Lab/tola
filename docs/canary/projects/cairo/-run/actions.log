@@ -1920,3 +1920,207 @@ test -n "$PKG_DIR"
 [2026-09-13 20:24:15.971] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
 [2026-09-13 20:24:15.971] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
 [2026-09-13 20:24:15.971] *                          invariant  (ALL OK)
+[2026-09-15 14:25:26.788] *                          run_start  (cairo)
+[2026-09-15 14:25:26.796] *                          variant_start  (source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched)
+[2026-09-15 14:25:26.796] *                          graph_start  (7 steps)
+[2026-09-15 14:25:26.797] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:26.797] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 14:25:26.797] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:26.797] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-15 14:25:26.798] fetch_binding_ocaml_stub_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:26.798] fetch_binding_ocaml_stub_inspect  skip  (verdict marker (prior success))
+[2026-09-15 14:25:26.798] probe_lib                  check_pre  (pass)
+[2026-09-15 14:25:26.800] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libcairo.so* /usr/lib*/libcairo.so* 2>/dev/null \
+        "$(brew --prefix cairo 2>/dev/null)/lib/libcairo.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'cairo_' || echo 0)
+printf 'cairo_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/cairo/probe_lib/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-09-15 14:25:26.800] probe_lib                  opam_switch  (canary)
+[2026-09-15 14:25:26.800] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 14:25:26.851] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:26.851] probe_lib                  detect  (ok, output present)
+[2026-09-15 14:25:26.851] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:26.851] probe_lib                  check_post  (pass)
+[2026-09-15 14:25:26.851] probe_lib                  done
+[2026-09-15 14:25:26.853] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 14:25:26.855] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libcairo.so* /usr/lib*/libcairo.so* 2>/dev/null \
+        "$(brew --prefix cairo 2>/dev/null)/lib/libcairo.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'cairo_' --watchlist 'cairo_create,cairo_destroy,cairo_paint,cairo_move_to,cairo_line_to,cairo_stroke,cairo_image_surface_create,cairo_surface_destroy' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_lib/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json)
+[2026-09-15 14:25:26.855] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 14:25:26.855] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 14:25:26.913] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:26.913] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 14:25:26.913] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:26.913] probe_lib_inspect          check_post  (pass)
+[2026-09-15 14:25:26.913] probe_lib_inspect          done
+[2026-09-15 14:25:26.915] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 14:25:26.917] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package cairo2 -linkpkg canary/examples/cairo/cairo_example.ml -o /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example >> /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example && { nm -D "/home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/inspect_abi_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-09-15 14:25:26.917] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 14:25:26.917] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 14:25:27.112] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:27.112] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: inconclusive: one side carries no symbol versioning; an empty requirement set decides nothing)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: violated: libfontconfig.so.1,libfreetype.so.6)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:27.115] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:27.120] probe_binding_ocaml        check_post  (pass)
+[2026-09-15 14:25:27.120] probe_binding_ocaml        agreement_confirmed  (dependencies_provided: predicted text present in this run's output)
+[2026-09-15 14:25:27.120] probe_binding_ocaml        done
+[2026-09-15 14:25:27.122] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-15 14:25:27.124] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'cairo2' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'cairo2' --watchlist 'Cairo' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json)
+[2026-09-15 14:25:27.124] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-15 14:25:27.124] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-15 14:25:27.182] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:27.182] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: inconclusive: one side carries no symbol versioning; an empty requirement set decides nothing)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: violated: libfontconfig.so.1,libfreetype.so.6)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:27.183] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:27.189] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-15 14:25:27.189] probe_binding_ocaml_inspect  agreement_confirmed  (dependencies_provided: predicted text present in this run's output)
+[2026-09-15 14:25:27.189] probe_binding_ocaml_inspect  done
+[2026-09-15 14:25:27.191] *                          graph_end  (7/7 completed)
+[2026-09-15 14:25:27.192] *                          diagram  (_out/canary/projects/cairo/-run/diagrams/all.mmd)
+[2026-09-15 14:25:27.192] *                          diagram  (_out/canary/projects/cairo/-run/diagrams/full.mmd)
+[2026-09-15 14:25:27.192] *                          view  (lib (3 steps))
+[2026-09-15 14:25:27.192] *                          view  (probes (4 steps))
+[2026-09-15 14:25:27.193] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 14:25:27.193] *                          html  (_out/canary/projects/cairo/-run/result.html)
+[2026-09-15 14:25:27.194] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 14:25:27.194] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:27.194] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-09-15 14:25:27.195] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:27.195] *                          invariant  (lib.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:27.195] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
+[2026-09-15 14:25:27.195] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:27.195] *                          invariant  (ALL OK)
+[2026-09-15 14:25:27.221] *                          variant_start  (source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched)
+[2026-09-15 14:25:27.221] *                          graph_start  (7 steps)
+[2026-09-15 14:25:27.221] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:27.221] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 14:25:27.222] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:27.222] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-15 14:25:27.222] fetch_binding_ocaml_stub_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:27.222] fetch_binding_ocaml_stub_inspect  skip  (verdict marker (prior success))
+[2026-09-15 14:25:27.222] probe_lib                  check_pre  (pass)
+[2026-09-15 14:25:27.224] probe_lib                  cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/cairo-all/prebuilt/cairo-1.18.4/lib/libcairo.so* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/cairo-all/prebuilt/cairo-1.18.4/lib — run 'canary prebuilt cairo' first" >&2; exit 1; }
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'cairo_' || echo 0)
+printf 'cairo_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/cairo/probe_lib/probe_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-09-15 14:25:27.224] probe_lib                  opam_switch  (canary)
+[2026-09-15 14:25:27.224] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 14:25:27.274] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:27.274] probe_lib                  detect  (ok, output present)
+[2026-09-15 14:25:27.274] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:27.274] probe_lib                  check_post  (pass)
+[2026-09-15 14:25:27.274] probe_lib                  done
+[2026-09-15 14:25:27.277] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 14:25:27.279] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/cairo-all/prebuilt/cairo-1.18.4/lib/libcairo.so* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/cairo-all/prebuilt/cairo-1.18.4/lib — run 'canary prebuilt cairo' first" >&2; exit 1; }
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'cairo_' --watchlist 'cairo_create,cairo_destroy,cairo_paint,cairo_move_to,cairo_line_to,cairo_stroke,cairo_image_surface_create,cairo_surface_destroy' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_lib/inspect_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-09-15 14:25:27.279] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 14:25:27.279] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 14:25:27.333] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:27.333] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 14:25:27.333] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:27.333] probe_lib_inspect          check_post  (pass)
+[2026-09-15 14:25:27.333] probe_lib_inspect          done
+[2026-09-15 14:25:27.336] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 14:25:27.338] probe_binding_ocaml        cmd  (eval $(opam env)
+export LD_LIBRARY_PATH=/home/red/code/contrib/cairo-all/prebuilt/cairo-1.18.4/lib:$LD_LIBRARY_PATH
+ocamlfind ocamlopt -package cairo2 -linkpkg canary/examples/cairo/cairo_example.ml -o /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example >> /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log 2>&1
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example && { nm -D "/home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/inspect_abi_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log
+exit $RC)
+[2026-09-15 14:25:27.338] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 14:25:27.338] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 14:25:27.503] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:27.503] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: inconclusive: one side carries no symbol versioning; an empty requirement set decides nothing)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: violated: libfontconfig.so.1,libfreetype.so.6)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:27.505] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:27.509] probe_binding_ocaml        check_post  (pass)
+[2026-09-15 14:25:27.509] probe_binding_ocaml        agreement_confirmed  (dependencies_provided: predicted text present in this run's output)
+[2026-09-15 14:25:27.509] probe_binding_ocaml        done
+[2026-09-15 14:25:27.512] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-15 14:25:27.514] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'cairo2' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'cairo2' --watchlist 'Cairo' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/inspect_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-09-15 14:25:27.514] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-15 14:25:27.514] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-15 14:25:27.570] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:27.570] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: inconclusive: one side carries no symbol versioning; an empty requirement set decides nothing)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: violated: libfontconfig.so.1,libfreetype.so.6)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:27.571] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:27.576] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-15 14:25:27.576] probe_binding_ocaml_inspect  agreement_confirmed  (dependencies_provided: predicted text present in this run's output)
+[2026-09-15 14:25:27.576] probe_binding_ocaml_inspect  done
+[2026-09-15 14:25:27.579] *                          graph_end  (7/7 completed)
+[2026-09-15 14:25:27.579] *                          diagram  (_out/canary/projects/cairo/-run/diagrams/all.mmd)
+[2026-09-15 14:25:27.579] *                          diagram  (_out/canary/projects/cairo/-run/diagrams/full.mmd)
+[2026-09-15 14:25:27.579] *                          view  (lib (3 steps))
+[2026-09-15 14:25:27.579] *                          view  (probes (4 steps))
+[2026-09-15 14:25:27.579] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 14:25:27.580] *                          html  (_out/canary/projects/cairo/-run/result.html)
+[2026-09-15 14:25:27.581] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 14:25:27.581] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:27.581] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-09-15 14:25:27.581] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:27.581] *                          invariant  (lib.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:27.581] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
+[2026-09-15 14:25:27.581] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:27.581] *                          invariant  (ALL OK)

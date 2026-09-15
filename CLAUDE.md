@@ -793,6 +793,50 @@ is the method's FIRING in an actual world. llvm's
 `install_lib_post:sip` column can never be filled because no llvm world
 is Installed; recorded in `project/issues.md` §1 as a decision, not a
 repair.
+**THE GAP IS IN `canary result` NOW — MARK, THEN BLAME** (2026-09-15,
+user: "this information can be put on the same result table … for a
+cell without a meaningful check we shall mark it with unavailable /
+inconclusive / not_applicable", and "before we fix that, can we
+attribute it as one thing to blame in the table, so we can see how
+eager we need to fix it"). A VERDICT IS A SYMBOL, A GAP IS A WORD —
+`✓ ✗` vs `no-evid` (unavailable) / `no-ref` (inconclusive) / `stale`
+(not_applicable) / `off` (disabled); `·` stays a true absence ("no run
+has recorded this cell"). Those five used to be ONE DOT, the same
+collapse the `2/3` cell had one level down. Words rather than glyphs
+because the split is the semantics: a symbol means a verdict was
+reached, a word means it was not, and no pair of glyphs tells a reader
+that without a key. Since a check column exists only where the claim
+CAN be decided, every non-verdict cell in one is a DEFECT, so each
+carries a BLAME, counted under the terminal table and per agreement in
+the HTML key: `evidence` (wiring — nothing wrote the inspection),
+`declaration` (spec — a declaration comparison found the declaration
+empty), `version` (spec — one declared value, several version points),
+`stale` (re-run), `vacuous` (nobody — both sides read, neither has
+anything of this kind). EVERY BLAME IS A STATIC SCAN of the spec plus
+the recorded outcome, so it can be attributed before it is fixed.
+`version` is the only blame that attaches to a DECIDED cell — sqlite's
+four `dse ✗` are real violations of a declaration that cannot say
+"these symbols exist from 3.44", and a reader counting findings has to
+be told which reds may be the spec's fault. TWO BUGS THE PIN NOW HOLDS,
+both found by disbelieving the first numbers: version points were keyed
+on `build_id.id`, which is `""` for an UNPINNED placement, so
+Built@Stable and Built@Dev collapsed and NO project was ever
+version-blind; and `inconclusive` was blamed `declaration` whatever the
+comparison was, putting ten permanent `vacuous` rows on the work queue.
+Pinned by `matrix.blame_is_static_and_glossed`.
+**`make canary-refresh PROJECT=<p>`** (2026-09-15) clears `stale`: a
+warm step logs nothing, so recorded outcomes outlive the registry that
+produced them. It drops the markers of the steps that DECIDE (probes,
+binding builds, staging) and re-runs; fetches and the library build
+stay warm. Cleared all of zarith/cairo/libffi/zlib, and moved two
+zarith claims straight to `decided`.
+⚠ **A VERDICT CAN STILL BE INVISIBLE** (`project/issues.md` §1, second
+instance): the column set comes from `covered_actions_of` (the union of
+every world's actions) while each cell re-resolves its slot against ITS
+OWN row's chain. zarith's `dependencies_provided` `holds` in the
+fetched-binding world, whose chain has no `build_binding` — the column
+`dp` slotted into — so that verdict has nowhere to render. Same root as
+the llvm case; decide both together.
 
 See [`doc/canary/status.md`](doc/canary/status.md) for current implementation
 state and open items. Lower-priority items live in

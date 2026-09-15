@@ -47,18 +47,65 @@ run". An index cell (`canary checks llvm`) comes from
 `m_firing mechanism lang world` and is world-aware, which is why the
 index correctly reports that nothing fires at llvm's `install_lib`.
 
-So this is not drift and there is nothing broken to repair. It is a
-DECISION: should a per-project result table drop a column that no world
-of that project can fill? The user's rule when the check columns landed
-was "if there is no checks at that stage, we don't need to show an empty
-column", which argues yes. Against it: the batch table
-(`matrix_of all_projects`) needs the column because sqlite fills it, and
-"belongs here but this project never stages" is itself worth seeing.
+**DECIDED 2026-09-15 (user): llvm DECLARES the `Installed` point, or the
+column stays blank. The firing gate is not to be relaxed.**
 
-Cheap if taken: `check_cols_of_chain` already receives the chain; give it
-the project's worlds and require some world to fire the method. Found by
-the could-vs-did report (§`canary checks <project>`), which is the first
-thing to compare the two derivations.
+The temptation was to relax it, because llvm already produces both
+copies. Its dev chain runs, all `ar_needs = None`
+(`canary_project_llvm.ml:539-549`): `Install_lib` staging into
+`build/../install`, a `Probe_lib` on the build tree writing
+`probe_lib/inspect.json`, and a second `Probe_lib` on `Staged_lib`
+writing `probe_lib_staged/inspect.json` — which are exactly the two
+inputs `staged_interface_preserved` names. Firing on "both copies
+exist" instead of "the world is `Installed`" would have decided it on
+llvm today with no spec change.
+
+It is still wrong, and the reason is the one the user gave: **it would
+assert that the installed build IS the non-installed one**, which is the
+very thing the agreement exists to check. A gate that fires wherever
+both files happen to be present decides nothing about whether this
+project's install step is a relocation, a re-link, or a re-build — it
+just finds two paths. The `Installed` provision is a CLAIM the project
+makes about its own staging, and nothing else can stand in for it.
+
+So: the fix is to declare `(Installed, [Dev])` in llvm's lib universe —
+after surveying what `cmake --install --component LLVM` actually does to
+`libLLVM.so` here (rpath, soname, re-link?), because that survey is the
+content of the claim. Until somebody does it, **leaving the column blank
+is the correct state**: it says "this project has not said whether it
+stages", which is true.
+
+⚠ Note the two projects encode OPPOSITE models and that is a separate
+question: sqlite gates its rows (`ar_needs = Some Installed`) so the
+build-tree and staged probes never coexist in one world; llvm runs both
+in every built world. Which one is right is about what an `Installed`
+world MEANS for the consumer, not about this agreement.
+
+**SECOND INSTANCE, found 2026-09-15 by the blame marks — and this one
+LOSES a verdict.** The column set is computed once per project from
+`covered_actions_of` (the union of every world's actions), while each
+cell re-resolves `slot_in_chain` against ITS OWN row's chain. When a
+project's worlds have different chains the two disagree, and the row
+with the shorter chain has nowhere to put its answer:
+
+zarith's `dependencies_provided` reports `holds x2, unavailable x2`.
+`dp`'s slot resolves to `build_binding_ocaml` against the union chain,
+so that is the column. Row #1 (binding **built**) has that action and
+shows `no-evid` — correct, that world really did report `unavailable`.
+Row #2 (binding **fetched**) has no `build_binding` at all, so
+`slot_in_chain` puts its verdict at `probe_binding_ocaml` — for which
+there is no column. **The `holds` is real, recorded, and invisible.**
+
+`canary checks zarith` does report it (`decided: dependencies_provided`),
+so nothing is lost overall — but the result table understates decided
+coverage, which is the one thing it must not do.
+
+The fix is small and the reason to think before taking it is that it
+widens the table: derive the column set by unioning `check_cols_of_chain`
+over each SCENARIO's chain rather than calling it once on the union of
+actions. zarith would then gain a `probe_binding_ocaml_pre:dp` column
+that only row #2 fills. Same root cause as the llvm case above, so both
+should be decided together.
 
 ### Open — a project's declared api_source is version-blind (2026-09-15)
 

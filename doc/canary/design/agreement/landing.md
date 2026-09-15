@@ -337,6 +337,55 @@ below depends on it being right.
 Step 3 is the only remaining one that changes the landing table without a new
 inspector, which is why it is next.
 
+## The result table says it per cell — mark, then blame
+
+`canary result <project>`'s check columns carry the gap directly, which
+is where you meet it first. A **symbol** means the check reached a
+verdict; a **word** means it did not:
+
+| cell | outcome | means |
+| --- | --- | --- |
+| `✓` | holds | |
+| `✗` | violated / error | |
+| `no-evid` | unavailable | nothing wrote the inspection it reads |
+| `no-ref` | inconclusive | read, nothing to compare against |
+| `stale` | not_applicable | the log predates the registry — re-run |
+| `off` | disabled | |
+| `·` | — | no run has recorded this cell |
+
+Those five used to be one dot. A check column only exists where the
+claim *can* be decided (`check_cols_of_chain` requires an evaluator and
+static applicability), so a non-verdict cell in one is a **defect**, not
+a blank — which is why each carries a **blame**, counted under the table
+and per agreement in the HTML key:
+
+```
+gap: 58 evidence  10 vacuous  4 version
+```
+
+| blame | owner | what to do |
+| --- | --- | --- |
+| `evidence` | wiring | nothing wrote the inspection, or the reader runs before the writer |
+| `declaration` | spec | a declaration comparison found the declaration empty |
+| `version` | spec | one declared value, several version points — see [issues.md §1](../../project/issues.md) |
+| `stale` | nobody | `make canary-refresh PROJECT=<p>` |
+| `vacuous` | nobody | both sides read, neither has anything of this kind |
+
+Every one is a **static scan** of the project spec plus the cell's
+recorded outcome, so a blame can be attributed before the thing it
+blames is fixed — which is the point: the count says how eager to be.
+
+Two of them ask for nothing, deliberately. `vacuous` exists because a
+PEER comparison that reaches `inconclusive` read both artifacts and
+neither carried anything of this kind — sqlite's libsqlite3 has no
+symbol versioning, so `required_versions_exported` has nothing to
+compare and never will. Blaming that on the declaration put ten
+permanent rows on the work queue. `version` is the only blame that
+attaches to a **decided** cell: sqlite's four `dse ✗` are real
+violations of a declaration that cannot say "these two symbols exist
+from 3.44", so a reader counting findings has to be told which reds may
+be the spec's fault. Pinned by `matrix.blame_is_static_and_glossed`.
+
 ## Could decide vs did decide — where the next landing comes from
 
 This tracker is per AGREEMENT across projects. The other cut — one

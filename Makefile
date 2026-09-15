@@ -90,6 +90,32 @@ canary-agreement-roundtrip:
 	done
 	@echo "round-trip: sqlite decided $(CANARY_LANDED_AGREEMENTS) from a real run"
 
+# REFRESH ONE PROJECT'S AGREEMENT OUTCOMES.
+#   make canary-refresh PROJECT=cairo
+# A warm step re-checks nothing and logs nothing, so a project's
+# recorded outcomes outlive the registry that produced them: after
+# applicability became a static property (2026-09-14) the old
+# `not_applicable` lines stayed in the logs, and `canary result` marks
+# those cells `stale`. This is how you clear them.
+# It drops the markers of the steps that DECIDE — probes, binding
+# builds, staging — and re-runs. Fetches and the library build stay
+# warm on purpose: they are the expensive ones, they decide little, and
+# re-running them from scratch is what `canary action <p>` without this
+# is for. Verified on zarith 2026-09-15: three `stood down` claims, two
+# of which went straight to `decided`.
+CANARY_REFRESH_STEPS = probe_binding probe_binding_ocaml probe_binding_python \
+                       probe_lib probe_lib_staged probe_lib_apt \
+                       build_binding_ocaml build_binding_python install_lib
+
+canary-refresh:
+	@test -n "$(PROJECT)" || { echo "usage: make canary-refresh PROJECT=<name>"; exit 2; }
+	@for s in $(CANARY_REFRESH_STEPS); do \
+	  rm -f "_out/canary/projects/$(PROJECT)/$$s"/*.ok \
+	        "_out/canary/projects/$(PROJECT)/$$s"/*/*.ok 2>/dev/null; \
+	done; true
+	$(CANARY) action $(PROJECT)
+	@echo "refresh: $(PROJECT) re-decided its agreements — 'canary result $(PROJECT)' to see the gap"
+
 # The generated per-agreement catalogue. `make agreement-catalogue`
 # rewrites it; `agreements.catalogue_doc_is_generated` fails if the file
 # on disk differs from what the registry would emit, so it cannot drift.

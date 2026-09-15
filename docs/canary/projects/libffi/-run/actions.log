@@ -1617,3 +1617,203 @@ test -n "$PKG_DIR"
 [2026-09-13 20:24:17.930] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
 [2026-09-13 20:24:17.930] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
 [2026-09-13 20:24:17.930] *                          invariant  (ALL OK)
+[2026-09-15 14:25:28.214] *                          run_start  (libffi)
+[2026-09-15 14:25:28.222] *                          variant_start  (source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched)
+[2026-09-15 14:25:28.222] *                          graph_start  (7 steps)
+[2026-09-15 14:25:28.223] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:28.223] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 14:25:28.223] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:28.223] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-15 14:25:28.223] fetch_binding_ocaml_stub_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:28.223] fetch_binding_ocaml_stub_inspect  skip  (verdict marker (prior success))
+[2026-09-15 14:25:28.223] probe_lib                  check_pre  (pass)
+[2026-09-15 14:25:28.225] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ffi_' || echo 0)
+printf 'ffi_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-09-15 14:25:28.226] probe_lib                  opam_switch  (canary)
+[2026-09-15 14:25:28.226] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.271] probe_lib                  cmd_log  (probe_lib.out_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.271] probe_lib                  detect  (ok, output present)
+[2026-09-15 14:25:28.271] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:28.271] probe_lib                  check_post  (pass)
+[2026-09-15 14:25:28.271] probe_lib                  done
+[2026-09-15 14:25:28.273] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 14:25:28.275] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ffi_' --watchlist 'ffi_prep_cif,ffi_call,ffi_prep_closure_loc,ffi_closure_alloc,ffi_closure_free' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json)
+[2026-09-15 14:25:28.275] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 14:25:28.275] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.337] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.337] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 14:25:28.337] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:28.337] probe_lib_inspect          check_post  (pass)
+[2026-09-15 14:25:28.337] probe_lib_inspect          done
+[2026-09-15 14:25:28.339] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 14:25:28.341] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ctypes-foreign -linkpkg canary/examples/libffi/libffi_example.ml -o /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example >> /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example && { nm -D "/home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/inspect_abi_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-09-15 14:25:28.341] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 14:25:28.341] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.528] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.528] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: holds)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: holds)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        check_post  (pass)
+[2026-09-15 14:25:28.529] probe_binding_ocaml        done
+[2026-09-15 14:25:28.531] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-15 14:25:28.533] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'ctypes-foreign' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'ctypes-foreign' --watchlist 'Foreign,Ctypes_foreign_basis' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json)
+[2026-09-15 14:25:28.533] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-15 14:25:28.533] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: holds)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: holds)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-15 14:25:28.587] probe_binding_ocaml_inspect  done
+[2026-09-15 14:25:28.589] *                          graph_end  (7/7 completed)
+[2026-09-15 14:25:28.590] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/all.mmd)
+[2026-09-15 14:25:28.590] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/full.mmd)
+[2026-09-15 14:25:28.590] *                          view  (lib (3 steps))
+[2026-09-15 14:25:28.590] *                          view  (probes (4 steps))
+[2026-09-15 14:25:28.591] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 14:25:28.592] *                          html  (_out/canary/projects/libffi/-run/result.html)
+[2026-09-15 14:25:28.593] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 14:25:28.593] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:28.593] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-09-15 14:25:28.594] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:28.594] *                          invariant  (lib.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:28.594] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
+[2026-09-15 14:25:28.594] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:28.594] *                          invariant  (ALL OK)
+[2026-09-15 14:25:28.622] *                          variant_start  (source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched)
+[2026-09-15 14:25:28.622] *                          graph_start  (7 steps)
+[2026-09-15 14:25:28.623] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:28.623] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 14:25:28.623] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:28.623] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-15 14:25:28.623] fetch_binding_ocaml_stub_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 14:25:28.623] fetch_binding_ocaml_stub_inspect  skip  (verdict marker (prior success))
+[2026-09-15 14:25:28.623] probe_lib                  check_pre  (pass)
+[2026-09-15 14:25:28.625] probe_lib                  cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/libffi-all/prebuilt/libffi-3.7.0/lib/libffi.so* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/libffi-all/prebuilt/libffi-3.7.0/lib — run 'canary prebuilt libffi' first" >&2; exit 1; }
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ffi_' || echo 0)
+printf 'ffi_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/probe_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-09-15 14:25:28.625] probe_lib                  opam_switch  (canary)
+[2026-09-15 14:25:28.625] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.672] probe_lib                  cmd_log  (probe_lib.out_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.672] probe_lib                  detect  (ok, output present)
+[2026-09-15 14:25:28.672] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:28.672] probe_lib                  check_post  (pass)
+[2026-09-15 14:25:28.672] probe_lib                  done
+[2026-09-15 14:25:28.674] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 14:25:28.676] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/libffi-all/prebuilt/libffi-3.7.0/lib/libffi.so* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/libffi-all/prebuilt/libffi-3.7.0/lib — run 'canary prebuilt libffi' first" >&2; exit 1; }
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ffi_' --watchlist 'ffi_prep_cif,ffi_call,ffi_prep_closure_loc,ffi_closure_alloc,ffi_closure_free' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/inspect_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-09-15 14:25:28.676] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 14:25:28.676] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.726] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.726] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 14:25:28.726] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 14:25:28.726] probe_lib_inspect          check_post  (pass)
+[2026-09-15 14:25:28.726] probe_lib_inspect          done
+[2026-09-15 14:25:28.728] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 14:25:28.730] probe_binding_ocaml        cmd  (eval $(opam env)
+export LD_LIBRARY_PATH=/home/red/code/contrib/libffi-all/prebuilt/libffi-3.7.0/lib:$LD_LIBRARY_PATH
+ocamlfind ocamlopt -package ctypes-foreign -linkpkg canary/examples/libffi/libffi_example.ml -o /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example >> /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log 2>&1
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example && { nm -D "/home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/inspect_abi_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log
+exit $RC)
+[2026-09-15 14:25:28.730] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 14:25:28.730] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.895] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.895] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: holds)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: holds)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        check_post  (pass)
+[2026-09-15 14:25:28.896] probe_binding_ocaml        done
+[2026-09-15 14:25:28.898] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-09-15 14:25:28.900] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'ctypes-foreign' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'ctypes-foreign' --watchlist 'Foreign,Ctypes_foreign_basis' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/inspect_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-09-15 14:25:28.900] probe_binding_ocaml_inspect  opam_switch  (canary)
+[2026-09-15 14:25:28.900] probe_binding_ocaml_inspect  platform  (wsl_ubuntu)
+[2026-09-15 14:25:28.953] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 14:25:28.953] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (api_names_present/watchlist_vs_user_surface: unavailable: no user-facing surface inspection in this world)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: holds)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: holds)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-09-15 14:25:28.954] probe_binding_ocaml_inspect  done
+[2026-09-15 14:25:28.956] *                          graph_end  (7/7 completed)
+[2026-09-15 14:25:28.956] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/all.mmd)
+[2026-09-15 14:25:28.957] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/full.mmd)
+[2026-09-15 14:25:28.957] *                          view  (lib (3 steps))
+[2026-09-15 14:25:28.957] *                          view  (probes (4 steps))
+[2026-09-15 14:25:28.957] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 14:25:28.957] *                          html  (_out/canary/projects/libffi/-run/result.html)
+[2026-09-15 14:25:28.958] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 14:25:28.959] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:28.959] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-09-15 14:25:28.959] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:28.959] *                          invariant  (lib.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 14:25:28.959] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
+[2026-09-15 14:25:28.959] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 14:25:28.959] *                          invariant  (ALL OK)
