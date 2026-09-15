@@ -4147,15 +4147,28 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                      somewhere to look for its surface inspection. The
                      order key puts it in the python block beside its
                      OCaml twin. *)
+                  (* [sa] joined the PYTHON block on 2026-09-14 with the
+                     capability model. Its old predicate said
+                     "(OCaml, static) applies, anything else does not —
+                     no signature extractor for this language's stub
+                     surface yet", which conflated two things: a
+                     compiled extension DOES call the C API and must
+                     match its declarations, so the claim applies. What
+                     is missing is an extractor, and that is a canary
+                     gap. It reports `unavailable` here, which names
+                     the gap instead of hiding it behind
+                     `not_applicable`. *)
                   "build_binding_python_pre:dp";
                   "build_binding_python_pre:rse";
                   "build_binding_python_pre:rve";
+                  "build_binding_python_pre:sa";
                   "build_binding_python_pre:smr"; "build_binding_python";
                   "build_binding_python=py"; "fetch_binding_python";
                   "fetch_binding_python=py"; "probe_binding_python_pre:anp";
                   "probe_binding_python_pre:dp";
                   "probe_binding_python_pre:rse";
                   "probe_binding_python_pre:rve";
+                  "probe_binding_python_pre:sa";
                   "probe_binding_python_pre:smr"; "probe_binding_python" ])
         (* the OFF-TREE binding-source slot (2026-08-18, user): the
            order key places fetch_binding_source at the FRONT of its

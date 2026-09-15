@@ -191,6 +191,24 @@ let is_disabled ~(disabled : agreement_id list) (r : agreement_row) : bool =
     [Not_implemented] — a selection that dropped them would report
     full coverage of an action while saying nothing about the claims
     nobody has implemented yet. *)
+
+(** WHAT A WORLD OFFERS. {!Canary_agreement_common.capabilities_of} does
+    the work; this supplies the one fact it cannot reach — whether the
+    consumer artifact records dependencies and symbol versions, which
+    belongs to the MECHANISM module that owns it
+    ([Canary_agreement_cstubs]) and therefore sits above common.
+
+    The registry is where this has to live: it is the only tier that
+    sees every mechanism module, which is exactly why it is the tier
+    that holds the list. A family declares what it NEEDS
+    ([m_requires]); nobody below here computes what a world HAS. *)
+let world_capabilities ~(mechanism : Canary_mechanism.mechanism)
+    ~(world : Canary_artifact.assignment)
+    ~(declared : Canary_artifact.t option) : capability list =
+  capabilities_of ~mechanism ~world ~declared
+    ~consumer_records:
+      (Canary_agreement_identity.consumer_records_needed mechanism)
+
 let evaluate_in_context ?(disabled = []) ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
     ?(declared : Canary_artifact.t option)
@@ -207,6 +225,7 @@ let evaluate_in_context ?(disabled = []) ~(mechanism : Canary_mechanism.mechanis
           else
             let outcome =
               evaluate_method ~disabled:off ~mechanism ~lang ~world ?declared
+                ~provided:(world_capabilities ~mechanism ~world ~declared)
                 ~resolve m
             in
             Some
@@ -547,9 +566,10 @@ let cell_status_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
   if List.is_empty firing then Empty
   else if not r.ag_enabled then Off
   else
+    let provided = world_capabilities ~mechanism ~world ~declared:None in
     let applicable =
       List.filter firing ~f:(fun m ->
-          match m.m_applicable mechanism lang world with
+          match applies_given ~provided m.m_requires with
           | Applicable -> true
           | Inapplicable _ -> false)
     in
@@ -908,7 +928,12 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
           let world = uniform_world ~lang ~mechanism:mech Canary_store.Built in
           let sites = m.m_firing mech lang world in
           let applies =
-            match m.m_applicable mech lang world with
+            match
+              applies_given
+                ~provided:
+                  (world_capabilities ~mechanism:mech ~world ~declared:None)
+                m.m_requires
+            with
             | Applicable -> None
             | Inapplicable why -> Some why
           in

@@ -254,7 +254,8 @@ let compat_pure_tests =
         && String.equal
              (C.outcome_label
                 (C.evaluate_method ~mechanism:Canary_mechanism.Cstubs
-                   ~lang:Canary_lang.OCaml ~world ~resolve:Fn.id witnessless))
+                   ~lang:Canary_lang.OCaml ~world ~provided:[] ~resolve:Fn.id
+                   witnessless))
              "inconclusive"
         (* and a real finding is left exactly as it was *)
         && Poly.equal
@@ -327,7 +328,7 @@ let compat_pure_tests =
         in
         match
           C.evaluate_method ~mechanism:Canary_mechanism.Cstubs
-            ~lang:Canary_lang.OCaml ~world ~resolve:Fn.id m
+            ~lang:Canary_lang.OCaml ~world ~provided:[] ~resolve:Fn.id m
         with
         | C.Not_implemented reason -> not (String.is_empty reason)
         | _ -> false };

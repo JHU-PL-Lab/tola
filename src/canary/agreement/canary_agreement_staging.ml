@@ -139,13 +139,7 @@ let staged_interface_preserved : agreement =
     ag_methods =
       [ checking_method ~name:"staged_vs_build_tree_summary" ~kind:Compare
           ~reference:Peer_artifact
-          ~applicable:(fun _ _ w ->
-            match Canary_artifact.provision_of_lib w with
-            | Canary_store.Installed -> Applicable
-            | _ ->
-                Inapplicable
-                  "this world does not stage the library — there is no second \
-                   copy to compare against")
+          ~requires:[ Staged_lib_copy ]
           ~firing:(fun _ _ w ->
             match Canary_artifact.provision_of_lib w with
             | Canary_store.Installed ->

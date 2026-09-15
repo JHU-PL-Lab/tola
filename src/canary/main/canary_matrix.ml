@@ -678,7 +678,8 @@ let langs_of_chain (chain : Canary_basic.action list) : Canary_lang.lang list =
     are all absent contributes nothing — which is how a project that
     builds no app avoids a [build_app_ocaml_pre] column. *)
 let check_cols_of_chain (chain : Canary_basic.action list)
-    ~(worlds : Canary_artifact.assignment list) : col list =
+    ~(worlds : Canary_artifact.assignment list)
+    ~(declared : Canary_artifact.t option) : col list =
   List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
       List.concat_map (langs_of_chain chain) ~f:(fun lang ->
           let mech =
@@ -700,7 +701,13 @@ let check_cols_of_chain (chain : Canary_basic.action list)
               ~f:(fun m ->
                 Option.is_some m.Canary_agreement_common.m_eval
                 && List.exists worlds ~f:(fun w ->
-                       match m.Canary_agreement_common.m_applicable mech lang w with
+                       match
+                         Canary_agreement_common.applies_given
+                           ~provided:
+                             (Canary_agreement.world_capabilities
+                                ~mechanism:mech ~world:w ~declared)
+                           m.Canary_agreement_common.m_requires
+                       with
                        | Canary_agreement_common.Applicable -> true
                        | Canary_agreement_common.Inapplicable _ -> false))
           in
@@ -982,7 +989,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
         in
         let worlds = Canary_project_run.scenarios_of pr in
         List.map acts ~f:(fun a -> Act a)
-        @ check_cols_of_chain acts ~worlds
+        @ check_cols_of_chain acts ~worlds ~declared
         @ (match world with
            | None -> []
            | Some w -> artifact_cols_of_chain acts ~world:w ~declared))

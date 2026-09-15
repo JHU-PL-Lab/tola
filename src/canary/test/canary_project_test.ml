@@ -1619,10 +1619,21 @@ let agreement_registry_firing_pin : pure_test =
         && (* … and the pair identity agreement is INAPPLICABLE under
               cstubs, because a static archive records no dependency.
               Firing and applicability are different questions and the
-              model says so separately. *)
+              model says so separately.
+
+              Asked through the CAPABILITY match since 2026-09-14: the
+              claim REQUIRES a consumer artifact that records
+              dependencies, and a cstubs world does not offer one. The
+              predicate this replaced said the same thing in a closure
+              of its own. *)
         (match
-           (List.hd_exn (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_methods)
-             .C.m_applicable Canary_mechanism.Cstubs Canary_lang.OCaml built_ml
+           C.applies_given
+             ~provided:
+               (CR.world_capabilities ~mechanism:Canary_mechanism.Cstubs
+                  ~world:built_ml ~declared:None)
+             (List.hd_exn
+                (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_methods)
+               .C.m_requires
          with
          | C.Inapplicable _ -> true
          | C.Applicable -> false)) }

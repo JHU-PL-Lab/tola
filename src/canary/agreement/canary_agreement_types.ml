@@ -179,16 +179,7 @@ let signatures_agree : agreement =
     ag_methods =
       [ checking_method ~name:"header_vs_stub_signature_summaries" ~kind:Compare
           ~reference:Peer_artifact
-          ~applicable:(fun m l _ ->
-            match (l, is_dynamic m) with
-            | Canary_lang.OCaml, false -> Applicable
-            | _, true ->
-                Inapplicable
-                  "a dynamic binding declares its types as values rather than \
-                   as a compiled boundary; it needs its own extractor"
-            | _ ->
-                Inapplicable
-                  "no signature extractor for this language's stub surface yet")
+          ~requires:[ Typed_stub_signatures ]
           ~firing:firing_default
           ~inputs:(fun { ac_mechanism = m; ac_lang = l; _ } ->
             match (l, is_dynamic m) with

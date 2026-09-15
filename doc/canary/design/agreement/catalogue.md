@@ -370,7 +370,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | compares | compare |
 | against | peer |
 | implemented | yes |
-| ocaml/cstubs@built | not applicable — this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive has neither; a dynamic binding compiles nothing) |
+| ocaml/cstubs@built | not applicable — nothing on the consumer side records NEEDED or symbol versions — a static archive carries neither, and those appear only at link time |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
 |   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
 |   reads | consumer identity + NEEDED build_binding_python/inspect.json |
@@ -482,7 +482,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | compares | compare |
 | against | peer |
 | implemented | yes |
-| ocaml/cstubs@built | not applicable — this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive has neither; a dynamic binding compiles nothing) |
+| ocaml/cstubs@built | not applicable — nothing on the consumer side records NEEDED or symbol versions — a static archive carries neither, and those appear only at link time |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
 |   reads | provider version tags build_lib/inspect.json | probe_lib/inspect.json |
 |   reads | consumer version tags build_binding_python/inspect.json |
@@ -571,7 +571,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
 |   reads | header signatures scan_sources/inspect_typed_header.json |
 |   reads | stub signatures scan_sources/inspect_typed_binding_stub_ocaml.json |
-| python/cext@built | not applicable — no signature extractor for this language's stub surface yet |
+| python/cext@built | fires at build_binding_python, probe_binding_python |
 | limits | textual comparison of type SPELLINGS, not semantic type equivalence, representation or ownership. Names on only one side are skipped. The current extractor parses known C header declarations and supplies fixed binding signatures where their names occur in the binding source — general binding-signature extraction is the next step. |
 
 **Examples**
@@ -639,7 +639,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | compares | compare |
 | against | peer |
 | implemented | yes |
-| ocaml/cstubs@built | not applicable — this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive has neither; a dynamic binding compiles nothing) |
+| ocaml/cstubs@built | not applicable — nothing on the consumer side records NEEDED or symbol versions — a static archive carries neither, and those appear only at link time |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
 |   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
 |   reads | consumer identity + NEEDED build_binding_python/inspect.json |

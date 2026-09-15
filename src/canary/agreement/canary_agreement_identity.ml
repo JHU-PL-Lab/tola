@@ -353,13 +353,11 @@ let consumer_records_needed (m : Canary_mechanism.mechanism) : bool =
       Canary_agreement_cstubs.records_needed_in_a_readable_artifact
   | _ -> not (is_dynamic m)
 
-let needs_consumer_record m _ _ =
-  if consumer_records_needed m then Applicable
-  else
-    Inapplicable
-      "this binding mechanism produces no artifact carrying a dependency or \
-       symbol-version record (a static archive has neither; a dynamic \
-       binding compiles nothing)"
+(** A pair check needs SOMETHING on the consumer side that records
+    dependencies or symbol versions. Declared rather than tested
+    (2026-09-14): {!capabilities_of} decides whether this world offers
+    one, and derives the reason when it does not. *)
+let needs_consumer_record = [ Consumer_elf_record ]
 
 (** WHERE A PAIR CHECK FIRES: wherever the consumer artifact exists,
     and not before.
@@ -471,7 +469,7 @@ let soname_matches_requirement : agreement =
     ag_fault_tag = "abi_soname";
     ag_methods =
       [ checking_method ~name:"library_identity_vs_consumer_record" ~kind:Compare
-          ~reference:Peer_artifact ~applicable:needs_consumer_record
+          ~reference:Peer_artifact ~requires:needs_consumer_record
           ~firing:pair_firing
           ~inputs:
             consumer_record_inputs_native
@@ -573,7 +571,7 @@ let required_versions_exported : agreement =
     ag_fault_tag = "sym_version";
     ag_methods =
       [ checking_method ~name:"required_tags_vs_provider_exports" ~kind:Compare
-          ~reference:Peer_artifact ~applicable:needs_consumer_record
+          ~reference:Peer_artifact ~requires:needs_consumer_record
           ~firing:pair_firing
           ~inputs:(fun { ac_mechanism = m; ac_lang = l; ac_world = w; _ } ->
             if consumer_records_needed m then
@@ -672,7 +670,7 @@ let dependencies_provided : agreement =
     ag_methods =
       [ checking_method ~name:"recorded_dependencies_vs_world_providers"
           ~kind:Compare ~reference:Peer_artifact
-          ~applicable:needs_consumer_record ~firing:pair_firing
+          ~requires:needs_consumer_record ~firing:pair_firing
           ~inputs:
             consumer_record_inputs_native
           ~eval:dependencies_provided_eval
