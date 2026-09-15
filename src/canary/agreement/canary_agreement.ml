@@ -677,8 +677,82 @@ type proposed = {
   prop_needs : string;  (** what implementing it requires *)
 }
 
+(* THE DISTANCE-0 HOLES (2026-09-15, user asked for the plan to live in
+   the catalogue rather than in a reply).
+
+   [theory.md] §5 walks every action and states, for each, the
+   full-information agreement the real tool established and what
+   post-fact checking can recover. Walking that against the registry
+   leaves these. They come FIRST in the list because distance 0 — both
+   sides still present at the one action — is where the least was lost
+   and therefore where checking is cheapest and strongest, while the
+   three older proposals below are all distance ≥2.
+
+   Two of them are not speculative at all: z3 already performs §5.7 as
+   a hand-listed shell assertion inside its install template
+   (`assert_staged`), and §5.1 runs as a `git rev-parse` in a
+   postcondition. "Already runs" is NOT "already produces evidence",
+   which is why they are proposals rather than lifts — an evaluator
+   needs a recorded fact to read, and a shell assert leaves none. *)
 let proposed_agreements : proposed list =
-  [ { prop_slug = "denotation_stable_across_worlds";
+  [ { prop_slug = "exports_accounted_for";
+      prop_doc = "§5.3";
+      prop_claim =
+        "every symbol the library exports on its declared surface is \
+         accounted for by the project's declaration — the CONVERSE of \
+         declared_symbols_exported, which together with it makes the \
+         pair an equality rather than an inclusion";
+      prop_needs =
+        "nothing new: both sides are already in hand wherever \
+         declared_symbols_exported decides. The open question is the \
+         SURFACE — a library exports internals a declaration should not \
+         have to name, so the claim needs a prefix or visibility filter \
+         before it stops being noise" };
+    { prop_slug = "package_contains_declared_files";
+      prop_doc = "§5.7";
+      prop_claim =
+        "the staged package contains every file the recipe said it \
+         installs — and the consumer's side of it: what the prefix \
+         holds is what a consumer reading the prefix will find";
+      prop_needs =
+        "a manifest of what the install actually staged, recorded as \
+         evidence. z3 asserts exactly this today with a hand-listed \
+         `assert_staged` and two shell guards, and declares the \
+         pre-#10549 failure as two hand-written substrings; all four \
+         retire when the claim has a row" };
+    { prop_slug = "source_is_declared_ref";
+      prop_doc = "§5.1";
+      prop_claim =
+        "the source tree a build read is the ref the project declared — \
+         an IDENTITY claim, so unlike the relation ones it closes \
+         exactly rather than converging";
+      prop_needs =
+        "the resolved commit RECORDED after the fetch. The check itself \
+         already runs as a shell assertion in a check_post, which is \
+         precisely why it has no row: there is no evidence file to read" };
+    { prop_slug = "build_tree_configured_for_source";
+      prop_doc = "§5.2";
+      prop_claim =
+        "the build tree was configured for THIS source tree and these \
+         options — a warm tree configured from another ref answers \
+         every later question about the wrong world";
+      prop_needs =
+        "an inspector over the configure cache (CMakeCache.txt, \
+         config.status, dune's env) reducing it to the source path, the \
+         ref and the option set" };
+    { prop_slug = "signatures_match_debug_info";
+      prop_doc = "§5.3";
+      prop_claim =
+        "the signatures the header declares are the ones the compiled \
+         library was built with — the strongest available answer to the \
+         type question, since it reads what the compiler recorded \
+         rather than what the header says now";
+      prop_needs =
+        "a DWARF inspector and libraries built with -g. Strictly \
+         stronger than signatures_agree, which compares two TEXTS and \
+         cannot see a changed struct layout behind an unchanged \
+         spelling" };
+    { prop_slug = "denotation_stable_across_worlds";
       prop_doc = "§5.6";
       prop_claim =
         "a recorded library identity denotes the SAME implementation in \
