@@ -18,6 +18,14 @@
       "status": "done"
     },
     {
+      "tag": "fetch_binding_ocaml_inspect",
+      "output_tag": "fetch_binding_ocaml",
+      "action": "fetch_binding_ocaml",
+      "variant_id": "source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
       "tag": "fetch_binding_ocaml_stub_inspect",
       "output_tag": "fetch_binding_ocaml",
       "action": "fetch_binding_ocaml",
@@ -27,14 +35,6 @@
     },
     {
       "tag": "probe_binding_ocaml",
-      "output_tag": "probe_binding_ocaml",
-      "action": "probe_binding_ocaml",
-      "variant_id": "source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "probe_binding_ocaml_inspect",
       "output_tag": "probe_binding_ocaml",
       "action": "probe_binding_ocaml",
       "variant_id": "source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched",

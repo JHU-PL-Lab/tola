@@ -1,0 +1,6 @@
+ninja: Entering directory `/home/red/code/contrib/z3-all/z3/../build-arbipher'
+[0/4] Generating "/home/red/code/contrib/z3-all/build-arbipher/src/api/dll/install_tactic.cpp"
+INFO:root:Generated "/home/red/code/contrib/z3-all/build-arbipher/src/api/dll/install_tactic.cpp"
+[2/4] Building CXX object src/api/dll/CMakeFiles/api_dll.dir/install_tactic.cpp.o
+[3/4] Linking CXX shared library libz3.so.4.15.5.0
+[4/4] Creating library symlink libz3.so.4.15 libz3.so

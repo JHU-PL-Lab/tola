@@ -14,14 +14,14 @@ graph LR
     A_build_binding_ocaml{{"build_binding_ocaml [3]"}}
     A_build_app_ocaml{{"build_app_ocaml"}}
     A_install_lib{{"install_lib"}}
-    A_pack_binding_ocaml{{"pack_binding_ocaml [4]"}}
+    A_pack_binding_ocaml{{"pack_binding_ocaml [5]"}}
     A_pack_lib{{"pack_lib"}}
     A_pack_app{{"pack_app"}}
-    A_probe_binding_ocaml(["probe_binding_ocaml [6]"])
+    A_probe_binding_ocaml(["probe_binding_ocaml [7]"])
     A_probe_app_ocaml(["probe_app_ocaml"])
     A_probe_lib(["probe_lib [8][9]"])
-    A_pack_binding_ocaml_stub_inspect(["inspect_ocaml_stub [5]"])
-    A_probe_binding_ocaml_inspect(["inspect_ocaml [7]"])
+    A_build_binding_ocaml_inspect(["inspect_ocaml [4]"])
+    A_pack_binding_ocaml_stub_inspect(["inspect_ocaml_stub [6]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers
@@ -44,8 +44,8 @@ graph LR
     app_node -->|test| A_probe_app_ocaml
     lib_node -.->|runtime| A_probe_app_ocaml
     lib_node -->|test| A_probe_lib
+    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect
     A_pack_binding_ocaml -.-> A_pack_binding_ocaml_stub_inspect
-    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
     classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
@@ -68,8 +68,8 @@ graph LR
     class A_probe_binding_ocaml st_done
     class A_probe_app_ocaml st_nospec
     class A_probe_lib st_done_ctx
+    class A_build_binding_ocaml_inspect st_done
     class A_pack_binding_ocaml_stub_inspect st_done
-    class A_probe_binding_ocaml_inspect st_done
     linkStyle 0 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5

@@ -651,7 +651,12 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
           Raw
             (fun ~output_dir ~variant_key ->
               let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-              let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in
+              (* [symbols.log] is gone with the assert that wrote it
+                 (2026-09-15): the symbol question is answered from
+                 [build_binding_ocaml/inspect_stub.json] against the
+                 library's native summary, by the registry, so the probe
+                 no longer decides it in shell and leaves no log of its
+                 own about it. *)
               (* -cclib "$LIB_Z3": the cmxa embeds `-L<stublibs> -L<build> -lz3`
                  — the STORE's stale libz3.so wins the -lz3 search (stublibs
                  first) and the link dies on any API the store lacks (finite-set
@@ -700,12 +705,6 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      BINDING_DIR=%s/src/api/ml && \
                      STUB=$(ls \"$BINDING_DIR\"/libz3ml.a 2>/dev/null | head -1) && \
                      test -n \"$STUB\" && \
-                     { python3 canary/scripts/assert_binary_symbols.py \
-                       --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
-                       --symbol-prefix Z3_ > %s/%s 2>&1 ; SYMRC=$? ; \
-                       sed -n '1p' %s/%s | sed 's/^/CANARY-NOTE: symbols /' ; \
-                       sed -n '3,7p' %s/%s | sed 's/^/CANARY-NOTE: missing /' ; \
-                       exit $SYMRC ; } && \
                      LD_LIBRARY_PATH=\"$SYS_LIBDIR\" \
                      ocamlfind ocamlopt -package zarith -linkpkg \
                        -cclib \"$LIB_Z3\" \
@@ -714,10 +713,8 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      LD_LIBRARY_PATH=\"$SYS_LIBDIR\" \
                      %s/z3_example >> %s/%s 2>&1 && \
                      cat %s/%s"
-                    sys_resolve build output_dir symbols_log output_dir
-                    symbols_log output_dir symbols_log output_dir output_dir
-                    probe_log output_dir output_dir probe_log output_dir
-                    probe_log
+                    sys_resolve build output_dir output_dir probe_log
+                    output_dir output_dir probe_log output_dir probe_log
               | Canary_artifact.Built | Canary_artifact.Vendored
               | Canary_artifact.Absent ->
                   Printf.sprintf
@@ -727,16 +724,13 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      BINDING_DIR=%s/src/api/ml && \
                      STUB=$(ls \"$BINDING_DIR\"/libz3ml.a 2>/dev/null | head -1) && \
                      test -n \"$STUB\" && \
-                     python3 canary/scripts/assert_binary_symbols.py \
-                       --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
-                       --symbol-prefix Z3_ > %s/%s 2>&1 && \
                      ocamlfind ocamlopt -package zarith -linkpkg \
                        -cclib \"$LIB_Z3\" \
                        -I \"$BINDING_DIR\" \"$BINDING_DIR\"/z3ml.cmxa \
                        canary/examples/z3/z3_example.ml -o %s/z3_example > %s/%s 2>&1 && \
                      %s/z3_example >> %s/%s 2>&1 && \
                      cat %s/%s"
-                    build build build output_dir symbols_log
+                    build build build
                     output_dir output_dir probe_log
                     output_dir output_dir probe_log
                     output_dir probe_log
@@ -766,9 +760,6 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      BINDING_DIR=%s/lib/ocaml/z3 && \
                      STUB=$(ls \"$BINDING_DIR\"/z3ml.a 2>/dev/null | head -1) && \
                      { test -n \"$STUB\" || { echo \"STAGED PACKAGE MISSING: $BINDING_DIR/z3ml.a\" >&2; echo \"STAGED PACKAGE MISSING: $BINDING_DIR/z3ml.a\" > %s/%s; exit 1; }; } && \
-                     python3 canary/scripts/assert_binary_symbols.py \
-                       --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
-                       --symbol-prefix Z3_ > %s/%s 2>&1 && \
                      LD_LIBRARY_PATH=%s/lib:$LD_LIBRARY_PATH \
                      ocamlfind ocamlopt -package zarith -linkpkg \
                        -cclib \"$LIB_Z3\" \
@@ -778,7 +769,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      %s/z3_example >> %s/%s 2>&1 && \
                      cat %s/%s"
                     prefix prefix prefix prefix
-                    output_dir staged_fail output_dir symbols_log
+                    output_dir staged_fail
                     prefix
                     output_dir output_dir probe_log
                     prefix output_dir output_dir probe_log
@@ -1012,12 +1003,45 @@ let realize a =
        else spec.probe_binding);
     inspect = (fun action _loc ->
         match action with
-        | Canary_basic.Probe_lib ->
-            Some (fun ~output_dir ~variant_key ->
-                let lib_resolve = "LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so" in
-                Printf.sprintf "%s\n%s" lib_resolve
-                  (Canary_artifact_native.inspect_cmd ~lib:"$LIB_Z3"
-                     ~prefixes:[ "Z3_"; "Z3_mk_"; "Z3_solver_" ] ~output_dir ~variant_key ()))
+        (* THE [Probe_lib] OVERRIDE IS GONE (2026-09-15). It resolved
+           the library with `pkg-config --variable=libdir z3`, i.e. the
+           SYSTEM one, in every world — and because an explicit inspect
+           replaces the generated one of the same base name, it
+           overwrote the three world-aware summaries z3's own
+           [Native_lib_probe] rows already produce (the PM lib, the
+           build tree, the staged prefix). Every recorded
+           `probe_lib/inspect.json` in this project said
+           `/usr/lib/x86_64-linux-gnu/libz3.so`, including the worlds
+           that build their own.
+
+           Nothing replaces it: [Native_lib_probe] emits the summary
+           beside its probe log since 2026-09-13, and it knows which
+           library the world placed. This override predates that. *)
+        (* THE CONSUMER SIDE, RECORDED (2026-09-15, user: "let's first
+           use this one set of truth from canary").
+
+           z3 used to answer the symbol question with
+           `assert_binary_symbols.py` inside three probe commands: it
+           ran `nm` over the same two artifacts, compared them, and
+           exited 0/1 — leaving nothing behind. That is the same
+           comparison `required_symbols_exported` makes, landed on five
+           projects, so z3 carried a second implementation of a claim
+           the registry already owns and produced no evidence anyone
+           else could read.
+
+           Recording the stub's undefined references here is the whole
+           change. The library's side already exists (every
+           [Native_lib_probe] emits a native summary since 2026-09-13),
+           and the archive name is z3's own declaration —
+           [z3_binding_decls]' `Stub_archive { archive = "libz3ml.a" }`
+           — so the only project-specific fact left is the directory
+           its build puts it in. *)
+        | Canary_basic.Build_binding Canary_lang.OCaml ->
+            Some
+              (fun ~output_dir ~variant_key ->
+                Canary_artifact_lang.stub_inspect_path_cmd
+                  ~archive:(build ^ "/src/api/ml/libz3ml.a")
+                  ~prefix:"Z3_" ~output_dir ~variant_key ())
         | _ -> None);
   }
 

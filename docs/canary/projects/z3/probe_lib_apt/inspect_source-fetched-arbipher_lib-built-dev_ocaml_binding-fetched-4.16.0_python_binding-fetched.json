@@ -1,13 +1,12 @@
 {
   "counts": {
     "by_prefix": {
-      "Z3_": 705,
-      "Z3_mk_": 263,
-      "Z3_solver_": 39
+      "Z3_": 705
     },
     "total": 727
   },
   "elf": {
+    "format": "elf",
     "needed": [
       "libstdc++.so.6",
       "libm.so.6",

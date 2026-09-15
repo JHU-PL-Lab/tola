@@ -274,7 +274,32 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
               ~watchlist:d.native_watchlist
               ~output_dir ~variant_key () in
             Printf.sprintf "%s\n%s" (resolve ()) sum)
-      | Probe_binding (_), _ ->
+      (* THE SURFACE INSPECTION ATTACHES WHERE THE BINDING IS
+         PROVISIONED, not where it is probed (2026-09-15, user).
+
+         It used to hang on [Probe_binding], and the evidence it writes
+         is good — ocamlfind + ocamlobjinfo over the installed package,
+         strictly better than a generated mli scan. But the derivation
+         asks for a binding's surface at the step that PROVISIONS it
+         ([binding_evidence_tag]: `fetch_binding_ocaml` for a fetched
+         binding, `build_binding_ocaml` for a built one), so all four
+         Pattern A projects wrote the right file in the wrong place and
+         [api_names_present] reported `unavailable` on every one of
+         them — eight cells of the result table's `no-evid`.
+
+         This is the same one-line relocation sqlite took in 2026-09-12,
+         and it is the third instance of the class: the producer picks a
+         step, the consumer derives one, and nothing makes them agree.
+         (The general fix — a typed evidence ADDRESS produced and
+         consumed from one place — is backlog §50.)
+
+         NOT a new summary: nothing is generated that was not generated
+         before, which is what keeps zarith safe. The trap that cost a
+         round in 2026-09-13 was ADDING a derived mli scan beside this
+         one, where [Zarith_version] ships no `.mli` and the scan
+         reported missing what ocamlobjinfo lists. Moving this one does
+         not create a second. *)
+      | Fetch (Binding _), _ | Build_binding _, _ ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.inspect_opam_pkg_cmd
               ~pkg:d.ocamlfind_pkg

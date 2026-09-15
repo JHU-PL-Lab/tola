@@ -172,24 +172,43 @@ python3 %{script} --kind stub --path "$STUB" \
   --prefix '%{prefix}' --watchlist '%{watchlist_csv}' \
   > %{output_dir}/%{out_file}|}]
 
-(* Symbol compat check for an opam-installed binding vs a system native lib.
-   Discovers stub archive via `ocamlfind query <pkg>` (looks for lib*.a),
-   finds the system lib with `provided_lib_cmd` (a shell expression → path).
-   Writes symbols.log; exits nonzero if symbols are missing.
-   provided_lib_cmd example: "ls \"$(llvm-config --libdir)\"/libLLVM*.so | head -1" *)
-let opam_pkg_symbol_check_cmd ~pkg ~provided_lib_cmd ~prefix ~output_dir =
-  let script = "canary/scripts/assert_binary_symbols.py" in
+(* THE SAME c_stub SUMMARY FOR AN ARCHIVE CANARY BUILT (2026-09-15).
+
+   [stub_inspect_opam_pkg_cmd] above finds the archive through
+   `ocamlfind query`, which answers only where the binding came from a
+   package. A binding canary BUILDS has no package to query — z3's
+   `libz3ml.a` sits in its cmake build tree — so the derivation that
+   gives every fetched binding a stub summary gave a built one nothing,
+   and the projects with built bindings (z3, llvm) were exactly the ones
+   still asserting symbols by hand in shell.
+
+   [archive] is a GLOB, not a path: the caller knows the directory and
+   the declared archive name ([Canary_binding_decl.Stub_archive]), and
+   a `ls | head -1` over the two is how every project already finds it.
+   Output is [inspect_stub.json] beside the fetched form's, so the
+   agreement's evidence paths need no new spelling. *)
+let stub_inspect_path_cmd ~archive ?(prefix = "") ?(watchlist = [])
+    ~output_dir ~variant_key () =
+  let script = "canary/scripts/inspect_binding.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  let out_file =
+    Canary_basic.filename ~variant_key ~base:"inspect_stub" ~ext:"json"
+  in
   [%string
-    {|eval $(opam env)
-PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
-test -n "$PKG_DIR"
-STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+    {|STUB=$(ls %{archive} 2>/dev/null | head -1)
 test -n "$STUB"
-PROVIDED=$(%{provided_lib_cmd})
-test -n "$PROVIDED"
-python3 %{script} --provided-lib "$PROVIDED" --required-lib "$STUB" \
-  --symbol-prefix %{prefix} 2>&1 | tee %{output_dir}/symbols.log
-grep -q 'OK:' %{output_dir}/symbols.log|}]
+python3 %{script} --kind stub --path "$STUB" \
+  --prefix '%{prefix}' --watchlist '%{watchlist_csv}' \
+  > %{output_dir}/%{out_file}|}]
+
+(* [opam_pkg_symbol_check_cmd] was here and is gone with
+   `assert_binary_symbols.py` (2026-09-15) — the opam-package twin of
+   the native one, and like it, uncalled. Note what the PAIR of them
+   says: two dead wrappers around a pass/fail script, beside two live
+   inspectors that record the same two symbol sets as JSON. The shell
+   form kept being written because it is the obvious thing to reach
+   for, and kept being abandoned because nothing downstream can read
+   what it leaves behind. *)
 
 (* ── Python ── *)
 

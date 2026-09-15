@@ -830,6 +830,52 @@ produced them. It drops the markers of the steps that DECIDE (probes,
 binding builds, staging) and re-runs; fetches and the library build
 stay warm. Cleared all of zarith/cairo/libffi/zlib, and moved two
 zarith claims straight to `decided`.
+**ONE SOURCE OF TRUTH — `assert_binary_symbols.py` IS DELETED**
+(2026-09-15, user: "I am good to delete it. Let's first use this one set
+of truth from canary"). z3 (×3) and llvm (×1) answered the symbol
+question with a shell script that ran `nm` over two artifacts, compared
+them, and exited 0/1 — a SECOND implementation of
+`required_symbols_exported`, which had been landed on five projects,
+producing no evidence anyone else could read. It also carried its own
+unpinned copy of the macOS nm handling, WITHOUT the underscore stripping
+`inspect_native.py` has: on Mach-O both symbol sets came back empty and
+`∅ ⊆ ∅` passed vacuously — the fourth silent-failure class of the macOS
+section, still live in it. Two dead OCaml wrappers went with it
+(`native_symbol_check_cmd`, `opam_pkg_symbol_check_cmd`, both uncalled).
+NOTE WHAT THE PAIR SAID: two abandoned shell wrappers beside two live
+inspectors recording the same two symbol sets — the shell form keeps
+being written because it is the obvious thing to reach for, and keeps
+being abandoned because nothing downstream can read what it leaves.
+Replaced by `Canary_artifact_lang.stub_inspect_path_cmd`, the twin of
+the opam-package form for a stub archive canary BUILDS (`ocamlfind
+query` has nothing to query for a built binding — which is exactly why
+z3 and llvm were the two projects still asserting by hand).
+**z3 IS UNMUTED and `required_symbols_exported` decides there**: `holds`
+×8 / `violated` ×2 cold, and the violation is THE FORWARD CELL
+reproduced from evidence — the arbipher-HEAD binding requires 776 `Z3_`
+symbols, apt's libz3 4.8.12 exports 705, **85 missing**. Two bugs found
+doing it: (1) z3's `Probe_lib` inspect override resolved the library
+with `pkg-config --variable=libdir z3` — the SYSTEM one — in EVERY
+world, and since an explicit inspect replaces the generated one of the
+same base name it was overwriting the three world-aware summaries z3's
+own `Native_lib_probe` rows produce; every recorded
+`probe_lib/inspect.json` said `/usr/lib/.../libz3.so` including the
+worlds that build their own. Deleted; `Native_lib_probe` has emitted
+that summary since 2026-09-13. (2) in the both-released world
+`required_symbols_exported` is `violated` while the probe PASSES, and
+both are right: the scenario declares `lib = apt` but the opam `z3`
+package ships its own libz3 in `stublibs` and the loader finds that
+first — which z3's spec already records as `pm_gate =
+Package_builds_lib`. A declared world that the run does not realize.
+**`api_names_present` LANDED ON THE PATTERN A FOUR** the same day, by
+moving the template's inspect from `Probe_binding` to
+`Fetch (Binding _) | Build_binding _` — the steps that PROVISION a
+binding, which is where `binding_evidence_tag` looks. cairo 1→4 decided,
+libffi 1→5, zlib 0→3, zarith 3→4. Nothing new is generated, which is
+what keeps zarith safe (the 2026-09-13 trap was ADDING a derived mli
+scan beside it). THIRD instance of the class after tiny's filenames and
+probe-vs-install: the producer picks a step, the consumer derives one,
+nothing makes them agree — general fix is backlog §50.
 ⚠ **A VERDICT CAN STILL BE INVISIBLE** (`project/issues.md` §1, second
 instance): the column set comes from `covered_actions_of` (the union of
 every world's actions) while each cell re-resolves its slot against ITS

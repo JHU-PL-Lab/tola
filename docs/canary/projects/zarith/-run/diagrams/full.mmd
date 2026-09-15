@@ -14,10 +14,10 @@ graph LR
 
     A_fetch_lib{{"fetch_lib [1]"}}
     A_build_binding_ocaml{{"build_binding_ocaml [3]"}}
-    A_pack_binding_ocaml{{"pack_binding_ocaml [4]"}}
-    A_pack_binding_ocaml_stub_inspect(["inspect_ocaml_stub [5]"])
-    A_probe_binding_ocaml(["probe_binding_ocaml [6]"])
-    A_probe_binding_ocaml_inspect(["inspect_ocaml [7]"])
+    A_build_binding_ocaml_inspect(["inspect_ocaml [4]"])
+    A_pack_binding_ocaml{{"pack_binding_ocaml [5]"}}
+    A_pack_binding_ocaml_stub_inspect(["inspect_ocaml_stub [6]"])
+    A_probe_binding_ocaml(["probe_binding_ocaml [7]"])
     A_probe_lib(["probe_lib [8]"])
     A_probe_lib_inspect(["inspect_lib [9]"])
 
@@ -31,8 +31,8 @@ graph LR
     A_pack_binding_ocaml --> ocaml_binding_opam_node
     ocaml_binding_build_tree_node -->|test| A_probe_binding_ocaml
     lib_node -.->|runtime| A_probe_binding_ocaml
+    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect
     A_pack_binding_ocaml -.-> A_pack_binding_ocaml_stub_inspect
-    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect
     A_probe_lib -.-> A_probe_lib_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
@@ -48,10 +48,10 @@ graph LR
     class A_fetch_lib st_done
     class A_fetch_binding_source_ocaml st_done
     class A_build_binding_ocaml st_done
+    class A_build_binding_ocaml_inspect st_done
     class A_pack_binding_ocaml st_done
     class A_pack_binding_ocaml_stub_inspect st_done
     class A_probe_binding_ocaml st_done
-    class A_probe_binding_ocaml_inspect st_done
     class A_probe_lib st_done
     class A_probe_lib_inspect st_done
     linkStyle 0 stroke:#4caf50,stroke-width:3px

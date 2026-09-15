@@ -1,0 +1,26 @@
+From https://github.com/Z3Prover/z3
+   9d781559e..2d2fb04fe  master                 -> origin/master
+   bd9f6c83e..413fccaf4  c3                     -> origin/c3
+ * [new branch]          c3-merge-master-aug25  -> origin/c3-merge-master-aug25
+ * [new branch]          c3mv                   -> origin/c3mv
+ * [new branch]          code-simplifier-seq-regex-live-1789336203-09d28542eee92e11 -> origin/code-simplifier-seq-regex-live-1789336203-09d28542eee92e11
+ * [new branch]          code-simplifier/fpa-rewriter-dedup-45aac2f8fae89838 -> origin/code-simplifier/fpa-rewriter-dedup-45aac2f8fae89838
+ * [new branch]          copilot/aw-detection-runs -> origin/copilot/aw-detection-runs
+ * [new branch]          copilot/comment-cmake-tradeoffs -> origin/copilot/comment-cmake-tradeoffs
+ * [new branch]          copilot/fix-chc-model-issue -> origin/copilot/fix-chc-model-issue
+ * [new branch]          copilot/fix-java-lib-get-full-version -> origin/copilot/fix-java-lib-get-full-version
+ * [new branch]          copilot/fix-smt-macro-finder-issue -> origin/copilot/fix-smt-macro-finder-issue
+ * [new branch]          copilot/simplify-membership-view-helper -> origin/copilot/simplify-membership-view-helper
+ * [new branch]          copilot/simplify-operations-not-defined -> origin/copilot/simplify-operations-not-defined
+ * [new branch]          fix-seq-indexof-nth-3508 -> origin/fix-seq-indexof-nth-3508
+ * [new branch]          fix-view-witness-trail-state -> origin/fix-view-witness-trail-state
+ * [new branch]          fp-sls-followup        -> origin/fp-sls-followup
+ * [new branch]          hoq                    -> origin/hoq
+ * [new branch]          nseq-pa-bisim-ssnf-experiments -> origin/nseq-pa-bisim-ssnf-experiments
+ * [new branch]          opt-nlsat-open-suprema -> origin/opt-nlsat-open-suprema
+ * [new branch]          optima                 -> origin/optima
+ * [new branch]          resplit-ablation-20260914 -> origin/resplit-ablation-20260914
+ * [new branch]          resplit-ablation-current-20260915 -> origin/resplit-ablation-current-20260915
+ * [new branch]          seq-monadic-iterative-iterator -> origin/seq-monadic-iterative-iterator
+Your branch is behind 'origin/master' by 120 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)

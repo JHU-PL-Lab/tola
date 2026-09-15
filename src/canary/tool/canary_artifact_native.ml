@@ -195,15 +195,9 @@ let elf_inspect_cmd ~lib ~output_dir ~variant_key () =
   [%string
     {|python3 %{script} --path "%{lib}" > %{output_dir}/%{out_file}|}]
 
-(* Symbol compatibility probe via assert_binary_symbols.py.
-   Writes symbols.log; exits nonzero if symbols are missing. *)
-let native_symbol_check_cmd ~provided_lib ~required_libs ~prefix ~output_dir =
-  let script = "canary/scripts/assert_binary_symbols.py" in
-  let req_args =
-    List.map required_libs ~f:(fun l -> "--required-lib " ^ l)
-    |> String.concat ~sep:" "
-  in
-  [%string
-    "python3 %{script} --provided-lib %{provided_lib} %{req_args} \
-     --symbol-prefix %{prefix} 2>&1 | tee %{output_dir}/symbols.log && \
-     grep -q 'OK:' %{output_dir}/symbols.log"]
+(* [native_symbol_check_cmd] was here and is gone with
+   `assert_binary_symbols.py` (2026-09-15). It wrapped that script's
+   pass/fail into a step command; it had no caller, and the question it
+   answered — does the library export what the stub requires — belongs
+   to [required_symbols_exported], which compares two recorded
+   inspections instead of deciding in a pipeline and leaving a log. *)

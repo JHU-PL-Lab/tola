@@ -550,21 +550,24 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
       { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml; ar_needs = None;
         ar_template = Raw (fun ~output_dir ~variant_key ->
             let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-            let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in
             (* No llvm-config indirection: `ninja LLVM` builds only the dylib,
                so build/bin/llvm-config does not exist (cold OR warm) — the
                build libdir is known, point at it directly. *)
+            (* The symbol assert that used to gate this link is gone
+               (2026-09-15): it made the same comparison
+               [required_symbols_exported] makes, in a second
+               implementation that recorded nothing, and it carried its
+               own unpinned copy of the macOS nm handling — without the
+               underscore stripping [inspect_native.py] has, so on
+               Mach-O both symbol sets came back empty and it passed
+               vacuously. The stub summary at [build_binding_ocaml]
+               answers it now, from evidence. *)
             Printf.sprintf
               "eval $(opam env) && \
-               python3 canary/scripts/assert_binary_symbols.py \
-                 --provided-lib %s/lib/libLLVM.so \
-                 --required-lib %s/lib/ocaml/llvm/libllvm.a \
-                 --symbol-prefix LLVM > %s/%s 2>&1 && \
                ocamlopt -I %s/lib/ocaml/llvm %s/lib/ocaml/llvm/llvm.cmxa \
                  canary/examples/llvm/llvm_example_dev.ml -o %s/llvm_example_dev > %s/%s 2>&1 && \
                %s/llvm_example_dev >> %s/%s 2>&1 && \
                cat %s/%s"
-              build build output_dir symbols_log
               build build output_dir output_dir probe_log
               output_dir output_dir probe_log output_dir probe_log) };
     ]
@@ -631,6 +634,36 @@ let realize (a : Canary_artifact.assignment) : Canary_step_builder.runner_spec =
               in
               llvm_world_check pin ^ base) ]
        else spec.probe_binding);
+    (* THE CONSUMER SIDE, RECORDED (2026-09-15) — the same move z3 took,
+       and llvm needs it for the same reason: its binding is BUILT, so
+       the derivation that gives every opam-fetched binding a stub
+       summary (`ocamlfind query`) has nothing to query. Only in the
+       built worlds: a fetched llvm binding gets the derived one. *)
+    inspect =
+      (fun action loc ->
+        match action with
+        | Canary_basic.Build_binding Canary_lang.OCaml when not binding_fetched
+          ->
+            (* the same build dir the rows resolve — llvm has no
+               [z3_paths] twin, so it is spelled here from the one
+               source of it, the local checkout record *)
+            let build =
+              match
+                Canary_artifact_source.local_for (detect_distro ()) source
+              with
+              | Some l -> Canary_artifact_source.build_path_of l
+              | None ->
+                  Printf.sprintf "_out/canary/projects/llvm/%s_%s/build"
+                    (Canary_basic.string_of_version
+                       source.Canary_artifact_source.version)
+                    source.Canary_artifact_source.ref_
+            in
+            Some
+              (fun ~output_dir ~variant_key ->
+                Canary_artifact_lang.stub_inspect_path_cmd
+                  ~archive:(build ^ "/lib/ocaml/llvm/libllvm.a")
+                  ~prefix:"LLVM" ~output_dir ~variant_key ())
+        | _ -> spec.inspect action loc);
   }
 
 (** llvm as a [Canary_project_run.project_run] (`action llvm` →

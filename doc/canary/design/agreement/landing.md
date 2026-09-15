@@ -37,7 +37,7 @@ The planned column used to be repeated here beside the effective one, which
 put the registry's status in two files and made this one go stale first
 (2026-09-13). It is one column now, and the catalogue holds the other.
 
-## Effective — 2026-09-14
+## Effective — 2026-09-15
 
 Regenerate with `canary checks --landing`; this is a dated copy so the
 tracker is readable without a checkout.
@@ -49,8 +49,8 @@ tracker is readable without a checkout.
 | **LANDED** | `soname_matches_requirement` | **`holds` ×6 on sqlite, ×2 on ssl (2026-09-15); falsified by bumping the provider's recorded soname to `libsqlite3.so.9` → `violated: libsqlite3.so.0` on that scenario alone** |
 | **LANDED** | `dependencies_provided` | **`holds` ×6 on sqlite. On ssl it reports `violated: libcrypto.so.3` — a finding about the SPEC, not the artifacts: openssl ships two libraries and ssl declares one, so a dependency the world really provides has no modeled provider. See below** |
 | **LANDED** | `required_versions_exported` | **`holds` ×2 on ssl — the only project whose consumer carries versioned references (`OPENSSL_3.0.0`), matched against libssl's version definitions. `unavailable` on sqlite, whose libsqlite3 has no version nodes at all** |
-| **LANDED** | `api_names_present` | **decided in sqlite (OCaml and Python), ssl** |
-| **LANDED** | `required_symbols_exported` | **decided in cairo, libffi, sqlite, ssl, zarith. `holds` ×6 on sqlite's OCaml probe (2026-09-13); falsified by injecting a bogus required symbol → `violated: sqlite3_canary_not_a_real_symbol` on exactly that scenario. `unavailable` ×6 on the Python probe: CPython's `_sqlite3` extension is never inspected for its undefined references** |
+| **LANDED** | `api_names_present` | **decided in sqlite (OCaml and Python), ssl, and — since 2026-09-15 — cairo, libffi, zlib, zarith. Those four had reported `unavailable` for three days while writing perfectly good evidence: the Pattern A template hung its `ocamlfind`+`ocamlobjinfo` inspection on `Probe_binding` while the derivation asks for a binding's surface at the step that PROVISIONS it. One relocation, four projects, eight cells** |
+| **LANDED** | `required_symbols_exported` | **decided in cairo, libffi, sqlite, ssl, z3, zarith. `holds` ×6 on sqlite's OCaml probe (2026-09-13); falsified by injecting a bogus required symbol → `violated: sqlite3_canary_not_a_real_symbol` on exactly that scenario. On **z3** (2026-09-15) `holds` ×8 / `violated` ×2 cold, and the violation is the FORWARD CELL reproduced from evidence: the arbipher-HEAD-built binding requires 776 `Z3_` symbols, apt's libz3 4.8.12 exports 705, **85 missing**. z3 used to answer that question with `assert_binary_symbols.py` gating its own link; the script is deleted. `unavailable` ×6 on sqlite's Python probe: CPython's `_sqlite3` extension is never inspected for its undefined references** |
 | | `signatures_agree` | reported as `not_applicable`/`unavailable` |
 | | `soname_matches_requirement` | reported as `not_applicable`/`unavailable` |
 | | `required_versions_exported` | reported as `not_applicable`/`unavailable` |
@@ -238,16 +238,23 @@ From `registry.md` §7.4.2, narrowed to what this table says is closest:
      a warning now, and `spec-check`'s "binding dev source" item reports the
      gap — which is a real one, and newly visible rather than newly created.
 
-3. `api_names_present` on the Pattern A projects (cairo, libffi, zarith,
-   zstd). They report `unavailable`, and for the reason sqlite did before
-   2026-09-12: the project inspects its binding's surface at
-   `probe_binding`, and the derivation looks at the step that PROVISIONS
-   the binding. Their evidence is good — better than a generated mli scan,
-   since it is ocamlobjinfo's module list — it is simply at the wrong tag.
-   Moving the template's inspect from `Probe_binding` to
-   `Fetch (Binding OCaml)` is the same one-line relocation sqlite took, and
-   it lands four projects at once. A Built binding axis (zarith has one)
-   needs `Build_binding` covered as well.
+3. ~~`api_names_present` on the Pattern A projects~~ — **done 2026-09-15**,
+   and it was the one-line relocation this entry predicted: the template's
+   inspect moved from `Probe_binding` to `Fetch (Binding _) | Build_binding _`,
+   the two steps that PROVISION a binding, which is where
+   `binding_evidence_tag` looks. cairo 1→4 decided, libffi 1→5, zlib 0→3,
+   zarith 3→4.
+
+   Nothing new is generated, which is what kept zarith safe: the trap of
+   2026-09-13 was *adding* a derived mli scan beside this one, where
+   `Zarith_version` ships no `.mli` and the scan reported missing what
+   ocamlobjinfo lists. Moving the existing inspection does not create a
+   second one.
+
+   **Third instance of the class**, after tiny's filenames and the
+   probe-vs-install step: the producer picks a step, the consumer derives
+   one, and nothing makes them agree. The general fix — a typed evidence
+   ADDRESS, produced and consumed from one place — is backlog §50.
 4. The identity and dependency rows, now reachable through sqlite's Python
    extension — they need a native summary of the `.so`. **The lib half of
    this is now free** (every `Native_lib_probe` emits one); what is left is
