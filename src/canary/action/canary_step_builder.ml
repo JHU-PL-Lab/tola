@@ -282,6 +282,28 @@ type runner_spec = {
   asserts :
     (Canary_basic.action * Canary_store.location option * Canary_world.t list)
     list;
+  (** WHAT A TEMPLATE ALREADY WRITES (2026-09-15), as (action, output
+      base name) pairs. Filled by {!Canary_action_templates.realize};
+      empty for a hand-written spec.
+
+      It exists because two mechanisms write summaries and neither could
+      see the other. [attach_inspect] below replaces a generated summary
+      with an explicit one of the same base name — but a
+      [Native_lib_probe] emits its summary INSIDE the probe command, not
+      through that path, so an explicit [inspect] for the same action
+      became a SECOND step writing the same file into the same
+      directory. Last writer won, silently, and it was the hand-written
+      one.
+
+      z3 paid for that: its three world-aware probe rows (PM lib, build
+      tree, staged prefix) were all overwritten by one override that
+      resolved the library with `pkg-config` — so every recorded
+      [probe_lib/inspect.json] in the project named the SYSTEM libz3,
+      including the worlds that build their own. Nothing said so; the
+      file was simply the wrong library's.
+
+      Recording it makes the clash a warning instead of a coin flip. *)
+  template_summaries : (Canary_basic.action * string) list;
 }
 
 let empty_runner_spec = {
@@ -310,6 +332,7 @@ let empty_runner_spec = {
   artifact_name = (fun _ -> None);
   disabled_agreements = [];
   asserts = [];
+  template_summaries = [];
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -1183,7 +1206,30 @@ let derive_steps ~root ~project ?(cache_project = project)
     let explicit =
       match spec.inspect action loc with
       | None -> []
-      | Some c -> [ ("_inspect", "inspect", c) ]
+      | Some c ->
+          (* THE CLASH THE TEMPLATE NOW REPORTS (2026-09-15). If the
+             action's template already writes this base name inside its
+             own command, an explicit inspect is a second writer into
+             the same file and the last one wins — which is how z3's
+             hand-written `pkg-config` resolve came to overwrite three
+             world-aware probe summaries without a word.
+
+             The TEMPLATE wins, because its answer is derived from the
+             world and the override's is not. Saying so is the point:
+             the override is dead code, and the run now says which file
+             it was quietly losing. *)
+          if
+            List.exists spec.template_summaries ~f:(fun (a, base) ->
+                Poly.equal a action && String.equal base "inspect")
+          then begin
+            Fmt.epr
+              "[inspect] %s: the template for %s already writes \
+               inspect.json (the world's own library); ignoring the \
+               project's override, which was overwriting it.@." project
+              (string_of_action action);
+            []
+          end
+          else [ ("_inspect", "inspect", c) ]
     in
     let auto =
       List.filter (auto_binding_summaries action)

@@ -452,7 +452,15 @@ let realize_template (tpl : action_template) : runner_spec =
                    (Canary_artifact_native.native_lib_probe_cmd ~lib:"$LIB"
                       ~prefix ~output_dir ~variant_key))
       in
-      { spec with probe_lib = [ (location_of_probe_location location, cmd) ] }
+      (* AND IT DECLARES WHAT IT WRITES. [with_summary] appends the
+         native inspection to the probe's own command, so this template
+         produces `inspect.json` without going through
+         [attach_inspect] — which is how a project's explicit inspect
+         for the same action became an invisible second writer. Saying
+         so here is what lets the step builder catch that. *)
+      { spec with
+        probe_lib = [ (location_of_probe_location location, cmd) ];
+        template_summaries = [ (Canary_basic.Probe_lib, "inspect") ] }
   | Cmake_install_component { build; prefix; component } ->
       { spec with install_lib =
                    Some (fun ~output_dir ~variant_key ->
@@ -625,6 +633,12 @@ let realize_from_rows ?(base = empty_runner_spec)
         probe_lib = merge_list acc.probe_lib row_spec.probe_lib;
         probe_binding = merge_list acc.probe_binding row_spec.probe_binding;
         inspect = merge_inspect acc.inspect row_spec.inspect;
+        (* accumulated, not chosen: a project with three probe rows
+           (PM lib / build tree / staged prefix) declares the same base
+           name three times and every one of them is true *)
+        template_summaries =
+          List.dedup_and_sort ~compare:Poly.compare
+            (acc.template_summaries @ row_spec.template_summaries);
         stores = if Poly.equal row_spec.stores empty_runner_spec.stores then acc.stores else row_spec.stores;
       })
 

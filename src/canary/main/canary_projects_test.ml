@@ -1905,6 +1905,79 @@ let strict_mode_pin : Canary_project_test.pure_test =
         && String.equal f_lax expected_lax
         && not (String.equal f_lax f_strict)) }
 
+(* TWO WRITERS, ONE FILE — THE CLASH IS LOUD NOW (2026-09-15).
+
+   Summaries reach a step by two routes. Most go through
+   [attach_inspect], which already replaces a generated summary with an
+   explicit one of the same base name. A [Native_lib_probe] does NOT:
+   it appends its inspection to the probe's own command, so an explicit
+   [inspect] for the same action became a SECOND step writing the same
+   file into the same directory, and the last writer won.
+
+   z3 paid for it in silence. Its three probe rows are world-aware — the
+   PM library, the build tree, the staged prefix — and one override that
+   resolved the library with `pkg-config` overwrote all three. Every
+   recorded `probe_lib/inspect.json` in the project named the SYSTEM
+   libz3, including the worlds that build their own, and
+   `required_symbols_exported` was being decided against the wrong
+   artifact. Nothing was missing, nothing failed; the file was simply
+   another library's.
+
+   The template now declares what it writes, and the step builder drops
+   the override with a message rather than letting the two race. The
+   TEMPLATE wins because its answer is derived from the world and the
+   override's is hand-written — which is exactly the direction z3 proved.
+
+   Pinned by construction: the same spec with and without the
+   declaration differs by one step, so removing either half shows here. *)
+let inspect_clash_pin : Canary_project_test.pure_test =
+  { name = "steps.template_summary_beats_override";
+    check =
+      (fun () ->
+        let module SB = Canary_step_builder in
+        let probe ~output_dir:_ ~variant_key:_ = "true" in
+        let override ~output_dir:_ ~variant_key:_ = "echo override" in
+        let base =
+          { SB.empty_runner_spec with
+            probe_lib = [ (Canary_store.Build_tree, probe) ];
+            inspect =
+              (fun action _ ->
+                match action with
+                | Canary_basic.Probe_lib -> Some override
+                | _ -> None) }
+        in
+        let steps_of spec =
+          SB.derive_steps ~root:"_out/canary/test/no-such-run"
+            ~project:"clash-test" ~langs:[ Canary_lang.OCaml ] spec
+          |> List.map ~f:(fun (s : Canary_step_model.step) ->
+                 s.Canary_step_model.tag)
+        in
+        (* WITHOUT the declaration the override is attached, as it has
+           always been for a hand-written probe — that route stays open,
+           because a project whose probe writes no summary still needs
+           one *)
+        let loose = steps_of base in
+        let attached =
+          List.exists loose ~f:(fun t -> String.is_substring t ~substring:"inspect")
+        in
+        (* WITH it, the override is dropped: the template already wrote
+           that file and knows which library the world placed *)
+        let tight =
+          steps_of
+            { base with
+              template_summaries = [ (Canary_basic.Probe_lib, "inspect") ] }
+        in
+        let dropped =
+          not
+            (List.exists tight ~f:(fun t ->
+                 String.is_substring t ~substring:"inspect"))
+        in
+        (* and nothing else moved *)
+        let same_otherwise =
+          List.length loose = List.length tight + 1
+        in
+        attached && dropped && same_otherwise) }
+
 (* BLAME IS A STATIC SCAN, AND IT HAS TO BE RIGHT TO BE WORTH COUNTING
    (2026-09-15, user: "before we fix that, can we attribute it as one
    thing to blame in the table, so we can see how eager we need to fix
@@ -4522,6 +4595,7 @@ let base_tests : Canary_project_test.pure_test list =
       strict_mode_pin;
       check_index_language_pin;
       blame_attribution_pin;
+      inspect_clash_pin;
       run_info_session_pin;
       machine_roots_pin;
       platform_enumeration_pin;

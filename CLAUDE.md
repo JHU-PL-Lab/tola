@@ -876,6 +876,37 @@ what keeps zarith safe (the 2026-09-13 trap was ADDING a derived mli
 scan beside it). THIRD instance of the class after tiny's filenames and
 probe-vs-install: the producer picks a step, the consumer derives one,
 nothing makes them agree — general fix is backlog §50.
+**`probe_lib` IS STATIC, NOT A RUNTIME CHECK** (2026-09-15, user asked).
+Read the command: `nm -D | grep -c <prefix>` then `test COUNT -gt 0`.
+Nothing loads, nothing executes. `probe_binding` IS runtime — it links a
+consumer, runs it, and greps the output for a world witness. THREE ROLES
+are tangled in the two probe actions: **existence** (the artifact the
+world declares is there), **inspection** (record a projection as
+evidence), **execution** (load it, run it, observe). `probe_lib` has 1+2
+and NO 3; `probe_binding` has all three fused in one `&&` chain — the
+same fusion removed from z3. Role 1 on `probe_lib` is a degenerate
+ancestor of `declared_symbols_exported` ("count > 0" is the weakest
+"exports what was declared", which is landed and reads the NAMES), so
+role 2 is what the step is really for. ⚠ **NOTHING EVER `dlopen`s A
+LIBRARY**: it can pass every static check and fail to load (a missing
+transitive NEEDED, an unresolvable RUNPATH, a version-script mismatch
+the symbol table does not show). `dependencies_provided` reasons about
+RECORDED dependencies and never asks the loader. That is the identity
+half `theory.md` §5.9 calls missing, and what
+`interposition_binds_build_target` / `denotation_stable_across_worlds`
+wait on — a role-3 `probe_lib` is NEW COVERAGE, not a reclassification.
+Written up at `Canary_artifact_native.native_lib_probe_cmd`.
+**TWO WRITERS, ONE FILE — now loud** (2026-09-15). Summaries reach a
+step by two routes: most through `attach_inspect` (which already
+replaces by output base name), but a `Native_lib_probe` appends its
+inspection to the probe's OWN command, so a project's explicit
+`inspect` for the same action was a second step writing the same file —
+last writer won, silently. `runner_spec.template_summaries` records
+what a template writes; the step builder now DROPS the override with a
+message. The template wins because its answer is derived from the world
+and the override's is hand-written. Pinned by
+`steps.template_summary_beats_override`. Zero clashes today (z3's was
+the only one).
 ⚠ **A VERDICT CAN STILL BE INVISIBLE** (`project/issues.md` §1, second
 instance): the column set comes from `covered_actions_of` (the union of
 every world's actions) while each cell re-resolves its slot against ITS

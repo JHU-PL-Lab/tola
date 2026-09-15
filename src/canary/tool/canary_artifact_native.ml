@@ -119,6 +119,40 @@ let symbols_undefined ~prefix lines =
 (* Sanity probe: count symbols with prefix exported by a native lib.
    Writes probe.log; exits nonzero if the count is zero.
    Use to verify the lib compiled and exports the expected API surface. *)
+(* A [Probe_lib] STEP IS STATIC — READ THE COMMAND (2026-09-15, user
+   asked whether probe_lib is a kind of runtime check).
+
+   It is not. The command below runs `nm`, counts prefixed defined
+   symbols, and asserts the count is positive. Nothing is loaded and
+   nothing executes; the name says probe and the act is a static read.
+   Its sibling [Probe_binding] IS runtime — it links a consumer, runs
+   it, and greps the output for a world witness.
+
+   Three roles are tangled in the two probe actions, and naming them is
+   what makes the gap visible:
+
+   | role       | what it is                              | probe_lib | probe_binding |
+   | existence  | the artifact the world declares is there| COUNT > 0 | test -f target|
+   | inspection | record a projection as evidence         | the native summary | the ABI summary |
+   | execution  | load it, run it, observe what it does   | NOTHING   | link + run + witness |
+
+   So [probe_lib] has roles 1 and 2 and no role 3, and role 1 is a
+   degenerate ancestor of [declared_symbols_exported] — "count > 0" is
+   the weakest possible form of "exports what was declared", which is
+   landed and reads the NAMES. Role 2 is what the step is really for
+   now, which is why an override that clobbered it
+   ([steps.template_summary_beats_override]) mattered so much.
+
+   WHAT NOBODY CHECKS: that the library LOADS. A library can pass every
+   static check here and fail to dlopen — a missing transitive NEEDED, a
+   RUNPATH that does not resolve, a version-script mismatch the symbol
+   table does not show. [dependencies_provided] reasons about RECORDED
+   dependencies; it never asks the loader. That is the identity half
+   theory.md §5.9 says is missing ("the resolutions — which object,
+   which definition — survive only with instrumentation"), and it is
+   what [interposition_binds_build_target] and
+   [denotation_stable_across_worlds] are waiting on. A role-3
+   [probe_lib] would be new coverage, not a reclassification. *)
 let native_lib_probe_cmd ~lib ~prefix ~output_dir ~variant_key =
   let nm_flag = nm_dynamic_flag () in
   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
