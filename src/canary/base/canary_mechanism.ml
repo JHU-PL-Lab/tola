@@ -187,11 +187,16 @@ let mechanism_catalogue : mechanism_info list =
         [ "build_binding (stub compile/link)"; "probe (link + run)" ];
       mi_wired = true;
       mi_compiles_a_stub = true;
-      (* a [.a] carries no DT_NEEDED and no SONAME — those appear when
-         the executable is linked. Inspecting the linked probe
-         executable would change this answer, and the change belongs on
-         this line (landing.md order item 1). *)
-      mi_consumer_records_needed = false;
+      (* TRUE SINCE 2026-09-15, and the change is about WHICH artifact
+         counts as the consumer. The [.a] carries no DT_NEEDED and no
+         SONAME — those appear when the executable is linked — so this
+         read "false" while the question was about the binding. But the
+         consumer that runs is the executable the probe links, and it
+         records both; the probe now summarises it into
+         [inspect_abi.json] and [consumer_record_inputs] names it
+         first. Measured on ssl's ssl_app_core: NEEDED libssl.so.3 and
+         a version-needs section naming OPENSSL_3.0.0. *)
+      mi_consumer_records_needed = true;
       mi_exposes_typed_stub = true };
     { mi_mechanism = Cext; mi_lang = Canary_lang.Python;
       mi_discipline = Static_c_abi;

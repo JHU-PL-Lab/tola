@@ -161,6 +161,32 @@ let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key
   let pipe = inspect_pipe_cmd ~lib ~prefixes ~watchlist () in
   pipe ^ Printf.sprintf " \\\n  > %s/%s" output_dir out_file
 
+(** THE CONSUMER'S OWN RECORD (2026-09-15).
+
+    Summarises a LINKED EXECUTABLE rather than a library, into
+    [inspect_abi.json] — a separate base name because the probe step's
+    [inspect.json] is already the binding's surface summary and the two
+    would collide in one directory.
+
+    Why an executable at all: a cstubs binding is a [.a], which records
+    no [DT_NEEDED] and no symbol versions, so the identity agreements
+    had nothing to read on the consumer side and reported
+    [not_applicable]. But the consumer that actually runs is the
+    executable the probe links, and it records both — measured on
+    ssl's [ssl_app_core]: NEEDED libssl.so.3, libcrypto.so.3, and a
+    version-needs section naming OPENSSL_3.0.0. The evidence was on
+    disk and unread.
+
+    No prefix filter and no watchlist: this is read for the ELF
+    records, not for a symbol set, and a prefix would silently drop the
+    rows the identity agreements want. *)
+let abi_inspect_cmd ~exe ~output_dir ~variant_key =
+  let out_file =
+    Canary_basic.filename ~variant_key ~base:"inspect_abi" ~ext:"json"
+  in
+  let pipe = inspect_pipe_cmd ~lib:exe ~emit_symbols:false () in
+  pipe ^ Printf.sprintf " \\\n  > %s/%s" output_dir out_file
+
 (* L4: ELF ABI metadata via readelf -d.  Captures SONAME, NEEDED, RPATH, RUNPATH.
    Writes inspect_elf.json to the output directory. *)
 let elf_inspect_cmd ~lib ~output_dir ~variant_key () =

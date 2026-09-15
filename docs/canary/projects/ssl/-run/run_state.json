@@ -39,7 +39,7 @@
       "action": "probe_binding_ocaml",
       "variant_id": "source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable",
       "expect": "compat_derived",
-      "status": "done"
+      "status": "failed"
     },
     {
       "tag": "probe_app_ocaml",

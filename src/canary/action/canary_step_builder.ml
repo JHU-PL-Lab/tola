@@ -532,9 +532,27 @@ let probe_ocaml_env_cmd ~env ~log_grep ~binding_lib ~example ~target
       (List.map (Canary_world.log_substrings log_grep) ~f:(fun s ->
            [%string {| && grep -qF "%{s}" %{output_dir}/%{probe_log}|}]))
   in
+  (* THE LINKED CONSUMER'S OWN RECORD, emitted here rather than by a
+     child inspect step (2026-09-15). Two reasons it has to be in this
+     command:
+
+     - ORDER. Agreements are evaluated after this step's command and
+       before any child step runs, so a summary written by a child
+       would arrive too late for the very step that reads it — the
+       same trap that made required_symbols_exported decide only on a
+       warm tree.
+     - IT SURVIVES A FAILING PROBE. [RC] is captured first, so this
+       cannot change the verdict, and it runs even when the probe
+       compiled and then failed at RUNTIME — which is exactly when the
+       identity claims are worth reading. *)
+  let abi =
+    Canary_artifact_native.abi_inspect_cmd
+      ~exe:[%string "%{output_dir}/%{target}"] ~output_dir ~variant_key
+  in
   [%string {|eval $(opam env)
 %{exports}ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 && %{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1%{grep}
 RC=$?
+test -f %{output_dir}/%{target} && { %{abi} ; } || true
 cat %{output_dir}/%{probe_log}
 exit $RC|}]
 

@@ -46,6 +46,9 @@ tracker is readable without a checkout.
 | --- | --- | --- |
 | **LANDED** | `declared_symbols_exported` | **`holds` ×8 / `violated` ×8 on sqlite (2026-09-14) — and the falsification is the project's OWN 2×2, not a synthetic break: the dev channel builds 3.46.1 and exports the declared modern API; the stable channel builds 3.43.2 and is missing `sqlite3_get_clientdata`, `sqlite3_set_clientdata`. That forward cell was created deliberately on 2026-08-19 and had gone undetected since** |
 | **LANDED** | `staged_interface_preserved` | **`holds` ×4 on sqlite. The first distance-0 agreement to decide: it needed a summary of the BUILD-TREE copy, which arrived when `build_lib` began inspecting its own output. An empty diff is the finding — sqlite's copy-out staging is interface-preserving** |
+| **LANDED** | `soname_matches_requirement` | **`holds` ×6 on sqlite, ×2 on ssl (2026-09-15); falsified by bumping the provider's recorded soname to `libsqlite3.so.9` → `violated: libsqlite3.so.0` on that scenario alone** |
+| **LANDED** | `dependencies_provided` | **`holds` ×6 on sqlite. On ssl it reports `violated: libcrypto.so.3` — a finding about the SPEC, not the artifacts: openssl ships two libraries and ssl declares one, so a dependency the world really provides has no modeled provider. See below** |
+| **LANDED** | `required_versions_exported` | **`holds` ×2 on ssl — the only project whose consumer carries versioned references (`OPENSSL_3.0.0`), matched against libssl's version definitions. `unavailable` on sqlite, whose libsqlite3 has no version nodes at all** |
 | **LANDED** | `api_names_present` | **decided in sqlite (OCaml and Python), ssl** |
 | **LANDED** | `required_symbols_exported` | **decided in cairo, libffi, sqlite, ssl, zarith. `holds` ×6 on sqlite's OCaml probe (2026-09-13); falsified by injecting a bogus required symbol → `violated: sqlite3_canary_not_a_real_symbol` on exactly that scenario. `unavailable` ×6 on the Python probe: CPython's `_sqlite3` extension is never inspected for its undefined references** |
 | | `signatures_agree` | reported as `not_applicable`/`unavailable` |
@@ -58,7 +61,40 @@ tracker is readable without a checkout.
 | | `repack_preserves_api` | reported as `not_implemented` |
 | | `repack_complete` | reported as `not_implemented` |
 
-**Five landed of thirteen.** Three arrived on 2026-09-14 from one change —
+**Eight landed of thirteen.** The three that arrived on 2026-09-15 came from
+one correction: **the consumer is not the binding, it is the executable the
+probe links.** A cstubs binding is a `.a`, which records no `DT_NEEDED` and no
+symbol versions — true of the archive, and the wrong artifact to have been
+asking about. `ssl_app_core` records `NEEDED libssl.so.3` and an
+`OPENSSL_3.0.0` version requirement, and had done all along, unread. The probe
+now summarises its own executable into `inspect_abi.json` (inside the probe
+command, not a child step, so it exists before the same step's agreements are
+evaluated), `mi_consumer_records_needed` became true for cstubs, and the three
+consumer-side claims gained a column on the OCaml side.
+
+**One thing that had to be fixed to land `required_versions_exported`
+honestly.** A consumer records one versioned reference per (symbol, tag), and
+most belong to somebody else: ssl's probe requires `OPENSSL_3.0.0` and
+twenty-two `GLIBC_*` tags. Compared against one provider, every glibc tag reads
+as missing — so the check would have reported `violated` on every project whose
+consumer links libc, which is all of them. The rule is now **derived from the
+provider**: a required tag is this provider's concern exactly when the provider
+exports a tag in the same namespace. libssl participates in `OPENSSL` and not in
+`GLIBC`, so the glibc tags are somebody else's; glibc *itself* participates in
+`GLIBC`, so a consumer needing a newer glibc than the provider offers is still a
+finding — which a hardcoded "GLIBC is ambient" list would have thrown away, and
+which is one of this agreement's own counterexamples.
+
+**A finding about ssl's spec, surfaced by `dependencies_provided`.** It reports
+`violated: libcrypto.so.3` on ssl. libcrypto is genuinely present — it ships in
+the same apt package as libssl — but ssl's artifact table declares **one** lib,
+so canary's model of the world has no provider for it. That is the agreement's
+documented limitation ("ONE modeled provider… a name supplied by a second
+unmodeled library is reported unprovided") meeting a real project, and the
+honest reading is that the spec is incomplete rather than the artifacts wrong.
+Fixing it needs the multi-lib work (`A_lib of string option`, `issues.md`).
+
+**Five landed of thirteen** (before 2026-09-15). Three arrived on 2026-09-14 from one change —
 routing the project's own declared C API onto the agreement context — plus two
 consequences of it. Once `build_lib` summarised its own output, the staging
 comparison had a build-tree copy to hold the staged one against. And once the

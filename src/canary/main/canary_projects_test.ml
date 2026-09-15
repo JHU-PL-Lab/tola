@@ -4115,21 +4115,27 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                      repo as [Binding_source ocaml], and the order key puts
                      it at the FRONT of the ocaml block *)
                   "fetch_binding_source_ocaml";
-                  (* OCAML CSTUBS drops three of the six consumer-side
-                     claims: a [.a] archive records no NEEDED and no
-                     symbol versions, so identity, versioned-reference
-                     and dependency claims are [not_applicable] in
-                     every world this project has and get no column.
-                     The Python block below keeps all three, because a
-                     compiled extension is a shared object that records
-                     both — the same registry, two mechanisms, two
-                     column sets. *)
-                  "build_binding_ocaml_pre:rse"; "build_binding_ocaml_pre:sa";
+                  (* OCAML CSTUBS GAINED THREE COLUMNS on 2026-09-15 —
+                     dp, rve, smr. They were absent because a [.a]
+                     archive records no NEEDED and no symbol versions,
+                     which is true of the archive and the wrong
+                     artifact to have been asking about: the consumer
+                     that runs is the executable the probe links, and
+                     it records both. The two language blocks now
+                     differ only in [sa], because cstubs spells its
+                     boundary as [external] declarations a scanner can
+                     read and a cext does not. *)
+                  "build_binding_ocaml_pre:dp"; "build_binding_ocaml_pre:rse";
+                  "build_binding_ocaml_pre:rve"; "build_binding_ocaml_pre:sa";
+                  "build_binding_ocaml_pre:smr";
                   "build_binding_ocaml"; "build_binding_ocaml=ocaml";
                   "fetch_binding_ocaml"; "fetch_binding_ocaml=ocaml";
                   "pack_binding_ocaml"; "probe_binding_ocaml_pre:anp";
+                  "probe_binding_ocaml_pre:dp";
                   "probe_binding_ocaml_pre:rse";
-                  "probe_binding_ocaml_pre:sa"; "probe_binding_ocaml";
+                  "probe_binding_ocaml_pre:rve";
+                  "probe_binding_ocaml_pre:sa";
+                  "probe_binding_ocaml_pre:smr"; "probe_binding_ocaml";
                   (* NOT build_app_ocaml_pre: no registry project
                      declares [build_app], so [api_names_present]'s
                      first candidate is absent from every chain and it

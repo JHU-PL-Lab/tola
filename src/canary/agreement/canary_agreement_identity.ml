@@ -286,6 +286,40 @@ let declared_versions_eval ~resolve inputs : outcome =
             | [] -> Holds
             | missing -> Violated missing))
 
+(** WHOSE TAG IS IT (2026-09-15) — the version-node twin of
+    {!ambient_runtime}, and it was missing.
+
+    A consumer records one versioned reference per (symbol, tag), and
+    most of them belong to some other library: ssl's probe executable
+    requires [OPENSSL_3.0.0] and twenty-two [GLIBC_*] tags. Comparing
+    the whole set against ONE provider reports every glibc tag as
+    missing, which is not a finding about openssl — it is the same
+    attribution error [ambient_runtime] prevents on the NEEDED side,
+    and without it this agreement reports [violated] on every project
+    whose consumer links libc, which is all of them.
+
+    THE RULE IS DERIVED FROM THE PROVIDER, not from a list of system
+    namespaces. A tag belongs to the NAMESPACE before its first
+    underscore ([OPENSSL_3.0.0] → [OPENSSL]), and a required tag is
+    this provider's concern exactly when the provider exports at least
+    one tag in the same namespace. libssl participates in [OPENSSL] and
+    not in [GLIBC], so the glibc tags are somebody else's; glibc itself
+    participates in [GLIBC], so a consumer needing a NEWER glibc than
+    the provider offers is still a finding — which a hardcoded
+    "GLIBC_ is ambient" list would have thrown away, and which is one
+    of this agreement's own counterexamples.
+
+    Deriving it also means no list to maintain: a distro minting
+    [GLIBC_2.41] changes nothing, and a project that ships its own libc
+    is handled by the same rule rather than by an exception. *)
+let namespace_of_version_tag (tag : string) : string =
+  match String.lsplit2 tag ~on:'_' with Some (ns, _) -> ns | None -> tag
+
+let provider_participates ~(provider_tags : string list) (tag : string) : bool =
+  let ns = namespace_of_version_tag tag in
+  List.exists provider_tags ~f:(fun t ->
+      String.equal (namespace_of_version_tag t) ns)
+
 let required_versions_eval ~resolve inputs : outcome =
   match
     (versioned_exports_path ~resolve inputs, versioned_req_path ~resolve inputs)
@@ -295,7 +329,14 @@ let required_versions_eval ~resolve inputs : outcome =
   | Some pp, Some cp -> (
       let prov = load_versioned_symbols pp in
       let cons = load_versioned_symbols cp in
-      let consumer_required = List.map cons.req_counts ~f:fst in
+      let provider_tags =
+        List.map prov.exports ~f:snd
+        |> List.dedup_and_sort ~compare:String.compare
+      in
+      let consumer_required =
+        List.map cons.req_counts ~f:fst
+        |> List.filter ~f:(provider_participates ~provider_tags)
+      in
       match
         check_sym_version ~provider_versioned_exports:prov.exports
           ~consumer_required_versions:consumer_required
@@ -382,9 +423,27 @@ let needs_consumer_record m _ _ =
     keep that site, which is theirs. *)
 let pair_firing = firing_default
 
+(** THE CONSUMER'S RECORD, wherever this mechanism keeps it
+    (2026-09-15). Two spellings, in preference order:
+
+    - the LINKED EXECUTABLE the probe built. For a static-archive
+      mechanism this is the only consumer that records anything — the
+      [.a] carries no NEEDED and no symbol versions, they appear when
+      the executable is linked — so it is named first;
+    - the BINDING artifact itself, which is the right answer for a
+      mechanism whose binding IS a shared object (a Python cext).
+
+    Listing both and letting the kind guard choose is the same
+    arrangement the evidence paths use everywhere else; a wrong guess
+    cannot be read as the right artifact because the summary declares
+    its kind. *)
 let consumer_record_inputs first m l w =
   if consumer_records_needed m then
-    [ first; Abi_surface [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+    [ first;
+      Abi_surface
+        [ Canary_basic.string_of_action (Canary_basic.Probe_binding l)
+          ^ "/inspect_abi.json";
+          binding_evidence_tag w l ^ "/inspect.json" ] ]
   else []
 
 (** The pair shape both dependency agreements read: the library's own
@@ -586,7 +645,15 @@ let required_versions_exported : agreement =
           ~inputs:(fun { ac_mechanism = m; ac_lang = l; ac_world = w; _ } ->
             if consumer_records_needed m then
               [ Versioned_exports (lib_evidence_paths w "inspect.json");
-                Versioned_req [ binding_evidence_tag w l ^ "/inspect.json" ] ]
+                (* the same two spellings [consumer_record_inputs]
+                   uses: the linked executable first, since for a
+                   static archive it is the only consumer that records
+                   a versioned reference at all *)
+                Versioned_req
+                  [ Canary_basic.string_of_action
+                      (Canary_basic.Probe_binding l)
+                    ^ "/inspect_abi.json";
+                    binding_evidence_tag w l ^ "/inspect.json" ] ]
             else [])
           ~eval:required_versions_eval
           ~limits:

@@ -761,20 +761,33 @@ let mechanism_catalogue_test : pure_test =
 
          - an artifact that records NEEDED is one that was COMPILED, so
            [mi_consumer_records_needed] implies [mi_compiles_a_stub];
-         - the one-bit approximation these replaced said a static
-           discipline meant a readable NEEDED record. It is false —
-           cstubs and cext share a discipline and differ — and pinning
-           that the two really do differ keeps the catalogue from
-           quietly collapsing back into the guess. *)
+         - the fields are NOT all derivable from discipline, which is
+           the whole reason they are stored. [mi_exposes_typed_stub]
+           differs WITHIN Static_c_abi — cstubs spells its boundary as
+           [external] declarations a scanner can read, a cext spells it
+           in C that canary has no extractor for — so a predicate keyed
+           on discipline cannot answer it, and pinning the difference
+           stops the catalogue quietly collapsing back into one bit.
+
+         [mi_consumer_records_needed] no longer differs within a
+         discipline (2026-09-15: cstubs became true once the linked
+         probe executable was recognised as the consumer), so it is no
+         longer the field that demonstrates this. That is a fact about
+         the artifacts, not a reason to drop the record. *)
       && List.for_all all ~f:(fun m ->
              let i = Canary_mechanism.info_of_mechanism m in
              (not i.Canary_mechanism.mi_consumer_records_needed)
              || i.Canary_mechanism.mi_compiles_a_stub)
+      && (Canary_mechanism.info_of_mechanism Mech.Cstubs)
+           .Canary_mechanism.mi_exposes_typed_stub
       && (not
-            (Canary_mechanism.info_of_mechanism Mech.Cstubs)
-              .Canary_mechanism.mi_consumer_records_needed)
-      && (Canary_mechanism.info_of_mechanism Mech.Cext)
-           .Canary_mechanism.mi_consumer_records_needed) }
+            (Canary_mechanism.info_of_mechanism Mech.Cext)
+              .Canary_mechanism.mi_exposes_typed_stub)
+      && Poly.equal
+           (Canary_mechanism.info_of_mechanism Mech.Cstubs)
+             .Canary_mechanism.mi_discipline
+           (Canary_mechanism.info_of_mechanism Mech.Cext)
+             .Canary_mechanism.mi_discipline) }
 
 (* M2 step 2 pin (2026-08-12): the contract×lang input template equals
    tiny's formerly hand-written rows — the refactor is provably
@@ -858,13 +871,20 @@ let inputs_template_pin : pure_test =
       && eq CC.Api_names_present L.Python
         CC.[ Python_attrs [ "build_binding_python/inspect.json";
                             "build_binding_python/inspect_attrs.json" ] ]
+      (* THE CONSUMER'S RECORD HAS TWO SPELLINGS since 2026-09-15: the
+         linked probe EXECUTABLE first — for a static-archive mechanism
+         it is the only consumer that records NEEDED or a versioned
+         reference at all — then the binding artifact, which is the
+         right answer where the binding IS a shared object. *)
       && eq CC.Soname_matches_requirement L.Python
         CC.[ Native_lib [ "build_lib/inspect.json"; "probe_lib/inspect.json" ];
-             Abi_surface [ "build_binding_python/inspect.json" ] ]
+             Abi_surface [ "probe_binding_python/inspect_abi.json";
+                           "build_binding_python/inspect.json" ] ]
       && eq CC.Required_versions_exported L.Python
         CC.[ Versioned_exports [ "build_lib/inspect.json";
                                  "probe_lib/inspect.json" ];
-             Versioned_req [ "build_binding_python/inspect.json" ] ]
+             Versioned_req [ "probe_binding_python/inspect_abi.json";
+                             "build_binding_python/inspect.json" ] ]
       && eq CC.Signatures_agree L.OCaml
         CC.[ Typed_header [ "scan_sources/inspect_typed_header.json" ];
              Typed_binding_stub
@@ -884,9 +904,16 @@ let inputs_template_pin : pure_test =
       && eq CC.Declared_versions_exported L.OCaml
            CC.[ Versioned_exports [ "build_lib/inspect.json";
                                     "probe_lib/inspect.json" ] ]
-      (* cstubs archives no dependency record, so the identity PAIR
-         agreements read nothing under OCaml *)
-      && List.is_empty (template CC.Soname_matches_requirement L.OCaml)
+      (* THE IDENTITY PAIR READS SOMETHING UNDER OCAML NOW
+         (2026-09-15). It used to read nothing, because a cstubs
+         archive records no dependency — true of the archive, and the
+         wrong artifact to be asking about. The consumer that runs is
+         the executable the probe links, and it carries NEEDED and the
+         versioned references; this is the line where that changed. *)
+      && eq CC.Soname_matches_requirement L.OCaml
+           CC.[ Native_lib [ "build_lib/inspect.json"; "probe_lib/inspect.json" ];
+                Abi_surface [ "probe_binding_ocaml/inspect_abi.json";
+                              "build_binding_ocaml/inspect.json" ] ]
       (* planned — no evaluator, and nothing to read *)
       && List.is_empty (template CC.Repack_complete L.OCaml)) }
 
@@ -1636,23 +1663,33 @@ let agreement_registry_firing_pin : pure_test =
              (C.uniform_world ~lang:Canary_lang.Python
                 ~mechanism:Canary_mechanism.Ctypes Canary_store.Built))
           [ Canary_basic.Build_lib ]
-        && (* … and the pair identity agreement is INAPPLICABLE under
-              cstubs, because a static archive records no dependency.
+        && (* … and the pair identity agreement is APPLICABLE under
+              cstubs but INAPPLICABLE under a dynamic mechanism.
               Firing and applicability are different questions and the
-              model says so separately.
+              model says so separately; applicability is STATIC since
+              2026-09-14 (mechanism, language, declared API — no
+              world), because whether a given SCENARIO reaches a claim
+              is firing's question.
 
-              A STATIC question since 2026-09-14 — it takes the
-              mechanism, the language and the declared API, and no
-              world. Whether a given SCENARIO reaches the claim is
-              firing's question, and the one agreement that tested the
-              world here was restating its own firing gate. *)
-        (match
-           (List.hd_exn
-              (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_methods)
-             .C.m_applicable Canary_mechanism.Cstubs Canary_lang.OCaml None
-         with
-         | C.Inapplicable _ -> true
-         | C.Applicable -> false)) }
+              The cstubs half FLIPPED on 2026-09-15 and the flip is the
+              point: it read inapplicable while the question was "does
+              the .a record a dependency" (no, and it never will), and
+              reads applicable now that the consumer is understood to
+              be the executable the probe links (which does). A dynamic
+              mechanism compiles nothing at all, so it stays
+              inapplicable — that is the case that distinguishes "wrong
+              artifact" from "no artifact". *)
+        (let applicable_under m =
+           match
+             (List.hd_exn
+                (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_methods)
+               .C.m_applicable m Canary_lang.OCaml None
+           with
+           | C.Applicable -> true
+           | C.Inapplicable _ -> false
+         in
+         applicable_under Canary_mechanism.Cstubs
+         && not (applicable_under Canary_mechanism.Dynlink))) }
 
 (* The counterexamples execute AHEAD of any project run — every
    fixture's synthetic evidence goes through the METHOD the registry
@@ -2874,23 +2911,25 @@ let agreement_action_path_pin : pure_test =
                  "repack_preserves_api/declared_repacking_relation: \
                   not_implemented:")
       in
-      (* and the mechanism's own limit is NOT in the log at all
-         (2026-09-14). A cstubs archive records no dependency, so the
-         identity pair has no claim here — but that is a fact about the
-         project, not something this run discovered, and it used to be
-         re-stated at every firing site. The run carries what a run can
-         find; the static half comes from the spec, and the pin checks
-         BOTH halves so the claim cannot simply vanish. *)
+      (* WHAT THE PROJECT CANNOT CARRY IS NOT IN THE LOG (2026-09-14):
+         applicability is a static property, reported once from the
+         spec rather than restated at every firing site. The claim used
+         here was soname_matches_requirement until 2026-09-15, when
+         cstubs gained a consumer record (the linked probe executable)
+         and it became applicable. [signatures_agree] under a cext is
+         the standing example now — canary has no signature extractor
+         for that boundary — and the pin checks BOTH halves so the
+         claim cannot simply vanish. *)
       let inapplicable_ok =
         (not
            (has ok_log
-              "soname_matches_requirement/library_identity_vs_consumer_record"))
+              "signatures_agree/header_vs_stub_signature_summaries: \
+               not_applicable"))
         && List.exists
-             (Canary_agreement.unsuited_here ~mechanism:Canary_mechanism.Cstubs
-                ~lang:Canary_lang.OCaml ~declared:None)
+             (Canary_agreement.unsuited_here ~mechanism:Canary_mechanism.Cext
+                ~lang:Canary_lang.Python ~declared:None)
              ~f:(fun (u : Canary_agreement.unsuited) ->
-               String.equal u.Canary_agreement.us_slug
-                 "soname_matches_requirement"
+               String.equal u.Canary_agreement.us_slug "signatures_agree"
                && not (String.is_empty u.Canary_agreement.us_why))
       in
       holds_ok && violated_ok && unavailable_ok && planned_ok
@@ -3037,10 +3076,18 @@ let agreement_acceptance_pin : pure_test =
         (* the derived route found nothing there — its own input path
            has no library inspection — so the record's DECIDED outcome
            came from the declared one, and the undecided derived entry
-           was replaced rather than logged alongside it *)
+           was replaced rather than logged alongside it.
+
+           SCOPED TO THE METHOD since 2026-09-15. It matched the bare
+           reason string, which was unique to this method until the
+           identity pair became applicable under cstubs and started
+           reporting the same sentence about their own missing
+           provider. Two agreements saying "no native library
+           inspection" is correct and says nothing about whether THIS
+           method's routes merged. *)
         && (not
               (has log_d
-                 "unavailable: no native library inspection in this world"))
+                 "stub_requirements_vs_library_exports: unavailable"))
         && List.equal String.equal ids_d [ "required_symbols_exported" ]
       in
       (* BOTH ROUTES DECIDE, AND THEY DISAGREE. The derived route sees

@@ -370,10 +370,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | compares | compare |
 | against | peer |
 | implemented | yes |
-| ocaml/cstubs@built | not applicable — this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive has neither; a dynamic binding compiles nothing) |
+| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
+|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json | build_binding_ocaml/inspect.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
 |   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED build_binding_python/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json | build_binding_python/inspect.json |
 | limits | name equality only. It does not establish which object the loader will select, nor that the selected object means the same thing as the one linked against. |
 
 **Examples**
@@ -482,10 +484,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | compares | compare |
 | against | peer |
 | implemented | yes |
-| ocaml/cstubs@built | not applicable — this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive has neither; a dynamic binding compiles nothing) |
+| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
+|   reads | provider version tags build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | consumer version tags probe_binding_ocaml/inspect_abi.json | build_binding_ocaml/inspect.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
 |   reads | provider version tags build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer version tags build_binding_python/inspect.json |
+|   reads | consumer version tags probe_binding_python/inspect_abi.json | build_binding_python/inspect.json |
 | limits | exact tag match, direct requirements only. It does not model version ordering, and a world without symbol versioning is inconclusive rather than compatible. |
 
 **Examples**
@@ -639,10 +643,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | compares | compare |
 | against | peer |
 | implemented | yes |
-| ocaml/cstubs@built | not applicable — this binding mechanism produces no artifact carrying a dependency or symbol-version record (a static archive has neither; a dynamic binding compiles nothing) |
+| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
+|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json | build_binding_ocaml/inspect.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
 |   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED build_binding_python/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json | build_binding_python/inspect.json |
 | limits | ONE modeled provider, direct dependencies only, and an ambient list that is code rather than a per-world policy. It does not enumerate every provider, traverse transitive dependencies, verify the ambient libraries exist, or run a loader — so a name supplied by a second unmodeled library is reported unprovided. |
 
 **Examples**

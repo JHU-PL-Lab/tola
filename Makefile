@@ -69,7 +69,8 @@ canary-tiny1-bridge:
 # that reads it runs second.
 CANARY_LANDED_AGREEMENTS = api_names_present required_symbols_exported \
                            declared_symbols_exported staged_interface_preserved \
-                           soname_matches_declaration
+                           soname_matches_declaration soname_matches_requirement \
+                           dependencies_provided
 
 canary-agreement-roundtrip:
 	@rm -f _out/canary/projects/sqlite/probe_binding/*/*.ok
