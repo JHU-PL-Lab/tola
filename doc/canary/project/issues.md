@@ -31,6 +31,67 @@
 > torch merely surfaced stay here — the `status` substring bug below is
 > one.
 
+### Open — `canary result` can show a check column no world can fill (2026-09-15)
+
+`canary result llvm` carries an `install_lib_post:sip` column whose every
+cell is, and will stay, blank. llvm derives an `install_lib` step, so
+`staged_interface_preserved`'s SLOT resolves against its chain and the
+column appears; but no llvm world is `Installed`, so the method's FIRING
+never selects it and nothing can ever decide it.
+
+**The two derivations answer different questions, both on purpose.** A
+column comes from `ag_slot` resolved against the chain and is
+world-blind — `check_cell`'s own comment says the column exists because
+"the claim BELONGS here, and that is true whether or not anything has
+run". An index cell (`canary checks llvm`) comes from
+`m_firing mechanism lang world` and is world-aware, which is why the
+index correctly reports that nothing fires at llvm's `install_lib`.
+
+So this is not drift and there is nothing broken to repair. It is a
+DECISION: should a per-project result table drop a column that no world
+of that project can fill? The user's rule when the check columns landed
+was "if there is no checks at that stage, we don't need to show an empty
+column", which argues yes. Against it: the batch table
+(`matrix_of all_projects`) needs the column because sqlite fills it, and
+"belongs here but this project never stages" is itself worth seeing.
+
+Cheap if taken: `check_cols_of_chain` already receives the chain; give it
+the project's worlds and require some world to fire the method. Found by
+the could-vs-did report (§`canary checks <project>`), which is the first
+thing to compare the two derivations.
+
+### Open — a project's declared api_source is version-blind (2026-09-15)
+
+`--strict` on sqlite fails `build_lib` in four scenarios:
+
+```
+declared_symbols_exported/declared_exports_vs_library: violated:
+  sqlite3_get_clientdata,sqlite3_set_clientdata
+```
+
+The agreement is right. sqlite's built-Stable lib is **3.43.2**, chosen
+deliberately as the last release *before* 3.44.0 added those two symbols
+(`canary_project_sqlite.ml`, the 3.45.1 → 3.43.2 widening), and the
+project's `native_api` names them.
+
+The question this raises is general, and it is the same shape as ssl's
+`dependencies_provided: violated libcrypto.so.3`: **a project declares
+one API surface while its version axis realizes several.** Today the
+declaration is a static property of the project spec, so a project whose
+whole point is to span a symbol-adding release cannot state a
+declaration that is true in both cells. Three ways out, none free:
+
+1. scope the declaration per version point (the artifact table already
+   carries the points; the `api_source` does not reach them);
+2. read the declaration as a UNION and weaken the agreement to "exported
+   by some declared version" — which throws away the check's teeth;
+3. leave it, and treat the violation as the correct report of a real
+   backward cell — which is what it is, but then `--strict` is unusable
+   on any project with a mismatch axis.
+
+Not urgent: the default (permissive) mode reports it without failing
+anything, which is the behaviour every recorded run has.
+
 ### Found — tiny-full enumerates ONE world where its own docs claim six;
 ### the built-lib and dev-binding axes are declared in dead code (2026-08-25)
 

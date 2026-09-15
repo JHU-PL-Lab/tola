@@ -1905,6 +1905,94 @@ let strict_mode_pin : Canary_project_test.pure_test =
         && String.equal f_lax expected_lax
         && not (String.equal f_lax f_strict)) }
 
+(* THE CHECKING INDEX IS ASKED IN EACH ACTION'S OWN LANGUAGE
+   (2026-09-15).
+
+   [canary checks <project>] used to compute the WHOLE index with "the
+   project's first declared binding". So sqlite's index was OCaml
+   throughout and reported that nothing fires at [probe_binding_python]
+   — while the same project's result table carried five Python check
+   columns and its own run log decided [api_names_present] on that very
+   step six times. Three views of one project, two answers, and the
+   wrong one understated coverage, which is the direction nobody
+   notices.
+
+   Two properties, and each was a separate defect:
+
+   1. an action that NAMES a language carries the agreements that fire
+      for THAT language. Pinned on the concrete fact that made it
+      visible — sqlite's Python probe carries [api_names_present], which
+      is landed there and has the log to prove it. Revert the per-action
+      language and this cell goes empty;
+   2. no cell claims an agreement the language cannot carry. The index
+      skipped the applicability filter the result table already applied,
+      so it listed [signatures_agree] at a Python probe, where the
+      mechanism declares its types as values and there are no stub
+      signatures to read — a cell that could never say anything, counted
+      as coverage.
+
+   NOT pinned: that the index and the result table's check columns name
+   the same cells. They do not, and the difference is by design rather
+   than by drift — a column comes from the agreement's SLOT resolved
+   against the chain (world-blind: the claim BELONGS at that action),
+   an index cell from the method's FIRING in an actual world. llvm
+   derives an [install_lib] step, no llvm world is [Installed], so
+   [staged_interface_preserved] slots there and fires nowhere, and
+   `canary result llvm` carries an [install_lib_post:sip] column that no
+   llvm world can fill. That is a real observation about the result
+   table and it is written down in issues rather than pinned here —
+   pinning a containment that is false would only teach the next person
+   to weaken it. *)
+let check_index_language_pin : Canary_project_test.pure_test =
+  { name = "checks.index_speaks_each_action_language";
+    check =
+      (fun () ->
+        (* a root nothing has written to: the index's third column reads
+           run logs, and this pin is about the first two *)
+        let root = "_out/canary/test/no-such-run" in
+        let cells_of pr =
+          Canary_check_index.of_project ~root pr
+          |> List.concat_map ~f:(fun (_, es) -> es)
+          |> List.concat_map ~f:(fun (e : Canary_check_index.entry) ->
+                 List.map e.Canary_check_index.en_added
+                   ~f:(fun (a : Canary_check_index.added) ->
+                     (e.Canary_check_index.en_action, a)))
+        in
+        (* (1) sqlite's Python probe carries the agreement that is
+           landed there *)
+        let sqlite_python_anp =
+          match List.Assoc.find Canary_registry.all_projects "sqlite"
+                  ~equal:String.equal with
+          | None -> false
+          | Some pr ->
+              List.exists (cells_of pr) ~f:(fun (act, a) ->
+                  Poly.equal act (Canary_basic.Probe_binding Canary_lang.Python)
+                  && String.equal a.Canary_check_index.ad_slug
+                       "api_names_present")
+        in
+        (* (2) no cell claims what its language cannot carry — asked of
+           every project, since the filter is generic *)
+        let no_unsuited_cell =
+          List.for_all Canary_registry.all_projects ~f:(fun (_, pr) ->
+              let declared = Canary_pipeline.declared_api_of pr in
+              List.for_all (cells_of pr) ~f:(fun (act, a) ->
+                  match act with
+                  | Canary_basic.Build_binding l
+                  | Canary_basic.Probe_binding l
+                  | Canary_basic.Fetch (Canary_basic.Binding l)
+                  | Canary_basic.Build_app { lang = l } ->
+                      let mech = Canary_pipeline.mechanism_of_project pr l in
+                      not
+                        (List.exists
+                           (Canary_agreement.unsuited_here ~mechanism:mech ~lang:l
+                              ~declared)
+                           ~f:(fun (u : Canary_agreement.unsuited) ->
+                             String.equal u.Canary_agreement.us_slug
+                               a.Canary_check_index.ad_slug))
+                  | _ -> true))
+        in
+        sqlite_python_anp && no_unsuited_cell) }
+
 (* THE GH RENDERING MUST AGREE WITH THE EXPECTATION'S POLARITY
    (2026-08-28).
 
@@ -4318,6 +4406,7 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_key_covers_codes_pin;
       platform_single_source_pin;
       strict_mode_pin;
+      check_index_language_pin;
       run_info_session_pin;
       machine_roots_pin;
       platform_enumeration_pin;

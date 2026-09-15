@@ -337,6 +337,52 @@ below depends on it being right.
 Step 3 is the only remaining one that changes the landing table without a new
 inspector, which is why it is next.
 
+## Could decide vs did decide — where the next landing comes from
+
+This tracker is per AGREEMENT across projects. The other cut — one
+project, every agreement — is `canary checks <project>`, which walks the
+actions that project derives and prints, per cell, the agreement, its
+method summary, and what the recorded runs decided there. The foot of it
+is the gap:
+
+```
+COULD DECIDE vs DID DECIDE — 13 agreement(s) fire in this project; the registry declares 13
+  decided         7  api_names_present, declared_symbols_exported, dependencies_provided, …
+  could not       3  declared_versions_exported (unavailable), required_versions_exported (inconclusive/unavailable), signatures_agree (unavailable)
+  no evaluator    3  behavior_matches, repack_complete, repack_preserves_api
+```
+
+Five classes, and they are five different jobs:
+
+| class | what it means | what to do |
+| --- | --- | --- |
+| `decided` | a run reached `holds` or `violated` | nothing |
+| `could not` | the evaluator ran and could not conclude — `unavailable` is missing evidence, `inconclusive` is evidence with nothing to compare against | wire the evidence, or fix the declaration |
+| `never asked` | no log line at all at any of its cells | run the project cold |
+| `stood down` | the log says `not_applicable` where the registry now says the claim applies | re-run: the log predates [static applicability](#) |
+| `no evaluator` | every method firing there is planned | state a spec — these are the three unrooted agreements |
+
+`stood down` is not a hypothesis. zarith showed three claims in it;
+re-running zarith moved `dependencies_provided` and
+`soname_matches_requirement` straight into `decided` and
+`required_versions_exported` into `could not (inconclusive)`. Its
+coverage had been understated for two days by three stale log lines.
+
+Two things this cut is honest about that the per-agreement table is not:
+
+- it reads EVERY recorded run, last-wins per (step, agreement, method),
+  not just the last one — "has anything ever decided this here" is not a
+  property of the newest run, it is a property of the newest run that
+  LOOKED (same reasoning as `latest_observation`). The cost is that a
+  cell keeps a stale word until something re-runs it, which is exactly
+  what `stood down` is for;
+- it asks each action in ITS OWN language. Asking the whole index with
+  the project's first declared binding is how sqlite's index came to
+  report that nothing fires at `probe_binding_python` while the result
+  table had five Python columns there and the log had decided
+  `api_names_present` six times. Pinned by
+  `checks.index_speaks_each_action_language`.
+
 ## `--strict` — while you are landing one
 
 By default a detected disagreement does **not** fail the step. That is

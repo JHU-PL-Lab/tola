@@ -839,8 +839,10 @@ let checks_cmd =
          "The checking index: with no argument, every agreement the \
           registry declares; with --catalogue, each one's reference \
           expectation and checking methods in full; with a project, the \
-          checks that apply to each of its actions and where each comes \
-          from. No execution.")
+          checks that apply to each of its actions, where each comes \
+          from, and what the recorded runs decided there — ending in a \
+          COULD DECIDE vs DID DECIDE summary whose gap rows are the work \
+          queue. No execution.")
     Term.(const run $ project $ firing $ catalogue $ observed $ landing
           $ dummies $ agreement $ md $ const ())
 

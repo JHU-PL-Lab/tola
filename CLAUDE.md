@@ -764,6 +764,35 @@ action-column lists exist — `canary result` uses
 `Canary_matrix.compare_column` (artifact group, then lifecycle stage),
 `--firing` uses `Canary_basic.actions_of_lang`; they cannot share until
 `compare_column` moves down to `base/` (layering).
+**COULD DECIDE vs DID DECIDE** (2026-09-15, user). `canary checks
+<project>` is the per-PROJECT cut of coverage (the landing tracker is
+the per-agreement one): every action the project derives, every
+agreement that fires there, and what the recorded runs decided at that
+cell — then a five-class gap summary, because the five are five
+different jobs. `decided` = nothing to do. `could not` = the evaluator
+ran and could not conclude (`unavailable` = missing evidence, a WIRING
+gap; `inconclusive` = evidence with nothing to compare, a DECLARATION
+gap). `never asked` = no log line anywhere; run it cold. `stood down` =
+the log says `not_applicable` where the registry now says the claim
+applies, so the log predates static applicability — RE-RUN. `no
+evaluator` = the three unrooted ones, waiting on a spec. `stood down`
+is not theoretical: zarith showed three, and re-running it moved two
+straight to `decided` — its coverage had been understated by stale log
+lines. TWO BUGS THIS FOUND IN THE INDEX ITSELF, both understating: it
+computed the WHOLE index with the project's first declared binding (so
+sqlite reported that nothing fires at `probe_binding_python` while the
+result table had five Python columns there and the log had decided
+`api_names_present` twelve times), and it skipped the applicability
+filter the result table already applied (listing `signatures_agree` at a
+Python probe). Both fixed; pinned by
+`checks.index_speaks_each_action_language`. What is NOT pinned and is
+worth knowing: the index and `canary result`'s check columns do NOT name
+the same cells, by design — a column is the agreement's SLOT resolved
+against the chain (world-blind: the claim BELONGS there), an index cell
+is the method's FIRING in an actual world. llvm's
+`install_lib_post:sip` column can never be filled because no llvm world
+is Installed; recorded in `project/issues.md` §1 as a decision, not a
+repair.
 
 See [`doc/canary/status.md`](doc/canary/status.md) for current implementation
 state and open items. Lower-priority items live in
