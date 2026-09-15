@@ -337,6 +337,43 @@ below depends on it being right.
 Step 3 is the only remaining one that changes the landing table without a new
 inspector, which is why it is next.
 
+## `--strict` — while you are landing one
+
+By default a detected disagreement does **not** fail the step. That is
+deliberate and it stays: an `Expect_success` step's acceptance policy is
+"the command succeeded and its postcondition holds", and a violated
+agreement there is a finding about *artifacts* that the action was never
+asked to fail on. ssl's `dependencies_provided: violated libcrypto.so.3`
+is a real finding about a real spec gap, and it must not turn ssl red.
+
+The cost of that default shows up exactly while an agreement is being
+landed: `canary result` prints `✗` in the check column and the scenario
+line says `PASS`, so the two views of one run disagree and you have to
+read the log to learn which is right.
+
+```sh
+canary action sqlite --thin --strict     # CANARY_STRICT=1 for Makefile targets
+```
+
+Under `--strict` a violation fails the step that read the evidence, so
+the two views agree and the run stops at the action that saw the problem
+rather than three actions later. It adds no evaluation — the violations
+are the same ones already reported; it only decides what they mean. The
+failure is logged as `strict_violation` with the `slug/method: outcome`
+of each, and the run header says `agreements: strict`.
+
+It rides the step fingerprint, so a verdict earned permissively is never
+served to a strict run. The permissive digest is unchanged, so turning
+strict *off* again costs nothing — but a strict run is always cold.
+Pinned by `strict.acceptance_policy`.
+
+Note what this means on a project with declared mismatch cells: sqlite's
+built-Stable lib is 3.43.2, chosen as the last release *before* 3.44.0
+added `sqlite3_get_clientdata`, so `--strict` fails `build_lib` in those
+four scenarios on the first run. That is the agreement being right about
+a world the project built to be wrong. `--strict` is a debugging mode for
+one landing, not a gate to put in CI.
+
 ## Keeping this honest
 
 - `agreements.landing_doc_lists_every_agreement` pins that the table names

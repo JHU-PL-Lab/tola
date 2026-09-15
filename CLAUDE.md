@@ -76,6 +76,31 @@ before adding anything platform-dependent** — it has the tool sibling
 table, what a project spec may declare per platform (pairs, never
 branches), and the three consumption modes.
 
+**`--strict` — a run-wide FAIL-FAST for agreement work** (2026-09-15,
+user: "it's good during the development that the running shall fail fast
+for better debugging for ourself, rather than expected fails (xf)").
+Third flag of the same shape as `--switch`/`--platform`: stripped from
+argv before cmdliner, applies to every subcommand, also
+`CANARY_STRICT=1`. By DEFAULT a detected disagreement does not fail its
+step — the acceptance policy is "the command succeeded and its
+postcondition holds", and a violated agreement there is a finding about
+ARTIFACTS the action was never asked to fail on (ssl's
+`dependencies_provided: violated libcrypto.so.3` is real and must not
+turn ssl red). The cost of that default is that `canary result` prints ✗
+in a check column while the scenario line says PASS. `--strict` makes the
+two views agree: the step that READ the disagreeing evidence fails, at
+that step. It adds no evaluation — same violations, different meaning —
+logs each as `strict_violation`, and rides the step fingerprint so a
+permissive verdict is never served to a strict run (the permissive digest
+is unchanged, so turning it off costs nothing; a strict run is always
+cold). It is a debugging mode for ONE landing, not a CI gate: sqlite's
+built-Stable lib is 3.43.2, deliberately pre-3.44.0, so `--strict` fails
+`build_lib` in four scenarios on the first run — the agreement being
+right about a world the project built to be wrong. Flag lives at
+`Canary_agreement_common.strict_mode`; pinned by
+`strict.acceptance_policy`; written up in
+[`agreement/landing.md`](doc/canary/design/agreement/landing.md).
+
 **macOS status** (2026-08-26). Canary runs on macOS: `make canary-test`
 is 113 + 109 + 14 green there, `canary mutation-test` 46/46 (that suite is
 NOT in `make canary-test` — run it separately, it had never been run on

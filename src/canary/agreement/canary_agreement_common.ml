@@ -813,6 +813,39 @@ let agreement_ids_of_csv s : agreement_id list * string list =
       because the meaning of the cached verdict changed. *)
 let evaluation_schema = "named-agreements-2"
 
+(* ── STRICT MODE (2026-09-15, user: "it's good during the development
+   that the running shall fail fast for better debugging for ourself,
+   rather than expected fails (xf)") ────────────────────────────────
+
+   THE DEFAULT IS DELIBERATE AND STAYS. A violated agreement at a
+   passing step is a finding about the ARTIFACTS; the step's acceptance
+   policy is "the command succeeded and its postcondition holds", and
+   that action was never asked to fail on somebody else's evidence.
+   Turning every violation into a step failure by default would change
+   what every landed project accepts, and would make a genuine finding
+   (ssl's missing libcrypto declaration) indistinguishable from a
+   broken step.
+
+   What strict mode is FOR is the gap that opens while an agreement is
+   being landed: [canary result] prints ✗ for the check and the
+   scenario still says PASS, so the two views of one run disagree and
+   the developer has to read the log to find out which is right. Under
+   [--strict] they agree — the step that READ the disagreeing evidence
+   fails, and it fails at the step, not three actions later.
+
+   It is NOT a mode a project declares, and nothing derives it: it is
+   an argument the invocation makes, like [--switch] and [--platform],
+   and like those it rides the step fingerprint (below) so a verdict
+   earned in the permissive mode is never served to a strict run. The
+   converse needs no guard — a strict pass is a lax pass. *)
+
+let strict = ref false
+
+(** Does this run turn a detected disagreement into a step failure? *)
+let strict_mode () : bool = !strict
+
+let set_strict (b : bool) : unit = strict := b
+
 (* ── loader support shared by the check families ──
    These sit with the JSON primitives because that is what they are:
    reading an inspect JSON, and expanding a dotted name into the forms

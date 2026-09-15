@@ -352,11 +352,22 @@ let step_fingerprint (step : step) : string =
      that independent of how much of it the command happens to spell.
      Matters most under [--platform], where the command text changes
      while the machine does not. *)
+  (* SO IS THE ACCEPTANCE POLICY (2026-09-15). Under [--strict] an
+     [Expect_success] step also has to find no disagreement, so its
+     verdict answers a strictly stronger question — serving a
+     permissive marker to a strict run would report PASS for a step
+     that was never asked the strict question. The suffix is EMPTY in
+     the default mode on purpose: landing this must not invalidate a
+     warm tree that is still being asked the same thing. *)
+  let strict_suffix =
+    if Canary_agreement_common.strict_mode () then "\x00strict" else ""
+  in
   Stdlib.Digest.to_hex
     (Stdlib.Digest.string
        (cmd ^ "\x00" ^ expectation_form step.expectation ^ "\x00"
       ^ Canary_store.opam_switch_label () ^ "\x00"
-      ^ Canary_store.string_of_platform (Canary_store.platform ())))
+      ^ Canary_store.string_of_platform (Canary_store.platform ())
+      ^ strict_suffix))
 
 (* The marker's CONTENT records how the expectation was met: "xfail" = a
    confirmed expected failure, "" (or "ok") = plain success — so a warm run
@@ -658,19 +669,50 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
         in
         let expectation_ok = match step.expectation with
           | Expect_success ->
-              let ok = cmd_ok && step.check_post ~output_dir:out ~variant_key:step.variant_id in
-              log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
-              (* A DETECTED DISAGREEMENT DOES NOT DECIDE THIS STEP.
-                 The step's acceptance policy is "the command succeeds
-                 and its postcondition holds"; a violated agreement
-                 here is a finding about artifacts that this action was
-                 never asked to fail on. It is reported (above, and as
-                 an unconfirmed disagreement below) and deliberately
-                 not turned into a failure — doing so would change what
-                 every existing project's steps accept. *)
+              let post = cmd_ok && step.check_post ~output_dir:out ~variant_key:step.variant_id in
+              log ~event:"check_post" ~detail:(Some (if post then "pass" else "FAIL"));
+              (* A DETECTED DISAGREEMENT DOES NOT DECIDE THIS STEP —
+                 UNLESS THE RUN ASKED IT TO. The step's acceptance
+                 policy is "the command succeeds and its postcondition
+                 holds"; a violated agreement here is a finding about
+                 artifacts that this action was never asked to fail on.
+                 It is reported (above, and as an unconfirmed
+                 disagreement below) and not turned into a failure,
+                 because doing so by default would change what every
+                 existing project's steps accept.
+
+                 [--strict] is that choice, made by the invocation
+                 (Canary_agreement_common.strict_mode): while an
+                 agreement is being landed, a finding should stop the
+                 run at the step that read the evidence rather than
+                 leave `canary result` printing ✗ beside a scenario
+                 that says PASS. The violations are the SAME ones
+                 reported above — strict mode adds no evaluation, it
+                 only decides what an existing one means. *)
               report_confirmation ();
+              let strict_violations =
+                if Canary_agreement_common.strict_mode () then
+                  step_eval.Canary_agreement.sv_violations
+                else []
+              in
+              let ok = post && List.is_empty strict_violations in
+              (match strict_violations with
+               | [] -> ()
+               | vs ->
+                   log ~event:"strict_violation"
+                     ~detail:(Some
+                       (String.concat ~sep:"; "
+                          (List.map vs ~f:Canary_agreement.pp_evaluation))));
               log ~event:(if ok then "done" else "failed")
-                ~detail:(if ok then None else Some "postcondition failed");
+                ~detail:
+                  (if ok then None
+                   else if not post then Some "postcondition failed"
+                   else
+                     Some
+                       (Printf.sprintf
+                          "--strict: %d disagreement(s) detected at a step \
+                           that otherwise passed"
+                          (List.length strict_violations)));
               ok
           | Expect_failure { contains_any; version_info } ->
               if cmd_ok then (

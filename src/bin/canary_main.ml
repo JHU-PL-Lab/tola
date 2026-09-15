@@ -2189,12 +2189,34 @@ let set_platform v =
       Fmt.epr "canary: unknown --platform %s (want: macos | wsl)@." v;
       Stdlib.exit 2
 
+(* STRICT MODE (2026-09-15). Third flag of the same shape, and for the
+   same reason: it is a property of the INVOCATION, not of a project or
+   a subcommand, and a run that dumps (`emit`, `result`) should report
+   the same mode the run that executed was in.
+
+     --strict              a detected disagreement fails the step
+     CANARY_STRICT=1       same, for Makefile targets
+
+   The policy it changes is documented where the flag lives
+   (Canary_agreement_common.strict_mode). It is off by default on
+   purpose — see there. *)
+let set_strict v =
+  match String.lowercase_ascii v with
+  | "" | "1" | "true" | "yes" | "on" -> Canary_agreement_common.set_strict true
+  | "0" | "false" | "no" | "off" -> Canary_agreement_common.set_strict false
+  | other ->
+      Fmt.epr "canary: unknown --strict %s (want: 1 | 0)@." other;
+      Stdlib.exit 2
+
 let switch_argv () : string array =
   (match Stdlib.Sys.getenv_opt "CANARY_SWITCH" with
    | Some v -> set_switch v
    | None -> ());
   (match Stdlib.Sys.getenv_opt "CANARY_PLATFORM" with
    | Some v -> set_platform v
+   | None -> ());
+  (match Stdlib.Sys.getenv_opt "CANARY_STRICT" with
+   | Some v -> set_strict v
    | None -> ());
   let argv = Stdlib.Sys.argv in
   let n = Array.length argv in
@@ -2208,7 +2230,16 @@ let switch_argv () : string array =
     let a = argv.(!i) in
     let is_eq = starts_with a "--switch=" in
     let is_plat_eq = starts_with a "--platform=" in
-    if String.equal a "--switch" && !i + 1 < n then (
+    let is_strict_eq = starts_with a "--strict=" in
+    if String.equal a "--strict" then (
+      (* a BARE flag, unlike the other two: [--strict] takes no value,
+         so the next argv word must not be eaten (`--strict sqlite`). *)
+      set_strict "";
+      Stdlib.incr i)
+    else if is_strict_eq then (
+      set_strict (String.sub a 9 (String.length a - 9));
+      Stdlib.incr i)
+    else if String.equal a "--switch" && !i + 1 < n then (
       set_switch argv.(!i + 1);
       i := !i + 2)
     else if is_eq then (

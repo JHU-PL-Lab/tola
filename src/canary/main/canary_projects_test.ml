@@ -1834,8 +1834,76 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         mac && wsl && mapping_ok
         && not (String.equal f_mac f_wsl)) }
 
+(* STRICT MODE IS AN ARGUMENT OF THE INVOCATION (2026-09-15, user: "it's
+   good during the development that the running shall fail fast for
+   better debugging for ourself, rather than expected fails (xf)").
 
+   Third flag of the [--switch] / [--platform] shape, and the same three
+   things have to be true of it. What makes this one worth a pin of its
+   own is that both directions are dangerous:
 
+   1. IT IS OFF BY DEFAULT. Every landed project's steps accept "the
+      command succeeded and the postcondition holds"; a violated
+      agreement at a passing step is a finding about artifacts, not a
+      broken step, and ssl's `dependencies_provided: violated
+      libcrypto.so.3` is a real one that must not turn ssl red. If this
+      row flips, ten projects change meaning at once and nothing else in
+      the suite would say so;
+   2. THE DEFAULT DIGEST DID NOT MOVE. Landing a fingerprint input
+      normally costs one cold refresh of every step in every output tree
+      (that is written down at [expectation_form]). This one must not,
+      because the permissive question is exactly the question those
+      markers already answered. Pinned as an EQUALITY against the digest
+      spelled out longhand — appending a "lax" tag "for symmetry" would
+      throw away every warm verdict on the box, silently;
+   3. STRICT DOES separate it. A marker earned permissively answers a
+      weaker question; serving it to a strict run would report PASS for
+      a step that was never asked. Falsified by construction — drop the
+      suffix and the two hashes coincide.
+
+   NOT pinned here: that a violation actually fails the step. That is a
+   claim about a real evaluation over real evidence, and the project's
+   standard for it is a REAL project's log plus a deliberate break
+   (agreement/landing.md), not a synthetic [agreement_ctx] that would
+   pass by agreeing with whatever the derivation happens to do today. *)
+let strict_mode_pin : Canary_project_test.pure_test =
+  { name = "strict.acceptance_policy";
+    check =
+      (fun () ->
+        let saved = Canary_agreement_common.strict_mode () in
+        let restore () = Canary_agreement_common.set_strict saved in
+        let step : Canary_step_model.step =
+          { tag = "probe"; cache_key = "k"; output_tag = "o"; output_dir = "d";
+            project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
+            deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
+            check_pre = (fun () -> true);
+            check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+            expectation = Canary_step_model.Expect_success; symbol_check = None;
+            disabled_agreements = []; agreement_ctx = None; dummy = None }
+        in
+        let fingerprint_under b =
+          Canary_agreement_common.set_strict b;
+          Canary_local_runner.step_fingerprint step
+        in
+        (* (1) off unless the invocation says otherwise *)
+        Canary_agreement_common.set_strict false;
+        let default_is_permissive = not (Canary_agreement_common.strict_mode ()) in
+        (* (2) the permissive digest is the pre-strict digest, longhand *)
+        let f_lax = fingerprint_under false in
+        let expected_lax =
+          Stdlib.Digest.to_hex
+            (Stdlib.Digest.string
+               (step.cmd ~output_dir:step.output_dir ~variant_key:step.variant_id
+               ^ "\x00" ^ "success" ^ "\x00"
+               ^ Canary_store.opam_switch_label () ^ "\x00"
+               ^ Canary_store.string_of_platform (Canary_store.platform ())))
+        in
+        (* (3) and strict is a different question *)
+        let f_strict = fingerprint_under true in
+        restore ();
+        default_is_permissive
+        && String.equal f_lax expected_lax
+        && not (String.equal f_lax f_strict)) }
 
 (* THE GH RENDERING MUST AGREE WITH THE EXPECTATION'S POLARITY
    (2026-08-28).
@@ -4249,6 +4317,7 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_check_cell_pin;
       matrix_key_covers_codes_pin;
       platform_single_source_pin;
+      strict_mode_pin;
       run_info_session_pin;
       machine_roots_pin;
       platform_enumeration_pin;

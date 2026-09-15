@@ -52,7 +52,9 @@ let run_project_spec ?policy (pr : project_run) ~root
      Canary_step_model.create_logger ~log_path:(run_dir ^ "/actions.log")
    in
    logger.Canary_step_model.log ~tag:"*" ~event:"run_start"
-     ~detail:(Some pr.pr_name);
+     ~detail:(Some
+       (pr.pr_name
+       ^ if Canary_agreement_common.strict_mode () then " [strict]" else ""));
    logger.Canary_step_model.close ());
   let scenarios = Canary_pipeline.ordered ?policy pr in
   let baseline =

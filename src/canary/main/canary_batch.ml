@@ -62,6 +62,14 @@ let run_one ?(config = Canary_project_run.default_config)
   Fmt.pr "  platform: %s%s@."
     (Canary_store.string_of_platform (Canary_store.platform ()))
     (if Canary_store.platform_is_overridden () then " (--platform)" else "");
+  (* AND THE ACCEPTANCE POLICY (2026-09-15), when it is not the default.
+     Under [--strict] a step fails on a disagreement it would otherwise
+     only report, so a red cell means something different from what it
+     means in every other run — a reader comparing two logs has to be
+     told which question each was asked. Silent when off, because that
+     is what the results archive is full of. *)
+  if Canary_agreement_common.strict_mode () then
+    Fmt.pr "  agreements: strict (a violation fails its step)@.";
   Fmt.pr "@.%s — generic project run (enumerate → runner_spec → run)@."
     pr.Canary_project_run.pr_name;
   let results =
