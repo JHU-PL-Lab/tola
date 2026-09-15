@@ -74,7 +74,14 @@ let string_of_discipline = function
 (** The mechanism each language uses today. Round 1 wires only the static
     mechanism per language; a language's dynamic mechanism (Python ctypes,
     OCaml Dynlink) is deferred, so this is [Some] a static mechanism for the
-    two languages that appear as bindings and [None] for the rest. *)
+    two languages that appear as bindings and [None] for the rest.
+
+    ⚠ PREFER {!mechanism_of_lang_exn}. Every one of this function's nine
+    callers wrote [Option.value ~default:Cstubs] immediately after
+    calling it (2026-09-14 survey), which silently treats a Rust or Java
+    binding as OCaml cstubs — the caller asks a question, ignores the
+    answer "there isn't one", and proceeds on a guess. The option is
+    kept because two callers genuinely branch on absence. *)
 let default_mechanism_of_lang : Canary_lang.lang -> mechanism option = function
   | Canary_lang.OCaml -> Some Cstubs
   | Canary_lang.Python -> Some Cext
@@ -82,6 +89,32 @@ let default_mechanism_of_lang : Canary_lang.lang -> mechanism option = function
       (* not modeled yet (to-do); these never appear as binding artifacts
          in any current project. *)
       None
+
+(** THE MECHANISM, or a refusal naming the language (2026-09-14, user).
+
+    The defaulting the nine call sites shared was a decision — "a
+    language canary has no binding mechanism for behaves like OCaml
+    cstubs" — restated nine times and never written down. It is wrong
+    for every language that would exercise it: a Rust binding is not a
+    cstubs archive, and answering as though it were would let an
+    agreement read evidence that cannot exist and report [unavailable]
+    rather than the truth, which is that canary does not model this
+    language's binding at all.
+
+    Raising is right rather than harsh: the caller is always deep in a
+    derivation that has no honest answer to give, and a language
+    reaches here only by being declared in a project spec — so the
+    failure is a spec error, at startup, with the language named. *)
+let mechanism_of_lang_exn (l : Canary_lang.lang) : mechanism =
+  match default_mechanism_of_lang l with
+  | Some m -> m
+  | None ->
+      Stdlib.failwith
+        (Printf.sprintf
+           "canary models no binding mechanism for %s — declare one in \
+            canary_mechanism.ml before a project declares a %s binding"
+           (Canary_lang.string_of_lang l)
+           (Canary_lang.string_of_lang l))
 
 (* ── The mechanism CATALOGUE (reunited in base 2026-08-14) ──
    Mechanism DETAIL as standalone DATA, in the same file as the identity
@@ -111,6 +144,36 @@ type mechanism_info = {
       (** where surface agreements manifest for this mechanism (prose;
           upper layers own the typed firing sites) *)
   mi_wired : bool;  (** round-1 wiring state (produced by live projects) *)
+  (* ── THE DECIDABLE FACTS (2026-09-14, user) ──
+
+     The three fields agreements actually dispatch on. They lived as
+     loose constants in [canary_agreement_cstubs.ml], which is why
+     only cstubs had them and why the families approximated the whole
+     table with one bit ([is_dynamic]) — a guess that happens to be
+     right for cstubs and wrong for cext on the middle field.
+
+     Booleans rather than an evidence reference: WHAT a mechanism
+     offers is base vocabulary and belongs in the catalogue; WHERE the
+     evidence sits is a path into a particular world's output tree,
+     which only the agreement layer can name. The per-mechanism
+     tier-1 module keeps that half. *)
+  mi_compiles_a_stub : bool;
+      (** is there a compiled artifact whose undefined references ARE
+          the binding's requirement set? [ocamlmklib] archives stub
+          objects into a [.a] and a cext is a [.so]; a dlopen binding
+          has none and the probe's own failure is the evidence. *)
+  mi_consumer_records_needed : bool;
+      (** does that artifact record WHICH shared library it needs? A
+          static archive does not — no [DT_NEEDED], no [SONAME], those
+          appear when the executable is linked — while a cext is a
+          shared object that records both. This is the field the
+          one-bit approximation got wrong: cstubs and cext share a
+          discipline and differ here. *)
+  mi_exposes_typed_stub : bool;
+      (** does the mechanism spell its boundary in a form a signature
+          can be read from? [external] declarations do; a ctypes
+          binding declares its types as values instead, which is a
+          different shape read from a different place. *)
 }
 
 let mechanism_catalogue : mechanism_info list =
@@ -122,7 +185,14 @@ let mechanism_catalogue : mechanism_info list =
          provide (c1's consumer side)";
       mi_check_points =
         [ "build_binding (stub compile/link)"; "probe (link + run)" ];
-      mi_wired = true };
+      mi_wired = true;
+      mi_compiles_a_stub = true;
+      (* a [.a] carries no DT_NEEDED and no SONAME — those appear when
+         the executable is linked. Inspecting the linked probe
+         executable would change this answer, and the change belongs on
+         this line (landing.md order item 1). *)
+      mi_consumer_records_needed = false;
+      mi_exposes_typed_stub = true };
     { mi_mechanism = Cext; mi_lang = Canary_lang.Python;
       mi_discipline = Static_c_abi;
       mi_lib_coupling =
@@ -130,7 +200,19 @@ let mechanism_catalogue : mechanism_info list =
          against the lib";
       mi_check_points =
         [ "build_binding (cc of the extension)"; "probe (import + run)" ];
-      mi_wired = true };
+      mi_wired = true;
+      mi_compiles_a_stub = true;
+      (* THE ROW THE ONE-BIT APPROXIMATION GOT WRONG: cext shares
+         [Static_c_abi] with cstubs and differs here, because an
+         extension is a [.so] that records both NEEDED and its symbol
+         versions. Any predicate keyed on discipline answered "no" for
+         both. *)
+      mi_consumer_records_needed = true;
+      (* the extension's boundary is C source that a scanner could
+         read, but canary has no extractor for it — a gap in canary
+         rather than in the mechanism, so it is NOT stated as an
+         absence here (see registry.md §7.4.3) *)
+      mi_exposes_typed_stub = false };
     { mi_mechanism = Ctypes; mi_lang = Canary_lang.Python;
       mi_discipline = Dynamic_ffi;
       mi_lib_coupling =
@@ -139,17 +221,33 @@ let mechanism_catalogue : mechanism_info list =
       mi_check_points =
         [ "probe only (no build stage; missing symbol surfaces at \
            first call)" ];
-      mi_wired = true (* tiny's ctypes probe; z3-solver is ctypes-based *) };
+      mi_wired = true (* tiny's ctypes probe; z3-solver is ctypes-based *);
+      (* nothing is compiled, so there is no artifact to read on the
+         consumer side at all — the probe's own failure is the
+         evidence. Its types are declared as VALUES rather than at a
+         compiled boundary. *)
+      mi_compiles_a_stub = false;
+      mi_consumer_records_needed = false;
+      mi_exposes_typed_stub = false };
     { mi_mechanism = Cffi; mi_lang = Canary_lang.Python;
       mi_discipline = Dynamic_ffi;
       mi_lib_coupling = "load-time: dlopen; cdef re-declares the C surface";
       mi_check_points = [ "probe only" ];
-      mi_wired = false };
+      mi_wired = false;
+      mi_compiles_a_stub = false;
+      mi_consumer_records_needed = false;
+      (* a cdef RE-DECLARES the C surface, so cffi is the one dynamic
+         mechanism with a typed boundary to read — unwired, and worth
+         remembering when it lands *)
+      mi_exposes_typed_stub = true };
     { mi_mechanism = Dynlink; mi_lang = Canary_lang.OCaml;
       mi_discipline = Dynamic_ffi;
       mi_lib_coupling = "load-time: OCaml Dynlink of a cmxs that dlopens";
       mi_check_points = [ "probe only" ];
-      mi_wired = false };
+      mi_wired = false;
+      mi_compiles_a_stub = false;
+      mi_consumer_records_needed = false;
+      mi_exposes_typed_stub = false };
   ]
 
 (** Catalogue lookup — total over the [mechanism] constructors (pinned by
@@ -161,10 +259,15 @@ let info_of_mechanism (m : mechanism) : mechanism_info =
   | Some i -> i
   | None ->
       (* unreachable while the totality pin holds *)
+      (* unreachable while the totality pin holds; the decidable fields
+         answer NO so an uncatalogued mechanism claims nothing *)
       { mi_mechanism = m; mi_lang = Canary_lang.OCaml;
         mi_discipline = discipline_of_mechanism m;
         mi_lib_coupling = "(uncatalogued)";
-        mi_check_points = []; mi_wired = false }
+        mi_check_points = []; mi_wired = false;
+        mi_compiles_a_stub = false;
+        mi_consumer_records_needed = false;
+        mi_exposes_typed_stub = false }
 
 (** One-line display form for [spec] — the project spec REFERENCES the
     mechanism; the facts printed come from here, never from the project. *)

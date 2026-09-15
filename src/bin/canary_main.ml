@@ -1003,11 +1003,7 @@ let scenarios_cmd =
             Canary_artifact.a_source :: Canary_enumerate.a_lib
             :: List.map
                  (fun l ->
-                   let m =
-                     Option.value
-                       (Canary_mechanism.default_mechanism_of_lang l)
-                       ~default:Canary_mechanism.Cstubs
-                   in
+                   let m = Canary_mechanism.mechanism_of_lang_exn l in
                    Canary_artifact.a_binding l m)
                  langs
           in

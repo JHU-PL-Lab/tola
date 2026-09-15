@@ -151,10 +151,7 @@ let mechanism_of_project (pr : project_run) (l : Canary_lang.lang) :
       pr.pr_binding_decls
   with
   | Some d -> d.Canary_binding_decl.mechanism
-  | None ->
-      Option.value
-        (Canary_mechanism.default_mechanism_of_lang l)
-        ~default:Canary_mechanism.Cstubs
+  | None -> Canary_mechanism.mechanism_of_lang_exn l
 
 (** WHAT THE PROJECT ALREADY DECLARED, routed to the runner
     (2026-09-13).

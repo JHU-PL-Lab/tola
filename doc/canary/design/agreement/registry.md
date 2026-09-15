@@ -1115,7 +1115,55 @@ The unresolved scope decisions remain: what the repacking claims permit; how
 policy; what establishes denotation or containment across worlds; and which
 artifacts each additional mechanism can actually supply.
 
-#### 7.4.3 Deferred: the action-unit perspective
+#### 7.4.3 Finish `mechanism_info`, and stop defaulting the language map
+
+Two to-dos from a survey of every site that consults a `mechanism`
+(2026-09-14, user: "let's also do a collection on other code which needs
+checking on `mechanism` and think about if they can also benefit"). Both
+were found by looking rather than predicted, and the first is half-built
+already.
+
+**(a) The record exists; the facts are elsewhere.**
+`base/canary_mechanism.ml` already defines `mechanism_info`, a five-entry
+catalogue covering every mechanism, a total `info_of_mechanism`, and pins for
+totality and discipline-consistency. Its own header says the intent outright:
+*"Making each one a structured record turns the design space into data canary
+can range over."* But the record carries `mi_lang`, `mi_discipline`,
+`mi_lib_coupling` (prose), `mi_check_points` (prose) and `mi_wired` — none of
+the facts anything dispatches on. Those live as loose constants in
+`canary_agreement_cstubs.ml`, which is why only cstubs has them and why the
+families approximate the table with one bit (`is_dynamic`).
+
+So the move is not tag → record. It is **finish the record**: add the
+decidable fields — does this mechanism compile a stub archive, does its
+consumer artifact record `NEEDED` and symbol versions, does it expose typed
+stub declarations — and point the predicates at `info_of_mechanism`.
+
+**Who benefits, measured rather than assumed.** ~110 sites mention a
+mechanism; ~90 of them only NAME one (project specs, test worlds) and
+dispatch on nothing.
+
+| group | sites | benefit |
+| --- | --- | --- |
+| agreement layer (`is_dynamic`, `consumer_records_needed`) | 5 files | **direct** — each becomes a field lookup, and a new mechanism is a catalogue row rather than edits in four families |
+| enumeration (`Build_binding` stage exists?) | `canary_enumerate.ml` ×2 | **none** — `discipline` already answers it, and that is what discipline is for |
+| coverage (`is_static_binding_lang`) | 1 | **none**, same reason |
+| specs and tests naming a mechanism | ~90 | inert |
+
+The point of the table is the second and third rows: "everywhere that touches
+`mechanism`" looks like 25 files and is really 5. Folding the enumeration in
+would be churn.
+
+**(b) `default_mechanism_of_lang` returns an option nobody wants.** All nine
+call sites — the bin, the step builder, the registry, the matrix (×3), the
+pipeline, tiny — immediately write `Option.value ~default:Cstubs`. A Rust or
+Java binding would therefore be treated silently as OCaml cstubs rather than
+refused or reported. Same class as the `merge_inspect` proxy that made
+`Inspect_native_build` unusable for a year: a defaulting rule restated at
+every call site instead of being decided once. Independent of (a) and
+cheaper — one total answer, or a deliberate error.
+
+#### 7.4.4 Deferred: the action-unit perspective
 
 Raised 2026-09-13 and deliberately not acted on, because it is a MODEL
 change rather than a rendering one and the milestone is landing agreements.

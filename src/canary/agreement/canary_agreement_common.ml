@@ -518,6 +518,18 @@ let declares_version_tags (d : Canary_artifact.t option) : bool =
       not (List.is_empty a.Canary_artifact.native_api.versioned_symbols)
   | None -> false
 
+(** THE MECHANISM'S OWN ANSWERS, from the catalogue (2026-09-14). Ask
+    these rather than [is_dynamic] wherever the question is about the
+    ARTIFACT — whether a stub is compiled, whether a boundary carries
+    types. Discipline is about the pipeline's shape (does a
+    [Build_binding] stage exist), and using it as a proxy for the
+    artifact table is the one-bit approximation these replace. *)
+let compiles_a_stub (m : Canary_mechanism.mechanism) : bool =
+  (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_compiles_a_stub
+
+let exposes_typed_stub (m : Canary_mechanism.mechanism) : bool =
+  (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_exposes_typed_stub
+
 let is_dynamic (m : Canary_mechanism.mechanism) : bool =
   Base.Poly.equal
     (Canary_mechanism.discipline_of_mechanism m)
@@ -1148,7 +1160,7 @@ type agreement = {
           which is several actions depending on who is linking. A typed
           reference would have to lie about both. Drawing this as a
           relation needs a different field; that is deferred in
-          registry.md §7.4.3.
+          registry.md §7.4.4.
 
           The FIRING sites remain [m_firing]. An agreement is rooted
           where the rule ran and detected wherever evidence survives,

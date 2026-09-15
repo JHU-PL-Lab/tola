@@ -303,15 +303,19 @@ let required_symbols_exported : agreement =
     ag_methods =
       [ checking_method ~name:"stub_requirements_vs_library_exports"
           ~kind:Compare ~reference:Peer_artifact
+          (* asks whether a STUB IS COMPILED, which is the actual
+             question — not whether the discipline is dynamic, which
+             happened to agree for every mechanism wired so far *)
           ~applicable:(fun m _ _ ->
-            if is_dynamic m then
+            if compiles_a_stub m then Applicable
+            else
               Inapplicable
-                "a dynamic binding compiles no stub archive, so it records no \
-                 requirement set; the probe's own failure is the evidence"
-            else Applicable)
+                "this binding mechanism compiles no stub archive, so it \
+                 records no requirement set; the probe's own failure is the \
+                 evidence")
           ~firing:firing_default
           ~inputs:(fun { ac_mechanism = m; ac_lang = l; ac_world = w; _ } ->
-            if is_dynamic m then []
+            if not (compiles_a_stub m) then []
             else
               let tag = binding_evidence_tag w l in
               (* BOTH SPELLINGS, as for the user surface (2026-09-12).

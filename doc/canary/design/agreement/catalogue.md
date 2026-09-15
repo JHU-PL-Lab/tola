@@ -12,7 +12,7 @@ The model these fields belong to is [`registry.md`](registry.md) §1; how a proj
 
 Every row is one action's rule, re-derived from what survived it. **Action** is where the rule ran — not where the check fires, which is wherever the evidence lands and is usually later. **Tool** is what applied it; **artifact** is what it ranged over.
 
-A `code-set` action is one THIS graph contains, so the row can be read against `canary paths`. A plain-prose one is not: the link that built a consumer ran in a world this graph never modelled, and "the link" is several actions depending on who is linking. Naming those in the action type would be a lie in both directions; drawing them needs the action-unit view, which is deferred in [`registry.md`](registry.md) §7.4.3.
+A `code-set` action is one THIS graph contains, so the row can be read against `canary paths`. A plain-prose one is not: the link that built a consumer ran in a world this graph never modelled, and "the link" is several actions depending on who is linking. Naming those in the action type would be a lie in both directions; drawing them needs the action-unit view, which is deferred in [`registry.md`](registry.md) §7.4.4.
 
 | code | agreement | action | tool | artifact | checked at | status |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -571,7 +571,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
 |   reads | header signatures scan_sources/inspect_typed_header.json |
 |   reads | stub signatures scan_sources/inspect_typed_binding_stub_ocaml.json |
-| python/cext@built | not applicable — no signature extractor for this language's stub surface yet |
+| python/cext@built | not applicable — this mechanism declares its types as values rather than at a compiled boundary, so there are no stub signatures to read |
 | limits | textual comparison of type SPELLINGS, not semantic type equivalence, representation or ownership. Names on only one side are skipped. The current extractor parses known C header declarations and supplies fixed binding signatures where their names occur in the binding source — general binding-signature extraction is the next step. |
 
 **Examples**

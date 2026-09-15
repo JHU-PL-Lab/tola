@@ -347,11 +347,15 @@ let dependencies_provided_eval ~resolve inputs : outcome =
    The mechanisms without a module of their own answer by discipline
    until they get one — dynamic means no compiled artifact, so nothing
    to read. *)
+(* ONE FIELD LOOKUP, not a match (2026-09-14). This used to special-case
+   Cstubs against its own module's constant and fall back to
+   [not (is_dynamic m)] for everything else — which is wrong for cext:
+   it shares Cstubs' discipline and DOES record NEEDED, being a shared
+   object. The catalogue states it per mechanism, so a new mechanism is
+   a row rather than another arm here. *)
 let consumer_records_needed (m : Canary_mechanism.mechanism) : bool =
-  match m with
-  | Canary_mechanism.Cstubs ->
-      Canary_agreement_cstubs.records_needed_in_a_readable_artifact
-  | _ -> not (is_dynamic m)
+  (Canary_mechanism.info_of_mechanism m).Canary_mechanism
+    .mi_consumer_records_needed
 
 (** A pair check needs SOMETHING on the consumer side that records
     dependencies or symbol versions. A STATIC question — it is a

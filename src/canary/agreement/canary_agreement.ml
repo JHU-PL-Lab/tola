@@ -499,11 +499,7 @@ let skipped_checks ?(disabled = []) () : (agreement_row * string) list =
 let inputs_of_agreement ?mechanism ?(world = []) (c : agreement_id)
     (l : Canary_lang.lang) : inspect_input list =
   let m =
-    Option.value mechanism
-      ~default:
-        (Option.value
-           (Canary_mechanism.default_mechanism_of_lang l)
-           ~default:Canary_mechanism.Cstubs)
+    Option.value mechanism ~default:(Canary_mechanism.mechanism_of_lang_exn l)
   in
   List.concat_map (row_of c).ag.ag_methods ~f:(fun mm ->
       mm.m_inputs
@@ -869,10 +865,7 @@ let pp_catalogue () : string =
     a path, not a closure. *)
 let record_worlds : (Canary_lang.lang * Canary_mechanism.mechanism) list =
   List.map [ Canary_lang.OCaml; Canary_lang.Python ] ~f:(fun l ->
-      ( l,
-        Option.value
-          (Canary_mechanism.default_mechanism_of_lang l)
-          ~default:Canary_mechanism.Cstubs ))
+      (l, Canary_mechanism.mechanism_of_lang_exn l))
 
 let string_of_input (i : inspect_input) : string =
   let one name ps = name ^ " " ^ String.concat ~sep:" | " ps in
@@ -1121,7 +1114,7 @@ let pp_rooting_table_md () : string =
      several actions depending on who is linking. Naming those in the action \
      type would be a lie in both directions; drawing them needs the \
      action-unit view, which is deferred in [`registry.md`](registry.md) \
-     §7.4.3.\n\n";
+     §7.4.4.\n\n";
   add "| code | agreement | action | tool | artifact | checked at | status |\n";
   add "| --- | --- | --- | --- | --- | --- | --- |\n";
   List.iter rooted_rows ~f:(fun r ->

@@ -996,10 +996,8 @@ let agreement_ctx_of_action ~(world : Canary_artifact.assignment)
 let derive_steps ~root ~project ?(cache_project = project)
     ?(langs = Canary_lang.[ OCaml ]) ?(world = [])
     ?(mechanism_of =
-      fun l ->
-        Option.value
-          (Canary_mechanism.default_mechanism_of_lang l)
-          ~default:Canary_mechanism.Cstubs) (spec : runner_spec) : step list =
+      fun l -> Canary_mechanism.mechanism_of_lang_exn l)
+    (spec : runner_spec) : step list =
   check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
   let mk_one ~tag ~action ~deps ~cmd =

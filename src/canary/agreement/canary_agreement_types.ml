@@ -179,19 +179,29 @@ let signatures_agree : agreement =
     ag_methods =
       [ checking_method ~name:"header_vs_stub_signature_summaries" ~kind:Compare
           ~reference:Peer_artifact
+          (* TWO DIFFERENT NOES, and keeping them apart is the point
+             (2026-09-14). "This mechanism has no typed boundary" is a
+             fact about the mechanism and comes from the catalogue.
+             "We have not written the extractor for this one" is a fact
+             about CANARY, and saying so names a gap instead of
+             implying the claim does not apply — a cext DOES call the C
+             API and must match its declarations; nobody has written
+             the scanner. *)
           ~applicable:(fun m l _ ->
-            match (l, is_dynamic m) with
-            | Canary_lang.OCaml, false -> Applicable
-            | _, true ->
-                Inapplicable
-                  "a dynamic binding declares its types as values rather than \
-                   as a compiled boundary; it needs its own extractor"
-            | _ ->
-                Inapplicable
-                  "no signature extractor for this language's stub surface yet")
+            if not (exposes_typed_stub m) then
+              Inapplicable
+                "this mechanism declares its types as values rather than at a \
+                 compiled boundary, so there are no stub signatures to read"
+            else
+              match l with
+              | Canary_lang.OCaml -> Applicable
+              | _ ->
+                  Inapplicable
+                    "no signature extractor for this language's stub surface \
+                     yet — a gap in canary, not in the mechanism")
           ~firing:firing_default
           ~inputs:(fun { ac_mechanism = m; ac_lang = l; _ } ->
-            match (l, is_dynamic m) with
+            match (l, not (exposes_typed_stub m)) with
             | Canary_lang.OCaml, false ->
                 (* the header is the NATIVE side and language-neutral; the
                    stub surface is the MECHANISM's — [external] is how

@@ -531,7 +531,7 @@ let row_key (pr : Canary_project_run.project_run)
    MOVED TO [Canary_basic] on 2026-09-14. It is a pure function of
    [action] and two orderings existed — this one and the agreement
    views' — which could not share while it lived in [main/]; that is
-   the layering [registry.md] §7.4.3 recorded. The agreement catalogue
+   the layering [registry.md] §7.4.4 recorded. The agreement catalogue
    now sorts its summary table by the same key, so the two tables list
    their rows in one order.
 
@@ -681,11 +681,7 @@ let check_cols_of_chain (chain : Canary_basic.action list)
     ~(declared : Canary_artifact.t option) : col list =
   List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
       List.concat_map (langs_of_chain chain) ~f:(fun lang ->
-          let mech =
-            Option.value
-              (Canary_mechanism.default_mechanism_of_lang lang)
-              ~default:Canary_mechanism.Cstubs
-          in
+          let mech = Canary_mechanism.mechanism_of_lang_exn lang in
           (* CAN THIS CLAIM BE DECIDED HERE AT ALL? Two filters, and
              both are about not spending a column on a cell that can
              never say anything: a method with no evaluator reports
@@ -733,9 +729,7 @@ let artifact_cols_of_chain (chain : Canary_basic.action list)
                 List.concat_map
                   (m.Canary_agreement_common.m_inputs
                      { Canary_agreement_common.ac_mechanism =
-                         Option.value
-                           (Canary_mechanism.default_mechanism_of_lang lang)
-                           ~default:Canary_mechanism.Cstubs;
+                         Canary_mechanism.mechanism_of_lang_exn lang;
                        ac_lang = lang;
                        ac_world = world;
                        ac_declared = declared })
@@ -947,9 +941,7 @@ let check_cell ~(chain : Canary_basic.action list)
               List.filter_map
                 (m.Canary_agreement_common.m_inputs
                    { Canary_agreement_common.ac_mechanism =
-                       Option.value
-                         (Canary_mechanism.default_mechanism_of_lang lang)
-                         ~default:Canary_mechanism.Cstubs;
+                       Canary_mechanism.mechanism_of_lang_exn lang;
                      ac_lang = lang;
                      ac_world = world;
                      ac_declared = declared })

@@ -436,7 +436,7 @@ let string_of_action = function
 (* ── THE CANONICAL ACTION ORDER ────────────────────────────────────
 
    Moved down from [Canary_matrix] on 2026-09-14, which is exactly the
-   move [registry.md] §7.4.3 said it would take: two action-column
+   move [registry.md] §7.4.4 said it would take: two action-column
    orderings existed, the result table's and the agreement views', and
    they could not share while this lived in [main/]. It is a pure
    function of [action] and belongs in the vocabulary.

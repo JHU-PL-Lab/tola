@@ -1031,11 +1031,7 @@ let id_of_kind : Canary_basic.artifact_kind -> Canary_artifact.artifact_info =
   | Canary_basic.Source -> Canary_artifact.a_source
   | Canary_basic.Lib -> a_lib
   | Canary_basic.Binding l ->
-      let m =
-        Option.value
-          (Canary_mechanism.default_mechanism_of_lang l)
-          ~default:Canary_mechanism.Cstubs
-      in
+      let m = Canary_mechanism.mechanism_of_lang_exn l in
       Canary_artifact.a_binding l m
   | Canary_basic.Binding_source l -> Canary_artifact.a_binding_source l
   | Canary_basic.Headers -> Canary_artifact.a_headers

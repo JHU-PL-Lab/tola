@@ -754,7 +754,27 @@ let mechanism_catalogue_test : pure_test =
       && List.for_all [ L.OCaml; L.Python ] ~f:(fun l ->
              match Mech.default_mechanism_of_lang l with
              | Some m -> (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_wired
-             | None -> false)) }
+             | None -> false)
+      (* THE DECIDABLE FIELDS ARE CONSISTENT (2026-09-14). Two
+         implications the agreement layer relies on, and a mechanism
+         added without thinking about them would break silently:
+
+         - an artifact that records NEEDED is one that was COMPILED, so
+           [mi_consumer_records_needed] implies [mi_compiles_a_stub];
+         - the one-bit approximation these replaced said a static
+           discipline meant a readable NEEDED record. It is false —
+           cstubs and cext share a discipline and differ — and pinning
+           that the two really do differ keeps the catalogue from
+           quietly collapsing back into the guess. *)
+      && List.for_all all ~f:(fun m ->
+             let i = Canary_mechanism.info_of_mechanism m in
+             (not i.Canary_mechanism.mi_consumer_records_needed)
+             || i.Canary_mechanism.mi_compiles_a_stub)
+      && (not
+            (Canary_mechanism.info_of_mechanism Mech.Cstubs)
+              .Canary_mechanism.mi_consumer_records_needed)
+      && (Canary_mechanism.info_of_mechanism Mech.Cext)
+           .Canary_mechanism.mi_consumer_records_needed) }
 
 (* M2 step 2 pin (2026-08-12): the contract×lang input template equals
    tiny's formerly hand-written rows — the refactor is provably

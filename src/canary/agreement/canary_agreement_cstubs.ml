@@ -21,25 +21,20 @@
 
 open Canary_agreement_common
 
-(** Is there a compiled artifact recording the C symbols the binding
-    requires? Yes: [ocamlmklib] archives the stub objects into a [.a]
-    whose undefined references ARE the requirement set, which is what
-    c1 reads on the consumer side. A [Dynlink] binding has none — it
-    resolves at runtime, and the probe's own failure is the evidence. *)
-let produces_a_compiled_stub = true
+(* THE TWO BOOLEANS THAT USED TO LIVE HERE moved into the mechanism
+   CATALOGUE on 2026-09-14 ([Canary_mechanism.mi_compiles_a_stub],
+   [mi_consumer_records_needed]). They were facts about a mechanism
+   stated in the module of ONE mechanism, so no other mechanism had
+   them and the families approximated the whole table with
+   [is_dynamic] — a guess that is right for cstubs and wrong for cext,
+   which shares its discipline and records NEEDED where cstubs does
+   not.
 
-(** Does that artifact record WHICH shared library it needs?
-
-    No. A static archive carries no [DT_NEEDED] and no [SONAME]: those
-    appear when the executable is linked, so there is no consumer-side
-    artifact for the identity agreements (c4 soname, c5 version nodes)
-    to read under this mechanism. Python's [Cext] answers yes to the
-    same question — a cext is a [.so] — which is why those two fire
-    there and not here.
-
-    Inspecting the linked probe executable would change this answer,
-    and the change would belong on this line. *)
-let records_needed_in_a_readable_artifact = false
+   What stays here is what the catalogue cannot hold: WHERE the
+   evidence sits. "Does this mechanism expose a typed boundary" is
+   base vocabulary; "it is at
+   scan_sources/inspect_typed_binding_stub_ocaml.json" is a path into
+   a world's output tree, which only the agreement layer can name. *)
 
 (** The STUB-FACING typed surface (Sf.3): the binding's [external]
     declarations with their C types, scanned from SOURCE rather than
