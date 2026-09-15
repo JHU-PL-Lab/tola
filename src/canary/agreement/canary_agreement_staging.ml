@@ -139,7 +139,13 @@ let staged_interface_preserved : agreement =
     ag_methods =
       [ checking_method ~name:"staged_vs_build_tree_summary" ~kind:Compare
           ~reference:Peer_artifact
-          ~requires:[ Staged_lib_copy ]
+          (* NO APPLICABILITY TEST (2026-09-14, user). It used to
+             declare that it applies only where the lib is Installed —
+             the same condition its FIRING already tests three lines
+             below, which returns no sites otherwise. One gate, stated
+             twice. Per-scenario variation is firing's question; this
+             agreement suits any project that stages a library, which
+             is a thing no static fact can rule out. *)
           ~firing:(fun _ _ w ->
             match Canary_artifact.provision_of_lib w with
             | Canary_store.Installed ->

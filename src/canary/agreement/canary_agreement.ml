@@ -192,22 +192,50 @@ let is_disabled ~(disabled : agreement_id list) (r : agreement_row) : bool =
     full coverage of an action while saying nothing about the claims
     nobody has implemented yet. *)
 
-(** WHAT A WORLD OFFERS. {!Canary_agreement_common.capabilities_of} does
-    the work; this supplies the one fact it cannot reach — whether the
-    consumer artifact records dependencies and symbol versions, which
-    belongs to the MECHANISM module that owns it
-    ([Canary_agreement_cstubs]) and therefore sits above common.
+(** WHICH CLAIMS THIS PROJECT CANNOT CARRY, AND WHY — computed once
+    from the three static facts a spec yields (2026-09-14, user).
 
-    The registry is where this has to live: it is the only tier that
-    sees every mechanism module, which is exactly why it is the tier
-    that holds the list. A family declares what it NEEDS
-    ([m_requires]); nobody below here computes what a world HAS. *)
-let world_capabilities ~(mechanism : Canary_mechanism.mechanism)
-    ~(world : Canary_artifact.assignment)
-    ~(declared : Canary_artifact.t option) : capability list =
-  capabilities_of ~mechanism ~world ~declared
-    ~consumer_records:
-      (Canary_agreement_identity.consumer_records_needed mechanism)
+    Applicability was a per-step gate: every method re-answered it at
+    every firing site, and the runner logged the answer each time.
+    sqlite emitted the same six [not_applicable] sentences on every one
+    of ten scenarios — sixty lines restating one fact about cstubs.
+
+    It is a property of the PROJECT, so it is derived here, once, and
+    reported once. What varies per scenario is whether a run reaches
+    the claim, and that is [m_firing]'s question and always was. *)
+type unsuited = {
+  us_slug : string;
+  us_method : string;
+  us_lang : Canary_lang.lang;
+      (** WHICH SIDE cannot carry it. A project with two bindings can
+          be unsuited on one and fine on the other — sqlite's cstubs
+          archive records no NEEDED while its Python extension is a
+          shared object that does — so a report that omitted the
+          language would list a claim as impossible while the log
+          beside it showed that claim running. *)
+  us_why : string;
+}
+
+let unsuited_here ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(declared : Canary_artifact.t option) :
+    unsuited list =
+  List.concat_map agreement_registry ~f:(fun r ->
+      List.filter_map r.ag.ag_methods ~f:(fun m ->
+          match m.m_applicable mechanism lang declared with
+          | Applicable -> None
+          | Inapplicable why ->
+              Some
+                { us_slug = r.ag_slug; us_method = m.m_name; us_lang = lang;
+                  us_why = why }))
+
+(** The same question for one method — what the result table's columns
+    and the runner's selection both ask. *)
+let suits_here ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(declared : Canary_artifact.t option)
+    (m : checking_method) : bool =
+  match m.m_applicable mechanism lang declared with
+  | Applicable -> true
+  | Inapplicable _ -> false
 
 let evaluate_in_context ?(disabled = []) ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
@@ -221,11 +249,19 @@ let evaluate_in_context ?(disabled = []) ~(mechanism : Canary_mechanism.mechanis
             List.exists (m.m_firing mechanism lang world) ~f:(fun a ->
                 Poly.equal a action)
           in
-          if not fires then None
+          (* A CLAIM THIS PROJECT CANNOT CARRY IS NOT AN OUTCOME
+             (2026-09-14, user). It used to be evaluated and logged as
+             [not_applicable] at every firing site, which restated one
+             static fact once per step — sixty lines on a ten-scenario
+             sqlite run saying that a cstubs archive records no NEEDED.
+             The fact is reported once now, from the spec, by
+             [Canary_pipeline.unsuited_of]; the RUN carries only what a
+             run can discover. *)
+          if (not fires) || not (suits_here ~mechanism ~lang ~declared m) then
+            None
           else
             let outcome =
               evaluate_method ~disabled:off ~mechanism ~lang ~world ?declared
-                ~provided:(world_capabilities ~mechanism ~world ~declared)
                 ~resolve m
             in
             Some
@@ -566,12 +602,8 @@ let cell_status_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
   if List.is_empty firing then Empty
   else if not r.ag_enabled then Off
   else
-    let provided = world_capabilities ~mechanism ~world ~declared:None in
     let applicable =
-      List.filter firing ~f:(fun m ->
-          match applies_given ~provided m.m_requires with
-          | Applicable -> true
-          | Inapplicable _ -> false)
+      List.filter firing ~f:(suits_here ~mechanism ~lang ~declared:None)
     in
     if List.is_empty applicable then Inapplicable_cell
     else if List.for_all applicable ~f:(fun m -> Option.is_none m.m_eval) then
@@ -928,12 +960,7 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
           let world = uniform_world ~lang ~mechanism:mech Canary_store.Built in
           let sites = m.m_firing mech lang world in
           let applies =
-            match
-              applies_given
-                ~provided:
-                  (world_capabilities ~mechanism:mech ~world ~declared:None)
-                m.m_requires
-            with
+            match m.m_applicable mech lang None with
             | Applicable -> None
             | Inapplicable why -> Some why
           in

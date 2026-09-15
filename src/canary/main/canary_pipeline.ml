@@ -199,6 +199,30 @@ let declared_api_of (pr : project_run) : Canary_artifact.t option =
   in
   match from_source with Some _ -> from_source | None -> pr.pr_api_source
 
+(** THE STATIC HALF OF COVERAGE (2026-09-14, user) — which claims this
+    project cannot carry, and why, derived from its spec rather than
+    from a run.
+
+    It used to be a per-step outcome: every method re-answered
+    applicability at every firing site and the runner logged the
+    answer, so sqlite emitted the same six sentences on each of ten
+    scenarios. The fact is a property of the project, so the run stops
+    carrying it and this reports it once.
+
+    That keeps the rule the per-step logging existed for — a report
+    showing only what found something would read as full coverage —
+    while paying for it once instead of sixty times. [--observed] now
+    prints what RAN from the log and what CANNOT RUN from here. *)
+let unsuited_of (pr : project_run) : Canary_agreement.unsuited list =
+  let declared = declared_api_of pr in
+  List.concat_map
+    (fun lang ->
+      Canary_agreement.unsuited_here
+        ~mechanism:(mechanism_of_project pr lang)
+        ~lang ~declared)
+    langs
+  |> List.sort_uniq Stdlib.compare
+
 let with_declared_facts (pr : project_run)
     (spec : Canary_step_builder.runner_spec) : Canary_step_builder.runner_spec =
   let api_source =

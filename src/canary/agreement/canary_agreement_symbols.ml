@@ -303,7 +303,12 @@ let required_symbols_exported : agreement =
     ag_methods =
       [ checking_method ~name:"stub_requirements_vs_library_exports"
           ~kind:Compare ~reference:Peer_artifact
-          ~requires:[ Compiled_stub ]
+          ~applicable:(fun m _ _ ->
+            if is_dynamic m then
+              Inapplicable
+                "a dynamic binding compiles no stub archive, so it records no \
+                 requirement set; the probe's own failure is the evidence"
+            else Applicable)
           ~firing:firing_default
           ~inputs:(fun { ac_mechanism = m; ac_lang = l; ac_world = w; _ } ->
             if is_dynamic m then []

@@ -1621,19 +1621,15 @@ let agreement_registry_firing_pin : pure_test =
               Firing and applicability are different questions and the
               model says so separately.
 
-              Asked through the CAPABILITY match since 2026-09-14: the
-              claim REQUIRES a consumer artifact that records
-              dependencies, and a cstubs world does not offer one. The
-              predicate this replaced said the same thing in a closure
-              of its own. *)
+              A STATIC question since 2026-09-14 — it takes the
+              mechanism, the language and the declared API, and no
+              world. Whether a given SCENARIO reaches the claim is
+              firing's question, and the one agreement that tested the
+              world here was restating its own firing gate. *)
         (match
-           C.applies_given
-             ~provided:
-               (CR.world_capabilities ~mechanism:Canary_mechanism.Cstubs
-                  ~world:built_ml ~declared:None)
-             (List.hd_exn
-                (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_methods)
-               .C.m_requires
+           (List.hd_exn
+              (CR.row_of C.Soname_matches_requirement).CR.ag.C.ag_methods)
+             .C.m_applicable Canary_mechanism.Cstubs Canary_lang.OCaml None
          with
          | C.Inapplicable _ -> true
          | C.Applicable -> false)) }
@@ -2858,13 +2854,24 @@ let agreement_action_path_pin : pure_test =
                  "repack_preserves_api/declared_repacking_relation: \
                   not_implemented:")
       in
-      (* and the mechanism's own limit is reported as INAPPLICABLE, not
-         as a pass and not as missing evidence — a cstubs archive
-         records no dependency, so the identity pair has no claim here *)
+      (* and the mechanism's own limit is NOT in the log at all
+         (2026-09-14). A cstubs archive records no dependency, so the
+         identity pair has no claim here — but that is a fact about the
+         project, not something this run discovered, and it used to be
+         re-stated at every firing site. The run carries what a run can
+         find; the static half comes from the spec, and the pin checks
+         BOTH halves so the claim cannot simply vanish. *)
       let inapplicable_ok =
-        has ok_log
-          "soname_matches_requirement/library_identity_vs_consumer_record: \
-           not_applicable:"
+        (not
+           (has ok_log
+              "soname_matches_requirement/library_identity_vs_consumer_record"))
+        && List.exists
+             (Canary_agreement.unsuited_here ~mechanism:Canary_mechanism.Cstubs
+                ~lang:Canary_lang.OCaml ~declared:None)
+             ~f:(fun (u : Canary_agreement.unsuited) ->
+               String.equal u.Canary_agreement.us_slug
+                 "soname_matches_requirement"
+               && not (String.is_empty u.Canary_agreement.us_why))
       in
       holds_ok && violated_ok && unavailable_ok && planned_ok
       && inapplicable_ok) }

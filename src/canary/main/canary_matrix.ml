@@ -678,7 +678,6 @@ let langs_of_chain (chain : Canary_basic.action list) : Canary_lang.lang list =
     are all absent contributes nothing — which is how a project that
     builds no app avoids a [build_app_ocaml_pre] column. *)
 let check_cols_of_chain (chain : Canary_basic.action list)
-    ~(worlds : Canary_artifact.assignment list)
     ~(declared : Canary_artifact.t option) : col list =
   List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
       List.concat_map (langs_of_chain chain) ~f:(fun lang ->
@@ -689,27 +688,18 @@ let check_cols_of_chain (chain : Canary_basic.action list)
           in
           (* CAN THIS CLAIM BE DECIDED HERE AT ALL? Two filters, and
              both are about not spending a column on a cell that can
-             never say anything. A method with no evaluator reports
-             [not_implemented] forever; a method the mechanism cannot
-             carry reports [not_applicable] in every world this project
-             has. Applicability is asked of EVERY world, not a
-             representative one — [staged_interface_preserved] applies
-             only where the lib is Installed, and a Built representative
-             would have dropped it. *)
+             never say anything: a method with no evaluator reports
+             [not_implemented] forever, and one this project cannot
+             carry reports [not_applicable] forever.
+
+             Applicability takes no world — it is a static property of
+             the project — so this no longer sweeps every scenario
+             looking for one that permits the claim. *)
           let decidable =
             List.exists r.Canary_agreement.ag.Canary_agreement_common.ag_methods
               ~f:(fun m ->
                 Option.is_some m.Canary_agreement_common.m_eval
-                && List.exists worlds ~f:(fun w ->
-                       match
-                         Canary_agreement_common.applies_given
-                           ~provided:
-                             (Canary_agreement.world_capabilities
-                                ~mechanism:mech ~world:w ~declared)
-                           m.Canary_agreement_common.m_requires
-                       with
-                       | Canary_agreement_common.Applicable -> true
-                       | Canary_agreement_common.Inapplicable _ -> false))
+                && Canary_agreement.suits_here ~mechanism:mech ~lang ~declared m)
           in
           if not (decidable && r.Canary_agreement.ag_enabled) then []
           else
@@ -987,9 +977,8 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
           | w :: _ -> Some w
           | [] -> None
         in
-        let worlds = Canary_project_run.scenarios_of pr in
         List.map acts ~f:(fun a -> Act a)
-        @ check_cols_of_chain acts ~worlds ~declared
+        @ check_cols_of_chain acts ~declared
         @ (match world with
            | None -> []
            | Some w -> artifact_cols_of_chain acts ~world:w ~declared))

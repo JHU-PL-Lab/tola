@@ -780,7 +780,26 @@ let checks_cmd =
         in
         Fmt.pr "%s@." (Canary_status.pp_landing ?projects ~root:"_out" ())
     | Some name, _, _ when observed ->
-        Fmt.pr "%s@." (Canary_status.pp_observed ~root:"_out" ~project:name)
+        Fmt.pr "%s@." (Canary_status.pp_observed ~root:"_out" ~project:name);
+        (* the STATIC half: what this project cannot carry at all,
+           derived from its spec rather than from the log, so a reader
+           of "what ran" is never left thinking that was everything *)
+        (match List.assoc_opt name Canary_registry.all_specs with
+         | Some pr -> (
+             match Canary_pipeline.unsuited_of pr with
+             | [] -> ()
+             | us ->
+                 Fmt.pr
+                   "@.  %d claim(s) this project cannot carry at all \
+                    (from its spec, not from the run):@."
+                   (List.length us);
+                 List.iter
+                   (fun (u : Canary_agreement.unsuited) ->
+                     Fmt.pr "    %-28s [%s] %s@." u.Canary_agreement.us_slug
+                       (Canary_lang.string_of_lang u.Canary_agreement.us_lang)
+                       u.Canary_agreement.us_why)
+                   us)
+         | None -> ())
     | None, _, _ when observed ->
         List.iter
           (fun p ->

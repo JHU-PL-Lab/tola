@@ -353,74 +353,28 @@ let is_decided = function Holds | Violated _ -> true | _ -> false
     those two is how a missing inspector reads as a passing check. *)
 type applicability = Applicable | Inapplicable of string
 
-(** WHAT A WORLD OFFERS, AND WHAT A CLAIM NEEDS (2026-09-14, user).
+(** WHETHER A CLAIM SUITS THIS PROJECT AT ALL — and it is a STATIC
+    question (2026-09-14, user).
 
-    An agreement used to carry a PREDICATE — [mechanism -> lang ->
-    world -> applicability] — and each one re-derived facts the
-    mechanism and the world already knew: is this binding dynamic, does
-    the consumer record NEEDED, is the library staged. Thirteen
-    closures asking the same handful of questions, each with its own
-    hand-written reason for saying no.
+    The predicate this replaced took the WORLD, and that was the
+    mistake. Per-world variation belongs to [m_firing], which already
+    does it: [staged_interface_preserved] returns no firing sites
+    unless the library is Installed, so its applicability test on the
+    same condition was a second copy of one gate. Firing answers "does
+    this run reach the claim"; applicability answers "can this project
+    carry the claim at all", and the second does not need a scenario.
 
-    It is a MATCH now: an agreement declares the capabilities it
-    requires, the registry computes what this world provides, and a
-    claim applies exactly when its requirements are a subset. Three
-    things follow, and the third is why the change is worth making.
+    Its inputs are therefore the three STATIC facts a project spec
+    yields: the binding mechanism, the language, and the declared C
+    API. The registry can evaluate it once per project — see
+    [Canary_agreement.unsuited_here] — instead of re-deriving it at
+    every firing site and logging the same sentence sixty times.
 
-    - The reason a claim does not apply is DERIVED from the missing
-      capability rather than written out, so it cannot drift from the
-      condition it explains.
-    - [staged_interface_preserved] stops being a special case. "The
-      world stages the library" is a world capability in the same way
-      "the mechanism compiles a stub archive" is a mechanism one; it
-      was the only agreement whose predicate read the world, which made
-      it look exceptional when it is not.
-    - A PROJECT'S DECLARATION becomes a capability too, and that fixes
-      a reporting bug rather than just tidying one. sqlite builds
-      without a version script, so [declared_versions_exported] had
-      nothing to compare — and said so as [unavailable], from inside
-      the evaluator, which reads as canary failing to wire something.
-      It is a fact about sqlite. As a missing capability it reports
-      [not_applicable], which is what it is. *)
-type capability =
-  | Compiled_stub
-      (** the binding produces an archive of compiled stubs whose
-          undefined references can be read *)
-  | Consumer_elf_record
-      (** some artifact on the consumer side records NEEDED / SONAME /
-          version requirements — an ELF, not a static archive *)
-  | Typed_stub_signatures
-      (** the mechanism exposes the stub's declarations with types, so
-          a signature can be compared rather than a name *)
-  | Staged_lib_copy  (** the world stages the library, so two copies exist *)
-  | Declares_exports  (** the project states which symbols it ships *)
-  | Declares_soname  (** the project states the library's identity *)
-  | Declares_version_tags  (** the project states its symbol-version tags *)
-
-(** Phrased as the REASON a claim does not apply, because that is the
-    only place it is read. *)
-let string_of_missing = function
-  | Compiled_stub ->
-      "this binding mechanism compiles no stub archive, so it records no \
-       requirements to check"
-  | Consumer_elf_record ->
-      "nothing on the consumer side records NEEDED or symbol versions — a \
-       static archive carries neither, and those appear only at link time"
-  | Typed_stub_signatures ->
-      "this mechanism exposes no typed stub declarations, so there are no \
-       signatures to compare"
-  | Staged_lib_copy ->
-      "this world does not stage the library — there is no second copy to \
-       compare against"
-  | Declares_exports ->
-      "this project declares no c_api export list, so there is nothing to \
-       hold the library's exports against"
-  | Declares_soname ->
-      "this project declares no soname for its library"
-  | Declares_version_tags ->
-      "this project declares no symbol-version tags. For most libraries that \
-       is the truth rather than an omission — a library built without a \
-       version script has no version nodes to check"
+    The DECLARATION is a parameter because a missing declaration is a
+    fact about the project, not a gap in canary. sqlite builds with no
+    version script, so [declared_versions_exported] has nothing to
+    compare; that used to surface as [unavailable] from inside the
+    evaluator, which reads as something we failed to wire. *)
 
 (** THE ACTION CONTEXT an agreement selection needs.
 
@@ -544,64 +498,25 @@ let produced_here (p : Canary_store.provision) : bool =
   | Canary_store.Built | Canary_store.Installed -> true
   | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent -> false
 
-(** WHAT THIS WORLD PROVIDES — the one place the mechanism's artifact
-    facts, the world's provisioning and the project's declarations are
-    read, so an agreement never has to ask.
+(** The DECLARED facts a project's [api_source] carries, as the three
+    questions an applicability test asks of it. Small helpers rather
+    than a vocabulary: each is one field test, and naming them keeps
+    the six predicates below reading as sentences. *)
+let declares_exports (d : Canary_artifact.t option) : bool =
+  match d with
+  | Some a -> not (List.is_empty a.Canary_artifact.native_api.stable_symbols)
+  | None -> false
 
-    [Consumer_elf_record] is granted from the BINDING artifact today,
-    and that is a known understatement rather than the final answer. A
-    static-archive mechanism's binding is a [.a], which records neither
-    NEEDED nor symbol versions — but the consumer at runtime is the
-    executable the probe links, and that records both (measured: ssl's
-    [ssl_app_core] carries NEEDED libssl.so.3 and an OPENSSL_3.0.0
-    version requirement). Granting it on that basis is landing.md's
-    order item 1 and belongs with the evidence change that makes it
-    true, not with this refactor: flipping it here would turn six
-    honest [not_applicable] cells into [unavailable] ones with nothing
-    yet able to read the executable. *)
-let capabilities_of ~(mechanism : Canary_mechanism.mechanism)
-    ~(consumer_records : bool) ~(world : Canary_artifact.assignment)
-    ~(declared : Canary_artifact.t option) : capability list =
-  let static =
-    Base.Poly.equal
-      (Canary_mechanism.discipline_of_mechanism mechanism)
-      Canary_mechanism.Static_c_abi
-  in
-  List.concat
-    [ (if static then [ Compiled_stub; Typed_stub_signatures ] else []);
-      (* [consumer_records] is passed IN rather than derived: the fact
-         lives with the mechanism that owns it
-         ([Canary_agreement_cstubs.records_needed_in_a_readable_artifact]),
-         and those modules sit ABOVE this one — a family reads common,
-         never the reverse. The registry, which can see every mechanism
-         module, answers. *)
-      (if consumer_records then [ Consumer_elf_record ] else []);
-      (match Canary_artifact.provision_of_lib world with
-       | Canary_store.Installed -> [ Staged_lib_copy ]
-       | _ -> []);
-      (match declared with
-       | None -> []
-       | Some a ->
-           let n = a.Canary_artifact.native_api in
-           List.concat
-             [ (if List.is_empty n.stable_symbols then [] else [ Declares_exports ]);
-               (match n.soname with
-                | Some s when not (String.is_empty s) -> [ Declares_soname ]
-                | _ -> []);
-               (if List.is_empty n.versioned_symbols then []
-                else [ Declares_version_tags ]) ]) ]
+let declares_soname (d : Canary_artifact.t option) : bool =
+  match Option.bind d ~f:(fun a -> a.Canary_artifact.native_api.soname) with
+  | Some s -> not (String.is_empty s)
+  | None -> false
 
-(** Does this world offer everything the claim needs? The reason names
-    the FIRST missing capability — one clear sentence beats a list, and
-    a claim blocked on two things is blocked. *)
-let applies_given ~(provided : capability list) (required : capability list) :
-    applicability =
-  match
-    List.find required ~f:(fun c ->
-        not (List.mem provided c ~equal:Base.Poly.equal))
-  with
-  | None -> Applicable
-  | Some missing -> Inapplicable (string_of_missing missing)
+let declares_version_tags (d : Canary_artifact.t option) : bool =
+  match d with
+  | Some a ->
+      not (List.is_empty a.Canary_artifact.native_api.versioned_symbols)
+  | None -> false
 
 let is_dynamic (m : Canary_mechanism.mechanism) : bool =
   Base.Poly.equal
@@ -1005,16 +920,14 @@ type checking_method = {
       (** unique within the agreement; the name that appears in a log *)
   m_kind : method_kind;
   m_reference : reference;
-  m_requires : capability list;
-      (** WHAT THIS CLAIM NEEDS THE WORLD TO OFFER — see {!capability}.
-          [[]] = it applies wherever it fires.
-
-          A LIST, not a predicate. The predicate it replaced took the
-          mechanism, the language and the world and re-derived facts
-          all three already knew; thirteen closures asked the same few
-          questions and each wrote its own reason for saying no.
-          Declaring the requirement lets {!applies_given} answer, and
-          lets the reason be derived from what is missing. *)
+  m_applicable :
+    Canary_mechanism.mechanism -> Canary_lang.lang ->
+    Canary_artifact.t option -> applicability;
+      (** CAN THIS PROJECT CARRY THE CLAIM AT ALL — a static question,
+          over the three facts a spec yields: the mechanism, the
+          language, the declared C API. No world: per-scenario
+          variation is [m_firing]'s, and the one agreement that read
+          the world here was duplicating its own firing gate. *)
   m_firing :
     Canary_mechanism.mechanism -> Canary_lang.lang ->
     Canary_artifact.assignment -> Canary_basic.action list;
@@ -1251,13 +1164,15 @@ type agreement = {
 (** Build a method. [eval] omitted ⇒ planned, and [planned] is then
     required to say why (an empty reason is a programming error the
     registry pin catches). *)
-let checking_method ~name ~kind ~reference ?(requires = [])
+let always_applicable _ _ _ = Applicable
+
+let checking_method ~name ~kind ~reference ?(applicable = always_applicable)
     ~firing ~inputs ?eval ?(planned = "") ?diagnostics ~limits
     ?(counterexamples = []) () : checking_method =
   { m_name = name;
     m_kind = kind;
     m_reference = reference;
-    m_requires = requires;
+    m_applicable = applicable;
     m_firing = firing;
     m_inputs = inputs;
     m_eval = eval;
@@ -1285,11 +1200,11 @@ let has_evaluator (ag : agreement) : bool =
     and one that does not apply must not be reported as unimplemented. *)
 let evaluate_method ?(disabled = false) ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(world : Canary_artifact.assignment)
-    ?(declared : Canary_artifact.t option) ~(provided : capability list)
+    ?(declared : Canary_artifact.t option)
     ~(resolve : string -> string) ?inputs (m : checking_method) : outcome =
   if disabled then Disabled "switched off for this run"
   else
-    match applies_given ~provided m.m_requires with
+    match m.m_applicable mechanism lang declared with
     | Inapplicable why -> Not_applicable why
     | Applicable -> (
         match m.m_eval with
