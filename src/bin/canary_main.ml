@@ -824,13 +824,29 @@ let checks_cmd =
         (* no project: the registry itself *)
         Fmt.pr "%s@." (Canary_agreement.pp_agreements ())
     | Some name, false, false -> (
-        match List.assoc_opt name Canary_registry.all_projects with
+        (* THE CATALOGUE, NOT THE ACTIVE LIST (2026-09-15). A muted
+           project is muted because a RUN of it is expensive, which says
+           nothing about whether its checking should be readable —
+           `spec-check` and `emit` both made that distinction already
+           and this one had not. It mattered: z3 is the project with the
+           most hand-written checking in the registry and `canary checks
+           z3` answered "unknown project", so the one coverage report
+           that would have said so could not be pointed at it. Its index
+           is static anyway; the run-log column is simply empty until
+           somebody unmutes it. *)
+        match List.assoc_opt name Canary_registry.all_specs with
         | Some pr ->
             let idx = Canary_check_index.of_project pr in
-            Fmt.pr "%s@." (Canary_check_index.pp pr idx)
+            Fmt.pr "%s@." (Canary_check_index.pp pr idx);
+            if not (Canary_registry.is_active name) then
+              Fmt.pr
+                "  NOTE: %s is MUTED out of the run set, so the decided \
+                 column reads its last recorded run (if any) and not a \
+                 current one.@."
+                name
         | None ->
             Fmt.epr "usage: canary checks [<%s>]@."
-              (String.concat "|" (List.map fst Canary_registry.all_projects));
+              (String.concat "|" (List.map fst Canary_registry.all_specs));
             Stdlib.exit 2)
   in
   Cmd.v
