@@ -428,3 +428,66 @@ No hurry — all items below are queued for when their forcing function arrives.
     problem (record fields and package names that look like pin names)
     is the part that needs real design: a marker convention at the
     citation site would beat a blacklist.
+
+49. **ONE pipeline, one set of docs — merge `enumeration/` and
+    `agreement/`** (2026-09-15, user: *"now both the canary and the
+    checking are integrated well, so I am thinking shall we have one
+    unified pipeline so that we can reorganize the doc"*. Explicitly
+    **no hurry**).
+
+    The two directories were written when checking was a separate
+    concern bolted onto a run. It is not any more: a step carries an
+    `agreement_ctx`, the runner calls `evaluate_in_context`, and
+    `canary result`'s columns are `pre → action → artifact → post`.
+    Checking is a phase of the pipeline, and the docs still describe two
+    pipelines.
+
+    What the merge would have to settle, and why it is not a file move:
+
+    - **Where the check phase sits.** The enumeration is five passes
+      ending at `realize` (`world → steps`). Evaluation happens INSIDE
+      pass 5's execution, per step — so it is either a sixth pass over a
+      different IR (verdicts), or a property of pass 5 that pass 5's doc
+      does not currently mention. Both readings are defensible and they
+      produce different documents.
+    - **Two action-column orders still exist** (`registry.md` §7.4.4):
+      `canary result` uses `Canary_matrix.compare_column`, `--firing`
+      uses `Canary_basic.actions_of_lang`. A unified pipeline doc that
+      shows one grid has to pick.
+    - **The reading path.** `enumeration/README.md`'s four-step *How to
+      read this, if you are new* is the best thing in either directory;
+      `agreement/README.md` is a map of four files. One merged entry
+      point should keep the first shape.
+
+50. **Review the evidence workflow itself — the runner writes an
+    inspection, an external reader checks it** (2026-09-15, user: *"the
+    previous approach is to let the runner generate the inspection JSON
+    into the summary, while the external reader read it as checker …
+    maybe it's a good time to review it and think about the better
+    workflow"*).
+
+    The split is load-bearing and mostly right — a comparator over a
+    recorded fact is re-runnable, diffable and testable, which a shell
+    assertion inside a command is not (that distinction is the whole
+    reason `assert_staged` and the source-ref check are PROPOSALS rather
+    than lifts). What is worth reviewing is everything around it:
+
+    - **Placement.** The largest single class of `unavailable` is not a
+      missing inspection but one written at a tag the derivation does
+      not name — four Pattern A projects' `api_names_present`. The
+      producer chooses a step, the consumer derives one, and nothing
+      makes them agree. A typed evidence ADDRESS, produced and consumed
+      from one place, would close the class rather than the instance.
+    - **`unavailable` is one word for four situations** — no inspector
+      exists anywhere; an inspector exists and this project does not run
+      it; the evidence exists at another tag; the artifact is not in
+      the world model (CPython's stdlib `sqlite3`). The evaluators
+      already say which in their reason STRING; the `outcome` type
+      throws it away, so `canary result`'s blame column has to guess.
+      Making `Unavailable` carry a typed cause is the small fix; it is
+      what would let the blame count answer "spec or wiring?" per cell.
+    - **Who writes it.** An inspection is attached by `derive_steps`
+      from the project's declarations. `Native_lib_probe` emitting a
+      summary (2026-09-13) removed a whole class of per-project work;
+      the same question is open for the compiled stub and for the
+      interpreter's extension modules.
