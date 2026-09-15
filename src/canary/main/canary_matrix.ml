@@ -861,7 +861,10 @@ let outcome_rank = function
   | "inconclusive" -> 2
   | "holds" -> 1
   | "" -> -1
-  | _ -> 0 (* unavailable | not_implemented | not_applicable | disabled *)
+  | _ -> 0
+  (* unavailable | undeclared | vacuous | not_implemented | not_applicable
+     | disabled — every undecided outcome ranks alike, which is what stops
+     a finding at one firing site being lost to a silence at another *)
 
 (** A VERDICT IS A SYMBOL; A GAP IS A WORD (2026-09-15, user: "I am good
     to have hold/violated/(expected) error as symbols, but for the
@@ -890,6 +893,12 @@ let mark_of_outcome = function
   | "holds" -> "✓"
   | "inconclusive" -> "no-ref"
   | "unavailable" -> "no-evid"
+  (* THE TWO THE CAUSE SPLIT OUT (2026-09-15). All three used to be
+     `unavailable`, so a cell that needed nothing read the same as one
+     waiting on an inspector. `undeclared` is the project's to-do,
+     `vacuous` is nobody's. *)
+  | "undeclared" -> "no-decl"
+  | "vacuous" -> "none"
   | "not_applicable" -> "stale"
   | "disabled" -> "off"
   | "not_implemented" -> "planned"
@@ -997,6 +1006,13 @@ let blame_of ~(outcome : string) ~(is_declaration : bool)
     ~(version_blind : bool) : string option =
   match outcome with
   | "unavailable" -> Some "evidence"
+  (* READ, NOT GUESSED (2026-09-15). These two used to arrive as
+     `unavailable` and be blamed `evidence` with everything else, which
+     is how sqlite's eight `declared_versions_exported` cells sat on a
+     work queue for a defect the evaluator's own prose denied. The
+     evaluator says which side was absent now, so this stops inferring. *)
+  | "undeclared" -> Some "declaration"
+  | "vacuous" -> Some "vacuous"
   | "inconclusive" ->
       (* AND HERE THE TWO REFERENCE KINDS PART WAYS. A DECLARATION
          comparison that reaches [inconclusive] found the declaration
@@ -1601,8 +1617,10 @@ let pp_text (m : t) : unit =
            | _ -> false))
    then
      Fmt.pr
-       "        no-evid nothing wrote the evidence  no-ref nothing to \
-        compare against  stale log predates the registry  off disabled@.");
+       "        no-evid nothing wrote the evidence  no-decl the project \
+        declared nothing  none nothing of this kind here@.        \
+        no-ref nothing to compare against  stale log predates the \
+        registry  off disabled@.");
   (* THE GAP, COUNTED (2026-09-15, user). A check column exists only
      where the claim CAN be decided, so every non-verdict cell in one is
      a defect rather than a blank — and the blame says whose. Printed

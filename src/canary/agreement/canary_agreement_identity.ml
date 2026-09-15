@@ -205,13 +205,16 @@ let soname_declaration_eval ~resolve inputs : outcome =
   match declared_soname inputs with
   | None ->
       Unavailable
-        "this project declares no soname for its library, so there is \
-         nothing to hold the artifact's recorded identity against. A \
-         project to-do, not a gap in canary: set [native_api.soname] and \
-         this decides"
+        (Missing_declaration
+           "this project declares no soname for its library, so there is \
+            nothing to hold the artifact's recorded identity against. A \
+            project to-do, not a gap in canary: set [native_api.soname] \
+            and this decides")
   | Some declared -> (
       match native_path ~resolve inputs with
-      | None -> Unavailable "no native library inspection in this world"
+      | None ->
+          Unavailable
+            (Missing_evidence "no native library inspection in this world")
       | Some p -> (
           match (load_abi_surface p).soname with
           | None ->
@@ -225,8 +228,12 @@ let soname_declaration_eval ~resolve inputs : outcome =
 
 let soname_requirement_eval ~resolve inputs : outcome =
   match (native_path ~resolve inputs, consumer_abi_path ~resolve inputs) with
-  | None, _ -> Unavailable "no native library inspection in this world"
-  | _, None -> Unavailable "no consumer dependency record in this world"
+  | None, _ ->
+      Unavailable
+        (Missing_evidence "no native library inspection in this world")
+  | _, None ->
+      Unavailable
+        (Missing_evidence "no consumer dependency record in this world")
   | Some pp, Some cp -> (
       let prov = load_abi_surface pp in
       let cons = load_abi_surface cp in
@@ -256,17 +263,25 @@ let soname_requirement_eval ~resolve inputs : outcome =
 let declared_versions_eval ~resolve inputs : outcome =
   match declared_version_tags inputs with
   | None ->
+      (* [Nothing_to_check], not [Missing_declaration], and the prose
+         here is why: a library built without a version script has no
+         version nodes, so declaring none is the TRUTH rather than an
+         omission. Counting it as a spec gap put eight sqlite cells on a
+         work queue for a defect this very sentence denied. *)
       Unavailable
-        "this project declares no symbol-version tags. For most libraries \
-         that is the truth rather than an omission — a library built \
-         without a version script has no version nodes to check — so \
-         setting [native_api.versioned_symbols] is right only where the \
-         build really uses one"
+        (Nothing_to_check
+           "this project declares no symbol-version tags. For most \
+            libraries that is the truth rather than an omission — a \
+            library built without a version script has no version nodes \
+            to check — so setting [native_api.versioned_symbols] is right \
+            only where the build really uses one")
   | Some [] ->
       Inconclusive "the declared tag list is empty; nothing to compare"
   | Some declared -> (
       match versioned_exports_path ~resolve inputs with
-      | None -> Unavailable "no versioned-export inspection in this world"
+      | None ->
+          Unavailable
+            (Missing_evidence "no versioned-export inspection in this world")
       | Some p ->
           let vs = load_versioned_symbols p in
           let exported =
@@ -324,8 +339,14 @@ let required_versions_eval ~resolve inputs : outcome =
   match
     (versioned_exports_path ~resolve inputs, versioned_req_path ~resolve inputs)
   with
-  | None, _ -> Unavailable "no provider versioned-export inspection in this world"
-  | _, None -> Unavailable "no consumer versioned-requirement record in this world"
+  | None, _ ->
+      Unavailable
+        (Missing_evidence
+           "no provider versioned-export inspection in this world")
+  | _, None ->
+      Unavailable
+        (Missing_evidence
+           "no consumer versioned-requirement record in this world")
   | Some pp, Some cp -> (
       let prov = load_versioned_symbols pp in
       let cons = load_versioned_symbols cp in
@@ -359,8 +380,12 @@ let required_versions_eval ~resolve inputs : outcome =
     half of that story: the name is not there at all. *)
 let dependencies_provided_eval ~resolve inputs : outcome =
   match (native_path ~resolve inputs, consumer_abi_path ~resolve inputs) with
-  | None, _ -> Unavailable "no native library inspection in this world"
-  | _, None -> Unavailable "no consumer dependency record in this world"
+  | None, _ ->
+      Unavailable
+        (Missing_evidence "no native library inspection in this world")
+  | _, None ->
+      Unavailable
+        (Missing_evidence "no consumer dependency record in this world")
   | Some pp, Some cp -> (
       let prov = load_abi_surface pp in
       let cons = load_abi_surface cp in
@@ -508,7 +533,11 @@ let soname_matches_declaration : agreement =
                   [ ("lib.json",
                      {|{"kind": "native", "path": "fx",
     "elf": {"soname": "libtiny.so.1", "needed": []}}|}) ];
-                fx_outcome = "unavailable";
+                (* the artifact is right there and readable; what is
+                   absent is the DECLARATION to hold it against, which
+                   is a project to-do (2026-09-15: was `unavailable`,
+                   the word this shared with a missing inspection) *)
+                fx_outcome = "undeclared";
                 fx_findings = [] } ]
           () ] }
 
@@ -611,7 +640,12 @@ let declared_versions_exported : agreement =
                   [ ("lib.json",
                      {|{"kind": "native", "path": "fx",
     "versioned_exports": {"tiny_sum": "TINY_1.0"}}|}) ];
-                fx_outcome = "unavailable";
+                (* `vacuous`, not `undeclared`: a library built without a
+                   version script has no version nodes, so declaring
+                   none is the truth rather than an omission. This
+                   fixture is the one that shows the difference between
+                   the two absences (2026-09-15) *)
+                fx_outcome = "vacuous";
                 fx_findings = [] } ]
           () ] }
 

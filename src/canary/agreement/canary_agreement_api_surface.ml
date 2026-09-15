@@ -35,7 +35,9 @@ let watchlist_paths ~resolve inputs =
 
 let api_names_eval ~resolve inputs : outcome =
   match watchlist_paths ~resolve inputs with
-  | [] -> Unavailable "no user-facing surface inspection in this world"
+  | [] ->
+      Unavailable
+        (Missing_evidence "no user-facing surface inspection in this world")
   | paths -> (
       let loaded = List.filter_map paths ~f:load_watchlist in
       if List.is_empty loaded then

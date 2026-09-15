@@ -355,6 +355,8 @@ verdict; a **word** means it did not:
 | `✓` | holds | |
 | `✗` | violated / error | |
 | `no-evid` | unavailable | nothing wrote the inspection it reads |
+| `no-decl` | undeclared | the artifact is readable; the project declared nothing to hold it against |
+| `none` | vacuous | both sides reachable, nothing of this kind in this world |
 | `no-ref` | inconclusive | read, nothing to compare against |
 | `stale` | not_applicable | the log predates the registry — re-run |
 | `off` | disabled | |
@@ -373,7 +375,7 @@ gap: 58 evidence  10 vacuous  4 version
 | blame | owner | what to do |
 | --- | --- | --- |
 | `evidence` | wiring | nothing wrote the inspection, or the reader runs before the writer |
-| `declaration` | spec | a declaration comparison found the declaration empty |
+| `declaration` | spec | the project declared nothing to hold the artifact against |
 | `version` | spec | one declared value, several version points — see [issues.md §1](../../project/issues.md) |
 | `stale` | nobody | `make canary-refresh PROJECT=<p>` |
 | `vacuous` | nobody | both sides read, neither has anything of this kind |
@@ -381,6 +383,29 @@ gap: 58 evidence  10 vacuous  4 version
 Every one is a **static scan** of the project spec plus the cell's
 recorded outcome, so a blame can be attributed before the thing it
 blames is fixed — which is the point: the count says how eager to be.
+
+**And the outcome now says which, rather than the table guessing.**
+`Unavailable` used to be one word for three situations — the artifact's
+inspection absent, the project's declaration absent, or genuinely
+nothing of this kind here — so a cell that needed nothing read exactly
+like one waiting on an inspector. The evaluators always knew (they said
+so in prose); the type discarded it. `unavailable_cause` is
+`Missing_evidence | Missing_declaration | Nothing_to_check`, and the
+three carry distinct outcome LABELS (`unavailable` / `undeclared` /
+`vacuous`) so every reader — log, tracker, result marks — gets the
+distinction at once. `Missing_evidence` keeps the old word, so nothing
+that matched `unavailable` changed meaning and old logs still read as
+what they were. No cache epoch: an `Unavailable` produces no prediction
+whichever cause it carries, so no compat verdict moves.
+
+It cost sqlite eight cells of false work queue on its first reading —
+`declared_versions_exported` reports that the project declares no
+symbol-version tags and adds, in the same sentence, that *"for most
+libraries that is the truth rather than an omission"*. `undeclared`
+fires on no live project cell today (every project that reaches those
+evaluators does declare its soname and c_api); it is exercised by a
+counterexample fixture, which is the honest way to keep a path that
+should stay empty.
 
 Two of them ask for nothing, deliberately. `vacuous` exists because a
 PEER comparison that reaches `inconclusive` read both artifacts and

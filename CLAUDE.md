@@ -876,6 +876,29 @@ what keeps zarith safe (the 2026-09-13 trap was ADDING a derived mli
 scan beside it). THIRD instance of the class after tiny's filenames and
 probe-vs-install: the producer picks a step, the consumer derives one,
 nothing makes them agree — general fix is backlog §50.
+**`Unavailable` CARRIES A TYPED CAUSE** (2026-09-15, user: "the real fix
+is to make Unavailable carry a typed cause"). It was ONE word for three
+situations — the artifact's inspection absent, the project's declaration
+absent, or genuinely nothing of this kind here — so a cell that needed
+NOTHING read exactly like one waiting on an inspector, and `canary
+result`'s blame column had to guess. The evaluators always knew and said
+so in prose; the type threw it away. `unavailable_cause =
+Missing_evidence | Missing_declaration | Nothing_to_check`, and the
+three carry DISTINCT LABELS — `unavailable` / `undeclared` / `vacuous` —
+so the log, the landing tracker and the result marks all get it at once
+rather than one report learning to parse a detail string.
+`Missing_evidence` keeps the old word, so nothing matching `unavailable`
+changed meaning and old logs still read as what they were. NO CACHE
+EPOCH: an `Unavailable` yields no prediction whichever cause it carries,
+so no compat verdict moves. Marks: `no-evid` / `no-decl` / `none`.
+Effect on the real count: 81 evidence → 69, vacuous 15 → 19 (sqlite
+alone shed 4 false work-queue cells whose evaluator says in the same
+sentence that declaring no version tags is "the truth rather than an
+omission"). `undeclared` fires on NO live project cell — every project
+reaching those evaluators declares its soname and c_api — and is
+exercised by a counterexample fixture, which is how a path that should
+stay empty stays honest. Three fixtures had to name the finer word,
+which is the pin (`agreements.fixtures_execute`) doing its job.
 **`probe_lib` IS STATIC, NOT A RUNTIME CHECK** (2026-09-15, user asked).
 Read the command: `nm -D | grep -c <prefix>` then `test COUNT -gt 0`.
 Nothing loads, nothing executes. `probe_binding` IS runtime — it links a

@@ -1648,3 +1648,190 @@ exit $RC)
 [2026-09-15 12:25:16.345] *                          invariant  (all.mmd: OK (5 nodes, 8 IDs))
 [2026-09-15 12:25:16.346] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
 [2026-09-15 12:25:16.346] *                          invariant  (ALL OK)
+[2026-09-15 18:47:33.710] *                          run_start  (ssl)
+[2026-09-15 18:47:33.719] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable)
+[2026-09-15 18:47:33.719] *                          graph_start  (8 steps)
+[2026-09-15 18:47:33.719] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:33.719] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 18:47:33.982] fetch_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-09-15 18:47:33.983] fetch_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:33.983] fetch_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-09-15 18:47:33.983] fetch_binding_ocaml_stub_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:33.983] fetch_binding_ocaml_stub_inspect  skip  (verdict marker (prior success))
+[2026-09-15 18:47:33.984] probe_app_ocaml            warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:33.984] probe_app_ocaml            skip  (verdict marker (prior xfail) [api_names_present])
+[2026-09-15 18:47:33.984] fetch_binding_ocaml        check_pre  (pass)
+[2026-09-15 18:47:33.986] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.6.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok)
+[2026-09-15 18:47:33.986] fetch_binding_ocaml        opam_switch  (canary)
+[2026-09-15 18:47:33.986] fetch_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 18:47:39.755] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-09-15 18:47:39.755] fetch_binding_ocaml        detect  (ok, output present)
+[2026-09-15 18:47:39.755] fetch_binding_ocaml        agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:40.026] fetch_binding_ocaml        check_post  (pass)
+[2026-09-15 18:47:40.026] fetch_binding_ocaml        done
+[2026-09-15 18:47:40.028] probe_lib                  check_pre  (pass)
+[2026-09-15 18:47:40.031] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
+test "$COUNT" -gt 0)
+[2026-09-15 18:47:40.031] probe_lib                  opam_switch  (canary)
+[2026-09-15 18:47:40.031] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 18:47:40.083] probe_lib                  cmd_log  (probe_lib.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-09-15 18:47:40.083] probe_lib                  detect  (ok, output present)
+[2026-09-15 18:47:40.083] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:40.083] probe_lib                  check_post  (pass)
+[2026-09-15 18:47:40.083] probe_lib                  done
+[2026-09-15 18:47:40.085] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 18:47:40.087] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json)
+[2026-09-15 18:47:40.088] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 18:47:40.088] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 18:47:40.142] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-09-15 18:47:40.142] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 18:47:40.142] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:40.142] probe_lib_inspect          check_post  (pass)
+[2026-09-15 18:47:40.142] probe_lib_inspect          done
+[2026-09-15 18:47:40.144] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 18:47:40.146] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list ssl --installed --short --columns=version --color=never 2>/dev/null)
+test "$INSTALLED" = "0.6.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.6.0"; exit 1; }
+eval $(opam env)
+ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_core.ml -o /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core >> /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log 2>&1
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core && { nm -D "/home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/inspect_abi_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
+exit $RC)
+[2026-09-15 18:47:40.147] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 18:47:40.147] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 18:47:40.589] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-09-15 18:47:40.589] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: holds)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: holds)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: violated: libcrypto.so.3)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 18:47:40.593] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 18:47:40.594] probe_binding_ocaml        compat_note  (required_symbols_exported: consumer requires 43 of the provider's 485 symbols (e.g. SSL_CIPHER_description in use; BIO_f_ssl in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-15 18:47:40.599] probe_binding_ocaml        unexpected_success  (compat failure predicted (derived) but command succeeded)
+[2026-09-15 18:47:40.599] *                          graph_end  (7/8 completed)
+[2026-09-15 18:47:40.599] probe_binding_ocaml        failed
+[2026-09-15 18:47:40.599] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
+[2026-09-15 18:47:40.599] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
+[2026-09-15 18:47:40.600] *                          view  (lib (3 steps))
+[2026-09-15 18:47:40.600] *                          view  (probes (4 steps))
+[2026-09-15 18:47:40.600] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 18:47:40.602] *                          html  (_out/canary/projects/ssl/-run/result.html)
+[2026-09-15 18:47:40.603] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 18:47:40.603] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-09-15 18:47:40.603] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
+[2026-09-15 18:47:40.603] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-09-15 18:47:40.603] *                          invariant  (lib.mmd: OK (6 nodes, 8 IDs))
+[2026-09-15 18:47:40.603] *                          invariant  (all.mmd: OK (5 nodes, 8 IDs))
+[2026-09-15 18:47:40.603] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-09-15 18:47:40.603] *                          invariant  (ALL OK)
+[2026-09-15 18:47:40.625] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable)
+[2026-09-15 18:47:40.625] *                          graph_start  (8 steps)
+[2026-09-15 18:47:40.625] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:40.625] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 18:47:40.891] fetch_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-09-15 18:47:40.895] fetch_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:40.895] fetch_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-09-15 18:47:40.896] fetch_binding_ocaml_stub_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:40.896] fetch_binding_ocaml_stub_inspect  skip  (verdict marker (prior success))
+[2026-09-15 18:47:40.896] probe_app_ocaml            warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:40.896] probe_app_ocaml            skip  (verdict marker (prior success))
+[2026-09-15 18:47:40.896] fetch_binding_ocaml        check_pre  (pass)
+[2026-09-15 18:47:40.898] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.7.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.ok)
+[2026-09-15 18:47:40.898] fetch_binding_ocaml        opam_switch  (canary)
+[2026-09-15 18:47:40.898] fetch_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 18:47:43.626] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-09-15 18:47:43.626] fetch_binding_ocaml        detect  (ok, output present)
+[2026-09-15 18:47:43.626] fetch_binding_ocaml        agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:43.885] fetch_binding_ocaml        check_post  (pass)
+[2026-09-15 18:47:43.885] fetch_binding_ocaml        done
+[2026-09-15 18:47:43.888] probe_lib                  check_pre  (pass)
+[2026-09-15 18:47:43.890] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log
+test "$COUNT" -gt 0)
+[2026-09-15 18:47:43.890] probe_lib                  opam_switch  (canary)
+[2026-09-15 18:47:43.890] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 18:47:43.940] probe_lib                  cmd_log  (probe_lib.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-09-15 18:47:43.940] probe_lib                  detect  (ok, output present)
+[2026-09-15 18:47:43.940] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:43.940] probe_lib                  check_post  (pass)
+[2026-09-15 18:47:43.940] probe_lib                  done
+[2026-09-15 18:47:43.943] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 18:47:43.944] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json)
+[2026-09-15 18:47:43.945] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 18:47:43.945] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 18:47:43.999] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-09-15 18:47:43.999] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 18:47:43.999] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:43.999] probe_lib_inspect          check_post  (pass)
+[2026-09-15 18:47:43.999] probe_lib_inspect          done
+[2026-09-15 18:47:44.001] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 18:47:44.003] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list ssl --installed --short --columns=version --color=never 2>/dev/null)
+test "$INSTALLED" = "0.7.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.7.0"; exit 1; }
+eval $(opam env)
+ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_core.ml -o /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core >> /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log 2>&1
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core && { nm -D "/home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/inspect_abi_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log
+exit $RC)
+[2026-09-15 18:47:44.003] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 18:47:44.004] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 18:47:44.427] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-09-15 18:47:44.428] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: holds)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: holds)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: holds)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: violated: libcrypto.so.3)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 18:47:44.430] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 18:47:44.431] probe_binding_ocaml        compat_note  (required_symbols_exported: consumer requires 43 of the provider's 485 symbols (e.g. SSL_CIPHER_description in use; BIO_f_ssl in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-09-15 18:47:44.436] probe_binding_ocaml        unexpected_success  (compat failure predicted (derived) but command succeeded)
+[2026-09-15 18:47:44.436] *                          graph_end  (7/8 completed)
+[2026-09-15 18:47:44.436] probe_binding_ocaml        failed
+[2026-09-15 18:47:44.436] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
+[2026-09-15 18:47:44.436] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
+[2026-09-15 18:47:44.437] *                          view  (lib (3 steps))
+[2026-09-15 18:47:44.437] *                          view  (probes (4 steps))
+[2026-09-15 18:47:44.437] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 18:47:44.437] *                          html  (_out/canary/projects/ssl/-run/result.html)
+[2026-09-15 18:47:44.438] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 18:47:44.438] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-09-15 18:47:44.438] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
+[2026-09-15 18:47:44.438] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-09-15 18:47:44.439] *                          invariant  (lib.mmd: OK (6 nodes, 8 IDs))
+[2026-09-15 18:47:44.439] *                          invariant  (all.mmd: OK (5 nodes, 8 IDs))
+[2026-09-15 18:47:44.439] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-09-15 18:47:44.439] *                          invariant  (ALL OK)

@@ -88,7 +88,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
     "symbols": ["tiny_sum", "tiny_diff"]}
 ```
 
-**2. reports `unavailable`**
+**2. reports `undeclared`**
 
 `lib.json`:
 
@@ -330,7 +330,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
     "elf": {"soname": "libtiny.so.2", "needed": []}}
 ```
 
-**2. reports `unavailable`**
+**2. reports `undeclared`**
 
 `lib.json`:
 
@@ -444,7 +444,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
     "versioned_exports": {"tiny_sum": "TINY_1.0"}}
 ```
 
-**2. reports `unavailable`**
+**2. reports `vacuous`**
 
 `lib.json`:
 

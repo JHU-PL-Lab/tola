@@ -125,8 +125,11 @@ let signatures_eval ~resolve inputs : outcome =
       ~f:(function Typed_binding_stub ps -> pick_existing ~resolve ps
                  | _ -> None) in
   match (header_path, stub_path) with
-  | None, _ -> Unavailable "no header signature summary in this world"
-  | _, None -> Unavailable "no binding signature summary in this world"
+  | None, _ ->
+      Unavailable (Missing_evidence "no header signature summary in this world")
+  | _, None ->
+      Unavailable
+        (Missing_evidence "no binding signature summary in this world")
   | Some hp, Some sp ->
       let h = load_typed_signatures hp in
       let s = load_typed_signatures sp in

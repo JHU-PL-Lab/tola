@@ -2073,3 +2073,199 @@ exit $RC)
 [2026-09-15 17:27:28.922] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
 [2026-09-15 17:27:28.922] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
 [2026-09-15 17:27:28.922] *                          invariant  (ALL OK)
+[2026-09-15 18:47:12.907] *                          run_start  (zlib)
+[2026-09-15 18:47:12.916] *                          variant_start  (source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched)
+[2026-09-15 18:47:12.916] *                          graph_start  (7 steps)
+[2026-09-15 18:47:12.916] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:12.916] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 18:47:12.917] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:12.917] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-15 18:47:12.917] fetch_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:12.917] fetch_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-09-15 18:47:12.917] fetch_binding_ocaml_stub_inspect  check_pre  (pass)
+[2026-09-15 18:47:12.919] fetch_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'camlzip' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
+  --prefix 'deflate' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_binding/ocaml/inspect_stub_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json)
+[2026-09-15 18:47:12.919] fetch_binding_ocaml_stub_inspect  opam_switch  (canary)
+[2026-09-15 18:47:12.919] fetch_binding_ocaml_stub_inspect  platform  (wsl_ubuntu)
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  cmd_log  (fetch_binding_ocaml_stub_inspect.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  cmd_fail  (exit 2)
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  cmd_out  (usage: inspect_binding.py [-h] --kind {mli,stub} [--path PATH] [--dir DIR])
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  cmd_out  (                          [--watchlist WATCHLIST] [--prefix PREFIX])
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  cmd_out  (                          [--module-prefix MODULE_PREFIX])
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  cmd_out  (inspect_binding.py: error: --kind stub requires --path)
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  detect  (error, output present)
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  check_post  (FAIL)
+[2026-09-15 18:47:12.985] fetch_binding_ocaml_stub_inspect  failed  (postcondition failed)
+[2026-09-15 18:47:12.985] probe_lib                  check_pre  (pass)
+[2026-09-15 18:47:12.987] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libz.so.1* /usr/lib*/libz.so.1* 2>/dev/null \
+        "$(brew --prefix zlib 2>/dev/null)/lib/libz.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'deflate' || echo 0)
+printf 'deflate symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-09-15 18:47:12.987] probe_lib                  opam_switch  (canary)
+[2026-09-15 18:47:12.987] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 18:47:13.038] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 18:47:13.038] probe_lib                  detect  (ok, output present)
+[2026-09-15 18:47:13.038] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:13.038] probe_lib                  check_post  (pass)
+[2026-09-15 18:47:13.038] probe_lib                  done
+[2026-09-15 18:47:13.040] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 18:47:13.042] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libz.so.1* /usr/lib*/libz.so.1* 2>/dev/null \
+        "$(brew --prefix zlib 2>/dev/null)/lib/libz.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'deflate,inflate,gz,crc32,adler32' --watchlist 'deflateInit_,deflate,deflateEnd,inflateInit_,inflate,inflateEnd,zlibVersion' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json)
+[2026-09-15 18:47:13.042] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 18:47:13.042] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 18:47:13.098] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 18:47:13.098] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 18:47:13.098] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:13.098] probe_lib_inspect          check_post  (pass)
+[2026-09-15 18:47:13.098] probe_lib_inspect          done
+[2026-09-15 18:47:13.100] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 18:47:13.102] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package camlzip -linkpkg canary/examples/zlib/zlib_example.ml -o /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example >> /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example && { nm -D "/home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/inspect_abi_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-09-15 18:47:13.102] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 18:47:13.102] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 18:47:13.281] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.log)
+[2026-09-15 18:47:13.282] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: unavailable: no compiled-stub inspection in this world)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: holds)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: inconclusive: one side carries no symbol versioning; an empty requirement set decides nothing)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: holds)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        check_post  (pass)
+[2026-09-15 18:47:13.283] probe_binding_ocaml        done
+[2026-09-15 18:47:13.285] *                          graph_end  (6/7 completed)
+[2026-09-15 18:47:13.285] fetch_binding_ocaml_stub_inspect  failed
+[2026-09-15 18:47:13.285] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/all.mmd)
+[2026-09-15 18:47:13.285] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/full.mmd)
+[2026-09-15 18:47:13.286] *                          view  (lib (3 steps))
+[2026-09-15 18:47:13.286] *                          view  (probes (3 steps))
+[2026-09-15 18:47:13.286] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 18:47:13.288] *                          html  (_out/canary/projects/zlib/-run/result.html)
+[2026-09-15 18:47:13.289] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 18:47:13.289] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 18:47:13.289] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-09-15 18:47:13.289] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 18:47:13.289] *                          invariant  (lib.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 18:47:13.289] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
+[2026-09-15 18:47:13.289] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 18:47:13.289] *                          invariant  (ALL OK)
+[2026-09-15 18:47:13.311] *                          variant_start  (source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched)
+[2026-09-15 18:47:13.311] *                          graph_start  (7 steps)
+[2026-09-15 18:47:13.311] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:13.311] fetch_lib                  skip  (verdict marker (prior success))
+[2026-09-15 18:47:13.311] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:13.311] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-09-15 18:47:13.311] fetch_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-09-15 18:47:13.311] fetch_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-09-15 18:47:13.311] fetch_binding_ocaml_stub_inspect  check_pre  (pass)
+[2026-09-15 18:47:13.313] fetch_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'camlzip' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
+  --prefix 'deflate' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/fetch_binding/ocaml/inspect_stub_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-09-15 18:47:13.313] fetch_binding_ocaml_stub_inspect  opam_switch  (canary)
+[2026-09-15 18:47:13.313] fetch_binding_ocaml_stub_inspect  platform  (wsl_ubuntu)
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  cmd_log  (fetch_binding_ocaml_stub_inspect.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  cmd_fail  (exit 2)
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  cmd_out  (usage: inspect_binding.py [-h] --kind {mli,stub} [--path PATH] [--dir DIR])
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  cmd_out  (                          [--watchlist WATCHLIST] [--prefix PREFIX])
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  cmd_out  (                          [--module-prefix MODULE_PREFIX])
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  cmd_out  (inspect_binding.py: error: --kind stub requires --path)
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  detect  (error, output present)
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  check_post  (FAIL)
+[2026-09-15 18:47:13.377] fetch_binding_ocaml_stub_inspect  failed  (postcondition failed)
+[2026-09-15 18:47:13.377] probe_lib                  check_pre  (pass)
+[2026-09-15 18:47:13.379] probe_lib                  cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib/libz.so.1* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib — run 'canary prebuilt zlib' first" >&2; exit 1; }
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'deflate' || echo 0)
+printf 'deflate symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-09-15 18:47:13.379] probe_lib                  opam_switch  (canary)
+[2026-09-15 18:47:13.379] probe_lib                  platform  (wsl_ubuntu)
+[2026-09-15 18:47:13.427] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 18:47:13.427] probe_lib                  detect  (ok, output present)
+[2026-09-15 18:47:13.427] probe_lib                  agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:13.427] probe_lib                  check_post  (pass)
+[2026-09-15 18:47:13.427] probe_lib                  done
+[2026-09-15 18:47:13.429] probe_lib_inspect          check_pre  (pass)
+[2026-09-15 18:47:13.431] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib/libz.so.1* 2>/dev/null | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib — run 'canary prebuilt zlib' first" >&2; exit 1; }
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'deflate,inflate,gz,crc32,adler32' --watchlist 'deflateInit_,deflate,deflateEnd,inflateInit_,inflate,inflateEnd,zlibVersion' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_lib/inspect_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.json)
+[2026-09-15 18:47:13.431] probe_lib_inspect          opam_switch  (canary)
+[2026-09-15 18:47:13.431] probe_lib_inspect          platform  (wsl_ubuntu)
+[2026-09-15 18:47:13.497] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 18:47:13.497] probe_lib_inspect          detect  (ok, output present)
+[2026-09-15 18:47:13.497] probe_lib_inspect          agreement_outcome  (no agreement fires at this action)
+[2026-09-15 18:47:13.497] probe_lib_inspect          check_post  (pass)
+[2026-09-15 18:47:13.497] probe_lib_inspect          done
+[2026-09-15 18:47:13.499] probe_binding_ocaml        check_pre  (pass)
+[2026-09-15 18:47:13.501] probe_binding_ocaml        cmd  (eval $(opam env)
+export LD_LIBRARY_PATH=/home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib:$LD_LIBRARY_PATH
+ocamlfind ocamlopt -package camlzip -linkpkg canary/examples/zlib/zlib_example.ml -o /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example >> /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && grep -qF "/home/red/code/contrib/zlib-all/prebuilt/zlib-1.3.2/lib" /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log
+RC=$?
+test -f /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example && { nm -D "/home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --elf --path "/home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/zlib_example" --prefixes '' --watchlist '' \
+  > /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/inspect_abi_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.json ; } || true
+cat /home/red/code/research/tola/_out/canary/projects/zlib/probe_binding/ocaml/probe_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log
+exit $RC)
+[2026-09-15 18:47:13.501] probe_binding_ocaml        opam_switch  (canary)
+[2026-09-15 18:47:13.501] probe_binding_ocaml        platform  (wsl_ubuntu)
+[2026-09-15 18:47:13.679] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-09-15 18:47:13.679] probe_binding_ocaml        detect  (ok, output present)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (required_symbols_exported/stub_requirements_vs_library_exports: unavailable: no compiled-stub inspection in this world)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (api_names_present/watchlist_vs_user_surface: holds)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source as embedded assertions, and the observation is the probe's …)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (soname_matches_requirement/library_identity_vs_consumer_record: holds)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (required_versions_exported/required_tags_vs_provider_exports: inconclusive: one side carries no symbol versioning; an empty requirement set decides nothing)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (signatures_agree/header_vs_stub_signature_summaries: unavailable: no header signature summary in this world)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (dependencies_provided/recorded_dependencies_vs_world_providers: holds)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (repack_preserves_api/declared_repacking_relation: not_implemented: the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a bin…)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        agreement_outcome  (repack_complete/composed_faithfulness: not_implemented: the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreem…)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        check_post  (pass)
+[2026-09-15 18:47:13.680] probe_binding_ocaml        done
+[2026-09-15 18:47:13.682] *                          graph_end  (6/7 completed)
+[2026-09-15 18:47:13.682] fetch_binding_ocaml_stub_inspect  failed
+[2026-09-15 18:47:13.683] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/all.mmd)
+[2026-09-15 18:47:13.683] *                          diagram  (_out/canary/projects/zlib/-run/diagrams/full.mmd)
+[2026-09-15 18:47:13.683] *                          view  (lib (3 steps))
+[2026-09-15 18:47:13.683] *                          view  (probes (3 steps))
+[2026-09-15 18:47:13.683] *                          view  (binding_ocaml (4 steps))
+[2026-09-15 18:47:13.684] *                          html  (_out/canary/projects/zlib/-run/result.html)
+[2026-09-15 18:47:13.685] *                          index  (_out/canary/projects/index.html)
+[2026-09-15 18:47:13.685] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 18:47:13.686] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-09-15 18:47:13.686] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 18:47:13.686] *                          invariant  (lib.mmd: OK (5 nodes, 7 IDs))
+[2026-09-15 18:47:13.686] *                          invariant  (all.mmd: OK (4 nodes, 7 IDs))
+[2026-09-15 18:47:13.686] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-09-15 18:47:13.686] *                          invariant  (ALL OK)

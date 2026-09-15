@@ -7,12 +7,10 @@ Repositories removed from the selections of switch canary. Use '--all' to forget
 <><> Updating package repositories ><><><><><><><><><><><><><><><><><><><><><><>
 [canary-local] no changes from file:///home/red/code/research/tola/canary/templates/opam-local-repo
 The following actions will be performed:
-=== remove 2 packages
-  ⊘ z3     4.16.0 [uses zarith]
+=== remove 1 package
   ⊘ zarith 1.14
 
 <><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
-⊘ removed   z3.4.16.0
 ⊘ removed   zarith.1.14
 Done.
 The following actions will be performed:

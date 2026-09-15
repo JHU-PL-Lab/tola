@@ -139,12 +139,15 @@ let declared_exports_eval ~resolve inputs : outcome =
   match declared_exports inputs with
   | None ->
       Unavailable
-        "this project declares no c_api export list, so there is nothing to \
-         hold the library's exports against. A project to-do, not a gap in \
-         canary: set [native_api.stable_symbols] and this decides"
+        (Missing_declaration
+           "this project declares no c_api export list, so there is nothing \
+            to hold the library's exports against. A project to-do, not a \
+            gap in canary: set [native_api.stable_symbols] and this decides")
   | Some declared -> (
       match native_path ~resolve inputs with
-      | None -> Unavailable "no native library inspection in this world"
+      | None ->
+          Unavailable
+            (Missing_evidence "no native library inspection in this world")
       | Some p -> (
           match check_declared_exports ~declared ~native_lib:(load_native p) with
           | Compatible -> Holds
@@ -157,8 +160,11 @@ let declared_exports_eval ~resolve inputs : outcome =
 
 let required_symbols_eval ~resolve inputs : outcome =
   match (stub_path ~resolve inputs, native_path ~resolve inputs) with
-  | None, _ -> Unavailable "no compiled-stub inspection in this world"
-  | _, None -> Unavailable "no native library inspection in this world"
+  | None, _ ->
+      Unavailable (Missing_evidence "no compiled-stub inspection in this world")
+  | _, None ->
+      Unavailable
+        (Missing_evidence "no native library inspection in this world")
   | Some s, Some l -> (
       let stub = load_stub s and lib = load_native l in
       match check_c_compat ~binding_stub:stub ~native_lib:lib with
@@ -268,7 +274,11 @@ let declared_symbols_exported : agreement =
                   [ ("lib.json",
                      {|{"kind": "native", "path": "fx",
     "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
-                fx_outcome = "unavailable";
+                (* the library is readable and lists its exports; the
+                   project declared no c_api to hold them against — a
+                   spec gap, and now a distinct word from a missing
+                   inspection (2026-09-15) *)
+                fx_outcome = "undeclared";
                 fx_findings = [] } ]
           () ] }
 

@@ -283,21 +283,67 @@ let string_of_method_kind = function
     [Holds] is bounded by the method's own stated scope ([m_limits]) —
     it says no counterexample was found within the properties that
     method inspects, never that the pairing is compatible. *)
+(** WHY A METHOD COULD NOT READ WHAT IT NEEDED (2026-09-15, user: "the
+    real fix is to make Unavailable carry a typed cause").
+
+    [Unavailable] used to be one word for three different situations,
+    and every reader downstream had to guess between them. The
+    evaluators already knew which — they SAID so, in a free-text reason
+    — and the type threw it away, so `canary result`'s blame column
+    counted all three as a wiring gap. That over-counted by the whole
+    of {!Nothing_to_check}: sqlite's eight `declared_versions_exported`
+    cells sat on a work queue for a defect the evaluator's own prose
+    denied ("for most libraries that is the truth rather than an
+    omission").
+
+    The split the evaluator can always make is which SIDE was absent —
+    the artifact's inspection, or the project's declaration — and
+    whether an absent declaration is an omission or the truth. Nothing
+    here requires knowing why the inspection is missing (no inspector
+    anywhere? wrong tag? wrong order?); that is the reader's next
+    question and the paths in the reason are what answer it. *)
+type unavailable_cause =
+  | Missing_evidence of string
+      (** an inspection the method reads was not produced here — a
+          WIRING gap, and the one that is somebody's job *)
+  | Missing_declaration of string
+      (** the project declared nothing to hold the artifact against — a
+          SPEC gap. [soname_matches_declaration] without a declared
+          soname is the case: a project to-do, not a canary one *)
+  | Nothing_to_check of string
+      (** both sides were reachable and there is genuinely nothing of
+          this kind in this world. NOT a defect, and kept separate for
+          exactly that reason *)
+
 type outcome =
   | Holds
   | Violated of string list
       (** the counterexample, as the names/messages that witness it *)
-  | Unavailable of string   (** required evidence was not produced here *)
+  | Unavailable of unavailable_cause (** see {!unavailable_cause} *)
   | Inconclusive of string  (** evidence present, comparison cannot decide *)
   | Not_implemented of string (** a declared method with no evaluator yet *)
   | Not_applicable of string  (** this mechanism/world offers no such claim *)
   | Disabled of string        (** switched off for this run *)
   | Error of string           (** the evaluation itself failed *)
 
+(* THE CAUSE IS IN THE LABEL, not a second field (2026-09-15). Every
+   reader of an outcome — the log, the landing tracker, the result
+   table's marks — already keys on this word, so distinguishing the
+   three here is what makes them visible everywhere at once rather than
+   in one report that learned to parse a detail string.
+
+   [Missing_evidence] keeps the old word, so nothing that matched
+   "unavailable" changes meaning, and a log written before today still
+   reads as what it was: the common case. The other two get their own,
+   and a cell that had been miscounted starts saying so on its next
+   cold run. No cache epoch: an [Unavailable] produces no prediction
+   whichever cause it carries, so no compat verdict moves. *)
 let outcome_label = function
   | Holds -> "holds"
   | Violated _ -> "violated"
-  | Unavailable _ -> "unavailable"
+  | Unavailable (Missing_evidence _) -> "unavailable"
+  | Unavailable (Missing_declaration _) -> "undeclared"
+  | Unavailable (Nothing_to_check _) -> "vacuous"
   | Inconclusive _ -> "inconclusive"
   | Not_implemented _ -> "not_implemented"
   | Not_applicable _ -> "not_applicable"
@@ -307,8 +353,12 @@ let outcome_label = function
 let outcome_detail = function
   | Holds -> ""
   | Violated fs -> String.concat ~sep:"," fs
-  | Unavailable r | Inconclusive r | Not_implemented r | Not_applicable r
-  | Disabled r | Error r -> r
+  | Unavailable (Missing_evidence r | Missing_declaration r | Nothing_to_check r)
+    ->
+      r
+  | Inconclusive r | Not_implemented r | Not_applicable r | Disabled r
+  | Error r ->
+      r
 
 let string_of_outcome o =
   match outcome_detail o with

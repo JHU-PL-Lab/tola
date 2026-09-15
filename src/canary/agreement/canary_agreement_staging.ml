@@ -92,8 +92,13 @@ let diff_staged ~(build_tree : staged_view) ~(staged : staged_view) :
 
 let staged_interface_eval ~resolve inputs : outcome =
   match (build_tree_path ~resolve inputs, staged_path ~resolve inputs) with
-  | None, _ -> Unavailable "no build-tree inspection of the library in this world"
-  | _, None -> Unavailable "no inspection of the staged library in this world"
+  | None, _ ->
+      Unavailable
+        (Missing_evidence
+           "no build-tree inspection of the library in this world")
+  | _, None ->
+      Unavailable
+        (Missing_evidence "no inspection of the staged library in this world")
   | Some b, Some s -> (
       let build_tree = load_staged_view b and staged = load_staged_view s in
       if build_tree.symbols < 0 && staged.symbols < 0 then
