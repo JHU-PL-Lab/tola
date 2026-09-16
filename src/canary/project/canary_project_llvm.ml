@@ -637,33 +637,27 @@ let realize (a : Canary_artifact.assignment) : Canary_step_builder.runner_spec =
     (* THE CONSUMER SIDE, RECORDED (2026-09-15) — the same move z3 took,
        and llvm needs it for the same reason: its binding is BUILT, so
        the derivation that gives every opam-fetched binding a stub
-       summary (`ocamlfind query`) has nothing to query. Only in the
-       built worlds: a fetched llvm binding gets the derived one. *)
-    inspect =
-      (fun action loc ->
-        match action with
-        | Canary_basic.Build_binding Canary_lang.OCaml when not binding_fetched
-          ->
-            (* the same build dir the rows resolve — llvm has no
-               [z3_paths] twin, so it is spelled here from the one
-               source of it, the local checkout record *)
-            let build =
-              match
-                Canary_artifact_source.local_for (detect_distro ()) source
-              with
-              | Some l -> Canary_artifact_source.build_path_of l
-              | None ->
-                  Printf.sprintf "_out/canary/projects/llvm/%s_%s/build"
-                    (Canary_basic.string_of_version
-                       source.Canary_artifact_source.version)
-                    source.Canary_artifact_source.ref_
-            in
-            Some
-              (fun ~output_dir ~variant_key ->
-                Canary_artifact_lang.stub_inspect_path_cmd
-                  ~archive:(build ^ "/lib/ocaml/llvm/libllvm.a")
-                  ~prefix:"LLVM" ~output_dir ~variant_key ())
-        | _ -> spec.inspect action loc);
+       summary (`ocamlfind query`) has nothing to query. DECLARED, not
+       an [inspect] override: the explicit channel names every summary
+       "inspect", which is the wrong base name for a stub. *)
+    binding_stub_archive =
+      (if binding_fetched then []
+       else
+         (* the same build dir the rows resolve — llvm has no [z3_paths]
+            twin, so it is spelled here from the one source of it, the
+            local checkout record *)
+         let build =
+           match
+             Canary_artifact_source.local_for (detect_distro ()) source
+           with
+           | Some l -> Canary_artifact_source.build_path_of l
+           | None ->
+               Printf.sprintf "_out/canary/projects/llvm/%s_%s/build"
+                 (Canary_basic.string_of_version
+                    source.Canary_artifact_source.version)
+                 source.Canary_artifact_source.ref_
+         in
+         [ (Canary_lang.OCaml, build ^ "/lib/ocaml/llvm/libllvm.a") ]);
   }
 
 (** llvm as a [Canary_project_run.project_run] (`action llvm` →

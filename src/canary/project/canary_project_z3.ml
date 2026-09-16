@@ -1000,7 +1000,50 @@ let realize a =
                       ~target:"z3_example" ~output_dir ~variant_key
               in
               z3_world_check pin ^ base) ]
-       else spec.probe_binding);
+       else
+         (* THE PUBLISHED PACKAGE, PROBED (2026-09-15, user: "after a
+            package is published, we shall run the same test … against
+            the package version z3 … because we don't know if the
+            install package and lib is correct. It may contain some
+            issue that only occurring after installed as a package").
+
+            The built-binding worlds run `opam install z3.dev` at
+            [Publish] and then compiled against the BUILD TREE — the
+            probe uses `-package zarith` plus `-I <build>/src/api/ml`
+            and an explicit `z3ml.cmxa`, deliberately dropping
+            `-package z3` because mixing the two gives "inconsistent
+            assumptions" (the gotcha). So the package was installed,
+            its store state was pin-checked, and no probe ever asked it
+            to work.
+
+            IN PARALLEL, not instead (user). The two answer different
+            questions and the pair is the information: the build tree
+            says the code is right, the package says the RECIPE is —
+            `ocamlfind install z3 $B/src/api/ml/*` can omit a file the
+            consumer needs, a META can be wrong, and a `conf-` chain
+            can fail to resolve, none of which the build-tree probe can
+            see. A build tree that passes beside a package that fails
+            is exactly "an issue that only occurs after installing as a
+            package", and the two tags keep them apart
+            ([probe_binding_ocaml] vs [probe_binding_ocaml_opam]).
+
+            Cheap, because the local recipe reuses canary's build: its
+            build stanza skips cmake+ninja when `z3ml.cmxa` is already
+            there, so the publish is a copy and this costs one compile
+            and run of the example.
+
+            THE DEPENDENCY IS AUTOMATIC: a [Pm (Lang_pm _)] probe
+            location depends on [pack_binding], so this cannot run
+            before the publish that makes the package. *)
+         spec.probe_binding
+         @ [ (Canary_lang.OCaml,
+              Canary_store.Pm
+                (Canary_store.Lang_pm
+                   { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
+              fun ~output_dir ~variant_key ->
+                Canary_step_builder.probe_ocaml_cmd ~binding_lib:"z3"
+                  ~example:"canary/examples/z3/z3_example.ml"
+                  ~target:"z3_example" ~output_dir ~variant_key) ]);
     inspect = (fun action _loc ->
         match action with
         (* THE [Probe_lib] OVERRIDE IS GONE (2026-09-15). It resolved
@@ -1036,13 +1079,17 @@ let realize a =
            [z3_binding_decls]' `Stub_archive { archive = "libz3ml.a" }`
            — so the only project-specific fact left is the directory
            its build puts it in. *)
-        | Canary_basic.Build_binding Canary_lang.OCaml ->
-            Some
-              (fun ~output_dir ~variant_key ->
-                Canary_artifact_lang.stub_inspect_path_cmd
-                  ~archive:(build ^ "/src/api/ml/libz3ml.a")
-                  ~prefix:"Z3_" ~output_dir ~variant_key ())
         | _ -> None);
+    (* DECLARED, not overridden (2026-09-15). This was an [inspect]
+       closure for [Build_binding OCaml] for a few hours, and it wrote
+       its evidence correctly and failed its own step every time: the
+       explicit channel names every summary "inspect", so a stub
+       summary written as `inspect_stub_<vk>.json` was judged against
+       `inspect_<vk>.json`. Declaring the archive instead routes it
+       through the auto channel, which already carries base names — and
+       leaves the project saying only the thing it alone knows. *)
+    binding_stub_archive =
+      [ (Canary_lang.OCaml, build ^ "/src/api/ml/libz3ml.a") ];
   }
 
 (** z3 as a [Canary_project_run.project_run] — the generic path (`action z3`

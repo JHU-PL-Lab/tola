@@ -5,7 +5,7 @@
       "tag": "fetch_lib",
       "output_tag": "fetch_lib",
       "action": "fetch_lib",
-      "variant_id": "source-fetched-pre-10549_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -13,31 +13,31 @@
       "tag": "build_binding_ocaml",
       "output_tag": "build_binding_ocaml",
       "action": "build_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
-      "status": "failed"
+      "status": "done"
     },
     {
-      "tag": "build_binding_ocaml_inspect",
+      "tag": "build_binding_ocaml_stub_inspect",
       "output_tag": "build_binding_ocaml",
       "action": "build_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
-      "status": "skipped"
+      "status": "done"
     },
     {
       "tag": "pack_binding_ocaml",
       "output_tag": "pack_binding_ocaml",
       "action": "pack_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
-      "status": "skipped"
+      "status": "failed"
     },
     {
       "tag": "pack_binding_ocaml_stub_inspect",
       "output_tag": "pack_binding_ocaml",
       "action": "pack_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "skipped"
     },
@@ -45,7 +45,15 @@
       "tag": "probe_binding_ocaml",
       "output_tag": "probe_binding_ocaml",
       "action": "probe_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "expect": "success",
+      "status": "failed"
+    },
+    {
+      "tag": "probe_binding_ocaml_opam",
+      "output_tag": "probe_binding_ocaml_opam",
+      "action": "probe_binding_ocaml",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "skipped"
     },
@@ -53,7 +61,7 @@
       "tag": "probe_lib",
       "output_tag": "probe_lib",
       "action": "probe_lib",
-      "variant_id": "source-fetched-pre-10549_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-arbipher_lib-fetched_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     }

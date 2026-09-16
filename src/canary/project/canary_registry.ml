@@ -26,7 +26,12 @@ let all_projects : (string * Canary_project_run.project_run) list =
        flip, ~30 min), and because muting no longer hides what it
        checks: `canary checks` reads the CATALOGUE, so z3's index and
        its recorded verdicts stay readable and the output says the run
-       is not current. *)
+       is not current. Unmuted again the same day to verify the
+       published-package probe, and re-muted: that probe is correct and
+       blocked behind a publish that cannot succeed locally
+       (`project/issues.md` §1 — the canary-local repo holds only
+       `opam.in` and z3's hand-written Publish never runs
+       `opam config subst`). *)
     (* ("z3", Canary_project_z3.z3_run Canary_store.Wsl); *)
     ("llvm", Canary_project_llvm.llvm_run Canary_store.Wsl);
     ("tiny-full", Canary_project_tiny.tiny_full_run);

@@ -876,6 +876,37 @@ what keeps zarith safe (the 2026-09-13 trap was ADDING a derived mli
 scan beside it). THIRD instance of the class after tiny's filenames and
 probe-vs-install: the producer picks a step, the consumer derives one,
 nothing makes them agree — general fix is backlog §50.
+**THE PUBLISHED PACKAGE IS PROBED, IN PARALLEL** (2026-09-15, user:
+"after a package is published, we shall run the same test … against the
+package version z3 … because we don't know if the install package and
+lib is corrected"). z3's built-binding worlds ran `opam install z3.dev`
+at `Publish`, pin-checked that the switch held it, and then compiled the
+example against the BUILD TREE — `-package zarith` plus `-I
+<build>/src/api/ml` and an explicit `z3ml.cmxa`, dropping `-package z3`
+because mixing the two gives "inconsistent assumptions". So the package
+was made, its store state verified, and no probe ever asked it to work.
+Now `probe_binding_ocaml` (build tree) and `probe_binding_ocaml_opam`
+(the package) run as SIBLINGS — in parallel, not instead (user), because
+the pair is the information: the build tree says the CODE is right, the
+package says the RECIPE is, and `ocamlfind install z3 $B/src/api/ml/*`
+can omit a file, ship a wrong META, or hit an unresolvable `conf-` chain,
+none of which the build-tree probe can see. The dep is automatic (a
+`Pm (Lang_pm _)` probe depends on `pack_binding`). Cheap, because the
+local recipe skips cmake+ninja when `z3ml.cmxa` already exists — the
+publish is a copy. ⚠ **BLOCKED, and the block is a real bug**
+(`project/issues.md` §1): z3's Publish is hand-written and never runs
+`opam config subst`, so the canary-local repo holds only `opam.in` and
+`opam install z3.dev` answers "Package z3 has no version dev". The
+helper exists and its docstring names z3
+(`Canary_toolchain.opam_pack_cmd ~preamble`); Pattern A uses that path.
+**AND A BUILT BINDING'S STUB IS DECLARED, NOT OVERRIDDEN.**
+`runner_spec.binding_stub_archive` (lang × glob) earns the compiled-stub
+summary at `Build_binding`, which the package route cannot produce for a
+binding no package installed. It goes through the AUTO channel for a
+concrete reason found the hard way: `spec.inspect` hardcodes every
+summary's base name to "inspect", so a stub attached through it writes
+`inspect_stub_<vk>.json` and is judged against `inspect_<vk>.json` — the
+evidence lands and the step fails anyway.
 **`Unavailable` CARRIES A TYPED CAUSE** (2026-09-15, user: "the real fix
 is to make Unavailable carry a typed cause"). It was ONE word for three
 situations — the artifact's inspection absent, the project's declaration

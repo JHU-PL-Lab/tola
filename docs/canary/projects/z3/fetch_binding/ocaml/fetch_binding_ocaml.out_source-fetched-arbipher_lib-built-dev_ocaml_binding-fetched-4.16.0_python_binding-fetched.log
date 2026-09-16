@@ -1,2 +1,16 @@
-[NOTE] Package z3 is already installed (current version is 4.16.0).
+The following actions will be performed:
+=== remove 1 package
+  ⊘ zarith-no-conf dev    [conflicts with zarith]
+=== install 2 packages
+  ∗ z3             4.16.0
+  ∗ zarith         1.14   [required by z3]
+
+<><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+⬇ retrieved z3.4.16.0  (cached)
+⬇ retrieved zarith.1.14  (cached)
+⬇ retrieved zarith-no-conf.dev  (no changes)
+⊘ removed   zarith-no-conf.dev
+∗ installed zarith.1.14
+∗ installed z3.4.16.0
+Done.
 [NOTE] Package ocamlfind is already installed (current version is 1.9.8).

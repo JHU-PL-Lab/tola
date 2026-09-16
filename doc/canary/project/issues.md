@@ -107,6 +107,49 @@ actions. zarith would then gain a `probe_binding_ocaml_pre:dp` column
 that only row #2 fills. Same root cause as the llvm case above, so both
 should be decided together.
 
+### Open — z3's local publish cannot succeed, so the package it makes is never exercised (2026-09-15)
+
+`canary action z3` on any built-binding world fails at `pack_binding_ocaml`:
+
+```
+[ERROR] Package z3 has no version dev.
+'opam install -y z3.dev --verbose --keep-build-dir --assume-depexts' failed.
+```
+
+**Why.** opam sees a package only when `<pkg>/<pkg>.<ver>/opam` exists. The
+registered `canary-local` repo holds only the template:
+
+```
+~/.opam/repo/canary-local/packages/z3/z3.dev/  →  opam.in  opam.in.tpl
+```
+
+That is *correct* — CLAUDE.md's gotcha says to keep only `opam.in`, because
+a materialised `opam` file at rank 1 shadows the official package. The
+`opam` file is supposed to be generated **at pack time** by
+`opam config subst`.
+
+z3's `Publish` row does not do that. It is hand-written and runs
+`opam install -y z3.dev` with no `opam config subst`, no `opam repo add`,
+no `opam update` — so it depends on a materialisation nobody performs.
+
+**The helper already exists and names z3 as its intended user.**
+`Canary_toolchain.opam_pack_cmd`'s own docstring: *"~preamble: shell lines
+after `eval $(opam env)`, before repo add — typically
+mkdir+cp+opam-config-subst for template-based packages (e.g. z3)"*.
+`install_local_cmd` right above it does the full sequence. Pattern A's
+projects go through that path; z3 does not.
+
+**Why it matters beyond z3 being red.** This is the reason the published
+package was never probed: not merely that no probe consumed it, but that
+it was never successfully produced. `probe_binding_ocaml_opam` (added
+2026-09-15) is correctly gated on `pack_binding_ocaml` and therefore
+skips. The parallel-probe work is done and waits on this.
+
+**Not fixed here deliberately.** The fix mutates opam state
+(`opam repo add --rank=1`), and rank-1 shadowing is the exact hazard the
+CLAUDE.md gotcha is about — worth doing with attention rather than at the
+end of a long session.
+
 ### Open — a project's declared api_source is version-blind (2026-09-15)
 
 `--strict` on sqlite fails `build_lib` in four scenarios:

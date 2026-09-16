@@ -1352,11 +1352,20 @@ let tool_routing_ratchet_test : pure_test =
              (* 7 -> 8 (2026-08-19): both extras are COMMENTS — cmake's
                 default generator, and the install-prefix isolation note
                 naming the staging verb. The shell goes through
-                cmake_configure_cmd / cmake_install_cmd. *)
-             ("canary_project_z3.ml", 8); ("canary_run.ml", 1) ]);
+                cmake_configure_cmd / cmake_install_cmd.
+                8 -> 7 (2026-09-15): the file has been at 7 for a while
+                and nobody lowered it — the ratchet only fails ABOVE
+                baseline, so drift in this direction is silent. Tightened
+                on the way past. *)
+             ("canary_project_z3.ml", 7); ("canary_run.ml", 1) ]);
           ("ninja ",
-           [ (* one COMMENT mention (the -G Ninja note above) *)
-             ("canary_project_z3.ml", 1);
+           [ (* one COMMENT mention (the -G Ninja note above).
+                1 -> 2 (2026-09-15): a second COMMENT, on the
+                published-package probe, saying that the local recipe
+                skips cmake+ninja when canary already built the binding
+                — which is why probing the package costs a compile and
+                not a second z3 build. Evidence, not shell. *)
+             ("canary_project_z3.ml", 2);
              (* one COMMENT mention (the ninja LLVM dylib note, 2026-08-13) *)
              ("canary_project_llvm.ml", 1) ]);
           ("gcc ", []);
@@ -1373,8 +1382,14 @@ let tool_routing_ratchet_test : pure_test =
              ("canary_project_ssl.ml", 3);
              ("canary_project_llvm.ml", 1);
              (* 3 -> 2 (2026-08-17): the conf-* refactor removed one
-                mention — the shell goes through [SB.fetch_binding_cmd] *)
-             ("canary_project_z3.ml", 2);
+                mention — the shell goes through [SB.fetch_binding_cmd].
+                2 -> 3 (2026-09-15): a COMMENT naming the publish this
+                world runs, on the probe that finally consumes the
+                package it makes. Quoting the command is the point of
+                that comment — it says WHICH package the probe is
+                asking ocamlfind for — and the shell still goes through
+                [SB.fetch_binding_cmd] / the pack row. *)
+             ("canary_project_z3.ml", 3);
              (* all 5 are COMMENTS quoting the opam commands that were
                 MEASURED while landing torch (the dry-runs that establish
                 the one-point binding axis and the solver-enforced gate) —

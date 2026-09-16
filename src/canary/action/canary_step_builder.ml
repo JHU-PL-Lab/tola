@@ -251,6 +251,16 @@ type runner_spec = {
       both have modules with no [.mli], so an mli scan reports missing
       what their own ocamlobjinfo summaries list. *)
   binding_store_pkg : (Canary_lang.lang * string) list;
+  (** WHERE A BUILT BINDING'S STUB ARCHIVE LIVES (2026-09-15), as a
+      glob per language — e.g. [<build>/src/api/ml/libz3ml.a].
+
+      The archive's NAME is already declared
+      ([Canary_binding_decl.Stub_archive]); what only the project knows
+      is the directory its build puts it in. Declaring it here earns
+      the compiled-stub summary at [Build_binding], the evidence
+      [required_symbols_exported] reads — which the package route
+      cannot produce for a binding no package installed. *)
+  binding_stub_archive : (Canary_lang.lang * string) list;
   (* Optional note prepended to auto-generated binding summaries (shell echo).
      Used by stable-fetch specs to warn that watchlists were declared for the
      dev version. Ignored when the explicit [summary] override is used. *)
@@ -327,6 +337,7 @@ let empty_runner_spec = {
   symbol_check = (fun _ -> None);
   binding_user_facing_pkg = [];
   binding_store_pkg = [];
+  binding_stub_archive = [];
   inspect_note = None;
   inspect = (fun _ _ -> None);
   artifact_name = (fun _ -> None);
@@ -1171,7 +1182,41 @@ let derive_steps ~root ~project ?(cache_project = project)
           | Some _ as p -> p
           | None -> List.Assoc.find derived ~equal:Poly.equal lang
         in
+        (* THE BUILT BINDING'S STUB (2026-09-15). The package route
+           above finds the archive with `ocamlfind query`, which
+           answers only where the binding came from a package. A
+           binding canary BUILDS has none — z3's `libz3ml.a` sits in
+           its cmake build tree — so the projects with built bindings
+           were exactly the ones with no compiled-stub evidence, and
+           exactly the ones still asserting symbols by hand in shell.
+
+           The project declares WHERE (a glob; the archive NAME is
+           already in [Canary_binding_decl.Stub_archive], only its
+           directory is project knowledge) and the framework does the
+           rest. It goes through the AUTO channel rather than a
+           project's [inspect] override for a concrete reason: the
+           explicit channel hardcodes the output base name to
+           "inspect", so a project attaching a stub summary through it
+           writes `inspect_stub.json` and is then judged against
+           `inspect.json` — the evidence lands and the step fails. *)
+        let built_stub lang =
+          match
+            List.Assoc.find spec.binding_stub_archive ~equal:Poly.equal lang
+          with
+          | None -> []
+          | Some archive ->
+              let prefix =
+                match surf.native.symbol_prefixes with p :: _ -> p | [] -> ""
+              in
+              [ ( "_stub_inspect",
+                  "inspect_stub",
+                  prepend_note spec.inspect_note
+                    (fun ~output_dir ~variant_key ->
+                      Canary_artifact_lang.stub_inspect_path_cmd ~archive
+                        ~prefix ~output_dir ~variant_key ()) ) ]
+        in
         match action with
+        | Build_binding lang -> built_stub lang
         | Fetch (Binding OCaml) | Publish (Binding OCaml) -> (
             match any_pkg Canary_lang.OCaml with
             | None -> []
