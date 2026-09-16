@@ -246,7 +246,7 @@ asks for 5.
 
 The codebase has an organizing axis already, and it is not this one:
 
-- **Layers** (`base/ → surface/ → tool/ → action/ → backend/`, with
+- **Layers** (`base/ → agreement/ → tool/ → action/ → backend/`, with
   `project/` and `main/` on top) are a **dependency** discipline — who
   may reference whom. dune enforces it and it works.
 - **Passes** are a **dataflow** discipline — who hands what to whom.
@@ -288,8 +288,26 @@ Short list, each learned from something that went wrong:
 - The **cache** — `../artifact_cache.md` (proposal) and
   [`stage5_realize_steps.md`](stage5_realize_steps.md) §4 (what exists).
 - **Adding an action** — `../action_playbook.md`.
-- The **checking** side (what a probe asserts, which contract fires) —
-  `../agreement/registry.md` and `surface/`.
+- The **checking** side — `../agreement/`, and start at its
+  [`README.md`](../agreement/README.md). (The old pointer here named
+  `surface/`, a directory renamed to `agreement/` on 2026-09-01 and so
+  dead for a fortnight.)
+
+  ⚠ **This boundary is being redrawn** (backlog §49). The line above
+  sends *"which contract fires"* away, and that is the **occasion** — a
+  function of `(world, action, mechanism, lang)`, which is this
+  directory's vocabulary, not the agreement layer's. The seam is
+  *agreement/ owns the CLAIM, enumeration/ owns the OCCASION*, and by it
+  a section on when a check is triggered belongs in
+  [`stage5_realize_steps.md`](stage5_realize_steps.md) — which today
+  mentions "agreement" zero times while being the doc for the pass that
+  attaches `agreement_ctx` to every step.
+
+  Not redrawn yet, deliberately: what that section would SAY depends on
+  backlog §50. Today a check is evaluated by the runner after a step's
+  command; under the bundling direction a check *is* an action that
+  produces the evidence it reads. Those are different paragraphs, and
+  writing the first now means rewriting it.
 - Anything **per project** — `../../project/`.
 
 ## The alignment rule
