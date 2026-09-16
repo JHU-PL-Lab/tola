@@ -274,3 +274,35 @@ Both are real and both are in the registry as proposals. The honest statement
 is that the per-action frame covers most of the catalogue and that these sit
 outside it — which is itself worth knowing, because it says they will not be
 found by the procedure in §6 and need their own reasoning.
+
+### 7.1 And one the procedure finds that is NOT an agreement
+
+§6 run over `fetch_source` produces "the source tree is the ref the project
+declared" (§5.1), and it looks like a textbook identity gap: recordable,
+cheap, closes exactly. It is in the registry as the proposal
+`source_is_declared_ref`.
+
+It is the wrong category (2026-09-15, user). An agreement is a claim about
+**the project's artifacts** — what the library exports, what the stub
+requires, what the package contains. "Is the tree at the commit we said" is a
+claim about **whether canary realized the world it claims to be testing**.
+That is harness self-verification, and canary already has a vocabulary for
+it: the world assertions (`Canary_world.Log_names`, `Opam_pin`,
+`pin_check_post`, z3's `SYSTEM LIB MISSING`) which assert that a scenario's
+declared world was actually established.
+
+The distinction matters because the two fail differently and are read by
+different people. A violated agreement is a finding **about the software**;
+a failed world assertion means **this run tested something other than what it
+says**, and every verdict in it is suspect. Filing the second as the first
+would put "our harness misconfigured itself" on the same list as "this
+library dropped a symbol".
+
+So §6 needs a filter it does not currently state: *whose* rule is being
+recovered. `ag_rooted_in` already asks that question of every registered
+agreement — and for §5.1 the honest answer is "canary's own", which is
+exactly the signal that it belongs elsewhere.
+
+Left in the registry as a proposal rather than deleted, with this note,
+because the CHECK is worth having and the reasoning about where it lives is
+the part that was missing.

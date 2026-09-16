@@ -59,8 +59,8 @@ it never means "compatible".
   artifacts, bindings, versions, packaging and deployment (§§2–6), and
   registry integration with its open items (§7).
 - [`pipeline.md`](pipeline.md) — **a project end to end.** The seven points
-  where a run touches the registry, the four failure modes that make an
-  agreement report `unavailable`, and the checklist for landing one.
+  where a run touches the registry, what each undecided outcome means and
+  which of them is anyone's job, and the checklist for landing one.
 - [`landing.md`](landing.md) — **the tracker.** Planned (from the registry)
   beside effective (from run logs), per agreement, with what each is
   waiting on.
@@ -74,8 +74,10 @@ canary checks --catalogue            # every agreement, its reference expectatio
 canary checks --firing               # the agreement × action grid
 canary checks --landing              # planned vs effective
 canary checks --dummies              # every DUMMY ACTION and why it is empty
-canary checks <project>              # what this project's actions would select
+canary checks <project>              # what this project's actions select, what ran, and the GAP
 canary checks <project> --observed   # what its LAST RUN actually evaluated
+canary result <project>              # the scenario × check table, with blame counted
+
 ```
 
 The last two are the pair that matters. The first says what would be
@@ -96,6 +98,8 @@ want one: **[`catalogue.md`](catalogue.md)**, which is generated and complete.
 | full-information per action | [`theory.md`](theory.md) §5 | what each real tool established, and what survives of it |
 | the summary catalogue | [`registry.md`](registry.md) §1.7 | a one-line index — largely superseded by `catalogue.md` |
 | agreement × action | `canary checks --firing` | where each one fires |
+| **scenario × check** | `canary result [<project>]` | what each agreement DECIDED, per world — check columns interleaved with the actions, `pre → action → artifact → post`, one agreement per cell, plus a counted **blame** for every cell that carries no verdict |
+| **could vs did, per project** | `canary checks <project>` | every action the project derives, every agreement that fires there, what the runs decided — ending in a five-class gap summary (`decided` / `could not` / `never asked` / `stood down` / `no evaluator`) |
 
 ## Two claims worth keeping apart
 
@@ -103,6 +107,27 @@ want one: **[`catalogue.md`](catalogue.md)**, which is generated and complete.
 directory says which ones exist and whether they run. The first is a claim
 about software; the second is a claim about this repository. Confusing them
 is how a catalogue comes to describe checks that never executed.
+
+## And a third — an agreement is not a harness assertion
+
+An agreement is a claim about **the project's artifacts**: what the library
+exports, what the stub requires, what the package contains. Canary also makes
+claims about **itself** — that the switch holds the pin this scenario
+declares, that the probe reported the library this world placed, that the
+source tree is at the declared ref. Those are **world assertions**
+(`Canary_world.Log_names`, `Opam_pin`, `pin_check_post`), and they are not
+agreements however much they look like one.
+
+They fail differently, and that is the test. A violated agreement is a
+finding *about the software*. A failed world assertion means *this run tested
+something other than what it says*, and every verdict in it is suspect. Put
+the second on the first's list and "our harness misconfigured itself" ends up
+ranked beside "this library dropped a symbol".
+
+When it is not obvious which you have, ask `ag_rooted_in`'s question: **whose
+rule does it recover?** If the answer is "canary's own", it is an assertion.
+Worked through for `source_is_declared_ref` in [`theory.md`](theory.md) §7.1,
+which is the case that looks most like an agreement and is not one.
 
 ## The rule this directory exists to enforce
 

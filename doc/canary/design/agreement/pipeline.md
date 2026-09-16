@@ -184,14 +184,26 @@ probe_binding_ocaml  agreement_outcome  (soname_matches_requirement/…: not_app
 probe_binding_ocaml  agreement_outcome  (behavior_matches/probe_assertions: not_implemented: the expected values live inside the probe's source…)
 ```
 
-Four different reasons, four different fixes:
+Different reasons, different fixes — and since 2026-09-15 the outcome
+*word* tells them apart rather than leaving it to the reason string:
 
-| outcome | what to do about it |
-| --- | --- |
-| `holds` / `violated` | nothing — this agreement is landed here |
-| `unavailable` | produce the evidence (points 3–4) |
-| `not_applicable` | nothing — this mechanism has no such artifact. Consider whether another of the project's bindings *does* |
-| `not_implemented` | the agreement has no evaluator; that is a catalogue decision, not a wiring one |
+| outcome | mark in `canary result` | what to do about it |
+| --- | --- | --- |
+| `holds` / `violated` | `✓` / `✗` | nothing — this agreement is decided here |
+| `unavailable` | `no-evid` | produce the evidence (points 3–4). A WIRING gap: nothing wrote the inspection, or the reader runs before the writer |
+| `undeclared` | `no-decl` | the artifact is readable and the PROJECT declared nothing to hold it against. A spec to-do |
+| `vacuous` | `none` | nothing — both sides were reachable and there is genuinely nothing of this kind in this world (a library with no symbol versioning, for instance) |
+| `inconclusive` | `no-ref` | evidence read, nothing to compare against |
+| `not_applicable` | `stale` | **re-run.** Applicability became a static property of the project (2026-09-14), so in a fresh run the selection drops such a method before it evaluates. A `not_applicable` in a log therefore means the log predates that: `make canary-refresh PROJECT=<p>` |
+| `not_implemented` | `planned` | the agreement has no evaluator; that is a catalogue decision, not a wiring one |
+
+> The first three were ONE outcome until 2026-09-15. `Unavailable` carried
+> a free-text reason that the evaluators wrote and the type discarded, so a
+> cell that needed nothing read exactly like one waiting on an inspector —
+> and `canary result`'s blame column had to guess between them.
+> `unavailable_cause` is `Missing_evidence | Missing_declaration |
+> Nothing_to_check`, and `Missing_evidence` kept the old word so nothing
+> that matched `unavailable` changed meaning.
 
 ## 7. Read it back
 
@@ -204,15 +216,19 @@ canary checks --landing             # planned vs effective, all agreements
 > marker is trusted is skipped, and a skipped step re-checks nothing. Its
 > old outcomes are not re-emitted, so an agreement can be missing from a log
 > for no reason except caching. `--observed` prints the skip count for
-> exactly this reason. To force a real re-read, drop the relevant verdict
-> markers:
+> exactly this reason. To force a real re-read:
 >
 > ```sh
-> rm -f _out/canary/projects/sqlite/probe_binding/ocaml/*.verdict*.ok
+> make canary-refresh PROJECT=sqlite
 > ```
 >
-> Not the whole output tree: the point is to re-run the step that reads the
-> evidence, not to rebuild the world.
+> It drops the markers of the steps that DECIDE — probes, binding builds,
+> staging — and re-runs; fetches and the library build stay warm, because
+> the point is to re-run the step that reads the evidence, not to rebuild
+> the world. (It was a hand-written `rm -f` of one project's probe markers
+> until 2026-09-15; the target exists because clearing `stale` is a thing
+> you do repeatedly, and because guessing which markers matter is how you
+> end up deleting an output tree.)
 
 ## The checklist
 

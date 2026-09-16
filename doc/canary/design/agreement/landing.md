@@ -369,8 +369,12 @@ a blank — which is why each carries a **blame**, counted under the table
 and per agreement in the HTML key:
 
 ```
-gap: 58 evidence  10 vacuous  4 version
+gap: 50 evidence  18 vacuous  4 version      # sqlite, 2026-09-15
 ```
+
+The numbers are a SNAPSHOT, not a fact about the code: every count is read
+off the cells the last recorded run left, so it moves whenever a project
+re-runs. What is stable is the vocabulary and which rows ask for work.
 
 | blame | owner | what to do |
 | --- | --- | --- |

@@ -952,9 +952,10 @@ stub summary would be read as a user surface.
 
 `make canary-agreement-roundtrip` is this assertion as a gate, and it runs
 inside `make canary-post-check`. [`pipeline.md`](pipeline.md) walks the seven
-points a run passes through and the four failure modes behind an
-`unavailable`; [`landing.md`](landing.md) tracks which agreements have made
-it.
+points a run passes through and what each undecided outcome means — since
+2026-09-15 the outcome WORD carries that (`unavailable` / `undeclared` /
+`vacuous`) rather than a reason string a reader had to interpret;
+[`landing.md`](landing.md) tracks which agreements have made it.
 
 An agreement may eventually have several checking methods, including external
 checkers. Such a method needs explicit prerequisites, evidence and result
@@ -1163,51 +1164,54 @@ refused or reported. Same class as the `merge_inspect` proxy that made
 every call site instead of being decided once. Independent of (a) and
 cheaper — one total answer, or a deliberate error.
 
-#### 7.4.4 Deferred: the action-unit perspective
+#### 7.4.4 The action-unit perspective — LANDED, and what is left
 
-Raised 2026-09-13 and deliberately not acted on, because it is a MODEL
-change rather than a rendering one and the milestone is landing agreements.
-Recorded so it is not re-derived from scratch.
+Raised 2026-09-13 as deferred. Answered 2026-09-14/15. Kept rather than
+deleted because the *reasoning* about why it looked blocked is worth having
+when the remaining piece comes up.
 
-**The question.** `canary result`'s column headers are a list of actions.
-Could the same header row carry a discussion of agreements *between* actions —
-marking some cells, leaving others empty?
+**The question was:** `canary result`'s column headers are a list of actions.
+Could the same header row carry a discussion of agreements *between* actions?
 
-**What blocks it, and it is not the medium.** `canary checks --firing` is
-already an agreement × action grid, so the shape exists. What does not exist
-is the data: `m_firing` records where a method's evidence is available, which
-is where an agreement is **detected**. Nothing records where it is **rooted**
-— the action whose rule it recovers. [`theory.md`](theory.md) §3 names that
-distinction as load-bearing and the registry does not carry it.
+**It does now.** The table interleaves check columns with action columns in
+the order `pre → action → artifact → post`:
 
-A row of independent marks is also lossy for exactly that relation. Mark
-`build_lib` and `build_binding` and nothing says which is the root; an
-agreement with two roots gives three marks with no way to say which pair is
-one relation. An edge is not a set of cells.
+```
+| build_lib | build_lib=lib | build_lib_post:dse | build_lib_post:dve | install_lib | … |
+```
 
-Since 2026-09-13 the agreement record carries `ag_rooted_in`, but as **prose
-for a reader**, not an action reference — enough to classify the catalogue,
-not enough to draw. Turning it into a drawable relation means a typed field.
+One agreement per cell, a short code as the column's only name, columns
+grouped per action with a rule down the left edge, and an always-visible key
+mapping code → agreement. A cell is that agreement's outcome at that slot;
+`✓`/`✗` are verdicts and everything else is a word (`no-evid`, `no-ref`,
+`stale`, `none`, `no-decl`) with a counted **blame** underneath.
 
-**The cheap version, when it earns its place.** A second mark letter in the
-existing firing table — `R` where rooted, `✓`/`~` where observed. One typed
-field, one mark, no new medium. The expensive version puts agreements on the
-action graph as edge labels, which canary already renders in Mermaid.
+**All three stated blockers are gone:**
 
-**A smaller thing worth fixing first.** There are TWO action-column lists and
-they are not the same:
+| the 2026-09-13 claim | today |
+| --- | --- |
+| "nothing records where an agreement is **rooted**" | `ag_rooted_in` is a `rooting` record; `rt_action` must parse as an action, pinned by `agreements.rooting_names_an_action` |
+| "`ag_rooted_in` is prose, not an action reference" | it is both — `rt_action` is the reference, `rt_note` the prose |
+| "`compare_column` lives in `main/`, the firing table in `agreement/` below it" | `compare_column` moved to `base/canary_basic.ml`; `main/` aliases it |
 
-| view | columns from | ordered by |
-| --- | --- | --- |
-| `canary result` | the union of every project's `covered_actions_of` | `Canary_matrix.compare_column` — `(column_group, column_stage)`: artifact group, then lifecycle stage |
-| `canary checks --firing` | `Canary_basic.actions_of_lang` | the catalogue's own order, for one language |
+**What is actually left**, and it is the part that was right all along: *an
+edge is not a set of cells*. The table gives each agreement one column at one
+slot, chosen by `ag_slot`. An agreement whose rule spans two actions still
+renders as one cell plus a `recovers` column in the key — which reads, but
+does not draw the relation. An agreement with two roots has nowhere to say
+which pair is one relation.
 
-Both are defensible; `compare_column` is the more considered. They cannot
-share today for a layering reason — `compare_column` lives in `main/` and the
-firing table in `agreement/`, which sits below it. Unifying means moving the
-order key down to `base/` beside `kind_order`, which is arguably where
-ordering vocabulary belongs. Small, self-contained, and a prerequisite for
-ever putting the two grids side by side.
+Two known consequences, both filed in
+[`../../project/issues.md`](../../project/issues.md) §1:
+
+- a column can exist that no world can fill (llvm's `install_lib_post:sip` —
+  the slot resolves against the chain, the firing never does);
+- a verdict can be invisible (zarith's `dependencies_provided` holds in a
+  world whose chain lacks the action its slot chose).
+
+Both are the same shape: the column set is derived once per project from
+`covered_actions_of`, while each cell re-resolves its slot against its own
+row's chain. That is the remaining model question, not the rendering one.
 
 ### 7.5 Outside current coverage
 

@@ -276,7 +276,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | compares | run-program |
 | against | declaration |
 | implemented | no — planned |
-| why not | the expected values live inside the probe's source as embedded assertions, and the observation is the probe's own exit code; the registry has no evaluator that could read them. Wiring one means giving the project a place to state expected results outside the probe |
+| why not | the expected values live inside the probe's source as embedded assertions, and the observation is the probe's own exit code; the registry has no evaluator that could read them. Wiring one means giving the project a place to state expected results outside the probe. NOTE (2026-09-15, user) that this is ONE ROW standing for a CATEGORY, and the category has at least three members that want different machinery: tests DERIVED from a version-compatibility claim (canary generates them), the project's OWN test suite (canary runs what upstream wrote), and ROUND-TRIP tests across the provider and consumer sides of a binding (canary composes them). Wiring this row without deciding which of the three it is would fix the narrowest one by accident |
 | ocaml/cstubs@built | fires at probe_binding_ocaml |
 | python/cext@built | fires at probe_binding_python |
 | limits | not evaluated here. The probe's assertions cover the inputs that probe runs and nothing else. |
