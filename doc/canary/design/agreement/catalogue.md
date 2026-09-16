@@ -845,7 +845,7 @@ No family implements these yet.
 
 **Claim:** every symbol the library exports on its declared surface is accounted for by the project's declaration — the CONVERSE of declared_symbols_exported, which together with it makes the pair an equality rather than an inclusion
 
-**Needs:** nothing new: both sides are already in hand wherever declared_symbols_exported decides. The open question is the SURFACE — a library exports internals a declaration should not have to name, so the claim needs a prefix or visibility filter before it stops being noise
+**Needs:** A DECLARATION KIND THAT DOES NOT EXIST YET. Filed 2026-09-15 as the cheapest proposal — 'both sides are already in hand' — and that was wrong. The two sides are not the same KIND of claim: [native_api.stable_symbols] is a WATCHLIST ('these modern-API symbols must be present', a probe for version drift), not a manifest. sqlite declares 5 and its library exports 272, so the converse would report 267 orphans on the project where declared_symbols_exported is landed. A prefix filter does not save it: all 272 share the prefix. What this needs is for a project to be able to say 'this list is EXHAUSTIVE for this surface', which is a different declaration from the one every project writes today — so this is a spec change, not a free comparator
 
 ### package_contains_declared_files
 
