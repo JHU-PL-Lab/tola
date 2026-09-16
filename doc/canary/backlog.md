@@ -459,6 +459,39 @@ No hurry — all items below are queued for when their forcing function arrives.
       `agreement/README.md` is a map of four files. One merged entry
       point should keep the first shape.
 
+    **The seam, stated (2026-09-15, user):** *agreement/ owns the CLAIM,
+    enumeration/ owns the OCCASION.* Everything that decides WHEN a check
+    fires is a function of `(world, action, mechanism, lang)`, which is
+    enumeration's vocabulary, not the agreement layer's. Two things make
+    it more than a preference:
+
+    - `stage5_realize_steps.md` mentions "agreement" **zero times**, and
+      it is the doc for the pass that attaches `agreement_ctx` to every
+      step;
+    - `agreement/pipeline.md` already IS that document, filed in the
+      wrong directory — its §§2–5 are *the enumeration produces a
+      world*, *derive_steps attaches the action context*, *the step
+      runs*, *evaluate_step*. So the merge relocates a spine rather than
+      inventing a section.
+    - `enumeration/README.md`'s **"What is NOT here"** is where the
+      boundary is currently declared, and it is wrong on both halves:
+      it sends "which contract fires" away (that is the occasion, which
+      should come IN) and it points at `surface/`, renamed to
+      `agreement/` in 2026-09-01.
+
+    **And evaluation is NOT a sixth pass.** Pass 5 attaches the context;
+    the RUNNER BACKEND evaluates. The step list is object code consumed
+    by four backends and only one of them checks anything — GH-render,
+    Mermaid and HTML evaluate nothing. A sixth pass would put a stage
+    above the IR that one consumer reaches.
+
+    **Sequence it after §50's placement bullet.** The doc split says
+    "where evidence lives is enumeration's" while the code keeps
+    `binding_evidence_tag` in `canary_agreement_common.ml`. Moving the
+    text first leaves a paragraph saying "lives in agreement/ for
+    layering reasons, conceptually enumeration's" — honest, and the kind
+    of note that never gets cleaned up.
+
 50. **Review the evidence workflow itself — the runner writes an
     inspection, an external reader checks it** (2026-09-15, user: *"the
     previous approach is to let the runner generate the inspection JSON
@@ -472,22 +505,48 @@ No hurry — all items below are queued for when their forcing function arrives.
     reason `assert_staged` and the source-ref check are PROPOSALS rather
     than lifts). What is worth reviewing is everything around it:
 
-    - **Placement.** The largest single class of `unavailable` is not a
-      missing inspection but one written at a tag the derivation does
-      not name — four Pattern A projects' `api_names_present`. The
-      producer chooses a step, the consumer derives one, and nothing
-      makes them agree. A typed evidence ADDRESS, produced and consumed
-      from one place, would close the class rather than the instance.
-    - **`unavailable` is one word for four situations** — no inspector
-      exists anywhere; an inspector exists and this project does not run
-      it; the evidence exists at another tag; the artifact is not in
-      the world model (CPython's stdlib `sqlite3`). The evaluators
-      already say which in their reason STRING; the `outcome` type
-      throws it away, so `canary result`'s blame column has to guess.
-      Making `Unavailable` carry a typed cause is the small fix; it is
-      what would let the blame count answer "spec or wiring?" per cell.
+    - **Placement — and this is now the whole of §50's first half.**
+      The largest single class of `unavailable` is not a missing
+      inspection but one written at a tag the derivation does not name.
+      The producer chooses a step, the consumer derives one, and
+      nothing makes them agree. **Four instances, each fixed
+      individually and none of them fixing the class:**
+
+      | instance | the mismatch | fixed |
+      | --- | --- | --- |
+      | tiny's filenames | framework wrote `inspect.json`+`inspect_stub.json`, tiny the reverse | list both conventions, select by declared `kind` |
+      | sqlite's binding | inspected at `probe_binding`, derivation names the INSTALL step | relocated |
+      | `lib_evidence_tags` | named only `probe_lib` — the build-tree probe's tag | made world-aware |
+      | Pattern A's `anp` | inspected at `probe_binding`, derivation names the PROVISIONING step | relocated (2026-09-15) |
+
+      A typed evidence ADDRESS, produced and consumed from one place,
+      closes the class. It would also settle where the address BELONGS:
+      `binding_evidence_tag` / `lib_evidence_tags` map a world to a step
+      tag, which is world-arranging by nature, and they live in
+      `canary_agreement_common.ml`. That is the ownership line backlog
+      §49's doc split turns on — see there.
+    - ~~**`unavailable` is one word for four situations**~~ — **done
+      2026-09-15** (`83f43ecb`). `unavailable_cause = Missing_evidence |
+      Missing_declaration | Nothing_to_check`, carried in distinct
+      outcome LABELS (`unavailable` / `undeclared` / `vacuous`) so every
+      reader gets the split at once. Note the count came down from four
+      to three: "no inspector anywhere" and "an inspector exists and
+      this project does not run it" are both `Missing_evidence` and the
+      evaluator cannot tell them apart — it knows only which paths it
+      looked for. Distinguishing THOSE two is the placement bullet
+      above, not an outcome question.
     - **Who writes it.** An inspection is attached by `derive_steps`
       from the project's declarations. `Native_lib_probe` emitting a
-      summary (2026-09-13) removed a whole class of per-project work;
-      the same question is open for the compiled stub and for the
-      interpreter's extension modules.
+      summary (2026-09-13) removed a whole class of per-project work,
+      and `binding_stub_archive` (2026-09-15) did the same for a BUILT
+      binding's compiled stub — the project declares the one thing it
+      alone knows (the directory), the framework does the rest.
+
+      **Still open: the interpreter's extension modules.** sqlite's
+      Python side is 40 of its `no-evid` cells, because CPython ships
+      `sqlite3` in the stdlib: the binding is held by a dummy action,
+      no step compiles or inspects an extension module, and
+      `_sqlite3` is built INTO the interpreter on the venv Python while
+      being a `.so` on `/usr/bin/python3`. The interpreter is an
+      unmodelled part of the world, which makes this as much a spec
+      question as an inspector one.
