@@ -17,8 +17,9 @@ wired by **one registry entry** in
 `src/canary/project/canary_registry.ml`. Three entry shapes, cheapest
 first:
 
-- **`simple` (Pattern A)** — system lib + opam binding, no source build.
-  The `canary_pattern_a.ml` template brings each spec down to ~40 lines
+- **`simple` (the opam-binding shape)** — system lib + opam binding, no
+  source build. The `Canary_opam_binding` template (it was
+  `canary_pattern_a.ml`) brings each spec down to ~40 lines
   (`runner_spec`), then
   `let <name>_run = Canary_project_run.simple ~name ~runner_spec` wraps
   it as a `project_run` (lib + binding Fetched@Stable → exactly 1
@@ -112,7 +113,7 @@ does not fork the factory).
 
 **Effort ballpark** (per level, per project):
 
-- **A**: ~40 LOC via `canary_pattern_a.ml` (Pattern A: system lib + opam binding), ~600 LOC hand-written for a source-built project (z3/llvm shape).
+- **A**: ~40 LOC via `Canary_opam_binding` (system lib + opam binding), ~600 LOC hand-written for a source-built project (z3/llvm shape).
 - **B**: A + the watchlist/`api_source` entries that carry the evidence — usually ~10-20 LOC, no expectation code.
 - **C**: B + the `pr_spec` universe table + `realize ∘ dispatch` (sqlite: ~300 LOC including the from-source build; z3/llvm: the bulk is their build commands, not the scenario machinery).
 

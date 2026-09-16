@@ -269,6 +269,21 @@ Dependency direction: canary_lib ← canary_project ← canary_main
 tiny harness lives at `doc/_legacy_code/tiny_python_harness/`
 per Phase E of the tiny migration.)
 
+⚠ **"Pattern A".."Pattern F" ARE NOT CANARY CATEGORIES** — do not use
+them to describe a project. They come from
+[`doc/canary/surveys/opam.md`](doc/canary/surveys/opam.md) §2, which
+surveys what opam packages look like IN THE WILD, and hybrids already
+break the letters (bitwuzla is "A for discovery + C for building").
+Canary describes a project by ORTHOGONAL DIMENSIONS — native-lib origin
+× lib discovery × binding origin — carried as data in `store_config`
+(`doc/canary/project/projects.md` §1, ssot §6.1). **A project is not IN a
+pattern; it HAS dimension values**, and nothing branches on a letter. The
+module once called `canary_pattern_a.ml` is `Canary_opam_binding`, a
+TEMPLATE that fills a common combination. Say "the opam-binding
+template" or name the projects (cairo, libffi, zarith, zstd, ssl, zlib).
+This line exists because the term outlived its retirement in this very
+file and got copied into fresh docs from here (2026-09-16, user).
+
 **Read `src/canary/base/` before writing code that introduces a type.**
 `base/` is the shared vocabulary every layer reuses; a new vocabulary
 type belongs there (in `canary_basic`/`canary_store`/`canary_lang`/
@@ -344,7 +359,7 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_project_ssl.ml`         | OpenSSL/`ssl` project; variant matrix (`variants` = 0.6.0/0.7.0 × core/native-lib-version) via `mk_variant`; folded native probe. All fetch-origin (Level A). |
 | `src/canary/project/canary_project_cairo.ml`       | cairo project via `Canary_opam_binding` (conf-* + opam binding); Level A                                  |
 | `src/canary/project/canary_project_zarith.ml`      | zarith project via `Canary_opam_binding` (conf-* + opam binding); Level A                                 |
-| `src/canary/project/canary_project_torch.ml`       | torch project (2026-08-30). NOT Pattern A — the registry's first lib whose stable point is **opam** (`libtorch.2.1.2+linux-x86_64`, an unzipped upstream binary), first `Cpp_api`, and first mangled-C++ surface (87,877 symbols; prefixes must be Itanium-spelled — `_ZN2at`, not `at::`). 2 scenarios = the binding's two PACKAGINGS at one version: stock `torch.v0.17.0` (a declared build xfail — it does not build with dune 3.23.1) and the canary-local `v0.17.0-canary1` carrying the one-line upstream fix. The version axis genuinely has one point (on OCaml 5.4.1, v0.16 and the 0.x series need `base/core < v0.17`). The lib's 2.2.1 point is named and unrealized |
+| `src/canary/project/canary_project_torch.ml`       | torch project (2026-08-30). NOT the opam-binding template — the registry's first lib whose stable point is **opam** (`libtorch.2.1.2+linux-x86_64`, an unzipped upstream binary), first `Cpp_api`, and first mangled-C++ surface (87,877 symbols; prefixes must be Itanium-spelled — `_ZN2at`, not `at::`). 2 scenarios = the binding's two PACKAGINGS at one version: stock `torch.v0.17.0` (a declared build xfail — it does not build with dune 3.23.1) and the canary-local `v0.17.0-canary1` carrying the one-line upstream fix. The version axis genuinely has one point (on OCaml 5.4.1, v0.16 and the 0.x series need `base/core < v0.17`). The lib's 2.2.1 point is named and unrealized |
 | `src/canary/project/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
 | `src/canary/project/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_agreement_bindings` (Task 2 Phase D 2026-07-21). |
 | `src/canary/project/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_agreement_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |
@@ -352,9 +367,9 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
 | `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage5_realize_steps.md` §2). |
-| `src/canary/project/canary_opam_binding.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
+| `src/canary/project/canary_opam_binding.ml`           | THE OPAM-BINDING TEMPLATE (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs. ⚠ NOT "Pattern A" — the survey's letters are an ECOSYSTEM taxonomy, not canary's categories; see the note under "Key source files" |
 | `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
-| `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
+| `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + opam-binding smoke jobs                     |
 | `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |
 | `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                       |
 | `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding                                                |
@@ -430,7 +445,7 @@ registry** (`Canary_registry.all_projects`, 2026-08-12) is THE single
 source of truth for project names — `action`/`spec`/`scenarios` each do
 one `List.assoc_opt` lookup; adding a project = adding one entry
 (`Project pr` runs via `run_project_run`, `Multi (name, variants)` via
-`run_project_multi` — ssl only). Pattern A projects wrap their
+`run_project_multi` — ssl only). Opam-binding projects wrap their
 `runner_spec` via `Canary_project_run.simple`. **The generic
 path** (tiny-full + sqlite + z3 + llvm since A5, 2026-08-05)
 is `run_project_run` over a `Canary_project_run.project_run`
@@ -898,7 +913,8 @@ publish is a copy. ⚠ **BLOCKED, and the block is a real bug**
 `opam config subst`, so the canary-local repo holds only `opam.in` and
 `opam install z3.dev` answers "Package z3 has no version dev". The
 helper exists and its docstring names z3
-(`Canary_toolchain.opam_pack_cmd ~preamble`); Pattern A uses that path.
+(`Canary_toolchain.opam_pack_cmd ~preamble`); the opam-binding template
+uses that path.
 **AND A BUILT BINDING'S STUB IS DECLARED, NOT OVERRIDDEN.**
 `runner_spec.binding_stub_archive` (lang × glob) earns the compiled-stub
 summary at `Build_binding`, which the package route cannot produce for a

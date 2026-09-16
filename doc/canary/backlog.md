@@ -517,14 +517,47 @@ No hurry — all items below are queued for when their forcing function arrives.
       | tiny's filenames | framework wrote `inspect.json`+`inspect_stub.json`, tiny the reverse | list both conventions, select by declared `kind` |
       | sqlite's binding | inspected at `probe_binding`, derivation names the INSTALL step | relocated |
       | `lib_evidence_tags` | named only `probe_lib` — the build-tree probe's tag | made world-aware |
-      | Pattern A's `anp` | inspected at `probe_binding`, derivation names the PROVISIONING step | relocated (2026-09-15) |
+      | the opam-binding template's `anp` | inspected at `probe_binding`, derivation names the PROVISIONING step | relocated (2026-09-15) |
 
-      A typed evidence ADDRESS, produced and consumed from one place,
-      closes the class. It would also settle where the address BELONGS:
-      `binding_evidence_tag` / `lib_evidence_tags` map a world to a step
-      tag, which is world-arranging by nature, and they live in
-      `canary_agreement_common.ml`. That is the ownership line backlog
-      §49's doc split turns on — see there.
+      **A DIRECTION, from the user (2026-09-16), that dissolves the
+      question rather than answering it.** Bundle the producer (the
+      inspection) and the consumer (reading and comparing) into ONE
+      action, *because that is what checking is*. Then there is no
+      address to negotiate: the check produces what it needs. Multiple
+      consumers of the same evidence stay agnostic of each other
+      because the ACTION RESULT is cached — the second consumer's
+      inspection is a cache hit, not a coordination problem.
+
+      What makes this more than a preference is that the codebase is
+      already drifting toward it, twice, both times to fix exactly this
+      class: `Native_lib_probe` emits its native summary INSIDE the
+      probe's own command (2026-09-13) rather than as a child step, and
+      `probe_ocaml_env_cmd` emits the consumer's ABI summary inline
+      after `RC=$?` (2026-09-15) — the second with a comment saying why
+      a child step would be too late to be read by the step that needs
+      it.
+
+      What it costs, and this is the part to design rather than assume:
+      the cache would have to key on **artifact identity**, not step
+      identity. Today the run cache keys on `variant_id` + the step
+      fingerprint, and its documented blind spot is precisely
+      input-artifact identity
+      ([`design/enumeration/stage5_realize_steps.md`](design/enumeration/stage5_realize_steps.md)
+      §4). Bundling without fixing that trades a placement bug for a
+      staleness bug. `canary inspect-diff --old A --new B` also wants
+      evidence to stay a durable file at a nameable path, which a
+      content-addressed cache satisfies and an in-memory one does not.
+
+      The alternative shape — a typed evidence ADDRESS produced and
+      consumed from one place — keeps the producer/consumer split and
+      makes the two sides share one spelling. It also settles where the
+      address BELONGS: `binding_evidence_tag` / `lib_evidence_tags` map
+      a world to a step tag, which is world-arranging by nature, and
+      they live in `canary_agreement_common.ml`. That is the ownership
+      line backlog §49's doc split turns on — see there. NOTE the
+      bundling direction makes §49 EASIER, not harder: if a check
+      produces its own evidence there is no world→tag map to own, and
+      the seam stops running through a shared module.
     - ~~**`unavailable` is one word for four situations**~~ — **done
       2026-09-15** (`83f43ecb`). `unavailable_cause = Missing_evidence |
       Missing_declaration | Nothing_to_check`, carried in distinct
@@ -542,11 +575,23 @@ No hurry — all items below are queued for when their forcing function arrives.
       binding's compiled stub — the project declares the one thing it
       alone knows (the directory), the framework does the rest.
 
-      **Still open: the interpreter's extension modules.** sqlite's
-      Python side is 40 of its `no-evid` cells, because CPython ships
-      `sqlite3` in the stdlib: the binding is held by a dummy action,
-      no step compiles or inspects an extension module, and
-      `_sqlite3` is built INTO the interpreter on the venv Python while
-      being a `.so` on `/usr/bin/python3`. The interpreter is an
-      unmodelled part of the world, which makes this as much a spec
-      question as an inspector one.
+      **Still open, and it is ONE PROJECT, not a class** (corrected
+      2026-09-16, user asked whether it was sqlite-only — it is).
+      sqlite's Python side is 40 of its `no-evid` cells. The reason is
+      specific: sqlite is the registry's ONLY project declaring a
+      **Cext** Python binding (`binding-python-cext`), and its Cext
+      happens to be CPython's stdlib `sqlite3` — held by a dummy
+      action, with no step that compiles or inspects an extension
+      module. z3 and llvm declare `binding-python-ctypes`, whose
+      mechanism compiles no stub at all, so the stub-reading agreements
+      report `not_applicable` there and are CORRECT to. zarith and
+      cairo have no Python binding.
+
+      So this is not "the interpreter's extension modules" in general.
+      It is one project whose declaration meets an unmodelled part of
+      the world: `_sqlite3` is built INTO the interpreter on the venv
+      Python and is a `.so` on `/usr/bin/python3`, and canary models no
+      interpreter. That makes it a SPEC question first (what is the
+      Python binding's artifact, when the interpreter provides it?) and
+      an inspector question second — which is why it is not simply the
+      next `Native_lib_probe`-shaped win.

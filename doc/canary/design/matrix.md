@@ -123,8 +123,8 @@ ref IS the identity), and status quo.
 
 ### The zarith data fix that came with it
 
-`Canary_opam_binding.t` gained `source_of_binding`: Pattern A projects
-say whether their declared repos are the C LIB's (cairo, libffi) or a
+`Canary_opam_binding.t` gained `source_of_binding`: projects on that
+template say whether their declared repos are the C LIB's (cairo, libffi) or a
 BINDING's (zarith — `ocaml/Zarith.git` over an apt libgmp). zarith's
 repos now enumerate as `a_binding_source OCaml` and fetch through
 `Fetch (Binding_source ocaml)`, so §2's table entry "zarith's ref column

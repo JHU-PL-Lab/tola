@@ -49,7 +49,7 @@ tracker is readable without a checkout.
 | **LANDED** | `soname_matches_requirement` | **`holds` ×6 on sqlite, ×2 on ssl (2026-09-15); falsified by bumping the provider's recorded soname to `libsqlite3.so.9` → `violated: libsqlite3.so.0` on that scenario alone** |
 | **LANDED** | `dependencies_provided` | **`holds` ×6 on sqlite. On ssl it reports `violated: libcrypto.so.3` — a finding about the SPEC, not the artifacts: openssl ships two libraries and ssl declares one, so a dependency the world really provides has no modeled provider. See below** |
 | **LANDED** | `required_versions_exported` | **`holds` ×2 on ssl — the only project whose consumer carries versioned references (`OPENSSL_3.0.0`), matched against libssl's version definitions. `unavailable` on sqlite, whose libsqlite3 has no version nodes at all** |
-| **LANDED** | `api_names_present` | **decided in sqlite (OCaml and Python), ssl, and — since 2026-09-15 — cairo, libffi, zlib, zarith. Those four had reported `unavailable` for three days while writing perfectly good evidence: the Pattern A template hung its `ocamlfind`+`ocamlobjinfo` inspection on `Probe_binding` while the derivation asks for a binding's surface at the step that PROVISIONS it. One relocation, four projects, eight cells** |
+| **LANDED** | `api_names_present` | **decided in sqlite (OCaml and Python), ssl, and — since 2026-09-15 — cairo, libffi, zlib, zarith. Those four had reported `unavailable` for three days while writing perfectly good evidence: the opam-binding template hung its `ocamlfind`+`ocamlobjinfo` inspection on `Probe_binding` while the derivation asks for a binding's surface at the step that PROVISIONS it. One relocation, four projects, eight cells** |
 | **LANDED** | `required_symbols_exported` | **decided in cairo, libffi, sqlite, ssl, z3, zarith. `holds` ×6 on sqlite's OCaml probe (2026-09-13); falsified by injecting a bogus required symbol → `violated: sqlite3_canary_not_a_real_symbol` on exactly that scenario. On **z3** (2026-09-15) `holds` ×8 / `violated` ×2 cold, and the violation is the FORWARD CELL reproduced from evidence: the arbipher-HEAD-built binding requires 776 `Z3_` symbols, apt's libz3 4.8.12 exports 705, **85 missing**. z3 used to answer that question with `assert_binary_symbols.py` gating its own link; the script is deleted. `unavailable` ×6 on sqlite's Python probe: CPython's `_sqlite3` extension is never inspected for its undefined references** |
 | | `signatures_agree` | reported as `not_applicable`/`unavailable` |
 | | `soname_matches_requirement` | reported as `not_applicable`/`unavailable` |
@@ -238,7 +238,7 @@ From `registry.md` §7.4.2, narrowed to what this table says is closest:
      a warning now, and `spec-check`'s "binding dev source" item reports the
      gap — which is a real one, and newly visible rather than newly created.
 
-3. ~~`api_names_present` on the Pattern A projects~~ — **done 2026-09-15**,
+3. ~~`api_names_present` on the opam-binding projects~~ — **done 2026-09-15**,
    and it was the one-line relocation this entry predicted: the template's
    inspect moved from `Probe_binding` to `Fetch (Binding _) | Build_binding _`,
    the two steps that PROVISION a binding, which is where

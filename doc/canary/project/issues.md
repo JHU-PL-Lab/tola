@@ -136,8 +136,8 @@ no `opam update` — so it depends on a materialisation nobody performs.
 `Canary_toolchain.opam_pack_cmd`'s own docstring: *"~preamble: shell lines
 after `eval $(opam env)`, before repo add — typically
 mkdir+cp+opam-config-subst for template-based packages (e.g. z3)"*.
-`install_local_cmd` right above it does the full sequence. Pattern A's
-projects go through that path; z3 does not.
+`install_local_cmd` right above it does the full sequence. The projects
+built on the opam-binding template go through that path; z3 does not.
 
 **Why it matters beyond z3 being red.** This is the reason the published
 package was never probed: not merely that no probe consumed it, but that

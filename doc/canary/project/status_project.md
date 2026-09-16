@@ -349,7 +349,7 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
 
    **What it left open**, now tracked by the tool rather than by prose:
 
-   - **Pattern A cannot declare a binding pair at all** — the template
+   - **The opam-binding template cannot declare a binding pair at all** — it
      hardcodes `versions = None` on the opam provider, so cairo / libffi
      / zlib / zstd carry a permanent `binding_pair` warn that is a
      TEMPLATE gap, not a project one. That is item E below; the warn is
