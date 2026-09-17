@@ -728,3 +728,54 @@ No hurry — all items below are queued for when their forcing function arrives.
     `mechanism_of_lang_exn` is the total answer, and
     `default_mechanism_of_lang` has two real callers left, both of which
     genuinely branch on absence.
+
+52. **The action model's open items** (moved out of
+    `design/action_playbook.md` §3 on 2026-09-17, where a refactoring
+    PLAN was sitting inside a how-to). Refreshed against the code on the
+    way; the model they serve is
+    [`design/action_model.md`](design/action_model.md).
+
+    From the Publish case study (2026-08-17), still open:
+
+    - **Publish is not in the typed `action_catalogue`.** Its
+      consumes/produces are hand-written cases in `canary_action.ml`;
+      the typed catalogue in `canary_basic.ml` covers Fetch/Build/Probe.
+      Configure, Scan_sources, Build_headers, Install_lib and Build_app
+      are in the same position. Folding them in makes the derivation
+      uniform — and pass 2's join (`an_touches`) reads exactly those
+      two functions, so it inherits the split.
+    - **`canary_path_table.ml` has no pack entries.** `canary paths`
+      omits Publish. A doc note may be the honest answer rather than a
+      row: Publish produces no new artifact identity, it mutates a
+      store. Decide which, and say so in the table.
+    - ⚠ **Two docs disagree about the legacy pack helpers.**
+      `Canary_toolchain.opam_pack_cmd` and `install_local_cmd` are
+      defined and called by nothing. The playbook said "delete them
+      after confirming zero consumers"; `project/issues.md` §1 says
+      z3's broken local publish should START using `opam_pack_cmd
+      ~preamble`, whose docstring names z3. One of the two is wrong.
+      Resolve it before either acting on it or leaving the dead code.
+    - **`Canary_project_z3.render_opam_in` is the renderer's second
+      implementation.** Migrate z3's `.tpl` flow to
+      `Canary_opam_template`; its `%%Z3_CMAKE_BUILD_FLAGS%%`
+      substitution is that renderer's first parameterized body.
+
+    From [`design/action_model.md`](design/action_model.md) §6, in
+    order, and the first one blocks the rest:
+
+    1. **One locator vocabulary.** Three exist for "where is the
+       library" — typed `probe_lib_location` (sqlite/z3/llvm),
+       `lib_locator` globs (the opam-binding template), raw shell
+       (llvm's `probe_lib`). A derived inspection has to resolve a
+       location, so this is a prerequisite rather than a follow-up.
+    2. **Derive the inspection from the join.** At `<action>_post`, for
+       each artifact in `produced_at`, run the inspection that
+       artifact's kind defines, at the location the world gives.
+    3. **Retire the world→tag maps.** `binding_evidence_tag` /
+       `lib_evidence_tags` are `producers_of` plus the world's
+       provision, written by hand. Deriving them closes §50's placement
+       class and settles §49's ownership question at once: a derived map
+       has no owner.
+    4. **Split `probe_lib`'s three roles** — existence, inspection,
+       execution — and add the third. Nothing `dlopen`s a library
+       today, so that is NEW COVERAGE, not a reclassification.

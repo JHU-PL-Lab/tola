@@ -190,6 +190,9 @@ a follow-up.
 
 ## 6. What is NOT done, in order
 
+Tracked as [`../backlog.md`](../backlog.md) §52, which also carries the
+older action-catalogue items.
+
 1. **One locator vocabulary.** Three exist; the hook needs one. This is
    the blocking item and it is self-contained.
 2. **Derive the inspection from the join.** Replace the hand-placed
@@ -220,7 +223,9 @@ but is new coverage rather than a repair, so it is not urgent.
 - The pass that realizes a step —
   [`enumeration/stage6_realize_steps.md`](enumeration/stage6_realize_steps.md).
 - Adding an action, procedurally —
-  [`action_playbook.md`](action_playbook.md).
+  [`action_playbook.md`](action_playbook.md): the ten touch points for a
+  new action, the lighter checklist for a new artifact kind on an
+  existing one, and what two worked examples taught.
 - What a check CLAIMS, as against when it fires —
   [`agreement/README.md`](agreement/README.md).
 - The evidence-workflow backlog this serves — `../backlog.md` §50.

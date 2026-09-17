@@ -1,31 +1,29 @@
-# The action playbook — how an action flows through canary, and the Publish case study
+# The action playbook — how to add one
 
-**Kind: how-to.** The procedure for adding an action, with Publish as the worked example. The machinery it describes exists.
+**Kind: how-to.** The procedure, as a checklist per touch point. The
+machinery it describes exists.
 
-**The MODEL this realizes is [`action_model.md`](action_model.md)** —
-what an action is, why `<action>_post` is a moment rather than a
-specification of what runs at it, and the action × declaration join a
-hook needs. Read that first if you are about to add a step whose name
-ends in `_inspect`: the answer is that you should not.
+**Read [`action_model.md`](action_model.md) first** if you are not sure
+what you are adding. It says what an action IS — a moment with a typed
+footprint — why `<action>_post` is a moment rather than a specification
+of what runs at it, and therefore what should NOT become an action. In
+particular: if you were about to add a step whose name ends in
+`_inspect`, the answer is that you should not.
 
-> 2026-08-17. Written from the Publish generalization (active plan 2):
-> the "how to add an action" checklist (the orthogonality surface), the
-> Publish worked example, and the refactoring plan the case study
-> surfaced. 2026-08-18: §4 — the lighter EXTENSION checklist (a new
-> artifact kind on an existing action), from the off-tree
-> binding-source case.
+Two forks before the checklists:
 
 ## 0. New action vs extending an action — the fork in the road
 
 - **A NEW action** (a new `action` constructor) = the ten-touchpoint
-  checklist below (§1).
+  checklist in §1.
 - **EXTENDING an existing action with a new ARTIFACT KIND** (e.g.
   `Fetch (Binding_source l)` — the 2026-08-18 off-tree binding source)
-  = the lighter checklist in §4. The action constructor, its
+  = the lighter checklist in §2. The action constructor, its
   provision gate, its deps/marker defaults, and the execution path
   are inherited; the work is the kind's vocabulary + its typed
   catalogue row + the DEPENDENT actions' consumes (the DAG edge) +
   display slots.
+
 
 ## 1. The checklist — the ten touch points an action passes through
 
@@ -38,7 +36,7 @@ ends in `_inspect`: the answer is that you should not.
    says which actions exist per project; `consumes_of_action`/
    `produces_of_action` say what each touches (hand-written cases where
    the typed `action_catalogue` doesn't cover the action — a finding,
-   see §3); `action_requires_provision` (`canary_action_templates.ml`)
+   tracked in [`../backlog.md`](../backlog.md) §52); `action_requires_provision` (`canary_action_templates.ml`)
    gates rows on the target artifact's provision (`Publish _ → Built`).
 3. **The path table** — `canary_path_table.ml` enumerates the provenance
    chains for display (`canary paths`). Not every action appears here
@@ -72,77 +70,8 @@ ends in `_inspect`: the answer is that you should not.
     `canary-local` registration, and the renderer that generates them
     (`canary_opam_template.ml`).
 
-## 2. The Publish case study (active plan 2, landed 2026-08-17)
 
-The feature: the ocaml/opam-binding pattern publishes its wrapper
-package. What it touched, checklist order:
-
-- **Slot** (existing): `pack_binding` on `runner_spec` — already wired
-  end to end (marker `pack.ok`, deps = `build_binding`, provision gate
-  Built). Filling a slot is the CHEAP way to add a feature — the
-  catalogue machinery predates the pattern.
-- **The primitive** (new, tool layer): `Canary_pm_opam.pack_wrapper_cmd`
-  — subst the wrapper's `opam.in` (three live-learned opam details: the
-  package dir is `<name>.<version>` under a name dir — `packages/zarith/
-  zarith-no-conf.dev/`; `opam config subst` APPENDS `.in` itself so the
-  target is the base name; the `%{VAR}%` interpolation reads the
-  `OPAMVAR_`-prefixed env var), idempotent `canary-local` registration,
-  drop the conflicting store packages, install over the scenario's
-  source, write the marker. Generalizes the dead `opam_pack_cmd`.
-- **The renderer** (new, tool layer): `Canary_opam_template` — one
-  skeleton, per-project build bodies (`wrapper_decl`); the rendered
-  files stay committed; a pin asserts byte-equality (the M2
-  discipline).
-- **The pattern wiring** (project layer): `pack_binding` in the
-  bind_built scenarios + the pin-checked postcondition (`pin_check_post
-  ~pkg ~pin:"dev"` — the store provably holds the published state) +
-  the world-check half: the Fetched-binding probe verifies the store
-  holds the STOCK package (the stable repo's version id) and
-  self-heals by reinstalling it — each scenario lands itself in the
-  right world IN-RUN (the pin-switch dance, enumeration/stage5_order_worlds.md
-  §10).
-- **Declaration**: `pr_wrapper_pkgs` derives from the decl — spec-check
-  goes Ok without executing anything.
-
-## 3. The refactoring plan (orthogonality findings)
-
-The case study surfaced six non-orthogonal spots — the follow-up work:
-
-1. **Publish into the typed `action_catalogue`** — its
-   consumes/produces are hand-written cases in `canary_action.ml`
-   (:374/:388); the typed catalogue (`canary_basic.ml`) covers
-   Fetch/Build/Probe only. Fold Publish in so the derivation is
-   uniform.
-2. **`canary_path_table.ml` has no pack entries** — the 15-pattern
-   display omits Publish entirely. Add the pack-pattern rows or state
-   explicitly why provenance chains stop at build/fetch (a doc note
-   may be the honest answer — Publish doesn't produce new artifact
-   identities, it mutates the store).
-3. **Retire the legacy pack helpers** — `opam_pack_cmd` and
-   `install_local_cmd` (`canary_toolchain.ml`) are now superseded by
-   `Canary_pm_opam.pack_wrapper_cmd`; delete them (after confirming
-   zero consumers).
-4. **`render_opam_in` (z3, project-side) → `Canary_opam_template`** —
-   z3.dev's `.tpl` flow is the renderer's second consumer; migrate it
-   (the `%%Z3_CMAKE_BUILD_FLAGS%%` substitution = the renderer's first
-   parameterized body).
-5. **Repo registration for local runs** — previously relied on a
-   manually-registered `canary-local`; the primitive now self-registers
-   (CI keeps its explicit step).
-6. **The warm-skip gate must consult `check_post`** (FIXED in this
-   pass, `canary_local_runner.ml`): BOTH skip sites — `run_graph`'s
-   verdict-marker seed and `run_step`'s local-cache branch — now
-   require `check_post` to still hold. The code had drifted from the
-   documented doctrine (a warm skip only fires when the store provably
-   holds the state): a stale marker over a changed store was a silent
-   PASS for the wrong world (the z3 pin dance had the same latent hole
-   — its warm skips now re-verify the pins too).
-
-And the future uses the same shape: tiny's Publish = the same
-`wrapper_decl` + primitive when it wants an opam-visible artifact; pip
-bindings follow with a pip-side primitive.
-
-## 4. The EXTENSION checklist — a new artifact kind on an existing action
+## 2. The EXTENSION checklist — a new artifact kind on an existing action
 
 > 2026-08-18, from the off-tree binding-source case (`Fetch
 > (Binding_source l)`, commit `f5db302` + its follow-ups): the binding
@@ -201,3 +130,39 @@ bindings follow with a pip-side primitive.
     repo is already there (the `Source_fetch` local `test -d` path).
     The provider's `artifacts` contents list already declares
     multi-artifact provision.
+
+## 3. What the worked examples taught
+
+Two features went through the checklists, and the durable part is small.
+The chronology is in [`../worklog/`](../worklog/); these are the things
+that would cost a day again.
+
+**Filling a slot is the cheap way to add a feature.** Publish
+(2026-08-17) touched nine of the ten points and needed a new constructor
+for none of them: `pack_binding` was already wired end to end — marker
+`pack.ok`, deps `build_binding`, provision gate Built. The catalogue
+machinery predates most of the features that use it, so check for an
+empty slot before adding a constructor.
+
+**Three opam details, each learned by getting it wrong:**
+
+- a wrapper package's directory is `<name>.<version>` **under a name
+  dir** — `packages/zarith/zarith-no-conf.dev/`;
+- `opam config subst` **appends `.in` itself**, so the target you name
+  is the base name, not the template;
+- `%{VAR}%` interpolation reads the **`OPAMVAR_`-prefixed** environment
+  variable.
+
+**A rendered file that is committed needs a byte-equality pin.**
+`Canary_opam_template` renders one skeleton with per-project build
+bodies; the rendered `opam.in` files stay in the tree, and
+`tool.opam_template_render` asserts the renderer still produces them. It
+earns its keep: a doc-filename change in a project's `description`
+string failed it on 2026-09-16, which is exactly the drift it exists to
+catch.
+
+**A warm skip must consult `check_post`.** Found here, fixed here: both
+skip sites required only the marker, so a stale marker over a changed
+store was a silent PASS for the wrong world. A warm skip fires only when
+the store provably still holds the state.
+
