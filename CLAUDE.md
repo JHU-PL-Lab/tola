@@ -387,6 +387,7 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
 | `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage6_realize_steps.md` §2). |
+| `src/canary/project/canary_project_analysis.ml`     | **PASS 2 — ANALYSE** (2026-09-16): `project_run -> t`. Pure, world-free. `an_spec` (pass 1's, carried), `an_chains` (which of the 38 universal chains this spec admits — was the pass table's unnumbered *(branch)*), `an_declared`, `an_mechanisms`, `an_unsuited`, **`an_touches`** (THE JOIN: per action, which DECLARED artifacts it consumes/produces, in refined identities and as LISTS), `an_carries`. Ask it: `carries`/`suits` (applicability — ONE answer, both the result table and the check index route here), `mechanism_for`, `langs`, `touches`/`produced_at`/`producers_of` (the hook's questions). MEMBERSHIP RULE: a fact belongs here iff it needs NO WORLD — applicability does, FIRING does not and stays at realize. Dump: `canary emit <p> --stage analyse` |
 | `src/canary/project/canary_opam_binding.ml`           | THE OPAM-BINDING TEMPLATE (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs. ⚠ NOT "Pattern A" — the survey's letters are an ECOSYSTEM taxonomy, not canary's categories; see the note under "Key source files" |
 | `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
 | `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + opam-binding smoke jobs                     |
@@ -402,15 +403,17 @@ reconciling with, not duplicating.
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
 | `doc/canary/index.md`                          | **THE doc index** — every file under `doc/canary/`, grouped by intent. A new doc gets its row there; the rows below are only the ones a coding session hits constantly |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
-| `doc/canary/design/enumeration/stage6_realize_steps.md` | **Pass 5, realize** (`world → steps`) — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. Absorbed `algorithm_explainer.md` |
+| `doc/canary/design/enumeration/stage6_realize_steps.md` | **Pass 6, realize** (`world → steps`) — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. **§2b THE OCCASION** (2026-09-16) — when a check fires: the three gates (applicability at pass 2, firing here, evidence at run time), what realize attaches, why evaluation is not a further pass, where the evidence address comes from. Absorbed `algorithm_explainer.md` |
+| `doc/canary/design/enumeration/stage2_analyse_spec.md` | **Pass 2, analyse** (`spec → spec, enriched`) — what canary DERIVES before any world. The membership rule (no world ⇒ here), why it is a pass and not a second branch, the three-views-two-answers bug it closed, §5 the join, §8 ⚠ the mechanism declaration it does NOT read |
+| `doc/canary/design/action_model.md` | **What an action IS, and what `_post` means** (2026-09-16) — a hook is a MOMENT, not a specification of what runs at it; the join a hook needs; `probe_lib` as three roles (existence · inspection · execution — nothing ever `dlopen`s a lib); the THREE locator vocabularies that block deriving an inspection; §6 the ordered remainder |
 | `doc/canary/design/ssot.md`                    | Project-wide SSOT — canonical ID tables (Ar/Sf/Ag/Sc/scenarios/actions) bridging manuscript ↔ code    |
 | `doc/canary/design/enumeration/stage0_naming.md` | **Vocabulary, not a pass** — naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
-| `doc/canary/design/enumeration/stage5_order_worlds.md` | **Pass 4, order** (`worlds → worlds`) — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
+| `doc/canary/design/enumeration/stage5_order_worlds.md` | **Pass 5, order** (`worlds → worlds`) — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
 | `doc/canary/project/opam_exclusive_store_issue.md` | opam's one-version-per-switch problem — ONE instance of pass 4's principle: what a pin costs, the per-version-switch measurement (`ocaml-system` = ~5 s), and the two open questions (which switch model; what a collateral rebuild is FOR) |
 | `doc/canary/design/staged_parity.md` | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation (the isolation half generalized into pass 4) |
 | `doc/canary/design/enumeration/README.md`       | **THE map** for the enumeration — the reading path, the pipeline (3 IRs / 5 passes), and ONE pass table giving each pass its doc, code and pins. Read before changing how scenarios are produced |
-| `doc/canary/design/enumeration/stage4_select_worlds.md` | **Pass 3, select** (`worlds → worlds`) — what THIS run asked for: the selection type, `--thin` / `--refs` as a pass rather than a filter, and why "not running" now has two distinct answers (does not exist vs was not asked for) |
-| `doc/canary/design/enumeration/stage3_enumerate_worlds.md` | **Pass 2, enumerate** (`spec → worlds`) — the five constraints that prune the product (`assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`) and the over-generation each was written against |
+| `doc/canary/design/enumeration/stage4_select_worlds.md` | **Pass 4, select** (`worlds → worlds`) — what THIS run asked for: the selection type, `--thin` / `--refs` as a pass rather than a filter, and why "not running" now has two distinct answers (does not exist vs was not asked for) |
+| `doc/canary/design/enumeration/stage3_enumerate_worlds.md` | **Pass 3, enumerate** (`spec → worlds`) — the five constraints that prune the product (`assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`) and the over-generation each was written against |
 | `doc/canary/design/enumeration/stage1_declare_spec.md` | **Pass 1, declare** (`surface → spec`) — what a project declares: rows, artifact identity, the provision × version universe, providers and the four things derived from them, versions (ambient vs identity-bearing), repo lifecycle, the channel pair, what cannot be declared. Absorbed the purged `repo_model.md` + `versioning.md` |
 | `doc/canary/project/projects.md`               | **The project roster** — what exists: dimension model, per-project lib/binding axes + 2×2 status, landing history, candidates |
 | `doc/canary/project/status_project.md`         | **The project layer's SOLO to-do tracker** — the ordered plan, general to-dos, the report milestone |
@@ -1004,6 +1007,73 @@ OWN row's chain. zarith's `dependencies_provided` `holds` in the
 fetched-binding world, whose chain has no `build_binding` — the column
 `dp` slotted into — so that verdict has nowhere to render. Same root as
 the llvm case; decide both together.
+
+**2026-09-16 — THE PIPELINE IS LINEAR, AND APPLICABILITY HAS ONE
+ANSWER.** Four landings, in order.
+
+**(1) Pass 2 finished.** `Canary_matrix.check_cols_of_chain` and
+`Canary_check_index` each re-derived "which agreements apply here"; both
+ask pass 2 now. Not only deduplication — each built its own
+`(mechanism, declared)` pair, and the result table's was the LANGUAGE
+DEFAULT while the index used the DECLARATION. Those differ wherever a
+project declares a non-default mechanism (z3/llvm bind Python through
+Ctypes; the default is Cext), and applicability turns on it: 5 carryable
+claims against 9. Nothing in today's output moved — no project's chain
+puts such a language in front of the result table — which is the point:
+the same class as the 2026-09-15 Python bug, caught before it fired.
+Pinned by `checks.applicability_reads_the_declaration`, which asserts
+BOTH sides. `chain_applicable` folded in as `an_chains`, so the pass
+table's unnumbered *(branch)* row is gone. **Renumbered**: declare(1),
+analyse(2), enumerate(3), select(4), order(5), realize(6) — four doc
+renames plus a citation sweep. PIN NAMES ARE NOT RENUMBERED; a `stageN`
+inside a pin name is a historical label.
+
+**(2) The action model** (`design/action_model.md`). `<action>_post` is
+a trigger MOMENT, not a specification of what runs at it — the same
+`nm -D` belongs at `build_lib_post`, `fetch_lib_post`,
+`install_lib_post` and a `fetch_package_post` canary does not model;
+only the LOCATION differs. THE JOIN that needs is pass 2's `an_touches`
+(`touches` / `produced_at` / `producers_of`), pinned by
+`analysis.touches_joins_actions_to_declarations`. NOTHING CONSUMES IT
+YET, and the blocker is named: **three locator vocabularies** exist for
+"where is the library" (typed `probe_lib_location`, `lib_locator` globs,
+raw shell). Order: one locator → derive the inspection → retire the
+world→tag maps → split `probe_lib`'s three roles (nothing ever
+`dlopen`s a library).
+
+**(3) The seam is drawn**: *agreement/ owns the CLAIM, enumeration/ owns
+the OCCASION.* `stage6_realize_steps.md` §2b is the account of when a
+check fires; `agreement/pipeline.md` is the project-facing walkthrough
+and keeps its four failure modes; both READMEs state the boundary the
+same way. Still crossed in CODE: `binding_evidence_tag` /
+`lib_evidence_tags`, which are waiting to be DERIVED from
+`producers_of`, not moved.
+
+**(4) The global CI cache is DELETED** (user). `cache-sync`, `--cache`,
+`?global_cache`, and `step.cache_key` are gone. It could not produce a
+hit and had not been able to since A5 (its keys came from the CI job
+specs, the only `cache_project` overriders; a local run uses the
+per-scenario default), was reachable only from the tiny runner, bypassed
+the fingerprint/`check_post`/switch/platform gates, and was fed by a
+file that never existed. The SOUND local marker cache is untouched
+(`canary cache-test`, 2/2). Before an artifact cache can be built, two
+things it needs do not exist: the **world's toolchain** on the key
+(nothing records a compiler or a linker; the switch and the platform
+already ride the fingerprint and show the shape) and a fix for
+`step_identity.md`, where a step's tag depends on how many siblings it
+has. Both are `design/artifact_cache.md` §4.6–4.7.
+
+⚠ Found, recorded, NOT fixed (`project/issues.md` §2): a project can
+declare its binding mechanism in TWO places and pass 2 reads one. The
+opam-binding template fills the artifact table's `a_binding` row and
+leaves `pr_binding_decls` empty, so cairo/libffi/zlib/zstd declare a
+mechanism nothing sees — libffi declares `Ctypes` and is reported
+`Cstubs`, and its phantom Python `unsuited` claim has the same cause.
+Routing the artifact table in would flip four GREEN libffi cells to
+`not_applicable`, and whether that is a correction depends on whether
+`ctypes-foreign` (which DOES ship a compiled stub archive, unlike
+Python's ctypes) is a `Ctypes` binding by the catalogue's own
+predicates. A mechanism-catalogue question, not a pipeline one.
 
 See [`doc/canary/status.md`](doc/canary/status.md) for current implementation
 state and open items. Lower-priority items live in
