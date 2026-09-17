@@ -633,17 +633,28 @@ sqlite), then `signatures_agree`. See `agreement/model.md` §2.1.1.
 is, then which file for which job), `pipeline.md` (**a project end to
 end** — the 7 points where a run touches the registry, the 4 failure
 modes behind an `unavailable`, and the landing checklist),
-`landing.md` (**the tracker**: PLANNED from the registry vs EFFECTIVE
-from run logs, per agreement, with what each is waiting on), and
-`model.md` (the model + registry integration) and `components.md` (the
-per-component walk, and where every `ag_doc` anchor points — the two
-halves of the retired `registry.md`, split 2026-09-17).
-`canary checks --landing` is the live
-tracker; `--observed` is one project's last run. Pinned by
-`agreements.landing_doc_lists_every_agreement` (the planned column must
-match the registry, so a new agreement cannot land without the tracker
-being updated). **Current: 1 landed** (`api_names_present`, on sqlite for
-BOTH OCaml and Python, and on ssl; falsified both ways).
+`landing.md` (**what is LEFT**: per agreement, what it is waiting on;
+the four undecided states and the four kinds of work they mean; the
+distance-0 backlog), `model.md` (the model + registry integration) and
+`components.md` (the per-component walk, and where every `ag_doc`
+anchor points — the two halves of the retired `registry.md`, split
+2026-09-17; that file's §7.4 became `backlog.md` §51).
+`canary checks --landing` is the live tracker; `--observed` is one
+project's last run. Pinned by
+`agreements.landing_doc_lists_every_agreement`, which since 2026-09-17
+pins COMPLETENESS only — every registered agreement has a row saying
+what would land it.
+
+⚠ **A TABLE THE TOOL GENERATES DOES NOT GET A HAND COPY** (2026-09-17).
+Three did — `registry.md` §1.7, `registry.md` §7.4.1 and `landing.md`'s
+"Effective" table — and all three had gone stale in the same direction,
+still reporting `declared_symbols_exported` as `unavailable` for want of
+a declaration months after it began deciding on sqlite and catching a
+real forward-cell violation. `landing.md`'s had got as far as listing
+three agreements TWICE, once as LANDED with a verdict and once as
+"reported as not_applicable/unavailable". All three are gone; read
+`canary checks --landing` / `--catalogue`. **8 of 13 landed** as of
+2026-09-17.
 **DUMMY ACTIONS** (2026-09-12, user): `Canary_step_builder.Dummy of
 string` — a step that holds a place in the action graph, does no work,
 and carries the reason it is empty. It exists because the graph is
