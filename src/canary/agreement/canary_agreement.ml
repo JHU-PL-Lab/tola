@@ -827,10 +827,44 @@ let recovery_mark_char = function
     canary never modelled. The catalogue already draws that distinction
     by backticking only what parses; this is the same test, used to
     decide whether a row can carry an R at all. *)
-let rooted_action_of (r : agreement_row) : Canary_basic.action option =
+(** THE ROOTING NAMES ONE LANGUAGE, AND A ROW MAY BE ANOTHER'S
+    (2026-09-17, user: "the R for python is on build_binding_ocaml
+    cell").
+
+    [rt_action] is a STRING, and for a claim that roots at a binding's
+    link it has to pick a spelling — `required_symbols_exported` says
+    `build_binding_ocaml`. That is the right answer for the cstubs row
+    and the WRONG one for the cext row, which marked `R` in the OCaml
+    column and then measured its lag from there: 7 columns, when the
+    linker that wrote those undefined references ran at
+    `build_binding_python`, lag 0.
+
+    The claim is not about OCaml. `ag_rooted_in` says which ACTION the
+    rule ran at; which language's instance of that action is a property
+    of the row. So the row re-languages it. An action with no language
+    in it — `build_lib`, `install_lib` — is returned unchanged, which is
+    what makes this safe to apply everywhere. *)
+let retarget_action ~(lang : Canary_lang.lang) (a : Canary_basic.action) :
+    Canary_basic.action =
+  match a with
+  | Canary_basic.Build_binding _ -> Canary_basic.Build_binding lang
+  | Canary_basic.Probe_binding _ -> Canary_basic.Probe_binding lang
+  | Canary_basic.Fetch (Canary_basic.Binding _) ->
+      Canary_basic.Fetch (Canary_basic.Binding lang)
+  | Canary_basic.Fetch (Canary_basic.Binding_source _) ->
+      Canary_basic.Fetch (Canary_basic.Binding_source lang)
+  | Canary_basic.Publish (Canary_basic.Binding _) ->
+      Canary_basic.Publish (Canary_basic.Binding lang)
+  | Canary_basic.Build_app _ -> Canary_basic.Build_app { lang }
+  | Canary_basic.Probe_app _ -> Canary_basic.Probe_app { lang }
+  | a -> a
+
+let rooted_action_of ?lang (r : agreement_row) : Canary_basic.action option =
   let rt = r.ag.ag_rooted_in in
   if not (is_rooted rt) then None
-  else Canary_basic.action_of_string rt.rt_action
+  else
+    Option.map (Canary_basic.action_of_string rt.rt_action) ~f:(fun a ->
+        match lang with Some l -> retarget_action ~lang:l a | None -> a)
 
 (** THE RECOVERY GRID: rows = agreements, columns = action patterns,
     cells = rooted / detected / both. *)
@@ -921,7 +955,7 @@ let pattern_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
     ~(lang : Canary_lang.lang) ~(provision : Canary_store.provision) :
     (Canary_basic.action * recovery_mark) list =
   let world = uniform_world ~lang ~mechanism provision in
-  let root = rooted_action_of r in
+  let root = rooted_action_of ~lang r in
   List.map (overview_columns ()) ~f:(fun a ->
       let is_root =
         match root with Some ra -> Poly.equal ra a | None -> false
@@ -951,6 +985,66 @@ let reads_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
              ac_declared = None })
         ~f:(artifact_of_input ~lang))
   |> List.dedup_and_sort ~compare:Poly.compare
+
+(* ── ROW ORDER: WHEN IT FIRES, THEN WHOSE (2026-09-17, user: "we also
+   need a better order for the agreement, and the spirit is the same as
+   the result columns … first rank on the D moment, then for the same D
+   moment, sorting on lang and mech").
+
+   Registry order was declaration order, which is a fact about the
+   source file and about nothing else. Ordering by the FIRING moment
+   makes the table read the way a run happens: everything decided at
+   `build_lib` together, then the binding's build, then its probe. That
+   is the result table's own principle — a column's place is its
+   lifecycle stage — applied to rows.
+
+   The key is the index of the EARLIEST `D`, in the table's own column
+   order, so the table sorts itself by what it displays. A row that
+   fires nowhere sorts last rather than first: `Int.max_value` is the
+   honest key for "never", and putting it at the top would give the
+   most prominent position to the least active claim. Ties break on
+   language then mechanism, both in catalogue order, so a claim's cstubs
+   and cext rows stay adjacent and in a stable order. *)
+let first_firing_index (row : overview_row) : int =
+  match
+    List.filter_mapi row.ov_cells ~f:(fun i (_, m) ->
+        match m with Detected | Rooted_and_detected -> Some i | _ -> None)
+  with
+  | [] -> Int.max_value
+  | is -> List.fold is ~init:Int.max_value ~f:Int.min
+
+(* Both ranks come off the mechanism catalogue, which is the one
+   declared order this layer has — a language ranks by where its first
+   mechanism appears. [langs_of_mechs] and [catalogue_langs] say the
+   same thing but are defined below, with the label functions they
+   serve. *)
+let lang_rank (l : Canary_lang.lang) : int =
+  match
+    List.findi Canary_mechanism.mechanism_catalogue ~f:(fun _ i ->
+        Poly.equal i.Canary_mechanism.mi_lang l)
+  with
+  | Some (i, _) -> i
+  | None -> 99
+
+let mech_rank (m : Canary_mechanism.mechanism) : int =
+  match
+    List.findi Canary_mechanism.mechanism_catalogue ~f:(fun _ i ->
+        Poly.equal i.Canary_mechanism.mi_mechanism m)
+  with
+  | Some (i, _) -> i
+  | None -> 99
+
+let sort_overview_rows (rows : overview_row list) : overview_row list =
+  let key (row : overview_row) =
+    ( first_firing_index row,
+      (match row.ov_mechs with
+       | m :: _ ->
+           lang_rank (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_lang
+       | [] -> 99),
+      (match row.ov_mechs with m :: _ -> mech_rank m | [] -> 99),
+      row.ov_agreement.ag_slug )
+  in
+  List.stable_sort rows ~compare:(fun a b -> Poly.compare (key a) (key b))
 
 (** THE TABLE: one row per (agreement × distinct pattern). *)
 let overview_rows ?(provision = Canary_store.Built) () : overview_row list =
@@ -994,7 +1088,22 @@ let overview_rows ?(provision = Canary_store.Built) () : overview_row list =
           |> List.map ~f:(fun (ms, cells, reads) ->
                  { ov_agreement = r; ov_mechs = ms; ov_reads = reads;
                    ov_cells = cells }))
+  |> sort_overview_rows
 
+
+(** THE AGREEMENTS IN THE TABLE'S ORDER — each one at the position of
+    its FIRST row, so a document that walks them walks the overview
+    top to bottom. An agreement with several patterns has several rows
+    and one record, so the mapping is first-row, not one-to-one. *)
+let registry_in_table_order ?(provision = Canary_store.Built) () :
+    agreement_row list =
+  let seen = ref [] in
+  List.filter_map (overview_rows ~provision ()) ~f:(fun row ->
+      let s = row.ov_agreement.ag_slug in
+      if List.mem !seen s ~equal:String.equal then None
+      else (
+        seen := s :: !seen;
+        Some row.ov_agreement))
 
 (** The ARTIFACT columns, in the result matrix's own order — the
     leading "setting" block, reused (2026-09-17, user: "I also wish the
@@ -1190,6 +1299,14 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: ""
      :: head :: body
     @ [ "";
+        "ROWS ARE ORDERED BY WHEN THE CHECK FIRES — earliest action \
+         first, then";
+        "language, then mechanism — so the table reads in the order a run \
+         happens,";
+        "which is the result table's principle applied to rows. A row that \
+         fires";
+        "nowhere sorts last.";
+        "";
         "ONE ROW PER DISTINCT PATTERN. A claim whose firing differs between \
          mechanisms";
         "gets a row each — a cstubs row and a cext row mark different action \
@@ -1224,6 +1341,14 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
          only where the";
         "       row is a strict subset. `none` in both = NO mechanism \
          carries this at all.";
+        "     NOTE `soname` is an ELF word for a format-neutral fact — the \
+         library's";
+        "     own recorded identity, `DT_SONAME` on ELF and the \
+         `LC_ID_DYLIB` install";
+        "     name on Mach-O, which the inspector writes into one field. \
+         Those rows";
+        "     are `EM`, and only the two version-node claims are really \
+         ELF-only.";
         "fmt  = which OBJECT FORMAT it can range over: E elf · M mach-o. A \
          format";
         "       changes whether a claim APPLIES, never where it fires — so \
@@ -2051,9 +2176,12 @@ let pp_catalogue_md () : string =
        at the top of the file they land in. *)
     "## 2. What there is — every agreement, one by one\n\n\
      **GENERATED from the registry**, so it cannot drift from the code \
-     that implements it. The agreements appear in registry order, which \
-     is the order the agreement overview uses — §2's n'th record is the \
-     table's n'th row.\n\n\
+     that implements it. The records are in the AGREEMENT OVERVIEW's \
+     order — earliest firing action first, then language, then \
+     mechanism — so reading down this section walks that table top to \
+     bottom. It is not one-to-one: a claim whose firing differs between \
+     mechanisms has several rows there and one record here, and it \
+     appears at its first row's position.\n\n\
      **What this does NOT show is what actually RAN.** That is a fact \
      about run logs, and a generated file that read logs would change \
      whenever anything ran — so `canary checks --landing` is the live \
@@ -2070,7 +2198,7 @@ let pp_catalogue_md () : string =
   Buffer.add_string b (pp_todo_table_md ());
   Buffer.add_string b (pp_rooting_table_md ());
   Buffer.add_string b "\n### The records\n";
-  List.iter agreement_registry ~f:(fun r ->
+  List.iter (registry_in_table_order ()) ~f:(fun r ->
       Buffer.add_string b (pp_agreement ~markdown:true ~depth:1 r));
   Buffer.add_string b (pp_out_of_table_md ());
   Buffer.contents b

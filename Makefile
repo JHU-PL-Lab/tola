@@ -126,9 +126,8 @@ canary-refresh:
 AGREEMENTS_DOC = doc/canary/design/agreement/agreements.md
 agreement-catalogue:
 	@$(CANARY) checks --catalogue --md > $@.tmp
-	@python3 -c 'import sys;p,g="$(AGREEMENTS_DOC)","$@.tmp";d=open(p).read();b=open(g).read();B="<!-- BEGIN GENERATED";E="<!-- END GENERATED -->";i=d.index(B);j=d.index(E);h=d.index("-->",i)+3;open(p,"w").write(d[:h]+"\n\n"+b.strip()+"\n\n"+d[j:])'
+	@python3 canary/scripts/splice_generated.py $(AGREEMENTS_DOC) $@.tmp
 	@rm -f $@.tmp
-	@echo "wrote $(AGREEMENTS_DOC) (generated region)"
 
 # THE WEB VIEW — three tables on one page: the check key, the RECOVERY
 # GRID (where each rule ran vs where it is checked), and the result

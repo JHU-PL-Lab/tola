@@ -306,7 +306,7 @@ Whichever frame produced it, the promotion workflow is §4.9.6.
 
 ## 2. What there is — every agreement, one by one
 
-**GENERATED from the registry**, so it cannot drift from the code that implements it. The agreements appear in registry order, which is the order the agreement overview uses — §2's n'th record is the table's n'th row.
+**GENERATED from the registry**, so it cannot drift from the code that implements it. The records are in the AGREEMENT OVERVIEW's order — earliest firing action first, then language, then mechanism — so reading down this section walks that table top to bottom. It is not one-to-one: a claim whose firing differs between mechanisms has several rows there and one record here, and it appears at its first row's position.
 
 **What this does NOT show is what actually RAN.** That is a fact about run logs, and a generated file that read logs would change whenever anything ran — so `canary checks --landing` is the live answer to *which are landed*, and this answers *what each one is and what is in its way*.
 
@@ -431,6 +431,294 @@ reads: `DECLARED exports (3 name(s))`, `native summary lib.json`
 ```
 
 
+### declared_versions_exported
+
+| | |
+| --- | --- |
+| subject | symbol-versions |
+| about | structural — artifacts and their fit |
+| obligation | project-declaration |
+| status | evaluated |
+| fault tag | sym_version |
+| why it exists | components.md §2.2 |
+| waiting on | a project that BUILDS a library carrying a version script. sqlite builds without one, so there are no version nodes and `vacuous` is the truth rather than a gap; openssl has one and canary fetches its lib, so build_lib never fires there |
+
+#### Claim
+
+
+**Says:** every version tag the project declares appears among the built lib's versioned exports
+
+**Held against:** the project's declared version-script tags. The version script's application is the black box; the artifact's export annotations are the evidence
+
+**Recovers:** build_lib — linker (version script), over the library's symbol-version nodes. a version script is what attaches version nodes to exported symbols. As with the soname, the tool is a black box and the annotations it wrote are the evidence
+
+**Checked at:** ocaml: build_lib_post; python: build_lib_post
+
+#### Method: declared_tags_vs_library_exports
+
+| | |
+| --- | --- |
+| how | inspects several artifacts and compares them |
+| against | declaration |
+| implemented | yes |
+| ocaml/cstubs@built | fires at build_lib |
+|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
+| python/cext@built | fires at build_lib |
+|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
+| limits | presence of a tag says nothing about the symbols inside it, nor about compatibility beyond the declared tags. |
+
+**Examples**
+
+**1. reports `violated`** — finding: `version TINY_2.0 not exported`
+
+reads: `DECLARED version tags (1)`, `provider version tags lib.json`
+
+`lib.json`:
+
+```json
+{"kind": "native", "path": "fx",
+    "versioned_exports": {"tiny_sum": "TINY_1.0"}}
+```
+
+**2. reports `vacuous`**
+
+reads: `provider version tags lib.json`
+
+`lib.json`:
+
+```json
+{"kind": "native", "path": "fx",
+    "versioned_exports": {"tiny_sum": "TINY_1.0"}}
+```
+
+
+### soname_matches_declaration
+
+| | |
+| --- | --- |
+| subject | identity |
+| about | structural — artifacts and their fit |
+| obligation | project-declaration |
+| status | evaluated |
+| fault tag | abi_soname |
+| why it exists | components.md §2.2 |
+
+#### Claim
+
+
+**Says:** the built lib's recorded identity is the soname the project declared
+
+**Held against:** the project's declared soname. The linker's -Wl,-soname application is the black box; the artifact's own record is the evidence
+
+**Recovers:** build_lib — linker (-Wl,-soname), over the library's SONAME record. the -soname flag is the only thing that puts an identity into the object. The linker is a black box here: it either recorded what was asked for or it did not, and the artifact is the evidence
+
+**Checked at:** ocaml: build_lib_post; python: build_lib_post
+
+#### Method: declared_soname_vs_library
+
+| | |
+| --- | --- |
+| how | inspects several artifacts and compares them |
+| against | declaration |
+| implemented | yes |
+| ocaml/cstubs@built | fires at build_lib |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+| python/cext@built | fires at build_lib |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+| limits | matching a name does not identify a unique implementation: two objects can advertise one soname and mean different things (the ncurses case). |
+
+**Examples**
+
+**1. reports `violated`** — finding: `soname libtiny.so.2 != declared libtiny.so.1`
+
+reads: `DECLARED soname libtiny.so.1`, `native summary lib.json`
+
+`lib.json`:
+
+```json
+{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum"],
+    "elf": {"soname": "libtiny.so.2", "needed": []}}
+```
+
+**2. reports `undeclared`**
+
+reads: `native summary lib.json`
+
+`lib.json`:
+
+```json
+{"kind": "native", "path": "fx",
+    "elf": {"soname": "libtiny.so.1", "needed": []}}
+```
+
+
+### api_names_present
+
+| | |
+| --- | --- |
+| subject | api-names |
+| about | structural — artifacts and their fit |
+| obligation | project-declaration |
+| status | evaluated |
+| fault tag | api_drop |
+| why it exists | components.md §3.1.1 |
+
+#### Claim
+
+
+**Says:** every watchlisted name is present on the binding's user-facing surface
+
+**Held against:** the project's watchlist for this binding; a watched name absent from the inspected surface is the falsifier. An empty watchlist asks nothing and is reported as inconclusive, never as a pass
+
+**Recovers:** build_app_ocaml — the language compiler, over the binding's user-facing interface. Most projects declare no app, so the rule's own action is absent and the check falls to the binding probe. the compiler's rule is that every name a consumer uses resolves on the interface it compiles against. The watchlist stands in for the application's actual uses, which makes this a hand-written APPROXIMATION of a real rule rather than a derivation of it
+
+**Checked at:** ocaml: build_app_ocaml_pre → probe_binding_ocaml_pre; python: build_app_python_pre → probe_binding_python_pre
+
+#### Method: watchlist_vs_user_surface
+
+| | |
+| --- | --- |
+| how | reads one artifact's properties or presence |
+| against | declaration |
+| implemented | yes |
+| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
+|   reads | OCaml surface build_binding_ocaml/inspect.json \| build_binding_ocaml/inspect_mli.json |
+| python/cext@built | fires at build_binding_python, probe_binding_python |
+|   reads | Python surface build_binding_python/inspect.json \| build_binding_python/inspect_attrs.json |
+| limits | coverage is bounded by the watchlist: names outside it are not checked, and a name being present says nothing about the signature or behaviour behind it. Obtaining the Python surface already imports the module. |
+
+**Examples**
+
+**1. reports `violated`** — finding: `Llvm.Opcode.UncondBr`, `Opcode.UncondBr`, `UncondBr`
+
+reads: `OCaml surface mli.json`
+
+`mli.json`:
+
+```json
+{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}
+```
+
+**2. reports `violated`** — finding: `Solver.add`, `add`, `BitVec`
+
+reads: `Python surface py.json`
+
+`py.json`:
+
+```json
+{"kind": "python", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}
+```
+
+**3. reports `inconclusive`**
+
+reads: `OCaml surface empty.json`
+
+`empty.json`:
+
+```json
+{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": [], "missing": []}}
+```
+
+
+### dependencies_provided
+
+| | |
+| --- | --- |
+| subject | dependencies |
+| about | structural — artifacts and their fit |
+| obligation | toolchain-rule |
+| status | evaluated |
+| fault tag | needed_unprovided |
+| why it exists | components.md §5.6 |
+
+#### Claim
+
+
+**Says:** every library name the consumer records as NEEDED has a provider in this world
+
+**Held against:** this world's modeled provider plus the family's fixed ambient-runtime list. A recorded name answered by neither is the falsifier — which is what a consumer linked where an implementation was split out, and deployed where it is folded in, produces
+
+**Recovers:** probe_binding_ocaml — linker, then the dynamic loader, over the consumer's NEEDED list. The linker wrote it and the LOADER re-checks it at every load, which is why the probe is the action named here rather than the link. the linker recorded a set of dependency names, and the loader's rule is that each resolves to an object. This recovers the LOADER'S rule statically, for the names recorded, against the providers this world models
+
+**Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
+
+#### Method: recorded_dependencies_vs_world_providers
+
+| | |
+| --- | --- |
+| how | inspects several artifacts and compares them |
+| against | peer |
+| implemented | yes |
+| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json \| build_binding_ocaml/inspect.json |
+| python/cext@built | fires at build_binding_python, probe_binding_python |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json \| build_binding_python/inspect.json |
+| limits | ONE modeled provider, direct dependencies only, and an ambient list that is code rather than a per-world policy. It does not enumerate every provider, traverse transitive dependencies, verify the ambient libraries exist, or run a loader — so a name supplied by a second unmodeled library is reported unprovided. |
+
+**Examples**
+
+**1. reports `violated`** — finding: `libtinfo.so.6`
+
+reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
+
+`lib.json`:
+
+```json
+{"kind": "native", "path": "fx",
+    "elf": {"soname": "libncursesw.so.6", "needed": []}}
+```
+
+`consumer.json`:
+
+```json
+{"kind": "native", "path": "fx",
+    "elf": {"soname": null,
+            "needed": ["libncursesw.so.6", "libtinfo.so.6", "libc.so.6"]}}
+```
+
+
+### repack_complete
+
+| | |
+| --- | --- |
+| subject | repacking |
+| about | behavioral — what running it does |
+| obligation | behavioral-spec |
+| status | planned |
+| fault tag | api_add |
+| why it exists | components.md §6.3.1 |
+| waiting on | the same scoping as repack_preserves_api, plus the two agreements it composes. A composition cannot be better rooted than its weakest part |
+
+#### Claim
+
+
+**Says:** the repack loses nothing the original had
+
+**Held against:** a statement of what the binding is allowed to omit. Without one there is no reference: a binding that deliberately wraps a subset is indistinguishable from one that dropped something
+
+**Recovers:** NO ACTION'S RULE. unrooted TWICE OVER: it composes one agreement that has a rule (the linker's) with two that do not. A composition cannot be better rooted than its weakest part
+
+**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
+
+#### Method: composed_faithfulness
+
+| | |
+| --- | --- |
+| how | runs a probe and inspects its result |
+| against | declaration |
+| implemented | no — planned |
+| why not | the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreements it composes — repacking and behaviour — have no evaluator either. check_api_faithfulness composes three verdicts and is ready for the day they exist |
+| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
+| python/cext@built | fires at build_binding_python, probe_binding_python |
+| limits | not evaluated. The composition function exists and is pure; what it would mean is the open decision. |
+| counterexamples | none — nothing shows it can fail |
+
 ### required_symbols_exported
 
 | | |
@@ -515,293 +803,6 @@ reads: `compiled-stub summary stub.json`, `native summary absent.json`
 ```json
 {"kind": "c_stub", "path": "fx",
     "requires": ["tiny_sum"]}
-```
-
-
-### api_names_present
-
-| | |
-| --- | --- |
-| subject | api-names |
-| about | structural — artifacts and their fit |
-| obligation | project-declaration |
-| status | evaluated |
-| fault tag | api_drop |
-| why it exists | components.md §3.1.1 |
-
-#### Claim
-
-
-**Says:** every watchlisted name is present on the binding's user-facing surface
-
-**Held against:** the project's watchlist for this binding; a watched name absent from the inspected surface is the falsifier. An empty watchlist asks nothing and is reported as inconclusive, never as a pass
-
-**Recovers:** build_app_ocaml — the language compiler, over the binding's user-facing interface. Most projects declare no app, so the rule's own action is absent and the check falls to the binding probe. the compiler's rule is that every name a consumer uses resolves on the interface it compiles against. The watchlist stands in for the application's actual uses, which makes this a hand-written APPROXIMATION of a real rule rather than a derivation of it
-
-**Checked at:** ocaml: build_app_ocaml_pre → probe_binding_ocaml_pre; python: build_app_python_pre → probe_binding_python_pre
-
-#### Method: watchlist_vs_user_surface
-
-| | |
-| --- | --- |
-| how | reads one artifact's properties or presence |
-| against | declaration |
-| implemented | yes |
-| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-|   reads | OCaml surface build_binding_ocaml/inspect.json \| build_binding_ocaml/inspect_mli.json |
-| python/cext@built | fires at build_binding_python, probe_binding_python |
-|   reads | Python surface build_binding_python/inspect.json \| build_binding_python/inspect_attrs.json |
-| limits | coverage is bounded by the watchlist: names outside it are not checked, and a name being present says nothing about the signature or behaviour behind it. Obtaining the Python surface already imports the module. |
-
-**Examples**
-
-**1. reports `violated`** — finding: `Llvm.Opcode.UncondBr`, `Opcode.UncondBr`, `UncondBr`
-
-reads: `OCaml surface mli.json`
-
-`mli.json`:
-
-```json
-{"kind": "ocaml_mli", "path": "fx",
-    "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}
-```
-
-**2. reports `violated`** — finding: `Solver.add`, `add`, `BitVec`
-
-reads: `Python surface py.json`
-
-`py.json`:
-
-```json
-{"kind": "python", "path": "fx",
-    "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}
-```
-
-**3. reports `inconclusive`**
-
-reads: `OCaml surface empty.json`
-
-`empty.json`:
-
-```json
-{"kind": "ocaml_mli", "path": "fx",
-    "watchlist": {"present": [], "missing": []}}
-```
-
-
-### behavior_matches
-
-| | |
-| --- | --- |
-| subject | behavior |
-| about | behavioral — what running it does |
-| obligation | behavioral-spec |
-| status | planned |
-| fault tag | behavior |
-| why it exists | components.md §6.3.2 |
-| waiting on | somebody to state a spec. This is one row standing for a CATEGORY — derived compatibility tests, the project's own suite, a provider/consumer round trip — and it needs both an expectation and a comparison. Introduce one test-suite reuse case, then one C/binding differential case: the first supplies the expectation, the second the comparison |
-
-#### Claim
-
-
-**Says:** the probe's trace matches what was recorded for it
-
-**Held against:** the probe's own embedded assertions. There is no project-independent statement of what a binding should compute, so the expectation is whatever the probe asserts — which bounds this agreement to the inputs that probe exercises
-
-**Recovers:** NO ACTION'S RULE. no toolchain enforces that a function returns what a project expected — a compiler checks types, a linker checks names, and neither has an opinion about results. There is no relation here to recover, only one to STATE, which is why this is unimplemented in a different sense from an agreement that merely lacks evidence
-
-**Checked at:** ocaml: probe_binding_ocaml_post; python: probe_binding_python_post
-
-#### Method: probe_assertions
-
-| | |
-| --- | --- |
-| how | runs a probe and inspects its result |
-| against | declaration |
-| implemented | no — planned |
-| why not | the expected values live inside the probe's source as embedded assertions, and the observation is the probe's own exit code; the registry has no evaluator that could read them. Wiring one means giving the project a place to state expected results outside the probe. NOTE (2026-09-15, user) that this is ONE ROW standing for a CATEGORY, and the category has at least three members that want different machinery: tests DERIVED from a version-compatibility claim (canary generates them), the project's OWN test suite (canary runs what upstream wrote), and ROUND-TRIP tests across the provider and consumer sides of a binding (canary composes them). Wiring this row without deciding which of the three it is would fix the narrowest one by accident |
-| ocaml/cstubs@built | fires at probe_binding_ocaml |
-| python/cext@built | fires at probe_binding_python |
-| limits | not evaluated here. The probe's assertions cover the inputs that probe runs and nothing else. |
-| counterexamples | none — nothing shows it can fail |
-
-### soname_matches_declaration
-
-| | |
-| --- | --- |
-| subject | identity |
-| about | structural — artifacts and their fit |
-| obligation | project-declaration |
-| status | evaluated |
-| fault tag | abi_soname |
-| why it exists | components.md §2.2 |
-
-#### Claim
-
-
-**Says:** the built lib's recorded identity is the soname the project declared
-
-**Held against:** the project's declared soname. The linker's -Wl,-soname application is the black box; the artifact's own record is the evidence
-
-**Recovers:** build_lib — linker (-Wl,-soname), over the library's SONAME record. the -soname flag is the only thing that puts an identity into the object. The linker is a black box here: it either recorded what was asked for or it did not, and the artifact is the evidence
-
-**Checked at:** ocaml: build_lib_post; python: build_lib_post
-
-#### Method: declared_soname_vs_library
-
-| | |
-| --- | --- |
-| how | inspects several artifacts and compares them |
-| against | declaration |
-| implemented | yes |
-| ocaml/cstubs@built | fires at build_lib |
-|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
-| python/cext@built | fires at build_lib |
-|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
-| limits | matching a name does not identify a unique implementation: two objects can advertise one soname and mean different things (the ncurses case). |
-
-**Examples**
-
-**1. reports `violated`** — finding: `soname libtiny.so.2 != declared libtiny.so.1`
-
-reads: `DECLARED soname libtiny.so.1`, `native summary lib.json`
-
-`lib.json`:
-
-```json
-{"kind": "native", "path": "fx",
-    "symbols": ["tiny_sum"],
-    "elf": {"soname": "libtiny.so.2", "needed": []}}
-```
-
-**2. reports `undeclared`**
-
-reads: `native summary lib.json`
-
-`lib.json`:
-
-```json
-{"kind": "native", "path": "fx",
-    "elf": {"soname": "libtiny.so.1", "needed": []}}
-```
-
-
-### soname_matches_requirement
-
-| | |
-| --- | --- |
-| subject | identity |
-| about | structural — artifacts and their fit |
-| obligation | toolchain-rule |
-| status | evaluated |
-| fault tag | abi_soname |
-| why it exists | components.md §4.1 |
-
-#### Claim
-
-
-**Says:** the lib's soname is the one the consumer recorded it needs
-
-**Held against:** the consumer's own recorded dependency list. A provider advertising a name the consumer never recorded will not be selected for it
-
-**Recovers:** build_binding_ocaml — linker, over the consumer's NEEDED record. The link that wrote it ran in whatever world built that consumer, which this graph need not contain. the linker's rule is that a recorded dependency names something it resolved against. It ran in whatever world built that consumer; this asks whether the name it wrote down is the one THIS world's provider answers to
-
-**Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
-
-#### Method: library_identity_vs_consumer_record
-
-| | |
-| --- | --- |
-| how | inspects several artifacts and compares them |
-| against | peer |
-| implemented | yes |
-| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json \| build_binding_ocaml/inspect.json |
-| python/cext@built | fires at build_binding_python, probe_binding_python |
-|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json \| build_binding_python/inspect.json |
-| limits | name equality only. It does not establish which object the loader will select, nor that the selected object means the same thing as the one linked against. |
-
-**Examples**
-
-**1. reports `violated`** — finding: `libtiny.so.1`
-
-reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
-
-`lib.json`:
-
-```json
-{"kind": "native", "path": "fx",
-    "elf": {"soname": "libtiny.so.2", "needed": []}}
-```
-
-`consumer.json`:
-
-```json
-{"kind": "native", "path": "fx",
-    "elf": {"soname": null, "needed": ["libtiny.so.1", "libc.so.6"]}}
-```
-
-
-### declared_versions_exported
-
-| | |
-| --- | --- |
-| subject | symbol-versions |
-| about | structural — artifacts and their fit |
-| obligation | project-declaration |
-| status | evaluated |
-| fault tag | sym_version |
-| why it exists | components.md §2.2 |
-| waiting on | a project that BUILDS a library carrying a version script. sqlite builds without one, so there are no version nodes and `vacuous` is the truth rather than a gap; openssl has one and canary fetches its lib, so build_lib never fires there |
-
-#### Claim
-
-
-**Says:** every version tag the project declares appears among the built lib's versioned exports
-
-**Held against:** the project's declared version-script tags. The version script's application is the black box; the artifact's export annotations are the evidence
-
-**Recovers:** build_lib — linker (version script), over the library's symbol-version nodes. a version script is what attaches version nodes to exported symbols. As with the soname, the tool is a black box and the annotations it wrote are the evidence
-
-**Checked at:** ocaml: build_lib_post; python: build_lib_post
-
-#### Method: declared_tags_vs_library_exports
-
-| | |
-| --- | --- |
-| how | inspects several artifacts and compares them |
-| against | declaration |
-| implemented | yes |
-| ocaml/cstubs@built | fires at build_lib |
-|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
-| python/cext@built | fires at build_lib |
-|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
-| limits | presence of a tag says nothing about the symbols inside it, nor about compatibility beyond the declared tags. |
-
-**Examples**
-
-**1. reports `violated`** — finding: `version TINY_2.0 not exported`
-
-reads: `DECLARED version tags (1)`, `provider version tags lib.json`
-
-`lib.json`:
-
-```json
-{"kind": "native", "path": "fx",
-    "versioned_exports": {"tiny_sum": "TINY_1.0"}}
-```
-
-**2. reports `vacuous`**
-
-reads: `provider version tags lib.json`
-
-`lib.json`:
-
-```json
-{"kind": "native", "path": "fx",
-    "versioned_exports": {"tiny_sum": "TINY_1.0"}}
 ```
 
 
@@ -973,29 +974,29 @@ reads: `header signatures hdr.json`, `stub signatures agree.json`
 ```
 
 
-### dependencies_provided
+### soname_matches_requirement
 
 | | |
 | --- | --- |
-| subject | dependencies |
+| subject | identity |
 | about | structural — artifacts and their fit |
 | obligation | toolchain-rule |
 | status | evaluated |
-| fault tag | needed_unprovided |
-| why it exists | components.md §5.6 |
+| fault tag | abi_soname |
+| why it exists | components.md §4.1 |
 
 #### Claim
 
 
-**Says:** every library name the consumer records as NEEDED has a provider in this world
+**Says:** the lib's soname is the one the consumer recorded it needs
 
-**Held against:** this world's modeled provider plus the family's fixed ambient-runtime list. A recorded name answered by neither is the falsifier — which is what a consumer linked where an implementation was split out, and deployed where it is folded in, produces
+**Held against:** the consumer's own recorded dependency list. A provider advertising a name the consumer never recorded will not be selected for it
 
-**Recovers:** probe_binding_ocaml — linker, then the dynamic loader, over the consumer's NEEDED list. The linker wrote it and the LOADER re-checks it at every load, which is why the probe is the action named here rather than the link. the linker recorded a set of dependency names, and the loader's rule is that each resolves to an object. This recovers the LOADER'S rule statically, for the names recorded, against the providers this world models
+**Recovers:** build_binding_ocaml — linker, over the consumer's NEEDED record. The link that wrote it ran in whatever world built that consumer, which this graph need not contain. the linker's rule is that a recorded dependency names something it resolved against. It ran in whatever world built that consumer; this asks whether the name it wrote down is the one THIS world's provider answers to
 
 **Checked at:** ocaml: build_binding_ocaml_pre → probe_binding_ocaml_pre; python: build_binding_python_pre → probe_binding_python_pre
 
-#### Method: recorded_dependencies_vs_world_providers
+#### Method: library_identity_vs_consumer_record
 
 | | |
 | --- | --- |
@@ -1008,11 +1009,11 @@ reads: `header signatures hdr.json`, `stub signatures agree.json`
 | python/cext@built | fires at build_binding_python, probe_binding_python |
 |   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
 |   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json \| build_binding_python/inspect.json |
-| limits | ONE modeled provider, direct dependencies only, and an ambient list that is code rather than a per-world policy. It does not enumerate every provider, traverse transitive dependencies, verify the ambient libraries exist, or run a loader — so a name supplied by a second unmodeled library is reported unprovided. |
+| limits | name equality only. It does not establish which object the loader will select, nor that the selected object means the same thing as the one linked against. |
 
 **Examples**
 
-**1. reports `violated`** — finding: `libtinfo.so.6`
+**1. reports `violated`** — finding: `libtiny.so.1`
 
 reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
 
@@ -1020,17 +1021,88 @@ reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
 
 ```json
 {"kind": "native", "path": "fx",
-    "elf": {"soname": "libncursesw.so.6", "needed": []}}
+    "elf": {"soname": "libtiny.so.2", "needed": []}}
 ```
 
 `consumer.json`:
 
 ```json
 {"kind": "native", "path": "fx",
-    "elf": {"soname": null,
-            "needed": ["libncursesw.so.6", "libtinfo.so.6", "libc.so.6"]}}
+    "elf": {"soname": null, "needed": ["libtiny.so.1", "libc.so.6"]}}
 ```
 
+
+### behavior_matches
+
+| | |
+| --- | --- |
+| subject | behavior |
+| about | behavioral — what running it does |
+| obligation | behavioral-spec |
+| status | planned |
+| fault tag | behavior |
+| why it exists | components.md §6.3.2 |
+| waiting on | somebody to state a spec. This is one row standing for a CATEGORY — derived compatibility tests, the project's own suite, a provider/consumer round trip — and it needs both an expectation and a comparison. Introduce one test-suite reuse case, then one C/binding differential case: the first supplies the expectation, the second the comparison |
+
+#### Claim
+
+
+**Says:** the probe's trace matches what was recorded for it
+
+**Held against:** the probe's own embedded assertions. There is no project-independent statement of what a binding should compute, so the expectation is whatever the probe asserts — which bounds this agreement to the inputs that probe exercises
+
+**Recovers:** NO ACTION'S RULE. no toolchain enforces that a function returns what a project expected — a compiler checks types, a linker checks names, and neither has an opinion about results. There is no relation here to recover, only one to STATE, which is why this is unimplemented in a different sense from an agreement that merely lacks evidence
+
+**Checked at:** ocaml: probe_binding_ocaml_post; python: probe_binding_python_post
+
+#### Method: probe_assertions
+
+| | |
+| --- | --- |
+| how | runs a probe and inspects its result |
+| against | declaration |
+| implemented | no — planned |
+| why not | the expected values live inside the probe's source as embedded assertions, and the observation is the probe's own exit code; the registry has no evaluator that could read them. Wiring one means giving the project a place to state expected results outside the probe. NOTE (2026-09-15, user) that this is ONE ROW standing for a CATEGORY, and the category has at least three members that want different machinery: tests DERIVED from a version-compatibility claim (canary generates them), the project's OWN test suite (canary runs what upstream wrote), and ROUND-TRIP tests across the provider and consumer sides of a binding (canary composes them). Wiring this row without deciding which of the three it is would fix the narrowest one by accident |
+| ocaml/cstubs@built | fires at probe_binding_ocaml |
+| python/cext@built | fires at probe_binding_python |
+| limits | not evaluated here. The probe's assertions cover the inputs that probe runs and nothing else. |
+| counterexamples | none — nothing shows it can fail |
+
+### repack_preserves_api
+
+| | |
+| --- | --- |
+| subject | repacking |
+| about | behavioral — what running it does |
+| obligation | behavioral-spec |
+| status | planned |
+| fault tag | api_repack |
+| why it exists | components.md §6.3.1 |
+| waiting on | a statement of what "preserves" permits — a rename, a merge, a deliberate omission (components.md §6.3.1). The claim has to be scoped before it can be named properly, let alone checked |
+
+#### Claim
+
+
+**Says:** the user-facing layer is a sound repacking of the stub-facing one
+
+**Held against:** an explicit statement of which transformations a wrapper may make. Until the project supplies one, there is no reference to compare against: a wrapper may rename, combine, restrict or extend, and none of those is refuted by a name comparison
+
+**Recovers:** NO ACTION'S RULE. a binding's two layers are both written by the author, and nothing compiles one against the other in a way that could reject a rename, a merge or a deliberate omission. This is a claim about INTENT, and it needs stating before it can be checked
+
+**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
+
+#### Method: declared_repacking_relation
+
+| | |
+| --- | --- |
+| how | runs a probe and inspects its result |
+| against | declaration |
+| implemented | no — planned |
+| why not | the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a binding against. check_api_repack compares names and declared renames, which refutes a stub-side orphan but not a wrapper whose implementation drifted; the probe's own assertions carry that case today |
+| ocaml/cstubs@built | fires at probe_binding_ocaml |
+| python/cext@built | fires at probe_binding_python |
+| limits | not evaluated. The name-based helper, when it is connected, will refute orphaned externals only. |
+| counterexamples | none — nothing shows it can fail |
 
 ### staged_interface_preserved
 
@@ -1132,78 +1204,6 @@ reads: `native summary bt.json`, `staged native summary absent.json`
     "elf": {"soname": "libtiny.so.1", "needed": []}}
 ```
 
-
-### repack_preserves_api
-
-| | |
-| --- | --- |
-| subject | repacking |
-| about | behavioral — what running it does |
-| obligation | behavioral-spec |
-| status | planned |
-| fault tag | api_repack |
-| why it exists | components.md §6.3.1 |
-| waiting on | a statement of what "preserves" permits — a rename, a merge, a deliberate omission (components.md §6.3.1). The claim has to be scoped before it can be named properly, let alone checked |
-
-#### Claim
-
-
-**Says:** the user-facing layer is a sound repacking of the stub-facing one
-
-**Held against:** an explicit statement of which transformations a wrapper may make. Until the project supplies one, there is no reference to compare against: a wrapper may rename, combine, restrict or extend, and none of those is refuted by a name comparison
-
-**Recovers:** NO ACTION'S RULE. a binding's two layers are both written by the author, and nothing compiles one against the other in a way that could reject a rename, a merge or a deliberate omission. This is a claim about INTENT, and it needs stating before it can be checked
-
-**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
-
-#### Method: declared_repacking_relation
-
-| | |
-| --- | --- |
-| how | runs a probe and inspects its result |
-| against | declaration |
-| implemented | no — planned |
-| why not | the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a binding against. check_api_repack compares names and declared renames, which refutes a stub-side orphan but not a wrapper whose implementation drifted; the probe's own assertions carry that case today |
-| ocaml/cstubs@built | fires at probe_binding_ocaml |
-| python/cext@built | fires at probe_binding_python |
-| limits | not evaluated. The name-based helper, when it is connected, will refute orphaned externals only. |
-| counterexamples | none — nothing shows it can fail |
-
-### repack_complete
-
-| | |
-| --- | --- |
-| subject | repacking |
-| about | behavioral — what running it does |
-| obligation | behavioral-spec |
-| status | planned |
-| fault tag | api_add |
-| why it exists | components.md §6.3.1 |
-| waiting on | the same scoping as repack_preserves_api, plus the two agreements it composes. A composition cannot be better rooted than its weakest part |
-
-#### Claim
-
-
-**Says:** the repack loses nothing the original had
-
-**Held against:** a statement of what the binding is allowed to omit. Without one there is no reference: a binding that deliberately wraps a subset is indistinguishable from one that dropped something
-
-**Recovers:** NO ACTION'S RULE. unrooted TWICE OVER: it composes one agreement that has a rule (the linker's) with two that do not. A composition cannot be better rooted than its weakest part
-
-**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
-
-#### Method: composed_faithfulness
-
-| | |
-| --- | --- |
-| how | runs a probe and inspects its result |
-| against | declaration |
-| implemented | no — planned |
-| why not | the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreements it composes — repacking and behaviour — have no evaluator either. check_api_faithfulness composes three verdicts and is ready for the day they exist |
-| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-| python/cext@built | fires at build_binding_python, probe_binding_python |
-| limits | not evaluated. The composition function exists and is pure; what it would mean is the open decision. |
-| counterexamples | none — nothing shows it can fail |
 
 ---
 

@@ -1972,7 +1972,11 @@ let render_html (m : t) ~(generated_at : string) : string =
              ^ "</td><td>" ^ tally code
              ^ "</td><td>" ^ blame_tally code ^ "</td></tr>"))
     ^ "</tbody></table>"
-    ^ "<p class=\"kq\"><b>One row per distinct pattern.</b> A claim whose \
+    ^ "<p class=\"kq\"><b>Rows are ordered by when the check fires</b> — \
+       earliest action first, then language, then mechanism — so the table \
+       reads in the order a run happens, which is the result matrix's \
+       principle applied to rows; a row that fires nowhere sorts last. \
+       <b>One row per distinct pattern:</b> a claim whose \
        firing differs between mechanisms gets a row each — a cstubs row and \
        a cext row mark different action columns — and a uniform claim stays \
        one row and says so in <b>mech</b>. \
@@ -1994,6 +1998,11 @@ let render_html (m : t) ~(generated_at : string) : string =
        say less than the truth. A name appears only where the row is a \
        strict subset; <code>none</code> in both means no mechanism carries \
        this at all. \
+       Note <code>soname</code> is an ELF word for a format-neutral fact — \
+       the library's own recorded identity, <code>DT_SONAME</code> on ELF \
+       and the <code>LC_ID_DYLIB</code> install name on Mach-O, which the \
+       inspector writes into one field; those rows are <code>EM</code>, and \
+       only the two version-node claims are really ELF-only. \
        <b>fmt</b> E elf &middot; M mach-o — a format changes whether a claim \
        APPLIES, never where it fires, so it annotates a row rather than \
        splitting one; <code>E&middot;</code> is not a gap, Mach-O has no \

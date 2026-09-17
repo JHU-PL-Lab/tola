@@ -2542,6 +2542,72 @@ let agreement_bridge_pins : pure_test list =
             List.length rows > List.length CR.agreement_registry
           in
           per_row_ok && covers_every && expands) };
+    (* THE ROOT SPEAKS THE ROW'S LANGUAGE (2026-09-17, user: "the R for
+       python is on build_binding_ocaml cell").
+
+       `ag_rooted_in.rt_action` is one string and has to pick a spelling,
+       so `required_symbols_exported` says `build_binding_ocaml`. That is
+       right for the cstubs row and wrong for the cext row, which marked
+       its `R` in the OCaml column and measured `lag` from there — 7,
+       when the linker that wrote those undefined references ran at
+       `build_binding_python` and the honest answer is 0.
+
+       Two claims, and the second is what makes the first non-vacuous:
+
+       (a) a row's `R` never lands in a column belonging to a language
+           the row does not carry;
+       (b) the Python rows' lags are SMALL. Before the fix five rows read
+           3, 4, 6 or 7 — an artifact of measuring to the wrong column,
+           not a fact about evidence travelling. A bound of 2 would have
+           caught it and will catch a regression. *)
+    { name = "agreements.rooting_speaks_the_rows_language";
+      check =
+        (fun () ->
+          let bad =
+            List.concat_map (CR.overview_rows ()) ~f:(fun (row : CR.overview_row) ->
+                match row.CR.ov_mechs with
+                | [] -> []
+                | m :: _ ->
+                    let mine =
+                      (Canary_mechanism.info_of_mechanism m)
+                        .Canary_mechanism.mi_lang
+                    in
+                    (* An action belongs to another language exactly when
+                       re-languaging it to this row's changes it —
+                       [retarget_action] is a no-op on the actions that
+                       carry no language, which is what makes this a
+                       total test rather than a list of constructors. *)
+                    let misrooted =
+                      List.filter_map row.CR.ov_cells ~f:(fun (a, mk) ->
+                          match mk with
+                          | CR.Rooted | CR.Rooted_and_detected ->
+                              if Poly.equal (CR.retarget_action ~lang:mine a) a
+                              then None
+                              else
+                                Some
+                                  (Printf.sprintf
+                                     "%s [%s] roots at %s — another \
+                                      language's action"
+                                     row.CR.ov_agreement.CR.ag_slug
+                                     (Canary_lang.string_of_lang mine)
+                                     (Canary_basic.string_of_action a))
+                          | _ -> None)
+                    in
+                    let lag_bad =
+                      match CR.row_lag row with
+                      | Some d when d > 2 ->
+                          [ Printf.sprintf
+                              "%s [%s] has lag %d — suspiciously far; the \
+                               language-blind rooting bug read 3..7"
+                              row.CR.ov_agreement.CR.ag_slug
+                              (Canary_lang.string_of_lang mine) d ]
+                      | _ -> []
+                    in
+                    misrooted @ lag_bad)
+          in
+          if not (List.is_empty bad) then
+            List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
+          List.is_empty bad) };
     (* THE FORMAT DIMENSION IS REAL, NOT DECORATIVE (2026-09-17).
 
        `ag_formats` is a third reason a claim can be inapplicable, and

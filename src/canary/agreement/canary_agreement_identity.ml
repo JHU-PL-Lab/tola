@@ -22,7 +22,24 @@ open Canary_agreement_common
 
     The fields are normalized across formats; the resolution semantics
     behind them are NOT the same, which is why a name match here is
-    never a statement about which object will be loaded. *)
+    never a statement about which object will be loaded.
+
+    ⚠ **`soname` IS AN ELF WORD FOR A FORMAT-NEUTRAL FACT** (2026-09-17,
+    user: "we have several agreement on soname, but soname itself is an
+    ELF term"). The field holds the library's own recorded identity —
+    ELF's `DT_SONAME` on Linux, the `LC_ID_DYLIB` install name on
+    macOS — and `inspect_native.py` writes both into this one key on
+    purpose. So `soname_matches_declaration` and
+    `soname_matches_requirement` are NOT ELF-only, which is why their
+    `ag_formats` is both and the overview shows them `EM`, unlike the
+    two version-node claims that really are ELF-only.
+
+    What is wrong is the NAME, not the coverage: the slug says ELF and
+    the claim does not. Renaming it is a migration — the slug appears in
+    logs, verdict markers, `--disable-agreement` and the doc, and the
+    2026-09-12 descriptive rename deliberately made old spellings fail
+    to parse — so it is a decision, not a tidy-up. Until then this
+    comment is the answer to "does this work on a Mac". *)
 type abi_surface_inspect = {
   path : string;
   soname : string option;
