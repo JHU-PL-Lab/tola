@@ -4338,6 +4338,16 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           && count "class=\"lm\"" = 2 * List.length rows
           && String.is_substring h ~substring:">cstubs<"
           && String.is_substring h ~substring:">ocaml<"
+          (* WHERE THE CLAIM COMES FROM, one cell per row (2026-09-17).
+             `kind` has its OWN class rather than sharing `lm`'s: three
+             cells under one class silently broke the count above, which
+             is how the column arrived. Both kinds in use are asserted
+             by name, so a registry that stopped distinguishing them —
+             every method declared `Declared_facts`, say — fails here
+             rather than rendering a constant column. *)
+          && count "class=\"kind\"" = List.length rows
+          && String.is_substring h ~substring:">declaration<"
+          && String.is_substring h ~substring:">peer<"
           && count "class=\"lm\"></td>"
              = List.count rows ~f:(fun (row : overview_row) ->
                    String.is_empty (lang_label row.ov_mechs))

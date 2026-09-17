@@ -1901,7 +1901,8 @@ let render_html (m : t) ~(generated_at : string) : string =
       List.map (CR.summary_rows ()) ~f:(fun sr -> (sr.CR.sr_slug, sr))
     in
     "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
-     <th>implemented at</th><th>lang</th><th>mech</th><th>fmt</th>"
+     <th>kind</th><th>implemented at</th><th>lang</th><th>mech</th>\
+     <th>fmt</th>"
     ^ String.concat ~sep:""
         (List.map CR.overview_artifact_columns ~f:(fun k ->
              "<th class=\"seth\">" ^ esc (CR.artifact_col_label k) ^ "</th>"))
@@ -1944,7 +1945,9 @@ let render_html (m : t) ~(generated_at : string) : string =
                      (esc family)
              in
              "<tr><td class=\"kc\">" ^ esc code ^ "</td><td>"
-             ^ esc r.CR.ag_slug ^ "</td>" ^ impl_cell ^ "<td class=\"lm\">"
+             ^ esc r.CR.ag_slug ^ "</td><td class=\"kind\">"
+             ^ esc (CR.kind_label r)
+             ^ "</td>" ^ impl_cell ^ "<td class=\"lm\">"
              ^ esc (CR.lang_label row.CR.ov_mechs)
              ^ "</td><td class=\"lm\">"
              ^ esc (CR.mech_label row.CR.ov_mechs)
@@ -1985,6 +1988,17 @@ let render_html (m : t) ~(generated_at : string) : string =
        a peer comparison shows two. \
        R the action whose rule RAN (hover for the tool and the artifact) \
        &middot; D a method FIRES here &middot; R+D both. \
+       <b>kind</b> WHERE THE CLAIM COMES FROM — what it is held against, \
+       which is not where its rule RAN (that is the <b>R</b> column). \
+       <code>declaration</code> the project said so &middot; \
+       <code>peer</code> the other artifact in this world says so &middot; \
+       <code>artifact</code> nothing says so — it is the format's own rule, \
+       with NO second party &middot; <code>sibling-world</code> &middot; \
+       <code>test-suite</code>. All 13 are declaration or peer today; the \
+       other three kinds are modelled and unused, and the standalone \
+       <code>artifact</code> kind is the emptiest — an installed library \
+       carrying a RUNPATH into its own build tree is wrong on its own terms \
+       and nothing checks it. \
        <b>implemented at</b> <code>&lt;module&gt;&middot;&lt;function&gt;</code> \
        in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
        (hover for the file); a RED cell is an agreement with no evaluator \
@@ -2224,6 +2238,10 @@ table.grid td.impl { font-family: ui-monospace, monospace; font-size: .68rem;
   white-space: nowrap; }
 table.grid td.impl.none { background: #ffebe9; color: #a40e26; font-weight: 700; }
 table.grid td.lm { font-size: .72rem; white-space: nowrap; }
+/* WHERE THE CLAIM COMES FROM. Its own class, not `lm`'s, because the
+   overview pin counts `lm` cells against the lang/mech labels and a
+   third cell sharing the class silently broke that count. */
+table.grid td.kind { font-size: .72rem; white-space: nowrap; color: #57606a; }
 td.g.rd { background: #d1e7dd; color: #0a3622; }   /* rule and check together */
 td.g.rr { background: #ffe8cc; color: #7a3e00; }   /* the rule ran here */
 td.g.dd { background: #dbeafe; color: #0a3069; }   /* the check fires here */

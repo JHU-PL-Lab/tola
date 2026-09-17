@@ -1034,9 +1034,29 @@ let mech_rank (m : Canary_mechanism.mechanism) : int =
   | Some (i, _) -> i
   | None -> 99
 
+(* WHAT WORKS COMES FIRST (2026-09-17, user: "I am also think whether we
+   can put the un-landed agreement at the bottom rows of this table").
+
+   An agreement with no evaluator sorts below every implemented one,
+   whatever it fires at. It is the primary key rather than a tiebreak
+   because the table's first job is to say what canary CAN check, and
+   `repack_complete` sitting between two working claims at the same
+   action reads as though it were one of them.
+
+   The split is REGISTRY-level, not log-level — "has an evaluator", not
+   "has decided something in a real run". Landing is a fact about run
+   logs, and this table is generated from the registry alone so that it
+   does not change whenever anything runs; `canary checks --landing` is
+   the log-level answer. So the bottom block is the 3 unimplemented
+   claims, not the 5 unlanded ones. *)
+let is_planned (row : overview_row) : bool =
+  List.for_all row.ov_agreement.ag.ag_methods ~f:(fun m ->
+      Option.is_none m.m_eval)
+
 let sort_overview_rows (rows : overview_row list) : overview_row list =
   let key (row : overview_row) =
-    ( first_firing_index row,
+    ( (if is_planned row then 1 else 0),
+      first_firing_index row,
       (match row.ov_mechs with
        | m :: _ ->
            lang_rank (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_lang
@@ -1215,6 +1235,40 @@ let mech_label (ms : Canary_mechanism.mechanism list) : string =
         String.concat ~sep:","
           (List.map ms ~f:Canary_mechanism.string_of_mechanism)
 
+(** WHERE THE CLAIM COMES FROM — the KIND cell (2026-09-17, user: "I
+    would like to have the agreement kind on the table, on where the
+    agreement comes from … we still have standalone agreement e.g. a
+    native binary shouldn't contain local path if it's to installed").
+
+    It was already modelled and never shown: [m_reference] names the
+    SECOND PARTY a method compares against, which is exactly "where the
+    claim comes from" —
+
+      declaration    the project said so
+      peer           the other artifact in this world says so
+      artifact       nothing says so; it is the format's own rule, and
+                     there is no second party at all
+      sibling-world  evidence kept from another world says so
+      test-suite     an upstream suite's expected results say so
+
+    NOT to be confused with the ORIGIN, which the action columns carry.
+    The origin is WHICH ACTION's rule ran; the kind is WHAT THE CLAIM IS
+    HELD AGAINST. A declaration comparison whose origin produced its
+    target is theory.md §5.11's top-left group — "is the thing you made
+    what you said it would be" — and that group is the INTERSECTION of
+    the two axes, not either one of them.
+
+    ⚠ Today every one of the 13 is `declaration` or `peer`. The other
+    three kinds are declared in the type and used by nothing, which the
+    column makes visible: `artifact` in particular is the standalone
+    well-formedness claim — an installed library carrying a RUNPATH into
+    the build tree it was made in is wrong on its own terms, against no
+    declaration and no peer — and it has no agreement. *)
+let kind_label (r : agreement_row) : string =
+  List.map r.ag.ag_methods ~f:(fun m -> string_of_reference m.m_reference)
+  |> List.dedup_and_sort ~compare:String.compare
+  |> String.concat ~sep:","
+
 (** WHERE THE CODE IS: the family file's topic and the evaluator's name,
     or [None] for the function when no evaluator exists — which the
     renderers show as a RED cell pointing at the file it would go in. *)
@@ -1264,8 +1318,8 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let rows = overview_rows ~provision () in
   let cols = overview_columns () in
   let head =
-    Printf.sprintf "%-4s %-28s %-36s %-7s %-14s %-3s | %s | " "code"
-      "agreement" "implemented at" "lang" "mech" "fmt"
+    Printf.sprintf "%-4s %-28s %-12s %-36s %-7s %-14s %-3s | %s | " "code"
+      "agreement" "kind" "implemented at" "lang" "mech" "fmt"
       (String.concat ~sep:" "
          (List.map overview_artifact_columns ~f:(fun k ->
               pad_display 3 (artifact_col_label k))))
@@ -1276,8 +1330,8 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let body =
     List.map rows ~f:(fun row ->
         let r = row.ov_agreement in
-        Printf.sprintf "%-4s %-28s %s %-7s %-14s %s | %s | %s | %3s | %s"
-          (short_code_of_slug r.ag_slug) r.ag_slug
+        Printf.sprintf "%-4s %-28s %-12s %s %-7s %-14s %s | %s | %s | %3s | %s"
+          (short_code_of_slug r.ag_slug) r.ag_slug (kind_label r)
           (pad_display 36 (impl_label r))
           (lang_label row.ov_mechs) (mech_label row.ov_mechs)
           (pad_display 3 (format_marks r))
@@ -1323,6 +1377,22 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         "D  a method FIRES here, reading what survived";
         "◉  both: the check fires at the very action whose rule it recovers";
         "";
+        "kind = WHERE THE CLAIM COMES FROM — what it is held against, \
+         which is not";
+        "       the same as where its rule RAN (that is the R column). \
+         `declaration` =";
+        "       the project said so · `peer` = the other artifact in this \
+         world says so ·";
+        "       `artifact` = nothing says so, it is the format's own rule \
+         and there is NO";
+        "       second party · `sibling-world` · `test-suite`. All 13 are \
+         declaration or";
+        "       peer today; the other three kinds are modelled and unused, \
+         and the";
+        "       standalone `artifact` kind is the emptiest — an installed \
+         library with a";
+        "       RUNPATH into its own build tree is wrong on its own terms \
+         and unchecked.";
         "implemented at — `<family>·<function>` in \
          src/canary/agreement/canary_agreement_<family>.ml.";
         "       `·—` = NO EVALUATOR YET; the family names the file it would \

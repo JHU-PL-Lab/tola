@@ -683,42 +683,6 @@ reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
 ```
 
 
-### repack_complete
-
-| | |
-| --- | --- |
-| subject | repacking |
-| about | behavioral — what running it does |
-| obligation | behavioral-spec |
-| status | planned |
-| fault tag | api_add |
-| why it exists | components.md §6.3.1 |
-| waiting on | the same scoping as repack_preserves_api, plus the two agreements it composes. A composition cannot be better rooted than its weakest part |
-
-#### Claim
-
-
-**Says:** the repack loses nothing the original had
-
-**Held against:** a statement of what the binding is allowed to omit. Without one there is no reference: a binding that deliberately wraps a subset is indistinguishable from one that dropped something
-
-**Recovers:** NO ACTION'S RULE. unrooted TWICE OVER: it composes one agreement that has a rule (the linker's) with two that do not. A composition cannot be better rooted than its weakest part
-
-**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
-
-#### Method: composed_faithfulness
-
-| | |
-| --- | --- |
-| how | runs a probe and inspects its result |
-| against | declaration |
-| implemented | no — planned |
-| why not | the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreements it composes — repacking and behaviour — have no evaluator either. check_api_faithfulness composes three verdicts and is ready for the day they exist |
-| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-| python/cext@built | fires at build_binding_python, probe_binding_python |
-| limits | not evaluated. The composition function exists and is pure; what it would mean is the open decision. |
-| counterexamples | none — nothing shows it can fail |
-
 ### required_symbols_exported
 
 | | |
@@ -1032,78 +996,6 @@ reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
 ```
 
 
-### behavior_matches
-
-| | |
-| --- | --- |
-| subject | behavior |
-| about | behavioral — what running it does |
-| obligation | behavioral-spec |
-| status | planned |
-| fault tag | behavior |
-| why it exists | components.md §6.3.2 |
-| waiting on | somebody to state a spec. This is one row standing for a CATEGORY — derived compatibility tests, the project's own suite, a provider/consumer round trip — and it needs both an expectation and a comparison. Introduce one test-suite reuse case, then one C/binding differential case: the first supplies the expectation, the second the comparison |
-
-#### Claim
-
-
-**Says:** the probe's trace matches what was recorded for it
-
-**Held against:** the probe's own embedded assertions. There is no project-independent statement of what a binding should compute, so the expectation is whatever the probe asserts — which bounds this agreement to the inputs that probe exercises
-
-**Recovers:** NO ACTION'S RULE. no toolchain enforces that a function returns what a project expected — a compiler checks types, a linker checks names, and neither has an opinion about results. There is no relation here to recover, only one to STATE, which is why this is unimplemented in a different sense from an agreement that merely lacks evidence
-
-**Checked at:** ocaml: probe_binding_ocaml_post; python: probe_binding_python_post
-
-#### Method: probe_assertions
-
-| | |
-| --- | --- |
-| how | runs a probe and inspects its result |
-| against | declaration |
-| implemented | no — planned |
-| why not | the expected values live inside the probe's source as embedded assertions, and the observation is the probe's own exit code; the registry has no evaluator that could read them. Wiring one means giving the project a place to state expected results outside the probe. NOTE (2026-09-15, user) that this is ONE ROW standing for a CATEGORY, and the category has at least three members that want different machinery: tests DERIVED from a version-compatibility claim (canary generates them), the project's OWN test suite (canary runs what upstream wrote), and ROUND-TRIP tests across the provider and consumer sides of a binding (canary composes them). Wiring this row without deciding which of the three it is would fix the narrowest one by accident |
-| ocaml/cstubs@built | fires at probe_binding_ocaml |
-| python/cext@built | fires at probe_binding_python |
-| limits | not evaluated here. The probe's assertions cover the inputs that probe runs and nothing else. |
-| counterexamples | none — nothing shows it can fail |
-
-### repack_preserves_api
-
-| | |
-| --- | --- |
-| subject | repacking |
-| about | behavioral — what running it does |
-| obligation | behavioral-spec |
-| status | planned |
-| fault tag | api_repack |
-| why it exists | components.md §6.3.1 |
-| waiting on | a statement of what "preserves" permits — a rename, a merge, a deliberate omission (components.md §6.3.1). The claim has to be scoped before it can be named properly, let alone checked |
-
-#### Claim
-
-
-**Says:** the user-facing layer is a sound repacking of the stub-facing one
-
-**Held against:** an explicit statement of which transformations a wrapper may make. Until the project supplies one, there is no reference to compare against: a wrapper may rename, combine, restrict or extend, and none of those is refuted by a name comparison
-
-**Recovers:** NO ACTION'S RULE. a binding's two layers are both written by the author, and nothing compiles one against the other in a way that could reject a rename, a merge or a deliberate omission. This is a claim about INTENT, and it needs stating before it can be checked
-
-**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
-
-#### Method: declared_repacking_relation
-
-| | |
-| --- | --- |
-| how | runs a probe and inspects its result |
-| against | declaration |
-| implemented | no — planned |
-| why not | the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a binding against. check_api_repack compares names and declared renames, which refutes a stub-side orphan but not a wrapper whose implementation drifted; the probe's own assertions carry that case today |
-| ocaml/cstubs@built | fires at probe_binding_ocaml |
-| python/cext@built | fires at probe_binding_python |
-| limits | not evaluated. The name-based helper, when it is connected, will refute orphaned externals only. |
-| counterexamples | none — nothing shows it can fail |
-
 ### staged_interface_preserved
 
 | | |
@@ -1204,6 +1096,114 @@ reads: `native summary bt.json`, `staged native summary absent.json`
     "elf": {"soname": "libtiny.so.1", "needed": []}}
 ```
 
+
+### repack_complete
+
+| | |
+| --- | --- |
+| subject | repacking |
+| about | behavioral — what running it does |
+| obligation | behavioral-spec |
+| status | planned |
+| fault tag | api_add |
+| why it exists | components.md §6.3.1 |
+| waiting on | the same scoping as repack_preserves_api, plus the two agreements it composes. A composition cannot be better rooted than its weakest part |
+
+#### Claim
+
+
+**Says:** the repack loses nothing the original had
+
+**Held against:** a statement of what the binding is allowed to omit. Without one there is no reference: a binding that deliberately wraps a subset is indistinguishable from one that dropped something
+
+**Recovers:** NO ACTION'S RULE. unrooted TWICE OVER: it composes one agreement that has a rule (the linker's) with two that do not. A composition cannot be better rooted than its weakest part
+
+**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
+
+#### Method: composed_faithfulness
+
+| | |
+| --- | --- |
+| how | runs a probe and inspects its result |
+| against | declaration |
+| implemented | no — planned |
+| why not | the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreements it composes — repacking and behaviour — have no evaluator either. check_api_faithfulness composes three verdicts and is ready for the day they exist |
+| ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
+| python/cext@built | fires at build_binding_python, probe_binding_python |
+| limits | not evaluated. The composition function exists and is pure; what it would mean is the open decision. |
+| counterexamples | none — nothing shows it can fail |
+
+### behavior_matches
+
+| | |
+| --- | --- |
+| subject | behavior |
+| about | behavioral — what running it does |
+| obligation | behavioral-spec |
+| status | planned |
+| fault tag | behavior |
+| why it exists | components.md §6.3.2 |
+| waiting on | somebody to state a spec. This is one row standing for a CATEGORY — derived compatibility tests, the project's own suite, a provider/consumer round trip — and it needs both an expectation and a comparison. Introduce one test-suite reuse case, then one C/binding differential case: the first supplies the expectation, the second the comparison |
+
+#### Claim
+
+
+**Says:** the probe's trace matches what was recorded for it
+
+**Held against:** the probe's own embedded assertions. There is no project-independent statement of what a binding should compute, so the expectation is whatever the probe asserts — which bounds this agreement to the inputs that probe exercises
+
+**Recovers:** NO ACTION'S RULE. no toolchain enforces that a function returns what a project expected — a compiler checks types, a linker checks names, and neither has an opinion about results. There is no relation here to recover, only one to STATE, which is why this is unimplemented in a different sense from an agreement that merely lacks evidence
+
+**Checked at:** ocaml: probe_binding_ocaml_post; python: probe_binding_python_post
+
+#### Method: probe_assertions
+
+| | |
+| --- | --- |
+| how | runs a probe and inspects its result |
+| against | declaration |
+| implemented | no — planned |
+| why not | the expected values live inside the probe's source as embedded assertions, and the observation is the probe's own exit code; the registry has no evaluator that could read them. Wiring one means giving the project a place to state expected results outside the probe. NOTE (2026-09-15, user) that this is ONE ROW standing for a CATEGORY, and the category has at least three members that want different machinery: tests DERIVED from a version-compatibility claim (canary generates them), the project's OWN test suite (canary runs what upstream wrote), and ROUND-TRIP tests across the provider and consumer sides of a binding (canary composes them). Wiring this row without deciding which of the three it is would fix the narrowest one by accident |
+| ocaml/cstubs@built | fires at probe_binding_ocaml |
+| python/cext@built | fires at probe_binding_python |
+| limits | not evaluated here. The probe's assertions cover the inputs that probe runs and nothing else. |
+| counterexamples | none — nothing shows it can fail |
+
+### repack_preserves_api
+
+| | |
+| --- | --- |
+| subject | repacking |
+| about | behavioral — what running it does |
+| obligation | behavioral-spec |
+| status | planned |
+| fault tag | api_repack |
+| why it exists | components.md §6.3.1 |
+| waiting on | a statement of what "preserves" permits — a rename, a merge, a deliberate omission (components.md §6.3.1). The claim has to be scoped before it can be named properly, let alone checked |
+
+#### Claim
+
+
+**Says:** the user-facing layer is a sound repacking of the stub-facing one
+
+**Held against:** an explicit statement of which transformations a wrapper may make. Until the project supplies one, there is no reference to compare against: a wrapper may rename, combine, restrict or extend, and none of those is refuted by a name comparison
+
+**Recovers:** NO ACTION'S RULE. a binding's two layers are both written by the author, and nothing compiles one against the other in a way that could reject a rename, a merge or a deliberate omission. This is a claim about INTENT, and it needs stating before it can be checked
+
+**Checked at:** ocaml: build_binding_ocaml_post → probe_binding_ocaml_post; python: build_binding_python_post → probe_binding_python_post
+
+#### Method: declared_repacking_relation
+
+| | |
+| --- | --- |
+| how | runs a probe and inspects its result |
+| against | declaration |
+| implemented | no — planned |
+| why not | the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a binding against. check_api_repack compares names and declared renames, which refutes a stub-side orphan but not a wrapper whose implementation drifted; the probe's own assertions carry that case today |
+| ocaml/cstubs@built | fires at probe_binding_ocaml |
+| python/cext@built | fires at probe_binding_python |
+| limits | not evaluated. The name-based helper, when it is connected, will refute orphaned externals only. |
+| counterexamples | none — nothing shows it can fail |
 
 ---
 
@@ -1989,6 +1989,96 @@ file's absorbed halves twice over after the merge sweep.
 
 ---
 
+
+### 5.8 Ordered next work on the table
+
+*(2026-09-17, from the user across one message — arranged here rather
+than answered in a reply, because they are four different sizes.)*
+
+**1. Three claims declare the wrong kind, and the `kind` column is what
+showed it.** `behavior_matches`, `repack_preserves_api` and
+`repack_complete` all pass `~reference:Declared_facts` — explicitly, not
+by default — and for all three it looks wrong:
+
+| claim | declares | arguably is | why |
+| --- | --- | --- | --- |
+| `behavior_matches` | `Declared_facts` | `Test_suite` | its stated blocker is that *"the expected values live inside the probe's source"* — there is no declaration canary can read, which is the definition of not being a declaration comparison. [`../directions.md`](../directions.md) §2 argues the oracle is the other side of the binding, or a suite |
+| `repack_preserves_api` | `Declared_facts` | `Peer_artifact` | "preserves" is a comparison against the PRE-repack surface, which is a peer, not a declaration |
+| `repack_complete` | `Declared_facts` | — | it composes three verdicts; whether a composition has a reference at all is the open part |
+
+All three are the unimplemented ones, so nothing evaluates today and
+nothing is wrong at run time. But `m_reference` feeds the diagnostics'
+`implicates` split — *this artifact is wrong* versus *these two
+disagree* — so it will matter the moment one gets an evaluator. Decide
+per claim; it is three small decisions, not one.
+
+**2. The standalone kind has no agreement, and the user named the first
+one.** `Artifact_itself` is in the type and used by nothing: a claim
+about one artifact against the format's own rule, with no second party.
+The instance:
+
+> *"a native binary shouldn't contain local path if it's to installed"*
+
+An installed library that records a RUNPATH into the build tree it was
+made in is wrong **on its own terms** — against no declaration and no
+peer. It is a good first `Artifact_itself` for four reasons: the
+evidence already exists (`inspect_native.py` records `runpath` and
+`rpath`), it is distance 0, it is rooted in a real tool's rule (the
+install step is supposed to rewrite those paths), and the falsifier is
+one line — install a library and look. It also has an off-the-shelf
+cross-check, which is item 4.
+
+**3. A second table for the DIRECTIONS.** The un-implemented claims now
+sort to the bottom of the overview, which answers half of *"put the
+un-landed agreement at the bottom rows of this table, or in a separate
+table"*. The other half is the work in [`../directions.md`](../directions.md)
+— versioning, cross-API correspondence, multiple package managers —
+which has no registry row at all and so cannot sort anywhere. Those are
+named, and their kind is known, and there is no implementation idea yet:
+
+| direction | kind it would be | what it needs |
+| --- | --- | --- |
+| Mach-O `compatibility_version` | `declaration` or `peer` | nothing new — the evidence is extracted and unread |
+| cross-API correspondence | `test-suite` | a generator, and a new action |
+| cross-package-manager discovery | `peer` | a resolver trace nothing records |
+
+They want a table of their own beside the overview, with the same
+vocabulary, because the overview's shape is only defined for a
+registered agreement.
+
+**4. An ALTERNATIVE-TOOL column, for differential comparison.** The
+user's: *"an alternative column so that we can fill into the related
+tool, who can be exactly call at the same moment to call our checking,
+then we can compare with it."*
+
+This is `rt_tool`'s sibling and NOT the same thing. `rt_tool` names the
+tool whose rule the agreement recovers — the linker, the C compiler, the
+install step — and that tool ran in the past, possibly in another world.
+The new column names a tool that could be **run right now, at the same
+step, to answer the same question independently**:
+
+| claim | could be cross-checked with |
+| --- | --- |
+| `declared_symbols_exported`, `required_symbols_exported` | `abidiff` (libabigail), `abi-compliance-checker` |
+| `soname_matches_declaration` | `patchelf --print-soname`, `otool -D` |
+| `declared_versions_exported` | `readelf --version-info`, `abidiff` |
+| `dependencies_provided` | `ldd -r`, `auditwheel show`, `delocate-listdeps` |
+| `staged_interface_preserved`, and item 2's path claim | `auditwheel` / `delocate` — they exist to check exactly staging and relocation |
+| `signatures_agree` | `abidiff` over DWARF, which is strictly stronger |
+
+The value is that a disagreement is a finding **either way**: if
+`abidiff` says compatible where we say violated, one of us is wrong, and
+finding out which is worth more than either answer alone. It is also the
+cheapest available evidence that canary's comparators are right at all —
+today nothing external confirms them.
+
+Two things to settle before building it. It is a field per agreement
+(*ag_cross_check*) if the tool answers the whole claim, or per method if
+it answers one comparison; and a column is worth having even while the
+tool is never RUN, because naming it is what makes the gap visible —
+which is the same argument as `implemented at`.
+
+---
 
 ## Appendix A. Implementation map
 
