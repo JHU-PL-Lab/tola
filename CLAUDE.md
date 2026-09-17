@@ -130,8 +130,12 @@ heavier, ~2min).
 **Start at
 [`doc/canary/design/enumeration/README.md`](doc/canary/design/enumeration/README.md)**
 and follow its *How to read this, if you are new* (four steps, ~45 min,
-stoppable after any of them). It is the map: the pipeline, the pass
-table, and the pins that arbitrate when a doc and the code disagree.
+stoppable after any of them). That file is the MAP — which doc answers
+which question, the seam with `agreement/`, the alignment rule. **The
+dataflow itself is
+[`pipeline.md`](doc/canary/design/enumeration/pipeline.md)** (split out
+2026-09-17): the IRs, the pass table, and the pins that arbitrate when a
+doc and the code disagree.
 
 The short version, so a session knows what it is looking at before
 opening anything. **Four IRs, six passes** — and the counts do not
@@ -630,12 +634,12 @@ then `required_symbols_exported` (needs a stub + native inspect on
 sqlite), then `signatures_agree`. See `agreement/model.md` §2.1.1.
 **The agreement docs are a DIRECTORY now** (2026-09-12):
 `doc/canary/design/agreement/` — `README.md` (the map: what an agreement
-is, then which file for which job), `pipeline.md` (**a project end to
-end** — the 7 points where a run touches the registry, the 4 failure
-modes behind an `unavailable`, and the landing checklist),
-`landing.md` (**what is LEFT**: per agreement, what it is waiting on;
-the four undecided states and the four kinds of work they mean; the
-distance-0 backlog), `model.md` (the model + registry integration) and
+is, then which file for which job), `landing.md` (**landing one, end to
+end** — the 8 points where a run consults the registry, the 4 failure
+modes behind an `unavailable`, the dummy action, the checklist, the four
+undecided states, the distance-0 backlog and `--strict`; it absorbed
+`pipeline.md` on 2026-09-17), `model.md` (the model + registry
+integration) and
 `components.md` (the per-component walk, and where every `ag_doc`
 anchor points — the two halves of the retired `registry.md`, split
 2026-09-17; that file's §7.4 became `backlog.md` §51).
@@ -1056,7 +1060,7 @@ world→tag maps → split `probe_lib`'s three roles (nothing ever
 
 **(3) The seam is drawn**: *agreement/ owns the CLAIM, enumeration/ owns
 the OCCASION.* `stage6_realize_steps.md` §2b is the account of when a
-check fires; `agreement/pipeline.md` is the project-facing walkthrough
+check fires; `agreement/landing.md` is the project-facing walkthrough
 and keeps its four failure modes; both READMEs state the boundary the
 same way. Still crossed in CODE: `binding_evidence_tag` /
 `lib_evidence_tags`, which are waiting to be DERIVED from

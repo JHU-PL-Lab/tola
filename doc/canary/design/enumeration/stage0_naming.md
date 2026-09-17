@@ -2,7 +2,8 @@
 
 **Kind: reference.** Not a pass: the words every pass reuses. Four senses
 of "scenario", the canonical name structure, the fault tags, the agreement
-catalogue. The pipeline map is [`README.md`](README.md).
+catalogue. The map is [`README.md`](README.md); the dataflow is
+[`pipeline.md`](pipeline.md).
 
 > 2026-08-10. Replaces `scenario_terms.md` (retired). Canonical naming scheme,
 > shared expected-outcome reference, and contract catalogue.
@@ -16,10 +17,12 @@ catalogue. The pipeline map is [`README.md`](README.md).
 | 3. Lifecycle stage                 | **stage**        | A single action in the coverage matrix                                    | `build_lib`, `fetch_binding`                  |
 | 4. Structural path                 | **path pattern** | Universal action chain from the path table (`canary paths`)               | `fetch_source → build_lib → build_binding`    |
 
-**Sense 1** is the primary one — `Canary_project_run.run_project_spec` produces scenarios.
+**Sense 1** is the primary one — `Canary_runner.run_project_spec` produces scenarios.
 **Sense 2** lives in `canary_scenario.ml` — the `good_scenarios` catalogue.
 **Sense 3** is displayed by `canary stages`. **Sense 4** is the `canary paths` command
-(18 universal chains from the action catalogue).
+(38 universal chains from the action catalogue; which of them a PROJECT
+admits is [pass 2](stage2_analyse_spec.md), `canary emit <p> --stage
+analyse`).
 
 ## Canonical scenario naming
 
@@ -184,7 +187,7 @@ the writeup — no need for a separate alignment section.
 | Below-middle | **action_graph**           | Actions-plus-pools schema (declared actions + the artifact-node pools produced by applying them).                                                               | `Canary_action.action_graph`                                                                                                                                                     |
 | Low          | **step**                   | Concrete instantiation of an action: cmdline + env + expectation. Runtime unit consumed by the four backends.                                                   | `Canary_step_model.step`                                                                                                                                                         |
 | Low (legacy) | **step_body**              | Shell-command record used by the retired YAML backend + `canary_toolchain`'s `verify_*_step` helpers (zero live consumers). Kept as placeholder.                | `Canary_basic.step_body`                                                                                                                                                         |
-| Action verb  | **action**                 | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue.                                                                               | `Canary_basic.action`                                                                                                                                                            |
+| Action verb  | **action**                 | Operational verb (`Build_lib`, `Probe_binding L`, …). See [`../ssot.md`](../ssot.md) §6.5 for the catalogue.                                                                               | `Canary_basic.action`                                                                                                                                                            |
 
 ...
 | Attribute of action   | **stage**                  | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings.                                                          | (doc-only)                           |

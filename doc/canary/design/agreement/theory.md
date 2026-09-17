@@ -78,7 +78,7 @@ Three consequences, and they are the ones the catalogue keeps running into:
   immaturity — it follows from the definition.
 - **The agreement is rooted where the action ran, and detected later.** The
   pairing `(lib₁.so, v₂.h)` may compile perfectly at `build_binding`; it is
-  wrong because no `compile_c` ever ran on `(v₂.h, …) → lib₁.so`. The action
+  wrong because no `build_lib` ever ran on `(v₂.h, …) → lib₁.so`. The action
   that owns the claim and the action where evidence is available are different
   actions.
 - **One edge carries several agreements**, one per surviving projection, and
@@ -144,7 +144,7 @@ The central action, and the one with the richest surviving projection.
 | **Established** | (a) every call agrees with a visible declaration; (b) every referenced symbol is defined; (c) the output records the requested identity and the requested dependency list                                                                                           |
 | **Survives**    | exported symbol names; version tags; the recorded soname; `NEEDED`; debug information, sometimes                                                                                                                                                                    |
 | **Loss**        | relation, mostly — the declarations are gone and the definitions are compiled                                                                                                                                                                                       |
-| **Post-fact**   | *names*: `declared_symbols_exported`. *types*: the DWARF comparison (registry §2.2, proposed) — the only route back to (a), and it depends on debug information being present. *identity of the output*: `soname_matches_declaration`, `declared_versions_exported` |
+| **Post-fact**   | *names*: `declared_symbols_exported`. *types*: the DWARF comparison ([`components.md`](components.md) §2.2, proposed) — the only route back to (a), and it depends on debug information being present. *identity of the output*: `soname_matches_declaration`, `declared_versions_exported` |
 
 One projection is unclaimed: symbols the library exports that appear in
 **neither** the headers nor this project's declaration. They came from

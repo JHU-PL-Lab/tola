@@ -8,20 +8,21 @@ wants. It changes nothing about what exists. The map is
 [`README.md`](README.md).
 
 > Landed 2026-08-24, from the user's question: *"are the possible
-> config/policy issues either functions from stage 3 to stage 4, or just
-> a stage 4 refinement?"* The analysis was written in the `emit`
+> config/policy issues either functions from stage 2 to stage 3, or just
+> a stage 3 refinement?"* — the numbers there are the pre-2026-09-16
+> ones, i.e. enumerate and select. The analysis was written in the `emit`
 > proposal; it moved here once the pass existed. Revised the same day so
 > it describes the code rather than a plan.
 
 **Neither, as asked — because "config/policy" is currently three
-different things.** Separate them and only one is a 2 → 3 function, and
+different things.** Separate them and only one is a 3 → 4 function, and
 it is the one the question is pointing at.
 
 | kind | examples | where it belongs |
 | --- | --- | --- |
-| **model constraints** | `assignment_ok`, `binding_couples`, `source_ref_ok`, `shadow_filter` | stage 3, **unconditional** — they say a world cannot exist or is indistinguishable. Turning one off does not buy coverage, it buys wrong or duplicate worlds |
-| **selection** | `--thin`, `--refs`, and the queued scenario / action / project selectors | **its own pass, 2 → 3** |
-| **run configuration** | `pr_tier` Heavy/Light, failfast, root, parallelism | stage 5 and later — not about which worlds at all |
+| **model constraints** | `assignment_ok`, `binding_couples`, `source_ref_ok`, `shadow_filter` | pass 3, **unconditional** — they say a world cannot exist or is indistinguishable. Turning one off does not buy coverage, it buys wrong or duplicate worlds |
+| **selection** | `--thin`, `--refs`, and the queued scenario / action / project selectors | **its own pass, 3 → 4** |
+| **run configuration** | `pr_tier` Heavy/Light, failfast, root, parallelism | pass 6 (realize) and the backends — not about which worlds at all |
 
 Two pieces of evidence that the tree already knows this:
 
@@ -44,13 +45,14 @@ dedup/order/group then selecting — dedup keys on the pin id and so does
 correctness does not decide this, which is exactly why the question feels
 ambiguous. Legibility does, and three arguments agree:
 
-- **Stage 3's output becomes invocation-independent** — "every world this
+- **Pass 3's output becomes invocation-independent** — "every world this
   project has", a fact about the project rather than about today's flags.
-  That is what makes `emit --stage 3` diffable across runs, and it
-  sharpens `matrix.registry_shape`, which today pins 42 rows *under the
-  default config* while reading as a statement about the enumeration.
+  That is what makes `emit --stage enumerate` diffable across runs, and
+  it sharpens `matrix.registry_shape`, which computes its row set *under
+  the default config* while reading as a statement about the
+  enumeration.
 - **"Why isn't this running?" splits into two answerable questions** —
-  *it does not exist* (a pass-2 constraint) versus *you did not ask for
+  *it does not exist* (a pass-3 constraint) versus *you did not ask for
   it* (this pass). Before the split both looked identical.
 - **One question per pass.** Pass 5 doing identity, exclusivity, order
   *and* selection would be the same violation the doc reorganization has

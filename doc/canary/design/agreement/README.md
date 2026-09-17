@@ -58,12 +58,12 @@ owns them.
 | **asking why there is anything to check** | [`theory.md`](theory.md) |
 | **looking for the NEXT agreement** | [`theory.md`](theory.md) §5–§6 |
 | **asking what one agreement IS** | [`catalogue.md`](catalogue.md), or `canary checks --agreement NAME` |
-| landing an agreement on a project | [`pipeline.md`](pipeline.md) |
+| landing an agreement on a project | [`landing.md`](landing.md) |
 | **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
 | asking what is actually in use | [`landing.md`](landing.md), or `canary checks --landing` |
 | **asking why THIS agreement exists** | [`components.md`](components.md), at the anchor its registry row carries |
 | writing the paper | [`components.md`](components.md) — the component walk |
-| debugging an `unavailable` | [`catalogue.md`](catalogue.md) for where it looks, then [`pipeline.md`](pipeline.md) points 3–4 |
+| debugging an `unavailable` | [`catalogue.md`](catalogue.md) for where it looks, then [`landing.md`](landing.md) points 4–5 |
 
 - [`theory.md`](theory.md) — **where agreements come from.** An action's
   implementation embodies a relation over its inputs; running it is the only
@@ -91,9 +91,13 @@ owns them.
   not establish. Every registry row's `ag_doc` anchor points here, and
   `agreements.doc_anchors_exist` fails if a cited section stops
   existing.
-- [`pipeline.md`](pipeline.md) — **a project end to end.** The seven points
-  where a run touches the registry, what each undecided outcome means and
-  which of them is anyone's job, and the checklist for landing one.
+- [`landing.md`](landing.md) — **landing one, end to end.** The eight
+  points where a run consults the registry, the four failure modes behind
+  an `unavailable`, the dummy action, the checklist, the four undecided
+  states and what each means for the work, the distance-0 backlog, and
+  `--strict`. It absorbed `pipeline.md` on 2026-09-17, when the tracker's
+  per-agreement table became generated and what was left of it was that
+  walkthrough's tail.
 - [`landing.md`](landing.md) — **what is left.** Per agreement, what it
   is waiting on; the four undecided states and the four kinds of work
   they mean; the distance-0 backlog. It does NOT carry a landed/not
@@ -121,8 +125,9 @@ every real project until 2026-09-12, and only the second could tell.
 
 ## Which table is which
 
-Four docs here carry tables and they answer different questions. If you only
-want one: **[`catalogue.md`](catalogue.md)**, which is generated and complete.
+Three docs here carry tables and they answer different questions. If you
+only want one: **[`catalogue.md`](catalogue.md)**, which is generated and
+complete.
 
 | table | in | answers |
 | --- | --- | --- |
@@ -132,7 +137,7 @@ want one: **[`catalogue.md`](catalogue.md)**, which is generated and complete.
 | full-information per action | [`theory.md`](theory.md) §5 | what each real tool established, and what survives of it |
 | **why an agreement exists** | [`components.md`](components.md) | the per-component rationale each `ag_doc` anchor points at |
 | **planned vs effective** | `canary checks --landing` | which ones a real run has decided. Not copied into any file — see below |
-| what each is waiting on | [`landing.md`](landing.md) | the half no code can answer |
+| **what is done, and what is left** | [`catalogue.md`](catalogue.md) | per agreement, what is in its way — GENERATED from `ag_waiting_on`, so it cannot go stale the way the hand-maintained version did |
 | agreement × action | `canary checks --firing` | where each one fires |
 | **scenario × check** | `canary result [<project>]` | what each agreement DECIDED, per world — check columns interleaved with the actions, `pre → action → artifact → post`, one agreement per cell, plus a counted **blame** for every cell that carries no verdict |
 | **could vs did, per project** | `canary checks <project>` | every action the project derives, every agreement that fires there, what the runs decided — ending in a five-class gap summary (`decided` / `could not` / `never asked` / `stood down` / `no evaluator`) |
@@ -142,7 +147,9 @@ hand copy. Three did — `registry.md` §1.7, `registry.md` §7.4.1 and
 `landing.md`'s effective table — and all three had gone stale in the same
 direction, still reporting `declared_symbols_exported` as `unavailable`
 months after it began deciding on sqlite and catching a real violation.
-That is why `registry.md` is gone and `landing.md` is half the size.
+That is why `registry.md` is gone, and why the per-agreement status
+table `landing.md` used to keep by hand is generated into the catalogue
+now (2026-09-17).
 
 ## Two claims worth keeping apart
 

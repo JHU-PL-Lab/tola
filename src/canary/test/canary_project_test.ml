@@ -2427,53 +2427,46 @@ let agreement_bridge_pins : pure_test list =
               Fmt.pr
                 "    catalogue.md is stale — run `make agreement-catalogue`@.";
               false)) };
-    (* THE LANDING TRACKER'S PLANNED COLUMN (2026-09-12).
+    (* A PLANNED AGREEMENT SAYS WHAT IT IS WAITING ON (2026-09-17).
 
-       [landing.md] carries a dated snapshot of two columns. The
-       EFFECTIVE one comes from run logs and cannot be pinned without
-       either skipping in a fresh checkout or forcing a heavy run in
-       the unit suite. The PLANNED one comes from the registry and can
-       be: this checks that the table names exactly the registered
-       agreements, each with the status the registry computes for it.
-       A new agreement, or one that gains an evaluator, therefore
-       cannot land without the tracker being updated. *)
-    { name = "agreements.landing_doc_lists_every_agreement";
+       Replaces [agreements.landing_doc_lists_every_agreement], which
+       asserted that landing.md's table had a row per registered
+       agreement. That table is generated into [catalogue.md] now, from
+       the registry, so it covers every agreement BY CONSTRUCTION and
+       the old pin was asserting what the generator guarantees.
+
+       What the generator cannot guarantee is that a blocked row says
+       what blocks it — [ag_waiting_on] is prose a human writes. An
+       agreement with no evaluator is blocked by definition, so it must
+       carry one; otherwise "planned" is the whole story and the reader
+       has to go read the family to find out why.
+
+       The converse is NOT pinned, deliberately: an agreement WITH an
+       evaluator may still be blocked (signatures_agree has one and no
+       project produces its evidence), and it may not. Requiring a
+       reason there would force a line saying "nothing", which is what
+       [None] already says. *)
+    { name = "agreements.planned_says_what_it_waits_on";
       check =
         (fun () ->
-          let path = "doc/canary/design/agreement/landing.md" in
-          if not (Stdlib.Sys.file_exists path) then true
-          else
-            let text =
-              Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
-            in
-            (* COMPLETENESS ONLY, since 2026-09-13. The table used to
-               repeat the registry's planned status beside the
-               effective one, and this pin compared that word. The
-               planned column now lives in the GENERATED catalogue —
-               where it cannot drift, and is already pinned by
-               [agreements.catalogue_doc_is_generated] — so comparing
-               it here would pin one derived copy against another.
-
-               What is still worth pinning is what no generator can
-               produce: the effective column is written by hand from
-               run logs, so a new agreement can be added and silently
-               never tracked. Every registered agreement must have a
-               row. *)
-            let row_of slug =
-              List.find (String.split_lines text) ~f:(fun l ->
-                  String.is_substring l ~substring:("`" ^ slug ^ "`")
-                  && String.is_prefix (String.lstrip l) ~prefix:"|")
-            in
-            let bad =
-              List.filter_map CR.agreement_registry ~f:(fun r ->
-                  match row_of r.CR.ag_slug with
-                  | None -> Some (r.CR.ag_slug ^ " (missing from the table)")
-                  | Some _ -> None)
-            in
-            if not (List.is_empty bad) then
-              Fmt.pr "    landing.md out of date: %s@."
-                (String.concat ~sep:", " bad);
-            List.is_empty bad) };
+          let bad =
+            List.filter_map CR.agreement_registry ~f:(fun r ->
+                let planned =
+                  List.for_all
+                    r.CR.ag.Canary_agreement_common.ag_methods ~f:(fun m ->
+                      Option.is_none m.Canary_agreement_common.m_eval)
+                in
+                match (planned, r.CR.ag_waiting_on) with
+                | true, None -> Some r.CR.ag_slug
+                | true, Some w when String.is_empty (String.strip w) ->
+                    Some (r.CR.ag_slug ^ " (empty reason)")
+                | _ -> None)
+          in
+          if not (List.is_empty bad) then
+            Fmt.pr
+              "    planned agreement(s) with no ag_waiting_on: %s@."
+              (String.concat ~sep:", " bad);
+          List.is_empty bad) };
     (* the harness proper: the doc anchors resolve *)
     { name = "agreements.doc_anchors_exist";
       check =

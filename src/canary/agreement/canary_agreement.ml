@@ -87,6 +87,22 @@ type agreement_row = {
 
           It pointed into `registry.md` until 2026-09-17, when that file
           split; the §-numbers did not move, only the filename. *)
+  ag_waiting_on : string option;
+      (** WHAT WOULD LAND THIS, or [None] when nothing known blocks it
+          (2026-09-17, user: "a rewrite for catalogue with completed
+          and to-do").
+
+          It lives on the row rather than in a doc because the doc that
+          used to hold it — `landing.md`'s per-agreement table — went
+          stale the way every hand copy of a generated table does. One
+          line here, beside the row it describes, is harder to forget
+          than a table in another file.
+
+          It is NOT the landed/not split. That is a fact about run
+          LOGS, and the catalogue is generated from code alone — if it
+          read logs it would change whenever anything ran and its pin
+          would fail. `canary checks --landing` is the live answer;
+          this says what is in the way. *)
   ag_enabled : bool;
       (** switched on for this build. NOT an implementation status —
           that is per-method ([m_eval = None] ⇒ planned). Every row
@@ -97,10 +113,11 @@ type agreement_row = {
       (** EVERYTHING ELSE, stated by the family's own module *)
 }
 
-let row ?(enabled = true) ~doc (id : agreement_id) : agreement_row =
+let row ?(enabled = true) ?waiting_on ~doc (id : agreement_id) : agreement_row =
   { ag_id = id;
     ag_slug = string_of_agreement_id id;
     ag_doc = doc;
+    ag_waiting_on = waiting_on;
     ag_enabled = enabled;
     ag = agreement_of id }
 
@@ -110,16 +127,41 @@ let agreement_registry : agreement_row list =
   [ row Declared_symbols_exported ~doc:"§2.2";
     row Required_symbols_exported ~doc:"§3.1.2";
     row Api_names_present ~doc:"§3.1.1";
-    row Behavior_matches ~doc:"§6.3.2";
+    row Behavior_matches ~doc:"§6.3.2"
+      ~waiting_on:
+        "somebody to state a spec. This is one row standing for a \
+         CATEGORY — derived compatibility tests, the project's own \
+         suite, a provider/consumer round trip — and it needs both an \
+         expectation and a comparison. Introduce one test-suite reuse \
+         case, then one C/binding differential case: the first supplies \
+         the expectation, the second the comparison";
     row Soname_matches_declaration ~doc:"§2.2";
     row Soname_matches_requirement ~doc:"§4.1";
-    row Declared_versions_exported ~doc:"§2.2";
+    row Declared_versions_exported ~doc:"§2.2"
+      ~waiting_on:
+        "a project that BUILDS a library carrying a version script. \
+         sqlite builds without one, so there are no version nodes and \
+         `vacuous` is the truth rather than a gap; openssl has one and \
+         canary fetches its lib, so build_lib never fires there";
     row Required_versions_exported ~doc:"§4.1";
-    row Signatures_agree ~doc:"§3.1.2";
+    row Signatures_agree ~doc:"§3.1.2"
+      ~waiting_on:
+        "the source-scanning inspectors, which no project wires. Also a \
+         real signature extractor in place of the fixed binding-signature \
+         table, so the check compares what the binding DECLARES rather \
+         than what the inspector was told to assume";
     row Dependencies_provided ~doc:"§5.6";
     row Staged_interface_preserved ~doc:"§6.1";
-    row Repack_preserves_api ~doc:"§6.3.1";
-    row Repack_complete ~doc:"§6.3.1" ]
+    row Repack_preserves_api ~doc:"§6.3.1"
+      ~waiting_on:
+        "a statement of what \"preserves\" permits — a rename, a merge, \
+         a deliberate omission (components.md §6.3.1). The claim has to \
+         be scoped before it can be named properly, let alone checked";
+    row Repack_complete ~doc:"§6.3.1"
+      ~waiting_on:
+        "the same scoping as repack_preserves_api, plus the two \
+         agreements it composes. A composition cannot be better rooted \
+         than its weakest part" ]
 
 (** Total lookup over the table. *)
 let row_of (id : agreement_id) : agreement_row =
@@ -773,7 +815,8 @@ let proposed_agreements : proposed list =
          the deploy world as in the build world";
       prop_needs =
         "retain corresponding build/deploy evidence across worlds and \
-         define an observable denotation criterion (§5.5.1)" };
+         define an observable denotation criterion (components.md \
+         §5.5.1)" };
     { prop_slug = "no_duplicate_implementation";
       prop_doc = "§5.6";
       prop_claim =
@@ -782,7 +825,8 @@ let proposed_agreements : proposed list =
          absorbs another (containment)";
       prop_needs =
         "the shipped objects' evidence plus an identity/containment \
-         policy; symbol overlap alone is a discovery heuristic (§5.5.3)" };
+         policy; symbol overlap alone is a discovery heuristic \
+         (components.md §5.5.3)" };
     { prop_slug = "interposition_binds_build_target";
       prop_doc = "§5.6";
       prop_claim =
@@ -790,7 +834,8 @@ let proposed_agreements : proposed list =
          consumer was built against";
       prop_needs =
         "a resolved binding trace and an expected-target policy; the \
-         recorder supplies evidence, the comparison a verdict (§5.6)" } ]
+         recorder supplies evidence, the comparison a verdict \
+         (components.md §5.6)" } ]
 
 (* ── the unified view — one list to print, cite and pin ──────────── *)
 
@@ -983,7 +1028,14 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
   let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
   let h2 s = if markdown then add "\n## %s\n\n" s else add "%s\n" s in
   let field k v =
-    if markdown then add "| %s | %s |\n" k v else add "  %-12s %s\n" k v
+    (* A VALUE MAY CONTAIN `|` and several do: [string_of_input] joins
+       alternative evidence paths with it, so an unescaped `reads` row
+       rendered as a four-column line inside a two-column table and the
+       second path vanished into a cell of its own. *)
+    if markdown then
+      add "| %s | %s |\n" k
+        (String.substr_replace_all v ~pattern:"|" ~with_:"\\|")
+    else add "  %-12s %s\n" k v
   in
   let para s = if markdown then add "\n%s\n" s else add "  %s\n" s in
   let sub s = if markdown then add "\n### %s\n\n" s else add "\n  %s\n" s in
@@ -991,15 +1043,25 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
   h2 r.ag_slug;
   if markdown then add "| | |\n| --- | --- |\n";
   field "subject" (string_of_subject r.ag.ag_subject);
-  field "claim"
+  (* "claim" was this row's label until 2026-09-17, which made it read
+     as though the claim were the word "structural". The claim is the
+     sentence under `### Claim`; this is what KIND of claim it is. *)
+  field "about"
     (match r.ag.ag_claim with
-     | Structural -> "structural — about artifacts and their fit"
-     | Behavioral -> "behavioral — about what running it does");
+     | Structural -> "structural — artifacts and their fit"
+     | Behavioral -> "behavioral — what running it does");
   field "obligation" (string_of_basis r.ag.ag_basis);
   field "status" (string_of_status (status_of_row r));
   field "fault tag" r.ag.ag_fault_tag;
-  field "doc" r.ag_doc;
-  field "enabled" (if r.ag_enabled then "yes" else "no");
+  (* the anchor names a FILE as well as a section now: a bare "§2.2"
+     told a reader the number and not where to look *)
+  field "why it exists" ("components.md " ^ r.ag_doc);
+  (* ONLY WHEN IT IS OFF. Every row ships enabled, so printing "yes"
+     thirteen times said nothing; printing "no" would be the news. *)
+  if not r.ag_enabled then field "enabled" "no";
+  (match r.ag_waiting_on with
+   | None -> ()
+   | Some w -> field "waiting on" w);
   let bold k v = if markdown then "**" ^ k ^ ":** " ^ v else k ^ ": " ^ v in
   sub "Claim";
   para (bold "Says" r.ag.ag_says);
@@ -1029,7 +1091,15 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
   List.iter r.ag.ag_methods ~f:(fun m ->
       sub ("Method: " ^ m.m_name);
       if markdown then add "| | |\n| --- | --- |\n";
-      field "compares" (string_of_method_kind m.m_kind);
+      (* "compares | compare" was the old row, which is a tautology
+         wearing a label. Say what the kind MEANS — the same four
+         sentences model.md §1.5 tabulates. *)
+      field "how"
+        (match m.m_kind with
+         | Inspect -> "reads one artifact's properties or presence"
+         | Compare -> "inspects several artifacts and compares them"
+         | Run_tool -> "compiles, links or loads"
+         | Run_program -> "runs a probe and inspects its result");
       field "against" (string_of_reference m.m_reference);
       field "implemented"
         (match m.m_eval with Some _ -> "yes" | None -> "no — planned");
@@ -1089,11 +1159,26 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
                   (match fx.fx_findings with
                    | [] -> ""
                    | fs -> " — finding: `" ^ String.concat ~sep:"`, `" fs ^ "`");
+                (* THE INPUTS, not only the file bodies (2026-09-17,
+                   user). A fixture's evidence is an input LIST, and
+                   some inputs carry their values inline rather than in
+                   a file — `Declared_exports [...]` is one. Printing
+                   only `fx_bodies` dropped exactly those, so
+                   declared_symbols_exported's two examples rendered as
+                   the same JSON twice with different outcomes, and the
+                   thing that differed — one has a declaration, the
+                   other does not — was invisible. *)
+                add "reads: %s\n\n"
+                  (match fx.fx_inputs with
+                   | [] -> "_nothing_"
+                   | ins ->
+                       String.concat ~sep:", "
+                         (List.map ins ~f:(fun i -> "`" ^ string_of_input i ^ "`")));
                 List.iter fx.fx_bodies ~f:(fun (name, body) ->
                     add "`%s`:\n\n```json\n%s\n```\n\n" name
                       (String.strip body));
                 if List.is_empty fx.fx_bodies then
-                  add "_(no evidence supplied — that is the case)_\n\n")
+                  add "_(no file evidence — that is the case)_\n\n")
               else (
                 add "    %d. reports %s%s\n" n fx.fx_outcome
                   (match fx.fx_findings with
@@ -1231,6 +1316,49 @@ let pp_rooting_table_md () : string =
         r.sr_note r.sr_status);
   Buffer.contents b
 
+(** WHAT IS DONE AND WHAT IS LEFT (2026-09-17, user: "a rewrite for
+    catalogue with completed and to-do").
+
+    This was `landing.md`'s per-agreement table, maintained by hand, and
+    it had reached the state of listing three agreements twice with
+    contradictory verdicts. Generated, it cannot.
+
+    The split it draws is deliberately NOT landed/not-landed — that
+    needs run logs, which a build product must not read. It is
+    *implemented and unblocked* against *blocked, and here is on what*,
+    which is answerable from the registry alone and is the half a
+    reader can act on. *)
+let pp_todo_table_md () : string =
+  let b = Buffer.create 2048 in
+  let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
+  let blocked =
+    List.filter agreement_registry ~f:(fun r -> Option.is_some r.ag_waiting_on)
+  in
+  let ready = List.length agreement_registry - List.length blocked in
+  add "## What is done, and what is left\n\n";
+  add
+    "%d of %d agreements are implemented with nothing known in their way. \
+     The other %d are blocked, and this is on what. Whether an unblocked \
+     one has actually been DECIDED by a real run is `canary checks \
+     --landing`'s question, not this file's.\n\n"
+    ready (List.length agreement_registry) (List.length blocked);
+  if List.is_empty blocked then add "_Nothing is blocked._\n\n"
+  else begin
+    add "| agreement | status | waiting on |\n";
+    add "| --- | --- | --- |\n";
+    List.iter blocked ~f:(fun r ->
+        add "| [`%s`](#%s) | %s | %s |\n" r.ag_slug r.ag_slug
+          (string_of_status (status_of_row r))
+          (Option.value r.ag_waiting_on ~default:""));
+    add
+      "\nThe `planned` rows are exactly the agreements no tool's rule \
+       roots (see the second table below). That is not a coincidence: no \
+       toolchain enforced the relation, so there is nothing to re-derive \
+       and they wait on somebody to STATE a specification rather than on \
+       wiring. **Prefer landing a tool-rooted one.**\n\n"
+  end;
+  Buffer.contents b
+
 (** The generated catalogue: every agreement's full record, as
     markdown. Written to [doc/canary/design/agreement/catalogue.md] and
     pinned against this output, so the document is a build product
@@ -1242,17 +1370,22 @@ let pp_catalogue_md () : string =
      **Kind: reference, GENERATED.** The summary table, then one section \
      per agreement with its complete record — claim, obligation, where it \
      looks, what falsifies it, and what a pass does not establish.\n\n\
-     Do not edit: regenerate with `make agreement-catalogue`. The fields \
-     come from the registry, so this cannot drift from the code that \
-     implements them. What it does NOT show is what actually ran — that is \
-     [`landing.md`](landing.md) and `canary checks --landing`.\n\n\
+     Do not edit: regenerate with `make agreement-catalogue`. Everything \
+     here comes from the registry, so it cannot drift from the code that \
+     implements it.\n\n\
+     **What it does NOT show is what actually RAN.** That is a fact about \
+     run logs, and a generated file that read logs would change whenever \
+     anything ran — so `canary checks --landing` is the live answer to \
+     *which are landed*, and this file answers *what each one is and what \
+     is in its way*.\n\n\
      Evidence paths are shown for a BUILT world. The world decides where \
      a binding's inspection sits — a Fetched binding's is at its fetch step \
      — so the same method reads different paths in different worlds.\n\n\
      The model these fields belong to is [`model.md`](model.md) §1; \
      why each agreement exists is [`components.md`](components.md), at \
-     the anchor its row carries; how a project reaches one is \
-     [`pipeline.md`](pipeline.md).\n\n";
+     the anchor its row carries; how to land one is \
+     [`landing.md`](landing.md).\n\n";
+  Buffer.add_string b (pp_todo_table_md ());
   Buffer.add_string b (pp_rooting_table_md ());
   Buffer.add_string b "\n---\n\n# The records\n";
   List.iter agreement_registry ~f:(fun r ->

@@ -32,7 +32,7 @@ canary checks --agreement NAME   # one agreement, complete
 | why there is anything to check at all | [`theory.md`](theory.md) |
 | what could be claimed about a kind of thing | [`components.md`](components.md) |
 | what one agreement IS | [`catalogue.md`](catalogue.md) (generated) |
-| landing one on a project | [`pipeline.md`](pipeline.md) |
+| landing one on a project | [`landing.md`](landing.md) |
 | what has actually been decided | [`landing.md`](landing.md) |
 | **when** a check fires | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not this directory's |
 
@@ -391,7 +391,7 @@ than by the first path that happens to exist — otherwise, on tiny, the compile
 stub summary would be read as a user surface.
 
 `make canary-agreement-roundtrip` is this assertion as a gate, and it runs
-inside `make canary-post-check`. [`pipeline.md`](pipeline.md) walks the seven
+inside `make canary-post-check`. [`landing.md`](landing.md) walks the eight
 points a run passes through and what each undecided outcome means — since
 2026-09-15 the outcome WORD carries that (`unavailable` / `undeclared` /
 `vacuous`) rather than a reason string a reader had to interpret;

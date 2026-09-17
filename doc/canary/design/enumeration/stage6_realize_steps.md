@@ -15,7 +15,7 @@ what happened. The map is [`README.md`](README.md).
 fires and against what evidence. That is a function of `(world, action,
 mechanism, lang)`, which is this directory's vocabulary; `agreement/`
 owns what a check CLAIMS. The account used to live entirely in
-[`../agreement/pipeline.md`](../agreement/pipeline.md), which left this
+[`../agreement/landing.md`](../agreement/landing.md), which left this
 doc — the doc for the pass that attaches `agreement_ctx` to every step —
 mentioning "agreement" zero times.
 
@@ -24,7 +24,8 @@ mentioning "agreement" zero times.
 > §2 (the action catalogue), §6 (the four steps), §7 (deploy-mismatch),
 > §8 (pre-run ≡ post-run), §9 (the run cache), §11 (chains vs graph), §12
 > and §14 (structure and ownership) are here; its §1 pipeline diagram is
-> in the README, §3/§4/§5 are passes 1 and 3, §10 is pass 5 plus
+> in [`pipeline.md`](pipeline.md), §3/§4/§5 are passes 1 and 3, §10 is
+> pass 5 plus
 > [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md),
 > and §13's terminology is [`stage0_naming.md`](stage0_naming.md). `git
 > show b4570b9` has the original.
@@ -109,7 +110,7 @@ what a check CLAIMS; this pass owns **when it is triggered and against
 what** — and that is a function of `(world, action, mechanism, lang)`,
 which is this directory's vocabulary and not the agreement layer's.
 Until 2026-09-16 the split was declared the other way round, the
-account lived in [`../agreement/pipeline.md`](../agreement/pipeline.md),
+account lived in [`../agreement/landing.md`](../agreement/landing.md),
 and this doc mentioned "agreement" zero times while being the doc for
 the pass that attaches the context.
 

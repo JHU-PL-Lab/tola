@@ -117,9 +117,20 @@ declaration check on its own library.)
 The declaration each needs is an explicit evidence input — `Declared_exports`,
 `Declared_soname`, `Declared_version_tags` — carried in the same list as the
 inspector outputs, so a declaration comparison has the same evaluator shape as
-a peer comparison. No action supplies one today. That gap is therefore visible
-at run time as `unavailable` with its reason, rather than as a comparator
-nobody calls (see [`../../backlog.md`](../../backlog.md) §51). A tool's exit status and output presence are additional
+a peer comparison.
+
+**They are supplied, since 2026-09-13.** `Canary_pipeline.with_declared_facts`
+routes a project's `api_source` into the runner spec; before it, every project
+ran with `api_source = None`, the declaration reached only `spec-check` and the
+CI renderer, and all three of these reported `unavailable` by construction.
+`declared_symbols_exported` and `soname_matches_declaration` decide on sqlite
+today, and the first one's violation is the project's own forward cell — a
+stable-channel build at 3.43.2 missing `sqlite3_get_clientdata`, not a synthetic
+break. `declared_versions_exported` is still `vacuous` there, and that is the
+truth rather than a gap: sqlite builds without a version script, so there are no
+version nodes to read.
+
+A tool's exit status and output presence are additional
 observations, not replacements for these comparisons.
 
 **Proposed:** compare header signatures with matching DWARF debug information

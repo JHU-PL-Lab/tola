@@ -2,11 +2,27 @@
 
 **Kind: reference, GENERATED.** The summary table, then one section per agreement with its complete record — claim, obligation, where it looks, what falsifies it, and what a pass does not establish.
 
-Do not edit: regenerate with `make agreement-catalogue`. The fields come from the registry, so this cannot drift from the code that implements them. What it does NOT show is what actually ran — that is [`landing.md`](landing.md) and `canary checks --landing`.
+Do not edit: regenerate with `make agreement-catalogue`. Everything here comes from the registry, so it cannot drift from the code that implements it.
+
+**What it does NOT show is what actually RAN.** That is a fact about run logs, and a generated file that read logs would change whenever anything ran — so `canary checks --landing` is the live answer to *which are landed*, and this file answers *what each one is and what is in its way*.
 
 Evidence paths are shown for a BUILT world. The world decides where a binding's inspection sits — a Fetched binding's is at its fetch step — so the same method reads different paths in different worlds.
 
-The model these fields belong to is [`model.md`](model.md) §1; why each agreement exists is [`components.md`](components.md), at the anchor its row carries; how a project reaches one is [`pipeline.md`](pipeline.md).
+The model these fields belong to is [`model.md`](model.md) §1; why each agreement exists is [`components.md`](components.md), at the anchor its row carries; how to land one is [`landing.md`](landing.md).
+
+## What is done, and what is left
+
+8 of 13 agreements are implemented with nothing known in their way. The other 5 are blocked, and this is on what. Whether an unblocked one has actually been DECIDED by a real run is `canary checks --landing`'s question, not this file's.
+
+| agreement | status | waiting on |
+| --- | --- | --- |
+| [`behavior_matches`](#behavior_matches) | planned | somebody to state a spec. This is one row standing for a CATEGORY — derived compatibility tests, the project's own suite, a provider/consumer round trip — and it needs both an expectation and a comparison. Introduce one test-suite reuse case, then one C/binding differential case: the first supplies the expectation, the second the comparison |
+| [`declared_versions_exported`](#declared_versions_exported) | evaluated | a project that BUILDS a library carrying a version script. sqlite builds without one, so there are no version nodes and `vacuous` is the truth rather than a gap; openssl has one and canary fetches its lib, so build_lib never fires there |
+| [`signatures_agree`](#signatures_agree) | evaluated | the source-scanning inspectors, which no project wires. Also a real signature extractor in place of the fixed binding-signature table, so the check compares what the binding DECLARES rather than what the inspector was told to assume |
+| [`repack_preserves_api`](#repack_preserves_api) | planned | a statement of what "preserves" permits — a rename, a merge, a deliberate omission (components.md §6.3.1). The claim has to be scoped before it can be named properly, let alone checked |
+| [`repack_complete`](#repack_complete) | planned | the same scoping as repack_preserves_api, plus the two agreements it composes. A composition cannot be better rooted than its weakest part |
+
+The `planned` rows are exactly the agreements no tool's rule roots (see the second table below). That is not a coincidence: no toolchain enforced the relation, so there is nothing to re-derive and they wait on somebody to STATE a specification rather than on wiring. **Prefer landing a tool-rooted one.**
 
 ## What each agreement recovers
 
@@ -46,12 +62,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | symbols |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | project-declaration |
 | status | evaluated |
 | fault tag | sym_missing |
-| doc | §2.2 |
-| enabled | yes |
+| why it exists | components.md §2.2 |
 
 ### Claim
 
@@ -68,18 +83,20 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | declaration |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_lib |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
 | python/cext@built | fires at build_lib |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
 | limits | only declared names are covered; signatures, versions and behaviour are not. A name present says nothing about what it does. |
 
 **Examples**
 
 **1. reports `violated`** — finding: `tiny_offset`
+
+reads: `DECLARED exports (3 name(s))`, `native summary lib.json`
 
 `lib.json`:
 
@@ -89,6 +106,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 ```
 
 **2. reports `undeclared`**
+
+reads: `native summary lib.json`
 
 `lib.json`:
 
@@ -103,12 +122,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | symbols |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | toolchain-rule |
 | status | evaluated |
 | fault tag | sym_missing |
-| doc | §3.1.2 |
-| enabled | yes |
+| why it exists | components.md §3.1.2 |
 
 ### Claim
 
@@ -125,20 +143,22 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | peer |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-|   reads | compiled-stub summary build_binding_ocaml/inspect_stub.json | build_binding_ocaml/inspect.json |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | compiled-stub summary build_binding_ocaml/inspect_stub.json \| build_binding_ocaml/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
-|   reads | compiled-stub summary build_binding_python/inspect_stub.json | build_binding_python/inspect.json |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | compiled-stub summary build_binding_python/inspect_stub.json \| build_binding_python/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
 | limits | set inclusion only: it does not check signatures, symbol versions, or which definition the loader will actually bind. Inclusion over a very small requirement set may also mean the binding is stale rather than deliberately narrow. |
 
 **Examples**
 
 **1. reports `violated`** — finding: `tiny_offset`
+
+reads: `compiled-stub summary stub.json`, `native summary lib.json`
 
 `stub.json`:
 
@@ -156,6 +176,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **2. reports `holds`**
 
+reads: `compiled-stub summary stub.json`, `native summary lib.json`
+
 `stub.json`:
 
 ```json
@@ -172,6 +194,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **3. reports `unavailable`**
 
+reads: `compiled-stub summary stub.json`, `native summary absent.json`
+
 `stub.json`:
 
 ```json
@@ -185,12 +209,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | api-names |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | project-declaration |
 | status | evaluated |
 | fault tag | api_drop |
-| doc | §3.1.1 |
-| enabled | yes |
+| why it exists | components.md §3.1.1 |
 
 ### Claim
 
@@ -207,18 +230,20 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | inspect |
+| how | reads one artifact's properties or presence |
 | against | declaration |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-|   reads | OCaml surface build_binding_ocaml/inspect.json | build_binding_ocaml/inspect_mli.json |
+|   reads | OCaml surface build_binding_ocaml/inspect.json \| build_binding_ocaml/inspect_mli.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
-|   reads | Python surface build_binding_python/inspect.json | build_binding_python/inspect_attrs.json |
+|   reads | Python surface build_binding_python/inspect.json \| build_binding_python/inspect_attrs.json |
 | limits | coverage is bounded by the watchlist: names outside it are not checked, and a name being present says nothing about the signature or behaviour behind it. Obtaining the Python surface already imports the module. |
 
 **Examples**
 
 **1. reports `violated`** — finding: `Llvm.Opcode.UncondBr`, `Opcode.UncondBr`, `UncondBr`
+
+reads: `OCaml surface mli.json`
 
 `mli.json`:
 
@@ -229,6 +254,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **2. reports `violated`** — finding: `Solver.add`, `add`, `BitVec`
 
+reads: `Python surface py.json`
+
 `py.json`:
 
 ```json
@@ -237,6 +264,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 ```
 
 **3. reports `inconclusive`**
+
+reads: `OCaml surface empty.json`
 
 `empty.json`:
 
@@ -251,12 +280,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | behavior |
-| claim | behavioral — about what running it does |
+| about | behavioral — what running it does |
 | obligation | behavioral-spec |
 | status | planned |
 | fault tag | behavior |
-| doc | §6.3.2 |
-| enabled | yes |
+| why it exists | components.md §6.3.2 |
+| waiting on | somebody to state a spec. This is one row standing for a CATEGORY — derived compatibility tests, the project's own suite, a provider/consumer round trip — and it needs both an expectation and a comparison. Introduce one test-suite reuse case, then one C/binding differential case: the first supplies the expectation, the second the comparison |
 
 ### Claim
 
@@ -273,7 +302,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | run-program |
+| how | runs a probe and inspects its result |
 | against | declaration |
 | implemented | no — planned |
 | why not | the expected values live inside the probe's source as embedded assertions, and the observation is the probe's own exit code; the registry has no evaluator that could read them. Wiring one means giving the project a place to state expected results outside the probe. NOTE (2026-09-15, user) that this is ONE ROW standing for a CATEGORY, and the category has at least three members that want different machinery: tests DERIVED from a version-compatibility claim (canary generates them), the project's OWN test suite (canary runs what upstream wrote), and ROUND-TRIP tests across the provider and consumer sides of a binding (canary composes them). Wiring this row without deciding which of the three it is would fix the narrowest one by accident |
@@ -287,12 +316,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | identity |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | project-declaration |
 | status | evaluated |
 | fault tag | abi_soname |
-| doc | §2.2 |
-| enabled | yes |
+| why it exists | components.md §2.2 |
 
 ### Claim
 
@@ -309,18 +337,20 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | declaration |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_lib |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
 | python/cext@built | fires at build_lib |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
 | limits | matching a name does not identify a unique implementation: two objects can advertise one soname and mean different things (the ncurses case). |
 
 **Examples**
 
 **1. reports `violated`** — finding: `soname libtiny.so.2 != declared libtiny.so.1`
+
+reads: `DECLARED soname libtiny.so.1`, `native summary lib.json`
 
 `lib.json`:
 
@@ -331,6 +361,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 ```
 
 **2. reports `undeclared`**
+
+reads: `native summary lib.json`
 
 `lib.json`:
 
@@ -345,12 +377,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | identity |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | toolchain-rule |
 | status | evaluated |
 | fault tag | abi_soname |
-| doc | §4.1 |
-| enabled | yes |
+| why it exists | components.md §4.1 |
 
 ### Claim
 
@@ -367,20 +398,22 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | peer |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json | build_binding_ocaml/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json \| build_binding_ocaml/inspect.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json | build_binding_python/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json \| build_binding_python/inspect.json |
 | limits | name equality only. It does not establish which object the loader will select, nor that the selected object means the same thing as the one linked against. |
 
 **Examples**
 
 **1. reports `violated`** — finding: `libtiny.so.1`
+
+reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
 
 `lib.json`:
 
@@ -402,12 +435,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | symbol-versions |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | project-declaration |
 | status | evaluated |
 | fault tag | sym_version |
-| doc | §2.2 |
-| enabled | yes |
+| why it exists | components.md §2.2 |
+| waiting on | a project that BUILDS a library carrying a version script. sqlite builds without one, so there are no version nodes and `vacuous` is the truth rather than a gap; openssl has one and canary fetches its lib, so build_lib never fires there |
 
 ### Claim
 
@@ -424,18 +457,20 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | declaration |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_lib |
-|   reads | provider version tags build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
 | python/cext@built | fires at build_lib |
-|   reads | provider version tags build_lib/inspect.json | probe_lib/inspect.json |
+|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
 | limits | presence of a tag says nothing about the symbols inside it, nor about compatibility beyond the declared tags. |
 
 **Examples**
 
 **1. reports `violated`** — finding: `version TINY_2.0 not exported`
+
+reads: `DECLARED version tags (1)`, `provider version tags lib.json`
 
 `lib.json`:
 
@@ -445,6 +480,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 ```
 
 **2. reports `vacuous`**
+
+reads: `provider version tags lib.json`
 
 `lib.json`:
 
@@ -459,12 +496,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | symbol-versions |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | toolchain-rule |
 | status | evaluated |
 | fault tag | sym_version |
-| doc | §4.1 |
-| enabled | yes |
+| why it exists | components.md §4.1 |
 
 ### Claim
 
@@ -481,20 +517,22 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | peer |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-|   reads | provider version tags build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer version tags probe_binding_ocaml/inspect_abi.json | build_binding_ocaml/inspect.json |
+|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer version tags probe_binding_ocaml/inspect_abi.json \| build_binding_ocaml/inspect.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
-|   reads | provider version tags build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer version tags probe_binding_python/inspect_abi.json | build_binding_python/inspect.json |
+|   reads | provider version tags build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer version tags probe_binding_python/inspect_abi.json \| build_binding_python/inspect.json |
 | limits | exact tag match, direct requirements only. It does not model version ordering, and a world without symbol versioning is inconclusive rather than compatible. |
 
 **Examples**
 
 **1. reports `violated`** — finding: `GLIBC_2.31`
+
+reads: `provider version tags prov.json`, `consumer version tags cons.json`
 
 `prov.json`:
 
@@ -512,6 +550,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **2. reports `holds`**
 
+reads: `provider version tags prov.json`, `consumer version tags ok.json`
+
 `prov.json`:
 
 ```json
@@ -527,6 +567,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 ```
 
 **3. reports `inconclusive`**
+
+reads: `provider version tags prov.json`, `consumer version tags bare.json`
 
 `prov.json`:
 
@@ -547,12 +589,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | signatures |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | toolchain-rule |
 | status | evaluated |
 | fault tag | type_arity |
-| doc | §3.1.2 |
-| enabled | yes |
+| why it exists | components.md §3.1.2 |
+| waiting on | the source-scanning inspectors, which no project wires. Also a real signature extractor in place of the fixed binding-signature table, so the check compares what the binding DECLARES rather than what the inspector was told to assume |
 
 ### Claim
 
@@ -569,7 +611,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | peer |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
@@ -581,6 +623,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Examples**
 
 **1. reports `violated`** — finding: `tiny_sum`
+
+reads: `header signatures hdr.json`, `stub signatures stub.json`
 
 `hdr.json`:
 
@@ -597,6 +641,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 ```
 
 **2. reports `holds`**
+
+reads: `header signatures hdr.json`, `stub signatures agree.json`
 
 `hdr.json`:
 
@@ -618,12 +664,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | dependencies |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | toolchain-rule |
 | status | evaluated |
 | fault tag | needed_unprovided |
-| doc | §5.6 |
-| enabled | yes |
+| why it exists | components.md §5.6 |
 
 ### Claim
 
@@ -640,20 +685,22 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | peer |
 | implemented | yes |
 | ocaml/cstubs@built | fires at build_binding_ocaml, probe_binding_ocaml |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json | build_binding_ocaml/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_ocaml/inspect_abi.json \| build_binding_ocaml/inspect.json |
 | python/cext@built | fires at build_binding_python, probe_binding_python |
-|   reads | native summary build_lib/inspect.json | probe_lib/inspect.json |
-|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json | build_binding_python/inspect.json |
+|   reads | native summary build_lib/inspect.json \| probe_lib/inspect.json |
+|   reads | consumer identity + NEEDED probe_binding_python/inspect_abi.json \| build_binding_python/inspect.json |
 | limits | ONE modeled provider, direct dependencies only, and an ambient list that is code rather than a per-world policy. It does not enumerate every provider, traverse transitive dependencies, verify the ambient libraries exist, or run a loader — so a name supplied by a second unmodeled library is reported unprovided. |
 
 **Examples**
 
 **1. reports `violated`** — finding: `libtinfo.so.6`
+
+reads: `native summary lib.json`, `consumer identity + NEEDED consumer.json`
 
 `lib.json`:
 
@@ -676,12 +723,11 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | staging |
-| claim | structural — about artifacts and their fit |
+| about | structural — artifacts and their fit |
 | obligation | toolchain-rule |
 | status | evaluated |
 | fault tag | staged_drift |
-| doc | §6.1 |
-| enabled | yes |
+| why it exists | components.md §6.1 |
 
 ### Claim
 
@@ -698,7 +744,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | compare |
+| how | inspects several artifacts and compares them |
 | against | peer |
 | implemented | yes |
 | ocaml/cstubs@built | does not fire |
@@ -708,6 +754,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 **Examples**
 
 **1. reports `violated`** — finding: `soname libtiny.so.1→libtiny.so.2`
+
+reads: `native summary bt.json`, `staged native summary st.json`
 
 `bt.json`:
 
@@ -725,6 +773,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **2. reports `violated`** — finding: `symbols 12→9`
 
+reads: `native summary bt.json`, `staged native summary thin.json`
+
 `bt.json`:
 
 ```json
@@ -740,6 +790,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 ```
 
 **3. reports `holds`**
+
+reads: `native summary bt.json`, `staged native summary same.json`
 
 `bt.json`:
 
@@ -757,6 +809,8 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 **4. reports `unavailable`**
 
+reads: `native summary bt.json`, `staged native summary absent.json`
+
 `bt.json`:
 
 ```json
@@ -770,12 +824,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | repacking |
-| claim | behavioral — about what running it does |
+| about | behavioral — what running it does |
 | obligation | behavioral-spec |
 | status | planned |
 | fault tag | api_repack |
-| doc | §6.3.1 |
-| enabled | yes |
+| why it exists | components.md §6.3.1 |
+| waiting on | a statement of what "preserves" permits — a rename, a merge, a deliberate omission (components.md §6.3.1). The claim has to be scoped before it can be named properly, let alone checked |
 
 ### Claim
 
@@ -792,7 +846,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | run-program |
+| how | runs a probe and inspects its result |
 | against | declaration |
 | implemented | no — planned |
 | why not | the repacking relation is not specified: "preserves" has no agreed scope, so there is nothing to compare a binding against. check_api_repack compares names and declared renames, which refutes a stub-side orphan but not a wrapper whose implementation drifted; the probe's own assertions carry that case today |
@@ -806,12 +860,12 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 | | |
 | --- | --- |
 | subject | repacking |
-| claim | behavioral — about what running it does |
+| about | behavioral — what running it does |
 | obligation | behavioral-spec |
 | status | planned |
 | fault tag | api_add |
-| doc | §6.3.1 |
-| enabled | yes |
+| why it exists | components.md §6.3.1 |
+| waiting on | the same scoping as repack_preserves_api, plus the two agreements it composes. A composition cannot be better rooted than its weakest part |
 
 ### Claim
 
@@ -828,7 +882,7 @@ These 3 are not checks waiting on evidence. No toolchain enforces them, so there
 
 | | |
 | --- | --- |
-| compares | run-program |
+| how | runs a probe and inspects its result |
 | against | declaration |
 | implemented | no — planned |
 | why not | the claim's scope is unsettled ("loses nothing" needs an allowed-omission policy), and two of the three agreements it composes — repacking and behaviour — have no evaluator either. check_api_faithfulness composes three verdicts and is ready for the day they exist |
@@ -875,17 +929,17 @@ No family implements these yet.
 
 **Claim:** a recorded library identity denotes the SAME implementation in the deploy world as in the build world
 
-**Needs:** retain corresponding build/deploy evidence across worlds and define an observable denotation criterion (§5.5.1)
+**Needs:** retain corresponding build/deploy evidence across worlds and define an observable denotation criterion (components.md §5.5.1)
 
 ### no_duplicate_implementation
 
 **Claim:** the resolved set contains no two identities that are one implementation (alternative spelling), and none that statically absorbs another (containment)
 
-**Needs:** the shipped objects' evidence plus an identity/containment policy; symbol overlap alone is a discovery heuristic (§5.5.3)
+**Needs:** the shipped objects' evidence plus an identity/containment policy; symbol overlap alone is a discovery heuristic (components.md §5.5.3)
 
 ### interposition_binds_build_target
 
 **Claim:** the definition that wins for a shared symbol is the one the consumer was built against
 
-**Needs:** a resolved binding trace and an expected-target policy; the recorder supplies evidence, the comparison a verdict (§5.6)
+**Needs:** a resolved binding trace and an expected-target policy; the recorder supplies evidence, the comparison a verdict (components.md §5.6)
 

@@ -1,6 +1,6 @@
 # Enumerating a project's DEPENDENCIES — more than one C lib
 
-**Stage:** see [README.md](README.md) (the stage map). **Kind: proposal.** **Step 1 landed 2026-08-25** — `A_lib of string option`, so two libs are now two artifacts. **Fully landed when** steps 2 and 3 of §3a follow, which await a project that declares two.
+**Stage:** see [pipeline.md](pipeline.md) (the six passes). **Kind: proposal.** **Step 1 landed 2026-08-25** — `A_lib of string option`, so two libs are now two artifacts. **Fully landed when** steps 2 and 3 of §3a follow, which await a project that declares two.
 
 > 2026-08-19. Opened by the question "how shall we handle and enumerate
 > their dependency" for the four candidate projects. Two of them (mpfr,
