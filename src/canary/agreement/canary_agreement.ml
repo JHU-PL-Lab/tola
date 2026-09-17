@@ -1066,21 +1066,36 @@ let catalogue_langs : Canary_lang.lang list =
       i.Canary_mechanism.mi_lang)
   |> List.dedup_and_sort ~compare:Poly.compare
 
-(** The LANG cell: the languages this row's mechanisms belong to, or
-    ["any"] when it spans every modelled language — which is what a
-    claim about the LIBRARY looks like, since no binding is involved. *)
+(** AN EMPTY CELL MEANS "THIS AXIS DOES NOT NARROW THE CLAIM", in BOTH
+    columns (2026-09-17, user: "how do you mean by `any` or an empty
+    cell? can we just use empty cell").
+
+    `lang` said `any` and `mech` said nothing, which spelled ONE relation
+    two ways — and `any` read like a third language value, sitting as it
+    does in a column of `ocaml` / `python`. It is not a language; it is
+    the absence of a restriction, which is what a blank says.
+
+    That leaves the THIRD state needing a word of its own, because it
+    had been sharing the blank: no mechanism carries this row at all.
+    It is the loudest thing the table can say, so it may not look like
+    the most ordinary one. *)
+let nothing_carries = "none"
+
+(** The LANG cell: the languages this row's mechanisms belong to, EMPTY
+    when it spans every modelled language — which is what a claim about
+    the LIBRARY looks like, since no binding is involved. *)
 let lang_label (ms : Canary_mechanism.mechanism list) : string =
   match langs_of_mechs ms with
-  | [] -> ""
+  | [] -> nothing_carries
   | ls ->
-      if List.length ls >= List.length catalogue_langs then "any"
+      if List.length ls >= List.length catalogue_langs then ""
       else String.concat ~sep:"," (List.map ls ~f:Canary_lang.string_of_lang)
 
 (** The MECH cell: empty when the row covers every mechanism of its
     language(s), because then the row is not about a mechanism. *)
 let mech_label (ms : Canary_mechanism.mechanism list) : string =
   match langs_of_mechs ms with
-  | [] -> ""
+  | [] -> nothing_carries
   | ls ->
       let covers_all_of l =
         List.for_all (mechs_of_lang l) ~f:(fun m ->
@@ -1195,19 +1210,20 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
          src/canary/agreement/canary_agreement_<family>.ml.";
         "       `·—` = NO EVALUATOR YET; the family names the file it would \
          go in.";
-        "lang = the language(s) whose mechanisms carry this row. `any` = \
-         every modelled";
-        "       language, which is what a claim about the LIBRARY looks like \
-         — no binding";
-        "       is involved, so nothing about a binding can narrow it.";
-        "mech = the MECHANISM(s), when the row is a strict subset of its \
-         language's.";
-        "       EMPTY means the row covers every mechanism of its \
-         language(s), so the";
-        "       claim is a fact about the language and naming a mechanism \
-         would say less";
-        "       than the truth. A blank lang AND mech = no mechanism carries \
-         it at all.";
+        "lang / mech — AN EMPTY CELL MEANS THIS AXIS DOES NOT NARROW THE \
+         CLAIM.";
+        "       An empty `lang` = every modelled language, which is what a \
+         claim about";
+        "       the LIBRARY looks like: no binding is involved, so nothing \
+         about a";
+        "       binding can narrow it. An empty `mech` = every mechanism of \
+         this row's";
+        "       language(s), so the claim is a fact about the LANGUAGE and \
+         naming a";
+        "       mechanism would say less than the truth. A name appears \
+         only where the";
+        "       row is a strict subset. `none` in both = NO mechanism \
+         carries this at all.";
         "fmt  = which OBJECT FORMAT it can range over: E elf · M mach-o. A \
          format";
         "       changes whether a claim APPLIES, never where it fires — so \

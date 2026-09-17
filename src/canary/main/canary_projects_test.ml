@@ -4328,10 +4328,21 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
                    Option.is_none (snd (impl_of row.ov_agreement)))
           (* LANG and MECH, one cell each per row, full terms rather
              than the letter marks they replaced (2026-09-17, user:
-             "single letters in mech is not reader-friendly") *)
+             "single letters in mech is not reader-friendly").
+
+             AN EMPTY CELL IS MEANINGFUL HERE — it says the axis does
+             not narrow the claim — so the pin counts the cells that
+             are BLANK and matches them against the labels, rather than
+             only looking for text. A renderer that dropped the column
+             entirely would otherwise pass by writing nothing. *)
           && count "class=\"lm\"" = 2 * List.length rows
           && String.is_substring h ~substring:">cstubs<"
-          && String.is_substring h ~substring:">any<"
+          && String.is_substring h ~substring:">ocaml<"
+          && count "class=\"lm\"></td>"
+             = List.count rows ~f:(fun (row : overview_row) ->
+                   String.is_empty (lang_label row.ov_mechs))
+               + List.count rows ~f:(fun (row : overview_row) ->
+                     String.is_empty (mech_label row.ov_mechs))
           && List.for_all agreement_registry ~f:(fun r ->
                  String.is_substring h
                    ~substring:

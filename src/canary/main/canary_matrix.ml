@@ -1985,12 +1985,15 @@ let render_html (m : t) ~(generated_at : string) : string =
        in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
        (hover for the file); a RED cell is an agreement with no evaluator \
        yet, and names the file it would go in. \
-       <b>lang</b> the language(s) whose mechanisms carry this row; \
-       <code>any</code> = all of them, which is what a claim about the \
-       LIBRARY looks like, no binding being involved. \
-       <b>mech</b> the mechanism(s), and EMPTY when the row covers every \
-       mechanism of its language — then the claim is a fact about the \
-       language, and naming a mechanism would say less than the truth. \
+       <b>lang</b> and <b>mech</b> — an EMPTY cell means that axis does \
+       not narrow the claim. An empty <b>lang</b> is every modelled \
+       language, which is what a claim about the LIBRARY looks like: no \
+       binding is involved, so nothing about a binding can narrow it. An \
+       empty <b>mech</b> is every mechanism of this row's language(s), so \
+       the claim is a fact about the LANGUAGE and naming a mechanism would \
+       say less than the truth. A name appears only where the row is a \
+       strict subset; <code>none</code> in both means no mechanism carries \
+       this at all. \
        <b>fmt</b> E elf &middot; M mach-o — a format changes whether a claim \
        APPLIES, never where it fires, so it annotates a row rather than \
        splitting one; <code>E&middot;</code> is not a gap, Mach-O has no \

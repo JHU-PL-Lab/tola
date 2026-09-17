@@ -45,11 +45,21 @@ were one five-slot mark string (`S···D`, one character per catalogue
 mechanism), which was dense, needed the legend to read at all, and —
 the reason it went — could not distinguish a rule from a coincidence.
 `S···D` and `ocaml` + an empty `mech` denote the same set, but only the
-second says the claim is about the LANGUAGE. So `mech` names mechanisms
-only when the row is a **strict subset** of its language's, and is empty
-otherwise; `lang` reads `any` when the row spans every modelled
-language, which is what a claim about the LIBRARY looks like — no
-binding is involved, so nothing about a binding can narrow it.
+second says the claim is about the LANGUAGE.
+
+**An empty cell means that axis does not narrow the claim**, in both
+columns. An empty `mech` is every mechanism of the row's language(s), so
+the claim is a fact about the language and naming a mechanism would say
+less than the truth; an empty `lang` is every modelled language, which
+is what a claim about the LIBRARY looks like — no binding is involved,
+so nothing about a binding can narrow it. A name appears only where the
+row is a **strict subset**. `lang` briefly read `any` there, which
+spelled one relation two ways and read like a third language value
+sitting in a column of `ocaml` / `python`; it is not a language, it is
+the absence of a restriction, which is what a blank says. That freed
+the blank's old meaning, so the third state — **no mechanism carries
+this row at all** — now says `none` in both cells: it is the loudest
+thing the table can say and must not look like the most ordinary one.
 
 **`implemented at` is `<module>·<function>`** in
 `src/canary/agreement/canary_agreement_<module>.ml`, and a **red cell**
