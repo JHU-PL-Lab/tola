@@ -328,35 +328,41 @@ Short list, each learned from something that went wrong:
 - The **cache** — `../artifact_cache.md` (proposal) and
   [`stage6_realize_steps.md`](stage6_realize_steps.md) §4 (what exists).
 - **Adding an action** — `../action_playbook.md`.
-- The **checking** side — `../agreement/`, and start at its
-  [`README.md`](../agreement/README.md). (The old pointer here named
-  `surface/`, a directory renamed to `agreement/` on 2026-09-01 and so
-  dead for a fortnight.)
+- What a check **CLAIMS** — `../agreement/`, and start at its
+  [`README.md`](../agreement/README.md).
 
-  ⚠ **This boundary is being redrawn** (backlog §49). The line above
-  sends *"which contract fires"* away, and that is the **occasion** — a
-  function of `(world, action, mechanism, lang)`, which is this
-  directory's vocabulary, not the agreement layer's. The seam is
-  *agreement/ owns the CLAIM, enumeration/ owns the OCCASION*, and by it
-  a section on when a check is triggered belongs in
-  [`stage6_realize_steps.md`](stage6_realize_steps.md) — which today
-  mentions "agreement" zero times while being the doc for the pass that
-  attaches `agreement_ctx` to every step.
+  **THE SEAM, drawn (2026-09-16):** *agreement/ owns the CLAIM,
+  enumeration/ owns the OCCASION.* A claim is what an agreement asserts,
+  whose rule it recovers, and what falsifies it — none of which mentions
+  a world. An occasion is `(world, action, mechanism, lang)`: which step
+  a check fires at, and where its evidence is. The split lands in three
+  places:
 
-  Not redrawn yet, deliberately: what that section would SAY depends on
-  backlog §50. Today a check is evaluated by the runner after a step's
-  command; under the bundling direction a check *is* an action that
-  produces the evidence it reads. Those are different paragraphs, and
-  writing the first now means rewriting it.
+  | | lives in |
+  | --- | --- |
+  | applicability — can this PROJECT carry the claim? | pass 2, [`stage2_analyse_spec.md`](stage2_analyse_spec.md) |
+  | firing + evidence address — does it fire HERE, and where does it read? | pass 6, [`stage6_realize_steps.md`](stage6_realize_steps.md) §2b |
+  | the claim itself | `../agreement/` |
 
-  **Half of it has already moved, though, and that half is settled.**
-  APPLICABILITY — *can this project carry this claim at all* — is
-  `(mechanism, lang, declaration)` with no world in it, so it is a fact
-  about the spec and it lives in pass 2
-  ([`stage2_analyse_spec.md`](stage2_analyse_spec.md)). FIRING — *does it
-  fire at this action in this world* — needs a world and stays at
-  realize. The seam runs between those two, not between the two
-  directories: agreement/ still owns what each claim SAYS.
+  The old line here sent *"which contract fires"* away, which was wrong
+  in both directions, and it pointed at `surface/` — a directory renamed
+  to `agreement/` on 2026-09-01 and so dead for a fortnight.
+
+  **Still crossed in CODE, and recorded rather than patched:**
+  `binding_evidence_tag` / `lib_evidence_tags` map a world to a step tag
+  — world-arranging by nature — and live in
+  `agreement/canary_agreement_common.ml`. Moving them is not the fix;
+  `Canary_project_analysis.producers_of` plus the world's provision
+  computes the same function from the declarations, and deriving it is
+  what closes the placement class (backlog §50). A derived map does not
+  need an owner.
+
+  **Still to merge:** `../agreement/pipeline.md` is the project-facing
+  walkthrough of the same spine — its value is the four failure modes,
+  which are diagnostic and belong with the landing checklist. Whether
+  the two entry points become one, and what the merged reading path
+  looks like, is backlog §49's remaining half.
+
 - Anything **per project** — `../../project/`.
 
 ## The alignment rule

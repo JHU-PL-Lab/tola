@@ -11,12 +11,24 @@ where to look when it reports `unavailable`.
 The worked example is **sqlite**, because it is real, it is cheap, and every
 one of the failure modes below was found in it.
 
+> **WHAT THIS DOC OWNS, since the seam was drawn (2026-09-16).**
+> *agreement/ owns the CLAIM, enumeration/ owns the OCCASION.* The
+> mechanics of when a check fires and where it reads are the
+> enumeration's — they are `(world, action, mechanism, lang)` — and
+> they are stated once, in
+> [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md)
+> §2b. What is here is the **project-facing walkthrough**: the seven
+> points a run touches, and the **four failure modes**, which are what
+> you actually came for. Points 2–4 below therefore say what a project
+> author has to get right and point at the mechanics rather than
+> restating them.
+
 ## The shape, in one picture
 
 ```text
      project spec                    the enumeration                the registry
   ┌────────────────┐          ┌───────────────────────┐       ┌──────────────────┐
-  │ pr_artifacts   │──1──────▶│ passes 1–4 → a WORLD  │       │ the agreements   │
+  │ pr_artifacts   │──1──────▶│ passes 1–5 → a WORLD  │       │ the agreements   │
   │ pr_binding_decls│         │  (an assignment)      │       │ each with        │
   │ pr_runner_spec │          └──────────┬────────────┘       │ methods          │
   └────────────────┘                     │                    └────────┬─────────┘
@@ -58,7 +70,7 @@ the one that decides whether any agreement can reach anything.
 
 ## 2. The enumeration produces a world
 
-Passes 1–4 ([`../enumeration/README.md`](../enumeration/README.md)) turn the
+Passes 1–5 ([`../enumeration/README.md`](../enumeration/README.md)) turn the
 artifact table into an `assignment`: one placement per artifact. For one
 sqlite scenario:
 
@@ -72,13 +84,17 @@ provision — `Fetched` means the inspection sits at the step that fetches
 and installs it, `Built` means the step that builds it. Get the world
 wrong and every path is wrong.
 
+The derivation itself, and why it is the enumeration's rather than this
+layer's, is
+[`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md)
+§2b.
+
 ## 3. `derive_steps` attaches the action context
 
-`Canary_pipeline.steps_of` passes the scenario's own assignment and the
-project's declared mechanism into `derive_steps`, which attaches an
-`agreement_ctx` — mechanism, language, world — to the steps that have
-binding facts (`agreement_ctx_of_action`). A `fetch_source` step gets
-`None`; a `probe_binding_ocaml` step gets the context.
+Pass 6 attaches an `agreement_ctx` — mechanism, language, world — to the
+steps that have binding facts; the mechanics are
+[`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md)
+§2b. What matters to a project author is the next paragraph.
 
 **This is also where the inspector steps are attached.** `attach_inspect`
 consults `spec.inspect action loc` first, then falls back to

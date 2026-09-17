@@ -26,6 +26,30 @@ Eight, because the previous API returned a substring list and an empty list
 meant all of them at once. `holds` is bounded by the method's stated scope;
 it never means "compatible".
 
+## What is NOT here — the seam
+
+*agreement/ owns the CLAIM, enumeration/ owns the OCCASION* (2026-09-16).
+
+A **claim** is what an agreement asserts, whose rule it recovers, what
+evidence it reads and what falsifies it. None of that mentions a world,
+and all of it is here.
+
+An **occasion** is `(world, action, mechanism, lang)` — which step a
+check fires at, and where its evidence sits in the output tree. That is
+the enumeration's vocabulary, and it is stated once, over there:
+
+| question | lives in |
+| --- | --- |
+| can this PROJECT carry the claim? | [`../enumeration/stage2_analyse_spec.md`](../enumeration/stage2_analyse_spec.md) — pass 2, no world needed |
+| does it fire HERE, and where does it read? | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — pass 6 |
+| what does it claim, and what falsifies it? | this directory |
+
+One thing still crosses it in code: `binding_evidence_tag` /
+`lib_evidence_tags` in `canary_agreement_common.ml` map a world to a
+step tag. The fix is not to move them — it is to derive them (backlog
+§50, [`../action_model.md`](../action_model.md) §6), after which nobody
+owns them.
+
 ## Which file
 
 | you are… | read |
@@ -35,6 +59,7 @@ it never means "compatible".
 | **looking for the NEXT agreement** | [`theory.md`](theory.md) §5–§6 |
 | **asking what one agreement IS** | [`catalogue.md`](catalogue.md), or `canary checks --agreement NAME` |
 | landing an agreement on a project | [`pipeline.md`](pipeline.md) |
+| **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
 | asking what is actually in use | [`landing.md`](landing.md), or `canary checks --landing` |
 | writing the paper | `registry.md` §§2–6 — the component walk |
 | debugging an `unavailable` | [`catalogue.md`](catalogue.md) for where it looks, then [`pipeline.md`](pipeline.md) points 3–4 |

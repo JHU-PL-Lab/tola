@@ -11,6 +11,14 @@ runs it here, `render_gh_step` emits GitHub Actions YAML,
 doc covers making the step list, running it, and deciding
 what happened. The map is [`README.md`](README.md).
 
+**It also owns the OCCASION** (§2b, added 2026-09-16) — when a check
+fires and against what evidence. That is a function of `(world, action,
+mechanism, lang)`, which is this directory's vocabulary; `agreement/`
+owns what a check CLAIMS. The account used to live entirely in
+[`../agreement/pipeline.md`](../agreement/pipeline.md), which left this
+doc — the doc for the pass that attaches `agreement_ctx` to every step —
+mentioning "agreement" zero times.
+
 > Created 2026-08-24, closing the last stage gap. It ABSORBED
 > `algorithm_explainer.md`, the walkthrough that predated the stage map:
 > §2 (the action catalogue), §6 (the four steps), §7 (deploy-mismatch),
@@ -45,7 +53,7 @@ type action_sig = {
 
 The version rule encodes propagation: `Build_lib` consumes a `Source`, so
 its output's version IS the source's. That is the same source-primary rule
-stage 3's constraints enforce
+pass 3's constraints enforce
 ([`stage3_enumerate_worlds.md`](stage3_enumerate_worlds.md) §1, §3) — here it is stated as a
 property of the action rather than as a filter over assignments, and the
 two must agree.
@@ -65,7 +73,7 @@ from the catalogue is the open cleanup.
 4. run_with_info_status(steps)  →  verdicts
 ```
 
-**1** is stage 4's ([`stage5_order_worlds.md`](stage5_order_worlds.md) §1) — it
+**1** is pass 5's ([`stage5_order_worlds.md`](stage5_order_worlds.md) §1) — it
 appears here because it is also the cache key, and §4 below depends on
 that.
 
@@ -93,6 +101,113 @@ runner captures every step's output:
 `{ ( cmd ) ; echo $? > RC ; } 2>&1 | tee LOG`. The inner parentheses are
 load-bearing — many probes end in `exit $RC`, and without the nested
 subshell that exits the group before the status is recorded.
+
+## 2b. The OCCASION — when a check fires
+
+**This section is here because the seam runs here.** `agreement/` owns
+what a check CLAIMS; this pass owns **when it is triggered and against
+what** — and that is a function of `(world, action, mechanism, lang)`,
+which is this directory's vocabulary and not the agreement layer's.
+Until 2026-09-16 the split was declared the other way round, the
+account lived in [`../agreement/pipeline.md`](../agreement/pipeline.md),
+and this doc mentioned "agreement" zero times while being the doc for
+the pass that attaches the context.
+
+### The three questions, and where each is answered
+
+A check reaching a step has passed three gates, and they are answered in
+three different places. Confusing them is why a cell that could never
+speak and a cell waiting on an inspector read the same for a year.
+
+| question | needs | answered at |
+| --- | --- | --- |
+| **applicability** — can this PROJECT carry the claim? | mechanism, lang, declaration | **pass 2** ([`stage2_analyse_spec.md`](stage2_analyse_spec.md)) — no world |
+| **firing** — does it fire at THIS action in THIS world? | + a world | **here**, at realize |
+| **evidence** — is there anything to read? | + a run | the runner, per step |
+
+Applicability moved out of the run in 2026-09-14 for a measurable
+reason: it was re-answered at every firing site and logged, so sqlite
+emitted the same six `not_applicable` sentences on each of ten
+scenarios — sixty lines restating one static fact about cstubs. Firing
+cannot move, because it takes a world.
+
+### What realize attaches
+
+`Canary_pipeline.steps_of` hands `derive_steps` the scenario's own
+assignment and the project's declared mechanism, and `derive_steps`
+attaches an **`agreement_ctx`** — mechanism, language, world — to the
+steps that have binding facts (`agreement_ctx_of_action`). A
+`fetch_source` step gets `None`; a `probe_binding_ocaml` step gets the
+context.
+
+The context is what turns the registry's world-dependent queries on for
+that step. Without it a method's `m_firing` and `m_inputs` have no world
+to ask about, and both are functions OF a world.
+
+### When evaluation happens, today
+
+**The runner evaluates, after the step's command.** `run_step` calls
+`Canary_agreement.evaluate_step`, which produces ONE record per step
+feeding BOTH the report and the step's acceptance — a compat step used
+to evaluate its comparators twice, once to log and once to decide.
+
+**Evaluation is NOT a further pass.** The step list is object code
+consumed by four backends and only one of them checks anything:
+GH-render, Mermaid and HTML evaluate nothing. A pass above the IR that
+one consumer reaches would be a stage that three targets skip.
+
+**A violated agreement does not, by default, fail its step.** The
+acceptance policy is "the command succeeded and its postcondition
+holds", and a disagreement found there is a finding about ARTIFACTS that
+the action was never asked to fail on — ssl's `dependencies_provided:
+violated libcrypto.so.3` is real and must not turn ssl red. `--strict`
+makes the two views agree by failing the step that READ the disagreeing
+evidence. See [`../agreement/landing.md`](../agreement/landing.md).
+
+### Where the evidence is, and why that is this pass's problem
+
+A method names its evidence as a relative path — `"fetch_binding_ocaml/
+inspect.json"` — and `run_step` resolves it against the world's output
+tree. The step tag in that path is **derived from the world**:
+`binding_evidence_tag` reads the binding's provision (`Fetched` → the
+step that fetches and installs it, `Built` → the step that builds it),
+and `lib_evidence_tags` does the same for the library.
+
+**Those derivations are world-arranging, so they are this pass's
+vocabulary — and they live in `agreement/canary_agreement_common.ml`.**
+That is the one place the seam is still crossed in code rather than only
+in prose. It is recorded rather than patched because the fix is not a
+move: `Canary_project_analysis.producers_of` plus the world's provision
+computes the same function from the declarations, and deriving it is
+what would also close the placement class — *the producer chooses a
+step, the consumer derives one, and nothing makes them agree*, four
+instances, each fixed individually (backlog §50).
+
+### The direction: a check that produces what it reads
+
+Today the producer (an inspection) and the consumer (a comparator) are
+separate steps with an address between them, and every instance of that
+class has been an address that did not match. The recorded direction is
+to **bundle them into one action, because that is what checking is** —
+then there is no address to negotiate, and a second consumer of the same
+evidence is a cache hit rather than a coordination problem.
+
+The codebase is already drifting that way, twice, both times to fix
+exactly this class: `Native_lib_probe` emits its native summary INSIDE
+the probe's own command (2026-09-13) rather than as a child step, and
+`probe_ocaml_env_cmd` emits the consumer's ABI summary inline after
+`RC=$?` (2026-09-15).
+
+**Not built, and the blocker is named.** `<action>_post` is a trigger
+MOMENT, not a specification of what runs at it; what runs is derived
+from what the action just produced, and pass 2's join (`produced_at` /
+`producers_of`) is the value that answers it. What stands in the way is
+that **three locator vocabularies** exist for "where is the library" —
+typed `probe_lib_location`, `lib_locator` globs, raw shell — and a
+derived inspection has to resolve a location. The ordered remainder is
+[`../action_model.md`](../action_model.md) §6.
+
+Read that doc before adding a step whose name ends in `_inspect`.
 
 ## 3. The two dependency relations — and the drift
 
@@ -207,7 +322,7 @@ cached success (`canary cache-test` guards it). Since 2026-08-17 the
 marker also carries a **spec fingerprint** over the realized command and
 the expectation's form, so an edited command invalidates it.
 
-**Per-scenario.** The scenario dir is the key, which is why stage 4's
+**Per-scenario.** The scenario dir is the key, which is why pass 5's
 identity rules are cache rules too: two assignments that differ only in an
 ambient version share a directory and only one runs.
 
@@ -291,7 +406,7 @@ Four backends consume the same step list: the local runner executes it,
 `canary_gh.ml` renders GH Actions YAML, `canary_diagram.ml` renders
 Mermaid, `canary_html.ml` renders the result page.
 
-## 8. Why a stage-5 dump is an APPLICATION, not a projection
+## 8. Why a realize dump is an APPLICATION, not a projection
 
 Two of the IRs contain closures and therefore cannot be `deriving show`:
 
@@ -302,7 +417,7 @@ Two of the IRs contain closures and therefore cannot be `deriving show`:
 - **`step`** carries `cmd : output_dir:… -> variant_key:… -> string`,
   `check_pre`, `check_post`.
 
-So a stage-4 dump is an **application**, not a projection: apply `cmd`
+So a realize dump is an **application**, not a projection: apply `cmd`
 with the scenario's real `output_dir` and print the resulting shell
 string; report `check_pre`/`check_post` as present/absent plus the
 expectation variant. This path already exists —

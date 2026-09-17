@@ -469,22 +469,33 @@ No hurry — all items below are queued for when their forcing function arrives.
     **The seam, stated (2026-09-15, user):** *agreement/ owns the CLAIM,
     enumeration/ owns the OCCASION.* Everything that decides WHEN a check
     fires is a function of `(world, action, mechanism, lang)`, which is
-    enumeration's vocabulary, not the agreement layer's. Two things make
-    it more than a preference:
+    enumeration's vocabulary, not the agreement layer's.
 
-    - `stage6_realize_steps.md` mentions "agreement" **zero times**, and
-      it is the doc for the pass that attaches `agreement_ctx` to every
-      step;
-    - `agreement/pipeline.md` already IS that document, filed in the
-      wrong directory — its §§2–5 are *the enumeration produces a
-      world*, *derive_steps attaches the action context*, *the step
-      runs*, *evaluate_step*. So the merge relocates a spine rather than
-      inventing a section.
-    - `enumeration/README.md`'s **"What is NOT here"** is where the
-      boundary is currently declared, and it is wrong on both halves:
-      it sends "which contract fires" away (that is the occasion, which
-      should come IN) and it points at `surface/`, renamed to
-      `agreement/` in 2026-09-01.
+    **DRAWN 2026-09-16.** The three things that made it more than a
+    preference are done:
+
+    - ~~`stage6_realize_steps.md` mentions "agreement" zero times~~ — it
+      has **§2b, The OCCASION**, now: the three gates (applicability at
+      pass 2, firing at realize, evidence at run time) and where each is
+      answered; what realize attaches; when evaluation happens and why
+      it is not a further pass; where the evidence address comes from;
+      and the bundling direction with its named blocker;
+    - ~~`agreement/pipeline.md` already IS that document, filed in the
+      wrong directory~~ — its points 2–4 now say what a PROJECT AUTHOR
+      has to get right and point at §2b for the mechanics. It keeps the
+      four failure modes, which are its real value and are diagnostic
+      rather than structural;
+    - ~~`enumeration/README.md`'s "What is NOT here" is wrong on both
+      halves~~ — redrawn, with the three-row table of what lives where,
+      and `agreement/README.md` gained the matching section from its
+      side.
+
+    **What the merge would STILL have to settle** is the reading path:
+    two entry points describe one spine from two ends (the enumeration
+    README's four-step *How to read this, if you are new*, and
+    `agreement/README.md`'s map of five files). Whether they become one
+    is open, and it is now a question about reading order rather than
+    about ownership.
 
     **And evaluation is NOT a further pass.** Pass 6 attaches the context;
     the RUNNER BACKEND evaluates. The step list is object code consumed
@@ -492,12 +503,23 @@ No hurry — all items below are queued for when their forcing function arrives.
     Mermaid and HTML evaluate nothing. A further pass would put a stage
     above the IR that one consumer reaches.
 
-    **Sequence it after §50's placement bullet.** The doc split says
-    "where evidence lives is enumeration's" while the code keeps
-    `binding_evidence_tag` in `canary_agreement_common.ml`. Moving the
-    text first leaves a paragraph saying "lives in agreement/ for
-    layering reasons, conceptually enumeration's" — honest, and the kind
-    of note that never gets cleaned up.
+    ~~**Sequence it after §50's placement bullet.**~~ It was not, and
+    the warning it carried was exactly right, so it is worth keeping
+    rather than deleting. It said: moving the text first leaves a
+    paragraph saying *"lives in agreement/ for layering reasons,
+    conceptually enumeration's"* — "honest, and the kind of note that
+    never gets cleaned up". The text moved on 2026-09-16 and that
+    paragraph now exists, in three places.
+
+    What makes it survivable rather than permanent is that it names a
+    REPAIR instead of an excuse: `binding_evidence_tag` /
+    `lib_evidence_tags` are not waiting to be MOVED, they are waiting to
+    be DERIVED — `Canary_project_analysis.producers_of` plus the world's
+    provision is the same function, computed from the declarations. A
+    derived map has no owner, so the note deletes itself when §50's
+    placement bullet lands rather than needing someone to remember it.
+    If that stops being the plan, this paragraph becomes the thing the
+    original warning described and should be treated as debt.
 
 50. **Review the evidence workflow itself — the runner writes an
     inspection, an external reader checks it** (2026-09-15, user: *"the
