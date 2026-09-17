@@ -38,6 +38,20 @@
 
 open Base
 
+(** What ONE action touches, spelled in the project's own artifact
+    identities rather than in coarse kinds.
+
+    Two lists and not one, because the two are asked by different
+    questions. A HOOK at `<action>_post` asks what the action just
+    PRODUCED — that is the artifact there is now something new to say
+    about. A precondition asks what it CONSUMES. The flat
+    `artifacts_of_action` concatenates them, which is right for the
+    diagram and wrong for a hook. *)
+type touch = {
+  tc_consumes : Canary_artifact.artifact_info list;
+  tc_produces : Canary_artifact.artifact_info list;
+}
+
 type t = {
   an_project : string;
   an_spec : Canary_artifact.project_spec;
@@ -64,6 +78,21 @@ type t = {
   an_unsuited : Canary_agreement.unsuited list;
       (** claims this project cannot carry, per language, with the
           reason. The negative form is what reports print *)
+  an_touches : (Canary_basic.action * touch) list;
+      (** THE JOIN: `artifacts_of_action` × the artifact declarations.
+          For each action canary knows, which of THIS project's declared
+          artifacts it consumes and produces. An action touching nothing
+          declared is absent — it is not in this project's vocabulary.
+
+          It is the missing half of the action model (2026-09-16, user).
+          `consumes_of_action` answers in coarse KINDS (`Lib`,
+          `Binding OCaml`); a project declares refined IDENTITIES
+          (`A_lib (Some "crypto")`, `A_binding (OCaml, Cstubs)`). Nothing
+          joined the two, so anything wanting "what did this action just
+          make, and what do we know about it" had to guess — and the
+          existing guess is `find_artifact_of_kind`, which takes the
+          FIRST declared artifact of a kind and is already wrong for the
+          multi-lib case `A_lib of string option` was landed for. *)
   an_carries : (Canary_lang.lang * string list) list;
       (** and the POSITIVE form, which is what selection wants: the
           agreements whose methods this project can carry, per language.
@@ -183,6 +212,39 @@ let carried_slugs ~(mechanism : Canary_mechanism.mechanism)
         Some r.Canary_agreement.ag_slug
       else None)
 
+(** Every artifact this project declares of a coarse kind — a LIST,
+    because a kind may name several identities.
+
+    `Canary_enumerate.find_artifact_of_kind` is the existing answer and
+    it returns the FIRST. That was a fair simplification while every
+    project had one lib and one binding per language; `A_lib of string
+    option` (2026-08-25, multi_lib step 1) is the declaration that
+    breaks it, and this is the shape that will not have to change when
+    a second lib lands. *)
+let declared_of_kind (s : Canary_artifact.project_spec)
+    (k : Canary_basic.artifact_kind) : Canary_artifact.artifact_info list =
+  List.filter (Canary_artifact.ps_artifacts s) ~f:(fun i ->
+      Poly.equal (Canary_artifact.kind_of i) k)
+
+(** THE JOIN. For every action in the catalogue over [langs], what this
+    project's DECLARATIONS say it touches.
+
+    An action with nothing declared on either side is dropped: it is not
+    in this project's vocabulary, and saying so by ABSENCE rather than
+    by an empty record is what lets a consumer iterate the list instead
+    of filtering it. Note an action can legitimately have an empty
+    [tc_produces] and still belong — every `Probe_*` does, because a
+    probe verifies and creates nothing. *)
+let touches_of (s : Canary_artifact.project_spec)
+    (langs : Canary_lang.lang list) :
+    (Canary_basic.action * touch) list =
+  List.filter_map (Canary_basic.store_actions ~langs) ~f:(fun a ->
+      let of_kinds ks = List.concat_map ks ~f:(declared_of_kind s) in
+      let tc_consumes = of_kinds (Canary_action.consumes_of_action a) in
+      let tc_produces = of_kinds (Canary_action.produces_of_action a) in
+      if List.is_empty tc_consumes && List.is_empty tc_produces then None
+      else Some (a, { tc_consumes; tc_produces }))
+
 (** THE PASS. Pure: it reads declarations and the registry, and touches
     no world, no workspace and no disk. *)
 let of_project_run (pr : Canary_project_run.project_run) : t =
@@ -208,6 +270,11 @@ let of_project_run (pr : Canary_project_run.project_run) : t =
     an_declared = declared;
     an_mechanisms = mechanisms;
     an_unsuited = unsuited;
+    (* over the MODELLED languages, like [an_carries] and for the same
+       reason: an action names a language whether or not this project
+       declared a binding for it, and a consumer asking about
+       `probe_binding_python` wants an answer rather than a hole *)
+    an_touches = touches_of spec modelled_langs;
     an_carries = carries }
 
 (* ── asking the analysed spec things ── *)
@@ -247,3 +314,42 @@ let suits (t : t) ~(lang : Canary_lang.lang)
 (** The languages this project DECLARES a binding for, in declaration
     order. *)
 let langs (t : t) : Canary_lang.lang list = List.map t.an_mechanisms ~f:fst
+
+(** What this action touches here, or [None] if it touches nothing this
+    project declares — which is the same as saying the action is not
+    part of this project. *)
+let touches (t : t) (a : Canary_basic.action) : touch option =
+  List.Assoc.find t.an_touches a ~equal:Poly.equal
+
+(** The artifacts an action PRODUCES here. THE HOOK'S QUESTION
+    (2026-09-16, user): `<action>_post` is a trigger MOMENT, not a
+    specification of what runs at it, and what should run is derived
+    from what the action just made. A lib inspection is the same
+    inspection whether the lib arrived via `build_lib`, `fetch_lib` or a
+    package that happens to contain one; what differs is only where it
+    is. Asking this from the INVOKING side is what makes that one
+    answer instead of three hand-placed ones.
+
+    Empty for every `Probe_*` — they produce nothing — which is the
+    typed statement of why a probe cannot be the place an artifact's
+    evidence is first recorded. *)
+let produced_at (t : t) (a : Canary_basic.action) :
+    Canary_artifact.artifact_info list =
+  match touches t a with None -> [] | Some tc -> tc.tc_produces
+
+(** The actions that PRODUCE this artifact here — the hook question read
+    backwards, and the one a check asks: "where could my evidence come
+    from?" More than one is normal and is the point: a lib is produced
+    by `build_lib` in a Built world, `fetch_lib` in a Fetched one and
+    `install_lib` in an Installed one, and a check that needs the lib
+    should be able to attach at whichever of them this world runs. *)
+let producers_of (t : t) (id : Canary_artifact.artifact_info) :
+    Canary_basic.action list =
+  List.filter_map t.an_touches ~f:(fun (a, tc) ->
+      if
+        List.exists tc.tc_produces ~f:(fun i ->
+            String.equal
+              (Canary_artifact.string_of_id i)
+              (Canary_artifact.string_of_id id))
+      then Some a
+      else None)

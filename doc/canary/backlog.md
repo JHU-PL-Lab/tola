@@ -535,6 +535,20 @@ No hurry — all items below are queued for when their forcing function arrives.
       because the ACTION RESULT is cached — the second consumer's
       inspection is a cache hit, not a coordination problem.
 
+      **LANDED 2026-09-16, the half that is a data structure.** The
+      join a derived address needs —
+      `artifacts_of_action` × the artifact declarations — is pass 2's
+      `an_touches`, with `produced_at` (the hook's question) and
+      `producers_of` (it backwards: where could this artifact's evidence
+      come from?). `canary emit <p> --stage analyse` prints it; pinned
+      by `analysis.touches_joins_actions_to_declarations`. NOTHING
+      CONSUMES IT YET, deliberately — see
+      [`design/action_model.md`](design/action_model.md) §6 for the
+      ordered remainder, whose blocking item is that **three locator
+      vocabularies** exist for "where is the library" (typed
+      `probe_lib_location`, `lib_locator` globs, raw shell) and a
+      derived inspection has to resolve a location.
+
       What makes this more than a preference is that the codebase is
       already drifting toward it, twice, both times to fix exactly this
       class: `Native_lib_probe` emits its native summary INSIDE the

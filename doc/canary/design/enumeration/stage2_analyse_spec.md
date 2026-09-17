@@ -32,6 +32,7 @@ derived facts over it, and until this pass they had no home.
 | `an_declared` | what the project says it ships: the source repo's `api_source`, else its own |
 | `an_mechanisms` | one `(lang, mechanism)` per language this project DECLARES a binding for |
 | `an_unsuited` | the claims it cannot carry, per language, with the reason |
+| `an_touches` | **the join** — for each action, which DECLARED artifacts it consumes and produces |
 | `an_carries` | and the positive form: the agreements it CAN carry, per language |
 
 See it:
@@ -115,10 +116,39 @@ divergence as the 2026-09-15 one, caught before it fired.
 `checks.applicability_reads_the_declaration` pins the direction at the
 one project where the two answers differ.
 
-## 5. Asking the analysed spec things
+## 5. The join — actions × declarations
 
-One value, three questions, and every one of them used to be asked by
-rebuilding its inputs:
+`an_touches` answers, for every action in the catalogue, which of THIS
+project's declared artifacts it consumes and produces — in the project's
+own artifact IDENTITIES, not in coarse kinds.
+
+It is here because it is spec-only: no world, no policy, no realized
+step. It exists because a HOOK needs it. `<action>_post` is a trigger
+moment, not a specification of what runs there, so what runs has to be
+derived from what the action just produced — which means something has
+to be able to say what that is. Nothing could.
+
+| function | question |
+| --- | --- |
+| `touches an action` | what does it touch here? `None` = not in this project |
+| `produced_at an action` | the hook's question — what did it just make? |
+| `producers_of an artifact` | backwards — where could this artifact's evidence come from? |
+
+Two lists rather than one: a hook reads the produced side, a
+precondition the consumed side. Lists per kind rather than a first
+match, because tiny-full already declares two apps and two Python
+bindings and `A_lib of string option` was landed for a second lib.
+
+Pinned by `analysis.touches_joins_actions_to_declarations` (total over
+the declarations; a `Probe_*` produces nothing; a lib has more than one
+producer). The model it serves is
+[`../action_model.md`](../action_model.md); what is NOT built on it yet
+is that doc's §6.
+
+## 6. Asking the analysed spec things
+
+One value; every question below used to be asked by rebuilding its
+inputs somewhere else:
 
 | function | question |
 | --- | --- |
@@ -135,7 +165,7 @@ anything — a method with no evaluator reports `not_implemented` forever,
 one the project cannot carry reports `not_applicable` forever, and
 neither is coverage.
 
-## 6. Two lists of languages, deliberately
+## 7. Two lists of languages, deliberately
 
 `an_mechanisms` and `an_carries` are keyed differently and it is not an
 oversight.
@@ -152,7 +182,7 @@ oversight.
   binding is answered with its default mechanism, which is what both
   consumers already did.
 
-## 7. ⚠ A declaration this pass does not read
+## 8. ⚠ A declaration this pass does not read
 
 A project can state its binding mechanism in **two** places, and pass 2
 reads one of them.
@@ -180,22 +210,25 @@ a compiled stub archive, unlike Python's ctypes), and it is a project
 question rather than a pipeline one. Tracked in
 [`../../project/issues.md`](../../project/issues.md) §1.
 
-## 8. Code and pins
+## 9. Code and pins
 
 | what | where |
 | --- | --- |
 | the pass | `project/canary_project_analysis.ml` |
 | named in the pipeline | `main/canary_pipeline.ml` — `analysed_of`, `json_analyse` |
 | the chain filter | `action/canary_enumerate.ml` — `applicable_chains`, `chain_applicable` |
+| the join | `project/canary_project_analysis.ml` — `touches_of`, `touches`, `produced_at`, `producers_of` |
 | the dump | `canary emit <p> --stage analyse [--json]` |
 
 Pins: `checks.applicability_reads_the_declaration` (pass 2's answer is
 the declaration's, not the language default's),
 `checks.index_speaks_each_action_language` (the 2026-09-15 instance),
+`analysis.touches_joins_actions_to_declarations` (the join is total, a
+probe produces nothing, a lib has several producers),
 `mechanism.dynamic_binding_has_no_build_chain` (the `build_binding`
 half of `chain_applicable`).
 
-## 9. What is NOT here
+## 10. What is NOT here
 
 - **Firing** — [pass 6](stage6_realize_steps.md). It needs a world.
 - **What a claim SAYS** — [`../agreement/`](../agreement/README.md).

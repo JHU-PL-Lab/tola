@@ -2,6 +2,12 @@
 
 **Kind: how-to.** The procedure for adding an action, with Publish as the worked example. The machinery it describes exists.
 
+**The MODEL this realizes is [`action_model.md`](action_model.md)** —
+what an action is, why `<action>_post` is a moment rather than a
+specification of what runs at it, and the action × declaration join a
+hook needs. Read that first if you are about to add a step whose name
+ends in `_inspect`: the answer is that you should not.
+
 > 2026-08-17. Written from the Publish generalization (active plan 2):
 > the "how to add an action" checklist (the orthogonality surface), the
 > Publish worked example, and the refactoring plan the case study

@@ -519,7 +519,7 @@ canary's own definition (`mi_compiles_a_stub`, `mi_consumer_records_needed`)?
 `not_applicable`; if no, the template's `binding_mechanism` is
 mis-declared and the fix is in the four project files. Either way pass 2
 should then read ONE place. Written up at
-[`../design/enumeration/stage2_analyse_spec.md`](../design/enumeration/stage2_analyse_spec.md) §7.
+[`../design/enumeration/stage2_analyse_spec.md`](../design/enumeration/stage2_analyse_spec.md) §8.
 
 ### Open — z3's `assert_staged` is outside the world vocabulary
 

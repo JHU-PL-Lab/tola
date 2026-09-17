@@ -377,6 +377,21 @@ let json_analyse (pr : project_run) : Yojson.Basic.t =
   `Assoc
     [ ("project", `String pr.pr_name); ("pass", `String "analyse");
       ("chains", `List (List.map chain an.A.an_chains));
+      ("touches",
+       `List
+         (List.map
+            (fun (act, (tc : A.touch)) ->
+              let ids l =
+                `List
+                  (List.map
+                     (fun i -> `String (Canary_artifact.string_of_id i))
+                     l)
+              in
+              `Assoc
+                [ ("action", `String (Canary_basic.string_of_action act));
+                  ("consumes", ids tc.A.tc_consumes);
+                  ("produces", ids tc.A.tc_produces) ])
+            an.A.an_touches));
       ("bindings",
        `List
          (List.map

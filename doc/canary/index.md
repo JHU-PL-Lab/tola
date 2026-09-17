@@ -105,6 +105,7 @@ All six stages now have a standalone doc.
 | File | Topic |
 | ---- | ----- |
 | [index.md](design/index.md) | **The design narrative** (not the doc map): vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
+| [action_model.md](design/action_model.md) | **What an action IS, and what `_post` means** (2026-09-16) — a hook is a MOMENT, not a specification of what runs at it; the action × declaration join that a hook needs (landed, pass 2); `probe_lib` as three roles wearing one name; the three locator vocabularies that block deriving an inspection |
 | [action_playbook.md](design/action_playbook.md) | *How-to*: adding an action, with Publish as the worked example |
 | [matrix.md](design/matrix.md) | The result matrix — what a row is and what names it, plus why a `·` cell is not neutral. NOT an enumeration pass: `canary result` reads `actions.log` after a run |
 | [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation. Moved out of `enumeration/` 2026-08-24: not a stage |

@@ -475,6 +475,26 @@ let emit_cmd =
                           Canary_basic.string_of_action a.Canary_basic.as_action)
                         c)))
               an.A.an_chains;
+            (* THE JOIN — what each action touches, in this project's
+               own artifact ids. `>` produces, `<` consumes, and the
+               asymmetry is the point: a hook at `<action>_post` reads
+               the `>` side, a precondition the `<` side. *)
+            Fmt.pr "@.  actions × declared artifacts — %d in this \
+                    project's vocabulary@."
+              (List.length an.A.an_touches);
+            List.iter
+              (fun (act, (tc : A.touch)) ->
+                let ids l =
+                  match l with
+                  | [] -> "-"
+                  | xs ->
+                      String.concat ","
+                        (List.map Canary_artifact.string_of_id xs)
+                in
+                Fmt.pr "    %-24s < %-38s > %s@."
+                  (Canary_basic.string_of_action act)
+                  (ids tc.A.tc_consumes) (ids tc.A.tc_produces))
+              an.A.an_touches;
             Fmt.pr "@.  bindings declared@.";
             List.iter
               (fun (l, m) ->

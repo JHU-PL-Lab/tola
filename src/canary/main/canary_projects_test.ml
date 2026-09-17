@@ -2229,6 +2229,70 @@ let applicability_reads_declaration_pin : Canary_project_test.pure_test =
             in
             declared_is_ctypes && (not by_declaration) && by_default) }
 
+(* THE ACTION × DECLARATION JOIN (2026-09-16, user) — three claims, and
+   the third is the one a hook will stand on.
+
+   (a) TOTAL over the declarations. Every artifact a project declares is
+   touched by at least one action in the catalogue. A declared artifact
+   no action reaches is unreachable: nothing can fetch it, build it,
+   consume it or check it, and the spec is describing something outside
+   canary's model. This is the invariant that would fire first if a new
+   `artifact_kind` were declared before the catalogue learned about it.
+
+   (b) A PROBE PRODUCES NOTHING. `produced_at` is empty for every
+   `Probe_*`, which is `produces_of_action`'s claim restated in the
+   project's own vocabulary. It matters because a probe is where three
+   roles are currently fused (existence, inspection, execution — see
+   `probe_lib`'s survey), and the typed fact that it creates nothing is
+   why a probe cannot be where an artifact's evidence is FIRST recorded,
+   whatever a tag map currently says.
+
+   (c) A LIB HAS SEVERAL PRODUCERS, and that is the point of the join
+   rather than a defect in it. `build_lib` in a Built world, `fetch_lib`
+   in a Fetched one, `install_lib` in an Installed one — all produce the
+   same declared artifact. A hook that wants a lib inspection should
+   attach at whichever of them this world runs, which is exactly the
+   "from the invoking side" the action model asks for. *)
+let touches_join_pin : Canary_project_test.pure_test =
+  { name = "analysis.touches_joins_actions_to_declarations";
+    check =
+      (fun () ->
+        let module A = Canary_project_analysis in
+        List.for_all Canary_registry.all_specs ~f:(fun (_, pr) ->
+            let an = Canary_pipeline.analysed_of pr in
+            let id_str = Canary_artifact.string_of_id in
+            let touched =
+              List.concat_map an.A.an_touches ~f:(fun (_, tc) ->
+                  List.map (tc.A.tc_consumes @ tc.A.tc_produces) ~f:id_str)
+            in
+            (* (a) *)
+            let total =
+              List.for_all
+                (Canary_artifact.ps_artifacts an.A.an_spec)
+                ~f:(fun i ->
+                  List.mem touched (id_str i) ~equal:String.equal)
+            in
+            (* (b) *)
+            let probes_produce_nothing =
+              List.for_all an.A.an_touches ~f:(fun (act, _) ->
+                  match act with
+                  | Canary_basic.Probe_lib | Canary_basic.Probe_binding _
+                  | Canary_basic.Probe_app _ ->
+                      List.is_empty (A.produced_at an act)
+                  | _ -> true)
+            in
+            (* (c) — asked of the lib every project declares *)
+            let lib_has_producers =
+              match
+                List.find (Canary_artifact.ps_artifacts an.A.an_spec)
+                  ~f:(fun i ->
+                    Poly.equal (Canary_artifact.kind_of i) Canary_basic.Lib)
+              with
+              | None -> true (* a project with no lib declares nothing here *)
+              | Some lib -> List.length (A.producers_of an lib) > 1
+            in
+            total && probes_produce_nothing && lib_has_producers)) }
+
 (* THE GH RENDERING MUST AGREE WITH THE EXPECTATION'S POLARITY
    (2026-08-28).
 
@@ -4225,6 +4289,7 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
             an_declared = None;
             an_mechanisms = [ (Canary_lang.OCaml, Canary_mechanism.Cstubs) ];
             an_unsuited = [];
+            an_touches = [];
             an_carries = [] }
         in
         let cell ?(version_points = fun _ -> 1) obs slug =
@@ -4664,6 +4729,7 @@ let base_tests : Canary_project_test.pure_test list =
       strict_mode_pin;
       check_index_language_pin;
       applicability_reads_declaration_pin;
+      touches_join_pin;
       blame_attribution_pin;
       inspect_clash_pin;
       run_info_session_pin;
