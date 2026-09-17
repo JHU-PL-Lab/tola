@@ -10,8 +10,8 @@ section numbering is therefore load-bearing —
 `agreements.doc_anchors_exist` fails if a cited section stops existing.
 
 > Split out of `registry.md` on 2026-09-17. That file was 1,376 lines and
-> two documents: the agreement MODEL (now [`agreements.md`](agreements.md)) and
-> this walk. Its title was a paper title, it had no `Kind:` line, and
+> two documents: the agreement MODEL (now [`agreements.md`](agreements.md) §1)
+> and this walk. Its title was a paper title, it had no `Kind:` line, and
 > CLAUDE.md routed "writing the paper" at these sections specifically.
 > The numbering is unchanged across the split, so every anchor in the
 > code still resolves.
@@ -226,7 +226,7 @@ checks, with each method's limits generated into [`agreements.md`](agreements.md
 | `signatures_agree`          | Compare return-type strings and argument-type lists for names present on both sides | Header and binding signature summaries    |
 
 `required_symbols_exported` in this context is the completed production path:
-[`agreements.md`](agreements.md) §2.1 records what runs; [`../../backlog.md`](../../backlog.md) §51 what is left.
+[`agreements.md`](agreements.md) §4.9.1 records what runs; [`../../backlog.md`](../../backlog.md) §51 what is left.
 
 `signatures_agree`'s registered method compares textual signatures, not
 semantic type equivalence, representations or ownership. Tiny's inspector
@@ -518,7 +518,7 @@ retain every build-time dependency of a fetched consumer.
 The demonstrated failure concerns the cooperation between packaging conventions.
 Version direction alone does not explain it: the same binaries ran after the
 name resolution was corrected. That observation supports attribution to the
-pairing, without claiming general compatibility between the releases ([`agreements.md`](agreements.md) §2.2).
+pairing, without claiming general compatibility between the releases ([`agreements.md`](agreements.md) §4.9.3).
 
 #### 5.5.3 Discovery is not an identity oracle
 

@@ -1281,6 +1281,45 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   silent half-edit. When a change feels too big for `Edit`, that is a signal
   to split it, not to reach for a script. Edit → build → diff → commit after
   each working tier.
+- **A DOCUMENT IS WRITTEN, NEVER ASSEMBLED** (2026-09-17, after a bad
+  one). A script may MOVE a doc, RENAME it, or sweep a reference across
+  the tree. It may not produce prose. When a task says merge, split,
+  absorb or unify two documents, the deliverable is a document someone
+  reads start to finish — not the union of the inputs with new headers
+  over it.
+
+  What went wrong, so the shape is recognisable: `model.md` +
+  `landing.md` + `catalogue.md` were "merged" by a python script that
+  sliced line ranges and glued them under new part numbers. Every
+  sentence survived. The result told the same pipeline twice at two
+  zooms, answered its own title only on page fifteen, carried three
+  competing routing tables, numbered a section §4.9.1 because that is
+  where the third file's §2.1 happened to land, and came to 2200 lines —
+  longer than the three files it replaced.
+
+  Three failures worth naming separately, because each is tempting on
+  its own:
+  - **Framing it as a file operation.** "Merge three files" invites a
+    script; "write the document these three were trying to be" does not.
+    The task is the second one even when the request says the first.
+  - **Making "lose no content" the success criterion.** Slicing exact
+    line ranges is provably lossless, which is why it feels safe. It is
+    the wrong objective: concatenation preserves every sentence and
+    destroys the document. Losing a paragraph that had stopped earning
+    its place is the CHEAP error; the expensive one is shipping prose
+    nobody can read.
+  - **Letting the cost of the method choose the method.** Writing 2000
+    lines through `Edit` is expensive and a script is one call. That is
+    a fact about effort, not about the right deliverable.
+
+  **And the pins cannot catch it.** `doc_names_live_code`,
+  `doc_cross_refs_resolve`, `doc_anchors_exist`,
+  `catalogue_doc_is_generated` all check mechanical properties —
+  identifiers exist, `§` references resolve, generated regions match the
+  registry. None of them can see that a document says the same thing
+  twice. **Green pins on a doc change mean nothing about the document.**
+  Read the result before claiming it is done; that read is the only
+  check there is.
 - **Catch-all ordering in `match`**: `| _ -> ...` or `| e -> ...` must come
   LAST.  Putting it first makes all patterns below unreachable.  The
   compiler warns `redundant-case` but doesn't error — the match silently

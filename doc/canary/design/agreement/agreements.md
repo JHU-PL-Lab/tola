@@ -1,58 +1,72 @@
 # The agreements — what there is, and what is left
 
-**Kind: reference + status.** ONE document for the question *what does
-canary check today, and what is missing* — the model a claim is built
-on, every agreement's record, everything that has no record yet, how a
-run gets from a step to a verdict, and what the remaining work is.
+**Kind: reference + status.** What canary checks today, what it cannot
+check yet, and how a run gets from a step to a verdict.
 
-> Merged 2026-09-17 from `model.md`, `landing.md` and the generated
-> `catalogue.md`, at the user's request: *"make an unified doc on what
-> are current working agreement and checking and what are left … discuss
-> what are they and what are missing."* The three answered one question
-> between them and a reader had to visit all three to assemble it.
->
-> The companion question — *why* an agreement exists at all — is a
-> different document and stays separate:
-> [`theory.md`](theory.md) (where agreements come from) and
-> [`components.md`](components.md) (why each one exists). Merging those
-> two was considered in the same breath and is recorded as open at the
-> end of §5.6: they collide on section numbering, and components' §§ are
-> load-bearing in CODE.
+## The answer, before the detail
 
-**It is aligned with the agreement overview** (`canary checks --firing`
-table 1, `make view` table 1, described in [`../matrix.md`](../matrix.md)).
-The overview is the one-screen version of §2 here: same agreements, same
-order, same rooting and targets. Where this document and the table
-disagree, the table is generated and this is not — except in §2, which
-is generated too.
+**Canary has 13 implemented agreements. 8 of them are LANDED** — a real
+project's run has decided them `holds` or `violated`, which is the only
+evidence that a check works. The other 5 are implemented and have not
+yet decided anything, for three different reasons:
 
-**The rule this file lives under:** a table the tool generates does not
-get a hand copy. §2 and §3 are written by `make agreement-catalogue`
-between the markers and pinned against the registry
-(`agreements.catalogue_doc_is_generated`); everything else is prose.
-Read the live views directly when in doubt:
+| not landed | why | what would land it |
+| --- | --- | --- |
+| `signatures_agree` | reports `unavailable` on all seven projects that reach it: it needs the source-scanning inspectors, which no project wires | wire one project's header and stub scans |
+| `declared_versions_exported` | reports `vacuous` — the libraries it reaches carry no symbol versioning, so there is nothing of that kind to compare | a project whose library uses a version script |
+| `behavior_matches`, `repack_preserves_api`, `repack_complete` | **no evaluator, and no tool's rule to recover.** Nothing in a toolchain enforces that a function returns what a project expected | somebody to STATE a specification — not wiring |
+
+That last row is worth reading twice. The three unimplemented agreements
+are exactly the three with no `ag_rooted_in`, and it is not a
+coincidence: an agreement re-checks a rule some tool once enforced, so
+where no tool enforced anything there is nothing to re-derive. Prefer
+landing a tool-rooted one.
+
+**Beyond the 13 there are 8 proposals with no implementation at all**,
+and they are not eight of a kind — four are held up by a schema field,
+one has never been filed, one is not an agreement, and two are outside
+the model entirely. §3 groups them by which.
+
+Live answers, because this file is prose and those are computed:
 
 ```sh
-canary checks --catalogue        # §2 and §3 of this file
-canary checks --firing           # the firing table and the agreement overview
-canary checks --landing          # planned vs effective, per agreement
-canary checks <p>                # one project's coverage, per action
-canary checks <p> --observed     # what its LAST run decided
+canary checks --landing          # the table above, live
+canary checks --firing           # the agreement overview, one screen
+canary checks <p> --observed     # what one project's LAST run decided
 canary checks --agreement NAME   # one agreement, complete
 ```
 
-## Where else to look
+## How to read the rest
+
+§1 is the model — what a claim is, and the eight outcomes an evaluation
+can return. Read it if a word in §2 is unfamiliar; skip it otherwise.
+
+**§2 and §3 are GENERATED** from the registry by `make
+agreement-catalogue`, between the `<!-- BEGIN/END GENERATED -->`
+markers, and pinned by `agreements.catalogue_doc_is_generated`. §2 is
+every implemented agreement's complete record; §3 is everything with no
+record. Edit the OCaml, never the region.
+
+§4 walks one project end to end — the eight points where a run consults
+the registry, each with the failure mode that shows up there. §5 is the
+remaining work.
+
+**This document and the agreement overview say the same thing at two
+sizes.** The overview (`canary checks --firing`, `make view` table 1,
+drawn per [`../matrix.md`](../matrix.md)) is one screen: same
+agreements, same order — §2's n'th record is the table's n'th row — with
+each claim's target artifacts, the action whose rule it recovers, and
+where it actually fires. Where the two disagree the table is right; it
+is generated and most of this is not.
 
 | you want | read |
 | --- | --- |
-| **why** there is anything to check at all | [`theory.md`](theory.md) |
-| **why** one agreement exists | [`components.md`](components.md), at the anchor its registry row carries |
-| **when** a check fires | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not this directory's |
+| **why** there is anything to check at all | [`theory.md`](theory.md) — the action walk |
+| **why** one agreement exists | [`components.md`](components.md) — the component walk, at the anchor its registry row carries |
+| **when** a check fires | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is the enumeration's, not this layer's |
 | why a claim is `not_applicable` here | [`mechanism.md`](mechanism.md) §2 — the three facts that gate it |
-| how the overview table is drawn | [`../matrix.md`](../matrix.md) |
 
 ---
-
 
 ## 1. What a claim is
 
@@ -282,7 +296,7 @@ translation disagrees under corresponding inputs, investigate the
 binding, the translation and the marshalling assumptions. A direct and a
 helper-mediated translation can also be compared.
 
-Whichever frame produced it, the promotion workflow is §4.9.3.
+Whichever frame produced it, the promotion workflow is §4.9.6.
 
 ---
 
@@ -1552,11 +1566,12 @@ canary checks --landing             # planned vs effective, all agreements
 > end up deleting an output tree.)
 
 
-### 4.9 The same path, in code
+### 4.9 The same eight points, at the level of the code
 
-The component discussions identify useful claims and observations. The registry
-connects those observations to actions over concrete worlds. This section
-separates the intended interface, current execution and remaining coverage.
+§4.1–§4.8 are what a project author sees. This section is the same path
+in the registry's own terms — which call happens where, what it returns,
+and the three places a result can be misread. Read it when you are
+changing the layer rather than landing a check on it.
 
 #### 4.9.1 From action context to checking methods
 
@@ -1644,7 +1659,7 @@ the verdict, and re-deriving the report would mean re-running the step. It also
 means a stale report is easy to mistake for a current one, which is why the
 reader below counts skipped steps alongside the outcomes.
 
-#### 2.1.1 The round trip: what a real run actually checked
+#### 4.9.2 The round trip: what a real run actually checked
 
 Everything above describes what WOULD be checked. The registry lists the
 methods, the firing table says where they apply, the checking index reports
@@ -1700,16 +1715,16 @@ one definition. Whether they carry a command or a check identity plus inputs
 remains open. [check_evaluation.md](../check_evaluation.md) owns that proposal;
 its historical CI summary should be read with the qualification above.
 
-#### 4.9.2 Result interpretation and attribution
+#### 4.9.3 Result interpretation and attribution
 
-#### 2.2.1 Evidence coverage must accompany a result
+#### 4.9.4 Evidence coverage must accompany a result
 
 The pass meanings are in §1.5; the eight outcomes that carry them are in
 §1.2.1. This was a design requirement and is now the result type: a method's
 evaluation returns one outcome, and a step logs every selected method's
 outcome, so its record says which checks ran, which found nothing, which had no
 evidence, and which are not implemented. One record supplies both that report
-and the step's acceptance (§2.1), so a run's pass/fail and its agreement
+and the step's acceptance (§4.9.1), so a run's pass/fail and its agreement
 coverage are no longer two independent derivations.
 
 What this does **not** yet establish. A malformed inspection now raises and
@@ -1719,7 +1734,7 @@ warnings to stderr and continue, so a diagnostic on the way to a `holds` is not
 yet part of the record. The GH backend renders none of this. And a warm step
 reports nothing at all, by construction.
 
-#### 2.2.2 Attribution needs a trusted claim
+#### 4.9.5 Attribution needs a trusted claim
 
 A declaration mismatch identifies a disagreement between artifact and declaration.
 Use the authority stated in §1.6 before blaming either. For a versioned pair,
@@ -1728,7 +1743,7 @@ a missing requirement. It does not by itself establish a violated promise or
 exclude a packaging/environment fault. Packaging disagreements may implicate
 the cooperation, as in [`components.md`](components.md) §5.5.2.
 
-#### 4.9.3 From candidate to check
+#### 4.9.6 From candidate to check
 
 For a candidate generated from a diff, manifest or failure:
 
@@ -1937,41 +1952,40 @@ one landing, not a gate to put in CI.
 - `make canary-agreement-roundtrip` gates the landed rows against a real
   sqlite run, inside `make canary-post-check`.
 
-### 5.7 Open: merging `theory.md` and `components.md`
+### 5.7 Decided: `theory.md` and `components.md` stay apart
 
-*(2026-09-17, from the user in the same breath as this merge: "Also
-think about to merge components.md and theory.md to discuss why an
-agreement exists.")*
+*(2026-09-17. Asked for in the same breath as this file's merge, then
+investigated by reading both documents rather than their outlines.)*
 
-**It is the right cut** — they are one question at two zooms.
-[`theory.md`](theory.md) asks why there is anything to check at all and
-walks the action catalogue; [`components.md`](components.md) asks why
-each agreement exists and walks the components. Between them they are
-*why*, the way this file is *what and what is left*. The 2026-09-17
-split that produced `components.md` cut model | components; the better
-axis is what | why, which is what these two merges are.
+**They should not merge, and the reason is not the section numbering.**
+The numbering collision is real — both number their sections from one
+to seven — but it is the shallow objection. The real one is that the two documents are
+**orthogonal walks over one space, and each defines itself against the
+other.**
 
-**The cost is section numbering, and it is the whole cost.** Both docs
-number from theory.md §1 to theory.md §7, so a merged file would carry
-two sections numbered five. One side has to move,
-and the sides are not symmetric:
+- [`theory.md`](theory.md) walks **actions**: for each build step, the
+  relation its tool enforced, what survived, and what post-fact checking
+  can recover. Its last part is a procedure for finding the next
+  agreement by following that axis.
+- [`components.md`](components.md) walks **components**: for each kind
+  of thing in a binding world, what could be claimed about it, what
+  observation is available, and what that observation does not
+  establish.
 
-| | cited by | validated by |
-| --- | --- | --- |
-| `components.md` §2–§7 | **13 `ag_doc` values in the registry**, 38 internal refs, ~10 docs | `agreements.doc_anchors_exist` |
-| `theory.md` §1–§7 | prose only — ~20 places across docs, plus two pins that grep its headings | `agreements.theory_target_groups_match_the_table`, `agreements.theory_names_the_frame_exclusions` |
+`components.md` says so itself, under *What this is not*: "It is not the
+procedure for finding the next agreement. That is theory.md's, which
+walks ACTIONS … This walks COMPONENTS … The two are complementary axes
+over one space; a candidate found on either should be checked against
+the other."
 
-So **theory's numbering is the cheap one to move**: components' §§ are
-load-bearing in *code*, theory's only in prose. Folding theory to §1.1–
-§1.7 under one part leaves every `ag_doc` untouched and every
-components reference valid.
+Merging them would put one sequence where there are two axes, and the
+cross-check that sentence describes — find a candidate on one axis,
+verify it on the other — would stop being expressible. Two documents is
+the correct shape, and their separation is load-bearing rather than
+accidental.
 
-⚠ **What makes it worth a decision rather than a patch:** theory.md is
-paper material, and `§5 The full-information agreements` reading as
-`§1.5` is a real loss for a document meant to be cited in a paper. The
-alternative — renumbering components — is ~60 references, all of them
-pinned, so it is safe but noisy. Neither is free and neither is hard.
-Not done, pending that call.
+What WAS worth fixing, and is fixed: both had been left citing this
+file's absorbed halves twice over after the merge sweep.
 
 ---
 
@@ -2003,7 +2017,7 @@ Canary_agreement.evaluate_over_inputs ?disabled ~resolve inputs
 Canary_agreement.agreements_for ~mechanism ~lang ~world ?action ()
 ```
 
-The first is the production path (§2.1). The second is the project-supplied
+The first is the production path (§4.9.1). The second is the project-supplied
 input path the compat expectations use, and it deliberately skips
 applicability. The third selects without evaluating, for the checking index.
 `inputs_of_agreement` remains the explicit per-name lookup.

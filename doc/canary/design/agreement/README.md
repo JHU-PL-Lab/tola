@@ -102,10 +102,12 @@ document; *why* is two; mechanisms gate both.
   cell of the 2×4 grid, how a project declares its binding, and the open
   question the catalogue exists to ask.
 
-> Merging `theory.md` and `components.md` into one *why* document was
-> asked for in the same breath and is **open** — they collide on section
-> numbering and components' §§ are load-bearing in code. The decision
-> and its cost are [`agreements.md`](agreements.md) §5.7.
+> **`theory.md` and `components.md` deliberately stay apart.** They are
+> orthogonal walks over one space — one by ACTION, one by COMPONENT —
+> and each defines itself against the other, so a candidate found on one
+> axis is checked against the other. Merging them would put one sequence
+> where there are two axes. Reasoning:
+> [`agreements.md`](agreements.md) §5.7.
 
 ## See it rather than read it
 

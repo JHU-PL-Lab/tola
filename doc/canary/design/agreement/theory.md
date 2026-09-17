@@ -2,9 +2,8 @@
 
 **Kind: theory.** Why there is anything to check at all, what an agreement
 *is* in terms of the actions that build software, and a procedure for finding
-the next one. Paper material; the engineering view is
-[`agreements.md`](agreements.md), the concrete records are
-[`agreements.md`](agreements.md).
+the next one. Paper material: the engineering view — what is implemented, what each
+agreement is, and what is left — is [`agreements.md`](agreements.md).
 
 This document does not describe what Canary runs. It describes the thing
 Canary is an implementation of, and it is written so that a reader who never
@@ -111,8 +110,8 @@ criterion, not a better comparator.
 
 For each action in Canary's catalogue: the relation the real tool established
 when it ran, what survives of it afterwards, and what post-fact checking can
-recover. Status is as of 2026-09-12 — see [`agreements.md`](agreements.md) for what
-a real run has actually decided.
+recover. Status is as of 2026-09-12; `canary checks --landing` is what a real run
+has actually decided.
 
 ### 5.1 `fetch_source` — a resolver picks a tree
 
