@@ -8,7 +8,8 @@ six. Standalone. Written 2026-08-23
 because it did not exist: the
 product over (provision × version × mutation) is easy and documented
 (§1 below), but what makes
-the enumeration *correct* is the five constraints that prune it, and
+the enumeration *correct* is the five constraints that prune it (§§1-5;
+§6 is documented here and belongs to select), and
 those lived only in comments inside `canary_enumerate.ml`. Every one of
 them exists because a specific over- or under-generation was observed.
 

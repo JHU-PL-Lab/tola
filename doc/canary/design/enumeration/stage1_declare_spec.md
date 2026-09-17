@@ -441,9 +441,11 @@ and declaring the Python binding as `Cext` (static) is what keeps
 chains disappear silently — the scenario count moves, and nothing says
 which shapes of run went with it.
 
-**Nothing prints a project's surviving chains.** `canary paths` shows the
-unfiltered 38. Naming and exposing them is a tracker item
-(`../../project/status_project.md`).
+**A project's surviving chains print now** — `canary emit <p> --stage
+analyse` (sqlite admits 10 of 38). `canary paths` still shows the
+unfiltered 38, which is the other half of the comparison. The derivation
+that produces the survivors was nameless until 2026-09-16, when it became
+[pass 2](stage2_analyse_spec.md)'s `an_chains`.
 
 ## 9. The channel pair — why a universe should have two points
 

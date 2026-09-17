@@ -70,7 +70,7 @@ from the catalogue is the open cleanup.
 1. scenario_dir_of(assignment)  →  output directory + cache key
 2. realize ∘ dispatch           →  runner_spec  (shell command closures)
 3. derive_steps(runner_spec)    →  step list
-4. run_with_info_status(steps)  →  verdicts
+4. run_graph(steps)             →  verdicts
 ```
 
 **1** is pass 5's ([`stage5_order_worlds.md`](stage5_order_worlds.md) §1) — it
@@ -400,7 +400,7 @@ neutral cell — see [`../matrix.md`](../matrix.md) §6.
 | `scenarios_of` / `scenarios_in_run_order` | `project/canary_project_run.ml` | project → ordered assignments |
 | `realize_from_rows` | `action/canary_action_templates.ml` | assignment → runner_spec |
 | `derive_steps` | `action/canary_step_builder.ml` | runner_spec → step list |
-| `run_with_info_status` | `backend/canary_local_runner.ml` | step list → verdict |
+| `run_graph` | `backend/canary_local_runner.ml` | step list → verdict (wrapped by `Canary_run_info.run_project`, which also writes the log, the diagrams and `run_state.json`) |
 
 Four backends consume the same step list: the local runner executes it,
 `canary_gh.ml` renders GH Actions YAML, `canary_diagram.ml` renders
