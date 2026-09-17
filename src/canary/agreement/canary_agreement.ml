@@ -1261,11 +1261,49 @@ let fill_list ?(mechanism = Canary_mechanism.Cstubs)
    so they are a separate list that [all_agreements] unions with the
    implemented rows for display and pinning. *)
 
+(** WHY A PROPOSAL HAS NO ROW IN THE AGREEMENT OVERVIEW (2026-09-17,
+    user: "I am thinking if we can group the agreement out-of-table in
+    one place … which I can see them together").
+
+    The eight proposals were ONE flat list, so the catalogue printed
+    them as eight of a kind. They are not. Four are held up by a schema
+    field; three the per-action model does not reach AT ALL, and
+    [theory.md] §7 already says which; one has never been filed. That is
+    four different kinds of work, and a reader deciding what to do next
+    was being asked to re-derive the split from prose in three
+    documents.
+
+    So the reason is DATA now, and the grouping is generated from it.
+    Pinned against the theory doc by
+    [agreements.theory_names_the_frame_exclusions] — the model and the
+    registry must name the same exclusions, or one of them is lying. *)
+type frame_fit =
+  | In_frame
+      (** the per-action frame REACHES this claim; what is missing is
+          that [proposed] carries no rooting and no target list, so
+          there is nothing to put in the R and ▣ columns. A schema
+          change, and it costs the row's meaning — [lag], decided and
+          blame are undefined without a firing *)
+  | Outside_the_frame of string
+      (** [theory.md] §7: the model has no vocabulary for it. Set
+          properties and cross-world properties are not per-edge, so
+          §6's procedure will never find them and they need their own
+          reasoning *)
+  | Not_an_agreement of string
+      (** [theory.md] §7.1: it recovers CANARY'S OWN rule, which makes
+          it a world assertion — "this run tested something other than
+          what it says" — rather than a finding about the software *)
+  | Unfiled of string
+      (** nobody has applied §7.1's filter to it. Distinct from the
+          three above because it is an open QUESTION, not an answer,
+          and it should not sit in a list looking like a peer *)
+
 type proposed = {
   prop_slug : string;
   prop_doc : string;
   prop_claim : string;  (** falsifier-phrased, like [ag_says] *)
   prop_needs : string;  (** what implementing it requires *)
+  prop_frame : frame_fit;  (** why it is not on the overview *)
 }
 
 (* THE DISTANCE-0 HOLES (2026-09-15, user asked for the plan to live in
@@ -1306,7 +1344,8 @@ let proposed_agreements : proposed list =
          project to be able to say 'this list is EXHAUSTIVE for this \
          surface', which is a different declaration from the one every \
          project writes today — so this is a spec change, not a free \
-         comparator" };
+         comparator";
+      prop_frame = In_frame };
     { prop_slug = "package_contains_declared_files";
       prop_doc = "§5.7";
       prop_claim =
@@ -1318,7 +1357,8 @@ let proposed_agreements : proposed list =
          evidence. z3 asserts exactly this today with a hand-listed \
          `assert_staged` and two shell guards, and declares the \
          pre-#10549 failure as two hand-written substrings; all four \
-         retire when the claim has a row" };
+         retire when the claim has a row";
+      prop_frame = In_frame };
     { prop_slug = "source_is_declared_ref";
       prop_doc = "§5.1";
       prop_claim =
@@ -1328,7 +1368,16 @@ let proposed_agreements : proposed list =
       prop_needs =
         "the resolved commit RECORDED after the fetch. The check itself \
          already runs as a shell assertion in a check_post, which is \
-         precisely why it has no row: there is no evidence file to read" };
+         precisely why it has no row: there is no evidence file to read";
+      prop_frame =
+        Not_an_agreement
+          "it recovers CANARY'S OWN rule, not a toolchain's. \"Is the tree \
+           at the commit we said\" is not a claim about the project's \
+           artifacts; it is a claim about whether this run realized the \
+           world it says it tested — which fails differently and is read \
+           by different people. Canary already has a vocabulary for it: \
+           the world assertions. The CHECK is worth having; the row is in \
+           the wrong register" };
     { prop_slug = "build_tree_configured_for_source";
       prop_doc = "§5.2";
       prop_claim =
@@ -1338,7 +1387,14 @@ let proposed_agreements : proposed list =
       prop_needs =
         "an inspector over the configure cache (CMakeCache.txt, \
          config.status, dune's env) reducing it to the source path, the \
-         ref and the option set" };
+         ref and the option set";
+      prop_frame =
+        Unfiled
+          "§7.1's filter has never been applied to this one, and it looks \
+           like it falls the same way as source_is_declared_ref: \"was the \
+           tree configured for the source we said\" has the same shape as \
+           \"is the tree at the commit we said\". If so it is a world \
+           assertion too. Nobody has decided, so it is not filed as either" };
     { prop_slug = "signatures_match_debug_info";
       prop_doc = "§5.3";
       prop_claim =
@@ -1350,7 +1406,8 @@ let proposed_agreements : proposed list =
         "a DWARF inspector and libraries built with -g. Strictly \
          stronger than signatures_agree, which compares two TEXTS and \
          cannot see a changed struct layout behind an unchanged \
-         spelling" };
+         spelling";
+      prop_frame = In_frame };
     { prop_slug = "denotation_stable_across_worlds";
       prop_doc = "§5.6";
       prop_claim =
@@ -1359,7 +1416,13 @@ let proposed_agreements : proposed list =
       prop_needs =
         "retain corresponding build/deploy evidence across worlds and \
          define an observable denotation criterion (components.md \
-         §5.5.1)" };
+         §5.5.1)";
+      prop_frame =
+        Outside_the_frame
+          "a CROSS-WORLD property. It compares two worlds, so there is no \
+           single action whose relation it recovers — it is a claim about \
+           two runs of one action, and the per-action model has no \
+           vocabulary for that" };
     { prop_slug = "no_duplicate_implementation";
       prop_doc = "§5.6";
       prop_claim =
@@ -1369,7 +1432,12 @@ let proposed_agreements : proposed list =
       prop_needs =
         "the shipped objects' evidence plus an identity/containment \
          policy; symbol overlap alone is a discovery heuristic \
-         (components.md §5.5.3)" };
+         (components.md §5.5.3)";
+      prop_frame =
+        Outside_the_frame
+          "a SET property. It is about the whole resolved set rather than \
+           about any one pairing, and nothing in the per-action model \
+           speaks about sets" };
     { prop_slug = "interposition_binds_build_target";
       prop_doc = "§5.6";
       prop_claim =
@@ -1378,7 +1446,8 @@ let proposed_agreements : proposed list =
       prop_needs =
         "a resolved binding trace and an expected-target policy; the \
          recorder supplies evidence, the comparison a verdict \
-         (components.md §5.6)" } ]
+         (components.md §5.6)";
+      prop_frame = In_frame } ]
 
 (* ── the unified view — one list to print, cite and pin ──────────── *)
 
@@ -1492,6 +1561,18 @@ let pp_catalogue () : string =
   List.iter proposed_agreements ~f:(fun p ->
       add "%s  [proposed]\n" p.prop_slug;
       add "  claims    %s\n" p.prop_claim;
+      (* WHY IT IS NOT ON THE OVERVIEW — the same four groups the
+         catalogue's "Out of the table" section prints, one line each,
+         so the terminal and the doc do not say different things. *)
+      add "  no row    %s\n"
+        (match p.prop_frame with
+         | In_frame ->
+             "the frame reaches it; a proposal carries no rooting or targets"
+         | Unfiled _ -> "NOT FILED — theory §7.1's filter never applied"
+         | Not_an_agreement _ ->
+             "not an agreement — it recovers canary's own rule (theory §7.1)"
+         | Outside_the_frame _ ->
+             "outside the per-action frame (theory §7)");
       add "  needs     %s\n\n" p.prop_needs);
   Buffer.contents b
 
@@ -1878,6 +1959,77 @@ let pp_todo_table_md () : string =
   end;
   Buffer.contents b
 
+(** ONE PLACE FOR EVERYTHING THE OVERVIEW CANNOT SHOW (2026-09-17,
+    user). The agreement overview is the table a reader works from, so
+    what is NOT on it is invisible unless somewhere collects it — and it
+    had been scattered across three documents and one flat list.
+
+    Grouped by [prop_frame], because the groups are four different kinds
+    of work and the order is deliberate: the ones a schema change would
+    put on the table come first, the ones the model does not reach come
+    last, and the undecided one is not allowed to hide among either. *)
+let pp_out_of_table_md () : string =
+  let b = Buffer.create 4096 in
+  let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
+  let group_of p =
+    match p.prop_frame with
+    | In_frame -> 0
+    | Unfiled _ -> 1
+    | Not_an_agreement _ -> 2
+    | Outside_the_frame _ -> 3
+  in
+  let heading =
+    [| ( "Held up by a schema field",
+         "The per-action frame REACHES these. What is missing is that a \
+          proposal carries no rooting and no target list, so there is \
+          nothing to put in the overview's `R` and ▣ columns. Adding \
+          those two fields would put each of these on the grid with its \
+          origin marked and no `D` anywhere — which is worth seeing, \
+          since it says where the information was lost for a claim \
+          nobody checks yet. It costs the row's meaning: `lag`, decided \
+          and blame are undefined without a firing." );
+       ( "Not filed either way",
+         "`theory.md` §7.1's filter — *whose* rule is being recovered — \
+          has never been applied here. Listed separately so it does not \
+          sit among the answered ones looking like a peer." );
+       ( "Not an agreement",
+         "`theory.md` §7.1. An agreement is a claim about the project's \
+          artifacts. These recover CANARY'S OWN rule, which makes them \
+          world assertions: a violated agreement is a finding about the \
+          software, a failed world assertion means this run tested \
+          something other than what it says and every verdict in it is \
+          suspect. Kept here rather than deleted, because the CHECK is \
+          worth having and only its register is wrong." );
+       ( "Outside the per-action frame",
+         "`theory.md` §7. The model reasons per edge, and these are not \
+          per-edge. §6's procedure will never find them, so they need \
+          their own reasoning rather than more wiring." ) |]
+  in
+  add
+    "\n## Out of the table — what has no row, and why\n\n\
+     The [agreement overview](../matrix.md) shows the %d implemented \
+     agreements. These %d have no row on it. The reason is carried on \
+     each proposal (`prop_frame`) and this grouping is generated from \
+     it, so the four kinds of work stay apart without anyone \
+     maintaining a list.\n"
+    (List.length agreement_registry)
+    (List.length proposed_agreements);
+  for g = 0 to 3 do
+    let here = List.filter proposed_agreements ~f:(fun p -> group_of p = g) in
+    if not (List.is_empty here) then begin
+      let title, blurb = heading.(g) in
+      add "\n### %s (%d)\n\n%s\n" title (List.length here) blurb;
+      List.iter here ~f:(fun p ->
+          add "\n#### %s\n\n**Claim:** %s\n\n" p.prop_slug p.prop_claim;
+          (match p.prop_frame with
+           | In_frame -> ()
+           | Outside_the_frame w | Not_an_agreement w | Unfiled w ->
+               add "**Why no row:** %s\n\n" w);
+          add "**Needs:** %s\n\n" p.prop_needs)
+    end
+  done;
+  Buffer.contents b
+
 (** The generated catalogue: every agreement's full record, as
     markdown. Written to [doc/canary/design/agreement/catalogue.md] and
     pinned against this output, so the document is a build product
@@ -1885,10 +2037,18 @@ let pp_todo_table_md () : string =
 let pp_catalogue_md () : string =
   let b = Buffer.create 16384 in
   Buffer.add_string b
-    "# The agreement catalogue\n\n\
+    (* THE TITLE ANSWERS A QUESTION (2026-09-17, user:
+       "catalogue/components/models even the title looks very alike and
+       confusing"). All three were reference nouns. The subtitle each
+       carries now is the phrase README.md's routing table already used
+       for it, so a reader who followed the routing sees the same words
+       at the top of the file they land in. *)
+    "# The agreement catalogue — one agreement, everything\n\n\
      **Kind: reference, GENERATED.** The summary table, then one section \
      per agreement with its complete record — claim, obligation, where it \
-     looks, what falsifies it, and what a pass does not establish.\n\n\
+     looks, what falsifies it, and what a pass does not establish. Ends \
+     with *Out of the table*: the claims that have NO row, grouped by \
+     why.\n\n\
      Do not edit: regenerate with `make agreement-catalogue`. Everything \
      here comes from the registry, so it cannot drift from the code that \
      implements it.\n\n\
@@ -1909,9 +2069,5 @@ let pp_catalogue_md () : string =
   Buffer.add_string b "\n---\n\n# The records\n";
   List.iter agreement_registry ~f:(fun r ->
       Buffer.add_string b (pp_agreement ~markdown:true r));
-  Buffer.add_string b "\n## Proposed\n\nNo family implements these yet.\n\n";
-  List.iter proposed_agreements ~f:(fun p ->
-      Printf.ksprintf (Buffer.add_string b)
-        "### %s\n\n**Claim:** %s\n\n**Needs:** %s\n\n" p.prop_slug p.prop_claim
-        p.prop_needs);
+  Buffer.add_string b (pp_out_of_table_md ());
   Buffer.contents b

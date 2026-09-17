@@ -2633,6 +2633,81 @@ let agreement_bridge_pins : pure_test list =
               if not (List.is_empty bad) then
                 List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
               List.is_empty bad) };
+    (* THE MODEL AND THE REGISTRY NAME THE SAME EXCLUSIONS (2026-09-17).
+
+       `prop_frame` says why a proposal has no row; `theory.md` §7 and
+       §7.1 say the same thing in prose, and they were written months
+       apart. If one grows an exclusion the other does not, the
+       catalogue's "Out of the table" grouping becomes a second opinion
+       rather than a rendering of the model — which is the whole defect
+       the grouping was added to fix.
+
+       Directional on purpose: a proposal classified as excluded must be
+       NAMED in the matching theory section, AND a proposal named there
+       must carry the matching constructor. Either half alone lets the
+       two drift apart in one direction. *)
+    { name = "agreements.theory_names_the_frame_exclusions";
+      check =
+        (fun () ->
+          match read_doc "doc/canary/design/agreement/theory.md" with
+          | None -> true
+          | Some text ->
+              let section ~from ~upto =
+                match String.substr_index text ~pattern:from with
+                | None -> None
+                | Some i ->
+                    let rest = String.subo text ~pos:(i + String.length from) in
+                    Some
+                      (match String.substr_index rest ~pattern:upto with
+                       | Some j -> String.sub rest ~pos:0 ~len:j
+                       | None -> rest)
+              in
+              let s7 = section ~from:"## 7. What this does not explain"
+                         ~upto:"### 7.1" in
+              let s71 = section ~from:"### 7.1" ~upto:"\n## " in
+              let bad =
+                List.concat_map CR.proposed_agreements ~f:(fun p ->
+                    let want, where =
+                      match p.CR.prop_frame with
+                      | CR.Outside_the_frame _ -> (Some s7, "§7")
+                      | CR.Not_an_agreement _ -> (Some s71, "§7.1")
+                      | CR.In_frame | CR.Unfiled _ -> (None, "")
+                    in
+                    let named_in sec =
+                      match sec with
+                      | None -> false
+                      | Some t -> String.is_substring t ~substring:p.CR.prop_slug
+                    in
+                    match want with
+                    | Some sec ->
+                        if named_in (Some (Option.value sec ~default:"")) then []
+                        else
+                          [ Printf.sprintf
+                              "%s is classified out-of-frame but theory.md %s \
+                               does not name it"
+                              p.CR.prop_slug where ]
+                    | None ->
+                        (* the converse: theory must not claim it *)
+                        List.filter_map
+                          [ (s7, "§7"); (s71, "§7.1") ]
+                          ~f:(fun (sec, w) ->
+                            if named_in (Some (Option.value sec ~default:"")) then
+                              Some
+                                (Printf.sprintf
+                                   "theory.md %s names %s, but the registry \
+                                    does not classify it as excluded"
+                                   w p.CR.prop_slug)
+                            else None))
+              in
+              (* and the sections must exist at all *)
+              let bad =
+                match (s7, s71) with
+                | Some _, Some _ -> bad
+                | _ -> "theory.md: §7 or §7.1 heading not found" :: bad
+              in
+              if not (List.is_empty bad) then
+                List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
+              List.is_empty bad) };
     { name = "agreements.planned_says_what_it_waits_on";
       check =
         (fun () ->

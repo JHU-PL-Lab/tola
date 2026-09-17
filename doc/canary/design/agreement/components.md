@@ -1,4 +1,4 @@
-# The components — what there is to check, per kind of thing
+# The components — why each agreement exists
 
 **Kind: reference.** A walk over the five kinds of thing a binding world
 is made of, saying for each what could be claimed about it, what

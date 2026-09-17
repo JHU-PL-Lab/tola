@@ -1,6 +1,6 @@
-# The agreement catalogue
+# The agreement catalogue — one agreement, everything
 
-**Kind: reference, GENERATED.** The summary table, then one section per agreement with its complete record — claim, obligation, where it looks, what falsifies it, and what a pass does not establish.
+**Kind: reference, GENERATED.** The summary table, then one section per agreement with its complete record — claim, obligation, where it looks, what falsifies it, and what a pass does not establish. Ends with *Out of the table*: the claims that have NO row, grouped by why.
 
 Do not edit: regenerate with `make agreement-catalogue`. Everything here comes from the registry, so it cannot drift from the code that implements it.
 
@@ -903,55 +903,86 @@ reads: `native summary bt.json`, `staged native summary absent.json`
 | limits | not evaluated. The composition function exists and is pure; what it would mean is the open decision. |
 | counterexamples | none — nothing shows it can fail |
 
-## Proposed
+## Out of the table — what has no row, and why
 
-No family implements these yet.
+The [agreement overview](../matrix.md) shows the 13 implemented agreements. These 8 have no row on it. The reason is carried on each proposal (`prop_frame`) and this grouping is generated from it, so the four kinds of work stay apart without anyone maintaining a list.
 
-### exports_accounted_for
+### Held up by a schema field (4)
+
+The per-action frame REACHES these. What is missing is that a proposal carries no rooting and no target list, so there is nothing to put in the overview's `R` and ▣ columns. Adding those two fields would put each of these on the grid with its origin marked and no `D` anywhere — which is worth seeing, since it says where the information was lost for a claim nobody checks yet. It costs the row's meaning: `lag`, decided and blame are undefined without a firing.
+
+#### exports_accounted_for
 
 **Claim:** every symbol the library exports on its declared surface is accounted for by the project's declaration — the CONVERSE of declared_symbols_exported, which together with it makes the pair an equality rather than an inclusion
 
 **Needs:** A DECLARATION KIND THAT DOES NOT EXIST YET. Filed 2026-09-15 as the cheapest proposal — 'both sides are already in hand' — and that was wrong. The two sides are not the same KIND of claim: [native_api.stable_symbols] is a WATCHLIST ('these modern-API symbols must be present', a probe for version drift), not a manifest. sqlite declares 5 and its library exports 272, so the converse would report 267 orphans on the project where declared_symbols_exported is landed. A prefix filter does not save it: all 272 share the prefix. What this needs is for a project to be able to say 'this list is EXHAUSTIVE for this surface', which is a different declaration from the one every project writes today — so this is a spec change, not a free comparator
 
-### package_contains_declared_files
+
+#### package_contains_declared_files
 
 **Claim:** the staged package contains every file the recipe said it installs — and the consumer's side of it: what the prefix holds is what a consumer reading the prefix will find
 
 **Needs:** a manifest of what the install actually staged, recorded as evidence. z3 asserts exactly this today with a hand-listed `assert_staged` and two shell guards, and declares the pre-#10549 failure as two hand-written substrings; all four retire when the claim has a row
 
-### source_is_declared_ref
 
-**Claim:** the source tree a build read is the ref the project declared — an IDENTITY claim, so unlike the relation ones it closes exactly rather than converging
-
-**Needs:** the resolved commit RECORDED after the fetch. The check itself already runs as a shell assertion in a check_post, which is precisely why it has no row: there is no evidence file to read
-
-### build_tree_configured_for_source
-
-**Claim:** the build tree was configured for THIS source tree and these options — a warm tree configured from another ref answers every later question about the wrong world
-
-**Needs:** an inspector over the configure cache (CMakeCache.txt, config.status, dune's env) reducing it to the source path, the ref and the option set
-
-### signatures_match_debug_info
+#### signatures_match_debug_info
 
 **Claim:** the signatures the header declares are the ones the compiled library was built with — the strongest available answer to the type question, since it reads what the compiler recorded rather than what the header says now
 
 **Needs:** a DWARF inspector and libraries built with -g. Strictly stronger than signatures_agree, which compares two TEXTS and cannot see a changed struct layout behind an unchanged spelling
 
-### denotation_stable_across_worlds
 
-**Claim:** a recorded library identity denotes the SAME implementation in the deploy world as in the build world
-
-**Needs:** retain corresponding build/deploy evidence across worlds and define an observable denotation criterion (components.md §5.5.1)
-
-### no_duplicate_implementation
-
-**Claim:** the resolved set contains no two identities that are one implementation (alternative spelling), and none that statically absorbs another (containment)
-
-**Needs:** the shipped objects' evidence plus an identity/containment policy; symbol overlap alone is a discovery heuristic (components.md §5.5.3)
-
-### interposition_binds_build_target
+#### interposition_binds_build_target
 
 **Claim:** the definition that wins for a shared symbol is the one the consumer was built against
 
 **Needs:** a resolved binding trace and an expected-target policy; the recorder supplies evidence, the comparison a verdict (components.md §5.6)
+
+
+### Not filed either way (1)
+
+`theory.md` §7.1's filter — *whose* rule is being recovered — has never been applied here. Listed separately so it does not sit among the answered ones looking like a peer.
+
+#### build_tree_configured_for_source
+
+**Claim:** the build tree was configured for THIS source tree and these options — a warm tree configured from another ref answers every later question about the wrong world
+
+**Why no row:** §7.1's filter has never been applied to this one, and it looks like it falls the same way as source_is_declared_ref: "was the tree configured for the source we said" has the same shape as "is the tree at the commit we said". If so it is a world assertion too. Nobody has decided, so it is not filed as either
+
+**Needs:** an inspector over the configure cache (CMakeCache.txt, config.status, dune's env) reducing it to the source path, the ref and the option set
+
+
+### Not an agreement (1)
+
+`theory.md` §7.1. An agreement is a claim about the project's artifacts. These recover CANARY'S OWN rule, which makes them world assertions: a violated agreement is a finding about the software, a failed world assertion means this run tested something other than what it says and every verdict in it is suspect. Kept here rather than deleted, because the CHECK is worth having and only its register is wrong.
+
+#### source_is_declared_ref
+
+**Claim:** the source tree a build read is the ref the project declared — an IDENTITY claim, so unlike the relation ones it closes exactly rather than converging
+
+**Why no row:** it recovers CANARY'S OWN rule, not a toolchain's. "Is the tree at the commit we said" is not a claim about the project's artifacts; it is a claim about whether this run realized the world it says it tested — which fails differently and is read by different people. Canary already has a vocabulary for it: the world assertions. The CHECK is worth having; the row is in the wrong register
+
+**Needs:** the resolved commit RECORDED after the fetch. The check itself already runs as a shell assertion in a check_post, which is precisely why it has no row: there is no evidence file to read
+
+
+### Outside the per-action frame (2)
+
+`theory.md` §7. The model reasons per edge, and these are not per-edge. §6's procedure will never find them, so they need their own reasoning rather than more wiring.
+
+#### denotation_stable_across_worlds
+
+**Claim:** a recorded library identity denotes the SAME implementation in the deploy world as in the build world
+
+**Why no row:** a CROSS-WORLD property. It compares two worlds, so there is no single action whose relation it recovers — it is a claim about two runs of one action, and the per-action model has no vocabulary for that
+
+**Needs:** retain corresponding build/deploy evidence across worlds and define an observable denotation criterion (components.md §5.5.1)
+
+
+#### no_duplicate_implementation
+
+**Claim:** the resolved set contains no two identities that are one implementation (alternative spelling), and none that statically absorbs another (containment)
+
+**Why no row:** a SET property. It is about the whole resolved set rather than about any one pairing, and nothing in the per-action model speaks about sets
+
+**Needs:** the shipped objects' evidence plus an identity/containment policy; symbol overlap alone is a discovery heuristic (components.md §5.5.3)
 

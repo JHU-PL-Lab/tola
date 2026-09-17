@@ -58,6 +58,7 @@ owns them.
 | **asking why there is anything to check** | [`theory.md`](theory.md) |
 | **looking for the NEXT agreement** | [`theory.md`](theory.md) §5–§6 |
 | **asking what one agreement IS** | [`catalogue.md`](catalogue.md), or `canary checks --agreement NAME` |
+| **asking what has NO row, and why** | [`catalogue.md`](catalogue.md) *Out of the table* — the eight proposals grouped by what is holding each one up |
 | landing an agreement on a project | [`landing.md`](landing.md) |
 | **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
 | asking what is actually in use | [`landing.md`](landing.md), or `canary checks --landing` |
@@ -78,9 +79,12 @@ owns them.
   Per agreement: subject, claim, obligation basis, status, fault tag, the
   sentence a counterexample refutes, what it is held against, and per method
   what it compares, against what, where it fires and what it READS in each
-  world, what falsifies it, and what a pass does not establish. `make
-  agreement-catalogue` rewrites it; a pin fails if it drifts from the
-  registry.
+  world, what falsifies it, and what a pass does not establish. Ends
+  with **Out of the table** — the claims with no row on the agreement
+  overview, grouped by whether a schema field is holding them up, or
+  §7.1's filter has not been applied, or the per-action model does not
+  reach them at all. `make agreement-catalogue` rewrites it; a pin fails
+  if it drifts from the registry.
 - [`model.md`](model.md) — **the model.** What an agreement is, what
   separates a claim from the methods that check it, the eight outcomes
   and why there are eight (§1); and how a running step gets from its own
@@ -99,18 +103,18 @@ owns them.
   not establish. Every registry row's `ag_doc` anchor points here, and
   `agreements.doc_anchors_exist` fails if a cited section stops
   existing.
-- [`landing.md`](landing.md) — **landing one, end to end.** The eight
-  points where a run consults the registry, the four failure modes behind
-  an `unavailable`, the dummy action, the checklist, the four undecided
-  states and what each means for the work, the distance-0 backlog, and
-  `--strict`. It absorbed `pipeline.md` on 2026-09-17, when the tracker's
-  per-agreement table became generated and what was left of it was that
-  walkthrough's tail.
-- [`landing.md`](landing.md) — **what is left.** Per agreement, what it
-  is waiting on; the four undecided states and the four kinds of work
-  they mean; the distance-0 backlog. It does NOT carry a landed/not
-  table — `canary checks --landing` does, and the hand copy that used to
-  sit here went stale and contradicted itself.
+- [`landing.md`](landing.md) — **landing one, end to end, and what is
+  left.** The eight points where a run consults the registry, the four
+  failure modes behind an `unavailable`, the dummy action, the
+  checklist, the four undecided states and the four kinds of work they
+  mean, the distance-0 backlog, and `--strict`. It absorbed
+  `pipeline.md` on 2026-09-17, when the tracker's per-agreement table
+  became generated and what was left of it was that walkthrough's tail.
+  It does NOT carry a landed/not table — `canary checks --landing` does,
+  and the hand copy that used to sit here went stale and contradicted
+  itself. (This bullet was two bullets until 2026-09-17, one per half of
+  the absorbed file, which is how a merged document grows back into two
+  entries in its own index.)
 
 ## See it rather than read it
 

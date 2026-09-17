@@ -1,4 +1,4 @@
-# The agreement model — what a claim is, and how a run reaches one
+# The agreement model — what a claim IS, and how a run reaches a verdict
 
 **Kind: reference.** The model: what an agreement is, what separates a
 claim from the methods that check it, what an evaluation can return, and
@@ -534,39 +534,35 @@ and cross-api testing".)*
 
 The overview iterates `agreement_registry` — the **13 implemented
 agreements, as 25 rows** (one per distinct firing pattern). Everything
-below is absent from it, in four classes that need four different
+else is absent from it, in four classes that need four different
 answers. Only the first is a table problem.
 
-**(a) Proposals cannot render, and four of the eight could.** A row needs
-a rooting (the `R` cell), methods with `m_inputs` (the ▣ targets),
-`m_firing` (the `D` cells) and `m_applicable` (lang/mech).
-`proposed_agreements` is a separate type carrying four strings —
-`prop_slug`, `prop_doc`, `prop_claim`, `prop_needs` — and none of those
-four fields. Giving it `rooting option` plus an `artifact_kind list`
-would put **`exports_accounted_for`, `package_contains_declared_files`,
-`signatures_match_debug_info`** and **`interposition_binds_build_target`**
-on the grid with an `R` and their ▣ and no `D` anywhere — which is a
-useful thing to see, since it says where the information was lost for a
-claim nobody checks yet. It is a **schema change, not a rendering
-change**, and it costs the row's meaning: `lag`, `decided` and `blame`
-are undefined without a firing. Undecided.
+**(a) and (b) — the eight proposals — are collected in ONE GENERATED
+PLACE:** *Out of the table* in [`catalogue.md`](catalogue.md), or
+`canary checks --catalogue`. Each proposal carries a `prop_frame` saying
+why it has no row, and the section groups by it, so the four kinds of
+work stay apart without anyone maintaining a list:
 
-**(b) Three are outside the frame, and the theory already says so.** The
-overview's blind spots coincide exactly with
-[`theory.md`](theory.md) §7 — which is reassuring rather than a defect,
-because it means the view and the model fail at the same place:
-
-| proposal | why no row | where it is stated |
+| group | what it means | count |
 | --- | --- | --- |
-| `no_duplicate_implementation` | a SET property — about the whole resolved set, not any pairing | theory.md §7 |
-| `denotation_stable_across_worlds` | a CROSS-WORLD property — two runs of one action | theory.md §7 |
-| `source_is_declared_ref` | **not an agreement**: it recovers canary's own rule, so it is a world assertion | theory.md §7.1 |
+| held up by a schema field | the per-action frame REACHES it; `proposed` carries no rooting and no target list, so there is nothing for the `R` and ▣ columns. A schema change, and it costs the row's meaning — `lag`, decided and blame are undefined without a firing | 4 |
+| not filed either way | [`theory.md`](theory.md) §7.1's filter has never been applied | 1 |
+| not an agreement | theory.md §7.1 — it recovers canary's OWN rule, so it is a world assertion | 1 |
+| outside the per-action frame | theory.md §7 — set properties and cross-world properties are not per-edge | 2 |
 
-⚠ **`build_tree_configured_for_source` has never had theory.md §7.1's
-filter applied to it** and probably falls the same way — "was the tree
-configured for the source we said" is the same shape as "is the tree at
-the commit we said". Nobody has decided; it sits in the proposals
-list looking like a peer of the other four.
+Two things worth stating that the generated section does not.
+
+**The overview's blind spots coincide exactly with the model's.** The
+claims it cannot show are the ones [`theory.md`](theory.md) §7 says the
+per-action frame does not explain. That is reassuring rather than a
+defect: the view and the model fail at the same place, so the table is
+not hiding anything the theory believes it can reach. The coincidence is
+pinned — `agreements.theory_names_the_frame_exclusions` requires the
+registry's classification and the prose of theory.md §7 and §7.1 to name
+the same proposals, in both directions.
+
+**The counts above are transcribed and the groups are not.** If they
+disagree with the generated section, the generated section is right.
 
 **(c) One target the columns cannot name: the PACKAGE.** The leading ▣
 columns range over `Canary_basic.artifact_kind` — Source, Headers, Lib,
