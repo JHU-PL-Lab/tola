@@ -494,13 +494,16 @@ applicability. The third selects without evaluating, for the checking index.
 Canary_agreement.pp_agreements ()
 Canary_agreement.pp_catalogue ()
 Canary_agreement.pp_firing_table ?mechanism ?lang ?provision ()
+Canary_agreement.pp_agreement_overview ?provision ()
 Canary_agreement.fill_list ?mechanism ?lang ?provision ()
 ```
 
-`canary checks` prints the first, `canary checks --catalogue` the second and
-`canary checks --firing` the third. The catalogue is the generated form of
-§1.7's prose: every agreement with its reference expectation and each method's kind,
-reference, implementation status, firing sites and scope limits.
+`canary checks` prints the first, `canary checks --catalogue` the second, and
+`canary checks --firing` prints the third and fourth. The catalogue is the
+generated form of §1.7's prose: every agreement with its reference expectation
+and each method's kind, reference, implementation status, firing sites and
+scope limits. The overview is also `make view` table 1, and its rendering is
+documented in [`../matrix.md`](../matrix.md).
 
 The firing table uses a uniform-provision world for its convenience view.
 Its marks are derived as follows:
@@ -520,6 +523,86 @@ exists in a given run, which is a fact about a run rather than about the
 registry. Fixture presence is checked per agreement, not per mechanism/action
 cell, so one fixture can mark several cells `✓`. This view is structurally
 total, not evidence of complete semantic or execution coverage.
+
+#### A.2.1 What the overview does NOT reach
+
+*(2026-09-17, from the user: "check if the agreement table can represent
+the existing and planned agreement … record any drifts [that] cannot be
+trivially handled. e.g. I think the current table doesn't mention
+versioning-related test generation, cross package manager experiments,
+and cross-api testing".)*
+
+The overview iterates `agreement_registry` — the **13 implemented
+agreements, as 25 rows** (one per distinct firing pattern). Everything
+below is absent from it, in four classes that need four different
+answers. Only the first is a table problem.
+
+**(a) Proposals cannot render, and four of the eight could.** A row needs
+a rooting (the `R` cell), methods with `m_inputs` (the ▣ targets),
+`m_firing` (the `D` cells) and `m_applicable` (lang/mech).
+`proposed_agreements` is a separate type carrying four strings —
+`prop_slug`, `prop_doc`, `prop_claim`, `prop_needs` — and none of those
+four fields. Giving it `rooting option` plus an `artifact_kind list`
+would put **`exports_accounted_for`, `package_contains_declared_files`,
+`signatures_match_debug_info`** and **`interposition_binds_build_target`**
+on the grid with an `R` and their ▣ and no `D` anywhere — which is a
+useful thing to see, since it says where the information was lost for a
+claim nobody checks yet. It is a **schema change, not a rendering
+change**, and it costs the row's meaning: `lag`, `decided` and `blame`
+are undefined without a firing. Undecided.
+
+**(b) Three are outside the frame, and the theory already says so.** The
+overview's blind spots coincide exactly with
+[`theory.md`](theory.md) §7 — which is reassuring rather than a defect,
+because it means the view and the model fail at the same place:
+
+| proposal | why no row | where it is stated |
+| --- | --- | --- |
+| `no_duplicate_implementation` | a SET property — about the whole resolved set, not any pairing | theory.md §7 |
+| `denotation_stable_across_worlds` | a CROSS-WORLD property — two runs of one action | theory.md §7 |
+| `source_is_declared_ref` | **not an agreement**: it recovers canary's own rule, so it is a world assertion | theory.md §7.1 |
+
+⚠ **`build_tree_configured_for_source` has never had theory.md §7.1's
+filter applied to it** and probably falls the same way — "was the tree
+configured for the source we said" is the same shape as "is the tree at
+the commit we said". Nobody has decided; it sits in the proposals
+list looking like a peer of the other four.
+
+**(c) One target the columns cannot name: the PACKAGE.** The leading ▣
+columns range over `Canary_basic.artifact_kind` — Source, Headers, Lib,
+Binding, Binding_source, App. A package is none of them, and three
+claims want it as their target: `package_contains_declared_files`, the
+third version layer of [`../directions.md`](../directions.md) §3
+(*package_version_names_the_library*), and the depext claim of
+[`../directions.md`](../directions.md) §1. This is a `base/` vocabulary
+question, not a table one, and it is the one gap here that no amount of
+work on the view would close.
+
+**(d) Two of the user's three examples are not agreements at all** — and
+the table's silence is the [seam](README.md#what-is-not-here--the-seam)
+working, *agreement/ owns the CLAIM, enumeration/ owns the OCCASION*.
+What was missing is anything that says so, which is why their absence
+read as a gap:
+
+Names in *italics* below are PROPOSED and have no definition in `src/`
+yet, which is why they are not backticked — in this directory a
+backticked identifier means the code has it.
+
+| direction | the agreement half — fits the frame | the half that is NOT an agreement |
+| --- | --- | --- |
+| cross-package-manager | *discovery\_matches\_link* (target: Lib; open question whether `pkg-config` ANSWERING counts as rooting when nothing ENFORCES) | combining a binding with a lib from another PM is an **enumeration axis** — `store_config`, passes 1 and 3 |
+| cross-api / correspondence | a new row, distinct from `behavior_matches` because the C side is the oracle | the **generator** produces cases, not claims: a new action plus generated drivers |
+| versioning | *compatibility\_version\_satisfied*, `install_name` normalisation | *(none — this direction is agreements all the way down)* |
+
+**The versioning one is the row to want**, and the overview is already
+shaped for it: `fmt` exists precisely to say a claim ranges over one
+object format, and today it only ever prints `E·`
+(`declared_versions_exported`, `required_versions_exported`). A Mach-O
+`compatibility_version` claim would be the first `·M`, which is the
+column earning its keep rather than annotating a constant. Its blocker
+is not the frame — `canary checks --landing` is platform-blind, so an
+agreement landed only on macOS would report as landed everywhere
+([`../platform.md`](../platform.md) §6).
 
 ### A.3 Existing evidence names
 

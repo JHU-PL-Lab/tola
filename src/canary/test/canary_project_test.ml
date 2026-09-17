@@ -2544,6 +2544,95 @@ let agreement_bridge_pins : pure_test list =
           List.equal String.equal elf_only
             [ "declared_versions_exported"; "required_versions_exported" ]
           && all_both) };
+    (* THE PAPER TABLE IS TRANSCRIBED FROM A GENERATED ONE (2026-09-17).
+
+       `theory.md` §5.11 classifies every agreement by how many
+       artifacts it ranges over, and says in its own prose that this is
+       "read off a generated table rather than asserted" — the ▣ marks
+       in the agreement overview. The table itself is still typed out by
+       hand, because it is the ARGUMENT of a paper section and deleting
+       it would gut the section.
+
+       So it gets a pin instead of a deletion. This is the fourth
+       instance of the hand-copy class and the first where the copy
+       should STAY: the rule is that a generated table gets no
+       unchecked hand copy, not that prose may not restate a result.
+
+       It pins a second thing worth having independently: the target
+       COUNT does not vary across an agreement's patterns. A claim
+       ranges over the same number of artifacts whatever mechanism
+       carries it — `required_symbols_exported` reads (lib, ml) under
+       cstubs and (lib, py) under cext, two either way. If that ever
+       stops being true, §5.11's rows stop being well-defined and the
+       classification needs a finer cell before the doc is edited. *)
+    { name = "agreements.theory_target_groups_match_the_table";
+      check =
+        (fun () ->
+          match read_doc "doc/canary/design/agreement/theory.md" with
+          | None -> true (* not in a checkout *)
+          | Some text ->
+              let line_after marker =
+                match String.substr_index text ~pattern:marker with
+                | None -> None
+                | Some i ->
+                    let rest = String.subo text ~pos:i in
+                    Some
+                      (match String.lsplit2 rest ~on:'\n' with
+                       | Some (l, _) -> l
+                       | None -> rest)
+              in
+              let buckets =
+                [ (1, line_after "| **one target** |");
+                  (2, line_after "| **two targets** |");
+                  (0, line_after "| **no target** |") ]
+              in
+              let rows = CR.overview_rows () in
+              let bad =
+                List.concat_map CR.agreement_registry ~f:(fun r ->
+                    let mine =
+                      List.filter rows ~f:(fun (row : CR.overview_row) ->
+                          String.equal row.CR.ov_agreement.CR.ag_slug
+                            r.CR.ag_slug)
+                    in
+                    let counts =
+                      List.map mine ~f:(fun (row : CR.overview_row) ->
+                          List.length row.CR.ov_reads)
+                      |> List.dedup_and_sort ~compare:Int.compare
+                    in
+                    match counts with
+                    | [ n ] ->
+                        (* the slug must be in ITS bucket and no other *)
+                        List.filter_map buckets ~f:(fun (b, line) ->
+                            match line with
+                            | None ->
+                                Some
+                                  (Printf.sprintf
+                                     "theory.md §5.11: no row for bucket %d" b)
+                            | Some l ->
+                                let here =
+                                  String.is_substring l
+                                    ~substring:r.CR.ag_slug
+                                in
+                                if Bool.equal here (b = n) then None
+                                else
+                                  Some
+                                    (Printf.sprintf
+                                       "%s ranges over %d artifact(s) but is \
+                                        %sin §5.11's %d-target row"
+                                       r.CR.ag_slug n
+                                       (if here then "" else "NOT ")
+                                       b))
+                    | ns ->
+                        [ Printf.sprintf
+                            "%s: target count varies by pattern (%s) — \
+                             §5.11's rows are no longer well-defined"
+                            r.CR.ag_slug
+                            (String.concat ~sep:","
+                               (List.map ns ~f:Int.to_string)) ])
+              in
+              if not (List.is_empty bad) then
+                List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
+              List.is_empty bad) };
     { name = "agreements.planned_says_what_it_waits_on";
       check =
         (fun () ->

@@ -410,15 +410,26 @@ cheapest and strongest. **One registered agreement is distance 0** —
 while both are still present; the rest are distance 1 or planned. (This
 sentence said *"every registered agreement is distance 1 or planned"*
 until 2026-09-17, contradicting the paragraph below it that records
-lifting exactly that one.) The distance-0 checks with **no row** are:
+lifting exactly that one.)
 
-| theory § | post-fact check | today | what it needs |
-| --- | --- | --- | --- |
-| 5.1 | the source tree is the declared ref | runs, as a **shell assertion** in a `check_post` | the resolved commit RECORDED as evidence, then a row |
-| 5.7 | the package contains the files the recipe named | runs, as **shell assertions** hand-listed per project | a package file manifest as evidence, then a row and a general form |
-| 5.3 | exports the declaration does not account for | nothing | the converse of `declared_symbols_exported`; together they make an equality rather than an inclusion |
-| 5.2 | the build tree is configured for *this* source | nothing | an inspector over the configure cache |
-| 5.3 | declared signatures match the library's debug info | prose proposal ([`components.md`](components.md) §2.2) | a DWARF inspector, and `-g` |
+**The distance-0 checks with no row are the first five proposals** —
+`canary checks --catalogue`, or the *Proposed* section of
+[`catalogue.md`](catalogue.md), which prints each one's claim and what
+it needs. They came first in that list precisely because distance 0 is
+the cheap end.
+
+> A table of those five stood here until 2026-09-17 and it had already
+> drifted, which is why it is a pointer now. It described
+> `exports_accounted_for` as *"the converse of
+> `declared_symbols_exported`; together they make an equality rather
+> than an inclusion"* — the framing the registry itself records as
+> **wrong** since 2026-09-15: `native_api.stable_symbols` is a
+> WATCHLIST, not a manifest, so on sqlite the converse would report 267
+> orphans, and what it actually needs is a declaration kind no project
+> can write today. The generated entry said so; the copy still sold the
+> item as a free comparator. Fourth instance of the hand-copy class, and
+> the same direction as the other three: the copy makes the work look
+> more done, or cheaper, than it is.
 
 **"Already runs" is not "already produces evidence",** and the
 distinction is why this list shrank rather than landing. It first
