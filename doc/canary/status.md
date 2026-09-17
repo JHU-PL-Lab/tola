@@ -176,7 +176,7 @@ Steps (each step keeps the suite green before the next):
    2026-08-15). Remaining: the raw-override warning; delete
    `mi_artifact_shape` prose.
 6. [ ] **Contract registry unification** — design in
-   [`agreement/model.md`](design/agreement/model.md)
+   [`agreement/agreements.md`](design/agreement/agreements.md)
    (2026-08-17, merged 2026-08-21): one
    statement per contract (invariant as a FALSIFIER, tool-based inputs,
    evidence kind, firing derived from mechanism × provision); the
@@ -239,7 +239,7 @@ Steps (each step keeps the suite green before the next):
    `errored? / output_present?` — its own header calls the real
    detector "postponed to a later seam" — and the obligation axis is
    typed `Intrinsic | Added` where
-   [`agreement/model.md`](design/agreement/model.md) §1.6 has
+   [`agreement/agreements.md`](design/agreement/agreements.md) §1.6 has
    seven sources of belief, each with a blame column. Two steps, in
    order:
    - **(a)** `Canary_detect.finding` carries what the registry already

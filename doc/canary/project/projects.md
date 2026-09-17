@@ -6,7 +6,7 @@ What exists, what each project covers, and what is queued next. Merged
 things about the same projects in two places.
 
 Siblings: [`status_project.md`](status_project.md) is THE to-do tracker
-for this layer (nothing here is a to-do); [`landing.md`](landing.md) is
+for this layer (nothing here is a to-do); [`agreements.md`](agreements.md) is
 how to land one; [`issues.md`](issues.md) is the open per-project
 worklist. Data behind the candidate picks: the
 [opam survey](../surveys/opam.md) and the measured

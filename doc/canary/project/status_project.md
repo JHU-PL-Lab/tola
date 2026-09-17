@@ -12,7 +12,7 @@
 > - [`projects.md`](projects.md): what EXISTS — the roster, per-project
 >   coverage and 2×2 status, landing history, candidates. Facts, not
 >   to-dos.
-> - [`landing.md`](landing.md): how to land one.
+> - [`agreements.md`](agreements.md): how to land one.
 > - Framework status is [`../status.md`](../status.md); anything FIXED
 >   is history and lives in [`../worklog/`](../worklog/).
 
@@ -196,7 +196,7 @@ is still baked into the action catalogue, so:
   packaging and never reaches the library — sundials remains the row that
   proves the finding. What is wrong is the *"Ready — a wide, real pair"*
   verdict that followed from it, and §3b step 3 of
-  [`landing.md`](landing.md) is exactly the step that catches it:
+  [`agreements.md`](agreements.md) is exactly the step that catches it:
 
   1. **sundialsml's own `./configure` reads the library version** —
      `SUNDIALS_PACKAGE_VERSION` (falling back to `SUNDIALS_VERSION`) out
@@ -228,7 +228,7 @@ is still baked into the action catalogue, so:
   arriving one row earlier. The honest 2×2 predicts an xfail in each
   cross cell (deploy: load-time soname failure; forward: build failure on
   the 6.x path against a 7.x header) rather than the green pair the
-  survey advertised. Declare it by [`landing.md`](landing.md) §3 as
+  survey advertised. Declare it by [`agreements.md`](agreements.md) §3 as
   measured — do NOT retreat to a conda-forge 6.x to manufacture green,
   which is §3's rule read backwards.
 
@@ -297,7 +297,7 @@ is still baked into the action catalogue, so:
   second form (containment: each solver lib statically absorbs the
   helper objects). Two forms, one instance each, found for free.
 
-  **Resume by** implementing the dependency agreements in `agreement/model.md`
+  **Resume by** implementing the dependency agreements in `agreement/agreements.md`
   §5.6 (open work in its §7.4), after which D6
   lands at Level B with the vendored world as a derived `xfail`.
   Landing it stable-only is the cheap alternative and costs a (correct)

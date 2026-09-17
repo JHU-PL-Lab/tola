@@ -1,5 +1,5 @@
 (** [Canary_agreement] — TIER 3: THE LIST, and everything derived from
-    it. Design: [doc/canary/design/agreement/model.md].
+    it. Design: [doc/canary/design/agreement/agreements.md].
 
     The agreement layer is three tiers: [Canary_agreement_common]
     declares the types; each [Canary_agreement_<topic>] is one family
@@ -1390,7 +1390,8 @@ let proposed_agreements : proposed list =
          ref and the option set";
       prop_frame =
         Unfiled
-          "§7.1's filter has never been applied to this one, and it looks \
+          "theory.md §7.1's filter has never been applied to this one, and \
+           it looks \
            like it falls the same way as source_is_declared_ref: \"was the \
            tree configured for the source we said\" has the same shape as \
            \"is the tree at the commit we said\". If so it is a world \
@@ -1623,10 +1624,15 @@ let string_of_input (i : inspect_input) : string =
 (** THE record for one agreement, as text. [markdown] switches the
     same content to a doc section so the generated catalogue and the
     CLI cannot say different things. *)
-let pp_agreement ?(markdown = false) (r : agreement_row) : string =
+let pp_agreement ?(markdown = false) ?(depth = 0) (r : agreement_row) : string =
   let b = Buffer.create 2048 in
   let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
-  let h2 s = if markdown then add "\n## %s\n\n" s else add "%s\n" s in
+  (* [depth] pushes every heading down a level. The records used to be
+     the only `##`s in their file; spliced into a numbered document they
+     sit under one, and a record heading at the same level as the part
+     that contains it makes the table of contents lie. *)
+  let hashes n = String.make (n + depth) '#' in
+  let h2 s = if markdown then add "\n%s %s\n\n" (hashes 2) s else add "%s\n" s in
   let field k v =
     (* A VALUE MAY CONTAIN `|` and several do: [string_of_input] joins
        alternative evidence paths with it, so an unescaped `reads` row
@@ -1638,7 +1644,7 @@ let pp_agreement ?(markdown = false) (r : agreement_row) : string =
     else add "  %-12s %s\n" k v
   in
   let para s = if markdown then add "\n%s\n" s else add "  %s\n" s in
-  let sub s = if markdown then add "\n### %s\n\n" s else add "\n  %s\n" s in
+  let sub s = if markdown then add "\n%s %s\n\n" (hashes 3) s else add "\n  %s\n" s in
   let sub_of md s = if md then add "\n**%s**\n\n" s else add "  %s\n" s in
   h2 r.ag_slug;
   if markdown then add "| | |\n| --- | --- |\n";
@@ -1876,7 +1882,7 @@ let pp_rooting_table_md () : string =
           String.is_empty r.sr_action) )
   in
   add
-    "## What each agreement recovers\n\n\
+    "### What each agreement recovers\n\n\
      Every row is one action's rule, re-derived from what survived it. \
      **Action** is where the rule ran — not where the check fires, which is \
      wherever the evidence lands and is usually later. **Tool** is what \
@@ -1935,7 +1941,7 @@ let pp_todo_table_md () : string =
     List.filter agreement_registry ~f:(fun r -> Option.is_some r.ag_waiting_on)
   in
   let ready = List.length agreement_registry - List.length blocked in
-  add "## What is done, and what is left\n\n";
+  add "### What is done, and what is left\n\n";
   add
     "%d of %d agreements are implemented with nothing known in their way. \
      The other %d are blocked, and this is on what. Whether an unblocked \
@@ -2006,10 +2012,10 @@ let pp_out_of_table_md () : string =
           their own reasoning rather than more wiring." ) |]
   in
   add
-    "\n## Out of the table — what has no row, and why\n\n\
+    "\n---\n\n## 3. What has no record yet — out of the table\n\n\
      The [agreement overview](../matrix.md) shows the %d implemented \
-     agreements. These %d have no row on it. The reason is carried on \
-     each proposal (`prop_frame`) and this grouping is generated from \
+     agreements of §2. These %d have no row on it. The reason is carried \
+     on each proposal (`prop_frame`) and this grouping is generated from \
      it, so the four kinds of work stay apart without anyone \
      maintaining a list.\n"
     (List.length agreement_registry)
@@ -2031,7 +2037,7 @@ let pp_out_of_table_md () : string =
   Buffer.contents b
 
 (** The generated catalogue: every agreement's full record, as
-    markdown. Written to [doc/canary/design/agreement/catalogue.md] and
+    markdown. Written to [doc/canary/design/agreement/agreements.md] and
     pinned against this output, so the document is a build product
     rather than a second copy. *)
 let pp_catalogue_md () : string =
@@ -2043,31 +2049,28 @@ let pp_catalogue_md () : string =
        carries now is the phrase README.md's routing table already used
        for it, so a reader who followed the routing sees the same words
        at the top of the file they land in. *)
-    "# The agreement catalogue — one agreement, everything\n\n\
-     **Kind: reference, GENERATED.** The summary table, then one section \
-     per agreement with its complete record — claim, obligation, where it \
-     looks, what falsifies it, and what a pass does not establish. Ends \
-     with *Out of the table*: the claims that have NO row, grouped by \
-     why.\n\n\
-     Do not edit: regenerate with `make agreement-catalogue`. Everything \
-     here comes from the registry, so it cannot drift from the code that \
-     implements it.\n\n\
-     **What it does NOT show is what actually RAN.** That is a fact about \
-     run logs, and a generated file that read logs would change whenever \
-     anything ran — so `canary checks --landing` is the live answer to \
-     *which are landed*, and this file answers *what each one is and what \
-     is in its way*.\n\n\
+    "## 2. What there is — every agreement, one by one\n\n\
+     **GENERATED from the registry**, so it cannot drift from the code \
+     that implements it. The agreements appear in registry order, which \
+     is the order the agreement overview uses — §2's n'th record is the \
+     table's n'th row.\n\n\
+     **What this does NOT show is what actually RAN.** That is a fact \
+     about run logs, and a generated file that read logs would change \
+     whenever anything ran — so `canary checks --landing` is the live \
+     answer to *which are landed*, and this answers *what each one is \
+     and what is in its way*.\n\n\
      Evidence paths are shown for a BUILT world. The world decides where \
      a binding's inspection sits — a Fetched binding's is at its fetch step \
      — so the same method reads different paths in different worlds.\n\n\
-     The model these fields belong to is [`model.md`](model.md) §1; \
-     why each agreement exists is [`components.md`](components.md), at \
-     the anchor its row carries; how to land one is \
-     [`landing.md`](landing.md).\n\n";
+     The model these fields belong to is §1 above; why each agreement \
+     exists is [`components.md`](components.md), at the anchor its row \
+     carries, and [`theory.md`](theory.md) for why there is anything to \
+     check at all; how to \
+     land one is §4 and §5 below.\n\n";
   Buffer.add_string b (pp_todo_table_md ());
   Buffer.add_string b (pp_rooting_table_md ());
-  Buffer.add_string b "\n---\n\n# The records\n";
+  Buffer.add_string b "\n### The records\n";
   List.iter agreement_registry ~f:(fun r ->
-      Buffer.add_string b (pp_agreement ~markdown:true r));
+      Buffer.add_string b (pp_agreement ~markdown:true ~depth:1 r));
   Buffer.add_string b (pp_out_of_table_md ());
   Buffer.contents b

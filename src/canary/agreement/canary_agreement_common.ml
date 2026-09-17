@@ -68,7 +68,7 @@ open Base
    and inspect_native.py --emit-symbols, respectively. Output is a verdict
    on `requires ⊆ provides`.
 
-   See doc/canary/design/agreement/model.md for the design. *)
+   See doc/canary/design/agreement/agreements.md for the design. *)
 
 (* ── Summary loaders ── *)
 

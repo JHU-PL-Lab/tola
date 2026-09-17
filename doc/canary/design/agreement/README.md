@@ -54,19 +54,31 @@ owns them.
 
 | you are… | read |
 | --- | --- |
-| meeting the idea | this file, then [`model.md`](model.md) §1 |
-| **asking why there is anything to check** | [`theory.md`](theory.md) |
-| **looking for the NEXT agreement** | [`theory.md`](theory.md) §5–§6 |
-| **asking what one agreement IS** | [`catalogue.md`](catalogue.md), or `canary checks --agreement NAME` |
-| **asking what has NO row, and why** | [`catalogue.md`](catalogue.md) *Out of the table* — the eight proposals grouped by what is holding each one up |
-| landing an agreement on a project | [`landing.md`](landing.md) |
-| **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
-| asking what is actually in use | [`landing.md`](landing.md), or `canary checks --landing` |
+| meeting the idea | this file, then [`agreements.md`](agreements.md) §1 |
+| **asking what canary checks today, and what is left** | [`agreements.md`](agreements.md) — the whole question, in one document |
+| asking what ONE agreement is | [`agreements.md`](agreements.md) §2, or `canary checks --agreement NAME` |
+| asking what has NO row, and why | [`agreements.md`](agreements.md) §3 |
+| landing an agreement on a project | [`agreements.md`](agreements.md) §4, then §5.1's checklist |
+| **asking why there is anything to check at all** | [`theory.md`](theory.md) |
 | **asking why THIS agreement exists** | [`components.md`](components.md), at the anchor its registry row carries |
+| looking for the NEXT agreement | [`theory.md`](theory.md) §5–§6 |
+| **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
 | asking why a claim is `not_applicable` here | [`mechanism.md`](mechanism.md) §2 — the three facts that gate it |
-| writing the paper | [`components.md`](components.md) — the component walk |
-| debugging an `unavailable` | [`catalogue.md`](catalogue.md) for where it looks, then [`landing.md`](landing.md) points 4–5 |
+| writing the paper | [`theory.md`](theory.md) and [`components.md`](components.md) |
 
+**Four files, two questions.** *What is there and what is left* is one
+document; *why* is two; mechanisms gate both.
+
+- [`agreements.md`](agreements.md) — **what there is, and what is left.**
+  §1 the model (what a claim is, the eight outcomes, claim vs checking
+  method). §2 every agreement's complete record and §3 everything that
+  has no record yet — both GENERATED from the registry between markers,
+  so they cannot drift; `make agreement-catalogue` rewrites them. §4 how
+  a run gets from a step to a verdict, one project end to end. §5 the
+  remaining work: the checklist, the four undecided states, what a
+  landing has cost, the distance-0 backlog and `--strict`. Merged
+  2026-09-17 from `model.md` + `landing.md` + the generated
+  `catalogue.md`, which answered one question between them.
 - [`theory.md`](theory.md) — **where agreements come from.** An action's
   implementation embodies a relation over its inputs; running it is the only
   witness that a tuple satisfies it; the tuple is then discarded and only a
@@ -75,27 +87,6 @@ owns them.
   catalogue and states, per action, the full-information agreement the real
   tool established and what post-fact checking can recover of it; §6 turns
   that into a procedure for finding the next one.
-- [`catalogue.md`](catalogue.md) — **one agreement, everything**, GENERATED.
-  Per agreement: subject, claim, obligation basis, status, fault tag, the
-  sentence a counterexample refutes, what it is held against, and per method
-  what it compares, against what, where it fires and what it READS in each
-  world, what falsifies it, and what a pass does not establish. Ends
-  with **Out of the table** — the claims with no row on the agreement
-  overview, grouped by whether a schema field is holding them up, or
-  §7.1's filter has not been applied, or the per-action model does not
-  reach them at all. `make agreement-catalogue` rewrites it; a pin fails
-  if it drifts from the registry.
-- [`model.md`](model.md) — **the model.** What an agreement is, what
-  separates a claim from the methods that check it, the eight outcomes
-  and why there are eight (§1); and how a running step gets from its own
-  action to a set of outcomes (§2).
-- [`mechanism.md`](mechanism.md) — **what a binding IS, and which
-  claims it can carry.** Two axes: the consumer's mechanism (a value,
-  with three decidable facts that `m_applicable` dispatches on) and the
-  provider's linkage (shared `.so` vs static `.a` — NOT a value yet, and
-  it turns off the same agreements for the same reason). Carries every
-  cell of the 2×4 grid, how a project declares its binding, and the open
-  question the catalogue exists to ask.
 - [`components.md`](components.md) — **why each agreement exists.** A
   walk over the five kinds of thing a binding world is made of —
   artifacts, bindings, versions, packaging, deployment — saying for each
@@ -103,18 +94,18 @@ owns them.
   not establish. Every registry row's `ag_doc` anchor points here, and
   `agreements.doc_anchors_exist` fails if a cited section stops
   existing.
-- [`landing.md`](landing.md) — **landing one, end to end, and what is
-  left.** The eight points where a run consults the registry, the four
-  failure modes behind an `unavailable`, the dummy action, the
-  checklist, the four undecided states and the four kinds of work they
-  mean, the distance-0 backlog, and `--strict`. It absorbed
-  `pipeline.md` on 2026-09-17, when the tracker's per-agreement table
-  became generated and what was left of it was that walkthrough's tail.
-  It does NOT carry a landed/not table — `canary checks --landing` does,
-  and the hand copy that used to sit here went stale and contradicted
-  itself. (This bullet was two bullets until 2026-09-17, one per half of
-  the absorbed file, which is how a merged document grows back into two
-  entries in its own index.)
+- [`mechanism.md`](mechanism.md) — **what a binding IS, and which
+  claims it can carry.** Two axes: the consumer's mechanism (a value,
+  with three decidable facts that `m_applicable` dispatches on) and the
+  provider's linkage (shared `.so` vs static `.a` — NOT a value yet, and
+  it turns off the same agreements for the same reason). Carries every
+  cell of the 2×4 grid, how a project declares its binding, and the open
+  question the catalogue exists to ask.
+
+> Merging `theory.md` and `components.md` into one *why* document was
+> asked for in the same breath and is **open** — they collide on section
+> numbering and components' §§ are load-bearing in code. The decision
+> and its cost are [`agreements.md`](agreements.md) §5.7.
 
 ## See it rather than read it
 
@@ -150,13 +141,13 @@ The rest answer different questions:
 | table | in | answers |
 | --- | --- | --- |
 | **the recovery grid** | `canary checks --firing`, `make view` table 1 | **start here** — every agreement, where its rule ran, where it is checked, which mechanisms and formats carry it |
-| what each one recovers, in prose | [`catalogue.md`](catalogue.md) | the same rooting as a sentence per row, with the tool and the artifact spelled out |
-| per-agreement records | [`catalogue.md`](catalogue.md) | what IS this agreement — claim, whose rule it recovers, where it looks, worked examples |
-| the distance-0 backlog | [`landing.md`](landing.md) | which unregistered checks are cheapest to add |
+| what each one recovers, in prose | [`agreements.md`](agreements.md) | the same rooting as a sentence per row, with the tool and the artifact spelled out |
+| per-agreement records | [`agreements.md`](agreements.md) | what IS this agreement — claim, whose rule it recovers, where it looks, worked examples |
+| the distance-0 backlog | [`agreements.md`](agreements.md) | which unregistered checks are cheapest to add |
 | full-information per action | [`theory.md`](theory.md) §5 | what each real tool established, and what survives of it |
 | **why an agreement exists** | [`components.md`](components.md) | the per-component rationale each `ag_doc` anchor points at |
 | **planned vs effective** | `canary checks --landing` | which ones a real run has decided. Not copied into any file — see below |
-| **what is done, and what is left** | [`catalogue.md`](catalogue.md) | per agreement, what is in its way — GENERATED from `ag_waiting_on`, so it cannot go stale the way the hand-maintained version did |
+| **what is done, and what is left** | [`agreements.md`](agreements.md) | per agreement, what is in its way — GENERATED from `ag_waiting_on`, so it cannot go stale the way the hand-maintained version did |
 | agreement × action | `canary checks --firing` | where each one fires |
 | **scenario × check** | `canary result [<project>]` | what each agreement DECIDED, per world — check columns interleaved with the actions, `pre → action → artifact → post`, one agreement per cell, plus a counted **blame** for every cell that carries no verdict |
 | **could vs did, per project** | `canary checks <project>` | every action the project derives, every agreement that fires there, what the runs decided — ending in a five-class gap summary (`decided` / `could not` / `never asked` / `stood down` / `no evaluator`) |

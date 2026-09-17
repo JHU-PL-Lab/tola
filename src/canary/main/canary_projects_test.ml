@@ -1864,7 +1864,7 @@ let platform_single_source_pin : Canary_project_test.pure_test =
    NOT pinned here: that a violation actually fails the step. That is a
    claim about a real evaluation over real evidence, and the project's
    standard for it is a REAL project's log plus a deliberate break
-   (agreement/landing.md), not a synthetic [agreement_ctx] that would
+   (agreement/agreements.md), not a synthetic [agreement_ctx] that would
    pass by agreeing with whatever the derivation happens to do today. *)
 let strict_mode_pin : Canary_project_test.pure_test =
   { name = "strict.acceptance_policy";

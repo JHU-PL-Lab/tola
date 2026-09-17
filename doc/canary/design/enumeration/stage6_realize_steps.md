@@ -15,7 +15,7 @@ what happened. The map is [`README.md`](README.md).
 fires and against what evidence. That is a function of `(world, action,
 mechanism, lang)`, which is this directory's vocabulary; `agreement/`
 owns what a check CLAIMS. The account used to live entirely in
-[`../agreement/landing.md`](../agreement/landing.md), which left this
+[`../agreement/agreements.md`](../agreement/agreements.md), which left this
 doc — the doc for the pass that attaches `agreement_ctx` to every step —
 mentioning "agreement" zero times.
 
@@ -110,7 +110,7 @@ what a check CLAIMS; this pass owns **when it is triggered and against
 what** — and that is a function of `(world, action, mechanism, lang)`,
 which is this directory's vocabulary and not the agreement layer's.
 Until 2026-09-16 the split was declared the other way round, the
-account lived in [`../agreement/landing.md`](../agreement/landing.md),
+account lived in [`../agreement/agreements.md`](../agreement/agreements.md),
 and this doc mentioned "agreement" zero times while being the doc for
 the pass that attaches the context.
 
@@ -163,7 +163,7 @@ holds", and a disagreement found there is a finding about ARTIFACTS that
 the action was never asked to fail on — ssl's `dependencies_provided:
 violated libcrypto.so.3` is real and must not turn ssl red. `--strict`
 makes the two views agree by failing the step that READ the disagreeing
-evidence. See [`../agreement/landing.md`](../agreement/landing.md).
+evidence. See [`../agreement/agreements.md`](../agreement/agreements.md).
 
 ### Where the evidence is, and why that is this pass's problem
 

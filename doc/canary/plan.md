@@ -110,7 +110,7 @@ Tool / empirical (**agent-ownable**):
       runner side lands projects fine; what a landing *checks* is still
       per-project tables plus c1..c8. This is
       [`../status.md`](status.md) M2 step 6 and its catalogue is
-      [`agreement/model.md`](design/agreement/model.md)
+      [`agreement/agreements.md`](design/agreement/agreements.md)
       (§2 develops the artifact foundation; §7.4 collects open
       implementation work). **Not descopable** (user, 2026-08-26).
 - [ ] **Depth, not count** — the library count M2 originally asked for

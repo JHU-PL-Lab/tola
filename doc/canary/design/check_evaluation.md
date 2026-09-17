@@ -108,7 +108,7 @@ As actions those become *more* honest, not less.
 
 ## 5. Why the agreement registry is the natural home
 
-[`agreement/model.md`](agreement/model.md) is the catalogue this
+[`agreement/agreements.md`](agreement/agreements.md) is the catalogue this
 section means.
 
 A contract is a check with declared inputs and an expected outcome, so

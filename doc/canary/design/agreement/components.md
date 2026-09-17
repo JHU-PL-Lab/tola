@@ -10,7 +10,7 @@ section numbering is therefore load-bearing —
 `agreements.doc_anchors_exist` fails if a cited section stops existing.
 
 > Split out of `registry.md` on 2026-09-17. That file was 1,376 lines and
-> two documents: the agreement MODEL (now [`model.md`](model.md)) and
+> two documents: the agreement MODEL (now [`agreements.md`](agreements.md)) and
 > this walk. Its title was a paper title, it had no `Kind:` line, and
 > CLAUDE.md routed "writing the paper" at these sections specifically.
 > The numbering is unchanged across the split, so every anchor in the
@@ -20,7 +20,7 @@ section numbering is therefore load-bearing —
 
 - **It is not the catalogue.** What each agreement IS — its claim,
   whose rule it recovers, its methods, limits and worked examples — is
-  [`catalogue.md`](catalogue.md), generated from the code. Nothing here
+  [`agreements.md`](agreements.md), generated from the code. Nothing here
   restates it, because the two hand-maintained copies that used to
   (the retired `registry.md`'s §1.7 and §7.4.1) had both gone stale: they still said
   `declared_symbols_exported` reports `unavailable` for want of a
@@ -218,7 +218,7 @@ The inspected static stub archive carries undefined native references but no
 dynamic dependency section. That supports `required_symbols_exported`'s
 provider/consumer symbol comparison; `signatures_agree` compares header and
 binding signature summaries for shared function names. These are current
-checks, with each method's limits generated into [`catalogue.md`](catalogue.md).
+checks, with each method's limits generated into [`agreements.md`](agreements.md).
 
 | Agreement                   | Exact comparison                                                                    | Evidence needed                           |
 | --------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
@@ -226,7 +226,7 @@ checks, with each method's limits generated into [`catalogue.md`](catalogue.md).
 | `signatures_agree`          | Compare return-type strings and argument-type lists for names present on both sides | Header and binding signature summaries    |
 
 `required_symbols_exported` in this context is the completed production path:
-[`model.md`](model.md) §2.1 records what runs; [`../../backlog.md`](../../backlog.md) §51 what is left.
+[`agreements.md`](agreements.md) §2.1 records what runs; [`../../backlog.md`](../../backlog.md) §51 what is left.
 
 `signatures_agree`'s registered method compares textual signatures, not
 semantic type equivalence, representations or ownership. Tiny's inspector
@@ -406,7 +406,7 @@ Header, provider and binding versions can vary independently. The carried
 oracle in §3.1.2 must retain its source identity so that a check does not silently
 use one version's header to judge another version's library. The detailed
 version-pair observations remain to be developed; existing comparisons and
-limits are generated into [`catalogue.md`](catalogue.md). The ordered
+limits are generated into [`agreements.md`](agreements.md). The ordered
 plan for the next three is [`../directions.md`](../directions.md) §3. Package-manager selection of these versions is the
 next section's subject.
 
@@ -518,7 +518,7 @@ retain every build-time dependency of a fetched consumer.
 The demonstrated failure concerns the cooperation between packaging conventions.
 Version direction alone does not explain it: the same binaries ran after the
 name resolution was corrected. That observation supports attribution to the
-pairing, without claiming general compatibility between the releases ([`model.md`](model.md) §2.2).
+pairing, without claiming general compatibility between the releases ([`agreements.md`](agreements.md) §2.2).
 
 #### 5.5.3 Discovery is not an identity oracle
 
@@ -530,7 +530,7 @@ one object can be benign; distinct loaded objects duplicating state may not be.
 
 ### 5.6 Dependency agreements
 
-The four stable slugs and statuses are generated into [`catalogue.md`](catalogue.md). Their distinguishing
+The four stable slugs and statuses are generated into [`agreements.md`](agreements.md). Their distinguishing
 questions are: is a recorded name provided (`dependencies_provided`), does it
 preserve its denotation across worlds, are prohibited duplicate
 implementations loaded, and does a symbol bind to its permitted target?
@@ -665,7 +665,7 @@ SEQUENCES rather than calls).
 
 Prefer earlier evidence when it can refute the same claim. Keep runtime checks
 where necessary, and state their input and execution coverage. Translated and
-differential tests are candidate evidence sources ([`model.md`](model.md) §1.8), not proof that the
+differential tests are candidate evidence sources ([`agreements.md`](agreements.md) §1.8), not proof that the
 entire binding preserves native behaviour.
 
 #### 6.3.3 Instrumentation

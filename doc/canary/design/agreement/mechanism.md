@@ -251,7 +251,7 @@ The long-term question, in two steps:
 ## Where this sits
 
 - The generated per-mechanism facts — `canary spec <project>`, and
-  [`catalogue.md`](catalogue.md) for what each agreement's applicability
+  [`agreements.md`](agreements.md) for what each agreement's applicability
   does with them.
 - Applicability as a pipeline pass —
   [`../enumeration/stage2_analyse_spec.md`](../enumeration/stage2_analyse_spec.md).

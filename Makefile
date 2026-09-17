@@ -116,12 +116,19 @@ canary-refresh:
 	$(CANARY) action $(PROJECT)
 	@echo "refresh: $(PROJECT) re-decided its agreements — 'canary result $(PROJECT)' to see the gap"
 
-# The generated per-agreement catalogue. `make agreement-catalogue`
-# rewrites it; `agreements.catalogue_doc_is_generated` fails if the file
-# on disk differs from what the registry would emit, so it cannot drift.
+# The generated half of `agreements.md` — §2 (every agreement's record)
+# and §3 (what has no record yet). SPLICED between the markers rather
+# than written as a whole file, because that document is half narrative
+# and half registry dump, and the merge on 2026-09-17 put them in one
+# place on purpose. `agreements.catalogue_doc_is_generated` fails if the
+# region on disk differs from what the registry would emit, so the
+# generated half cannot drift; the prose around it is edited by hand.
+AGREEMENTS_DOC = doc/canary/design/agreement/agreements.md
 agreement-catalogue:
-	@$(CANARY) checks --catalogue --md > doc/canary/design/agreement/catalogue.md
-	@echo "wrote doc/canary/design/agreement/catalogue.md"
+	@$(CANARY) checks --catalogue --md > $@.tmp
+	@python3 -c 'import sys;p,g="$(AGREEMENTS_DOC)","$@.tmp";d=open(p).read();b=open(g).read();B="<!-- BEGIN GENERATED";E="<!-- END GENERATED -->";i=d.index(B);j=d.index(E);h=d.index("-->",i)+3;open(p,"w").write(d[:h]+"\n\n"+b.strip()+"\n\n"+d[j:])'
+	@rm -f $@.tmp
+	@echo "wrote $(AGREEMENTS_DOC) (generated region)"
 
 # THE WEB VIEW — three tables on one page: the check key, the RECOVERY
 # GRID (where each rule ran vs where it is checked), and the result

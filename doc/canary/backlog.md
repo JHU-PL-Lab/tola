@@ -481,7 +481,7 @@ No hurry — all items below are queued for when their forcing function arrives.
       it is not a further pass; where the evidence address comes from;
       and the bundling direction with its named blocker;
     - ~~`agreement/pipeline.md` (retired 2026-09-17, absorbed into
-      `agreement/landing.md`) already WAS that document, filed in the
+      `agreement/agreements.md`) already WAS that document, filed in the
       wrong directory~~ — its points 2–4 now say what a PROJECT AUTHOR
       has to get right and point at §2b for the mechanics. It keeps the
       four failure modes, which are its real value and are diagnostic
@@ -660,7 +660,7 @@ No hurry — all items below are queued for when their forcing function arrives.
 51. **The agreement backlog** (moved out of the retired
     `agreement/registry.md` §7.4 on
     2026-09-17, when that file split into
-    [`design/agreement/model.md`](design/agreement/model.md) and
+    [`design/agreement/agreements.md`](design/agreement/agreements.md) and
     [`components.md`](design/agreement/components.md)). Open items live
     here; the model does not carry a work queue.
 

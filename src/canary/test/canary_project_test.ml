@@ -2114,7 +2114,7 @@ let agreement_bridge_pins : pure_test list =
      "the doc" now say which half they mean, because they mean
      different halves: names may appear in either, § cross-references
      resolve WITHIN a file, and the anchors resolve only in the walk. *)
-  let model_doc = "doc/canary/design/agreement/model.md" in
+  let model_doc = "doc/canary/design/agreement/agreements.md" in
   let components_doc = "doc/canary/design/agreement/components.md" in
   let agreement_docs = [ model_doc; components_doc ] in
   let read_doc p =
@@ -2237,6 +2237,15 @@ let agreement_bridge_pins : pure_test list =
                    has to spell them to say what NEEDED is and how
                    Mach-O differs. *)
                 "DT_NEEDED"; "DT_SONAME"; "DT_RPATH"; "DT_RUNPATH";
+                (* HOOK MOMENTS, not definitions (2026-09-17). The
+                   generated rooting table spells an action's post hook
+                   as `<action>_post`, which is a composed name: the
+                   action is a constructor and `_post` is the moment, so
+                   no `let build_lib_post` exists or should. They became
+                   visible when the catalogue was merged into
+                   `agreements.md` and this pin began scanning generated
+                   content — new coverage, not a new defect. *)
+                "build_lib_post"; "install_lib_post";
                 "LC_LOAD_DYLIB"; "LC_ID_DYLIB"; "LC_RPATH";
                 "compatibility_version"; "@loader_path";
                 "@executable_path"; "LD_LIBRARY_PATH"; "--as-needed";
@@ -2394,11 +2403,39 @@ let agreement_bridge_pins : pure_test list =
     { name = "agreements.catalogue_doc_is_generated";
       check =
         (fun () ->
-          let path = "doc/canary/design/agreement/catalogue.md" in
+          (* A SPLICED REGION, NOT A WHOLE FILE (2026-09-17). The
+             catalogue was merged into `agreements.md`, which is half
+             narrative and half registry dump; only the half between the
+             markers is generated, so only that half is pinned. A
+             missing marker fails rather than passing vacuously — that
+             is the failure mode a region pin has and a file pin does
+             not. *)
+          let path = "doc/canary/design/agreement/agreements.md" in
           if not (Stdlib.Sys.file_exists path) then true
           else
-            let on_disk =
+            let whole =
               Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
+            in
+            let region =
+              match
+                ( String.substr_index whole ~pattern:"<!-- BEGIN GENERATED",
+                  String.substr_index whole ~pattern:"<!-- END GENERATED -->" )
+              with
+              | Some i, Some j when j > i -> (
+                  match String.substr_index whole ~pos:i ~pattern:"-->" with
+                  | Some h when h + 3 <= j ->
+                      Some (String.sub whole ~pos:(h + 3) ~len:(j - h - 3))
+                  | _ -> None)
+              | _ -> None
+            in
+            let on_disk =
+              match region with
+              | Some r -> r
+              | None ->
+                  Fmt.pr
+                    "    agreements.md: generated-region markers missing or \
+                     out of order@.";
+                  "<<no region>>"
             in
             let generated = Canary_agreement.pp_catalogue_md () in
             (* COMPARE CONTENT, NOT BYTES (2026-09-12). The first version
@@ -2437,7 +2474,8 @@ let agreement_bridge_pins : pure_test list =
             if String.equal (normalize on_disk) (normalize generated) then true
             else (
               Fmt.pr
-                "    catalogue.md is stale — run `make agreement-catalogue`@.";
+                "    agreements.md §2–§3 are stale — run `make \
+                 agreement-catalogue`@.";
               false)) };
     (* A PLANNED AGREEMENT SAYS WHAT IT IS WAITING ON (2026-09-17).
 

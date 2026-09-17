@@ -229,7 +229,7 @@ check fail once on purpose.
   have reported cairo's 11 external dependencies *before* a run instead of
   leaving us to wonder. This is also the concrete motivation for the
   postponed "C smoke probe" in
-  [`../design/agreement/model.md`](../design/agreement/model.md):
+  [`../design/agreement/agreements.md`](../design/agreement/agreements.md):
   a lib can be perfectly formed and still fail to load.
 - [ ] **Fetch the closure when the system cannot satisfy it.** For a
   cairo-shaped package on a machine lacking pixman/freetype, the honest

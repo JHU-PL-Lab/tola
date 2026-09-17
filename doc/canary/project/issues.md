@@ -7,7 +7,7 @@
 > fixed lives in [`../worklog/`](../worklog/).
 >
 > Conventions for whoever picks these up: the project layer's rules are
-> in [`landing.md`](landing.md) and the repo CLAUDE.md — bottom-up
+> in [`agreements.md`](agreements.md) and the repo CLAUDE.md — bottom-up
 > increments, every increment ships a pin (`canary project-test`), and
 > `make canary-test` after any edit under `src/canary/`. Live-verify with
 > `canary action <project>` before calling an issue closed, and move the

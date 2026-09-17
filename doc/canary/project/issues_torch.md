@@ -232,7 +232,7 @@ Three things follow:
 ### Found — a build cache that ignores its selecting ENV variable serves
 ### a verdict about a different library (2026-09-01, torch)
 
-Generalized into [`landing.md`](landing.md) §4 as a landing lesson; the
+Generalized into [`agreements.md`](agreements.md) §4 as a landing lesson; the
 per-project fact is here. torch selects its library by reading `LIBTORCH`
 at build time, but the dune rule invoking the configurator depends only
 on `discover.exe`. Rebuilding a warm tree with a different `LIBTORCH`
