@@ -1017,6 +1017,33 @@ message. The template wins because its answer is derived from the world
 and the override's is hand-written. Pinned by
 `steps.template_summary_beats_override`. Zero clashes today (z3's was
 the only one).
+**2026-09-17 — THE RECOVERY GRID, and three directions recorded.**
+`canary checks --firing` prints a SECOND grid: same action columns,
+but marking **R** where the agreement is ROOTED (the tool's rule ran
+there; the information was lost there) beside **D** where a method
+FIRES. `◉` is both. The gap between R and D is how far the surviving
+evidence had to travel, and every column between is an action that
+could have dropped it. ⚠ The `lag` column is **NOT** landing.md's
+DISTANCE — that one measures how far apart the two SIDES of the
+comparison are. `required_symbols_exported` is distance-1 and lag-0.
+Conflating them is the error the legend exists to prevent. Pinned by
+`agreements.recovery_grid_matches_rooting`. The grid exists because
+`ag_rooted_in` landed: the backlog's "nothing typed records where an
+agreement is ROOTED" is no longer true, which is what unblocked the
+deferred action-unit view.
+
+Three directions explored and parked in
+[`doc/canary/design/directions.md`](doc/canary/design/directions.md)
+(backlog §54), plus the provider-linkage axis in `design/mechanism.md`
+(§53). Two findings worth carrying even if the work waits:
+`inspect_native.py` has extracted Mach-O's `compatibility_version`
+since the macOS port and **no agreement reads it** — written evidence
+with no reader, rooted in dyld's own rule, and the cheapest agreement
+available; and a CORRESPONDENCE test needs no project-supplied
+expectation because the C side IS the oracle, which is what makes it a
+different claim from `behavior_matches` rather than an evaluator for
+it.
+
 ⚠ **A VERDICT CAN STILL BE INVISIBLE** (`project/issues.md` §1, second
 instance): the column set comes from `covered_actions_of` (the union of
 every world's actions) while each cell re-resolves its slot against ITS

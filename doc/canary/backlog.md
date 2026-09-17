@@ -780,3 +780,66 @@ No hurry — all items below are queued for when their forcing function arrives.
     4. **Split `probe_lib`'s three roles** — existence, inspection,
        execution — and add the third. Nothing `dlopen`s a library
        today, so that is NEW COVERAGE, not a reclassification.
+
+53. **The provider-linkage axis** (2026-09-17, user: *"I wish the
+    mechanism can cover more binding cases including `{c-static-lib,
+    c-dynamic-lib} × …`"*). Written up in
+    [`design/mechanism.md`](design/mechanism.md) *"The axis that is
+    missing"*.
+
+    The mechanism catalogue ranges over the CONSUMER. Nothing ranges
+    over whether the provider is a `.so` or a `.a`, and it matters as
+    much: four agreements go `not_applicable` (`soname_matches_*`,
+    `*_versions_exported`) and `dependencies_provided` changes meaning,
+    because a static lib's own dependencies become the consumer's
+    transitively and silently.
+
+    **Closer than it looks.** `api_component` already distinguishes
+    `Link_lib` from `Runtime_lib`, and `inspect_binding.py --kind stub`
+    already reads both `.a` (plain `nm`) and `.so` (`nm -D`) — for the
+    CONSUMER's stub. `Canary_artifact_native.nm_cmd`, the provider side,
+    hardcodes `nm -D`. Order: (1) a `linkage = Shared | Static` value in
+    base; (2) `nm_cmd` reads it; (3) per-agreement applicability
+    mirroring `mi_consumer_records_needed`; (4) an enumeration
+    constraint refusing **ctypes × static**, which is impossible rather
+    than unwired — `CDLL` calls `dlopen` and an archive has nothing to
+    open; (5) a `libtiny.a` beside tiny's `libtiny.so.1`, which is one
+    CMake target and gives every admissible cell a controlled specimen.
+
+    Do 1–3 before 4: once linkage is a value the refusal is derivable
+    from the catalogue rather than guessed.
+
+54. **Three research directions, explored and parked** (2026-09-17) —
+    [`design/directions.md`](design/directions.md). Each has a *where
+    this lands* and an ordered first step; none is started.
+
+    - **§1 cross-PM / the `conf-*` hop.** The conversion is lossy in a
+      named way, so each loss is an agreement candidate. The first one:
+      *the object the discovery mechanism accepted is the object the
+      link resolved* — `pkg-config` answers at solve time, the linker at
+      build time, the loader at run time, and nothing checks the three
+      agreed. The ncurses segfault is one instance. **Land the depext
+      dispatch TABLE first**; it is useful with no agreement at all, it
+      is what makes an arbitrary opam package landable instead of
+      hand-specced, and the checks need it to have something to compare
+      against.
+    - **§2 correspondence tests.** A differential test needs no
+      project-supplied expectation — the C side IS the oracle, and
+      canary builds both in one world. It recovers a real loss: the C
+      compiler checked the stub's TYPES, not its argument ORDER.
+      Distinct from `behavior_matches` (which has no oracle), so a
+      distinct agreement. **Start with an argument-swap mutation in
+      tiny** — one line of C, invisible to every structural agreement,
+      and the evidence that the agreement is worth having. Then a
+      `probe_correspondence` action; decide whether the C driver is an
+      `App` artifact (right) or an inline probe fixture (tempting).
+    - **§3 versioning across ELF and Mach-O.**
+      `inspect_native.py` has extracted Mach-O's
+      `compatibility_version` since the macOS port and NO agreement
+      reads it — written evidence with no reader, and the cheapest
+      agreement in the tree. It is rooted in **dyld's rule**, so it
+      belongs with the ten tool-rooted ones. ⚠ **Blocked on a reporting
+      gap first:** `canary checks --landing` is platform-blind, so an
+      agreement landed only on mac would read as landed everywhere —
+      the same question `design/platform.md` §6 asks about the
+      cross-platform viewer.

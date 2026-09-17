@@ -115,7 +115,8 @@ All six stages now have a standalone doc.
 | [diagram.md](design/diagram.md) | The diagram pipeline and the design ideas its output implements |
 | [tiny.md](design/tiny.md) | Tiny — how the witness works. Carries a stale reframing banner; read it first |
 | [mechanism_payload.md](design/mechanism_payload.md) | The typed binding declaration (steps 1–4, 6 landed; step 5 partial) |
-| [mechanism.md](design/mechanism.md) | The mechanism catalogue (shipped) + the open research direction behind it |
+| [directions.md](design/directions.md) | **Three directions, explored** (2026-09-17) — what can be checked across the `conf-*` hop and how an arbitrary opam binding gets enumerated; correspondence tests (`push`/`pop` both sides) and why their oracle is the other side of the binding; versioning across ELF and Mach-O, where the evidence is already recorded and nothing reads it. Exploration, not a plan |
+| [mechanism.md](design/mechanism.md) | The mechanism catalogue (shipped) + the open research direction behind it + **the provider-linkage axis that is missing** (2026-09-17): `{static, shared} × {cstubs, dynlink, cext, ctypes}`, which four agreements a static provider turns `not_applicable`, and why ctypes × static is impossible rather than unwired |
 | [wrapper_packages.md](design/wrapper_packages.md) | Wrapper / conf-free packages, the fork layering, prebuilt-shadows-source (an unconditional filter since 2026-08-19, not a policy), the Publish generalization |
 
 ### Proposal — design for work not done

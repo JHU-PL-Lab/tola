@@ -696,6 +696,184 @@ let pp_firing_table ?(mechanism = Canary_mechanism.Cstubs)
         "∅ mechanism offers no such claim   × off in registry   · does not \
          fire here" ])
 
+(* ── THE RECOVERY GRID (2026-09-17, user) ───────────────────────────
+
+   The firing table above answers *where is this DETECTED*. That is half
+   of what theory.md §2 says an agreement is. The other half is where
+   the information was LOST — the action whose tool established the
+   relation and then threw the tuple away — and the two are usually
+   different actions.
+
+   The catalogue carries both, as prose columns: `action`, `tool`,
+   `artifact` on the rooting table, and `checked at` beside them. A
+   reader has to hold two tables in their head and subtract. Put them on
+   ONE row over the action patterns and the subtraction is visual:
+
+     declared_symbols_exported   ...  [R+D] build_lib ...
+     required_symbols_exported   ...  [R] build_binding_ocaml ... [D] probe_binding_ocaml
+
+   R and D in one cell is a DISTANCE-0 agreement — both sides of the
+   comparison are still present where the rule ran, and it is the
+   cheapest and strongest kind. R and D apart is the gap: how far the
+   evidence had to travel, and every column between them is an action
+   that could have dropped it.
+
+   That makes landing.md's distance-0 backlog readable off the grid
+   rather than maintained beside it, which is what the user asked for
+   when they said the catalogue's `recovers`/`tool` columns were less
+   clear than marking the action.
+
+   **The row is per (agreement × mechanism)**, because both halves move
+   with the mechanism: a Ctypes binding compiles no stub, so
+   `required_symbols_exported` has no R and no D there at all. *)
+
+type recovery_mark =
+  | Rooted_and_detected  (** distance 0 — the rule ran here and the check fires here *)
+  | Rooted  (** the tool ran here; the information was lost here *)
+  | Detected  (** a method fires here, reading what survived *)
+  | Nothing_here
+
+let recovery_mark_char = function
+  | Rooted_and_detected -> "◉"
+  | Rooted -> "R"
+  | Detected -> "D"
+  | Nothing_here -> "·"
+
+(** Where an agreement is ROOTED, as an action of THIS graph — or [None]
+    when [rt_action] is prose standing in for a link that ran in a world
+    canary never modelled. The catalogue already draws that distinction
+    by backticking only what parses; this is the same test, used to
+    decide whether a row can carry an R at all. *)
+let rooted_action_of (r : agreement_row) : Canary_basic.action option =
+  let rt = r.ag.ag_rooted_in in
+  if not (is_rooted rt) then None
+  else Canary_basic.action_of_string rt.rt_action
+
+(** THE RECOVERY GRID: rows = agreements, columns = action patterns,
+    cells = rooted / detected / both. *)
+let recovery_table ?(mechanism = Canary_mechanism.Cstubs)
+    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
+    (agreement_row * (Canary_basic.action * recovery_mark) list) list =
+  let world = uniform_world ~lang ~mechanism provision in
+  List.map agreement_registry ~f:(fun r ->
+      let root = rooted_action_of r in
+      ( r,
+        List.map (firing_columns lang) ~f:(fun a ->
+            let is_root =
+              match root with Some ra -> Poly.equal ra a | None -> false
+            in
+            let fires =
+              match cell_status_of r ~mechanism ~lang ~world a with
+              | Empty -> false
+              | _ -> true
+            in
+            ( a,
+              match (is_root, fires) with
+              | true, true -> Rooted_and_detected
+              | true, false -> Rooted
+              | false, true -> Detected
+              | false, false -> Nothing_here )) ))
+
+(** THE LAG: how many action patterns lie between the root and the
+    nearest firing site, or [None] when the row has no root in this
+    graph or does not fire here.
+
+    ⚠ **This is NOT landing.md's distance, and conflating them would be
+    a real error.** They measure different gaps:
+
+    - **landing.md's distance** is between the two SIDES OF THE
+      COMPARISON — is the other artifact still present at the one
+      action (d0), from an adjacent one (d1), or from another world
+      (d2+)? It says how much was lost between the things being
+      compared.
+    - **this lag** is between WHERE THE RULE RAN and WHERE WE CHECK. It
+      says how far the surviving evidence had to travel before anyone
+      read it, and every column in between is an action that could have
+      dropped it.
+
+    They disagree, and the disagreement is informative rather than a
+    bug: `required_symbols_exported` is landing.md-d1 (stub and library
+    come from adjacent actions) and lag-0 (it fires at the very action
+    whose link established the requirement). A row can be cheap on one
+    axis and expensive on the other. *)
+let recovery_lag ?(mechanism = Canary_mechanism.Cstubs)
+    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built)
+    (r : agreement_row) : int option =
+  let cells =
+    match
+      List.find (recovery_table ~mechanism ~lang ~provision ()) ~f:(fun (x, _) ->
+          Poly.equal x.ag_id r.ag_id)
+    with
+    | Some (_, cs) -> cs
+    | None -> []
+  in
+  let idx_of f =
+    List.filter_mapi cells ~f:(fun i (_, m) -> if f m then Some i else None)
+  in
+  let roots =
+    idx_of (function Rooted | Rooted_and_detected -> true | _ -> false)
+  in
+  let dets =
+    idx_of (function Detected | Rooted_and_detected -> true | _ -> false)
+  in
+  match (roots, dets) with
+  | [], _ | _, [] -> None
+  | rs, ds ->
+      Some
+        (List.fold ds ~init:Int.max_value ~f:(fun best d ->
+             List.fold rs ~init:best ~f:(fun best rt -> Int.min best (abs (d - rt)))))
+
+(** Render the recovery grid as text. *)
+let pp_recovery_table ?(mechanism = Canary_mechanism.Cstubs)
+    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () : string =
+  let m = recovery_table ~mechanism ~lang ~provision () in
+  let cols = firing_columns lang in
+  let head =
+    Printf.sprintf "%-28s | " "agreement"
+    ^ String.concat ~sep:" | "
+        (List.map cols ~f:Canary_basic.string_of_action)
+    ^ " | lag"
+  in
+  let body =
+    List.map m ~f:(fun (r, cells) ->
+        Printf.sprintf "%-28s | %s | %s" r.ag_slug
+          (String.concat ~sep:" | "
+             (List.map cells ~f:(fun (a, mk) ->
+                  let w = String.length (Canary_basic.string_of_action a) in
+                  recovery_mark_char mk ^ String.make (max 0 (w - 1)) ' ')))
+          (match recovery_lag ~mechanism ~lang ~provision r with
+           | Some d -> Int.to_string d
+           | None -> "-"))
+  in
+  String.concat ~sep:"\n"
+    (Printf.sprintf "recovery grid — %s / %s, over a %s world"
+       (Canary_lang.string_of_lang lang)
+       (Canary_mechanism.string_of_mechanism mechanism)
+       (Canary_enumerate.string_of_provision provision)
+     :: ""
+     :: head :: body
+    @ [ "";
+        "R  the tool's rule RAN here — this is where the information was lost";
+        "D  a method FIRES here, reading what survived";
+        "◉  both: the check fires at the very action whose rule it recovers";
+        "·  neither";
+        "";
+        "lag = action patterns between the root and the nearest firing. It is \
+         NOT";
+        "landing.md's DISTANCE, which measures how far apart the two SIDES of \
+         the";
+        "comparison are. required_symbols_exported is distance-1 (stub and \
+         library";
+        "come from adjacent actions) and lag-0 (it fires where the link ran).";
+        "";
+        "A row with no R roots in no action of this graph: the 3 unrooted \
+         ones, and";
+        "any whose rule ran in a world canary does not model — the catalogue \
+         says which.";
+        "A row with R and no D does not fire in THIS world \
+         (staged_interface_preserved";
+        "needs an Installed one) — re-run with a different provision." ])
+
 (** The fill list — every [Declared] cell (fires and is evaluated, but
     no counterexample yet). The concrete answer to "what is left to
     fill". Planned cells are NOT in it: they need an implementation,

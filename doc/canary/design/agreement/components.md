@@ -362,6 +362,32 @@ provide an additional matching mechanism. `soname_matches_requirement` and
 `required_versions_exported` observe parts of these claims, but equal names and
 tags do not establish equivalent implementations.
 
+**Three layers, and canary's agreements live at one.** The layers do not
+agree across object formats, and the differences are not cosmetic:
+
+| layer | ELF | Mach-O | who enforces it | canary |
+| --- | --- | --- | --- | --- |
+| package | `libfoo1 (= 1.2.3-4)` | `foo 1.2.3` | the solver, at install | a version point; `pin_check_post` verifies the store |
+| library identity | `SONAME libfoo.so.1` | `install_name` **+ `compatibility_version`** | the loader, at load | `soname_matches_*` — ELF-shaped |
+| symbol | version nodes (`GLIBC_2.2.5`) | **none** | the loader, per symbol | `*_versions_exported` — ELF-only by construction |
+
+Three asymmetries follow, each an open decision
+([`../directions.md`](../directions.md) §3):
+
+- **Mach-O carries a version FLOOR that ELF does not.**
+  `compatibility_version` is a number dyld compares and refuses on; ELF's
+  floor is per-symbol instead. The same claim exists on both platforms at
+  DIFFERENT RESOLUTIONS, which is a statement about what a surface theory
+  must be parametric in. `inspect_native.py` already extracts both
+  `compatibility_version` and `current_version`, and no agreement reads
+  either — written evidence with no reader.
+- **`install_name` is a PATH, not a name.** A name comparison needs a
+  basename normalisation on Mach-O that ELF never required, and doing it
+  silently would hide a dylib whose recorded path points where it is not.
+- **A package version never names the library version.** §4.2 states it;
+  the conf survey measures it — only 13 of 370 `conf-*` packages carry a
+  real version bound.
+
 ### 4.2 External version claims
 
 Package constraints, solver choices and installed pins are distinct from the
@@ -380,10 +406,23 @@ Header, provider and binding versions can vary independently. The carried
 oracle in §3.1.2 must retain its source identity so that a check does not silently
 use one version's header to judge another version's library. The detailed
 version-pair observations remain to be developed; existing comparisons and
-limits are generated into [`catalogue.md`](catalogue.md). Package-manager selection of these versions is the
+limits are generated into [`catalogue.md`](catalogue.md). The ordered
+plan for the next three is [`../directions.md`](../directions.md) §3. Package-manager selection of these versions is the
 next section's subject.
 
 ## 5. Packaging and provenance
+
+> **The `conf-*` hop is the unclaimed part of this section**
+> (2026-09-17). A `conf-<lib>` package converts *"needs library L"* into
+> *"needs system package P"*, and the conversion is lossy in a NAMED
+> way: it drops the version found and the ability to choose. Each
+> dropped thing is an agreement candidate at distance 0 or 1 —
+> especially *the object the discovery mechanism accepted is the object
+> the link resolved*, since `pkg-config` answers at solve time, the
+> linker at build time and the loader at run time, and nothing checks
+> that the three agreed. The ncurses report is one instance of exactly
+> that. Explored in [`../directions.md`](../directions.md) §1; measured
+> in [`../../surveys/conf_packages.md`](../../surveys/conf_packages.md) §H.
 
 Package managers contribute resource identity (§2.1), selection constraints and
 store exclusivity. Canary wraps apt/brew, opam and pip; it also consumes native
@@ -597,6 +636,22 @@ Behavioural checks cover the residue left by structural observations: returned
 values, errors, callbacks, repeated execution and wrapper behaviour. Ordinary
 probes already assert behaviour; `behavior_matches` and `repack_preserves_api`
 have no registered evaluator and report `not_implemented`.
+
+**CORRESPONDENCE is a separate claim, and it has an oracle the others do
+not** (2026-09-17; the plan is [`../directions.md`](../directions.md)
+§2). Running one operation through the C API and through the binding on
+the same inputs and comparing the results needs NO project-supplied
+expectation: the C side is the expectation, and canary is unusual in
+building both in one world. What it recovers is a real projection loss —
+the C compiler established that the stub's TYPES agree with the header
+and not that the arguments are in the right ORDER, so a stub binding
+`tiny_sum(a, b)` to `sum b a` compiles, links, and satisfies every
+structural agreement in the catalogue.
+
+That is why it should be its own agreement rather than an evaluator for
+`behavior_matches`: the two differ in their oracle, and merging a claim
+that HAS one with a claim that does not would repeat the solo/pair
+mistake.
 
 Prefer earlier evidence when it can refute the same claim. Keep runtime checks
 where necessary, and state their input and execution coverage. Translated and

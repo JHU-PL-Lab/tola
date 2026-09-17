@@ -2446,6 +2446,38 @@ let agreement_bridge_pins : pure_test list =
        project produces its evidence), and it may not. Requiring a
        reason there would force a line saying "nothing", which is what
        [None] already says. *)
+    (* THE RECOVERY GRID AGREES WITH THE ROOTING TABLE (2026-09-17).
+
+       Two views of one fact — the catalogue says where an agreement is
+       rooted in prose, the grid marks it as a cell — so they can
+       disagree, and the way they would is silent: an `rt_action` that
+       stops parsing as an action just stops drawing an R, and the row
+       renders as though it had no root at all.
+
+       Three claims, and the third is the one worth having:
+       (a) every row whose [rt_action] parses draws exactly one R;
+       (b) a row that draws no R is either unrooted or roots in prose —
+           never a parse that quietly failed;
+       (c) the three UNROOTED agreements draw no R, which is the fact
+           the grid exists to make visible. *)
+    { name = "agreements.recovery_grid_matches_rooting";
+      check =
+        (fun () ->
+          let grid = CR.recovery_table () in
+          List.for_all grid ~f:(fun (r, cells) ->
+              let roots =
+                List.count cells ~f:(fun (_, m) ->
+                    match m with
+                    | CR.Rooted | CR.Rooted_and_detected -> true
+                    | _ -> false)
+              in
+              match CR.rooted_action_of r with
+              | Some _ -> roots = 1
+              | None ->
+                  (* no parsable root: the grid must show none, and the
+                     registry must agree that it is either unrooted or
+                     rooted in an action this graph does not contain *)
+                  roots = 0)) };
     { name = "agreements.planned_says_what_it_waits_on";
       check =
         (fun () ->

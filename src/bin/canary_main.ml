@@ -872,6 +872,11 @@ let checks_cmd =
         (* Appendix A.2 tells the reader to read this from the code
            rather than from a transcribed table; this is where. *)
         Fmt.pr "%s@." (Canary_agreement.pp_firing_table ());
+        (* THE SAME GRID, ROOTED (2026-09-17, user). The firing table
+           says where a check is DETECTED; this one puts the action
+           whose rule was LOST on the same row, so the distance between
+           them is visual rather than a column to look up. *)
+        Fmt.pr "@.%s@." (Canary_agreement.pp_recovery_table ());
         let fill = Canary_agreement.fill_list () in
         Fmt.pr "@.fill list (%d cell(s) fire without a counterexample):@."
           (List.length fill);
