@@ -1975,10 +1975,18 @@ let render_html (m : t) ~(generated_at : string) : string =
              ^ "</td><td>" ^ tally code
              ^ "</td><td>" ^ blame_tally code ^ "</td></tr>"))
     ^ "</tbody></table>"
-    ^ "<p class=\"kq\"><b>Rows are ordered by when the check fires</b> — \
-       earliest action first, then language, then mechanism — so the table \
-       reads in the order a run happens, which is the result matrix's \
-       principle applied to rows; a row that fires nowhere sorts last. \
+    ^ "<p class=\"kq\"><b>Row order: trigger action, then AGREEMENT, then \
+       language, then mechanism.</b> The trigger is language-FREE — \
+       <code>build_binding</code>, not <code>build_binding_ocaml</code> — \
+       which is what lets one claim's mechanisms sit together: they fire at \
+       the same action in different languages, seven columns apart. \
+       Unimplemented claims sort to the bottom whatever they fire at, and a \
+       row that fires nowhere sorts last. \
+       <b>code</b> is the AGREEMENT's identity, so a repeated code is ONE \
+       claim with several patterns, shown adjacent — deliberately not \
+       per-row, because the same code names this agreement's column in the \
+       result matrix below, and a row is a pattern, which that table has no \
+       column for. \
        <b>One row per distinct pattern:</b> a claim whose \
        firing differs between mechanisms gets a row each — a cstubs row and \
        a cext row mark different action columns — and a uniform claim stays \
@@ -1988,17 +1996,23 @@ let render_html (m : t) ~(generated_at : string) : string =
        a peer comparison shows two. \
        R the action whose rule RAN (hover for the tool and the artifact) \
        &middot; D a method FIRES here &middot; R+D both. \
-       <b>kind</b> WHERE THE CLAIM COMES FROM — what it is held against, \
-       which is not where its rule RAN (that is the <b>R</b> column). \
-       <code>declaration</code> the project said so &middot; \
-       <code>peer</code> the other artifact in this world says so &middot; \
-       <code>artifact</code> nothing says so — it is the format's own rule, \
-       with NO second party &middot; <code>sibling-world</code> &middot; \
-       <code>test-suite</code>. All 13 are declaration or peer today; the \
-       other three kinds are modelled and unused, and the standalone \
-       <code>artifact</code> kind is the emptiest — an installed library \
-       carrying a RUNPATH into its own build tree is wrong on its own terms \
-       and nothing checks it. \
+       <b>kind</b> WHAT THE CLAIM IS HELD AGAINST — its second side, not \
+       where its rule RAN (that is the <b>R</b> column). \
+       <code>declaration</code>: the second side is something the PROJECT \
+       WROTE DOWN, a string in the spec and not a file &middot; \
+       <code>peer</code>: the second side is ANOTHER ARTIFACT, both present \
+       in the world under test — <code>required_symbols_exported</code> \
+       compares a stub archive's undefined references against the library's \
+       exports, two real files and neither a declaration (it also covers two \
+       COPIES of one artifact, as <code>staged_interface_preserved</code> \
+       does, which is arguably a sixth kind rather than this one) &middot; \
+       <code>artifact</code>: NO second side at all, the artifact against \
+       its own format's rule &middot; <code>sibling-world</code>: evidence \
+       kept from another world &middot; <code>test-suite</code>: expected \
+       results. All 13 are declaration or peer today; three of the five \
+       kinds are unused, and <code>artifact</code> is the emptiest — an \
+       installed library recording a RUNPATH into the build tree it was made \
+       in is wrong on its own terms and nothing checks it. \
        <b>implemented at</b> <code>&lt;module&gt;&middot;&lt;function&gt;</code> \
        in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
        (hover for the file); a RED cell is an agreement with no evaluator \

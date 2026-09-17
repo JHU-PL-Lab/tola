@@ -2542,6 +2542,57 @@ let agreement_bridge_pins : pure_test list =
             List.length rows > List.length CR.agreement_registry
           in
           per_row_ok && covers_every && expands) };
+    (* ONE CLAIM'S ROWS ARE ADJACENT (2026-09-17, user: "then we will
+       group the same agreement").
+
+       The grouping is not a cosmetic sort — it is what makes the
+       repeated `code` column readable. A code appearing twice means one
+       claim with two patterns, and that only reads correctly if the two
+       are next to each other; scattered, the same repetition looks like
+       a duplicate row.
+
+       What makes it fragile is that the key it depends on is
+       non-obvious: the trigger must be LANGUAGE-FREE, because a claim's
+       OCaml and Python rows fire at the same action in different
+       languages and the column list puts those seven apart. Anyone
+       "simplifying" `trigger_index` back to the column index breaks the
+       grouping without breaking anything that looks like a test — so
+       this asserts the property directly.
+
+       Stated per (agreement, trigger): a claim may legitimately appear
+       in two separate blocks if its patterns fire at different actions
+       (`api_names_present` does — cstubs at the binding's build,
+       dynlink at its probe), so the run test is over the pair, not over
+       the slug alone. *)
+    { name = "agreements.overview_groups_a_claims_patterns";
+      check =
+        (fun () ->
+          let rows = CR.overview_rows () in
+          let keyed =
+            List.map rows ~f:(fun (row : CR.overview_row) ->
+                ( row.CR.ov_agreement.CR.ag_slug,
+                  Option.map (CR.first_firing_action row)
+                    ~f:(fun a ->
+                      Canary_basic.string_of_action
+                        (CR.retarget_action ~lang:Canary_lang.OCaml a)) ))
+          in
+          (* every (slug, trigger) pair occupies one contiguous run *)
+          let runs =
+            List.fold keyed ~init:[] ~f:(fun acc k ->
+                match acc with
+                | last :: _ when Poly.equal last k -> acc
+                | _ -> k :: acc)
+          in
+          let distinct = List.dedup_and_sort runs ~compare:Poly.compare in
+          let ok = List.length runs = List.length distinct in
+          if not ok then
+            Fmt.pr
+              "    overview: a claim's rows are split — %d runs for %d \
+               distinct (agreement, trigger) pairs@."
+              (List.length runs) (List.length distinct);
+          (* and the grouping must be doing something: at least one
+             claim really does have several adjacent rows *)
+          ok && List.length rows > List.length distinct) };
     (* THE ROOT SPEAKS THE ROW'S LANGUAGE (2026-09-17, user: "the R for
        python is on build_binding_ocaml cell").
 

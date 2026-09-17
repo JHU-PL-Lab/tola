@@ -2012,6 +2012,23 @@ nothing is wrong at run time. But `m_reference` feeds the diagnostics'
 disagree* — so it will matter the moment one gets an evaluator. Decide
 per claim; it is three small decisions, not one.
 
+**1b. Is `peer` one kind or two?** It is defined as *the second side is
+another artifact, both present in the world under test* —
+`required_symbols_exported` compares a stub archive's undefined
+references against the library's exports, two real files and neither a
+declaration. But `staged_interface_preserved` is also `peer`, and its
+two sides are **two copies of one artifact**: a build tree and the
+staged copy of itself. Those are different situations. Comparing a
+consumer against a provider asks *do these two agree*; comparing a thing
+against its own copy asks *did moving it change it*, which is a
+preservation claim and cannot be violated by any disagreement between
+distinct components. The registry already notes this asymmetry at the
+staging evaluator, which names both sides positionally because
+`lib_evidence_paths` would have compared the staged copy against itself.
+Worth deciding whether that is a sixth kind (`Copy_of_itself`, or
+`Relocation`) before a second preservation claim lands and inherits the
+ambiguity.
+
 **2. The standalone kind has no agreement, and the user named the first
 one.** `Artifact_itself` is in the type and used by nothing: a claim
 about one artifact against the format's own rule, with no second party.

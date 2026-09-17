@@ -1005,13 +1005,38 @@ let reads_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
    most prominent position to the least active claim. Ties break on
    language then mechanism, both in catalogue order, so a claim's cstubs
    and cext rows stay adjacent and in a stable order. *)
-let first_firing_index (row : overview_row) : int =
-  match
-    List.filter_mapi row.ov_cells ~f:(fun i (_, m) ->
-        match m with Detected | Rooted_and_detected -> Some i | _ -> None)
-  with
-  | [] -> Int.max_value
-  | is -> List.fold is ~init:Int.max_value ~f:Int.min
+(** The earliest action where a method of this row FIRES. [ov_cells] is
+    in column order, so the first hit is the earliest. *)
+let first_firing_action (row : overview_row) : Canary_basic.action option =
+  List.find_map row.ov_cells ~f:(fun (a, m) ->
+      match m with Detected | Rooted_and_detected -> Some a | _ -> None)
+
+(* THE TRIGGER IS THE ACTION, NOT THE ACTION-IN-A-LANGUAGE (2026-09-17,
+   user: "we shall first sort on trigger action, which you did well,
+   then we will group the same agreement").
+
+   Those two instructions only compose if the trigger is language-free.
+   The column list is the union over both languages and puts every OCaml
+   action before every Python one, so `required_symbols_exported` fires
+   at column 9 as cstubs and column 16 as cext — seven columns apart,
+   with six other agreements in between. Sorting on that spreads one
+   claim across the table and no later key can pull it back together.
+
+   So the key is the trigger action with its language normalized away:
+   both rows rank at `build_binding`, and the agreement — the next key —
+   then puts them side by side. The table reads as "here is what fires
+   when the binding is built, claim by claim, and for each claim the
+   mechanisms that carry it", which is the grouping asked for. *)
+let trigger_index (row : overview_row) : int =
+  match first_firing_action row with
+  | None -> Int.max_value
+  | Some a -> (
+      let abstract = retarget_action ~lang:Canary_lang.OCaml a in
+      match
+        List.findi (overview_columns ()) ~f:(fun _ c -> Poly.equal c abstract)
+      with
+      | Some (i, _) -> i
+      | None -> Int.max_value)
 
 (* Both ranks come off the mechanism catalogue, which is the one
    declared order this layer has — a language ranks by where its first
@@ -1056,13 +1081,17 @@ let is_planned (row : overview_row) : bool =
 let sort_overview_rows (rows : overview_row list) : overview_row list =
   let key (row : overview_row) =
     ( (if is_planned row then 1 else 0),
-      first_firing_index row,
+      trigger_index row,
+      (* THE AGREEMENT, before language and mechanism: one claim's rows
+         stay together, and the mechanisms that carry it read as its
+         variants rather than as separate entries that happen to share a
+         name. *)
+      row.ov_agreement.ag_slug,
       (match row.ov_mechs with
        | m :: _ ->
            lang_rank (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_lang
        | [] -> 99),
-      (match row.ov_mechs with m :: _ -> mech_rank m | [] -> 99),
-      row.ov_agreement.ag_slug )
+      (match row.ov_mechs with m :: _ -> mech_rank m | [] -> 99) )
   in
   List.stable_sort rows ~compare:(fun a b -> Poly.compare (key a) (key b))
 
@@ -1353,13 +1382,29 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: ""
      :: head :: body
     @ [ "";
-        "ROWS ARE ORDERED BY WHEN THE CHECK FIRES — earliest action \
-         first, then";
-        "language, then mechanism — so the table reads in the order a run \
-         happens,";
-        "which is the result table's principle applied to rows. A row that \
-         fires";
-        "nowhere sorts last.";
+        "ROW ORDER: trigger action, then AGREEMENT, then language, then \
+         mechanism.";
+        "The trigger is language-FREE — `build_binding`, not \
+         `build_binding_ocaml` —";
+        "which is what lets one claim's mechanisms sit together: they fire \
+         at the same";
+        "action in different languages, seven columns apart. So the table \
+         reads as";
+        "\"what fires when the binding is built, claim by claim, and per \
+         claim the";
+        "mechanisms that carry it\". Unimplemented claims sort to the \
+         BOTTOM whatever";
+        "they fire at, and a row that fires nowhere sorts last.";
+        "";
+        "code = the AGREEMENT's identity, so a repeated code is ONE claim \
+         with several";
+        "       patterns — and they are adjacent, which is what the \
+         grouping is for. It";
+        "       is deliberately not per-row: the same code names this \
+         agreement's column";
+        "       in the result table, and a row is a pattern, which that \
+         table has no";
+        "       column for.";
         "";
         "ONE ROW PER DISTINCT PATTERN. A claim whose firing differs between \
          mechanisms";
@@ -1377,22 +1422,42 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         "D  a method FIRES here, reading what survived";
         "◉  both: the check fires at the very action whose rule it recovers";
         "";
-        "kind = WHERE THE CLAIM COMES FROM — what it is held against, \
-         which is not";
-        "       the same as where its rule RAN (that is the R column). \
-         `declaration` =";
-        "       the project said so · `peer` = the other artifact in this \
-         world says so ·";
-        "       `artifact` = nothing says so, it is the format's own rule \
-         and there is NO";
-        "       second party · `sibling-world` · `test-suite`. All 13 are \
-         declaration or";
-        "       peer today; the other three kinds are modelled and unused, \
-         and the";
-        "       standalone `artifact` kind is the emptiest — an installed \
-         library with a";
-        "       RUNPATH into its own build tree is wrong on its own terms \
-         and unchecked.";
+        "kind = WHAT THE CLAIM IS HELD AGAINST — its second side. NOT \
+         where its rule";
+        "       RAN, which is the R column.";
+        "  declaration   the second side is something the PROJECT WROTE \
+         DOWN — a string";
+        "                in the spec, not a file. `declared_symbols_exported` \
+         subtracts the";
+        "                library's exports from the list the project \
+         declared.";
+        "  peer          the second side is ANOTHER ARTIFACT, and both are \
+         present in the";
+        "                world under test. `required_symbols_exported` \
+         compares a stub";
+        "                archive's undefined references against the \
+         library's exports:";
+        "                two real files, neither of them a declaration. \
+         The name is";
+        "                literal — the claim's reference is its peer in \
+         the same world.";
+        "                ⚠ it also covers two COPIES of one artifact \
+         (`staged_interface_";
+        "                preserved` compares a build tree against its \
+         staged copy), which";
+        "                is arguably a sixth kind rather than this one.";
+        "  artifact      NO second side at all — the artifact against its \
+         own format's";
+        "                rule. Modelled, used by nothing, and the emptiest \
+         of the five:";
+        "                an installed library recording a RUNPATH into the \
+         build tree it";
+        "                was made in is wrong on its own terms, and \
+         nothing checks it.";
+        "  sibling-world evidence kept from ANOTHER world.  test-suite \
+         expected results.";
+        "       All 13 are declaration or peer today; three of the five \
+         kinds are unused.";
         "implemented at — `<family>·<function>` in \
          src/canary/agreement/canary_agreement_<family>.ml.";
         "       `·—` = NO EVALUATOR YET; the family names the file it would \
