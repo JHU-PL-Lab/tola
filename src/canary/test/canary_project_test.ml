@@ -1638,18 +1638,30 @@ let agreement_registry_firing_pin : pure_test =
           (sites C.Behavior_matches Canary_mechanism.Cstubs Canary_lang.OCaml
              built_ml)
           [ Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && (* THE SOLO SPLIT (2026-09-12): a declaration comparison has
-              evidence exactly where the lib was produced, and nowhere
-              else. It used to ride the pair's firing and so claimed the
-              binding's build and probe steps, where no declaration
-              comparison can happen. *)
+        && (* THE SOLO SPLIT (2026-09-12): a declaration comparison is
+              about the library alone, so it fires where THAT library's
+              inspection lands. It used to ride the pair's firing and so
+              claimed the binding's build and probe steps, where no
+              declaration comparison can happen. *)
         eq
           (sites C.Soname_matches_declaration Canary_mechanism.Cstubs
              Canary_lang.OCaml built_ml)
           [ Canary_basic.Build_lib ]
-        && List.is_empty
-             (sites C.Soname_matches_declaration Canary_mechanism.Cstubs
-                Canary_lang.OCaml fetched_ml)
+        && (* AND IT FIRES IN A FETCHED WORLD TOO (2026-09-17, user).
+              This asserted [[]] until then, which is why three claims
+              were absent from the vocabulary of every project that
+              fetches its library — seven of ten. The rule they recover
+              is the compiler and linker's; in a Fetched world that rule
+              ran on the distro's build machine, so the ROOT left the
+              graph while the PROJECTION we hold — the export table —
+              stayed exactly the same. The probe, not the fetch, because
+              the probe is what writes the inspection, and
+              [lib_evidence_tags] already resolved a Fetched world's
+              summary there. *)
+        eq
+          (sites C.Soname_matches_declaration Canary_mechanism.Cstubs
+             Canary_lang.OCaml fetched_ml)
+          [ Canary_basic.Probe_lib ]
         && (* A PAIR CHECK FIRES WHERE THE CONSUMER EXISTS, AND NOT
               BEFORE (2026-09-12 audit). These three used to claim
               Build_lib too — a leftover from sharing an id with their
@@ -2460,10 +2472,10 @@ let agreement_bridge_pins : pure_test list =
            never a parse that quietly failed;
        (c) the three UNROOTED agreements draw no R, which is the fact
            the grid exists to make visible. *)
-    { name = "agreements.recovery_grid_matches_rooting";
+    { name = "agreements.overview_matches_rooting";
       check =
         (fun () ->
-          let grid = CR.recovery_table () in
+          let grid = CR.overview_table () in
           List.for_all grid ~f:(fun (r, cells) ->
               let roots =
                 List.count cells ~f:(fun (_, m) ->

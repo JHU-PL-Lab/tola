@@ -352,6 +352,38 @@ specimen with real state, then the action.
 
 ---
 
+## 2b. An open question the firing fix left behind
+
+When the declaration claims began firing in Fetched worlds (2026-09-17),
+one case was deliberately left as it was: **Installed**.
+
+Today they fire at `build_lib` in an Installed world, reading the BUILD
+TREE's copy — while `lib_evidence_tags` puts the STAGED summary first for
+exactly that world. So the firing and the evidence disagree about which
+of the two libraries the claim is about.
+
+Both readings are defensible:
+
+- **fire at `build_lib` only** (today) — the declaration is about what
+  the build produced, and whether staging preserved it is
+  `staged_interface_preserved`'s question. Composition, not duplication.
+- **fire at `install_lib` as well** — the staged library is the one a
+  consumer actually loads, so "does the artifact people use export what
+  we declared" is a distinct and checkable claim. It would decide on
+  sqlite and z3, the two projects with Installed worlds.
+
+The second is probably right and the first is probably cheaper, and the
+deciding question is whether
+`staged_interface_preserved ∘ declared_symbols_exported` really implies
+the staged claim — it does only if staging preserves the export set
+exactly, which is what `sip` checks, so the composition is sound. That
+makes this a question about REPORTING (does a reader want the claim
+stated at the artifact they use?) rather than about coverage.
+
+⚠ Whichever way it goes, the firing and `lib_evidence_tags` must agree.
+They currently do not, and that is the bug class this repository keeps
+paying for.
+
 ## 3. Versioning: ELF and Mach-O do not agree, and we model one of them
 
 **The question, from the user:** *"we also don't discuss the versioning

@@ -1017,7 +1017,7 @@ let dummy_reason_of_action (spec : runner_spec) (a : action) : string option =
     is one place that decides which actions carry a context.
 
     The LIB actions take the first declared language. Their firing
-    derivations either ignore the language ([firing_built_lib_only]) or
+    derivations either ignore the language ([firing_lib_declaration]) or
     use it only to locate the binding side of a pair, and a lib step
     that also wants a second language's pair check is a case no project
     has yet. Named here rather than guessed at the call site. *)

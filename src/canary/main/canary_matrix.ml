@@ -1830,7 +1830,7 @@ let render_html (m : t) ~(generated_at : string) : string =
      (2026-09-17). Counted from the RENDERED cells rather than re-read
      from the logs, so a key cannot disagree with the table it explains:
      if a reader can see eight ticks in the [dse] column, the tally says
-     eight. The recovery grid carries them now — see below for why there
+     eight. The agreement overview carries them now — see below for why there
      is no longer a separate key. *)
   let tally code =
     let held = ref 0 and broke = ref 0 in
@@ -1880,7 +1880,7 @@ let render_html (m : t) ~(generated_at : string) : string =
   in
   let recovery_grid =
     let module CR = Canary_agreement in
-    let grid = CR.recovery_table () in
+    let grid = CR.overview_table () in
     let cols = CR.firing_columns Canary_lang.OCaml in
     let cell_class = function
       | CR.Rooted_and_detected -> "rd"
@@ -2145,7 +2145,7 @@ table.keytbl th, table.keytbl td { border: 1px solid #d0d7de; padding: .2rem .5r
 table.keytbl th { background: #f6f8fa; font-weight: 600; }
 table.keytbl td.kc { font-family: ui-monospace, monospace; font-weight: 700; }
 span.kq { color: #8c959f; }
-/* THE RECOVERY GRID. Its cells are two letters wide and the whole point
+/* THE AGREEMENT OVERVIEW's grid cells are two letters wide and the whole point
    is the SHAPE they make across a row, so colour carries the meaning and
    the text only confirms it: a reader should see where R sits relative
    to D before reading either. */
@@ -2168,7 +2168,7 @@ th.gs, td.gs { border-left: 1px solid #afb8c1; }
 </style></head><body>
 <h1>canary — what is checked, and what it decided</h1>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
-<h2>1 &middot; The recovery grid — every agreement, where its rule RAN, and where it is CHECKED</h2>
+<h2>1 &middot; Agreement overview — every agreement, where its rule RAN, and where it is CHECKED</h2>
 <p class="meta">One row per agreement over the same action columns as the
 result table, for an OCaml/cstubs binding in a Built world. <b>This is
 the TEMPLATE of the table below</b>: that one says what a run decided,

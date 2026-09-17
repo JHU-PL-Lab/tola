@@ -50,7 +50,7 @@
     - the registry vocabulary — [agreement_id];
     - the shared derivations a family needs in order to state where it
       fires and what it reads: [firing_default],
-      [firing_built_lib_only], [firing_probe_only], [uniform_world],
+      [firing_lib_declaration], [firing_probe_only], [uniform_world],
       [binding_evidence_tag];
     - the JSON primitives every loader is built from.
 
@@ -601,23 +601,63 @@ let firing_default (m : Canary_mechanism.mechanism) (l : Canary_lang.lang)
     [ Canary_basic.Build_binding l; probe ]
   else [ probe ]
 
-(** A DECLARATION comparison is about the library alone, so it has
-    evidence exactly where the library was produced — and nowhere else.
+(** A DECLARATION comparison is about the library alone, so it fires
+    where that library's inspection lands — which is NOT always
+    [build_lib].
+
+    ⚠ **IT USED TO FIRE NOWHERE IN A FETCHED WORLD** (was
+    [firing_lib_declaration]; fixed 2026-09-17, user: "why e.g. we only
+    check build_lib but no install_lib or fetch_lib, given from the code
+    side, we can did some checking"). The answer is that there was no
+    reason — it was an oversight, and the asymmetry is visible in the
+    two adjacent functions: [firing_default] above already falls back to
+    the probe when the BINDING is fetched, and this one returned [[]].
+
+    The user's framing is the justification and it sharpens theory §2 —
+    "it is ok that fetch_lib's check is actually trying to recover an
+    agreement which was established by a build somewhere else." Exactly
+    — the rule the claim recovers is the compiler and linker's, and in a
+    Fetched world that rule ran on the distro's build machine, in a
+    world canary never modelled. MORE was lost there (we never had the
+    source, the flags, the compiler), but **the projection we hold is
+    the same one**: the library's export table. So the check is as
+    decidable as it ever was; only the root moved out of the graph.
+
+    The catalogue already draws that distinction on the CONSUMER side —
+    [required_symbols_exported]'s note says the link "ran in whatever
+    world built the consumer, which this graph need not contain" — so
+    the vocabulary existed and only the provider side lacked it.
+
+    It fires at [probe_lib] rather than [fetch_lib] for the ordinary
+    reason: the fetch does not write an inspection, the probe does, and
+    firing before the evidence exists is the reader-before-writer bug
+    this file keeps paying for. [lib_evidence_tags] already resolves a
+    Fetched world's summary to the probe's output, so the firing now
+    agrees with the evidence instead of contradicting it.
+
+    ⚠ **The Installed case is NOT settled** and is deliberately left as
+    it was: it fires at [build_lib], reading the build tree's copy,
+    while [lib_evidence_tags] puts the STAGED summary first. Whether the
+    declaration claims should also fire at [install_lib] — asking
+    whether the staged library, the one a consumer actually uses,
+    exports what was declared — is a real question with a real answer
+    either way, and it overlaps [staged_interface_preserved]. Recorded
+    in `../../doc/canary/design/directions.md` rather than guessed.
 
     Two things it deliberately does not consult (2026-09-12 audit).
-    The LANGUAGE: whether the built library exports what the project
+    The LANGUAGE: whether the library exports what the project
     declared is the same question whoever consumes it. And the
     MECHANISM: [firing_with_build_lib], which this replaced, carried a
     [not (is_dynamic m)] guard, so a project whose only binding was
     ctypes would have had no declaration check on its own library. The
     guard was inherited from the pair check it used to share an id
     with, where it does belong. *)
-let firing_built_lib_only (_ : Canary_mechanism.mechanism)
+let firing_lib_declaration (_ : Canary_mechanism.mechanism)
     (_ : Canary_lang.lang) (w : Canary_artifact.assignment) :
     Canary_basic.action list =
   if produced_here (Canary_artifact.provision_of_lib w) then
     [ Canary_basic.Build_lib ]
-  else []
+  else [ Canary_basic.Probe_lib ]
 
 (** Behaviour needs a run — probe only, in every world. *)
 let firing_probe_only (_ : Canary_mechanism.mechanism) (l : Canary_lang.lang)

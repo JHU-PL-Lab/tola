@@ -347,8 +347,12 @@ let compat_pure_tests =
 let cmp_symbol_pure_tests =
   let stub_of requires : Canary_agreement_symbols.stub_inspect =
     { path = "fixture-stub"; requires } in
+  (* [total = 0] — "no counts recorded", which the evaluators read as
+     UNFILTERED. These fixtures are about the comparison itself; a
+     filtered inspection is a separate case (the symbols family's
+     [symbols_are_filtered]). *)
   let native_of symbols : Canary_agreement_symbols.native_inspect =
-    { path = "fixture-native"; symbols } in
+    { path = "fixture-native"; symbols; total = 0 } in
   [
     { name = "cmp_symbol.compatible";
       check = fun () ->
@@ -635,8 +639,12 @@ let cmp_api_faithfulness_pure_tests =
   let open Canary_agreement_composed in
   let stub_of requires : Canary_agreement_symbols.stub_inspect =
     { path = "fixture-stub"; requires } in
+  (* [total = 0] — "no counts recorded", which the evaluators read as
+     UNFILTERED. These fixtures are about the comparison itself; a
+     filtered inspection is a separate case (the symbols family's
+     [symbols_are_filtered]). *)
   let native_of symbols : Canary_agreement_symbols.native_inspect =
-    { path = "fixture-native"; symbols } in
+    { path = "fixture-native"; symbols; total = 0 } in
   [
     { name = "cmp_faithful.all_compatible";
       check = fun () ->

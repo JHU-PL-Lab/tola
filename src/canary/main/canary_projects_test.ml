@@ -4255,14 +4255,14 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
    recovery grid — the same value `canary checks --firing` prints. Two
    renderings of one table is how they drift, so this counts cells: the
    HTML must carry exactly one per (agreement × action column), and the
-   R / D / R+D tallies must match what [recovery_table] computes.
+   R / D / R+D tallies must match what [overview_table] computes.
 
    It also pins the TITLES, because the reason the page was hard to read
    was that three tables sat under one heading and a reader could not
    tell the template from the record. A table without a name is the
    defect this fixes, so the names are part of the contract. *)
 let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
-  { name = "matrix.page_titles_and_recovery_grid";
+  { name = "matrix.page_titles_and_agreement_overview";
     check =
       (fun () ->
         let path = "docs/canary/projects/matrix.html" in
@@ -4281,7 +4281,7 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
             in
             go 0 0
           in
-          let grid = Canary_agreement.recovery_table () in
+          let grid = Canary_agreement.overview_table () in
           let cols =
             List.length (Canary_agreement.firing_columns Canary_lang.OCaml)
           in
@@ -4296,7 +4296,7 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
              the check key was absorbed into the grid, because its
              columns were five of the grid's and two of its tooltips. *)
           count "<h2>" = 2
-          && String.is_substring h ~substring:"The recovery grid"
+          && String.is_substring h ~substring:"Agreement overview"
           && String.is_substring h ~substring:"The result matrix"
           && not (String.is_substring h ~substring:"The check key")
           (* one cell per (agreement × column), and the marks agree *)

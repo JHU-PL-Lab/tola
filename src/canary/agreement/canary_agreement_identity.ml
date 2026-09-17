@@ -503,7 +503,7 @@ let soname_matches_declaration : agreement =
     ag_fault_tag = "abi_soname";
     ag_methods =
       [ checking_method ~name:"declared_soname_vs_library" ~kind:Compare
-          ~reference:Declared_facts ~firing:firing_built_lib_only
+          ~reference:Declared_facts ~firing:firing_lib_declaration
           ~inputs:(fun { ac_declared = d; _ } ->
             (* the DECLARED identity is the reference half; without it
                there is nothing to hold the artifact against. The
@@ -615,7 +615,7 @@ let declared_versions_exported : agreement =
     ag_fault_tag = "sym_version";
     ag_methods =
       [ checking_method ~name:"declared_tags_vs_library_exports" ~kind:Compare
-          ~reference:Declared_facts ~firing:firing_built_lib_only
+          ~reference:Declared_facts ~firing:firing_lib_declaration
           ~inputs:(fun { ac_declared = d; _ } ->
             declared_version_tags_input d
             @ [ Versioned_exports (built_lib_evidence_paths "inspect.json") ])

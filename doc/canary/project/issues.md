@@ -476,6 +476,31 @@ ported as a whole (brew's `pkg-config`, `otool`, `.dylib`) or not at all.
 
 ## 2. Declaration gaps
 
+### Open — zlib declares a symbol its own inspection cannot see
+
+**zlib** (found 2026-09-17, the moment the declaration claims began
+firing in Fetched worlds).
+
+`native_api.stable_symbols` declares `zlibVersion`, deliberately and with
+a comment: *"the only symbol that reports WHICH zlib answered"*.
+`native_inspect_prefixes` is `[deflate; inflate; gz; crc32; adler32]`, and
+`zlibVersion` matches none of them — so the recorded symbol list has 79
+of the library's 102 defined symbols and `zlibVersion` is not among them.
+`nm -D /usr/lib/x86_64-linux-gnu/libz.so.1` shows the library exporting
+it.
+
+**The evaluator no longer calls that a violation** — a filtered
+inspection cannot convict, and it reports `inconclusive` naming the
+filter (see below). But the spec is still inconsistent: zlib declares
+something it has arranged not to look at. Either widen
+`native_inspect_prefixes` to cover the declaration, or drop the symbol
+from it and lose the identity check the comment wanted.
+
+**The class, not the instance.** Any project whose `stable_symbols` and
+`native_inspect_prefixes` disagree has this, and nothing checks that the
+two are compatible. `spec-check` is where it belongs — a static
+comparison of two declared lists, needing no run.
+
 ### Open — the opam-binding template's mechanism never reaches the pipeline
 
 **cairo, libffi, zlib, zstd** (found 2026-09-16, landing pass 2).

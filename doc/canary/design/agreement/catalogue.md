@@ -116,6 +116,18 @@ reads: `native summary lib.json`
     "symbols": ["tiny_sum", "tiny_diff"]}
 ```
 
+**3. reports `inconclusive`**
+
+reads: `DECLARED exports (3 name(s))`, `native summary lib.json`
+
+`lib.json`:
+
+```json
+{"kind": "native", "path": "fx",
+    "counts": {"total": 40},
+    "symbols": ["tiny_sum", "tiny_diff"]}
+```
+
 
 ## required_symbols_exported
 

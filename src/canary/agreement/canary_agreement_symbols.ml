@@ -25,7 +25,33 @@ type stub_inspect = {
 type native_inspect = {
   path : string;
   symbols : string list;  (* defined exports, prefix-filtered if emitted that way *)
+  total : int;
+      (** how many symbols the library actually defines, BEFORE the
+          prefix filter ([counts.total]).
+
+          It exists because the field above is a subset and every
+          evaluator here treated it as the whole truth (found
+          2026-09-17). zlib records five prefixes and declares
+          [zlibVersion], which matches none of them: the library exports
+          it, the inspection omits it, and the comparison called that a
+          VIOLATION. An absence in a filtered list is not evidence of
+          absence, and this is the field that says so. *)
 }
+
+(** Is this summary's symbol list a proper subset of what the library
+    defines? Then a name's absence from it proves nothing.
+
+    [total = 0] means the summary predates the field or carries no
+    counts; treat that as unfiltered rather than refusing to decide,
+    since every fixture and every existing summary is in that state and
+    reading them as "cannot tell" would silently retire the agreement. *)
+let symbols_are_filtered (n : native_inspect) : bool =
+  n.total > 0 && List.length n.symbols < n.total
+
+let filtered_note (n : native_inspect) : string =
+  Printf.sprintf
+    "the library's inspection is PREFIX-FILTERED (%d of %d defined symbols      recorded), so a declared name missing from it may simply be outside the      filter — %s. Widen the project's inspect prefixes to cover what it      declares, or narrow the declaration"
+    (List.length n.symbols) n.total n.path
 
 let load_stub path =
   let j = load path in
@@ -43,7 +69,12 @@ let load_native path =
   if List.is_empty symbols then
     Fmt.epr "compat: warning — native summary has no 'symbols' field; was \
              it produced with --emit-symbols? (%s)@." path;
-  { path = get_string j "path"; symbols }
+  let total =
+    match Option.bind (field j "counts") ~f:(fun c -> field c "total") with
+    | Some (`Int n) -> n
+    | _ -> 0
+  in
+  { path = get_string j "path"; symbols; total }
 
 (* Selected BY KIND: the same relative name means different artifacts
    in different projects (the framework writes its compiled-stub
@@ -149,8 +180,15 @@ let declared_exports_eval ~resolve inputs : outcome =
           Unavailable
             (Missing_evidence "no native library inspection in this world")
       | Some p -> (
-          match check_declared_exports ~declared ~native_lib:(load_native p) with
+          let lib = load_native p in
+          match check_declared_exports ~declared ~native_lib:lib with
           | Compatible -> Holds
+          (* AN ABSENCE IN A FILTERED LIST IS NOT EVIDENCE OF ABSENCE
+             (2026-09-17). Presence still proves presence, so [Holds]
+             above is sound either way; a MISSING name is only a finding
+             when the list it is missing from is complete. *)
+          | Missing _ when symbols_are_filtered lib ->
+              Inconclusive (filtered_note lib)
           | Missing { symbols } -> Violated symbols
           | Compatible_lag _ -> Holds
           | Unknown ->
@@ -169,6 +207,11 @@ let required_symbols_eval ~resolve inputs : outcome =
       let stub = load_stub s and lib = load_native l in
       match check_c_compat ~binding_stub:stub ~native_lib:lib with
       | Compatible | Compatible_lag _ -> Holds
+      (* same exposure as the declaration comparison above: a required
+         symbol outside the provider's inspect prefixes would read as
+         missing from a library that exports it *)
+      | Missing _ when symbols_are_filtered lib ->
+          Inconclusive (filtered_note lib)
       | Missing { symbols } -> Violated symbols
       | Unknown ->
           Inconclusive
@@ -240,7 +283,7 @@ let declared_symbols_exported : agreement =
     ag_methods =
       [ checking_method ~name:"declared_exports_vs_library" ~kind:Compare
           ~reference:Declared_facts
-          ~firing:firing_built_lib_only
+          ~firing:firing_lib_declaration
           ~inputs:(fun { ac_declared = d; _ } ->
             (* the declaration half comes from the project's own c_api,
                routed onto the context since 2026-09-14 — before that it
@@ -279,6 +322,24 @@ let declared_symbols_exported : agreement =
                    spec gap, and now a distinct word from a missing
                    inspection (2026-09-15) *)
                 fx_outcome = "undeclared";
+                fx_findings = [] };
+              (* A FILTERED INSPECTION CANNOT CONVICT (2026-09-17). Same
+                 shape as the first fixture — a declared name absent from
+                 the recorded list — but the summary says it recorded 2
+                 of 40 defined symbols, so the absence is the filter's
+                 doing and not the library's. This reported `violated`
+                 until the day it was written, on zlib, about a symbol
+                 `nm -D` shows the library exporting. *)
+              { fx_method = "declared_exports_vs_library";
+                fx_inputs =
+                  [ Declared_exports [ "tiny_sum"; "tiny_diff"; "tiny_offset" ];
+                    Native_lib [ "lib.json" ] ];
+                fx_bodies =
+                  [ ("lib.json",
+                     {|{"kind": "native", "path": "fx",
+    "counts": {"total": 40},
+    "symbols": ["tiny_sum", "tiny_diff"]}|}) ];
+                fx_outcome = "inconclusive";
                 fx_findings = [] } ]
           () ] }
 

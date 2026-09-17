@@ -802,7 +802,7 @@ let rooted_action_of (r : agreement_row) : Canary_basic.action option =
 
 (** THE RECOVERY GRID: rows = agreements, columns = action patterns,
     cells = rooted / detected / both. *)
-let recovery_table ?(mechanism = Canary_mechanism.Cstubs)
+let overview_table ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
     (agreement_row * (Canary_basic.action * recovery_mark) list) list =
   let world = uniform_world ~lang ~mechanism provision in
@@ -852,7 +852,7 @@ let recovery_lag ?(mechanism = Canary_mechanism.Cstubs)
     (r : agreement_row) : int option =
   let cells =
     match
-      List.find (recovery_table ~mechanism ~lang ~provision ()) ~f:(fun (x, _) ->
+      List.find (overview_table ~mechanism ~lang ~provision ()) ~f:(fun (x, _) ->
           Poly.equal x.ag_id r.ag_id)
     with
     | Some (_, cs) -> cs
@@ -918,9 +918,9 @@ let format_marks (r : agreement_row) : string =
          else "·"))
 
 (** Render the recovery grid as text. *)
-let pp_recovery_table ?(mechanism = Canary_mechanism.Cstubs)
+let pp_agreement_overview ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () : string =
-  let m = recovery_table ~mechanism ~lang ~provision () in
+  let m = overview_table ~mechanism ~lang ~provision () in
   let cols = firing_columns lang in
   let head =
     Printf.sprintf "%-4s %-28s | " "code" "agreement"
@@ -944,7 +944,7 @@ let pp_recovery_table ?(mechanism = Canary_mechanism.Cstubs)
           (string_of_status (status_of_row r)))
   in
   String.concat ~sep:"\n"
-    (Printf.sprintf "recovery grid — %s / %s, over a %s world"
+    (Printf.sprintf "agreement overview — %s / %s, over a %s world"
        (Canary_lang.string_of_lang lang)
        (Canary_mechanism.string_of_mechanism mechanism)
        (Canary_enumerate.string_of_provision provision)
