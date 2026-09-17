@@ -1035,7 +1035,8 @@ deferred action-unit view.
 
 Three directions explored and parked in
 [`doc/canary/design/directions.md`](doc/canary/design/directions.md)
-(backlog §54), plus the provider-linkage axis in `design/mechanism.md`
+(backlog §54), plus the provider-linkage axis in
+`design/agreement/mechanism.md`
 (§53). Two findings worth carrying even if the work waits:
 `inspect_native.py` has extracted Mach-O's `compatibility_version`
 since the macOS port and **no agreement reads it** — written evidence

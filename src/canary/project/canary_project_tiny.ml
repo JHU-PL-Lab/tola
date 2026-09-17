@@ -30,7 +30,7 @@ module TS = Canary_tiny_scenario
 
 (* ── the declarative project surface ── *)
 
-(* ── binding declarations (M2 step 4, mechanism_payload.md) ──
+(* ── binding declarations (M2 step 4, agreement/mechanism.md §4) ──
    One typed record per binding: mechanism label + facts. The facts are
    what the binding IS; the analysis (watchlists, contract rows, probe)
    stays on canary's side. c_api/native are shared across tiny's three

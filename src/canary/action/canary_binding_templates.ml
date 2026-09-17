@@ -1,5 +1,5 @@
 (** Binding realization — binding_decl × ctx → command builders
-    (M2 step 4, [doc/canary/design/mechanism_payload.md] step 3,
+    (M2 step 4, [doc/canary/design/agreement/mechanism.md] §4 stage 2,
     2026-08-15).
 
     A project declares its binding as ONE typed record
@@ -13,7 +13,7 @@
     prefix, surface_path) becomes commands; store locations + the
     probe choice stay ctx (the decl cannot know where a store lives
     or which example a project probes — that is the analysis side of
-    mechanism_payload.md).
+    the facts/analysis split).
 
     No behavior change: for tiny the emitted strings are byte-equal
     to the former hand-written literals (pinned by

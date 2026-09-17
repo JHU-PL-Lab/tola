@@ -784,7 +784,7 @@ No hurry — all items below are queued for when their forcing function arrives.
 53. **The provider-linkage axis** (2026-09-17, user: *"I wish the
     mechanism can cover more binding cases including `{c-static-lib,
     c-dynamic-lib} × …`"*). Written up in
-    [`design/mechanism.md`](design/mechanism.md) *"The axis that is
+    [`design/agreement/mechanism.md`](design/agreement/mechanism.md) *"The axis that is
     missing"*.
 
     The mechanism catalogue ranges over the CONSUMER. Nothing ranges
@@ -809,6 +809,19 @@ No hurry — all items below are queued for when their forcing function arrives.
     Do 1–3 before 4: once linkage is a value the refusal is derivable
     from the catalogue rather than guessed.
 
+    **All eight cells are analysed** (2026-09-17, user: *"good for
+    finding one impossible cell, please consider all the possible
+    ones"*), in `design/agreement/mechanism.md` §3. Three are wired and
+    **all three are SHARED** — canary has never tested a static provider
+    on any mechanism. One is impossible (ctypes × static). Three are
+    possible and cheap. And **dynlink × static is the one worth
+    building for its own sake**: it is the only cell where "static" and
+    "dynamic" are both true at different levels — the `.cmxs` embeds the
+    archive and is itself dlopened — which makes it the specimen for
+    `no_duplicate_implementation`, a standing proposal canary has no
+    other way to exercise. Two plugins each embedding the archive means
+    two copies of the library's state in one process.
+
 54. **Three research directions, explored and parked** (2026-09-17) —
     [`design/directions.md`](design/directions.md). Each has a *where
     this lands* and an ordered first step; none is started.
@@ -825,14 +838,31 @@ No hurry — all items below are queued for when their forcing function arrives.
       against.
     - **§2 correspondence tests.** A differential test needs no
       project-supplied expectation — the C side IS the oracle, and
-      canary builds both in one world. It recovers a real loss: the C
-      compiler checked the stub's TYPES, not its argument ORDER.
+      canary builds both in one world. It recovers everything ABOVE the
+      types, which the C compiler did not establish: conversions at the
+      boundary, error and exception mapping, ownership, and state.
       Distinct from `behavior_matches` (which has no oracle), so a
-      distinct agreement. **Start with an argument-swap mutation in
-      tiny** — one line of C, invisible to every structural agreement,
-      and the evidence that the agreement is worth having. Then a
-      `probe_correspondence` action; decide whether the C driver is an
-      `App` artifact (right) or an inline probe fixture (tempting).
+      distinct agreement.
+      ⚠ **Not argument order** (corrected 2026-09-17, user): the
+      correspondence is DEFINED BY the declared mapping, so `sum b a` is
+      a different binding rather than a wrong one. The right reading is
+      stronger — because the positional convention holds, the cases are
+      **GENERATABLE**: pair by name, same arguments in the same order,
+      compare. `binding_decl.c_api` already carries the pairing.
+      It is therefore a GENERATOR, not a test, with two possible
+      sources (the project's existing tests; generated from the
+      declaration) — build the generated one first, since it is
+      per-framework where a translation is per-project. **The drivers
+      live in the FORK**, not under `canary/`: they must compile against
+      the project's own headers and build system, a real fix would go
+      there anyway, and it keeps the oracle and the subject in one
+      repository at one commit. Canary owns the generator and the
+      verdict; the fork owns the drivers.
+      **Start with a CONVERSION fault in tiny** — one line of C,
+      invisible to every structural agreement. Then the generator, then
+      one stateful specimen, then a `probe_correspondence` action;
+      decide whether the C driver is an `App` artifact (right) or an
+      inline probe fixture (tempting).
     - **§3 versioning across ELF and Mach-O.**
       `inspect_native.py` has extracted Mach-O's
       `compatibility_version` since the macOS port and NO agreement

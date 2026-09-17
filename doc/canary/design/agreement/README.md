@@ -62,6 +62,7 @@ owns them.
 | **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
 | asking what is actually in use | [`landing.md`](landing.md), or `canary checks --landing` |
 | **asking why THIS agreement exists** | [`components.md`](components.md), at the anchor its registry row carries |
+| asking why a claim is `not_applicable` here | [`mechanism.md`](mechanism.md) §2 — the three facts that gate it |
 | writing the paper | [`components.md`](components.md) — the component walk |
 | debugging an `unavailable` | [`catalogue.md`](catalogue.md) for where it looks, then [`landing.md`](landing.md) points 4–5 |
 
@@ -84,6 +85,13 @@ owns them.
   separates a claim from the methods that check it, the eight outcomes
   and why there are eight (§1); and how a running step gets from its own
   action to a set of outcomes (§2).
+- [`mechanism.md`](mechanism.md) — **what a binding IS, and which
+  claims it can carry.** Two axes: the consumer's mechanism (a value,
+  with three decidable facts that `m_applicable` dispatches on) and the
+  provider's linkage (shared `.so` vs static `.a` — NOT a value yet, and
+  it turns off the same agreements for the same reason). Carries every
+  cell of the 2×4 grid, how a project declares its binding, and the open
+  question the catalogue exists to ask.
 - [`components.md`](components.md) — **why each agreement exists.** A
   walk over the five kinds of thing a binding world is made of —
   artifacts, bindings, versions, packaging, deployment — saying for each

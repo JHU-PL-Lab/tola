@@ -653,6 +653,16 @@ That is why it should be its own agreement rather than an evaluator for
 that HAS one with a claim that does not would repeat the solo/pair
 mistake.
 
+⚠ **Argument order is not the fault to look for.** The correspondence is
+DEFINED BY the declared mapping, so a binding that binds `tiny_sum(a,b)`
+to `sum b a` is a different binding, not a wrong one. The right reading
+is the opposite and it is stronger: because a positional convention
+holds, the cases are GENERATABLE — pair by name, feed the same arguments
+in the same order, compare. What the test catches is everything above
+the types: conversions at the boundary, error and exception mapping,
+ownership, and state (`push`/`pop`, whose interesting cases are
+SEQUENCES rather than calls).
+
 Prefer earlier evidence when it can refute the same claim. Keep runtime checks
 where necessary, and state their input and execution coverage. Translated and
 differential tests are candidate evidence sources ([`model.md`](model.md) §1.8), not proof that the

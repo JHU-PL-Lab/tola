@@ -1,5 +1,5 @@
 (** Binding declaration vocabulary (M2 step 4, 2026-08-13) —
-    [doc/canary/design/mechanism_payload.md].
+    [doc/canary/design/agreement/mechanism.md] §4.
 
     A project declares its binding as ONE record: mechanism label +
     payload. Everything in the record is a fact-level entity — what

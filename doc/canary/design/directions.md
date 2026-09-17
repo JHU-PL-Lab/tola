@@ -9,7 +9,7 @@ lands.
 > in my mind for next… when in doubt, explore more and record them."*
 > Five directions were asked about. Two had homes already and went
 > there: the provider-linkage axis is
-> [`mechanism.md`](mechanism.md) *"The axis that is missing"*, and the
+> [`agreement/mechanism.md`](agreement/mechanism.md) §3, and the
 > recovery grid shipped (`canary checks --firing`, second table). The
 > three here have no home yet, which is why they are together.
 
@@ -56,7 +56,7 @@ evidence is at hand.
 | --- | --- | --- | --- |
 | the version found | *the library the conf check ACCEPTED is the library the binding LINKED* | the conf check's resolution (pkg-config `--modversion`, or the compiled test's include path) vs the consumer's recorded `NEEDED` / the loader's answer | **nothing records the first half** |
 | the choice | *the depext package installed is the one that provided the library* | the system PM's file list for package P vs the resolved library path | `dpkg -S` / `brew list` exists; unmodelled |
-| — | *the presence test and the LINK resolve to the same object* | three resolvers can disagree: `pkg-config --libs`, the linker's `-L` search, the loader's `RUNPATH` | the ncurses report (§5.5) is one instance of exactly this |
+| — | *the presence test and the LINK resolve to the same object* | three resolvers can disagree: `pkg-config --libs`, the linker's `-L` search, the loader's `RUNPATH` | the ncurses report is one instance of exactly this |
 
 The third is the one worth naming first. **`conf-*` runs a
 `pkg-config`-shaped presence test at SOLVE time; the binding links at
@@ -152,12 +152,28 @@ expectation. And canary is unusual in being able to do this: it already
 builds the library and the binding in one world, so both callers are on
 hand.
 
-**What this recovers, in theory's terms.** `build_binding`'s tool — the C
-compiler — established that the stub's types agree with the header. It
-did *not* establish that the arguments are in the right order: a stub
-binding `tiny_sum(a, b)` to `sum b a` compiles, links, and passes every
-structural agreement in the catalogue. That is a real projection loss at
-a real edge, and a differential test is the only thing that recovers it.
+**What this recovers, in theory's terms.** `build_binding`'s tool — the
+C compiler — established that the stub's types agree with the header.
+Everything ABOVE the types it did not establish: the conversion at the
+boundary (an `int` that is an `int32` on one side and an `int63` on the
+other), the error and exception mapping, ownership and lifetime, and
+anything stateful — which is what `push`/`pop` is. Those are real
+projection losses at a real edge, and a differential test is the only
+thing that recovers them.
+
+> ⚠ **ARGUMENT ORDER IS NOT ONE OF THEM**, and an earlier draft of this
+> section had it wrong (corrected 2026-09-17, user: *"the order should
+> be kept by convention if possible — if we know `tiny_sum(a,b)` maps to
+> `sum a b`, then testing `sum b a` is not related here"*).
+>
+> The correspondence is DEFINED BY the declared mapping. A binding that
+> binds `tiny_sum(a,b)` to `sum b a` is not a wrong binding, it is a
+> different one, and a test that flagged it would be testing a
+> convention nobody stated. The right reading is the opposite and it is
+> stronger: **because the positional convention holds, the test is
+> GENERATABLE.** Pair the C function with the binding function by name,
+> feed the same arguments in the same order, compare. Nobody writes the
+> pairing.
 
 **But it is not the same claim as `behavior_matches`,** and merging them
 would repeat the solo/pair mistake:
@@ -170,33 +186,88 @@ would repeat the solo/pair mistake:
 So: **a distinct agreement**, provisionally `binding_computes_the_same`,
 rather than an evaluator for `behavior_matches`.
 
-### How to construct the test
+### It is a GENERATOR, not a test
 
-Three shapes, cheapest first. tiny is the specimen for all of them: it
-already has the two-layer structure (`Tiny_raw`, the 1:1 foreign-call
-layer, and `Tiny`, the user-facing repack whose docstring says *"today
-the repack is the identity modulo a rename"*).
+The user's framing, and it changes the deliverable: *"the `push`/`pop`
+[is] a logic to generate test cases, and the source can come from the
+existing tests, or generated from our framework."*
+
+So there are two inputs and one engine.
+
+| source | what it gives | cost |
+| --- | --- | --- |
+| **the project's existing tests** | real cases, upstream's own idea of what matters, no invention | a translation per project; a failure implicates the translation |
+| **generated from the declaration** | uniform, free per project, and it scales to any binding that declares its `c_api` | only reaches what the types admit — it cannot invent a meaningful input for an opaque handle |
+
+**Generated is the one to build first**, because `binding_decl` already
+carries what it needs: `c_api.functions` is the pairing, the positional
+convention is the argument mapping, and the arity plus the types give
+the input space. A generator over that is per-FRAMEWORK, written once;
+a translation is per-PROJECT, written every time.
+
+Stateful sequences (`push`/`pop`) are where generation earns its keep:
+the interesting cases are SEQUENCES, and enumerating short sequences
+over a small operation set is exactly what a generator does well and a
+human does badly.
+
+### Where the generated files live
+
+The user's call, and it is the right one: *"we need to prepare those
+files, either in a canary place, or in our forked repo, which may looks
+better."*
+
+**The fork.** Three reasons, and the third is the one that decides it:
+
+1. A generated driver has to COMPILE against the project's own headers
+   and build system. In the fork it is an ordinary target; under
+   `canary/` it needs the project's include paths reconstructed, which
+   is the `probe_lib` locator problem again
+   ([`action_model.md`](action_model.md) §5) and we already have three
+   vocabularies for it.
+2. It is the same place a real fix would go. Canary's findings are meant
+   to become upstream PRs, and a correspondence test that lives in the
+   fork beside the fix is a PR; one that lives in canary is a private
+   harness.
+3. **It keeps the ORACLE and the SUBJECT in one repository at one
+   commit.** The whole claim is *these two sides agree*, and the two
+   sides are the project's own C and binding source. Splitting them
+   across repositories means the test can go stale against the thing it
+   tests, silently — which is the placement class (backlog §50) all over
+   again, at a coarser granularity.
+
+Canary's side is then the GENERATOR and the comparison, not the cases:
+it emits into the fork's tree, the fork builds them, canary reads the
+two transcripts. That also answers who owns a failure — the fork owns
+the drivers, canary owns the verdict.
+
+### How to construct the cases
+
+Three shapes, cheapest first. tiny is the specimen: it already has the
+two-layer structure (`Tiny_raw`, the 1:1 foreign-call layer, and `Tiny`,
+the user-facing repack whose docstring says *"today the repack is the
+identity modulo a rename"*).
 
 1. **Paired drivers, shared inputs.** A C program and an OCaml program
    that each read the same input vector and print the same output
-   format; compare the two outputs. Cheapest, no new vocabulary, and it
-   works for `push`/`pop` because the state is internal to each run.
-   ⚠ It compares TRANSCRIPTS, so it needs a canonical print — the same
+   format; compare the two transcripts.
+   ⚠ It compares TRANSCRIPTS, so the print must be canonical — the same
    trap as `nm` output formats: *an assertion that compares tool OUTPUT
-   must state the format it wants.*
-2. **Algebraic laws, checked on both sides independently.**
-   `pop(push(s,x)) = (s,x)`. Weaker — it does not compare the sides —
-   but it catches a side that is self-consistently wrong and needs no
-   shared harness. Worth having as the fallback where a C driver is
-   expensive.
+   must state the format it wants.* Generate BOTH printers from one
+   spec rather than writing them twice.
+2. **Sequences, for stateful APIs.** `push`/`pop` has no meaningful
+   single-call test; the case is a sequence and the comparison is the
+   trace. Enumerate short sequences over the operation set, bounded by
+   length, with the same seed on both sides.
 3. **The project's own suite, run through the binding.** Strongest and
-   most expensive; needs a translation, and a failure implicates the
-   translation as much as the binding. Keep for last.
+   most expensive; a failure implicates the translation as much as the
+   binding. Keep for last, and use it to CHECK the generator rather than
+   to replace it.
 
-**Start with 1 on tiny**, because tiny is where a controlled fault can be
-injected: an argument-swap mutation in `tiny_stubs.c` is a new
-mutation kind for the tiny factory, and it is invisible to every
-structural agreement — which is exactly the demonstration this needs.
+**Start with 1 on tiny.** The fault to inject is not an argument swap —
+it is a CONVERSION fault: make `tiny_sum` return `int32` where the stub
+reads `int`, or have the repack layer drop `tiny_offset`'s contribution.
+Both are invisible to every structural agreement in the catalogue, and
+both are what a differential test is for.
 
 ### How to integrate it
 
@@ -224,9 +295,12 @@ right and the second is what will be tempting.
 
 `components.md` §6.3.2 is the section (behavioural observations); the
 agreement is a new row with `ag_rooted_in` stating honestly that no tool
-enforced it; the action is new. **The mutation comes first** — an
-argument-swap in tiny that nothing currently catches is the evidence
-that the agreement is worth having, and it costs one line of C.
+enforced it; the action is new; the generated drivers live in the fork.
+
+**The mutation comes first** — a conversion fault in tiny that nothing
+currently catches is the evidence that the agreement is worth having,
+and it costs one line of C. Then the generator, then one `push`/`pop`
+specimen with real state, then the action.
 
 ---
 
@@ -282,8 +356,8 @@ Three asymmetries fall out, and each is a decision:
    a basename normalisation that the ELF path never needed — and doing
    it silently would hide a real class of bug (a dylib whose
    `install_name` points somewhere it is not).
-3. **The package version is not the library version, ever.** §4.2 says
-   so; the conf survey measures it (13 of 370 conf packages carry a real
+3. **The package version is not the library version, ever.**
+   [`agreement/components.md`](agreement/components.md) §4.2 says so; the conf survey measures it (13 of 370 conf packages carry a real
    version bound). The agreement that would state it —
    *the installed package's version names the library's recorded
    identity* — is checkable wherever a system PM answers

@@ -394,9 +394,23 @@ than by subject.
 | **1** | from adjacent actions; established by the toolchain only if same-origin | a stub's undefined references against a library's exports |
 | **≥2** | from different worlds, or needing a runtime trace | denotation across worlds, interposition |
 
+⚠ **This is not the `lag` column in the recovery grid**
+(`canary checks --firing`, and table 2 of `make view`). DISTANCE is
+between the two SIDES OF A COMPARISON — how much was lost between the
+things being compared. LAG is between WHERE THE RULE RAN and WHERE WE
+CHECK — how far the surviving evidence travelled before anyone read it.
+`required_symbols_exported` is distance-1 (stub and library come from
+adjacent actions) and lag-0 (it fires at the very link that created the
+requirement). A row can be cheap on one axis and expensive on the
+other, which is why both exist.
+
 Distance 0 is where the least was lost, so it is where checking is
-cheapest and strongest. Every registered agreement is distance 1 or
-planned; the distance-0 checks with no row are:
+cheapest and strongest. **One registered agreement is distance 0** —
+`staged_interface_preserved`, which compares two copies of one library
+while both are still present; the rest are distance 1 or planned. (This
+sentence said *"every registered agreement is distance 1 or planned"*
+until 2026-09-17, contradicting the paragraph below it that records
+lifting exactly that one.) The distance-0 checks with **no row** are:
 
 | theory § | post-fact check | today | what it needs |
 | --- | --- | --- | --- |

@@ -142,7 +142,7 @@ Steps (each step keeps the suite green before the next):
    No current project's scenario count changes (all have static bindings
    alongside; tiny-full's cext keeps the build chain applicable).
 4. [ ] **Typed mechanism payload — the DECLARATION** (design in
-   [`mechanism_payload.md`](design/mechanism_payload.md), 2026-08-12; split
+   [`agreement/mechanism.md`](design/agreement/mechanism.md), 2026-08-12; split
    from the command derivation 2026-08-15, user). A project declares
    its binding as ONE flat typed record
    (`binding_decl = { mechanism; c_api; native; coupling; surface_path }`

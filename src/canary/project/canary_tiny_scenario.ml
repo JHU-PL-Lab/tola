@@ -2124,7 +2124,7 @@ let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
   python_cext_root = [%string "%{workspace_root}/python_cext"];
 }
 
-(* ── binding declarations (M2 step 4, mechanism_payload.md) ──
+(* ── binding declarations (M2 step 4, agreement/mechanism.md §4) ──
    One typed record per binding: mechanism label + facts. The facts are
    what the binding IS; the analysis (watchlists, contract rows, probe)
    stays on canary's side. The build HOW is a separate stage: the

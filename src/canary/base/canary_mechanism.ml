@@ -126,7 +126,8 @@ let mechanism_of_lang_exn (l : Canary_lang.lang) : mechanism =
 
    Mechanisms today are FOUND objects — cstubs / cext / ctypes grew
    historically. Making each one a structured record turns the design
-   space into data canary can range over (design/mechanism.md). *)
+   space into data canary can range over
+   (design/agreement/mechanism.md). *)
 
 open Base
 
