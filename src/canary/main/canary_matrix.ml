@@ -1925,6 +1925,56 @@ let render_html (m : t) ~(generated_at : string) : string =
                "<b>" ^ esc w ^ "</b> " ^ esc g))
       ^ "</p>"
   in
+  (* ── THE RECOVERY GRID, on the page (2026-09-17, user) ───────────
+
+     The result matrix below is CONCRETE — one row per enumerated world,
+     cells carrying what a run decided. This is its TEMPLATE: the same
+     action columns, but one row per agreement and the cells marking
+     where the rule RAN against where the check FIRES.
+
+     Putting the two on one page is the point. The concrete table says
+     what happened; this one says what the shape of the checking IS, so
+     a reader meeting an empty column below can look up here and see
+     whether anything was ever supposed to fill it.
+
+     It is registry-wide rather than per project, so it does not vary
+     with the rows and is rendered once. *)
+  let recovery_grid =
+    let module CR = Canary_agreement in
+    let grid = CR.recovery_table () in
+    let cols = CR.firing_columns Canary_lang.OCaml in
+    let cell_class = function
+      | CR.Rooted_and_detected -> "rd"
+      | CR.Rooted -> "rr"
+      | CR.Detected -> "dd"
+      | CR.Nothing_here -> "nn"
+    in
+    let cell_text = function
+      | CR.Rooted_and_detected -> "R+D"
+      | CR.Rooted -> "R"
+      | CR.Detected -> "D"
+      | CR.Nothing_here -> ""
+    in
+    "<table class=\"keytbl grid\"><thead><tr><th>agreement</th>"
+    ^ String.concat ~sep:""
+        (List.map cols ~f:(fun a ->
+             "<th class=\"gcol\">" ^ esc (Canary_basic.string_of_action a)
+             ^ "</th>"))
+    ^ "<th>lag</th></tr></thead><tbody>"
+    ^ String.concat ~sep:""
+        (List.map grid ~f:(fun (r, cells) ->
+             "<tr><td class=\"kc\">" ^ esc r.CR.ag_slug ^ "</td>"
+             ^ String.concat ~sep:""
+                 (List.map cells ~f:(fun (_, mk) ->
+                      Printf.sprintf "<td class=\"g %s\">%s</td>"
+                        (cell_class mk) (cell_text mk)))
+             ^ "<td>"
+             ^ (match CR.recovery_lag r with
+                | Some d -> Int.to_string d
+                | None -> "<span class=\"kq\">—</span>")
+             ^ "</td></tr>"))
+    ^ "</tbody></table>"
+  in
   let header =
     (* the two identity columns are FROZEN (2026-08-20, user: the page is
        too wide): they stay put while the action columns scroll, so a row
@@ -2117,18 +2167,56 @@ table.keytbl th, table.keytbl td { border: 1px solid #d0d7de; padding: .2rem .5r
 table.keytbl th { background: #f6f8fa; font-weight: 600; }
 table.keytbl td.kc { font-family: ui-monospace, monospace; font-weight: 700; }
 span.kq { color: #8c959f; }
+/* THE RECOVERY GRID. Its cells are two letters wide and the whole point
+   is the SHAPE they make across a row, so colour carries the meaning and
+   the text only confirms it: a reader should see where R sits relative
+   to D before reading either. */
+table.grid th.gcol { font-family: ui-monospace, monospace; font-size: .62rem;
+  writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap;
+  padding: .3rem .15rem; vertical-align: bottom; }
+table.grid td.g { text-align: center; font-family: ui-monospace, monospace;
+  font-size: .65rem; font-weight: 700; padding: .2rem .25rem; }
+td.g.rd { background: #d1e7dd; color: #0a3622; }   /* rule and check together */
+td.g.rr { background: #ffe8cc; color: #7a3e00; }   /* the rule ran here */
+td.g.dd { background: #dbeafe; color: #0a3069; }   /* the check fires here */
+td.g.nn { background: #fbfcfd; }
+h2 { font-size: 1rem; margin: 1.6rem 0 .5rem; padding-bottom: .25rem;
+  border-bottom: 1px solid #d0d7de; font-weight: 600; }
 /* the left edge of one action's group of columns — on EVERY cell in
    the column including the blanks, so it reads as a rule down the
    table rather than a scatter of ticks. Thin, because it separates
    rather than emphasises. */
 th.gs, td.gs { border-left: 1px solid #afb8c1; }
 </style></head><body>
-<h1>canary result matrix</h1>
+<h1>canary — what is checked, and what it decided</h1>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
-<div class="key"><div class="keyh">check key — what each short code means</div>%s</div>
+<h2>1 &middot; The check key — what each short code means</h2>
+<div class="key">%s</div>
+
+<h2>2 &middot; The recovery grid — where each rule RAN, and where it is CHECKED</h2>
+<p class="meta">One row per agreement over the same action columns as the
+result table, for an OCaml/cstubs binding in a Built world. <b>R</b> marks
+the action whose tool established the relation and then discarded the
+tuple — where the information was LOST. <b>D</b> marks where a method
+fires, reading what survived. <b>R+D</b> is both, so the check happens at
+the very action whose rule it recovers. The columns between an R and its
+nearest D are actions that could have dropped the evidence on the way.
+<br>This is the TEMPLATE of the table below: that one says what a run
+decided, this one says what the shape of the checking is — so an empty
+column down there can be looked up here to see whether anything was ever
+meant to fill it.
+<br><i>lag</i> counts action columns from the root to the nearest firing.
+It is <b>not</b> the DISTANCE the landing tracker uses, which measures how
+far apart the two SIDES of a comparison are: <code>required_symbols_exported</code>
+is distance-1 and lag-0. A row with no R roots in no action of this graph —
+the three unrooted agreements, and any whose rule ran in a world canary
+does not model.</p>
+%s
+
+<h2>3 &middot; The result matrix — one row per enumerated world</h2>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
-    (esc generated_at) check_key header body
+    (esc generated_at) check_key recovery_grid header body
 
 (* The web file locations (the docs copy is the GH Pages view).
 

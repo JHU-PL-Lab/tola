@@ -4247,6 +4247,64 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
         in
         (not (List.is_empty labels)) && no_dups && declared_ok && identifies) }
 
+(* THE PAGE CARRIES THE GRID, AND THE SAME ONE (2026-09-17, user:
+   "can you land the second table in the `make view` and give each
+   table a title name").
+
+   [matrix.html] now renders three tables, and the middle one is the
+   recovery grid — the same value `canary checks --firing` prints. Two
+   renderings of one table is how they drift, so this counts cells: the
+   HTML must carry exactly one per (agreement × action column), and the
+   R / D / R+D tallies must match what [recovery_table] computes.
+
+   It also pins the TITLES, because the reason the page was hard to read
+   was that three tables sat under one heading and a reader could not
+   tell the template from the record. A table without a name is the
+   defect this fixes, so the names are part of the contract. *)
+let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
+  { name = "matrix.page_titles_and_recovery_grid";
+    check =
+      (fun () ->
+        let path = "docs/canary/projects/matrix.html" in
+        if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
+        else
+          let h =
+            Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
+          in
+          let count sub =
+            let n = String.length sub and len = String.length h in
+            let rec go i acc =
+              if i + n > len then acc
+              else if String.equal (String.sub h ~pos:i ~len:n) sub then
+                go (i + n) (acc + 1)
+              else go (i + 1) acc
+            in
+            go 0 0
+          in
+          let grid = Canary_agreement.recovery_table () in
+          let cols =
+            List.length (Canary_agreement.firing_columns Canary_lang.OCaml)
+          in
+          let tally f =
+            List.sum
+              (module Int)
+              grid
+              ~f:(fun (_, cells) -> List.count cells ~f:(fun (_, m) -> f m))
+          in
+          let open Canary_agreement in
+          (* every table on the page is named *)
+          count "<h2>" = 3
+          && String.is_substring h ~substring:"The check key"
+          && String.is_substring h ~substring:"The recovery grid"
+          && String.is_substring h ~substring:"The result matrix"
+          (* one cell per (agreement × column), and the marks agree *)
+          && count "class=\"g " = List.length grid * cols
+          && count "class=\"g rd\""
+             = tally (function Rooted_and_detected -> true | _ -> false)
+          && count "class=\"g rr\"" = tally (function Rooted -> true | _ -> false)
+          && count "class=\"g dd\""
+             = tally (function Detected -> true | _ -> false)) }
+
 (* THE CHECK CELL (2026-09-14): the three things it must get right,
    each of which it got wrong at least once while being written.
 
@@ -4724,6 +4782,7 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_setting_block_pin;
       matrix_registry_shape_pin;
       matrix_check_cell_pin;
+      matrix_page_has_the_grid_pin;
       matrix_key_covers_codes_pin;
       platform_single_source_pin;
       strict_mode_pin;

@@ -30,6 +30,7 @@ dune exec src/bin/canary_main.exe -- tiny engine                             # r
 dune exec src/bin/canary_main.exe -- tiny assemble-check --id lib Bs.4       # P3 step 2: emit+assemble a vendored resource onto the witness base (needs `tiny prepare-all`)
 dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # per-scenario last-run verdict matrix (xfail/✓/✗/·)
 dune exec src/bin/canary_main.exe -- result [<project>] [--md|--json]        # THE result table: rows = project × scenario, columns = actions, cells = last-run verdicts (pure read); also refreshes docs/canary/projects/matrix.html (linked from the index)
+make view                                                    # the same, then names the page — THREE titled tables: (1) the check key, (2) the RECOVERY GRID (one row per agreement, R where the rule ran / D where it is checked / R+D both — the TEMPLATE of table 3, so an empty column below can be looked up), (3) the result matrix. Pinned to the terminal grid by matrix.page_titles_and_recovery_grid
 dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
 dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
 dune exec src/bin/canary_main.exe -- action zlib --switch=default  # OVERRIDE the switch (see below); --switch= means the AMBIENT one

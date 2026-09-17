@@ -1,4 +1,4 @@
-.PHONY: tola canary
+.PHONY: tola canary view
 
 PM_ROOT = _pm
 OUT = _out
@@ -122,6 +122,18 @@ canary-refresh:
 agreement-catalogue:
 	@$(CANARY) checks --catalogue --md > doc/canary/design/agreement/catalogue.md
 	@echo "wrote doc/canary/design/agreement/catalogue.md"
+
+# THE WEB VIEW — three tables on one page: the check key, the RECOVERY
+# GRID (where each rule ran vs where it is checked), and the result
+# matrix. A pure READ of actions.log; it runs nothing.
+#
+# The grid is registry-wide and the matrix is per-run, so the page is
+# the template beside the concrete: an empty column in the matrix can be
+# looked up in the grid to see whether anything was ever meant to fill
+# it.
+view:
+	@$(CANARY) result > /dev/null
+	@echo "open docs/canary/projects/matrix.html"
 
 canary-post-check: canary-sqlite canary-agreement-roundtrip canary-tiny1-bridge
 	@echo "post-check: sqlite + round-trip + tiny1 bridge all passed"
