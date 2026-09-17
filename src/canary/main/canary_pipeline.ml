@@ -56,7 +56,22 @@ open Canary_project_run
 let spec_of (pr : project_run) : Canary_artifact.project_spec =
   Canary_project_spec.project_spec_of_rows pr.pr_artifacts
 
-(* ── stage 2 — enumeration ── *)
+(* ── stage 2 — ANALYSE (2026-09-16, user) ────────────────────────────
+
+   What canary UNDERSTANDS about the project, as against what the author
+   WROTE. Pure, world-free, and named here for the same reason every
+   other pass is: so there is one answer rather than one per consumer.
+
+   The rule for what belongs in it is the absence of a world.
+   Applicability takes no assignment, so it is knowable here; FIRING
+   takes one, so it stays at realize. See
+   [Canary_project_analysis] for why this is a pass and not the second
+   unnumbered branch. *)
+
+let analysed_of (pr : project_run) : Canary_project_analysis.t =
+  Canary_project_analysis.of_project_run pr
+
+(* ── stage 3 — enumeration ── *)
 
 (** Which worlds the project HAS — the product with the five model
     constraints applied and NO selection. Invocation-independent: this
@@ -138,20 +153,15 @@ let langs = Canary_lang.[ OCaml; Python ]
     language's default. This is the fact [derive_steps] needs in order
     to attach an action context to a step, and the project already has
     it — [pr_binding_decls] is where a project says what its binding IS
-    (2026-09-12). *)
+    (2026-09-12).
+
+    ONE IMPLEMENTATION (2026-09-16): the body moved to pass 2
+    ([Canary_project_analysis.mechanism_of]) and this delegates. Two
+    copies of a derivation is the thing pass 2 exists to stop, so it
+    would be absurd for pass 2 to land beside one. *)
 let mechanism_of_project (pr : project_run) (l : Canary_lang.lang) :
     Canary_mechanism.mechanism =
-  match
-    List.find_opt
-      (fun (d : Canary_binding_decl.binding_decl) ->
-        Stdlib.( = )
-          (Canary_mechanism.info_of_mechanism d.Canary_binding_decl.mechanism)
-            .Canary_mechanism.mi_lang
-          l)
-      pr.pr_binding_decls
-  with
-  | Some d -> d.Canary_binding_decl.mechanism
-  | None -> Canary_mechanism.mechanism_of_lang_exn l
+  Canary_project_analysis.mechanism_of pr l
 
 (** WHAT THE PROJECT ALREADY DECLARED, routed to the runner
     (2026-09-13).
@@ -182,19 +192,11 @@ let mechanism_of_project (pr : project_run) (l : Canary_lang.lang) :
     [pr_api_source]. Exposed because the RESULT TABLE needs it too: to
     say which artifact a violated agreement was reading, it has to ask
     the agreement's methods what they read, and they now ask the
-    context, which carries this. *)
+    context, which carries this.
+
+    ONE IMPLEMENTATION (2026-09-16), as above: the body is pass 2's. *)
 let declared_api_of (pr : project_run) : Canary_artifact.t option =
-  let from_source =
-    List.find_map
-      (fun d ->
-        match Canary_project_spec.provider_of_row d with
-        | Some (Canary_store_config.Repo r)
-        | Some (Canary_store_config.Repo_axes (r :: _)) ->
-            r.Canary_artifact_source.api_source
-        | _ -> None)
-      pr.pr_artifacts
-  in
-  match from_source with Some _ -> from_source | None -> pr.pr_api_source
+  Canary_project_analysis.declared_api_of pr
 
 (** THE STATIC HALF OF COVERAGE (2026-09-14, user) — which claims this
     project cannot carry, and why, derived from its spec rather than
@@ -209,16 +211,17 @@ let declared_api_of (pr : project_run) : Canary_artifact.t option =
     That keeps the rule the per-step logging existed for — a report
     showing only what found something would read as full coverage —
     while paying for it once instead of sixty times. [--observed] now
-    prints what RAN from the log and what CANNOT RUN from here. *)
+    prints what RAN from the log and what CANNOT RUN from here.
+
+    ONE IMPLEMENTATION (2026-09-16): pass 2's, and the move fixed a
+    latent bug rather than only relocating one. This iterated the
+    registry-wide [langs] — OCaml and Python, always — so a project
+    binding only OCaml was asked what its PYTHON binding cannot carry
+    and answered at length about a binding it does not have. Pass 2
+    iterates the languages the project actually DECLARES, falling back
+    to the pair only when it declares none. *)
 let unsuited_of (pr : project_run) : Canary_agreement.unsuited list =
-  let declared = declared_api_of pr in
-  List.concat_map
-    (fun lang ->
-      Canary_agreement.unsuited_here
-        ~mechanism:(mechanism_of_project pr lang)
-        ~lang ~declared)
-    langs
-  |> List.sort_uniq Stdlib.compare
+  (Canary_project_analysis.of_project_run pr).Canary_project_analysis.an_unsuited
 
 let with_declared_facts (pr : project_run)
     (spec : Canary_step_builder.runner_spec) : Canary_step_builder.runner_spec =
