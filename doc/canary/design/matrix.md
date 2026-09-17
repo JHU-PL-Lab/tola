@@ -1,9 +1,9 @@
 # The result matrix — what a row is, and what names it
 
 > Moved out of `enumeration/` on 2026-08-24. It had been numbered as
-> "pass 6" of the pipeline, and that was wrong: the matrix is built by
+> a pass of the pipeline, and that was wrong: the matrix is built by
 > `canary result`, which READS `actions.log` after a run. The pipeline's
-> dataflow ends at pass 5 writing verdicts; reporting is a CONSUMER of
+> dataflow ends at pass 6 (realize) writing verdicts; reporting is a CONSUMER of
 > the log, not a pass in it. The enumeration map is
 > [`enumeration/README.md`](enumeration/README.md).
 
@@ -253,7 +253,7 @@ they are identical — but it says two things about presentation and scale:
   are wrong.** The forward cell is the sharpest case: three rows, one
   finding, no way to see that from the matrix.
 
-Note the relation to [`stage2_enumerate_worlds.md`](enumeration/stage2_enumerate_worlds.md) §4: the
+Note the relation to [`stage3_enumerate_worlds.md`](enumeration/stage3_enumerate_worlds.md) §4: the
 unread-source collapse is the same observation about *inputs* — a ref
 nothing reads produces identical runs, so only the canonical one survives.
 This is the *output* version: a ref that IS read but changes nothing still

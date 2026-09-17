@@ -14,7 +14,7 @@ rather than moved:
 | §7 principles on id alignment | **here** |
 | §4.2.x enumeration design | dropped — [`design/enumeration/`](../../design/enumeration/) owns it, one doc per pass |
 | §6.1 term ↔ code | moved to [`design/enumeration/stage0_naming.md`](../../design/enumeration/stage0_naming.md) — it is code-facing vocabulary, not paper material |
-| §6.5 action catalogue, §6.6 `runner_spec` | dropped — `canary_action.ml` + `enumeration/stage5_realize_steps.md` |
+| §6.5 action catalogue, §6.6 `runner_spec` | dropped — `canary_action.ml` + `enumeration/stage6_realize_steps.md` |
 | §8 downstream usage | dropped — obsolete once the file stopped being a bridge |
 
 **Read the status columns as history, not fact.** Every `Ar.` and `Sf.`
@@ -317,7 +317,7 @@ visibly empty. After §7.2 Phase 4 (2026-07-20)
 coverage stands at 12 of 20 cells filled after §7.1's
 `Drop_python_attr` primitive landed (2026-07-21); 8 remain
 awaiting App-level primitives + c4 wiring for OCaml. See
-[`enumeration/stage5_realize_steps.md`](../../design/enumeration/stage5_realize_steps.md) for
+[`enumeration/stage6_realize_steps.md`](../../design/enumeration/stage6_realize_steps.md) for
 the derived-vs-hand principle, and
 [`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells)
 for the blocker-primitive breakdown.

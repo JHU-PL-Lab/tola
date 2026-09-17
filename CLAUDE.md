@@ -13,7 +13,7 @@ dune exec src/bin/canary_main.exe -- action llvm             # 3 scenarios (2026
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3). ⚠ RUNS 1 SCENARIO, not the 6 this line claimed until 2026-08-25: its artifact table declares every row Vendored@Stable, so the product is 1 by construction. The spec declaring lib Built@{Stable,Dev} + the dev ocaml binding is `tiny_full_general_spec`, reachable only via `general_spec` — which NOTHING READS. Unreachable downstream: dispatch's Built_lib/Dev_binding cases and the OCaml @Dev Forward mismatch probe (the forward tiny_scale xfail that was tiny-full's whole point). Open decision — restore the axes or delete the dead code: doc/canary/project/issues.md §1
 dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 scenarios (drops both dev axes)
 dune exec src/bin/canary_main.exe -- action @all           # THE batch: every registry project under the default config — Heavy (z3/llvm) THIN (bypasses the source-built Dev chains), Light FULL; --thin forces thin everywhere; --refs A,B = only the source-repo refs with those pinned ids (any project; the batch never sets it); single-project runs always full
-dune exec src/bin/canary_main.exe -- emit sqlite --stage order  # ONE PIPELINE PASS (2026-08-24). FIVE passes (reporting is a consumer of actions.log, not a pass), each answering to a NAME or an index: 1 declare (the project_spec), 2 enumerate (the worlds the project HAS — invocation-independent), 3 select (what THIS run asked for: z3 has 16, thin asks for 1), 4 order (the run order, grouped by the store state each scenario locks — not the same order as 3 since 2026-08-21), 5 realize (one scenario's steps). --json = one encoder per pass (diffable; keys canonical); --raw = the derived `show` form; --thin/--refs as elsewhere; reads the CATALOGUE so a muted project can still be dumped. Goes through `Canary_pipeline`, never a re-derivation. Design: doc/canary/design/enumeration/README.md
+dune exec src/bin/canary_main.exe -- emit sqlite --stage order  # ONE PIPELINE PASS (2026-08-24, renumbered 2026-09-16). SIX passes (reporting is a consumer of actions.log, not a pass), each answering to a NAME or an index: 1 declare (the project_spec), 2 analyse (what canary UNDERSTANDS of it — the chains the spec admits, the mechanism each language binds through, which claims it can carry; world-free by definition), 3 enumerate (the worlds the project HAS — invocation-independent), 4 select (what THIS run asked for: z3 has 16, thin asks for 1), 5 order (the run order, grouped by the store state each scenario locks — not the same order as 4 since 2026-08-21), 6 realize (one scenario's steps). --json = one encoder per pass (diffable; keys canonical); --raw = the derived `show` form; --thin/--refs as elsewhere; reads the CATALOGUE so a muted project can still be dumped. Goes through `Canary_pipeline`, never a re-derivation. Design: doc/canary/design/enumeration/README.md
 dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). ALL of tiny-full/sqlite/z3/llvm are project_run now (the raw variant view retired with A5 phase 5)
 dune exec src/bin/canary_main.exe -- spec-check @all         # STATIC spec-maturity audit, 12 checks (✓/✗/⚠ per project, --json for web status, exit 1 on errors; tiny-full github/opam n/a). Reads only the declared artifact table — and the CATALOGUE since 2026-08-25, so a MUTED project (z3) is still auditable. `lib pair`/`binding pair` (2026-08-25) are the 2x2 lower bound: they count admissible (provision, version) POINTS per row and warn below two — points, not universe cells or channels, because ssl's and sqlite's binding pairs are two opam store PINS inside one Fetched@stable cell. EVERY lib must be paired, AT LEAST ONE binding must be. A warn prints the row's ~rationale, which is what tells a permanent thin axis (zarith: apt already ships GMP's newest) from an undeclared one (ssl: apt 3.0.13 vs conda-forge 4.0.1, obtainable and unlanded)
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
@@ -68,7 +68,7 @@ cmdliner) or `CANARY_PLATFORM`, carried on `run_config.platform`, printed
 in the run header, logged per command, and part of the step fingerprint.
 The system PM is DERIVED from it (`system_pm_of_platform`), which is what
 stops a Linux box with Linuxbrew from picking macOS package names. Passes
-1–4 of the enumeration never see it; only pass 5 (realize) and the tool
+1–5 of the enumeration never see it; only pass 6 (realize) and the tool
 wrappers do. The override lets one machine render the other's view —
 `canary --platform=macos result` on WSL is the cheapest way to review mac
 work. **Read [`doc/canary/design/platform.md`](doc/canary/design/platform.md)
@@ -134,20 +134,24 @@ stoppable after any of them). It is the map: the pipeline, the pass
 table, and the pins that arbitrate when a doc and the code disagree.
 
 The short version, so a session knows what it is looking at before
-opening anything. **Three IRs, five passes** — and the counts do not
-match, because passes 3 and 4 consume and produce the same IR:
+opening anything. **Four IRs, six passes** — and the counts do not
+match, because three passes consume and produce the IR they were handed:
 
 ```
 artifact_row list  (surface)
   ▼ 1 declare      → stage1_declare_spec.md
 project_spec       IR: spec
-  ▼ 2 enumerate    → stage2_enumerate_worlds.md
-assignment list    IR: worlds   ┐ passes 3 and 4 do not lower:
-  ▼ 3 select       → stage3_select_worlds.md    they narrow and
+  ▼ 2 analyse      → stage2_analyse_spec.md     enriches, does not lower
+analysis           IR: analysis — what canary UNDERSTANDS (chains it
+                   admits, mechanisms, which claims it can carry). Carries
+                   the spec, so pass 3 reads what pass 1 wrote
+  ▼ 3 enumerate    → stage3_enumerate_worlds.md
+assignment list    IR: worlds   ┐ passes 4 and 5 do not lower:
+  ▼ 4 select       → stage4_select_worlds.md    they narrow and
 assignment list    IR: worlds   │ resequence a fixed IR
-  ▼ 4 order        → stage4_order_worlds.md
+  ▼ 5 order        → stage5_order_worlds.md
 assignment list    IR: worlds   ┘
-  ▼ 5 realize      → stage5_realize_steps.md
+  ▼ 6 realize      → stage6_realize_steps.md
 step list          IR: steps — the object code, consumed by FOUR backends
                    (run_graph executes, render_gh_step, mermaid_of_steps,
                     render_steps_data); executing is one of them, not a
@@ -159,20 +163,36 @@ carries the reading order, the verb, and where the IR lowers.
 `stage0_naming.md` is vocabulary, not a pass — read it when a word stops
 being obvious ("scenario" has four senses, all in use).
 
+**RENUMBERED 2026-09-16** — analyse(2) was inserted and everything after
+it moved up one. Pass 2 absorbed `chain_applicable`, which used to be an
+unnumbered *(branch)* row in the pass table and which the README listed
+among the accidents it wanted redrawn. The user approved the rename cost:
+*"a clean model for pass as well as action / project is more worthy"*.
+**PIN NAMES WERE NOT RENUMBERED** — `select.is_a_subset_of_stage2` still
+says `stage2`, and a `stageN` inside a pin name is a historical label,
+not a claim about today's table.
+
+**The membership rule for pass 2 is the absence of a world.**
+Applicability (`mechanism → lang → declared`) is knowable from the spec,
+so it is pass 2's; FIRING (`mechanism → lang → world`) needs a world and
+stays at realize. That line is what the 2026-09-15 Python bug crossed in
+three files at once.
+
 **Which doc for which job:**
 
 | you are… | read |
 | --- | --- |
 | landing a project | pass 1 only — it is what you will actually write |
-| wondering why a world is missing | pass 2 (the five constraints) then pass 3 (was it selected?) |
-| debugging run order / an opam pin dance | pass 4 |
-| adding an action or a command template | pass 5, then `../action_playbook.md` |
+| asking what canary makes of a spec | pass 2 (`emit <p> --stage analyse`) |
+| wondering why a world is missing | pass 3 (the five constraints) then pass 4 (was it selected?) |
+| debugging run order / an opam pin dance | pass 5 |
+| adding an action or a command template | pass 6, then `../action_playbook.md` |
 | unsure what a word means | `stage0_naming.md` |
 
 **See it rather than read it** — every pass prints:
-`canary emit <project> --stage <name|1..5> [--json]`. `emit sqlite
+`canary emit <project> --stage <name|1..6> [--json]`. `emit sqlite
 --stage enumerate` then `--stage order` shows the same ten scenarios in
-two different orders, which is the fastest way to understand pass 4.
+two different orders, which is the fastest way to understand pass 5.
 
 Current state and open items in
 [`doc/canary/status.md`](doc/canary/status.md); per-project findings in
@@ -366,7 +386,7 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_agreement_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
-| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage5_realize_steps.md` §2). |
+| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage6_realize_steps.md` §2). |
 | `src/canary/project/canary_opam_binding.ml`           | THE OPAM-BINDING TEMPLATE (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs. ⚠ NOT "Pattern A" — the survey's letters are an ECOSYSTEM taxonomy, not canary's categories; see the note under "Key source files" |
 | `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
 | `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + opam-binding smoke jobs                     |
@@ -382,15 +402,15 @@ reconciling with, not duplicating.
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
 | `doc/canary/index.md`                          | **THE doc index** — every file under `doc/canary/`, grouped by intent. A new doc gets its row there; the rows below are only the ones a coding session hits constantly |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
-| `doc/canary/design/enumeration/stage5_realize_steps.md` | **Pass 5, realize** (`world → steps`) — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. Absorbed `algorithm_explainer.md` |
+| `doc/canary/design/enumeration/stage6_realize_steps.md` | **Pass 5, realize** (`world → steps`) — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. Absorbed `algorithm_explainer.md` |
 | `doc/canary/design/ssot.md`                    | Project-wide SSOT — canonical ID tables (Ar/Sf/Ag/Sc/scenarios/actions) bridging manuscript ↔ code    |
 | `doc/canary/design/enumeration/stage0_naming.md` | **Vocabulary, not a pass** — naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
-| `doc/canary/design/enumeration/stage4_order_worlds.md` | **Pass 4, order** (`worlds → worlds`) — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
+| `doc/canary/design/enumeration/stage5_order_worlds.md` | **Pass 4, order** (`worlds → worlds`) — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
 | `doc/canary/project/opam_exclusive_store_issue.md` | opam's one-version-per-switch problem — ONE instance of pass 4's principle: what a pin costs, the per-version-switch measurement (`ocaml-system` = ~5 s), and the two open questions (which switch model; what a collateral rebuild is FOR) |
 | `doc/canary/design/staged_parity.md` | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation (the isolation half generalized into pass 4) |
 | `doc/canary/design/enumeration/README.md`       | **THE map** for the enumeration — the reading path, the pipeline (3 IRs / 5 passes), and ONE pass table giving each pass its doc, code and pins. Read before changing how scenarios are produced |
-| `doc/canary/design/enumeration/stage3_select_worlds.md` | **Pass 3, select** (`worlds → worlds`) — what THIS run asked for: the selection type, `--thin` / `--refs` as a pass rather than a filter, and why "not running" now has two distinct answers (does not exist vs was not asked for) |
-| `doc/canary/design/enumeration/stage2_enumerate_worlds.md` | **Pass 2, enumerate** (`spec → worlds`) — the five constraints that prune the product (`assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`) and the over-generation each was written against |
+| `doc/canary/design/enumeration/stage4_select_worlds.md` | **Pass 3, select** (`worlds → worlds`) — what THIS run asked for: the selection type, `--thin` / `--refs` as a pass rather than a filter, and why "not running" now has two distinct answers (does not exist vs was not asked for) |
+| `doc/canary/design/enumeration/stage3_enumerate_worlds.md` | **Pass 2, enumerate** (`spec → worlds`) — the five constraints that prune the product (`assignment_ok`, `ax_follows`, `binding_couples`, `source_ref_ok`, `shadow_filter`, `ref_filter`) and the over-generation each was written against |
 | `doc/canary/design/enumeration/stage1_declare_spec.md` | **Pass 1, declare** (`surface → spec`) — what a project declares: rows, artifact identity, the provision × version universe, providers and the four things derived from them, versions (ambient vs identity-bearing), repo lifecycle, the channel pair, what cannot be declared. Absorbed the purged `repo_model.md` + `versioning.md` |
 | `doc/canary/project/projects.md`               | **The project roster** — what exists: dimension model, per-project lib/binding axes + 2×2 status, landing history, candidates |
 | `doc/canary/project/status_project.md`         | **The project layer's SOLO to-do tracker** — the ordered plan, general to-dos, the report milestone |
@@ -476,7 +496,7 @@ tiny-full assembles its vendored tree INSIDE its `pr_runner_spec`
 `canary_tiny_workspace`); a real project builds/fetches into the
 runner-given dir. See SSOT §6.1 for the taxonomy
 (project → scenario ≡ variant → runner_spec → step → action) and
-`design/enumeration/stage5_realize_steps.md` §2 for what is data vs code.
+`design/enumeration/stage6_realize_steps.md` §2 for what is data vs code.
 
 ### Two testing axes
 
@@ -1022,7 +1042,7 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   no build runs, but status reads PASS. Force a fresh run with `rm -rf
   _out/canary/projects/<name>` or a distinct `variant_id`. To coexist (Built vs
   Vendored, dev vs stable) put those axes in `variant_id`. See
-  [`doc/canary/design/enumeration/stage5_realize_steps.md`](doc/canary/design/enumeration/stage5_realize_steps.md) §4.
+  [`doc/canary/design/enumeration/stage6_realize_steps.md`](doc/canary/design/enumeration/stage6_realize_steps.md) §4.
 - **OCaml LSP stale diagnostics**: Cross-module edits show false errors
   until dune rebuilds. ocamllsp reads compiled `.cmi` files; no
   in-memory cross-module resolution. Ignore during multi-file refactors,

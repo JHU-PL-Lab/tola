@@ -84,10 +84,11 @@ done.
 | [README.md](design/enumeration/README.md) | **The stage map.** Read first; also records the known drift (two dependency relations; mechanism/app-wiring are not config axes) |
 | [stage0_naming.md](design/enumeration/stage0_naming.md) | **Stage 0** — the four senses of "scenario", the canonical naming scheme, short names, fault tags, the agreement catalogue |
 | [stage1_declare_spec.md](design/enumeration/stage1_declare_spec.md) | **Pass 1, declare** — what a project declares: rows, artifact identity, the provision × version universe, providers and what is derived from them, versions, repo lifecycle, the channel pair, what cannot be declared |
-| [stage2_enumerate_worlds.md](design/enumeration/stage2_enumerate_worlds.md) | **Pass 2, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against. Ends with *Attribution*, the `--why` per-candidate-ledger **proposal** (absorbed from `why_ledger.md`) |
-| [stage3_select_worlds.md](design/enumeration/stage3_select_worlds.md) | **Pass 3, select** — what a RUN asked for. Settles where config/policy sit: model constraints, SELECTION, and run configuration are three different things |
-| [stage4_order_worlds.md](design/enumeration/stage4_order_worlds.md) | **Pass 4, order** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
-| [stage5_realize_steps.md](design/enumeration/stage5_realize_steps.md) | **Pass 5, realize** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
+| [stage2_analyse_spec.md](design/enumeration/stage2_analyse_spec.md) | **Pass 2, analyse** — what canary DERIVES from a spec before any world: the chains it admits, the mechanism each language binds through, which claims it can carry. The membership rule is the absence of a world (applicability is here, firing is at realize) |
+| [stage3_enumerate_worlds.md](design/enumeration/stage3_enumerate_worlds.md) | **Pass 3, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against. Ends with *Attribution*, the `--why` per-candidate-ledger **proposal** (absorbed from `why_ledger.md`) |
+| [stage4_select_worlds.md](design/enumeration/stage4_select_worlds.md) | **Pass 4, select** — what a RUN asked for. Settles where config/policy sit: model constraints, SELECTION, and run configuration are three different things |
+| [stage5_order_worlds.md](design/enumeration/stage5_order_worlds.md) | **Pass 5, order** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
+| [stage6_realize_steps.md](design/enumeration/stage6_realize_steps.md) | **Pass 6, realize** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — a second C lib: naming landed 2026-08-25, `rp_build` + a per-slot action role remain; three options with costs |
 | [resolve_placements.md](design/enumeration/resolve_placements.md) | *Proposal* — resolve a placement to a concrete location: why `Installed` carries no path, the three overlapping types (one dead), and the `Vendored`-borrows-`Build_tree` lie |
 
@@ -107,7 +108,7 @@ All six stages now have a standalone doc.
 | [action_playbook.md](design/action_playbook.md) | *How-to*: adding an action, with Publish as the worked example |
 | [matrix.md](design/matrix.md) | The result matrix — what a row is and what names it, plus why a `·` cell is not neutral. NOT an enumeration pass: `canary result` reads `actions.log` after a run |
 | [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation. Moved out of `enumeration/` 2026-08-24: not a stage |
-| [platform.md](design/platform.md) | **The platform** (2026-08-26) — where it enters (only pass 5 and the tool wrappers; passes 1–4 must stay blind to it), the three consumption modes, the Linux↔macOS tool sibling table, what a project spec may declare per platform, and how the WSL side should re-check this branch |
+| [platform.md](design/platform.md) | **The platform** (2026-08-26) — where it enters (only pass 6, realize, and the tool wrappers; passes 1–5 must stay blind to it), the three consumption modes, the Linux↔macOS tool sibling table, what a project spec may declare per platform, and how the WSL side should re-check this branch |
 | [project/report_ncurses_libtinfo.md](project/report_ncurses_libtinfo.md) | **The first bug report** (2026-08-25) — `libtinfo.so.6` denotes the WIDE terminfo ABI on Debian and the NARROW one on conda-forge, so a Debian-built consumer segfaults on a conda prefix with identical sonames, symbols and version nodes. Mechanism, reproducer, backtrace, verified fix, remediation per party. The generalization lives in [agreement/registry.md](design/agreement/registry.md) §5.5 |
 | [diagram.md](design/diagram.md) | The diagram pipeline and the design ideas its output implements |
 | [tiny.md](design/tiny.md) | Tiny — how the witness works. Carries a stale reframing banner; read it first |
@@ -136,7 +137,7 @@ All six stages now have a standalone doc.
 | ---- | --- |
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
 | ~~contract_registry.md~~ | Merged into `agreement/registry.md` (2026-08-21) |
-| ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage5_realize_steps.md` (2026-08-24) |
+| ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage6_realize_steps.md` (2026-08-24) |
 | ~~enumeration/algorithm_explainer.md~~ | Purged 2026-08-24 — the walkthrough that predated the stage map; its sections went to the stage docs they belonged to |
 | ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `matrix.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |
 | ~~scenario_terms.md~~ | Replaced by `enumeration/stage0_naming.md` |
@@ -151,7 +152,7 @@ shrunk to this shape 2026-08-21, when `index.md` + `coverage.md` merged
 into `projects.md`, `store_switching.md` and `wrapper_packages.md` moved
 to `design/` and `conf_survey.md` to `surveys/`. The store-switching half
 came BACK on 2026-08-24 as `opam_exclusive_store_issue.md`: once the
-general principle was extracted into `design/enumeration/stage4_order_worlds.md`
+general principle was extracted into `design/enumeration/stage5_order_worlds.md`
 §2, what remained was one package manager's problem, which is a project
 concern.
 

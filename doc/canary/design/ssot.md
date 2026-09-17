@@ -15,8 +15,8 @@ Repointing them is mechanical and unblocked.
 | --- | --- |
 | §4.2, §4.2.1–§4.2.5 — enumeration, the provision × version model, the artifact & axis model, the mutation-agnostic spec | [`enumeration/`](enumeration/) — one doc per pass; start at [`enumeration/README.md`](enumeration/README.md) |
 | §6.1 — term ↔ code (project / scenario / runner_spec / step / action) | [`enumeration/stage0_naming.md`](enumeration/stage0_naming.md) § *Term ↔ code* |
-| §6.5 — the action catalogue | `src/canary/action/canary_action.ml` + [`enumeration/stage5_realize_steps.md`](enumeration/stage5_realize_steps.md) |
-| §6.6 — `runner_spec` | [`enumeration/stage5_realize_steps.md`](enumeration/stage5_realize_steps.md) |
+| §6.5 — the action catalogue | `src/canary/action/canary_action.ml` + [`enumeration/stage6_realize_steps.md`](enumeration/stage6_realize_steps.md) |
+| §6.6 — `runner_spec` | [`enumeration/stage6_realize_steps.md`](enumeration/stage6_realize_steps.md) |
 | §1 `Ar.X`, §2 `Sf.X`, §3 `Ag.X`, §4.1 concrete good scenarios, §5 `Bs.N`, §7 | [`../research/surface_draft/ids.md`](../research/surface_draft/ids.md) — paper-side material, statuses to be read as history |
 | §8 — downstream usage in `draft.md` | dropped; the draft carries its own ids |
 

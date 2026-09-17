@@ -5,14 +5,15 @@ opam's one-version-per-switch rule costs us, what a per-version switch
 would cost instead, and the two questions still open. The GENERAL
 principle — how to run a scenario that needs exclusive use of a mutated
 singleton, and how to choose between partitioning and serializing it — is
-[`../design/enumeration/stage4_order_worlds.md`
-§2](../design/enumeration/stage4_order_worlds.md).
+[`../design/enumeration/stage5_order_worlds.md`
+§2](../design/enumeration/stage5_order_worlds.md).
 
 > Narrowed 2026-08-24 (user: *"the remaining part is still an opam
 > store_switching issue, which is a specific problem"*), then moved here
 > from `design/enumeration/store_switching.md` and renamed: it is one
 > package manager's problem, not a general algorithm principle. The
-> general principle and the landed run-order behaviour went to stage 3;
+> general principle and the landed run-order behaviour went to the ORDER
+> pass ([`../design/enumeration/stage5_order_worlds.md`](../design/enumeration/stage5_order_worlds.md));
 > pin DECLARATION to [`../design/enumeration/stage1_declare_spec.md`
 > §5](../design/enumeration/stage1_declare_spec.md); the per-project cost
 > table is [`issues.md`](issues.md). `git show 5f5f12c` has the 604-line
@@ -25,7 +26,7 @@ solver invariant, no escape hatch in 2.5.x. `store_behavior_of_pm` types
 it as `Isolated_store "switch"`: isolated from the system, and internally
 single-valued.
 
-So opam is the **serialize** case in stage 3's taxonomy, not the
+So opam is the **serialize** case in the order pass's taxonomy, not the
 partition case: the resource is not a directory we can copy per world,
 and the alternative (a switch per version) changes the world under test
 rather than duplicating it.

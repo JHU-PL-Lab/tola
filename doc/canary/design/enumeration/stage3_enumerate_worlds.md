@@ -1,10 +1,10 @@
-# Pass 2 — enumerate: the product, and why it is not the answer
+# Pass 3 — enumerate: the product, and why it is not the answer
 
 **IR:** **spec** `project_spec` → **worlds** `assignment list`. (IR names: [`README.md`](README.md).)
 
 **Kind: rationale**, plus one **proposal** section at the end
-(*Attribution*, absorbed from `why_ledger.md` 2026-08-25). Pass 2 of
-five. Standalone. Written 2026-08-23
+(*Attribution*, absorbed from `why_ledger.md` 2026-08-25). Pass 3 of
+six. Standalone. Written 2026-08-23
 because it did not exist: the
 product over (provision × version × mutation) is easy and documented
 (§1 below), but what makes
@@ -12,7 +12,7 @@ the enumeration *correct* is the five constraints that prune it, and
 those lived only in comments inside `canary_enumerate.ml`. Every one of
 them exists because a specific over- or under-generation was observed.
 
-Read [`README.md`](README.md) first for where this sits (stage 2).
+Read [`README.md`](README.md) first for where this sits (stage 3).
 
 ## Two axes, not three
 
@@ -72,7 +72,7 @@ free product.
 exist* or is *indistinguishable from another*; the last two say *you did
 not ask for it*. That is the difference between the model and the run,
 and since 2026-08-24 it is also a pass boundary
-([`stage3_select_worlds.md`](stage3_select_worlds.md)). `ref_filter` is documented here
+([`stage4_select_worlds.md`](stage4_select_worlds.md)). `ref_filter` is documented here
 because it is the same shape of pruning and because it ran here until the
 split; it now runs from `select`.
 
@@ -171,7 +171,7 @@ with no declared/pinned source are unaffected.
 This is a **selection**, not a semantic constraint — it belongs to the
 run, not to the model. That observation became a pass: since 2026-08-24
 `ref_filter` is called from `select`, not from the enumeration proper,
-and `--thin` moved beside it. See [`stage3_select_worlds.md`](stage3_select_worlds.md).
+and `--thin` moved beside it. See [`stage4_select_worlds.md`](stage4_select_worlds.md).
 Folding BOTH into one general selection mechanism (channels, refs,
 scenarios, actions, …) is still open — `../../project/status_project.md`
 §2.
@@ -207,7 +207,7 @@ Different objects, and both STATIC — neither reads a run:
 
 | | `spec-check` | `--why` |
 | --- | --- | --- |
-| object | the **declaration** (pass 1), row by row | the **enumeration** (pass 2→3), candidate by candidate |
+| object | the **declaration** (pass 1), row by row | the **enumeration** (pass 3→4), candidate by candidate |
 | question | is this project's spec mature — does it declare what a landed project should? | given that declaration, why does the world set have exactly these members? |
 | answer shape | per-row ✓ / ⚠ / ✗ presence marks | per-candidate fate + reason |
 | arithmetic | none — it never multiplies anything | the whole point: `kept + dropped = the product` |
@@ -215,7 +215,7 @@ Different objects, and both STATIC — neither reads a run:
 The post-run family is elsewhere entirely — `status`, `result`, `verify`
 and `compat` all read `actions.log` or a probe. `--why` reads neither; it
 is a function of `(project_spec, policy)`, the same inputs as
-`emit <p> --stage 2`.
+`emit <p> --stage 3`.
 
 The independence is demonstrated, not asserted: `spec-check tiny-full`
 reports **0 errors** while tiny-full enumerates one world where its own
@@ -280,9 +280,9 @@ Three parts, and only the second carries behavioural risk:
    `ref_filter` (§§5, 6) become `list -> kept × (dropped × reason)`. This
    is the part that could change what is enumerated, so it is the part
    the invariant guards.
-3. **Selection reports separately.** Pass 3 exists
-   ([`stage3_select_worlds.md`](stage3_select_worlds.md)), so a missing world is either
-   *pruned by a constraint* (pass 2) or *not asked for* (pass 3). The
+3. **Selection reports separately.** Pass 4 exists
+   ([`stage4_select_worlds.md`](stage4_select_worlds.md)), so a missing world is either
+   *pruned by a constraint* (pass 3) or *not asked for* (pass 4). The
    ledger must say which; before the split it could only say "absent".
 
 ### Tests

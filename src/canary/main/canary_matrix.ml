@@ -694,26 +694,41 @@ let langs_of_chain (chain : Canary_basic.action list) : Canary_lang.lang list =
     are all absent contributes nothing — which is how a project that
     builds no app avoids a [build_app_ocaml_pre] column. *)
 let check_cols_of_chain (chain : Canary_basic.action list)
-    ~(declared : Canary_artifact.t option) : col list =
+    ~(an : Canary_project_analysis.t) : col list =
   List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
       List.concat_map (langs_of_chain chain) ~f:(fun lang ->
-          let mech = Canary_mechanism.mechanism_of_lang_exn lang in
-          (* CAN THIS CLAIM BE DECIDED HERE AT ALL? Two filters, and
-             both are about not spending a column on a cell that can
-             never say anything: a method with no evaluator reports
-             [not_implemented] forever, and one this project cannot
-             carry reports [not_applicable] forever.
+          (* CAN THIS CLAIM BE DECIDED HERE AT ALL? PASS 2's answer
+             (2026-09-16), not a local one. The two filters are still
+             the two filters — a method with no evaluator reports
+             [not_implemented] forever, one this project cannot carry
+             reports [not_applicable] forever, neither is coverage —
+             but they are applied once, in
+             [Canary_project_analysis.carried_slugs], and this asks.
+
+             THE LATENT HALF, which is why this is worth a pass and not
+             a shared helper. This used to compute the mechanism as
+             [mechanism_of_lang_exn lang] — the LANGUAGE DEFAULT — while
+             [Canary_check_index] asked the same question with what the
+             project DECLARES. The two answers differ wherever a project
+             declares a non-default mechanism (z3 and llvm bind Python
+             through Ctypes; the default is Cext), and applicability
+             genuinely turns on it: Ctypes compiles no stub and records
+             no dependency. No output moved when this changed, because
+             no project's chain puts such a language in front of THIS
+             function — llvm derives no Python step at all and z3 is
+             muted. A divergence that costs nothing today and flips a
+             column the day a project grows one is exactly the shape the
+             2026-09-15 Python instance had before it fired.
 
              Applicability takes no world — it is a static property of
-             the project — so this no longer sweeps every scenario
-             looking for one that permits the claim. *)
-          let decidable =
-            List.exists r.Canary_agreement.ag.Canary_agreement_common.ag_methods
-              ~f:(fun m ->
-                Option.is_some m.Canary_agreement_common.m_eval
-                && Canary_agreement.suits_here ~mechanism:mech ~lang ~declared m)
-          in
-          if not (decidable && r.Canary_agreement.ag_enabled) then []
+             the project — which is why the question can be answered a
+             pass before any assignment exists. *)
+          if
+            not
+              (r.Canary_agreement.ag_enabled
+              && Canary_project_analysis.carries an ~lang
+                   r.Canary_agreement.ag_slug)
+          then []
           else
             Option.to_list
               (Option.map
@@ -735,7 +750,7 @@ let check_cols_of_chain (chain : Canary_basic.action list)
     not depend on what happened to be run. *)
 let artifact_cols_of_chain (chain : Canary_basic.action list)
     ~(world : Canary_artifact.assignment)
-    ~(declared : Canary_artifact.t option) : col list =
+    ~(an : Canary_project_analysis.t) : col list =
   let read_tags =
     List.concat_map (langs_of_chain chain) ~f:(fun lang ->
         List.concat_map Canary_agreement.agreement_registry ~f:(fun r ->
@@ -745,10 +760,14 @@ let artifact_cols_of_chain (chain : Canary_basic.action list)
                 List.concat_map
                   (m.Canary_agreement_common.m_inputs
                      { Canary_agreement_common.ac_mechanism =
-                         Canary_mechanism.mechanism_of_lang_exn lang;
+                         (* pass 2's mechanism, for the same reason
+                            [check_cols_of_chain] takes it: what a
+                            method READS can depend on the mechanism,
+                            and a language default is a guess *)
+                         Canary_project_analysis.mechanism_for an lang;
                        ac_lang = lang;
                        ac_world = world;
-                       ac_declared = declared })
+                       ac_declared = an.Canary_project_analysis.an_declared })
                   ~f:Canary_agreement_common.paths_of_input)))
     |> List.filter_map ~f:(fun p ->
            match String.lsplit2 p ~on:'/' with
@@ -975,7 +994,7 @@ let version_points_of_kind (scenarios : Canary_artifact.assignment list)
     what makes a peer comparison unblameable on these grounds. *)
 let declared_against ~(lang : Canary_lang.lang)
     ~(world : Canary_artifact.assignment)
-    ~(declared : Canary_artifact.t option) (slug : string) :
+    ~(an : Canary_project_analysis.t) (slug : string) :
     Canary_basic.artifact_kind list =
   match Canary_agreement.agreement_named slug with
   | None -> []
@@ -987,10 +1006,10 @@ let declared_against ~(lang : Canary_lang.lang)
               List.filter_map
                 (m.Canary_agreement_common.m_inputs
                    { Canary_agreement_common.ac_mechanism =
-                       Canary_mechanism.mechanism_of_lang_exn lang;
+                       Canary_project_analysis.mechanism_for an lang;
                      ac_lang = lang;
                      ac_world = world;
-                     ac_declared = declared })
+                     ac_declared = an.Canary_project_analysis.an_declared })
                 ~f:(Canary_agreement_common.artifact_of_input ~lang)
           (* every other reference kind holds the artifact against
              something that is not a project declaration, so a
@@ -1056,7 +1075,7 @@ let check_cell ~(chain : Canary_basic.action list)
     ~(obs : Canary_status.agreement_obs list)
     ~(world : Canary_artifact.assignment)
     ~(version_points : Canary_basic.artifact_kind -> int)
-    ~(declared : Canary_artifact.t option) (a : Canary_basic.action)
+    ~(an : Canary_project_analysis.t) (a : Canary_basic.action)
     (s : Canary_agreement_common.stage) (slug : string) :
     cell * (Canary_basic.artifact_kind * string) list =
   (* THE LANGUAGE THIS COLUMN SPEAKS FOR — the one its action names,
@@ -1104,7 +1123,7 @@ let check_cell ~(chain : Canary_basic.action list)
      of comparison this is and the enumeration how many version points
      that artifact has. Neither question needs a run, which is why this
      can be attributed before it is fixed. *)
-  let against = declared_against ~lang ~world ~declared slug in
+  let against = declared_against ~lang ~world ~an slug in
   let version_blind = List.exists against ~f:(fun k -> version_points k > 1) in
   let blame =
     blame_of ~outcome
@@ -1155,10 +1174,10 @@ let check_cell ~(chain : Canary_basic.action list)
               List.filter_map
                 (m.Canary_agreement_common.m_inputs
                    { Canary_agreement_common.ac_mechanism =
-                       Canary_mechanism.mechanism_of_lang_exn lang;
+                       Canary_project_analysis.mechanism_for an lang;
                      ac_lang = lang;
                      ac_world = world;
-                     ac_declared = declared })
+                     ac_declared = an.Canary_project_analysis.an_declared })
                 ~f:(fun i ->
                   Option.map
                     (Canary_agreement_common.artifact_of_input ~lang i)
@@ -1174,7 +1193,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
   let cols =
     List.concat_map projects ~f:(fun (_, pr) ->
         let acts = Canary_project_run.covered_actions_of pr in
-        let declared = Canary_pipeline.declared_api_of pr in
+        let an = Canary_pipeline.analysed_of pr in
         (* one representative world for the SHAPE: which artifacts are
            inspectable is a property of the project's chain and its
            declarations, not of a particular scenario's placements *)
@@ -1184,10 +1203,10 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
           | [] -> None
         in
         List.map acts ~f:(fun a -> Act a)
-        @ check_cols_of_chain acts ~declared
+        @ check_cols_of_chain acts ~an
         @ (match world with
            | None -> []
-           | Some w -> artifact_cols_of_chain acts ~world:w ~declared))
+           | Some w -> artifact_cols_of_chain acts ~world:w ~an))
     |> Stdlib.List.sort_uniq Stdlib.compare
     |> List.stable_sort ~compare:compare_col
   in
@@ -1197,10 +1216,12 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
         let runs = Canary_status.project_matrix ~root ~project in
         (* the agreement half of the same log, read once per project *)
         let agmts = Canary_status.project_agreements ~root ~project in
-        (* what this project says it ships — the reference half of the
-           declaration comparisons, needed here to ask a method what it
-           reads *)
-        let declared = Canary_pipeline.declared_api_of pr in
+        (* PASS 2's value, once per project. It carries what the project
+           says it ships — the reference half of the declaration
+           comparisons, needed here to ask a method what it reads — and
+           the mechanism each language binds through, which is the half
+           this file used to guess from the language. *)
+        let an = Canary_pipeline.analysed_of pr in
         let platform = platform_label () in
         (* rows ordered by ref → c lib → bindings ({!row_key}) *)
         let scenarios =
@@ -1263,7 +1284,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                       Some
                         ( label_of_col col,
                           check_cell ~chain:chain_acts ~obs:scenario_obs
-                            ~world:a ~version_points ~declared ca cs slug )
+                            ~world:a ~version_points ~an ca cs slug )
                   | _ -> None)
             in
             let implicated_kinds =

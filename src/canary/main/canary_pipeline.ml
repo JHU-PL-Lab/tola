@@ -1,6 +1,6 @@
 (** [Canary_pipeline] — the enumeration pipeline as NAMED PASSES.
 
-    2026-08-24, the first step of [doc/canary/design/enumeration/stage2_enumerate_worlds.md Attribution]
+    2026-08-24, the first step of [doc/canary/design/enumeration/stage3_enumerate_worlds.md Attribution]
     §8. Every stage boundary was already a total function over a distinct
     type; what was missing was a place to point at. Before this module the
     chain was assembled in {!Canary_runner.run_project_spec} and PARTIALLY
@@ -12,17 +12,26 @@
 
     {v
     pr_artifacts : artifact_row list
-      │ spec_of                                            (stage 1)
+      │ spec_of                                            (pass 1 declare)
       ▼ project_spec
-      │ worlds                                             (stage 2)
+      │ analysed_of                                        (pass 2 analyse)
+      ▼ analysis                 — what canary UNDERSTANDS of the spec
+      │ worlds                                             (pass 3 enumerate)
       ▼ assignment list          — what worlds the project HAS
-      │ enumerated ?policy                                 (stage 2.5)
+      │ enumerated ?policy                                 (pass 4 select)
       ▼ assignment list          — what this RUN asked for
-      │ ordered ?policy                                    (stage 3)
+      │ ordered ?policy                                    (pass 5 order)
       ▼ assignment list          — deduped, grouped by store state
-      │ steps_of ~root                                     (stage 4)
+      │ steps_of ~root                                     (pass 6 realize)
       ▼ step list                — realized commands
     v}
+
+    RENUMBERED 2026-09-16 (user: "a clean model for pass as well as
+    action / project is more worthy"), when ANALYSE became a pass. It
+    cost four doc renames and a sweep of citations; what it bought is
+    that the pipeline has no half-numbers and no unnumbered branch. The
+    old numbering had both — [enumerated] was "stage 2.5" here and
+    [chain_applicable] was a [(branch)] row in the pass table.
 
     {1 Two properties this module is FOR}
 
@@ -41,7 +50,7 @@
     for every project: tiny-full's realization calls
     [Canary_tiny_workspace.witness_base_workspace] /
     [materialize_built_lib], so deriving its steps materializes a tree on
-    disk. Stages 1–3 are pure; stage 4 is not, and a caller that only
+    disk. Passes 1–5 are pure; pass 6 is not, and a caller that only
     wants to LOOK at a project (a dump, a matrix cell) must know that.
     {!actions_of} exists for exactly that caller: it needs the action set,
     not the commands, and takes the throwaway workspace the matrix has
@@ -49,14 +58,14 @@
 
 open Canary_project_run
 
-(* ── stage 1 — declaration ── *)
+(* ── pass 1 — declare ── *)
 
 (** The project's static declaration: the [artifact_row] table lifted to
     the [project_spec] the enumeration reads. Pure. *)
 let spec_of (pr : project_run) : Canary_artifact.project_spec =
   Canary_project_spec.project_spec_of_rows pr.pr_artifacts
 
-(* ── stage 2 — ANALYSE (2026-09-16, user) ────────────────────────────
+(* ── pass 2 — ANALYSE (2026-09-16, user) ────────────────────────────
 
    What canary UNDERSTANDS about the project, as against what the author
    WROTE. Pure, world-free, and named here for the same reason every
@@ -71,16 +80,16 @@ let spec_of (pr : project_run) : Canary_artifact.project_spec =
 let analysed_of (pr : project_run) : Canary_project_analysis.t =
   Canary_project_analysis.of_project_run pr
 
-(* ── stage 3 — enumeration ── *)
+(* ── pass 3 — enumerate ── *)
 
 (** Which worlds the project HAS — the product with the five model
     constraints applied and NO selection. Invocation-independent: this
-    list does not depend on [--thin] or [--refs], which is what makes a
-    stage-2 dump a fact about the project rather than about today's flags
-    (stage 2 Attribution; was why_ledger.md §7). Pure. *)
+    list does not depend on [--thin] or [--refs], which is what makes an
+    enumerate dump a fact about the project rather than about today's
+    flags (pass 3 Attribution; was why_ledger.md §7). Pure. *)
 let worlds (pr : project_run) : Canary_artifact.assignment list =
   let module EN = Canary_enumerate in
-  (* THROUGH [scenarios_of], deliberately. Stage 2 has two
+  (* THROUGH [scenarios_of], deliberately. Pass 3 has two
      implementations — [enumerate] (via [enumerate_product]) and
      [enumerate_follows_tree] (via [patterns_of], which is what
      [scenarios_of] and therefore the RUNNER use). Building [worlds] on
@@ -93,10 +102,12 @@ let worlds (pr : project_run) : Canary_artifact.assignment list =
      order-sensitive. [scenario_dir_of] was given a canonical kind order
      on 2026-08-19 for exactly this reason ("an enumeration change
      silently RENAMED every scenario dir"); the dedup key never was.
-     Recorded in stage 2 Attribution (was why_ledger.md §4a). *)
+     Recorded in pass 3 Attribution (was why_ledger.md §4a). *)
   scenarios_of ~policy:(EN.unselected (EN.full_policy ())) pr
 
-(** Stage 2.5 — the worlds a RUN asked for: {!worlds} through the
+(* ── pass 4 — select ── *)
+
+(** The worlds a RUN asked for: {!worlds} through the
     selection its policy carries. This IS
     {!Canary_project_run.scenarios_of}; the alias exists so a reader sees
     the pass sequence in one file, and so a consumer names the stage
@@ -104,7 +115,7 @@ let worlds (pr : project_run) : Canary_artifact.assignment list =
 let enumerated ?policy (pr : project_run) : Canary_artifact.assignment list =
   scenarios_of ?policy pr
 
-(* ── stage 3 — identity + order ── *)
+(* ── pass 5 — order (identity + run order) ── *)
 
 (** RUN order: {!enumerated} put through a stable sort on the
     single-valued store state each assignment locks, so scenarios needing
@@ -116,7 +127,7 @@ let enumerated ?policy (pr : project_run) : Canary_artifact.assignment list =
 let ordered ?policy (pr : project_run) : Canary_artifact.assignment list =
   scenarios_in_run_order ?policy pr
 
-(* ── stage 4 — realization ── *)
+(* ── pass 6 — realize ── *)
 
 (** What one scenario needs before its commands can be built: the
     workspace directory (which is also the scenario's identity and its
@@ -300,7 +311,7 @@ let json_of_placement (id : Canary_artifact.artifact_info)
       ("provision",
        `String (Canary_artifact.string_of_provision pl.Canary_artifact.provision));
       ("channel", `String (Canary_basic.string_of_channel v.Canary_basic.channel));
-      (* "" for a version-ambient placement — the distinction stage 4's
+      (* "" for a version-ambient placement — the distinction pass 5's
          identity rule turns on, so it is encoded rather than elided *)
       ("version_id", `String v.Canary_basic.id) ]
 
@@ -348,7 +359,54 @@ let json_declare (pr : project_run) : Yojson.Basic.t =
     [ ("project", `String pr.pr_name); ("pass", `String "declare");
       ("artifacts", `List (List.map row spec.Canary_artifact.ps_universe)) ]
 
-(** Passes 2 and 3 — enumerate and select. [of_total] is present on
+(** Pass 2 — analyse. The chains come first because they are what the
+    pass table used to carry as an unnumbered branch, and because
+    nothing has ever printed them: [canary paths] shows the unfiltered
+    38, and which of them a PROJECT admits was reachable only by
+    reading [patterns_of]. *)
+let json_analyse (pr : project_run) : Yojson.Basic.t =
+  let module A = Canary_project_analysis in
+  let an = analysed_of pr in
+  let chain c =
+    `List
+      (List.map
+         (fun (a : Canary_basic.action_sig) ->
+           `String (Canary_basic.string_of_action a.Canary_basic.as_action))
+         c)
+  in
+  `Assoc
+    [ ("project", `String pr.pr_name); ("pass", `String "analyse");
+      ("chains", `List (List.map chain an.A.an_chains));
+      ("bindings",
+       `List
+         (List.map
+            (fun (l, m) ->
+              `Assoc
+                [ ("lang", `String (Canary_lang.string_of_lang l));
+                  ("mechanism", `String (Canary_mechanism.string_of_mechanism m))
+                ])
+            an.A.an_mechanisms));
+      ("declared_api", `Bool (Option.is_some an.A.an_declared));
+      ("carries",
+       `Assoc
+         (List.map
+            (fun (l, slugs) ->
+              ( Canary_lang.string_of_lang l,
+                `List (List.map (fun s -> `String s) slugs) ))
+            an.A.an_carries));
+      ("unsuited",
+       `List
+         (List.map
+            (fun (u : Canary_agreement.unsuited) ->
+              `Assoc
+                [ ("agreement", `String u.Canary_agreement.us_slug);
+                  ("method", `String u.Canary_agreement.us_method);
+                  ("lang",
+                   `String (Canary_lang.string_of_lang u.Canary_agreement.us_lang));
+                  ("why", `String u.Canary_agreement.us_why) ])
+            an.A.an_unsuited)) ]
+
+(** Passes 3 and 4 — enumerate and select. [of_total] is present on
     select so a reader sees the narrowing without a second call. *)
 let json_assignments ~(pass : string) ?(of_total : int option)
     (pr : project_run) (asgs : Canary_artifact.assignment list) : Yojson.Basic.t
@@ -359,7 +417,7 @@ let json_assignments ~(pass : string) ?(of_total : int option)
     @ (match of_total with None -> [] | Some n -> [ ("of_total", `Int n) ])
     @ [ ("assignments", `List (List.map json_of_assignment asgs)) ])
 
-(** Pass 4 — order. Each entry carries the store state it locks, which is
+(** Pass 5 — order. Each entry carries the store state it locks, which is
     the sort key, so the grouping is readable from the encoding. *)
 let json_order ?policy (pr : project_run) : Yojson.Basic.t =
   let rows =
@@ -378,7 +436,7 @@ let json_order ?policy (pr : project_run) : Yojson.Basic.t =
     [ ("project", `String pr.pr_name); ("pass", `String "order");
       ("count", `Int (List.length rows)); ("scenarios", `List rows) ]
 
-(** Pass 5 — realize. NOT pure: see the module header. *)
+(** Pass 6 — realize. NOT pure: see the module header. *)
 let json_realize ~(root : string) (pr : project_run)
     (a : Canary_artifact.assignment) : Yojson.Basic.t =
   let ctx = ctx_of pr a in

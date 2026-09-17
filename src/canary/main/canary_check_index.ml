@@ -66,9 +66,9 @@ let is_decided (a : added) : bool =
   List.exists a.ad_observed ~f:(fun (w, _) ->
       List.mem decided_words w ~equal:String.equal)
 
-(** THE (MECHANISM, LANGUAGE) PAIRS TO ASK AN ACTION WITH (2026-09-15).
+(** THE LANGUAGES TO ASK AN ACTION IN (2026-09-15).
 
-    An action that NAMES a language is asked with that language alone: a
+    An action that NAMES a language is asked in that language alone: a
     Python probe is not evidence about the OCaml binding. Asking every
     action with "the project's first declared binding" is how sqlite's
     index came to report that NOTHING fires at [probe_binding_python]
@@ -76,25 +76,23 @@ let is_decided (a : added) : bool =
     times — the index disagreed with the log, in the direction that
     understates coverage.
 
-    A lib-side action names no language, so it is asked with every
-    binding the project declares: what fires at [build_lib] is a union
+    A lib-side action names no language, so it is asked in every
+    language the project binds: what fires at [build_lib] is a union
     over the project's consumers, exactly as it is already a union over
-    the group's worlds. *)
-let pairs_for ~(decls : (Canary_mechanism.mechanism * Canary_lang.lang) list)
-    (action : Canary_basic.action) :
-    (Canary_mechanism.mechanism * Canary_lang.lang) list =
-  let for_lang l =
-    match List.filter decls ~f:(fun (_, l') -> Poly.equal l l') with
-    | [] -> [ (Canary_mechanism.mechanism_of_lang_exn l, l) ]
-    | ps -> ps
-  in
+    the group's worlds.
+
+    LANGUAGES, not (mechanism, language) pairs, since 2026-09-16: the
+    mechanism is pass 2's to say, and pairing it up here was the second
+    copy of that derivation. *)
+let langs_for ~(langs : Canary_lang.lang list) (action : Canary_basic.action) :
+    Canary_lang.lang list =
   match action with
   | Canary_basic.Build_binding l
   | Canary_basic.Probe_binding l
   | Canary_basic.Fetch (Canary_basic.Binding l)
   | Canary_basic.Build_app { lang = l } ->
-      for_lang l
-  | _ -> decls
+      [ l ]
+  | _ -> langs
 
 (** The agreements that fire at [action] for these bindings, in any of
     [worlds]. A row of this index stands for a GROUP of worlds (those
@@ -103,15 +101,19 @@ let pairs_for ~(decls : (Canary_mechanism.mechanism * Canary_lang.lang) list)
     which is what stops a world's binding provision from being read off
     its lib's.
 
-    APPLICABILITY IS APPLIED HERE (2026-09-15), the same static filter
-    [Canary_matrix.check_cols_of_chain] uses, so the index and the
+    APPLICABILITY IS ASKED OF PASS 2 (2026-09-16), which is also where
+    [Canary_matrix.check_cols_of_chain] asks, so the index and the
     result table's check columns cannot disagree about which cells
-    exist. Without it the index claimed [signatures_agree] at a Python
-    probe, where the mechanism declares its types as values and there
-    are no stub signatures to read — a cell that could never say
-    anything, counted as coverage. *)
-let added_at ~(pairs : (Canary_mechanism.mechanism * Canary_lang.lang) list)
-    ~(declared : Canary_artifact.t option)
+    exist. Applying the filter at all was the 2026-09-15 fix: without
+    it the index claimed [signatures_agree] at a Python probe, where
+    the mechanism declares its types as values and there are no stub
+    signatures to read — a cell that could never say anything, counted
+    as coverage. Routing it through pass 2 is the 2026-09-16 one: the
+    two sites each built their own [(mechanism, declared)] pair, and
+    the matrix's was the language DEFAULT, so on z3's and llvm's
+    Ctypes bindings they were asking different questions. *)
+let added_at ~(an : Canary_project_analysis.t)
+    ~(langs : Canary_lang.lang list)
     ~(worlds : Canary_artifact.assignment list)
     ~(observed : (string * string, (string, int) Hashtbl.t) Hashtbl.t)
     (action : Canary_basic.action) : added list =
@@ -123,8 +125,9 @@ let added_at ~(pairs : (Canary_mechanism.mechanism * Canary_lang.lang) list)
          index counts methods rather than rows (2026-09-12). *)
       let firing =
         List.filter r.R.ag.C.ag_methods ~f:(fun m ->
-            List.exists pairs ~f:(fun (mech, lang) ->
-                R.suits_here ~mechanism:mech ~lang ~declared m
+            List.exists langs ~f:(fun lang ->
+                let mech = Canary_project_analysis.mechanism_for an lang in
+                Canary_project_analysis.suits an ~lang m
                 && List.exists worlds ~f:(fun w ->
                        List.exists (m.C.m_firing mech lang w) ~f:(fun a ->
                            Poly.equal a action))))
@@ -188,22 +191,14 @@ let observed_table ~root ~project :
     about each. *)
 let of_project ?policy ?(root = "_out") (pr : Canary_project_run.project_run) :
     (Canary_store.provision * entry list) list =
-  let declared = Canary_pipeline.declared_api_of pr in
-  (* WHAT THIS PROJECT'S BINDINGS ARE, all of them. The project already
-     says so; taking only the first is what made the index single-
-     language. A project with no declared binding keeps the old
-     fallback, since something has to be asked. *)
-  let decls =
-    match
-      List.map pr.Canary_project_run.pr_binding_decls
-        ~f:(fun (d : Canary_binding_decl.binding_decl) ->
-          let m = d.Canary_binding_decl.mechanism in
-          (m, (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_lang))
-      |> List.dedup_and_sort ~compare:Poly.compare
-    with
-    | [] -> [ (Canary_mechanism.Cstubs, Canary_lang.OCaml) ]
-    | ds -> ds
-  in
+  (* PASS 2 — what canary understands about this project. It carries
+     what the project declares it ships, and the languages it binds
+     WITH the mechanism each binds through: taking only the first
+     binding is what made the index single-language, and building the
+     mechanism here rather than asking is what made it disagree with
+     the result table. *)
+  let an = Canary_pipeline.analysed_of pr in
+  let langs = Canary_project_analysis.langs an in
   let observed = observed_table ~root ~project:pr.Canary_project_run.pr_name in
   (* actions come from the scenarios of THAT world, not from the whole
      project: a Fetched world has no build_lib, and pretending otherwise
@@ -240,9 +235,9 @@ let of_project ?policy ?(root = "_out") (pr : Canary_project_run.project_run) :
             { en_action = action;
               en_intrinsic = Canary_step_builder.marker_of_action action;
               en_added =
-                added_at
-                  ~pairs:(pairs_for ~decls action)
-                  ~declared ~worlds ~observed action }) ))
+                added_at ~an
+                  ~langs:(langs_for ~langs action)
+                  ~worlds ~observed action }) ))
 
 (* ── rendering ──────────────────────────────────────────────────── *)
 

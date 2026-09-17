@@ -444,12 +444,19 @@ No hurry — all items below are queued for when their forcing function arrives.
 
     What the merge would have to settle, and why it is not a file move:
 
-    - **Where the check phase sits.** The enumeration is five passes
+    - **Where the check phase sits.** The enumeration is six passes
       ending at `realize` (`world → steps`). Evaluation happens INSIDE
-      pass 5's execution, per step — so it is either a sixth pass over a
-      different IR (verdicts), or a property of pass 5 that pass 5's doc
-      does not currently mention. Both readings are defensible and they
-      produce different documents.
+      pass 6's execution, per step — so it is either a further pass over
+      a different IR (verdicts), or a property of pass 6 that pass 6's
+      doc does not currently mention. Both readings are defensible and
+      they produce different documents.
+
+      **Half of it is settled since 2026-09-16.** APPLICABILITY — can
+      this project carry this claim — is world-free, so it is pass 2
+      ([`design/enumeration/stage2_analyse_spec.md`](design/enumeration/stage2_analyse_spec.md)).
+      FIRING needs a world and stays at realize. So the seam does not
+      run between the two directories: part of the CLAIM's own
+      machinery is already an enumeration pass.
     - **Two action-column orders still exist** (`registry.md` §7.4.4):
       `canary result` uses `Canary_matrix.compare_column`, `--firing`
       uses `Canary_basic.actions_of_lang`. A unified pipeline doc that
@@ -465,7 +472,7 @@ No hurry — all items below are queued for when their forcing function arrives.
     enumeration's vocabulary, not the agreement layer's. Two things make
     it more than a preference:
 
-    - `stage5_realize_steps.md` mentions "agreement" **zero times**, and
+    - `stage6_realize_steps.md` mentions "agreement" **zero times**, and
       it is the doc for the pass that attaches `agreement_ctx` to every
       step;
     - `agreement/pipeline.md` already IS that document, filed in the
@@ -479,10 +486,10 @@ No hurry — all items below are queued for when their forcing function arrives.
       should come IN) and it points at `surface/`, renamed to
       `agreement/` in 2026-09-01.
 
-    **And evaluation is NOT a sixth pass.** Pass 5 attaches the context;
+    **And evaluation is NOT a further pass.** Pass 6 attaches the context;
     the RUNNER BACKEND evaluates. The step list is object code consumed
     by four backends and only one of them checks anything — GH-render,
-    Mermaid and HTML evaluate nothing. A sixth pass would put a stage
+    Mermaid and HTML evaluate nothing. A further pass would put a stage
     above the IR that one consumer reaches.
 
     **Sequence it after §50's placement bullet.** The doc split says
@@ -542,7 +549,7 @@ No hurry — all items below are queued for when their forcing function arrives.
       identity. Today the run cache keys on `variant_id` + the step
       fingerprint, and its documented blind spot is precisely
       input-artifact identity
-      ([`design/enumeration/stage5_realize_steps.md`](design/enumeration/stage5_realize_steps.md)
+      ([`design/enumeration/stage6_realize_steps.md`](design/enumeration/stage6_realize_steps.md)
       §4). Bundling without fixing that trades a placement bug for a
       staleness bug. `canary inspect-diff --old A --new B` also wants
       evidence to stay a durable file at a nameable path, which a

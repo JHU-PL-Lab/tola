@@ -23,7 +23,7 @@ one of the failure modes below was found in it.
           │                              │ 2                           │
           │ 3                            ▼                             │
           │                   ┌──────────────────────┐                 │
-          └──────────────────▶│ pass 5: derive_steps │                 │
+          └──────────────────▶│ pass 6: derive_steps │                 │
                               │  step + agreement_ctx│                 │
                               └──────────┬───────────┘                 │
                                          │ 4                           │

@@ -281,7 +281,7 @@ let action_cmd =
       $ const ())
 
 (* ── `canary emit` — one dump per pipeline pass (2026-08-24) ──
-   design/enumeration/stage2_enumerate_worlds.md Attribution. THE rule: --stage N prints the value
+   design/enumeration/stage3_enumerate_worlds.md Attribution. THE rule: --stage N prints the value
    stage N hands to stage N+1 — not a rendering of it, and not a join with
    a neighbouring stage. That is what separates this from `spec`, which is
    deliberately a joined human snapshot.
@@ -301,11 +301,14 @@ let emit_cmd =
       & info [ "stage" ] ~docv:"PASS"
           ~doc:
             "Which pass to print, by NAME or by index: 1 declare (the \
-             project_spec), 2 enumerate (the worlds the project HAS — \
+             project_spec), 2 analyse (what canary understands of it — \
+             the chains the spec admits, the mechanism each language \
+             binds through, and which claims the project can carry), 3 \
+             enumerate (the worlds the project HAS — \
              invocation-independent, --thin and --refs do not affect it), \
-             3 select (the worlds this RUN asked for), 4 order (the run \
-             order — 3 grouped by the store state each scenario locks; \
-             since 2026-08-21 not the same order as 3), 5 realize (one \
+             4 select (the worlds this RUN asked for), 5 order (the run \
+             order — 4 grouped by the store state each scenario locks; \
+             since 2026-08-21 not the same order as 4), 6 realize (one \
              scenario's steps).")
   in
   let json =
@@ -338,8 +341,8 @@ let emit_cmd =
       value & opt (some string) None
       & info [ "scenario" ] ~docv:"NAME"
           ~doc:
-            "--stage 4 only: which scenario to realize (its directory \
-             basename). Defaults to the first in run order.")
+            "--stage realize only: which scenario to realize (its \
+             directory basename). Defaults to the first in run order.")
   in
   let run project stage json raw thin refs scenario () =
     let module P = Canary_pipeline in
@@ -349,7 +352,7 @@ let emit_cmd =
        one (z3 is muted and is the richest spec we have). *)
     match List.assoc_opt project Canary_registry.all_specs with
     | None ->
-        Fmt.epr "usage: canary emit <%s> --stage <1|2|2.5|3|4>@."
+        Fmt.epr "usage: canary emit <%s> --stage <1..6|name>@."
           (String.concat "|" (List.map fst Canary_registry.all_specs));
         Stdlib.exit 2
     | Some pr ->
@@ -385,15 +388,17 @@ let emit_cmd =
         let pass =
           match String.lowercase_ascii stage with
           | "1" | "declare" -> `Declare
-          | "2" | "enumerate" -> `Enumerate
-          | "3" | "select" -> `Select
-          | "4" | "order" -> `Order
-          | "5" | "realize" -> `Realize
+          | "2" | "analyse" | "analyze" -> `Analyse
+          | "3" | "enumerate" -> `Enumerate
+          | "4" | "select" -> `Select
+          | "5" | "order" -> `Order
+          | "6" | "realize" -> `Realize
           | other -> `Unknown other
         in
         let out j = print_string (Yojson.Basic.pretty_to_string j ^ "\n") in
         (match pass with
         | `Declare when json -> out (P.json_declare pr)
+        | `Analyse when json -> out (P.json_analyse pr)
         | `Enumerate when json ->
             out (P.json_assignments ~pass:"enumerate" pr (P.worlds pr))
         | `Select when json ->
@@ -451,14 +456,58 @@ let emit_cmd =
                     universe pins follows runtime)
                 spec.Canary_artifact.ps_universe
             end
+        | `Analyse ->
+            let module A = Canary_project_analysis in
+            let an = P.analysed_of pr in
+            Fmt.pr "%s — 2 analyse: what canary understands@." project;
+            (* the CHAINS first: this is the derivation that had no home
+               until pass 2, and `canary paths` prints only the
+               unfiltered 38 *)
+            Fmt.pr "@.  chains admitted by the spec — %d of %d universal@."
+              (List.length an.A.an_chains)
+              (List.length Canary_enumerate.universal_chains);
+            List.iter
+              (fun c ->
+                Fmt.pr "    %s@."
+                  (String.concat " → "
+                     (List.map
+                        (fun (a : Canary_basic.action_sig) ->
+                          Canary_basic.string_of_action a.Canary_basic.as_action)
+                        c)))
+              an.A.an_chains;
+            Fmt.pr "@.  bindings declared@.";
+            List.iter
+              (fun (l, m) ->
+                Fmt.pr "    %-8s %s@." (Canary_lang.string_of_lang l)
+                  (Canary_mechanism.string_of_mechanism m))
+              an.A.an_mechanisms;
+            Fmt.pr "@.  declared api: %s@."
+              (match an.A.an_declared with None -> "none" | Some _ -> "yes");
+            Fmt.pr "@.  claims this project can carry@.";
+            List.iter
+              (fun (l, slugs) ->
+                Fmt.pr "    %-8s %d: %s@." (Canary_lang.string_of_lang l)
+                  (List.length slugs)
+                  (String.concat ", " slugs))
+              an.A.an_carries;
+            if not (List.is_empty an.A.an_unsuited) then begin
+              Fmt.pr "@.  and what it cannot — %d@."
+                (List.length an.A.an_unsuited);
+              List.iter
+                (fun (u : Canary_agreement.unsuited) ->
+                  Fmt.pr "    %-28s %-8s %s@." u.Canary_agreement.us_slug
+                    (Canary_lang.string_of_lang u.Canary_agreement.us_lang)
+                    u.Canary_agreement.us_why)
+                an.A.an_unsuited
+            end
         | `Enumerate ->
             pp_assignments
-              (project ^ " — 2 enumerate: worlds the project HAS")
+              (project ^ " — 3 enumerate: worlds the project HAS")
               (P.worlds pr)
         | `Select ->
             let all = List.length (P.worlds pr) in
             let sel = P.enumerated ?policy pr in
-            Fmt.pr "%s — 3 select: asked for %d of %d@." project
+            Fmt.pr "%s — 4 select: asked for %d of %d@." project
               (List.length sel) all;
             List.iter
               (fun a ->
@@ -467,7 +516,7 @@ let emit_cmd =
               sel
         | `Order ->
             let ordered = P.ordered ?policy pr in
-            Fmt.pr "%s — 4 order: run order — %d@." project
+            Fmt.pr "%s — 5 order: run order — %d@." project
               (List.length ordered);
             let last = ref None in
             List.iter
@@ -504,12 +553,12 @@ let emit_cmd =
             in
             (match pick with
              | None ->
-                 Fmt.epr "no such scenario; run `canary emit %s --stage 3`@."
+                 Fmt.epr "no such scenario; run `canary emit %s --stage order`@."
                    project;
                  Stdlib.exit 2
              | Some a ->
                  let ctx = P.ctx_of pr a in
-                 Fmt.pr "%s — 5 realize: steps@.  scenario %s@." project
+                 Fmt.pr "%s — 6 realize: steps@.  scenario %s@." project
                    (Filename.basename ctx.P.sc_workspace);
                  Fmt.pr
                    "  (deriving steps APPLIES pr_runner_spec — for \
@@ -523,7 +572,8 @@ let emit_cmd =
         | `Unknown n ->
             Fmt.epr
               "canary emit: %s is not a pass. Use a name or an index: 1 \
-               declare, 2 enumerate, 3 select, 4 order, 5 realize.@."
+               declare, 2 analyse, 3 enumerate, 4 select, 5 order, 6 \
+               realize.@."
               n;
             Stdlib.exit 2)
   in
@@ -531,7 +581,7 @@ let emit_cmd =
     (Cmd.info "emit"
        ~doc:
          "Print one pipeline pass's output (the value it hands the next \
-          pass). See design/enumeration/stage2_enumerate_worlds.md Attribution.")
+          pass). See design/enumeration/stage3_enumerate_worlds.md Attribution.")
     Term.(
       const run $ project $ stage $ json $ raw $ thin $ refs $ scenario
       $ const ())

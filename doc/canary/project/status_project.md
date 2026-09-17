@@ -343,7 +343,7 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
    chronicled in [`../worklog/worklog_2026_08.md`](../worklog/worklog_2026_08.md).
    The audit now prints §1 E per project instead of §1 E recording it by
    hand. Still complementary to, not replaced by, the per-candidate ledger
-   ([`../design/enumeration/stage2_enumerate_worlds.md`](../design/enumeration/stage2_enumerate_worlds.md)
+   ([`../design/enumeration/stage3_enumerate_worlds.md`](../design/enumeration/stage3_enumerate_worlds.md)
    *Attribution*): this one says the declaration is too thin, that one
    says which constraint ate a world you expected.
 
@@ -454,22 +454,29 @@ directions):
   is not obvious. The canonical-key half of this is DONE:
   `string_of_assignment` sorts by artifact kind, so the dedup key is a
   function of content rather than of build order.
-- [ ] **Passes 2-3 redesign — an open QUESTION, not a plan** (user,
+- [ ] **Passes 3-4 redesign — an open QUESTION, not a plan** (user,
   2026-08-25: *"a feeling that stage 2 and stage 3 with this can have a
-  redesign, but I am not that hurry"*). The model is two ideas; the
-  machinery carries four accidents around them (two constructions, an
-  unused mutation axis, a config with more knobs than uses, and chain
-  applicability with nowhere to live). Recorded in
-  `../design/enumeration/README.md`. The three items below are the
-  pieces; do them separately, or let them fall out of a redraw.
-- [ ] **Name the applicable-chain set** (found 2026-08-25, from the
-  user's "there is another missing part"): `chain_applicable` filters the
-  38 universal chains to what a project can run, from the SPEC ALONE —
-  and it has no name in the pipeline, no pass, and no dump. `canary
-  paths` prints the unfiltered 38; nothing prints a project's survivors.
-  It is the reason a scenario is "a chain plus coordinates" rather than
-  just coordinates. Small: name it, expose it as `emit --stage declare`
-  output or its own view, and pin the count per project the way
+  redesign, but I am not that hurry"* — the numbers there are the
+  pre-2026-09-16 ones, i.e. enumerate and select). The model is two
+  ideas; the machinery carried four accidents around them. **One is
+  gone**: chain applicability is pass 2 since 2026-09-16. Three remain
+  (two constructions, an unused mutation axis, a config with more knobs
+  than uses). Recorded in `../design/enumeration/README.md`. The items
+  below are the pieces; do them separately, or let them fall out of a
+  redraw.
+- [x] **Name the applicable-chain set** — **DONE 2026-09-16.** Found
+  2026-08-25 from the user's "there is another missing part":
+  `chain_applicable` filters the 38 universal chains to what a project
+  can run, from the SPEC ALONE — and it had no name in the pipeline, no
+  pass, and no dump. It is now **pass 2**, ANALYSE
+  ([`../design/enumeration/stage2_analyse_spec.md`](../design/enumeration/stage2_analyse_spec.md)):
+  `Canary_enumerate.applicable_chains` is the one function both
+  `patterns_of` and the analysis call, `an_chains` is the field, and
+  `canary emit <p> --stage analyse` prints a project's survivors (sqlite
+  admits 10 of 38). It cost a renumbering — declare(1), analyse(2),
+  enumerate(3), select(4), order(5), realize(6) — which the user
+  approved: *"a clean model for pass as well as action / project is more
+  worthy"*. Not done: pinning the count per project the way
   `matrix.registry_shape` pins scenarios.
 - [ ] **Retire the mutation axis from the general signature** — the
   enumeration is polymorphic in a mutation that no registry project uses
@@ -481,9 +488,9 @@ directions):
   constructions are reconciled — same neighbourhood.
 - [x] **`canary emit --stage N`** — **LANDED 2026-08-24**, one dump per
   pipeline pass, routed through `Canary_pipeline` so it can never be a
-  re-derivation. `emit <p> --stage <name|1..5> [--json]` covers all five
+  re-derivation. `emit <p> --stage <name|1..6> [--json]` covers all six
   passes and reads the CATALOGUE, so a muted project still dumps. That
-  closes this item's premise: **stage 3's run order can now be looked
+  closes this item's premise: **the run order can now be looked
   at** (`emit --stage order` vs `--stage enumerate` shows the same
   scenarios in the two orders), where before it was pin-verified and
   invisible.
@@ -491,7 +498,7 @@ directions):
   dropped a candidate. NOT landed; there is no `--why` flag. Still the
   debugging payoff and still nearly free, because three of the five are
   already predicates. Proposal:
-  [`../design/enumeration/stage2_enumerate_worlds.md`](../design/enumeration/stage2_enumerate_worlds.md)
+  [`../design/enumeration/stage3_enumerate_worlds.md`](../design/enumeration/stage3_enumerate_worlds.md)
   *Attribution*. Note the CLI help and five source files still cite the
   purged `why_ledger.md` for it — fix those references when this lands.
 

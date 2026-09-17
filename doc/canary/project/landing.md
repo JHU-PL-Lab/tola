@@ -118,7 +118,7 @@ does not fork the factory).
 - **C**: B + the `pr_spec` universe table + `realize ∘ dispatch` (sqlite: ~300 LOC including the from-source build; z3/llvm: the bulk is their build commands, not the scenario machinery).
 
 For scenario mechanics + the derived-vs-hand principle see
-[`design/enumeration/stage5_realize_steps.md`](../design/enumeration/stage5_realize_steps.md).
+[`design/enumeration/stage6_realize_steps.md`](../design/enumeration/stage6_realize_steps.md).
 
 ## 2b. The per-project checklist — what a landing costs
 

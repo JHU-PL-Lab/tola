@@ -17,7 +17,7 @@ A platform is **one fact about one machine**, and almost nothing in
 canary needs to know it. The enumeration — what worlds a project has,
 which ones a run asked for, what order they go in — is platform-agnostic
 end to end: it ranges over *provisions* and *versions*, and neither has a
-platform coordinate. Platform enters at exactly two boundaries: **pass 5,
+platform coordinate. Platform enters at exactly two boundaries: **pass 6,
 realize**, where a world becomes shell commands, and the **tool wrappers**
 those commands invoke. Everything else should be able to run without
 knowing, and now does.
@@ -103,11 +103,11 @@ The user's framing, filled in:
 
 | mode | meaning | examples |
 | --- | --- | --- |
-| **agnostic** | never sees the platform | passes 1–4 (`Canary_pipeline.spec_of` / `enumerated` / `ordered`), the enumeration algebra, contract theory (`canary_compat`), detection (`canary_detect`), spec-check |
+| **agnostic** | never sees the platform | passes 1–5 (`Canary_pipeline.spec_of` / `enumerated` / `ordered`), the enumeration algebra, contract theory (`canary_compat`), detection (`canary_detect`), spec-check |
 | **parameterized** | takes it as an argument | `Canary_prebuilt.{path_of,libdir_of,build_of}`, `Canary_artifact_source.{mk_locals,local_for}`, `Canary_store.{distro_base,contrib_root}` — all already `distro -> …` |
 | **dispatched** | asks the one value and branches | the tool wrappers: `ld_path_var`, `nm_dynamic_flag`, `c_symbol_prefix`, `dylib_ext`, `shared_lib_name`, `ld_trace_env`, `set_recorded_name_cmd`, `platform_suffix` |
 
-The dividing line is real and worth keeping: **passes 1–4 must stay in
+The dividing line is real and worth keeping: **passes 1–5 must stay in
 the first column.** A world is a choice of provisions and versions; if the
 platform ever leaks into enumeration, the two machines stop enumerating
 the same worlds and their results stop being comparable — which is the
@@ -275,7 +275,7 @@ Ordered by what unblocks what. Items marked ⇢ have a home in
    `git ls-remote --exit-code <url> <ref>` answers it in 1.1s and 0 bytes
    (measured 2026-08-27). It belongs here rather than in a run: a world
    that does not build from its source no longer fetches it at all
-   ([`enumeration/stage5_realize_steps.md`](enumeration/stage5_realize_steps.md)
+   ([`enumeration/stage6_realize_steps.md`](enumeration/stage6_realize_steps.md)
    §3b), so
    obtainability became a claim about the DECLARATION — which is what
    `spec-check` is for.
@@ -328,7 +328,7 @@ Ordered by what unblocks what. Items marked ⇢ have a home in
 User: *"how about the platform affecting the enumeration? it should be
 agnostic until the runner, but can we confirm that?"*
 
-§2b says passes 1–4 never see the platform. That was a design intent
+§2b says passes 1–5 never see the platform. That was a design intent
 written while making the mac run; this section is the measurement.
 
 **The answer is yes**, by two independent routes.
@@ -340,7 +340,7 @@ declare|enumerate|select|order --json` is **byte-identical** under
 differences.
 
 *Mechanically, as a pin.* `platform.enumeration_is_agnostic`
-(`canary project-test`) runs passes 1–4 over both platforms and compares,
+(`canary project-test`) runs passes 1–5 over both platforms and compares,
 for every project in the CATALOGUE.
 
 **Two vacuity traps had to be closed, and both were real.**
@@ -350,7 +350,7 @@ for every project in the CATALOGUE.
    So the pin also asserts that a realized command DOES change — sqlite's
    step set carries `probe_lib_apt` on one platform and `probe_lib_brew`
    on the other. Surveyed once across the roster: **every project's
-   realized commands differ** between the two platforms, which is pass 5
+   realized commands differ** between the two platforms, which is pass 6
    doing its job.
 2. *A spec can be FROZEN rather than agnostic.* The registry hands
    `z3_run`/`llvm_run` a literal `Wsl`, and every `project_run` is built
@@ -367,7 +367,7 @@ artifacts exist, at which provisions and versions, which a run selects,
 in what sequence. NOT the realization data hanging off a declaration —
 making a `Vendored_at` payload platform-dependent does not turn it red,
 because `json_declare` reports the provision, not its origin string. That
-is the right scope (an origin string is pass 5's to resolve), but it
+is the right scope (an origin string is pass 6's to resolve), but it
 means the claim is *both machines enumerate the same worlds*, not
 *nothing below a declaration mentions a platform*. Falsified by making
 the world set itself vary — dropping the Dev version point on macOS in

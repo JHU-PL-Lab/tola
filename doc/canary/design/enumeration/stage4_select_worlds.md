@@ -1,15 +1,15 @@
-# Pass 3 — select: what this run asked for
+# Pass 4 — select: what this run asked for
 
 **IR:** **worlds** → **worlds** — an endomorphism; it removes, never invents. (IR names: [`README.md`](README.md).)
 
-**Kind: rationale.** Standalone. Pass 3 of five. Pass 2 says which worlds
+**Kind: rationale.** Standalone. Pass 4 of six. Pass 3 says which worlds
 the project HAS; this one narrows them to the ones a particular run
 wants. It changes nothing about what exists. The map is
 [`README.md`](README.md).
 
 > Landed 2026-08-24, from the user's question: *"are the possible
-> config/policy issues either functions from stage 2 to stage 3, or just
-> a stage 3 refinement?"* The analysis was written in the `emit`
+> config/policy issues either functions from stage 3 to stage 4, or just
+> a stage 4 refinement?"* The analysis was written in the `emit`
 > proposal; it moved here once the pass existed. Revised the same day so
 > it describes the code rather than a plan.
 
@@ -19,9 +19,9 @@ it is the one the question is pointing at.
 
 | kind | examples | where it belongs |
 | --- | --- | --- |
-| **model constraints** | `assignment_ok`, `binding_couples`, `source_ref_ok`, `shadow_filter` | stage 2, **unconditional** — they say a world cannot exist or is indistinguishable. Turning one off does not buy coverage, it buys wrong or duplicate worlds |
+| **model constraints** | `assignment_ok`, `binding_couples`, `source_ref_ok`, `shadow_filter` | stage 3, **unconditional** — they say a world cannot exist or is indistinguishable. Turning one off does not buy coverage, it buys wrong or duplicate worlds |
 | **selection** | `--thin`, `--refs`, and the queued scenario / action / project selectors | **its own pass, 2 → 3** |
-| **run configuration** | `pr_tier` Heavy/Light, failfast, root, parallelism | stage 4 and later — not about which worlds at all |
+| **run configuration** | `pr_tier` Heavy/Light, failfast, root, parallelism | stage 5 and later — not about which worlds at all |
 
 Two pieces of evidence that the tree already knows this:
 
@@ -30,29 +30,29 @@ Two pieces of evidence that the tree already knows this:
   2026-08-19 (user: *"I think we remove this feature"*). That was
   recognizing shadowing as model rather than policy — the knob existed
   because it had been misfiled.
-- [`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) §6 had already said `ref_filter`
+- [`stage3_enumerate_worlds.md`](stage3_enumerate_worlds.md) §6 had already said `ref_filter`
   is *"a selection, not a semantic constraint — it belongs to the run,
   not to the model"*. The generalization was that the *category* was
   missing, not that one filter was misplaced.
 
-### Why a pass, and not a refinement of pass 4
+### Why a pass, and not a refinement of pass 5
 
-The honest part first: **selection commutes with all of pass 4.**
+The honest part first: **selection commutes with all of pass 5.**
 Selecting then dedup/order/group gives the same result as
 dedup/order/group then selecting — dedup keys on the pin id and so does
 `--refs`, and a stable sort preserves relative order under filtering. So
 correctness does not decide this, which is exactly why the question feels
 ambiguous. Legibility does, and three arguments agree:
 
-- **Stage 2's output becomes invocation-independent** — "every world this
+- **Stage 3's output becomes invocation-independent** — "every world this
   project has", a fact about the project rather than about today's flags.
-  That is what makes `emit --stage 2` diffable across runs, and it
+  That is what makes `emit --stage 3` diffable across runs, and it
   sharpens `matrix.registry_shape`, which today pins 42 rows *under the
   default config* while reading as a statement about the enumeration.
 - **"Why isn't this running?" splits into two answerable questions** —
   *it does not exist* (a pass-2 constraint) versus *you did not ask for
   it* (this pass). Before the split both looked identical.
-- **One question per pass.** Pass 4 doing identity, exclusivity, order
+- **One question per pass.** Pass 5 doing identity, exclusivity, order
   *and* selection would be the same violation the doc reorganization has
   been removing.
 
@@ -67,7 +67,7 @@ let enumerate ~tag ~policy s =
 ```
 
 `unselected` widens the version and refs axes; `select` narrows them
-afterwards. So pass 2 sees the whole declared space and pass 3 applies
+afterwards. So pass 3 sees the whole declared space and pass 4 applies
 what the run asked for.
 
 **The equivalence this rests on, and why it is checked rather than
@@ -85,7 +85,7 @@ by five constraints and one of them (`shadow_filter`) is
 CROSS-assignment. So it is a pin, not a paragraph:
 `select.thin_post_filter_equals_universe_restriction` runs both forms
 over every catalogued project. Two more guard the pass's shape —
-`select.is_a_subset_of_stage2` (selection only ever removes, so pass 2
+`select.is_a_subset_of_stage2` (selection only ever removes, so pass 3
 stays the honest inventory) and `select.full_policy_selects_everything`
 (the default asks for everything).
 
@@ -107,8 +107,8 @@ $ canary emit z3 --stage select --refs latest → 5 of 16
 
 That is the split's whole point: "why isn't this running" now has two
 different answers — *it does not exist* (a pass-2 constraint) versus
-*you did not ask for it* (pass 3). `--why` will report them separately
-([`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) *Attribution*); before the
+*you did not ask for it* (pass 4). `--why` will report them separately
+([`stage3_enumerate_worlds.md`](stage3_enumerate_worlds.md) *Attribution*); before the
 split it could only have said "absent".
 
 ### Still open

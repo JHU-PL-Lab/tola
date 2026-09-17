@@ -1,8 +1,8 @@
-# Pass 5 — realize: commands, steps, execution
+# Pass 6 — realize: commands, steps, execution
 
 **IR:** one **world** `assignment` → **steps** `step list`, the object code. (IR names: [`README.md`](README.md).)
 
-**Kind: rationale.** Pass 5 of five, the last. Standalone. Pass 4 hands
+**Kind: rationale.** Pass 6 of six, the last. Standalone. Pass 5 hands
 over an ordered list of scenarios; this one turns each into a **step
 list** — the pipeline's object code — and then a backend consumes it.
 EXECUTING is one of four backends, not a stage above them: `run_graph`
@@ -16,7 +16,7 @@ what happened. The map is [`README.md`](README.md).
 > §2 (the action catalogue), §6 (the four steps), §7 (deploy-mismatch),
 > §8 (pre-run ≡ post-run), §9 (the run cache), §11 (chains vs graph), §12
 > and §14 (structure and ownership) are here; its §1 pipeline diagram is
-> in the README, §3/§4/§5 are stages 1–2, §10 is stage 3 plus
+> in the README, §3/§4/§5 are passes 1 and 3, §10 is pass 5 plus
 > [`../../project/opam_exclusive_store_issue.md`](../../project/opam_exclusive_store_issue.md),
 > and §13's terminology is [`stage0_naming.md`](stage0_naming.md). `git
 > show b4570b9` has the original.
@@ -45,8 +45,8 @@ type action_sig = {
 
 The version rule encodes propagation: `Build_lib` consumes a `Source`, so
 its output's version IS the source's. That is the same source-primary rule
-stage 2's constraints enforce
-([`stage2_enumerate_worlds.md`](stage2_enumerate_worlds.md) §1, §3) — here it is stated as a
+stage 3's constraints enforce
+([`stage3_enumerate_worlds.md`](stage3_enumerate_worlds.md) §1, §3) — here it is stated as a
 property of the action rather than as a filter over assignments, and the
 two must agree.
 
@@ -65,7 +65,7 @@ from the catalogue is the open cleanup.
 4. run_with_info_status(steps)  →  verdicts
 ```
 
-**1** is stage 3's ([`stage4_order_worlds.md`](stage4_order_worlds.md) §1) — it
+**1** is stage 4's ([`stage5_order_worlds.md`](stage5_order_worlds.md) §1) — it
 appears here because it is also the cache key, and §4 below depends on
 that.
 
@@ -207,7 +207,7 @@ cached success (`canary cache-test` guards it). Since 2026-08-17 the
 marker also carries a **spec fingerprint** over the realized command and
 the expectation's form, so an edited command invalidates it.
 
-**Per-scenario.** The scenario dir is the key, which is why stage 3's
+**Per-scenario.** The scenario dir is the key, which is why stage 4's
 identity rules are cache rules too: two assignments that differ only in an
 ambient version share a directory and only one runs.
 

@@ -938,7 +938,7 @@ let registry_pin : Canary_project_test.pure_test =
       (* SUBSET, not equality (2026-08-21). A registry entry can be
          commented out to mute an expensive project — z3's full run is
          ~30 min because opam rebuilds libz3 on every binding pin flip
-         (stage4_order_worlds.md §3). Equality made that a test failure, which
+         (stage5_order_worlds.md §3). Equality made that a test failure, which
          would push someone to edit the pin instead of the registry.
 
          What is still caught: an UNKNOWN name (not in the catalogue) is
@@ -2173,6 +2173,62 @@ let check_index_language_pin : Canary_project_test.pure_test =
         in
         sqlite_python_anp && no_unsuited_cell) }
 
+(* ONE APPLICABILITY ANSWER, AND IT IS PASS 2's (2026-09-16).
+
+   [checks.index_speaks_each_action_language] above pins one INSTANCE of
+   the class — the index must not claim what a language cannot carry.
+   This pins the class's cause: both views used to build their own
+   [(mechanism, declared)] pair on the way into [suits_here], and the
+   result table's was the LANGUAGE DEFAULT while the index's was the
+   project's DECLARATION. Wherever those differ the two views answer
+   different questions, and nothing said which was right.
+
+   z3 is where they differ, and it is why this pin names a project.
+   z3 declares its Python binding as Ctypes; Python's default is Cext;
+   and applicability genuinely turns on the difference — Ctypes compiles
+   no stub archive, so [required_symbols_exported] has nothing to read,
+   while Cext's extension module does. So:
+
+     pass 2 (declaration) says NOT carried
+     the language default says carried
+
+   and the pin asserts the first. Nothing in today's OUTPUT moves either
+   way, because no z3 world derives a Python step and z3 is muted — this
+   is the divergence caught BEFORE it fired, which is the only time it
+   is cheap. *)
+let applicability_reads_declaration_pin : Canary_project_test.pure_test =
+  { name = "checks.applicability_reads_the_declaration";
+    check =
+      (fun () ->
+        match
+          List.Assoc.find Canary_registry.all_specs "z3" ~equal:String.equal
+        with
+        | None -> false
+        | Some pr ->
+            let an = Canary_pipeline.analysed_of pr in
+            let declared_is_ctypes =
+              Poly.equal
+                (Canary_project_analysis.mechanism_for an Canary_lang.Python)
+                Canary_mechanism.Ctypes
+            in
+            let slug = "required_symbols_exported" in
+            (* what pass 2 says, reading the declaration *)
+            let by_declaration =
+              Canary_project_analysis.carries an ~lang:Canary_lang.Python slug
+            in
+            (* what the language default would have said — the answer the
+               result table used to compute for itself *)
+            let by_default =
+              List.mem
+                (Canary_project_analysis.carried_slugs
+                   ~mechanism:
+                     (Canary_mechanism.mechanism_of_lang_exn Canary_lang.Python)
+                   ~lang:Canary_lang.Python
+                   ~declared:an.Canary_project_analysis.an_declared)
+                slug ~equal:String.equal
+            in
+            declared_is_ctypes && (not by_declaration) && by_default) }
+
 (* THE GH RENDERING MUST AGREE WITH THE EXPECTATION'S POLARITY
    (2026-08-28).
 
@@ -2281,7 +2337,7 @@ let source_refresh_scope_pin : Canary_project_test.pure_test =
             && String.is_substring cmd ~substring:"if [ ! -e \"$SENTINEL\" ]"
         | _ -> false) }
 
-(* DEMAND, NOT DECLARATION ([design/enumeration/stage5_realize_steps.md]
+(* DEMAND, NOT DECLARATION ([design/enumeration/stage6_realize_steps.md]
    §3b).
 
      Declaration makes an action available; dependency makes it necessary.
@@ -3015,7 +3071,7 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
         && List.for_all (built @ installed) ~f:(fun d ->
                not (String.is_substring d ~substring:".."))) }
 
-(* RUN ORDER GROUPS BY STORE STATE (2026-08-21, stage4_order_worlds.md §3).
+(* RUN ORDER GROUPS BY STORE STATE (2026-08-21, stage5_order_worlds.md §3).
 
    An opam switch holds ONE version of a package, so a pinned placement is
    an exclusive lock on that store's state. The enumerated list has always
@@ -4157,9 +4213,22 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
           Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
             ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
         in
+        (* the analysed spec this cell is read against: one OCaml
+           cstubs binding, nothing declared. A literal rather than a
+           registry project, because the pin is about the MERGE and a
+           real project would make its inputs depend on that project's
+           declarations. *)
+        let an : Canary_project_analysis.t =
+          { an_project = "pin";
+            an_spec = { Canary_artifact.ps_universe = [] };
+            an_chains = [];
+            an_declared = None;
+            an_mechanisms = [ (Canary_lang.OCaml, Canary_mechanism.Cstubs) ];
+            an_unsuited = [];
+            an_carries = [] }
+        in
         let cell ?(version_points = fun _ -> 1) obs slug =
-          Canary_matrix.check_cell ~chain ~obs ~world ~version_points
-            ~declared:None
+          Canary_matrix.check_cell ~chain ~obs ~world ~version_points ~an
             (Canary_basic.Probe_binding Canary_lang.OCaml)
             Canary_agreement_common.Pre slug
         in
@@ -4594,6 +4663,7 @@ let base_tests : Canary_project_test.pure_test list =
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;
+      applicability_reads_declaration_pin;
       blame_attribution_pin;
       inspect_clash_pin;
       run_info_session_pin;

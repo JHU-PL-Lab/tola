@@ -857,7 +857,7 @@ let string_of_assignment (a : assignment) : string =
    constructions that agree on content for every spec we have:
 
    - {!enumerate_product} — product-then-filter, the model the docs
-     describe (design/enumeration/stage2_enumerate_worlds.md). MUTATION-AWARE: it
+     describe (design/enumeration/stage3_enumerate_worlds.md). MUTATION-AWARE: it
      takes [~tag] and folds each point's mutation into its target's
      [quality = Bad tag]. tiny's oracle needs that; the general projects
      do not use it.
@@ -1212,6 +1212,25 @@ let chain_applicable (s : project_spec)
              | None ->
                  equal_artifact kind Source)))
 
+(** The chains this spec admits — [chain_applicable] over the universal
+    table, as ONE function rather than a `filter_map` repeated at each
+    call site.
+
+    Factored out 2026-09-16 so that pass 2 ([Canary_project_analysis])
+    and [patterns_of] compute the applicable chains with the same code.
+    Before this the derivation had no name and no home: the enumeration
+    README listed it among the accidents as "a real spec-only derivation
+    that is neither a pass nor a dump, and hides inside [patterns_of]",
+    and the pass table carried it as an unnumbered *(branch)* row. It is
+    a fact about the SPEC ALONE — no world, no policy — which is exactly
+    pass 2's membership rule, so pass 2 is where it belongs. This stays
+    here because [patterns_of] is in [action/], below [project/]; what
+    moved up is the ownership of the answer, not the code. *)
+let applicable_chains (s : project_spec) :
+    Canary_basic.action_sig list list =
+  List.filter_map universal_chains ~f:(fun (_, chain) ->
+      if chain_applicable s chain then Some chain else None)
+
 (** The provision each action in a chain requires: Ambient → Fetched,
     Follows_input → Built. Terminals (probes) are skipped. *)
 let provision_of_action (act : Canary_basic.action_sig) : provision option =
@@ -1227,10 +1246,7 @@ let provision_of_action (act : Canary_basic.action_sig) : provision option =
     3. Match each assignment to its chain by provision. *)
 let patterns_of ?(policy = full_policy ()) (s : project_spec)
     : (Canary_basic.action_sig list * assignment) list =
-  let chains =
-    List.filter_map universal_chains ~f:(fun (_, chain) ->
-        if chain_applicable s chain then Some chain else None)
-  in
+  let chains = applicable_chains s in
   let matches a chain =
     List.for_all chain ~f:(fun act ->
         match provision_of_action act with

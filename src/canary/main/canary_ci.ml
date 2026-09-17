@@ -30,7 +30,7 @@
 
     Pass 4 exists because scenarios share exclusive state on one machine —
     an opam switch, an install prefix, a build tree — and must be
-    serialized ([stage4_order_worlds.md]). A GH job gets a FRESH runner,
+    serialized ([stage5_order_worlds.md]). A GH job gets a FRESH runner,
     so that constraint evaporates: scenarios that must be sequential
     locally are independent jobs remotely, and the ordering pass is simply
     not needed. This is the one place where the enumeration's hardest

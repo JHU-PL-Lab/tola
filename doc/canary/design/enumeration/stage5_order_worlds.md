@@ -1,8 +1,8 @@
-# Pass 4 — order: identity, exclusive resources, and run order
+# Pass 5 — order: identity, exclusive resources, and run order
 
 **IR:** **worlds** → **worlds** — an endomorphism; it resequences, never removes. (IR names: [`README.md`](README.md).)
 
-**Kind: rationale.** Pass 4 of five. Standalone. Pass 3 hands over the
+**Kind: rationale.** Pass 5 of six. Standalone. Pass 4 hands over the
 selected assignments; this one answers three questions before anything
 runs:
 which of them are the **same** scenario, which of them **cannot coexist**,
@@ -155,7 +155,7 @@ Once exclusivity is handled correctly, order stops mattering for
 **correctness** — verify-or-set means a scenario cannot inherit a
 neighbour's state. What is left is **cost**, and it was large.
 
-The enumerated list IS the run order, and stage 2's product ranges over
+The enumerated list IS the run order, and stage 3's product ranges over
 the lib axis outermost. So the binding pin alternated on every row:
 
 ```

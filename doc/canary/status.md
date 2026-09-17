@@ -277,11 +277,11 @@ reorganization; the roster + landing mechanics in
 
 The built behaviour is [pass 1](design/enumeration/stage1_declare_spec.md)
 (what a declared repo becomes, why not submodules, partial-vs-shallow)
-and [pass 5](design/enumeration/stage5_realize_steps.md) §3b–3c (an
+and [pass 6](design/enumeration/stage6_realize_steps.md) §3b–3c (an
 unread fetch is not realized; a fetch prepares once and ensures per
 world). What is NOT done:
 
-- **Pass 5 receives commands, not the world.** `derive_steps` takes a
+- **Pass 6 receives commands, not the world.** `derive_steps` takes a
   `runner_spec`, so a step cannot be gated on a provision — which is why
   "don't realize a fetch nothing consumes" is decided from the step list
   a pass after `source_is_read` already asks the same question at

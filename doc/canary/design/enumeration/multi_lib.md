@@ -74,7 +74,7 @@ question "can two libs be represented before the runner?" has a better
 answer than this note assumed, and it changes (A)'s cost.
 
 `Canary_enumerate.runtime_pairing` is already the two-lib structure, built
-at **pass 2** from spec data plus enumeration coordinates, with the runner's
+at **pass 3** from spec data plus enumeration coordinates, with the runner's
 realization explicitly not consulted:
 
 ```
@@ -98,7 +98,7 @@ build-lib came from its provider". The type's own comment says it refines
 precisely because `A_lib` is unique: there is only one lib placement to
 point at, so the second slot has nowhere to resolve.
 
-That decomposes (A) into three changes, all of them **before** stage 5:
+That decomposes (A) into three changes, all of them **before** stage 6:
 
 1. ~~`A_lib of string`~~ — pass 1. **Done 2026-08-25**, as `A_lib of
    string option`: `None` = "this project has one lib, naming it would be
@@ -125,7 +125,7 @@ placements: within a scenario the assignment maps that one artifact to one
 placement. An action that links against one lib and loads another is the
 case this cannot express, and it is a *slot-role* gap, not a naming one.
 
-The payoff for sequencing it this way: with 1-3 done, stage 5 is left with
+The payoff for sequencing it this way: with 1-3 done, stage 6 is left with
 "which path goes to `-l` and which to `LD_LIBRARY_PATH`" — a template
 question, answerable per-project, and one the enumeration can already state
 the answer to.
@@ -181,7 +181,7 @@ let a_lib_named n = A_lib (Some n)
 ```
 
 **Nothing observable moved.** All five passes were dumped for all nine
-projects before and after (`emit <p> --stage 1..5 --json`, 40 files) and
+projects before and after (`emit <p> --stage 1..6 --json`, 40 files) and
 diffed: byte-identical. That matters beyond tidiness — ids feed scenario
 dirs, dedup keys and run-cache markers, so a churned id silently
 invalidates every cached run and the re-run reads as a fresh pass.

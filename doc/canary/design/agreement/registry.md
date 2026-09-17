@@ -16,7 +16,7 @@ end to end — where a run touches this registry and what to do when an
 agreement reports `unavailable`) and [`landing.md`](landing.md) (planned vs
 effective, per agreement). World enumeration belongs to
 [the pipeline design](../enumeration/README.md); execution and caching belong
-to [realization](../enumeration/stage5_realize_steps.md).
+to [realization](../enumeration/stage6_realize_steps.md).
 
 The exposition starts with **fixed artifacts, already available at known
 locations**. It introduces their inspectable properties and language-specific mechanisms
@@ -650,7 +650,7 @@ packaging constrains an independent provider/binding pairing:
 
 A package query establishes the installed pin; it does not establish what the
 runtime loads. Conflicting pins also require separate stores or serialized
-worlds. Those scheduling rules belong to [world ordering](../enumeration/stage4_order_worlds.md).
+worlds. Those scheduling rules belong to [world ordering](../enumeration/stage5_order_worlds.md).
 
 ### 5.4 Dependencies across packaging boundaries
 

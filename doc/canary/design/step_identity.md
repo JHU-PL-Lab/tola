@@ -97,7 +97,7 @@ through the output filename.
 
 Location kind is already agnostic vocabulary: `Build_tree | Staged |
 Pm (Sys_pm _) | Pm (Lang_pm _)`. Which PM realizes `Sys_pm` on a given
-box is a platform fact, and platform facts belong to pass 5 and to the
+box is a platform fact, and platform facts belong to pass 6 (realize) and to the
 record — `actions.log` already carries a `platform` event and an
 `opam_switch` event per command, which is where "this apt probe ran
 under apt" is properly said.

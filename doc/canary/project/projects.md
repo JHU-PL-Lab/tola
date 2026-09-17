@@ -109,7 +109,7 @@ by `registry.batch_tiers`.
   enumerated set) — tracked in [`issues.md`](issues.md).
 - **Re-runs are cache-powered and safe**: a step skips only when its
   output exists, `check_post` passes, AND its verdict marker is present.
-  Details in [`design/enumeration/stage5_realize_steps.md`](../design/enumeration/stage5_realize_steps.md)
+  Details in [`design/enumeration/stage6_realize_steps.md`](../design/enumeration/stage6_realize_steps.md)
   §8 and [`design/artifact_cache.md`](../design/artifact_cache.md).
 - **Source-build path convention** (z3/llvm only): source at
   `~/code/contrib/<p>-all/<p>`, build at

@@ -950,7 +950,7 @@ let check_api_consistency (spec : runner_spec) =
 
 (* ── An unread fetch is not realized ────────────────────────────────────
 
-   Design: [design/enumeration/stage5_realize_steps.md] §3b.
+   Design: [design/enumeration/stage6_realize_steps.md] §3b.
 
    THE PROBLEM, measured: cairo's all-Fetched world cloned a repository
    whose tree no later step reads. [derive_steps] walks the action

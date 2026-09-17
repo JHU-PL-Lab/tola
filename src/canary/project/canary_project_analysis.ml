@@ -33,12 +33,24 @@
     neither a pass nor a dump" — and the enumeration README lists it
     among the accidents it wants redesigned away. Adding a second branch
     would have reproduced exactly that. This is a PASS: it takes the
-    spec and hands on a richer value, and the branch folds into it. *)
+    spec and hands on a richer value, and the branch folds into it —
+    [an_chains] IS that branch, now a field of a numbered pass. *)
 
 open Base
 
 type t = {
   an_project : string;
+  an_spec : Canary_artifact.project_spec;
+      (** pass 1's output, carried rather than recomputed. The pipeline
+          is LINEAR: every pass hands the next everything it needs, so
+          pass 3 reads the spec from here instead of asking the
+          [project_run] again *)
+  an_chains : Canary_basic.action_sig list list;
+      (** the universal chains this spec admits — [chain_applicable]
+          over the 38. Was the pass table's unnumbered *(branch)* row.
+          `canary paths` prints the unfiltered 38 and nothing printed
+          the per-project survivors; `canary emit <p> --stage analyse`
+          now does *)
   an_declared : Canary_artifact.t option;
       (** what the project says it ships — the reference half of every
           declaration comparison. Was [Canary_pipeline.declared_api_of],
@@ -55,7 +67,17 @@ type t = {
   an_carries : (Canary_lang.lang * string list) list;
       (** and the POSITIVE form, which is what selection wants: the
           agreements whose methods this project can carry, per language.
-          Derived from the same question so the two cannot disagree *)
+          Derived from the same question so the two cannot disagree.
+
+          Keyed over the MODELLED languages, not the declared ones, and
+          the two lists differ on purpose. [an_unsuited] is a report
+          about this project — asking a one-binding project what its
+          absent Python side cannot carry is the bug pass 2 fixed. This
+          is a lookup table for consumers that ask about a language the
+          CHAIN mentions, which the result table does for every project
+          whose spec declares no binding at all. A language with no
+          declared binding is answered with its default mechanism,
+          which is what both consumers already did. *)
 }
 
 (** The languages a project binds, in declaration order. Falls back to
@@ -75,7 +97,24 @@ let langs_of (pr : Canary_project_run.project_run) : Canary_lang.lang list =
 
 (** The mechanism a project binds a language through, or that language's
     default. Moved from [Canary_pipeline.mechanism_of_project] — same
-    answer, computed once. *)
+    answer, computed once.
+
+    ⚠ IT READS ONE OF TWO DECLARATIONS (found 2026-09-16, recorded in
+    `project/issues.md` §2). A project may state its mechanism on
+    [pr_binding_decls] — which this reads — or on the artifact table's
+    [a_binding lang mech] row, which [Canary_opam_binding] fills from its
+    own [binding_mechanism] while leaving [pr_binding_decls] EMPTY. So
+    cairo, libffi, zlib and zstd declare a mechanism nothing here sees,
+    and this answers with the language default: libffi declares [Ctypes]
+    and is reported as [Cstubs].
+
+    NOT fixed in place, deliberately. Reading the artifact table would
+    flip four GREEN cells on libffi's result table to [not_applicable],
+    because Ctypes carries none of the stub-reading claims — and whether
+    that is a correction depends on whether `ctypes-foreign` (which DOES
+    ship a compiled stub archive, unlike Python's ctypes) is a [Ctypes]
+    binding by the catalogue's own predicates. That is a question about
+    the mechanism catalogue, not about this function. *)
 let mechanism_of (pr : Canary_project_run.project_run)
     (l : Canary_lang.lang) : Canary_mechanism.mechanism =
   match
@@ -106,10 +145,52 @@ let declared_api_of (pr : Canary_project_run.project_run) :
   | Some _ -> from_source
   | None -> pr.Canary_project_run.pr_api_source
 
+(** The languages canary MODELS a binding mechanism for. Not the
+    languages a project declares ([an_mechanisms] is that): the
+    consumers of [an_carries] ask about whichever language an ACTION
+    names, and four registry projects declare no binding at all while
+    their chains still carry OCaml actions. *)
+let modelled_langs : Canary_lang.lang list =
+  List.filter Canary_lang.[ Cpp; OCaml; Python; Rust; CSharp; Java ]
+    ~f:(fun l ->
+      Option.is_some (Canary_mechanism.default_mechanism_of_lang l))
+
+(** THE APPLICABILITY QUESTION, asked once — can this project carry this
+    METHOD, in this language? Every other applicability derivation in
+    the tree is this function with different plumbing, and when two of
+    them disagreed (2026-09-15, Python) it was because each had built
+    its own [mechanism]/[declared] pair on the way in. *)
+let suits_for ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(declared : Canary_artifact.t option)
+    (m : Canary_agreement_common.checking_method) : bool =
+  Canary_agreement.suits_here ~mechanism ~lang ~declared m
+
+(** …and the agreement-level form the result table's columns want: the
+    two filters that say a cell could never speak. A method with no
+    evaluator reports [not_implemented] forever, one this project cannot
+    carry reports [not_applicable] forever, and neither is coverage. *)
+let carried_slugs ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(declared : Canary_artifact.t option) :
+    string list =
+  List.filter_map Canary_agreement.agreement_registry ~f:(fun r ->
+      let usable =
+        List.exists r.Canary_agreement.ag.Canary_agreement_common.ag_methods
+          ~f:(fun m ->
+            Option.is_some m.Canary_agreement_common.m_eval
+            && suits_for ~mechanism ~lang ~declared m)
+      in
+      if usable && r.Canary_agreement.ag_enabled then
+        Some r.Canary_agreement.ag_slug
+      else None)
+
 (** THE PASS. Pure: it reads declarations and the registry, and touches
     no world, no workspace and no disk. *)
 let of_project_run (pr : Canary_project_run.project_run) : t =
   let declared = declared_api_of pr in
+  let spec =
+    Canary_project_spec.project_spec_of_rows
+      pr.Canary_project_run.pr_artifacts
+  in
   let langs = langs_of pr in
   let mechanisms = List.map langs ~f:(fun l -> (l, mechanism_of pr l)) in
   let unsuited =
@@ -118,25 +199,12 @@ let of_project_run (pr : Canary_project_run.project_run) : t =
     |> List.dedup_and_sort ~compare:Poly.compare
   in
   let carries =
-    List.map mechanisms ~f:(fun (lang, mechanism) ->
-        ( lang,
-          List.filter_map Canary_agreement.agreement_registry ~f:(fun r ->
-              (* the same two filters the result table's columns use:
-                 a method with no evaluator reports not_implemented
-                 forever, and one this project cannot carry reports
-                 not_applicable forever — neither is coverage *)
-              let usable =
-                List.exists
-                  r.Canary_agreement.ag.Canary_agreement_common.ag_methods
-                  ~f:(fun m ->
-                    Option.is_some m.Canary_agreement_common.m_eval
-                    && Canary_agreement.suits_here ~mechanism ~lang ~declared m)
-              in
-              if usable && r.Canary_agreement.ag_enabled then
-                Some r.Canary_agreement.ag_slug
-              else None) ))
+    List.map modelled_langs ~f:(fun lang ->
+        (lang, carried_slugs ~mechanism:(mechanism_of pr lang) ~lang ~declared))
   in
   { an_project = pr.Canary_project_run.pr_name;
+    an_spec = spec;
+    an_chains = Canary_enumerate.applicable_chains spec;
     an_declared = declared;
     an_mechanisms = mechanisms;
     an_unsuited = unsuited;
@@ -161,3 +229,21 @@ let mechanism_for (t : t) (l : Canary_lang.lang) : Canary_mechanism.mechanism =
   match List.Assoc.find t.an_mechanisms l ~equal:Poly.equal with
   | Some m -> m
   | None -> Canary_mechanism.mechanism_of_lang_exn l
+
+(** Can this project carry this METHOD, in this language? The finer
+    question behind {!carries}, for the consumer that counts methods
+    rather than rows — an agreement can reach an action through one
+    method and not another.
+
+    Asking it HERE is the point: the mechanism and the declaration come
+    off the analysed spec, so a caller cannot supply its own pair. That
+    is precisely how [Canary_matrix] came to ask z3's Python probe with
+    [Cext] (the language default) while [Canary_check_index] asked it
+    with [Ctypes] (what z3 declares). *)
+let suits (t : t) ~(lang : Canary_lang.lang)
+    (m : Canary_agreement_common.checking_method) : bool =
+  suits_for ~mechanism:(mechanism_for t lang) ~lang ~declared:t.an_declared m
+
+(** The languages this project DECLARES a binding for, in declaration
+    order. *)
+let langs (t : t) : Canary_lang.lang list = List.map t.an_mechanisms ~f:fst

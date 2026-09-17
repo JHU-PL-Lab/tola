@@ -477,6 +477,50 @@ ported as a whole (brew's `pkg-config`, `otool`, `.dylib`) or not at all.
 
 ## 2. Declaration gaps
 
+### Open — the opam-binding template's mechanism never reaches the pipeline
+
+**cairo, libffi, zlib, zstd** (found 2026-09-16, landing pass 2).
+
+A project can state which mechanism it binds a language through in TWO
+places, and the pipeline reads one:
+
+- `pr_binding_decls` — a `binding_decl` list. sqlite, z3, llvm, zarith,
+  ssl and torch use it, and it is what
+  `Canary_project_analysis.mechanism_of` reads.
+- the artifact table's `a_binding lang mech` row. `Canary_opam_binding`
+  fills this from its own `binding_mechanism` field and leaves
+  `pr_binding_decls = []`, so those four declare a mechanism nothing in
+  the pipeline sees.
+
+Two consequences, both visible in `canary emit libffi --stage analyse`:
+
+1. **the mechanism is the language DEFAULT.** libffi declares `Ctypes`
+   on its artifact row; pass 2 reports `ocaml cstubs`.
+2. **a phantom language.** With no `binding_decls`, pass 2 falls back to
+   the registry-wide `[OCaml; Python]`, so libffi reports one thing its
+   *Python* binding cannot carry — and it has no Python binding.
+
+**Why it was not simply fixed when it was found.** Routing the artifact
+table's mechanism into pass 2 would move libffi's OCaml side from
+`Cstubs` to `Ctypes`, and Ctypes is inapplicable for
+`required_symbols_exported`, `dependencies_provided`,
+`soname_matches_requirement`, `required_versions_exported` and
+`signatures_agree` — so **four currently GREEN cells on libffi's result
+table would become `not_applicable`**. Whether that is a correction or a
+misclassification is a question about `ctypes-foreign`, which is not
+Python's ctypes: it DOES ship a compiled stub archive, and libffi's
+`required_symbols_exported` cell holds today because a real stub was
+read. So the mechanism catalogue may be what is wrong, not the
+declaration.
+
+The decision, in order: (a) is `ctypes-foreign` a `Ctypes` binding by
+canary's own definition (`mi_compiles_a_stub`, `mi_consumer_records_needed`)?
+(b) if yes, the four cells are wrong today and should go
+`not_applicable`; if no, the template's `binding_mechanism` is
+mis-declared and the fix is in the four project files. Either way pass 2
+should then read ONE place. Written up at
+[`../design/enumeration/stage2_analyse_spec.md`](../design/enumeration/stage2_analyse_spec.md) §7.
+
 ### Open — z3's `assert_staged` is outside the world vocabulary
 
 Residue of the world-assertion unification (FIXED 2026-08-20, chronicled
@@ -785,7 +829,7 @@ whenever someone confirms nothing else reads them.
 ### Found — zarith packs a binding nothing probes (2026-08-27)
 
 Surfaced by the demand rule
-([`../design/enumeration/stage5_realize_steps.md`](../design/enumeration/stage5_realize_steps.md) §3b).
+([`../design/enumeration/stage6_realize_steps.md`](../design/enumeration/stage6_realize_steps.md) §3b).
 In `lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master`,
 zarith builds the binding, **packs it into the canary-local opam repo**,
 and then probes the BUILD TREE:
