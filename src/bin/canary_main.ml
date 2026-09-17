@@ -139,15 +139,6 @@ let action_cmd =
       & info [ "failfast"; "ff" ]
           ~doc:"Stop on first failure (useful for debugging)")
   in
-  let cache_path_arg =
-    Arg.(
-      value
-      & opt (some string) None
-      & info [ "cache" ] ~docv:"FILE"
-          ~doc:
-            "Path to step cache JSON for global skip (e.g. \
-             doc/canary/step_cache.json)")
-  in
   let disable_agreement_arg =
     Arg.(
       value & opt string ""
@@ -203,7 +194,7 @@ let action_cmd =
      — one derive_steps + run_graph, no multi-variant. *)
   (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
      the flag stays parsed so existing invocations don't break. *)
-  let run project _quick failfast cache_path disable_agreement_csv thin refs () =
+  let run project _quick failfast disable_agreement_csv thin refs () =
     let root = "_out" in
     let cli_disabled, unknown_agreements =
       Canary_agreement_common.agreement_ids_of_csv disable_agreement_csv
@@ -253,7 +244,7 @@ let action_cmd =
         Stdlib.exit 2
     | Some p when String.length p > 5 && String.sub p 0 5 = "tiny/" ->
         let name = String.sub p 5 (String.length p - 5) in
-        Canary_project_tiny.run_tiny_scenario ~root ~failfast ~cache_path
+        Canary_project_tiny.run_tiny_scenario ~root ~failfast
           ~cli_disabled ~name ()
     | Some "@all" | None ->
         (* THE batch (2026-08-14): [Canary_batch.run] over the registry —
@@ -276,7 +267,7 @@ let action_cmd =
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")
     Term.(
-      const run $ project $ quick $ failfast $ cache_path_arg
+      const run $ project $ quick $ failfast
       $ disable_agreement_arg $ thin_arg $ refs_arg
       $ const ())
 
@@ -1184,175 +1175,15 @@ let write_workflow out name yaml =
   Stdlib.close_out oc;
   Fmt.pr "Wrote %s@." path
 
-(* Read a command's stdout into a string. Returns None on error. *)
-let read_cmd cmd =
-  let ic = Unix.open_process_in cmd in
-  let buf = Buffer.create 256 in
-  (try
-     while true do
-       Buffer.add_channel buf ic 1
-     done
-   with End_of_file -> ());
-  match Unix.close_process_in ic with
-  | Unix.WEXITED 0 -> Some (Buffer.contents buf)
-  | _ -> None
-
-(* Map GH job names used in canary_ci.yml to stable cache_project ids. *)
-let job_name_to_cache_project =
-  [
-    ("LLVM 19 — fetch + probe", "llvm-19");
-    ("Z3 dev — build from source + probe", "z3-dev");
-    ("SQLite — fetch + probe", "sqlite");
-  ]
-
-(* Sync step results from a GH Actions run into the local cache file.
-   Algorithm:
-   1. Find run ID: use --run-id if given, else latest successful canary_ci.yml run.
-   2. gh run view <id> --json jobs  → parse jobs/steps.
-   3. For each job step with conclusion=success, record cache entry.
-   4. Save updated cache. *)
-let cache_sync_cmd =
-  let cache_path =
-    Arg.(
-      value
-      & opt string "doc/canary/step_cache.json"
-      & info [ "cache" ] ~docv:"FILE"
-          ~doc:"Path to step cache JSON (default: doc/canary/step_cache.json)")
-  in
-  let run_id_arg =
-    Arg.(
-      value
-      & opt (some int) None
-      & info [ "run-id" ] ~docv:"ID"
-          ~doc:
-            "GH Actions run database ID (default: latest successful \
-             canary_ci.yml run)")
-  in
-  let run cache_path run_id_opt () =
-    (* Step 1: resolve run ID *)
-    let run_id =
-      match run_id_opt with
-      | Some id -> id
-      | None -> (
-          let cmd =
-            {|gh run list --workflow=canary_ci.yml --json databaseId,conclusion --limit 20|}
-          in
-          match read_cmd cmd with
-          | None ->
-              Fmt.epr
-                "cache-sync: gh run list failed (is gh installed and \
-                 authenticated?)@.";
-              Stdlib.exit 1
-          | Some json_str -> (
-              let json = Yojson.Basic.from_string json_str in
-              let runs = match json with `List xs -> xs | _ -> [] in
-              let success_run =
-                List.find_opt
-                  (fun r ->
-                    match r with
-                    | `Assoc fields -> (
-                        match List.assoc_opt "conclusion" fields with
-                        | Some (`String "success") -> true
-                        | _ -> false)
-                    | _ -> false)
-                  runs
-              in
-              match success_run with
-              | None ->
-                  Fmt.epr "cache-sync: no successful canary_ci.yml run found@.";
-                  Stdlib.exit 1
-              | Some (`Assoc fields) -> (
-                  match List.assoc_opt "databaseId" fields with
-                  | Some (`Int id) -> id
-                  | _ ->
-                      Fmt.epr "cache-sync: could not parse databaseId@.";
-                      Stdlib.exit 1)
-              | Some _ -> Stdlib.exit 1))
-    in
-    Fmt.pr "cache-sync: reading run %d@." run_id;
-    (* Step 2: fetch jobs for this run *)
-    let jobs_json =
-      match read_cmd (Fmt.str "gh run view %d --json jobs" run_id) with
-      | None ->
-          Fmt.epr "cache-sync: gh run view failed@.";
-          Stdlib.exit 1
-      | Some s -> Yojson.Basic.from_string s
-    in
-    (* Step 3: parse and record *)
-    let cache = Canary_local_runner.load_cache ~path:cache_path in
-    let today =
-      let t = Unix.localtime (Unix.gettimeofday ()) in
-      Fmt.str "%04d-%02d-%02d" (t.tm_year + 1900) (t.tm_mon + 1) t.tm_mday
-    in
-    let jobs =
-      match jobs_json with
-      | `Assoc fields -> (
-          match List.assoc_opt "jobs" fields with
-          | Some (`List xs) -> xs
-          | _ -> [])
-      | _ -> []
-    in
-    let recorded = ref 0 in
-    List.iter
-      (fun job ->
-        match job with
-        | `Assoc fields -> (
-            let job_name =
-              match List.assoc_opt "name" fields with
-              | Some (`String s) -> s
-              | _ -> ""
-            in
-            let cache_project =
-              List.assoc_opt job_name job_name_to_cache_project
-            in
-            match cache_project with
-            | None -> Fmt.pr "  skipping unknown job: %s@." job_name
-            | Some cp ->
-                let steps =
-                  match List.assoc_opt "steps" fields with
-                  | Some (`List xs) -> xs
-                  | _ -> []
-                in
-                List.iter
-                  (fun step ->
-                    match step with
-                    | `Assoc sf ->
-                        let name =
-                          match List.assoc_opt "name" sf with
-                          | Some (`String s) -> s
-                          | _ -> ""
-                        in
-                        let conclusion =
-                          match List.assoc_opt "conclusion" sf with
-                          | Some (`String s) -> s
-                          | _ -> ""
-                        in
-                        (* Only record base step names (skip "(verify)" suffix steps) *)
-                        if
-                          not
-                            (String.length name > 9
-                            && String.sub name (String.length name - 9) 9
-                               = "(verify)")
-                        then (
-                          let key = cp ^ ":" ^ name in
-                          let entry =
-                            Canary_local_runner.
-                              { status = conclusion; run_id; at = today }
-                          in
-                          Canary_local_runner.cache_record cache ~key entry;
-                          Fmt.pr "  %s  →  %s@." key conclusion;
-                          incr recorded)
-                    | _ -> ())
-                  steps)
-        | _ -> ())
-      jobs;
-    Canary_local_runner.save_cache ~path:cache_path cache;
-    Fmt.pr "cache-sync: recorded %d entries → %s@." !recorded cache_path
-  in
-  Cmd.v
-    (Cmd.info "cache-sync"
-       ~doc:"Sync step results from latest GH CI run into the local cache file")
-    Term.(const run $ cache_path $ run_id_arg $ const ())
+(* `cache-sync` LIVED HERE and was deleted 2026-09-16 (user). It read a
+   GH Actions run's per-step conclusions into a JSON keyed
+   "<cache_project>:<step_name>", which [run_step] consulted to skip
+   work CI had certified. It could not produce a hit — the keys it wrote
+   came from the CI job specs, the only callers that override
+   [cache_project], while a local run uses the per-scenario default — so
+   the two key spaces had been disjoint since A5 (2026-08-05). See the
+   header comment in [Canary_local_runner] for the other three findings
+   and for what a cross-machine cache would have to be instead. *)
 
 let ci_cmd =
   let out =
@@ -1955,7 +1786,7 @@ let run_tiny_all_and_collect () : unit =
       Fmt.pr "[%d/%d] %-11s %-30s ... @?" index total sc.id sc.name;
       (try
          Canary_project_tiny.run_tiny_scenario ~root ~failfast:false
-           ~cache_path:None ~cli_disabled:[] ~name:sc.name ()
+           ~cli_disabled:[] ~name:sc.name ()
        with _ -> ());
       let status = Canary_project_run.scenario_status_of_run_state () in
       Fmt.pr "%s@." status;
@@ -2421,7 +2252,6 @@ let () =
         view_cmd;
         ci_cmd;
         debug_ci_cmd;
-        cache_sync_cmd;
         pm_test_cmd;
         artifact_test_cmd;
         project_test_cmd;

@@ -10,7 +10,34 @@
 
 ## 1. What exists today, and its exact shape
 
-Today's cache is a **step marker cache**, not an artifact cache:
+**There used to be a SECOND cache, and it was deleted on 2026-09-16 so
+that this proposal would not be built beside it** (user: *delete it or
+gate it — do not build an artifact cache while it sits there*). The
+global cache mapped `"<cache_project>:<step_tag>"` to a GitHub Actions
+step conclusion, was filled by a `canary cache-sync` subcommand, and was
+consulted by `run_step` before anything else. Four findings, the first
+fatal:
+
+1. **it could not hit,** and had not been able to since A5
+   (2026-08-05). `cache-sync` wrote keys from the CI job specs, the only
+   callers overriding `cache_project`; a local run left the default,
+   which is the per-SCENARIO project name. Disjoint key spaces.
+2. **it was unreachable**: `--cache` was parsed on `canary action` and
+   threaded only into the tiny runner, so passing it to a registry
+   project was silently ignored;
+3. **it bypassed every gate** — the hit short-circuited above the warm
+   gate, skipping the fingerprint, `check_post`, the switch and the
+   platform;
+4. **nothing fed it**: the default file never existed.
+
+`step.cache_key` went with it, because a written-and-never-read key
+field is exactly what this proposal's key would be mistaken for. Note
+what the pair of them says about the design below: the global cache
+answered *"did CI run a step with this name?"*, which is the question
+this document argues is the wrong one.
+
+What remains is one cache, and it is the sound one. It is a **step
+marker cache**, not an artifact cache:
 
 - each step writes `<step_dir>/<tag>.verdict_<variant>.ok`, whose line 1
   is the verdict flavor and line 2 a FINGERPRINT of the step's realized
@@ -104,6 +131,22 @@ becomes a set of artifact references plus its own step records.
 5. **Interaction with `check_post`.** A postcondition proves an artifact's
    existence at a path; with a store, the natural check is "the key is
    present and its recorded hash matches", which is stronger and uniform.
+6. **The key must carry the WORLD'S TOOLCHAIN, and nothing records it**
+   (2026-09-16). Two libraries built from the same source ref by
+   different compilers are different artifacts — different symbol
+   mangling, different `NEEDED`, different ABI — and a key that cannot
+   say so will serve one for the other. Today neither `step_fingerprint`
+   nor `run_info` records a compiler or a linker. The opam SWITCH and
+   the PLATFORM are already on the fingerprint (2026-08-26), which is
+   the same class of fact and shows the shape: detected once, carried on
+   the run config, printed in the header, part of the fingerprint. The
+   toolchain is the next member and it is a prerequisite for the store,
+   not a refinement of it.
+7. **`step_identity.md` is this problem from the other end.** A step's
+   TAG depends on how many siblings it has, so adding a second probe
+   renames the first — and the tag is part of the marker path. That is a
+   cache-key defect wearing a naming hat, and the store inherits it
+   unless identity stops depending on the size of the set it is in.
 
 ## 5. Suggested first step (small, and it pays immediately)
 
@@ -120,6 +163,10 @@ where it is already implied:
 
 Reversing that order would build a cache keyed on identities nothing
 currently guarantees.
+
+**Step 0, done 2026-09-16:** the global CI cache is gone (§1). It was
+not a step toward this; it was a second cache answering a different and
+wrong question, keyed on a name, bypassing every gate this one earned.
 
 ## 6. The second specimen — two caches agreed about a wrong artifact
 

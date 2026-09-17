@@ -199,7 +199,7 @@ let load_run_state ~dir =
       [%string "%{dir}/%{Canary_basic.step_dir_of_tag output_tag}"]
     in
     let step : step = {
-      tag; cache_key = ""; output_tag; output_dir;
+      tag; output_tag; output_dir;
       project_dir = dir; variant_id; action; deps = [];
       cmd          = (fun ~output_dir:_ ~variant_key:_ -> "");
       check_pre    = (fun () -> false);
@@ -257,7 +257,7 @@ let view_project ~root ~project () =
     ~artifact_names ~root logger;
   logger.close ()
 
-let run_project ?(failfast = false) ?run_info ?cache_path
+let run_project ?(failfast = false) ?run_info
     ?(artifact_names : artifact_kind -> string option = fun _ -> None)
     ~root ~project steps =
   let (project_name, variant_id) =
@@ -272,7 +272,6 @@ let run_project ?(failfast = false) ?run_info ?cache_path
   Option.iter run_info ~f:(fun info ->
       let path = dump_run_info ~dir:run_dir info in
       Fmt.pr "[run_info] %s@." path);
-  let global_cache = Option.map cache_path ~f:(fun p -> Canary_local_runner.load_cache ~path:p) in
   let log_path = [%string "%{run_dir}/actions.log"] in
   let logger = create_logger ~log_path in
   (* mark the variant/world in the log — `canary status` reconstructs its
@@ -281,7 +280,7 @@ let run_project ?(failfast = false) ?run_info ?cache_path
      collapsed into one "(run)" group). *)
   if not (String.is_empty variant_id) then
     logger.log ~tag:"*" ~event:"variant_start" ~detail:(Some variant_id);
-  let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
+  let status = run_graph ~failfast logger ~project ~root steps in
   Canary_diagram.write_project_output ~dir ~project_name ~variant:variant_id ~steps
     ~run_status:status ~artifact_names ~root logger;
   save_run_state ~dir:run_dir ~project_name steps ~artifact_name:artifact_names status;
@@ -343,7 +342,7 @@ let dump_run_info_multi ~dir ~project_name
 (* Run multiple variants of a project sharing one log, one result.html, one
    diagrams/ directory. Steps from all variants share the flat projects/<name>/
    step dirs; only filenames are variant-keyed (e.g. probe_stable.log). *)
-let run_project_multi ?(failfast = false) ?cache_path ~project_name ~root
+let run_project_multi ?(failfast = false) ~project_name ~root
     ?(artifact_names : artifact_kind -> string option = fun _ -> None)
     ~(variants : (string * step list * run_info option) list)
     () =
@@ -355,11 +354,10 @@ let run_project_multi ?(failfast = false) ?cache_path ~project_name ~root
   let logger = create_logger ~log_path in
   let all_results =
     List.map variants ~f:(fun (variant_id, steps, _run_info) ->
-        let global_cache = Option.map cache_path ~f:(fun p -> Canary_local_runner.load_cache ~path:p) in
         let project = if String.is_empty variant_id then project_name
                       else [%string "%{project_name}/%{variant_id}"] in
         logger.log ~tag:"*" ~event:"variant_start" ~detail:(Some variant_id);
-        let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
+        let status = run_graph ~failfast logger ~project ~root steps in
         (steps, status))
   in
   (* Single unified run_info.json covering all variants. *)

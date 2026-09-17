@@ -27,85 +27,39 @@
 open Base
 open Canary_step_model
 
-(* ── Cross-run cache (inlined from canary_step_cache.ml on 2026-06-01,
-   Phase 10b) ─────────────────────────────────────────────────────────
-   Maps cache_key → entry, where cache_key = "<project>:<step_tag>"
-   (e.g. "sqlite:fetch_lib", "llvm-19:probe_binding_pkg"). Populated by
-   the `cache-sync` CLI subcommand reading GH CI results back into a
-   local JSON; consulted by run_step below to skip steps a previous CI
-   run has already certified as successful.
+(* ── THE GLOBAL CACHE IS GONE (deleted 2026-09-16, user) ─────────────
+   It mapped "<cache_project>:<step_tag>" → a GH Actions step
+   conclusion, was populated by a `cache-sync` subcommand reading CI
+   results into a JSON file, and was consulted by [run_step] to skip
+   steps CI had certified. Four findings, and the first alone is fatal:
 
-   FUTURE: if the GH backend grows its own cache (e.g. CI-side artifact
-   caching with a different schema), revisit and extract a shared
-   cache abstraction. For now this lives next to its only consumer
-   (run_step's `?global_cache`). *)
+   1. IT COULD NOT HIT, and had not been able to since A5
+      (2026-08-05). `cache-sync` recorded keys built from the CI job
+      specs, which are the only callers that override [cache_project]
+      ("sqlite", "llvm-19", "z3-dev"). A local run leaves the default,
+      which is the per-SCENARIO project name — so it computed
+      "sqlite/lib-fetched_ocaml_binding-fetched:fetch_lib" and looked
+      it up in a table keyed "sqlite:fetch_lib". Disjoint key spaces.
+   2. It was UNREACHABLE anyway. `--cache` was parsed on `canary
+      action` and threaded only into [run_tiny_scenario]; passing it to
+      any registry project was silently ignored.
+   3. It BYPASSED EVERY GATE. The hit short-circuited above the warm
+      gate — no fingerprint, no [check_post], no switch, no platform —
+      and those gates exist because a stale marker reading as a silent
+      PASS is the bug the local cache was hardened against.
+   4. Nothing fed it: the default file never existed, and no CI step or
+      Makefile target created one.
 
-type cache_entry = {
-  status : string;   (* "success" or "failure" *)
-  run_id : int;      (* GH Actions run database ID; 0 = local *)
-  at : string;       (* date recorded, e.g. "2026-04-22" *)
-}
+   The LOCAL cross-run cache below is unaffected: verdict marker +
+   fingerprint + [check_post], which is the sound one and the one
+   `canary cache-test` covers.
 
-type step_cache = (string, cache_entry) Hashtbl.t
-
-let make_cache () : step_cache = Hashtbl.create (module String)
-
-let cache_entry_of_json fields =
-  let get_s name =
-    match List.Assoc.find fields ~equal:String.equal name with
-    | Some (`String s) -> s
-    | _ -> ""
-  in
-  let get_i name =
-    match List.Assoc.find fields ~equal:String.equal name with
-    | Some (`Int i) -> i
-    | _ -> 0
-  in
-  { status = get_s "status"; run_id = get_i "run_id"; at = get_s "at" }
-
-let cache_of_json (json : Yojson.Basic.t) : step_cache =
-  let tbl = make_cache () in
-  (match json with
-   | `Assoc pairs ->
-     List.iter pairs ~f:(fun (key, v) ->
-         match v with
-         | `Assoc fields -> Hashtbl.set tbl ~key ~data:(cache_entry_of_json fields)
-         | _ -> ())
-   | _ -> ());
-  tbl
-
-let cache_to_json (tbl : step_cache) : Yojson.Basic.t =
-  let pairs =
-    Hashtbl.to_alist tbl
-    |> List.sort ~compare:(fun (a, _) (b, _) -> String.compare a b)
-    |> List.map ~f:(fun (key, e) ->
-           ( key,
-             `Assoc
-               [ ("status", `String e.status);
-                 ("run_id", `Int e.run_id);
-                 ("at", `String e.at) ] ))
-  in
-  `Assoc pairs
-
-let load_cache ~path : step_cache =
-  if Stdlib.Sys.file_exists path then
-    (try Yojson.Basic.from_file path |> cache_of_json
-     with _ -> make_cache ())
-  else make_cache ()
-
-let save_cache ~path (tbl : step_cache) =
-  let oc = Stdlib.open_out path in
-  Yojson.Basic.pretty_to_channel oc (cache_to_json tbl);
-  Stdlib.output_char oc '\n';
-  Stdlib.close_out oc
-
-let cache_record (tbl : step_cache) ~key (e : cache_entry) =
-  Hashtbl.set tbl ~key ~data:e
-
-let cache_is_success tbl ~key =
-  match Hashtbl.find tbl key with
-  | Some { status = "success"; _ } -> true
-  | _ -> false
+   If a cross-machine cache is wanted, the design is an ARTIFACT store
+   (`doc/canary/artifact_cache.md`): markers record verdicts, a store
+   records what EXISTS, keyed on a declared key plus a recorded content
+   hash, with a mismatch as a finding — and the key has to carry the
+   world's toolchain, which nothing records today. That is a different
+   thing from this, which is why this was deleted rather than repaired. *)
 
 (* ── Execution ─────────────────────────────────────────────────────── *)
 
@@ -461,9 +415,12 @@ let step_xfail_contracts (step : step) : string list =
 
 (* Run a single action step; returns its [step_status] ([Step_done_xfail] =
    passed via a confirmed expected failure).
-   Skip priority: (1) global cache hit, (2) prior run met its expectation
-   (verdict marker present — NOT mere output presence). *)
-let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status =
+   Skipped only when a prior run met its expectation here — a verdict
+   marker, NOT mere output presence — and the fingerprint and the
+   postcondition both still hold. That is the whole skip rule since the
+   global cache was deleted (2026-09-16); it used to be checked second,
+   after a hit that consulted none of it. *)
+let run_step logger ~root:_ ~project:_ (step : step) : step_status =
   let tag = step.tag in
   let out = step.output_dir in
   let log = logger.log ~tag in
@@ -474,11 +431,6 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
      display layer can name WHICH contract confirmed. [] = no attribution
      (hand-written Expect_failure / empty-prediction fallback). *)
   let xfail_ids : string list ref = ref [] in
-  (* Global cache: skip if a previous CI run recorded success for this key *)
-  let global_hit = match global_cache with
-    | Some cache -> cache_is_success cache ~key:step.cache_key
-    | None -> false
-  in
   (* Warm-skip gate (VISIBLE, 2026-08-17, the warm-mask fix): a verdict
      marker is trusted only when the fingerprint matches the current
      spec AND the postcondition still holds. Each failing gate logs its
@@ -497,18 +449,15 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
        log ~event:"warm_check_post"
          ~detail:(Some "FAIL — the postcondition no longer holds; re-running");
        (try Stdlib.Sys.remove marker_path with _ -> ())));
-  if global_hit then (
-    log ~event:"skip" ~detail:(Some [%string "global cache hit (%{step.cache_key})"]);
-    Step_done)
-  (* Local cache: skip only if a PRIOR run recorded a met expectation here
-     (verdict marker), so a failed probe is never served as cached success.
+  (* Skip only if a PRIOR run recorded a met expectation here (verdict
+     marker), so a failed probe is never served as cached success.
      AND the postcondition must still hold (2026-08-17, the Publish case
      study's finding — the code had drifted from the documented contract:
      a store-mutating world's warm skip must re-verify the store, e.g. a
      pin-checked fetch/publish whose [check_post] asserts the switch
      provably holds the pinned state — a stale marker over a changed
      store is otherwise a silent PASS for the wrong world). *)
-  else if Stdlib.Sys.file_exists marker_path
+  if Stdlib.Sys.file_exists marker_path
           && verdict_matches_spec step
           && step.check_post ~output_dir:out ~variant_key:step.variant_id then
     (log ~event:"warm_gate"
@@ -901,7 +850,7 @@ let merge_step_statuses (all : (string, step_status) Hashtbl.t list)
 
 (* Run all steps in dependency order. Returns status per tag.
    ~failfast:true stops on the first failure (useful for debugging). *)
-let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : step list) =
+let run_graph ?(failfast = false) logger ~project ~root (steps : step list) =
   logger.log ~tag:"*" ~event:"graph_start"
     ~detail:(Some [%string "%{Int.to_string (List.length steps)} steps"]);
   let status = Hashtbl.create (module String) in
@@ -960,7 +909,7 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
                 | _ -> false)
           in
           if deps_ok then (
-            let st = run_step logger ~project ~root ?global_cache s in
+            let st = run_step logger ~project ~root s in
             Hashtbl.set status ~key:s.tag ~data:st;
             match st with
             | Step_done | Step_done_xfail -> changed := true

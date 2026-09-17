@@ -41,7 +41,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_step_builder.(derive_steps ~root ~project:"llvm/19" ~cache_project:"llvm-19"
+        Canary_step_builder.(derive_steps ~root ~project:"llvm/19"
           (no_source (Canary_project_llvm.llvm_ci_spec gh_root distro))) };
     (* Z3: build from source (no prebuilt OCaml binding in opam).
        sccache caches C++ compilation across runs; mold replaces ld for faster links. *)
@@ -51,7 +51,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       sys_deps = (Canary_project_z3.z3_source_of Canary_basic.Dev).build_sys_deps @ [ "mold" ];
       preamble_steps = [ sccache_cache_step; sccache_step ];
       steps =
-        Canary_step_builder.derive_steps ~root ~project:z3_ci_project ~cache_project:"z3-dev"
+        Canary_step_builder.derive_steps ~root ~project:z3_ci_project
           (Canary_project_z3.z3_ci_spec gh_root distro) };
     (* SQLite: system lib + opam binding *)
     { id = "sqlite";
@@ -60,7 +60,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_step_builder.(derive_steps ~root ~project:"sqlite" ~cache_project:"sqlite"
+        Canary_step_builder.(derive_steps ~root ~project:"sqlite"
           (no_source (Canary_project_sqlite.sqlite_ci_spec ~workspace:"sqlite_ci"))) };
     (* zarith: classic Pattern A — apt libgmp-dev + opam zarith binding *)
     { id = "zarith";
@@ -69,7 +69,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_step_builder.(derive_steps ~root ~project:"zarith" ~cache_project:"zarith"
+        Canary_step_builder.(derive_steps ~root ~project:"zarith"
           (no_source Canary_project_zarith.runner_spec)) };
     (* ssl: Pattern A second datapoint — apt libssl-dev + opam ssl binding;
        libssl/libcrypto symbol watchlist surfaces OpenSSL 1.x→3.x drift. *)
@@ -79,7 +79,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_step_builder.(derive_steps ~root ~project:"ssl" ~cache_project:"ssl"
+        Canary_step_builder.(derive_steps ~root ~project:"ssl"
           (no_source Canary_project_ssl.ci_spec)) };
     (* cairo: Pattern A graphics — apt libcairo2-dev + opam cairo2 binding.
        First new project on the post-redesign machinery (Derived fetch_lib). *)
@@ -89,7 +89,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_step_builder.(derive_steps ~root ~project:"cairo" ~cache_project:"cairo"
+        Canary_step_builder.(derive_steps ~root ~project:"cairo"
           (no_source Canary_project_cairo.runner_spec)) };
     (* libffi: Pattern A — apt libffi-dev + opam ctypes-foreign binding.
        First Dynamic_ffi project (ctypes resolves C calls at runtime). *)
@@ -99,7 +99,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_step_builder.(derive_steps ~root ~project:"libffi" ~cache_project:"libffi"
+        Canary_step_builder.(derive_steps ~root ~project:"libffi"
           (no_source Canary_project_libffi.runner_spec)) };
   ]
 

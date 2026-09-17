@@ -22,7 +22,6 @@ let root = "_out/canary/test/cache-test"
    that caused bug B. *)
 let mk_step ~(dir : string) ~(rc : int) : SM.step =
   { tag = "probe";
-    cache_key = "cache-test:probe";
     output_tag = "probe";
     output_dir = dir;
     project_dir = dir;

@@ -675,7 +675,7 @@ let default_check_post action ~output_dir ~variant_key =
 let out_of ~root ~project ~tag =
   output_dir_for ~root ~project ~tag
 
-let mk_step ~root ~project ~cache_project ~tag ?output_tag ~action ~deps ~cmd
+let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None)
     ?(disabled_agreements = []) ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
@@ -686,7 +686,6 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~action ~deps ~cmd
     | None -> ""
   in
   { tag;
-    cache_key = cache_project ^ ":" ^ tag;
     output_tag;
     output_dir;
     project_dir;
@@ -1045,7 +1044,7 @@ let agreement_ctx_of_action ~(world : Canary_artifact.assignment)
       match langs with l :: _ -> ctx l | [] -> None)
   | _ -> None
 
-let derive_steps ~root ~project ?(cache_project = project)
+let derive_steps ~root ~project
     ?(langs = Canary_lang.[ OCaml ]) ?(world = [])
     ?(mechanism_of =
       fun l -> Canary_mechanism.mechanism_of_lang_exn l)
@@ -1059,7 +1058,7 @@ let derive_steps ~root ~project ?(cache_project = project)
     in
     let expectation = spec.expectation action None in
     let symbol_check = spec.symbol_check action in
-    mk_step ~root ~project ~cache_project ~tag ~action ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements ()
+    mk_step ~root ~project ~tag ~action ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements ()
   in
   (* Optional follow-up step that writes a summary file for an artifact.
      Writes into the PARENT's output_dir (alongside probe.log) rather than
@@ -1075,7 +1074,7 @@ let derive_steps ~root ~project ?(cache_project = project)
     let check_post ~output_dir ~variant_key =
       has_file ~output_dir (Canary_basic.filename ~variant_key ~base:base_name ~ext:"json")
     in
-    mk_step ~root ~project ~cache_project ~tag
+    mk_step ~root ~project ~tag
       ~output_tag:parent_tag ~action
       ~deps:[ parent_tag ]
       ~cmd:inspect_cmd ~check_post ~expectation:Expect_success
@@ -1297,7 +1296,7 @@ let derive_steps ~root ~project ?(cache_project = project)
     let check_post ~output_dir ~variant_key =
       has_file ~output_dir (Canary_basic.variant_file ~variant_key "scan.ok")
     in
-    mk_step ~root ~project ~cache_project ~tag:"scan_source"
+    mk_step ~root ~project ~tag:"scan_source"
       ~output_tag:fetch_tag ~action:(Fetch Source)
       ~deps:[ fetch_tag ]
       ~cmd:scan_cmd ~check_post ~expectation:Expect_success
@@ -1337,7 +1336,7 @@ let derive_steps ~root ~project ?(cache_project = project)
                     with_world_asserts ~asserts ~output_dir ~variant_key
                       (cmd ~output_dir ~variant_key)
                 in
-                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
+                let base = mk_step ~root ~project ~tag:ptag ~action
                   ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
         | Probe_binding lang ->
@@ -1369,7 +1368,7 @@ let derive_steps ~root ~project ?(cache_project = project)
                     with_world_asserts ~asserts ~output_dir ~variant_key
                       (cmd ~output_dir ~variant_key)
                 in
-                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
+                let base = mk_step ~root ~project ~tag:ptag ~action
                   ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
         | _ ->

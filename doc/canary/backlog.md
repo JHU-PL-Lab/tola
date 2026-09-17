@@ -611,6 +611,23 @@ No hurry — all items below are queued for when their forcing function arrives.
       evaluator cannot tell them apart — it knows only which paths it
       looked for. Distinguishing THOSE two is the placement bullet
       above, not an outcome question.
+    - **THE OTHER CACHE IS GONE** (2026-09-16, user: *"delete it or gate
+      it — do not build an artifact cache while it sits there"*). The
+      global CI cache (`canary cache-sync`, `--cache`, `?global_cache`,
+      `step.cache_key`) is deleted. It could not produce a hit and had
+      not been able to since A5 — `cache-sync` wrote keys from the CI
+      job specs, the only callers overriding `cache_project`, while a
+      local run used the per-scenario default — and it was reachable
+      only from the tiny runner, bypassed the fingerprint /
+      `check_post` / switch / platform gates, and was fed by a file that
+      never existed. Written up in
+      [`design/artifact_cache.md`](design/artifact_cache.md) §1, along
+      with the two open items the artifact-cache key needs before it can
+      be built: the **world's toolchain** (compiler, linker — nothing
+      records either, while the switch and platform already ride the
+      fingerprint and show the shape) and **`step_identity.md`**, where
+      a step's tag depends on how many siblings it has, which is a
+      cache-key defect wearing a naming hat.
     - **Who writes it.** An inspection is attached by `derive_steps`
       from the project's declarations. `Native_lib_probe` emitting a
       summary (2026-09-13) removed a whole class of per-project work,

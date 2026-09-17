@@ -1915,7 +1915,6 @@ let marker_stale_on_spec_change_pin : pure_test =
       let out = "_out/canary/test" in
       let mk_step cmd_s =
         { Canary_step_model.tag = "build_lib";
-          cache_key = "build_lib";
           output_tag = "build_lib";
           output_dir = out ^ "/marker-fixture";
           project_dir = "_out/canary/projects/marker-fixture";
@@ -2845,7 +2844,6 @@ let agreement_action_path_pin : pure_test =
         let logger = Canary_step_model.create_logger ~log_path in
         let step : Canary_step_model.step =
           { tag = "probe_binding_ocaml";
-            cache_key = project ^ ":probe_binding_ocaml";
             output_tag = "probe_binding_ocaml";
             output_dir = project_dir ^ "/probe_binding/ocaml";
             project_dir;
@@ -3014,7 +3012,6 @@ let agreement_acceptance_pin : pure_test =
         let logger = Canary_step_model.create_logger ~log_path in
         let step : Canary_step_model.step =
           { tag = "probe_binding_ocaml";
-            cache_key = project ^ ":probe_binding_ocaml";
             output_tag = "probe_binding_ocaml";
             output_dir = project_dir ^ "/probe_binding/ocaml";
             project_dir;

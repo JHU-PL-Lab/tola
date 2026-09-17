@@ -103,9 +103,16 @@ type step_expectation =
     own postcondition; it just has no agreement to select. *)
 type agreement_ctx = Canary_agreement_common.action_context
 
+(* [cache_key : string] was here until 2026-09-16. It was
+   "<cache_project>:<tag>", the key of the global CI cache, and when
+   that was deleted the field became written-and-never-read. It is
+   removed rather than kept because an artifact cache is the thing that
+   WILL want a key field, and a dead one of the wrong shape sitting
+   here is how it would get reused by mistake — the key that design
+   needs is a content hash plus the world's toolchain, which this was
+   not. See [Canary_local_runner]'s header. *)
 type step = {
   tag : string;
-  cache_key : string;
   output_tag : string;
   output_dir : string;
   project_dir : string;

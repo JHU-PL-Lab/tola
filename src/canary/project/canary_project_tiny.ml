@@ -283,7 +283,7 @@ let project_run_of_tiny1 ~(name : string) : project_run =
 (* ── tiny1 run helpers (moved from bin 2026-08-10) ── *)
 
 let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
-    ~cache_path ~(cli_disabled : Canary_agreement_common.agreement_id list) ~name () =
+    ~(cli_disabled : Canary_agreement_common.agreement_id list) ~name () =
   let name = TS.name_of_string name in
   let workspace =
     match workspace_override with
@@ -316,7 +316,7 @@ let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
     Canary_run_info.run_project ~failfast ~run_info:
       (Canary_run_info.mk_run_info ~project:"tiny" ~version:"in_tree"
          ~ref_:"" ~source:"prebuilt" ~extra:[] steps)
-      ?cache_path ~root ~project steps
+      ~root ~project steps
   in
   ()
 
@@ -333,7 +333,7 @@ let run_assembled ~root ~failfast ~tag : unit =
        | Some assembled ->
            Fmt.pr "assembled tree: %s\n" assembled;
            run_tiny_scenario ~workspace_override:assembled ~root ~failfast
-             ~cache_path:None ~cli_disabled:[] ~name:s.scenario.name ();
+             ~cli_disabled:[] ~name:s.scenario.name ();
            Fmt.pr "\n. tiny-full assembled run [%s %s -> %s]: %s\n"
              tag s.scenario.name key
              (Canary_project_run.scenario_status_of_run_state ()))
@@ -345,7 +345,7 @@ let run_built_lib ~root : unit =
   | Some ws ->
       Fmt.pr "source-only-lib tree: %s\n  (no pre-built libtiny.so)\n" ws;
       (try run_tiny_scenario ~workspace_override:ws ~agnostic:true ~root
-             ~failfast:false ~cache_path:None ~cli_disabled:[]
+             ~failfast:false ~cli_disabled:[]
              ~name:"app_over_binding_ocaml" ()
        with _ -> ());
       Fmt.pr "\n. tiny-full built-lib (provision=Built): %s\n"
@@ -367,7 +367,7 @@ let run_assembled_combo ~root ~tags : unit =
     | Some ws ->
         Fmt.pr "assembled combo tree: %s\n" ws;
         run_tiny_scenario ~workspace_override:ws ~agnostic:true ~root
-          ~failfast:false ~cache_path:None ~cli_disabled:[]
+          ~failfast:false ~cli_disabled:[]
           ~name:"app_over_binding_ocaml" ();
         Fmt.pr "\n. tiny-full combo [%s]: %s\n" label
           (Canary_project_run.scenario_status_of_run_state ())

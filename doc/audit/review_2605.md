@@ -85,7 +85,7 @@ The repo is two projects in one tree:
 ### F7 — [MEDIUM] CI does not run the project's own tests
 
 - `.github/workflows/canary_ci.yml` (+ `debug.yml`) are single-purpose: LLVM-19 and SQLite fetch/probe shell pipelines, `ubuntu-latest` only. No `dune build`, no `dune runtest`, no `artifact-test`/`project-test`/`mutation-test` in CI — so **F1 would have been caught only locally**.
-- `canary ci` / `canary debug` (`src/bin/canary_main.ml:1531,1545`) generate `canary_ci.yml` / `debug.yml` into `.github/workflows` (default), but the checked-in files carry hand-tuned bits (path filters, `continue-on-error`); drift between generator output and checked-in file is unchecked. `cache-sync` hardcodes `--workflow=canary_ci.yml` (`canary_main.ml:1396`).
+- `canary ci` / `canary debug` (`src/bin/canary_main.ml:1531,1545`) generate `canary_ci.yml` / `debug.yml` into `.github/workflows` (default), but the checked-in files carry hand-tuned bits (path filters, `continue-on-error`); drift between generator output and checked-in file is unchecked. (`cache-sync`, which also hardcoded `--workflow=canary_ci.yml`, was deleted 2026-09-16 — see `doc/canary/design/artifact_cache.md` §1.)
 - CLAUDE.md "macOS support" tracks the runner matrix as a known gap (`canary_gh.ml:174` renders `runs-on: %{runner_os}`, default `ubuntu-latest`).
 - **Suggested fix**: add a `test` job (setup-ocaml → `opam install . --deps-only --with-test` → `dune build` → `dune runtest` → `canary artifact-test` + `project-test` + `mutation-test`) gated on `src/**`+`canary/**`; add a CI check that `canary ci` output is byte-identical to the committed workflow.
 

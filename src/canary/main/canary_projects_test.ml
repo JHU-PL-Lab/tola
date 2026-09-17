@@ -1679,7 +1679,7 @@ let canary_switch_pin : Canary_project_test.pure_test =
         let fingerprint_under sw =
           Canary_store.opam_switch := sw;
           let step : Canary_step_model.step =
-            { tag = "probe"; cache_key = "k"; output_tag = "o"; output_dir = "d";
+            { tag = "probe"; output_tag = "o"; output_dir = "d";
               project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
               deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
               check_pre = (fun () -> true);
@@ -1780,7 +1780,7 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         let fingerprint_under d =
           Canary_store.set_platform d;
           let step : Canary_step_model.step =
-            { tag = "probe"; cache_key = "k"; output_tag = "o"; output_dir = "d";
+            { tag = "probe"; output_tag = "o"; output_dir = "d";
               project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
               deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
               check_pre = (fun () -> true);
@@ -1873,7 +1873,7 @@ let strict_mode_pin : Canary_project_test.pure_test =
         let saved = Canary_agreement_common.strict_mode () in
         let restore () = Canary_agreement_common.set_strict saved in
         let step : Canary_step_model.step =
-          { tag = "probe"; cache_key = "k"; output_tag = "o"; output_dir = "d";
+          { tag = "probe"; output_tag = "o"; output_dir = "d";
             project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
             deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
             check_pre = (fun () -> true);
@@ -2313,7 +2313,7 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
     check =
       (fun () ->
         let step_with exp : Canary_step_model.step =
-          { tag = "probe_binding_ocaml"; cache_key = "k"; output_tag = "probe_binding_ocaml";
+          { tag = "probe_binding_ocaml"; output_tag = "probe_binding_ocaml";
             output_dir = "d"; project_dir = "p"; variant_id = "v";
             action = Canary_basic.Probe_binding Canary_lang.OCaml; deps = [];
             cmd = (fun ~output_dir:_ ~variant_key:_ -> "run it");
