@@ -4292,18 +4292,29 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
               ~f:(fun (_, cells) -> List.count cells ~f:(fun (_, m) -> f m))
           in
           let open Canary_agreement in
-          (* every table on the page is named *)
-          count "<h2>" = 3
-          && String.is_substring h ~substring:"The check key"
+          (* every table on the page is named. TWO since 2026-09-17:
+             the check key was absorbed into the grid, because its
+             columns were five of the grid's and two of its tooltips. *)
+          count "<h2>" = 2
           && String.is_substring h ~substring:"The recovery grid"
           && String.is_substring h ~substring:"The result matrix"
+          && not (String.is_substring h ~substring:"The check key")
           (* one cell per (agreement × column), and the marks agree *)
           && count "class=\"g " = List.length grid * cols
           && count "class=\"g rd\""
              = tally (function Rooted_and_detected -> true | _ -> false)
           && count "class=\"g rr\"" = tally (function Rooted -> true | _ -> false)
           && count "class=\"g dd\""
-             = tally (function Detected -> true | _ -> false)) }
+             = tally (function Detected -> true | _ -> false)
+          (* the absorbed columns: a mech and a fmt mark per agreement,
+             and the short code that WAS the key's first column *)
+          && count "class=\"mk\"" >= 2 * List.length grid
+          && List.for_all grid ~f:(fun (r, _) ->
+                 String.is_substring h
+                   ~substring:
+                     (">"
+                     ^ Canary_agreement_common.short_code_of_slug r.ag_slug
+                     ^ "</td>"))) }
 
 (* THE CHECK CELL (2026-09-14): the three things it must get right,
    each of which it got wrong at least once while being written.

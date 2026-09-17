@@ -16,16 +16,22 @@ template from the record:
 
 | # | table | what it is |
 | --- | --- | --- |
-| 1 | the check key | what each short column code means, with its tallies and blames |
-| 2 | **the recovery grid** | one row per AGREEMENT over the same action columns — `R` where the rule ran, `D` where the check fires, `R+D` both. Registry-wide, so it does not vary with the rows |
-| 3 | the result matrix | one row per enumerated WORLD — what a run decided |
+| 1 | **the recovery grid** | one row per AGREEMENT over the same action columns — `R` where the rule ran, `D` where the check fires, `R+D` both — plus its short code, the mechanisms that can carry it, the object formats it ranges over, the lag, and what the rows below decided and blame |
+| 2 | the result matrix | one row per enumerated WORLD — what a run decided |
 
-Table 2 is table 3's TEMPLATE. An empty column in the matrix can be
+Table 1 is table 2's TEMPLATE. An empty column in the matrix can be
 looked up in the grid to see whether anything was ever meant to fill it,
-which is the question the matrix alone could not answer. `make view`
-regenerates the page; `canary checks --firing` prints the same grid in
-the terminal, and `matrix.page_titles_and_recovery_grid` pins the two
-renderings to one value.
+which is the question the matrix alone could not answer.
+
+**It was three tables until 2026-09-17**, and the third was a check key
+listing code / agreement / rooting action / tool / artifact / decided /
+blame. Those are five of the grid's columns and two of its tooltips, so
+the key was absorbed: two tables explaining one thing is how they drift.
+
+`make view` regenerates the page; `canary checks --firing` prints the
+same grid in the terminal, and `matrix.page_titles_and_recovery_grid`
+pins the two renderings to one value — it counts the HTML's cells
+against what `recovery_table` computes.
 
 > 2026-08-19. Opened by the user's observation on the sqlite rows: "ref
 > is not the only world … how do you explain #6?" **Resolved the same

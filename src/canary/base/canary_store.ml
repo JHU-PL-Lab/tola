@@ -249,6 +249,30 @@ let string_of_platform = function
   | Wsl -> "wsl_ubuntu"
   | MacOS_local -> "macos_local"
 
+(** The object format this platform's toolchain produces. Derived, not
+    declared: a platform has exactly one, and giving it its own
+    declaration would be a second place to get it wrong. *)
+(** THE OBJECT FORMAT (2026-09-17). Vocabulary, because a claim can be
+    inapplicable for a reason that is neither the mechanism's nor the
+    project's: Mach-O has no symbol versioning at all, so the two
+    version-node agreements range over something that does not exist
+    there. That is a fact about the FORMAT, and without a value the only
+    way to state it is prose.
+
+    Here rather than in [Canary_basic] because a format is DERIVED from
+    the platform and [distro] lives here — putting the type one module up
+    would make [canary_store] depend on [canary_basic], reversing the
+    direction those two already have. *)
+type object_format = Elf | Macho [@@deriving eq]
+
+let string_of_object_format = function Elf -> "elf" | Macho -> "macho"
+
+(** Derived, not declared: a platform has exactly one format, and giving
+    it its own declaration would be a second place to get it wrong. *)
+let object_format_of_platform : distro -> object_format = function
+  | Wsl -> Elf
+  | MacOS_local -> Macho
+
 let detected_platform =
   lazy
     (match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with

@@ -2478,6 +2478,46 @@ let agreement_bridge_pins : pure_test list =
                      registry must agree that it is either unrooted or
                      rooted in an action this graph does not contain *)
                   roots = 0)) };
+    (* THE FORMAT DIMENSION IS REAL, NOT DECORATIVE (2026-09-17).
+
+       `ag_formats` is a third reason a claim can be inapplicable, and
+       the risk with a defaulted field is that it defaults everywhere
+       and says nothing. Two claims:
+
+       (a) it is USED — at least one agreement is format-restricted,
+           otherwise the column is a constant and should be deleted;
+       (b) it restricts the RIGHT ones. Mach-O has no symbol versioning,
+           so exactly the two version-node agreements are ELF-only.
+           Naming them is the point: if a third becomes ELF-only, that
+           is a claim about object formats and someone should have to
+           say so here.
+
+       Not pinned: that a format-restricted agreement reports
+       `not_applicable` at run time on the other platform. Nothing
+       consults `ag_formats` during evaluation yet — it is a reporting
+       value today, and pretending otherwise is what a vacuous pin
+       does. *)
+    { name = "agreements.formats_restrict_the_version_claims";
+      check =
+        (fun () ->
+          let elf_only =
+            List.filter_map CR.agreement_registry ~f:(fun r ->
+                match r.CR.ag_formats with
+                | [ Canary_store.Elf ] -> Some r.CR.ag_slug
+                | _ -> None)
+            |> List.sort ~compare:String.compare
+          in
+          let all_both =
+            List.for_all CR.agreement_registry ~f:(fun r ->
+                match r.CR.ag_formats with
+                | [ _; _ ] -> true
+                | [ Canary_store.Elf ] ->
+                    List.mem elf_only r.CR.ag_slug ~equal:String.equal
+                | _ -> false)
+          in
+          List.equal String.equal elf_only
+            [ "declared_versions_exported"; "required_versions_exported" ]
+          && all_both) };
     { name = "agreements.planned_says_what_it_waits_on";
       check =
         (fun () ->

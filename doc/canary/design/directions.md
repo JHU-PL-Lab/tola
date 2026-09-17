@@ -210,35 +210,83 @@ the interesting cases are SEQUENCES, and enumerating short sequences
 over a small operation set is exactly what a generator does well and a
 human does badly.
 
-### Where the generated files live
+### Where the generator lives
 
-The user's call, and it is the right one: *"we need to prepare those
-files, either in a canary place, or in our forked repo, which may looks
-better."*
+**`action/canary_correspondence_gen.ml`**, a sibling of
+`canary_binding_templates.ml`. That module already does
+`binding_decl × ctx → command builders`; this one does
+`binding_decl → driver source`. Same input, same layer, same reason to
+be in `action/`: it is a pure function from a declaration, and the
+project supplies no part of it.
 
-**The fork.** Three reasons, and the third is the one that decides it:
+It emits two drivers plus a case file per binding: the C driver, the
+binding driver, and the inputs they both read. Canary never runs them —
+the fork's build does — so the generator produces TEXT and nothing else,
+which also makes it unit-testable with no world.
 
-1. A generated driver has to COMPILE against the project's own headers
-   and build system. In the fork it is an ordinary target; under
-   `canary/` it needs the project's include paths reconstructed, which
-   is the `probe_lib` locator problem again
-   ([`action_model.md`](action_model.md) §5) and we already have three
-   vocabularies for it.
-2. It is the same place a real fix would go. Canary's findings are meant
-   to become upstream PRs, and a correspondence test that lives in the
-   fork beside the fix is a PR; one that lives in canary is a private
-   harness.
-3. **It keeps the ORACLE and the SUBJECT in one repository at one
-   commit.** The whole claim is *these two sides agree*, and the two
-   sides are the project's own C and binding source. Splitting them
-   across repositories means the test can go stale against the thing it
-   tests, silently — which is the placement class (backlog §50) all over
-   again, at a coarser granularity.
+### Where the generated files live, and how git should carry them
 
-Canary's side is then the GENERATOR and the comparison, not the cases:
-it emits into the fork's tree, the fork builds them, canary reads the
-two transcripts. That also answers who owns a failure — the fork owns
-the drivers, canary owns the verdict.
+**The fork**, and the reason is that a driver must COMPILE against the
+project's own headers and build system: in the fork it is an ordinary
+target, under `canary/` it needs the include paths reconstructed, which
+is the locator problem again ([`action_model.md`](action_model.md) §5)
+and we have three vocabularies for it already.
+
+**But not on the fix branch**, which is the user's concern: *"does the
+committed testcase bring more concerns if we want to make a PR that
+targets an api bugfix?"* Yes it does — and canary has already answered
+this question once, for packaging, in
+[`wrapper_packages.md`](wrapper_packages.md) §1. The rule there
+generalises exactly:
+
+> Putting it in the fork would (a) duplicate it per ref, (b) **pollute
+> the upstream-reportable fix branch with workflow concerns upstream
+> would never merge.**
+
+So: **a branch is PR-ready or it is workflow, never both.**
+
+| branch | holds | ever PR'd? |
+| --- | --- | --- |
+| `fix/<thing>` | the bugfix alone, off upstream | **yes** — this is the PR |
+| `canary/correspondence` | the generated drivers and cases | **no** |
+
+The two never merge. `canary/correspondence` rebases onto the fix branch
+(or onto upstream) so it always tests the current tree; nothing flows
+the other way.
+
+**When a generated case finds a bug, the PR does not carry the
+generator's output.** It carries a hand-minimised reproducer — which is
+a different artifact with a different purpose: generated cases are for
+FINDING, a minimal case is for REPORTING, and a maintainer reviewing a
+one-line fix should not be handed a corpus. That split is also why the
+noise question has a clean answer rather than a trade-off.
+
+### Canary still tracks it, because canary regenerates it
+
+The user's point, and it decides the shape: *"even it should be in the
+fork, we (canary) shall still track it, since canary may update it."*
+
+Two consequences:
+
+1. **The branch is a repo record**, exactly like z3's `arbipher` fork —
+   a `Repo_axes` entry with `label = Some "canary-correspondence"`,
+   `official = false`, and a ref. That is machinery canary already has,
+   and it means the branch is a version point the enumeration can range
+   over rather than something a human remembers to update.
+2. **The drivers are a BUILD PRODUCT under version control**, in the
+   same sense as `catalogue.md`: committed so the fork builds without
+   canary present, generated so they cannot drift from the declaration.
+   The pin is the same shape — regenerate, diff, fail if they differ —
+   and it is the reason to keep the generator pure text.
+
+⚠ The pin has to run where the fork is checked out, which
+`agreement-catalogue`'s does not. That is the one genuinely new
+mechanism here, and it is worth deciding before writing the generator:
+either canary regenerates into the fork and diffs (needs the checkout,
+which the source-repo record already gives it), or the fork's own CI
+runs the generator (needs canary installed there). **The first**, for
+the same reason the round-trip gate lives here: canary owns the
+assertion that its own output is current.
 
 ### How to construct the cases
 

@@ -87,6 +87,27 @@ type agreement_row = {
 
           It pointed into `registry.md` until 2026-09-17, when that file
           split; the §-numbers did not move, only the filename. *)
+  ag_formats : Canary_store.object_format list;
+      (** THE OBJECT FORMATS this claim can range over (2026-09-17,
+          user, when the recovery grid gained a platform column).
+
+          A third reason a claim can be inapplicable, beside the
+          mechanism and the project's declaration: **the format has no
+          such thing.** Mach-O carries no symbol versioning at all, so
+          the two version-node agreements are not unwired there and not
+          missing evidence — there is nothing of that kind to read, on
+          any project, ever.
+
+          Stating it as a value rather than prose is what lets the grid
+          have a column. It is NOT the open question about Mach-O's
+          `compatibility_version` (`directions.md` §3): that asks
+          whether to ADD a library-granularity floor agreement, and this
+          only records that the SYMBOL-granularity ones do not apply.
+
+          On the ROW rather than in the family's `agreement` record,
+          like [ag_doc] and [ag_waiting_on]: a family states the CLAIM,
+          and which formats carry it is a fact about the world the
+          registry is placing that claim in. *)
   ag_waiting_on : string option;
       (** WHAT WOULD LAND THIS, or [None] when nothing known blocks it
           (2026-09-17, user: "a rewrite for catalogue with completed
@@ -113,11 +134,15 @@ type agreement_row = {
       (** EVERYTHING ELSE, stated by the family's own module *)
 }
 
-let row ?(enabled = true) ?waiting_on ~doc (id : agreement_id) : agreement_row =
+let all_formats = Canary_store.[ Elf; Macho ]
+
+let row ?(enabled = true) ?waiting_on ?(formats = all_formats) ~doc
+    (id : agreement_id) : agreement_row =
   { ag_id = id;
     ag_slug = string_of_agreement_id id;
     ag_doc = doc;
     ag_waiting_on = waiting_on;
+    ag_formats = formats;
     ag_enabled = enabled;
     ag = agreement_of id }
 
@@ -137,13 +162,15 @@ let agreement_registry : agreement_row list =
          the expectation, the second the comparison";
     row Soname_matches_declaration ~doc:"§2.2";
     row Soname_matches_requirement ~doc:"§4.1";
-    row Declared_versions_exported ~doc:"§2.2"
+    (* ELF ONLY: Mach-O has no symbol versioning, so there is nothing
+       of this kind to range over there — not unwired, absent. *)
+    row Declared_versions_exported ~doc:"§2.2" ~formats:[ Canary_store.Elf ]
       ~waiting_on:
         "a project that BUILDS a library carrying a version script. \
          sqlite builds without one, so there are no version nodes and \
          `vacuous` is the truth rather than a gap; openssl has one and \
          canary fetches its lib, so build_lib never fires there";
-    row Required_versions_exported ~doc:"§4.1";
+    row Required_versions_exported ~doc:"§4.1" ~formats:[ Canary_store.Elf ];
     row Signatures_agree ~doc:"§3.1.2"
       ~waiting_on:
         "the source-scanning inspectors, which no project wires. Also a \
@@ -696,6 +723,30 @@ let pp_firing_table ?(mechanism = Canary_mechanism.Cstubs)
         "∅ mechanism offers no such claim   × off in registry   · does not \
          fire here" ])
 
+(** A row's implementation status, DERIVED from its methods rather than
+    declared. [Partly] is the state the old single [status] field could
+    not express and the audit kept tripping over. *)
+type status =
+  | Evaluated       (** every method has an evaluator *)
+  | Partly          (** some do *)
+  | Planned_only    (** none do; it is selected and reports not_implemented *)
+  | Off_in_registry
+  | Proposed        (** no family implements it at all *)
+
+let string_of_status = function
+  | Evaluated -> "evaluated"
+  | Partly -> "partly-evaluated"
+  | Planned_only -> "planned"
+  | Off_in_registry -> "off"
+  | Proposed -> "proposed"
+
+let status_of_row (r : agreement_row) : status =
+  if not r.ag_enabled then Off_in_registry
+  else
+    let n = List.length r.ag.ag_methods in
+    let impl = List.count r.ag.ag_methods ~f:(fun m -> Option.is_some m.m_eval) in
+    if impl = 0 then Planned_only else if impl = n then Evaluated else Partly
+
 (* ── THE RECOVERY GRID (2026-09-17, user) ───────────────────────────
 
    The firing table above answers *where is this DETECTED*. That is half
@@ -823,27 +874,74 @@ let recovery_lag ?(mechanism = Canary_mechanism.Cstubs)
         (List.fold ds ~init:Int.max_value ~f:(fun best d ->
              List.fold rs ~init:best ~f:(fun best rt -> Int.min best (abs (d - rt)))))
 
+(** WHICH MECHANISMS CAN CARRY THIS CLAIM — the catalogue's five, asked
+    one at a time (2026-09-17, user: "we can add a few columns … other
+    columns for eight cells or mechanism").
+
+    It is the same [suits_here] the result table and the check index
+    ask, ranged over the mechanism axis instead of held fixed. A claim
+    no mechanism can carry would be dead; one every mechanism carries is
+    format- or declaration-gated instead, which is what the other two
+    columns are for. *)
+let carrying_mechanisms (r : agreement_row) :
+    (Canary_mechanism.mechanism * bool) list =
+  List.map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+      let m = i.Canary_mechanism.mi_mechanism in
+      let lang = i.Canary_mechanism.mi_lang in
+      ( m,
+        List.exists r.ag.ag_methods
+          ~f:(suits_here ~mechanism:m ~lang ~declared:None) ))
+
+(** A compact mechanism mark: the initials of the mechanisms that carry
+    it, dotted where they do not. Two characters each would double the
+    width for no information — the ORDER is the catalogue's and fixed,
+    so position identifies the mechanism. *)
+let mechanism_marks (r : agreement_row) : string =
+  String.concat ~sep:""
+    (List.map (carrying_mechanisms r) ~f:(fun (m, ok) ->
+         if not ok then "·"
+         else
+           match m with
+           | Canary_mechanism.Cstubs -> "S"
+           | Canary_mechanism.Cext -> "E"
+           | Canary_mechanism.Ctypes -> "T"
+           | Canary_mechanism.Cffi -> "F"
+           | Canary_mechanism.Dynlink -> "D"))
+
+let format_marks (r : agreement_row) : string =
+  String.concat ~sep:""
+    (List.map all_formats ~f:(fun f ->
+         if
+           List.exists r.ag_formats ~f:(fun g ->
+               Canary_store.equal_object_format f g)
+         then match f with Canary_store.Elf -> "E" | Canary_store.Macho -> "M"
+         else "·"))
+
 (** Render the recovery grid as text. *)
 let pp_recovery_table ?(mechanism = Canary_mechanism.Cstubs)
     ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () : string =
   let m = recovery_table ~mechanism ~lang ~provision () in
   let cols = firing_columns lang in
   let head =
-    Printf.sprintf "%-28s | " "agreement"
+    Printf.sprintf "%-4s %-28s | " "code" "agreement"
     ^ String.concat ~sep:" | "
         (List.map cols ~f:Canary_basic.string_of_action)
-    ^ " | lag"
+    ^ " | lag | mech  | fmt | status"
   in
   let body =
     List.map m ~f:(fun (r, cells) ->
-        Printf.sprintf "%-28s | %s | %s" r.ag_slug
+        Printf.sprintf "%-4s %-28s | %s | %3s | %-5s | %-3s | %s"
+          (short_code_of_slug r.ag_slug)
+          r.ag_slug
           (String.concat ~sep:" | "
              (List.map cells ~f:(fun (a, mk) ->
                   let w = String.length (Canary_basic.string_of_action a) in
                   recovery_mark_char mk ^ String.make (max 0 (w - 1)) ' ')))
           (match recovery_lag ~mechanism ~lang ~provision r with
            | Some d -> Int.to_string d
-           | None -> "-"))
+           | None -> "-")
+          (mechanism_marks r) (format_marks r)
+          (string_of_status (status_of_row r)))
   in
   String.concat ~sep:"\n"
     (Printf.sprintf "recovery grid — %s / %s, over a %s world"
@@ -857,6 +955,12 @@ let pp_recovery_table ?(mechanism = Canary_mechanism.Cstubs)
         "D  a method FIRES here, reading what survived";
         "◉  both: the check fires at the very action whose rule it recovers";
         "·  neither";
+        "";
+        "mech  = which MECHANISM can carry the claim, in catalogue order:";
+        "        S cstubs · E cext · T ctypes · F cffi · D dynlink";
+        "fmt   = which OBJECT FORMAT it can range over: E elf · M mach-o.";
+        "        `E·` is not a gap — Mach-O has no symbol versioning, so a";
+        "        version-node claim has nothing of that kind to read there.";
         "";
         "lag = action patterns between the root and the nearest firing. It is \
          NOT";
@@ -1016,30 +1120,6 @@ let proposed_agreements : proposed list =
          (components.md §5.6)" } ]
 
 (* ── the unified view — one list to print, cite and pin ──────────── *)
-
-(** A row's implementation status, DERIVED from its methods rather than
-    declared. [Partly] is the state the old single [status] field could
-    not express and the audit kept tripping over. *)
-type status =
-  | Evaluated       (** every method has an evaluator *)
-  | Partly          (** some do *)
-  | Planned_only    (** none do; it is selected and reports not_implemented *)
-  | Off_in_registry
-  | Proposed        (** no family implements it at all *)
-
-let string_of_status = function
-  | Evaluated -> "evaluated"
-  | Partly -> "partly-evaluated"
-  | Planned_only -> "planned"
-  | Off_in_registry -> "off"
-  | Proposed -> "proposed"
-
-let status_of_row (r : agreement_row) : status =
-  if not r.ag_enabled then Off_in_registry
-  else
-    let n = List.length r.ag.ag_methods in
-    let impl = List.count r.ag.ag_methods ~f:(fun m -> Option.is_some m.m_eval) in
-    if impl = 0 then Planned_only else if impl = n then Evaluated else Partly
 
 type entry = {
   e_slug : string;

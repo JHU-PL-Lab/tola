@@ -133,13 +133,20 @@ every real project until 2026-09-12, and only the second could tell.
 
 ## Which table is which
 
-Three docs here carry tables and they answer different questions. If you
-only want one: **[`catalogue.md`](catalogue.md)**, which is generated and
-complete.
+**If you only want one: the RECOVERY GRID** — `canary checks --firing`,
+or table 1 of `make view`. One row per agreement, the action patterns as
+columns, `R` where the rule ran and `D` where the check fires, plus the
+short code, the mechanisms that can carry it, the object formats it
+ranges over, and the lag between root and firing. It absorbed the
+result page's separate check-key table on 2026-09-17, because that key's
+columns were five of the grid's and two of its tooltips.
+
+The rest answer different questions:
 
 | table | in | answers |
 | --- | --- | --- |
-| **what each one recovers** | [`catalogue.md`](catalogue.md) | the registry at a glance — action, tool, artifact, planned status. Start here |
+| **the recovery grid** | `canary checks --firing`, `make view` table 1 | **start here** — every agreement, where its rule ran, where it is checked, which mechanisms and formats carry it |
+| what each one recovers, in prose | [`catalogue.md`](catalogue.md) | the same rooting as a sentence per row, with the tool and the artifact spelled out |
 | per-agreement records | [`catalogue.md`](catalogue.md) | what IS this agreement — claim, whose rule it recovers, where it looks, worked examples |
 | the distance-0 backlog | [`landing.md`](landing.md) | which unregistered checks are cheapest to add |
 | full-information per action | [`theory.md`](theory.md) §5 | what each real tool established, and what survives of it |

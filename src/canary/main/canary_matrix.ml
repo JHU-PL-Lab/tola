@@ -1826,119 +1826,58 @@ let render_html (m : t) ~(generated_at : string) : string =
     acc
   in
   let is_group_start c = List.mem group_starts c ~equal:String.equal in
-  let check_key =
-    let rows =
-      List.filter (Canary_agreement.summary_rows ()) ~f:(fun r ->
-          List.exists m.check_columns ~f:(fun c ->
-              match String.lsplit2 c ~on:':' with
-              | Some (_, code) -> String.equal code r.Canary_agreement.sr_code
-              | None -> false))
-    in
-    (* WHAT THESE ROWS DECIDED, counted off the table itself
-       (2026-09-14, user: "now all the agreement check are evaluated?
-       it doesn't match the previous number").
-
-       The column here used to be [status], and it was tautological:
-       the key lists only agreements that CAN be decided — that is the
-       filter above — and then said of each that it was "evaluated".
-       Worse, it read as the landing count and disagreed with it,
-       because the two are different halves. [status] answers "does an
-       evaluator exist", which is a fact about the code;
-       [canary checks --landing] answers "did a real run decide it",
-       which is a fact about runs, and only the second belongs beside a
-       table of runs.
-
-       Counted from the rendered cells rather than re-read from the
-       logs, so the key cannot disagree with the table it explains: if
-       a reader can see eight ticks in the [dse] column, the key says
-       eight. *)
-    let tally code =
-      let held = ref 0 and broke = ref 0 in
-      List.iter m.rows ~f:(fun (rr : row) ->
-          List.iter rr.cells ~f:(fun (tag, cell) ->
-              match (String.lsplit2 tag ~on:':', cell) with
-              | Some (_, c), Some cc when String.equal c code ->
-                  if String.equal cc.mark "✓" then Int.incr held
-                  else if String.equal cc.mark "✗" then Int.incr broke
-              | _ -> ()));
-      match (!held, !broke) with
-      | 0, 0 -> "<span class=\"kq\">not decided in any row</span>"
-      | h, 0 -> Printf.sprintf "%d ✓" h
-      | 0, b -> Printf.sprintf "%d ✗" b
-      | h, b -> Printf.sprintf "%d ✓ · %d ✗" h b
-    in
-    (* AND WHAT THOSE ROWS BLAME (2026-09-15, user: "before we fix that,
-       can we attribute it as one thing to blame in the table, so we can
-       see how eager we need to fix it").
-
-       Counted off the same rendered cells as [tally], for the same
-       reason: a key that re-derived its numbers could disagree with the
-       table it explains. A blank cell here means this agreement's rows
-       are all fine — which is the only row of the key a reader can skip. *)
-    let blame_tally code =
-      let counts : (string, int) Hashtbl.t = Hashtbl.create (module String) in
-      List.iter m.rows ~f:(fun (rr : row) ->
-          List.iter rr.cells ~f:(fun (tag, cell) ->
-              match (String.lsplit2 tag ~on:':', cell) with
-              | Some (_, c), Some cc when String.equal c code -> (
-                  match cc.blame with
-                  | None -> ()
-                  | Some b ->
-                      Hashtbl.update counts b ~f:(function
-                        | None -> 1
-                        | Some n -> n + 1))
-              | _ -> ()));
-      Hashtbl.to_alist counts
-      |> List.sort ~compare:(fun (_, a) (_, b) -> Int.compare b a)
-      |> List.map ~f:(fun (b, n) ->
-             Printf.sprintf "<span title=\"%s\">%d %s</span>" (esc
-               (Option.value
-                  (List.Assoc.find blame_gloss b ~equal:String.equal)
-                  ~default:""))
-               n (esc b))
-      |> String.concat ~sep:" · "
-    in
-    if List.is_empty rows then ""
-    else
-      "<table class=\"keytbl\"><thead><tr><th>code</th><th>agreement</th>\
-       <th>recovers</th><th>tool</th><th>about</th><th>decided here</th>\
-       <th>blame</th></tr></thead><tbody>"
-      ^ String.concat ~sep:""
-          (List.map rows ~f:(fun r ->
-               Printf.sprintf
-                 "<tr><td class=\"kc\">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-                 (esc r.Canary_agreement.sr_code)
-                 (esc r.Canary_agreement.sr_slug)
-                 (esc
-                    (if String.is_empty r.Canary_agreement.sr_action then "—"
-                     else r.Canary_agreement.sr_action))
-                 (esc r.Canary_agreement.sr_tool)
-                 (esc r.Canary_agreement.sr_artifact)
-                 (tally r.Canary_agreement.sr_code)
-                 (blame_tally r.Canary_agreement.sr_code)))
-      ^ "</tbody></table>"
-      (* the vocabulary, once, under the key it annotates — four words
-         and what each one asks of the reader *)
-      ^ "<p class=\"kq\">blame: "
-      ^ String.concat ~sep:" · "
-          (List.map blame_gloss ~f:(fun (w, g) ->
-               "<b>" ^ esc w ^ "</b> " ^ esc g))
-      ^ "</p>"
+  (* THE TALLIES, hoisted out of the retired check-key table
+     (2026-09-17). Counted from the RENDERED cells rather than re-read
+     from the logs, so a key cannot disagree with the table it explains:
+     if a reader can see eight ticks in the [dse] column, the tally says
+     eight. The recovery grid carries them now — see below for why there
+     is no longer a separate key. *)
+  let tally code =
+    let held = ref 0 and broke = ref 0 in
+    List.iter m.rows ~f:(fun (rr : row) ->
+        List.iter rr.cells ~f:(fun (tag, cell) ->
+            match (String.lsplit2 tag ~on:':', cell) with
+            | Some (_, c), Some cc when String.equal c code ->
+                if String.equal cc.mark "✓" then Int.incr held
+                else if String.equal cc.mark "✗" then Int.incr broke
+            | _ -> ()));
+    match (!held, !broke) with
+    | 0, 0 -> "<span class=\"kq\">not decided in any row</span>"
+    | h, 0 -> Printf.sprintf "%d ✓" h
+    | 0, b -> Printf.sprintf "%d ✗" b
+    | h, b -> Printf.sprintf "%d ✓ · %d ✗" h b
   in
-  (* ── THE RECOVERY GRID, on the page (2026-09-17, user) ───────────
+  (* AND WHAT THOSE ROWS BLAME (2026-09-15, user: "before we fix that,
+     can we attribute it as one thing to blame in the table, so we can
+     see how eager we need to fix it").
 
-     The result matrix below is CONCRETE — one row per enumerated world,
-     cells carrying what a run decided. This is its TEMPLATE: the same
-     action columns, but one row per agreement and the cells marking
-     where the rule RAN against where the check FIRES.
-
-     Putting the two on one page is the point. The concrete table says
-     what happened; this one says what the shape of the checking IS, so
-     a reader meeting an empty column below can look up here and see
-     whether anything was ever supposed to fill it.
-
-     It is registry-wide rather than per project, so it does not vary
-     with the rows and is rendered once. *)
+     Counted off the same rendered cells as [tally], for the same
+     reason: a key that re-derived its numbers could disagree with the
+     table it explains. A blank cell here means this agreement's rows
+     are all fine — which is the only row of the key a reader can skip. *)
+  let blame_tally code =
+    let counts : (string, int) Hashtbl.t = Hashtbl.create (module String) in
+    List.iter m.rows ~f:(fun (rr : row) ->
+        List.iter rr.cells ~f:(fun (tag, cell) ->
+            match (String.lsplit2 tag ~on:':', cell) with
+            | Some (_, c), Some cc when String.equal c code -> (
+                match cc.blame with
+                | None -> ()
+                | Some b ->
+                    Hashtbl.update counts b ~f:(function
+                      | None -> 1
+                      | Some n -> n + 1))
+            | _ -> ()));
+    Hashtbl.to_alist counts
+    |> List.sort ~compare:(fun (_, a) (_, b) -> Int.compare b a)
+    |> List.map ~f:(fun (b, n) ->
+           Printf.sprintf "<span title=\"%s\">%d %s</span>" (esc
+             (Option.value
+                (List.Assoc.find blame_gloss b ~equal:String.equal)
+                ~default:""))
+             n (esc b))
+    |> String.concat ~sep:" · "
+  in
   let recovery_grid =
     let module CR = Canary_agreement in
     let grid = CR.recovery_table () in
@@ -1955,25 +1894,64 @@ let render_html (m : t) ~(generated_at : string) : string =
       | CR.Detected -> "D"
       | CR.Nothing_here -> ""
     in
-    "<table class=\"keytbl grid\"><thead><tr><th>agreement</th>"
+    (* the ROOTING detail, keyed by slug — tool and artifact are prose
+       and belong on the R cell as a tooltip rather than as two more
+       columns of a table that is already 19 wide *)
+    let rooting =
+      List.map (CR.summary_rows ()) ~f:(fun sr -> (sr.CR.sr_slug, sr))
+    in
+    "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>"
     ^ String.concat ~sep:""
         (List.map cols ~f:(fun a ->
              "<th class=\"gcol\">" ^ esc (Canary_basic.string_of_action a)
              ^ "</th>"))
-    ^ "<th>lag</th></tr></thead><tbody>"
+    ^ "<th>lag</th><th>mech</th><th>fmt</th><th>decided</th><th>blame</th>\
+       </tr></thead><tbody>"
     ^ String.concat ~sep:""
         (List.map grid ~f:(fun (r, cells) ->
-             "<tr><td class=\"kc\">" ^ esc r.CR.ag_slug ^ "</td>"
+             let code = Canary_agreement_common.short_code_of_slug r.CR.ag_slug in
+             let sr = List.Assoc.find rooting r.CR.ag_slug ~equal:String.equal in
+             let root_title =
+               match sr with
+               | Some x when not (String.is_empty x.CR.sr_tool) ->
+                   Printf.sprintf " title=\"%s — over %s\"" (esc x.CR.sr_tool)
+                     (esc x.CR.sr_artifact)
+               | _ -> ""
+             in
+             "<tr><td class=\"kc\">" ^ esc code ^ "</td><td>"
+             ^ esc r.CR.ag_slug ^ "</td>"
              ^ String.concat ~sep:""
                  (List.map cells ~f:(fun (_, mk) ->
-                      Printf.sprintf "<td class=\"g %s\">%s</td>"
-                        (cell_class mk) (cell_text mk)))
+                      let t =
+                        match mk with
+                        | CR.Rooted | CR.Rooted_and_detected -> root_title
+                        | _ -> ""
+                      in
+                      Printf.sprintf "<td class=\"g %s\"%s>%s</td>"
+                        (cell_class mk) t (cell_text mk)))
              ^ "<td>"
              ^ (match CR.recovery_lag r with
                 | Some d -> Int.to_string d
                 | None -> "<span class=\"kq\">—</span>")
-             ^ "</td></tr>"))
+             ^ "</td><td class=\"mk\">" ^ esc (CR.mechanism_marks r)
+             ^ "</td><td class=\"mk\">" ^ esc (CR.format_marks r)
+             ^ "</td><td>" ^ tally code
+             ^ "</td><td>" ^ blame_tally code ^ "</td></tr>"))
     ^ "</tbody></table>"
+    ^ "<p class=\"kq\">R the rule RAN here (hover for the tool and the \
+       artifact) &middot; D a method FIRES here &middot; R+D both. \
+       <b>mech</b> which mechanism can carry it, in catalogue order: \
+       S cstubs &middot; E cext &middot; T ctypes &middot; F cffi &middot; \
+       D dynlink. <b>fmt</b> which object format: E elf &middot; M mach-o \
+       — <code>E&middot;</code> is not a gap, Mach-O has no symbol \
+       versioning at all. <b>lag</b> action columns from the root to the \
+       nearest firing; NOT the landing tracker's distance, which measures \
+       how far apart the two SIDES of a comparison are.</p>"
+    ^ "<p class=\"kq\">blame: "
+    ^ String.concat ~sep:" &middot; "
+        (List.map blame_gloss ~f:(fun (w, g) ->
+             "<b>" ^ esc w ^ "</b> " ^ esc g))
+    ^ "</p>"
   in
   let header =
     (* the two identity columns are FROZEN (2026-08-20, user: the page is
@@ -2190,33 +2168,25 @@ th.gs, td.gs { border-left: 1px solid #afb8c1; }
 </style></head><body>
 <h1>canary — what is checked, and what it decided</h1>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
-<h2>1 &middot; The check key — what each short code means</h2>
-<div class="key">%s</div>
-
-<h2>2 &middot; The recovery grid — where each rule RAN, and where it is CHECKED</h2>
+<h2>1 &middot; The recovery grid — every agreement, where its rule RAN, and where it is CHECKED</h2>
 <p class="meta">One row per agreement over the same action columns as the
-result table, for an OCaml/cstubs binding in a Built world. <b>R</b> marks
-the action whose tool established the relation and then discarded the
-tuple — where the information was LOST. <b>D</b> marks where a method
-fires, reading what survived. <b>R+D</b> is both, so the check happens at
-the very action whose rule it recovers. The columns between an R and its
-nearest D are actions that could have dropped the evidence on the way.
-<br>This is the TEMPLATE of the table below: that one says what a run
-decided, this one says what the shape of the checking is — so an empty
-column down there can be looked up here to see whether anything was ever
-meant to fill it.
-<br><i>lag</i> counts action columns from the root to the nearest firing.
-It is <b>not</b> the DISTANCE the landing tracker uses, which measures how
-far apart the two SIDES of a comparison are: <code>required_symbols_exported</code>
-is distance-1 and lag-0. A row with no R roots in no action of this graph —
-the three unrooted agreements, and any whose rule ran in a world canary
-does not model.</p>
+result table, for an OCaml/cstubs binding in a Built world. <b>This is
+the TEMPLATE of the table below</b>: that one says what a run decided,
+this one says what the shape of the checking IS — so an empty column down
+there can be looked up here to see whether anything was ever meant to
+fill it, and the <code>code</code> column is the key to its headings.
+<br>It absorbed the separate check-key table on 2026-09-17: the key
+listed code, agreement, the rooting action, the tool and the artifact,
+which are five of this table&rsquo;s columns and two of its tooltips. Two
+tables explaining one thing is how they drift.
+<br>A row with no R roots in no action of this graph — the three unrooted
+agreements, and any whose rule ran in a world canary does not model.</p>
 %s
 
-<h2>3 &middot; The result matrix — one row per enumerated world</h2>
+<h2>2 &middot; The result matrix — one row per enumerated world</h2>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
-    (esc generated_at) check_key recovery_grid header body
+    (esc generated_at) recovery_grid header body
 
 (* The web file locations (the docs copy is the GH Pages view).
 
