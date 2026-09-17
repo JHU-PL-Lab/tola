@@ -1880,8 +1880,8 @@ let render_html (m : t) ~(generated_at : string) : string =
   in
   let recovery_grid =
     let module CR = Canary_agreement in
-    let grid = CR.overview_table () in
-    let cols = CR.firing_columns Canary_lang.OCaml in
+    let rows = CR.overview_rows () in
+    let cols = CR.overview_columns () in
     let cell_class = function
       | CR.Rooted_and_detected -> "rd"
       | CR.Rooted -> "rr"
@@ -1896,19 +1896,23 @@ let render_html (m : t) ~(generated_at : string) : string =
     in
     (* the ROOTING detail, keyed by slug — tool and artifact are prose
        and belong on the R cell as a tooltip rather than as two more
-       columns of a table that is already 19 wide *)
+       columns of a table that is already wide *)
     let rooting =
       List.map (CR.summary_rows ()) ~f:(fun sr -> (sr.CR.sr_slug, sr))
     in
-    "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>"
+    "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
+     <th>mech</th><th>fmt</th>"
+    ^ String.concat ~sep:""
+        (List.map CR.overview_artifact_columns ~f:(fun k ->
+             "<th class=\"seth\">" ^ esc (CR.artifact_col_label k) ^ "</th>"))
     ^ String.concat ~sep:""
         (List.map cols ~f:(fun a ->
              "<th class=\"gcol\">" ^ esc (Canary_basic.string_of_action a)
              ^ "</th>"))
-    ^ "<th>lag</th><th>mech</th><th>fmt</th><th>decided</th><th>blame</th>\
-       </tr></thead><tbody>"
+    ^ "<th>lag</th><th>decided</th><th>blame</th></tr></thead><tbody>"
     ^ String.concat ~sep:""
-        (List.map grid ~f:(fun (r, cells) ->
+        (List.map rows ~f:(fun (row : CR.overview_row) ->
+             let r = row.CR.ov_agreement in
              let code = Canary_agreement_common.short_code_of_slug r.CR.ag_slug in
              let sr = List.Assoc.find rooting r.CR.ag_slug ~equal:String.equal in
              let root_title =
@@ -1919,9 +1923,18 @@ let render_html (m : t) ~(generated_at : string) : string =
                | _ -> ""
              in
              "<tr><td class=\"kc\">" ^ esc code ^ "</td><td>"
-             ^ esc r.CR.ag_slug ^ "</td>"
+             ^ esc r.CR.ag_slug ^ "</td><td class=\"mk\">"
+             ^ esc (CR.mech_group_marks row.CR.ov_mechs)
+             ^ "</td><td class=\"mk\">" ^ esc (CR.format_marks r) ^ "</td>"
+             (* the TARGET artifacts — what the claim ranges over *)
              ^ String.concat ~sep:""
-                 (List.map cells ~f:(fun (_, mk) ->
+                 (List.map CR.overview_artifact_columns ~f:(fun k ->
+                      if
+                        List.mem row.CR.ov_reads k ~equal:Poly.equal
+                      then "<td class=\"g tgt\">&#9635;</td>"
+                      else "<td class=\"g nn\"></td>"))
+             ^ String.concat ~sep:""
+                 (List.map row.CR.ov_cells ~f:(fun (_, mk) ->
                       let t =
                         match mk with
                         | CR.Rooted | CR.Rooted_and_detected -> root_title
@@ -1930,23 +1943,30 @@ let render_html (m : t) ~(generated_at : string) : string =
                       Printf.sprintf "<td class=\"g %s\"%s>%s</td>"
                         (cell_class mk) t (cell_text mk)))
              ^ "<td>"
-             ^ (match CR.recovery_lag r with
+             ^ (match CR.row_lag row with
                 | Some d -> Int.to_string d
                 | None -> "<span class=\"kq\">—</span>")
-             ^ "</td><td class=\"mk\">" ^ esc (CR.mechanism_marks r)
-             ^ "</td><td class=\"mk\">" ^ esc (CR.format_marks r)
              ^ "</td><td>" ^ tally code
              ^ "</td><td>" ^ blame_tally code ^ "</td></tr>"))
     ^ "</tbody></table>"
-    ^ "<p class=\"kq\">R the rule RAN here (hover for the tool and the \
-       artifact) &middot; D a method FIRES here &middot; R+D both. \
-       <b>mech</b> which mechanism can carry it, in catalogue order: \
-       S cstubs &middot; E cext &middot; T ctypes &middot; F cffi &middot; \
-       D dynlink. <b>fmt</b> which object format: E elf &middot; M mach-o \
-       — <code>E&middot;</code> is not a gap, Mach-O has no symbol \
-       versioning at all. <b>lag</b> action columns from the root to the \
-       nearest firing; NOT the landing tracker's distance, which measures \
-       how far apart the two SIDES of a comparison are.</p>"
+    ^ "<p class=\"kq\"><b>One row per distinct pattern.</b> A claim whose \
+       firing differs between mechanisms gets a row each — a cstubs row and \
+       a cext row mark different action columns — and a uniform claim stays \
+       one row and says so in <b>mech</b>. \
+       &#9635; an ARTIFACT the claim ranges over (its TARGET); a declaration \
+       is not an artifact, so a declaration comparison shows exactly one and \
+       a peer comparison shows two. \
+       R the action whose rule RAN (hover for the tool and the artifact) \
+       &middot; D a method FIRES here &middot; R+D both. \
+       <b>mech</b> S cstubs &middot; E cext &middot; T ctypes &middot; \
+       F cffi &middot; D dynlink. \
+       <b>fmt</b> E elf &middot; M mach-o — a format changes whether a claim \
+       APPLIES, never where it fires, so it annotates a row rather than \
+       splitting one; <code>E&middot;</code> is not a gap, Mach-O has no \
+       symbol versioning at all. \
+       <b>lag</b> action columns from the root to the nearest firing; NOT \
+       the landing tracker's distance, which measures how far apart the two \
+       SIDES of a comparison are.</p>"
     ^ "<p class=\"kq\">blame: "
     ^ String.concat ~sep:" &middot; "
         (List.map blame_gloss ~f:(fun (w, g) ->
@@ -2158,6 +2178,7 @@ td.g.rd { background: #d1e7dd; color: #0a3622; }   /* rule and check together */
 td.g.rr { background: #ffe8cc; color: #7a3e00; }   /* the rule ran here */
 td.g.dd { background: #dbeafe; color: #0a3069; }   /* the check fires here */
 td.g.nn { background: #fbfcfd; }
+td.g.tgt { background: #f0e6ff; color: #512a97; }   /* an artifact the claim ranges over */
 h2 { font-size: 1rem; margin: 1.6rem 0 .5rem; padding-bottom: .25rem;
   border-bottom: 1px solid #d0d7de; font-weight: 600; }
 /* the left edge of one action's group of columns — on EVERY cell in

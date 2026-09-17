@@ -4281,35 +4281,41 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
             in
             go 0 0
           in
-          let grid = Canary_agreement.overview_table () in
-          let cols =
-            List.length (Canary_agreement.firing_columns Canary_lang.OCaml)
-          in
+          let open Canary_agreement in
+          let rows = overview_rows () in
+          let acts = List.length (overview_columns ()) in
+          let arts = List.length overview_artifact_columns in
           let tally f =
             List.sum
               (module Int)
-              grid
-              ~f:(fun (_, cells) -> List.count cells ~f:(fun (_, m) -> f m))
+              rows
+              ~f:(fun (row : overview_row) ->
+                List.count row.ov_cells ~f:(fun (_, m) -> f m))
           in
-          let open Canary_agreement in
           (* every table on the page is named. TWO since 2026-09-17:
-             the check key was absorbed into the grid, because its
-             columns were five of the grid's and two of its tooltips. *)
+             the check key was absorbed into the overview, because its
+             columns were five of its columns and two of its tooltips. *)
           count "<h2>" = 2
           && String.is_substring h ~substring:"Agreement overview"
           && String.is_substring h ~substring:"The result matrix"
           && not (String.is_substring h ~substring:"The check key")
-          (* one cell per (agreement × column), and the marks agree *)
-          && count "class=\"g " = List.length grid * cols
+          (* one ACTION cell per (row × action column) and one TARGET
+             cell per (row × artifact column) — both in the `g` family,
+             so the total counts them together *)
+          && count "class=\"g " = List.length rows * (acts + arts)
           && count "class=\"g rd\""
              = tally (function Rooted_and_detected -> true | _ -> false)
           && count "class=\"g rr\"" = tally (function Rooted -> true | _ -> false)
           && count "class=\"g dd\""
              = tally (function Detected -> true | _ -> false)
-          (* the absorbed columns: a mech and a fmt mark per agreement,
-             and the short code that WAS the key's first column *)
-          && count "class=\"mk\"" >= 2 * List.length grid
-          && List.for_all grid ~f:(fun (r, _) ->
+          (* the TARGET marks — the artifacts each row ranges over *)
+          && count "class=\"g tgt\""
+             = List.sum (module Int) rows ~f:(fun (row : overview_row) ->
+                   List.length row.ov_reads)
+          (* the absorbed columns: mech and fmt per row, and the short
+             code that WAS the key's first column *)
+          && count "class=\"mk\"" >= 2 * List.length rows
+          && List.for_all agreement_registry ~f:(fun r ->
                  String.is_substring h
                    ~substring:
                      (">"

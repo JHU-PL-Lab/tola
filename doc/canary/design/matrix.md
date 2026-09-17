@@ -16,7 +16,7 @@ template from the record:
 
 | # | table | what it is |
 | --- | --- | --- |
-| 1 | **the recovery grid** | one row per AGREEMENT over the same action columns — `R` where the rule ran, `D` where the check fires, `R+D` both — plus its short code, the mechanisms that can carry it, the object formats it ranges over, the lag, and what the rows below decided and blame |
+| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `mech`, `fmt`, lag, and what the rows below decided and blame |
 | 2 | the result matrix | one row per enumerated WORLD — what a run decided |
 
 Table 1 is table 2's TEMPLATE. An empty column in the matrix can be
@@ -25,8 +25,20 @@ which is the question the matrix alone could not answer.
 
 **It was three tables until 2026-09-17**, and the third was a check key
 listing code / agreement / rooting action / tool / artifact / decided /
-blame. Those are five of the grid's columns and two of its tooltips, so
-the key was absorbed: two tables explaining one thing is how they drift.
+blame. Those are five of the overview's columns and two of its tooltips,
+so the key was absorbed: two tables explaining one thing is how they
+drift.
+
+**One row per distinct PATTERN, not per agreement.** Firing is
+`mechanism × lang × world`, so a cstubs row and a cext row of one claim
+mark different action columns; collapsing them showed only the first.
+Claims whose pattern is uniform stay one row and say so in `mech`. A
+FORMAT never splits a row — it changes whether a claim applies, not
+where it fires — which is why `fmt` annotates rather than expands.
+
+**The leading artifact columns are the claim's TARGET**, and reading
+them against the origin gives a classification the flat list did not
+have: [`agreement/theory.md`](agreement/theory.md) §5.11.
 
 `make view` regenerates the page; `canary checks --firing` prints the
 same grid in the terminal, and `matrix.page_titles_and_recovery_grid`

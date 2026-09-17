@@ -235,6 +235,60 @@ Three patterns fall out, and none was designed in:
    at `build_binding` and `probe_binding`. Any implementation needs to keep
    those two apart, and Canary's does.
 
+### 5.11 Target and origin — a decomposition the table made visible
+
+*(2026-09-17, from the user: "for `declared_symbols_exported` we can
+mark the `lib` as this is the target, mark the `build_lib` which is the
+origin of the agreement. Check if this perspective is valid to describe
+one group of agreements.")*
+
+It is valid, it describes more than one group, and the groups fall out
+of two questions rather than one. The agreement overview
+(`canary checks --firing`, `make view` table 1) now marks both — the
+artifact columns carry the TARGET, the action columns carry the ORIGIN —
+so this is read off a generated table rather than asserted.
+
+**How many artifacts does the claim range over?** Count the ▣.
+
+**Does the origin action PRODUCE that artifact, or CONSUME it?**
+
+|  | origin **produces** the target | origin **consumes** the target |
+| --- | --- | --- |
+| **one target** | `declared_symbols_exported`, `soname_matches_declaration`, `declared_versions_exported` (at `build_lib`); `staged_interface_preserved` (at `install_lib`) | `api_names_present` (at `build_app_*`) |
+| **two targets** | — *(empty; see below)* | `required_symbols_exported`, `soname_matches_requirement`, `required_versions_exported`, `dependencies_provided` (at the binding's build/probe); `signatures_agree` (at `build_binding_*`) |
+| **no target** | — | `behavior_matches`, `repack_preserves_api`, `repack_complete` |
+
+Three things this says that the flat list did not.
+
+**The user's group is the top-left, and its question is
+*"is the thing you made what you said it would be?"*** One artifact, and
+the rule recovered is the one that MADE it — so origin and target are
+1:1 and the check is a comparison against a declaration. That is exactly
+`m_reference = Declared_facts`, arrived at from the other direction,
+which is a decent sign the decomposition is real rather than a
+re-labelling.
+
+**`api_names_present` is the exception that proves the axis is two and
+not one.** It has one target like the top-left group, but its origin
+CONSUMES that target: the rule is the compiler's when it checked an
+application against the binding's interface, not any rule that made the
+interface. Grouping by target count alone would have put it with
+`declared_symbols_exported`, and they are different kinds of claim.
+
+**The empty cell is a place to look.** An origin that produces TWO
+artifacts which must agree — nothing occupies it today. The candidate is
+already in the catalogue as a proposal: *declared signatures match the
+library's debug information*, rooted at `build_lib`, targets the headers
+and the library, both produced by that one build. §6's procedure would
+find it; this table says where the hole is without running the
+procedure, which is what a good classification buys.
+
+**A caveat on the granularity.** ▣ counts artifact KINDS, so
+`staged_interface_preserved` shows one target although it compares two
+copies of the library. Kind is the granularity the column has; where a
+claim is about two instances of one kind, the table under-counts and the
+catalogue's prose is the finer statement.
+
 ## 6. The procedure
 
 The table is not only a summary — it is how to find the next agreement. For

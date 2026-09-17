@@ -2458,38 +2458,52 @@ let agreement_bridge_pins : pure_test list =
        project produces its evidence), and it may not. Requiring a
        reason there would force a line saying "nothing", which is what
        [None] already says. *)
-    (* THE RECOVERY GRID AGREES WITH THE ROOTING TABLE (2026-09-17).
+    (* THE OVERVIEW AGREES WITH THE ROOTING TABLE, AND EXPANDS HONESTLY
+       (2026-09-17).
 
        Two views of one fact — the catalogue says where an agreement is
-       rooted in prose, the grid marks it as a cell — so they can
+       rooted in prose, the overview marks it as a cell — so they can
        disagree, and the way they would is silent: an `rt_action` that
        stops parsing as an action just stops drawing an R, and the row
        renders as though it had no root at all.
 
-       Three claims, and the third is the one worth having:
+       Four claims now, and the last two are what the expansion added:
        (a) every row whose [rt_action] parses draws exactly one R;
        (b) a row that draws no R is either unrooted or roots in prose —
            never a parse that quietly failed;
-       (c) the three UNROOTED agreements draw no R, which is the fact
-           the grid exists to make visible. *)
+       (c) every agreement appears at least once — expanding by pattern
+           must not drop one;
+       (d) the expansion is REAL: at least one agreement occupies more
+           than one row. If that stopped being true the grouping would
+           be doing nothing and the column could collapse again. *)
     { name = "agreements.overview_matches_rooting";
       check =
         (fun () ->
-          let grid = CR.overview_table () in
-          List.for_all grid ~f:(fun (r, cells) ->
-              let roots =
-                List.count cells ~f:(fun (_, m) ->
-                    match m with
-                    | CR.Rooted | CR.Rooted_and_detected -> true
-                    | _ -> false)
-              in
-              match CR.rooted_action_of r with
-              | Some _ -> roots = 1
-              | None ->
-                  (* no parsable root: the grid must show none, and the
-                     registry must agree that it is either unrooted or
-                     rooted in an action this graph does not contain *)
-                  roots = 0)) };
+          let rows = CR.overview_rows () in
+          let per_row_ok =
+            List.for_all rows ~f:(fun (row : CR.overview_row) ->
+                let roots =
+                  List.count row.CR.ov_cells ~f:(fun (_, m) ->
+                      match m with
+                      | CR.Rooted | CR.Rooted_and_detected -> true
+                      | _ -> false)
+                in
+                match CR.rooted_action_of row.CR.ov_agreement with
+                | Some _ -> roots = 1
+                | None -> roots = 0)
+          in
+          let slugs =
+            List.map rows ~f:(fun r ->
+                r.CR.ov_agreement.CR.ag_slug)
+          in
+          let covers_every =
+            List.for_all CR.agreement_registry ~f:(fun r ->
+                List.mem slugs r.CR.ag_slug ~equal:String.equal)
+          in
+          let expands =
+            List.length rows > List.length CR.agreement_registry
+          in
+          per_row_ok && covers_every && expands) };
     (* THE FORMAT DIMENSION IS REAL, NOT DECORATIVE (2026-09-17).
 
        `ag_formats` is a third reason a claim can be inapplicable, and

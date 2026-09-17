@@ -802,78 +802,6 @@ let rooted_action_of (r : agreement_row) : Canary_basic.action option =
 
 (** THE RECOVERY GRID: rows = agreements, columns = action patterns,
     cells = rooted / detected / both. *)
-let overview_table ?(mechanism = Canary_mechanism.Cstubs)
-    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
-    (agreement_row * (Canary_basic.action * recovery_mark) list) list =
-  let world = uniform_world ~lang ~mechanism provision in
-  List.map agreement_registry ~f:(fun r ->
-      let root = rooted_action_of r in
-      ( r,
-        List.map (firing_columns lang) ~f:(fun a ->
-            let is_root =
-              match root with Some ra -> Poly.equal ra a | None -> false
-            in
-            let fires =
-              match cell_status_of r ~mechanism ~lang ~world a with
-              | Empty -> false
-              | _ -> true
-            in
-            ( a,
-              match (is_root, fires) with
-              | true, true -> Rooted_and_detected
-              | true, false -> Rooted
-              | false, true -> Detected
-              | false, false -> Nothing_here )) ))
-
-(** THE LAG: how many action patterns lie between the root and the
-    nearest firing site, or [None] when the row has no root in this
-    graph or does not fire here.
-
-    ⚠ **This is NOT landing.md's distance, and conflating them would be
-    a real error.** They measure different gaps:
-
-    - **landing.md's distance** is between the two SIDES OF THE
-      COMPARISON — is the other artifact still present at the one
-      action (d0), from an adjacent one (d1), or from another world
-      (d2+)? It says how much was lost between the things being
-      compared.
-    - **this lag** is between WHERE THE RULE RAN and WHERE WE CHECK. It
-      says how far the surviving evidence had to travel before anyone
-      read it, and every column in between is an action that could have
-      dropped it.
-
-    They disagree, and the disagreement is informative rather than a
-    bug: `required_symbols_exported` is landing.md-d1 (stub and library
-    come from adjacent actions) and lag-0 (it fires at the very action
-    whose link established the requirement). A row can be cheap on one
-    axis and expensive on the other. *)
-let recovery_lag ?(mechanism = Canary_mechanism.Cstubs)
-    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built)
-    (r : agreement_row) : int option =
-  let cells =
-    match
-      List.find (overview_table ~mechanism ~lang ~provision ()) ~f:(fun (x, _) ->
-          Poly.equal x.ag_id r.ag_id)
-    with
-    | Some (_, cs) -> cs
-    | None -> []
-  in
-  let idx_of f =
-    List.filter_mapi cells ~f:(fun i (_, m) -> if f m then Some i else None)
-  in
-  let roots =
-    idx_of (function Rooted | Rooted_and_detected -> true | _ -> false)
-  in
-  let dets =
-    idx_of (function Detected | Rooted_and_detected -> true | _ -> false)
-  in
-  match (roots, dets) with
-  | [], _ | _, [] -> None
-  | rs, ds ->
-      Some
-        (List.fold ds ~init:Int.max_value ~f:(fun best d ->
-             List.fold rs ~init:best ~f:(fun best rt -> Int.min best (abs (d - rt)))))
-
 (** WHICH MECHANISMS CAN CARRY THIS CLAIM — the catalogue's five, asked
     one at a time (2026-09-17, user: "we can add a few columns … other
     columns for eight cells or mechanism").
@@ -917,66 +845,262 @@ let format_marks (r : agreement_row) : string =
          then match f with Canary_store.Elf -> "E" | Canary_store.Macho -> "M"
          else "·"))
 
-(** Render the recovery grid as text. *)
-let pp_agreement_overview ?(mechanism = Canary_mechanism.Cstubs)
-    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () : string =
-  let m = overview_table ~mechanism ~lang ~provision () in
-  let cols = firing_columns lang in
+(* ── ONE ROW PER PATTERN, NOT PER AGREEMENT (2026-09-17, user) ──────
+
+   The grid above renders ONE SLICE — a fixed (mechanism, lang,
+   provision) — and a `mech` column saying which other mechanisms carry
+   the claim. The user's objection is exact: a compact mark is fine when
+   the rows would be identical, and a lie when they would not. Firing is
+   `mechanism × lang × world`, so a cstubs row and a cext row of the
+   same agreement mark DIFFERENT COLUMNS (`build_binding_ocaml` vs
+   `build_binding_python`), and collapsing them showed only the first.
+
+   So: group a claim's carrying mechanisms by the pattern they produce,
+   and emit one row per group. Uniform claims stay one row and say so in
+   the `mech` column; the ones that differ expand, and the expansion IS
+   the information.
+
+   FORMAT does not expand, and the asymmetry is worth stating: a format
+   changes whether a claim APPLIES, never where it fires. `E·` therefore
+   annotates a whole row rather than splitting it — which is why the
+   column belongs beside the name rather than at the far end. *)
+
+type overview_row = {
+  ov_agreement : agreement_row;
+  ov_mechs : Canary_mechanism.mechanism list;
+      (** the mechanisms sharing this pattern; [[]] = carried by none,
+          and the row is shown anyway, because "no mechanism can carry
+          this" is the loudest thing the table can say *)
+  ov_reads : Canary_basic.artifact_kind list;
+      (** THE ARTIFACTS THE CLAIM RANGES OVER — its target(s), from the
+          methods' own [m_inputs] through [artifact_of_input]. A
+          DECLARATION is not an artifact and maps to [None], which is
+          what makes the declaration group read as a single target. *)
+  ov_cells : (Canary_basic.action * recovery_mark) list;
+}
+
+(** The action columns: the union over BOTH modelled languages, because
+    a row's mechanism decides which half it can mark and the emptiness
+    of the other half is the point. *)
+let overview_columns () : Canary_basic.action list =
+  Canary_basic.store_actions ~langs:Canary_lang.[ OCaml; Python ]
+
+let pattern_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(provision : Canary_store.provision) :
+    (Canary_basic.action * recovery_mark) list =
+  let world = uniform_world ~lang ~mechanism provision in
+  let root = rooted_action_of r in
+  List.map (overview_columns ()) ~f:(fun a ->
+      let is_root =
+        match root with Some ra -> Poly.equal ra a | None -> false
+      in
+      let fires =
+        match cell_status_of r ~mechanism ~lang ~world a with
+        | Empty -> false
+        | _ -> true
+      in
+      ( a,
+        match (is_root, fires) with
+        | true, true -> Rooted_and_detected
+        | true, false -> Rooted
+        | false, true -> Detected
+        | false, false -> Nothing_here ))
+
+(** What a claim reads, as artifact kinds, for one mechanism's language.
+    Union over its methods; declarations contribute nothing. *)
+let reads_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(provision : Canary_store.provision) :
+    Canary_basic.artifact_kind list =
+  let world = uniform_world ~lang ~mechanism provision in
+  List.concat_map r.ag.ag_methods ~f:(fun m ->
+      List.filter_map
+        (m.m_inputs
+           { ac_mechanism = mechanism; ac_lang = lang; ac_world = world;
+             ac_declared = None })
+        ~f:(artifact_of_input ~lang))
+  |> List.dedup_and_sort ~compare:Poly.compare
+
+(** THE TABLE: one row per (agreement × distinct pattern). *)
+let overview_rows ?(provision = Canary_store.Built) () : overview_row list =
+  List.concat_map agreement_registry ~f:(fun r ->
+      let carried =
+        List.filter_map (carrying_mechanisms r) ~f:(fun (m, ok) ->
+            if ok then
+              Some (m, (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_lang)
+            else None)
+      in
+      match carried with
+      | [] ->
+          (* no mechanism carries it. Still a row — with the pattern its
+             own default language would give, so the reader sees WHAT is
+             unreachable rather than a blank. *)
+          [ { ov_agreement = r;
+              ov_mechs = [];
+              ov_reads = [];
+              ov_cells =
+                pattern_of r ~mechanism:Canary_mechanism.Cstubs
+                  ~lang:Canary_lang.OCaml ~provision } ]
+      | _ ->
+          let with_pattern =
+            List.map carried ~f:(fun (m, l) ->
+                ( m,
+                  pattern_of r ~mechanism:m ~lang:l ~provision,
+                  reads_of r ~mechanism:m ~lang:l ~provision ))
+          in
+          (* group by identical pattern, keeping catalogue order *)
+          List.fold with_pattern ~init:[] ~f:(fun acc (m, cells, reads) ->
+              match
+                List.findi acc ~f:(fun _ (_, c, _) -> Poly.equal c cells)
+              with
+              | Some (i, (ms, c, rd)) ->
+                  List.mapi acc ~f:(fun j x ->
+                      if j = i then
+                        ( ms @ [ m ], c,
+                          List.dedup_and_sort (rd @ reads) ~compare:Poly.compare )
+                      else x)
+              | None -> acc @ [ ([ m ], cells, reads) ])
+          |> List.map ~f:(fun (ms, cells, reads) ->
+                 { ov_agreement = r; ov_mechs = ms; ov_reads = reads;
+                   ov_cells = cells }))
+
+
+(** The ARTIFACT columns, in the result matrix's own order — the
+    leading "setting" block, reused (2026-09-17, user: "I also wish the
+    table can have the leading columns as src/lib as the result
+    matrix"). *)
+let overview_artifact_columns : Canary_basic.artifact_kind list =
+  Canary_basic.
+    [ Source; Headers; Lib; Binding Canary_lang.OCaml;
+      Binding Canary_lang.Python; App ]
+
+let artifact_col_label (k : Canary_basic.artifact_kind) : string =
+  match k with
+  | Canary_basic.Source -> "src"
+  | Canary_basic.Headers -> "hdr"
+  | Canary_basic.Lib -> "lib"
+  | Canary_basic.Binding Canary_lang.OCaml -> "ml"
+  | Canary_basic.Binding Canary_lang.Python -> "py"
+  | Canary_basic.Binding l -> Canary_lang.string_of_lang l
+  | Canary_basic.Binding_source l -> Canary_lang.string_of_lang l ^ "src"
+  | Canary_basic.App -> "app"
+
+(** Pad to a DISPLAY width, not a byte count. Every mark in this table
+    is a multibyte glyph (`▣` is three bytes, `·` two), so [%-3s] pads
+    them differently and the columns drift — which is exactly the kind
+    of thing a table about precision must not do. *)
+let pad_display (n : int) (s : string) : string =
+  let width =
+    String.fold s ~init:0 ~f:(fun acc c ->
+        (* count only the leading byte of a UTF-8 sequence *)
+        if Char.to_int c land 0xC0 = 0x80 then acc else acc + 1)
+  in
+  s ^ String.make (max 0 (n - width)) ' '
+
+let mech_group_marks (ms : Canary_mechanism.mechanism list) : string =
+  String.concat ~sep:""
+    (List.map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+         let m = i.Canary_mechanism.mi_mechanism in
+         if not (List.mem ms m ~equal:Poly.equal) then "·"
+         else
+           match m with
+           | Canary_mechanism.Cstubs -> "S"
+           | Canary_mechanism.Cext -> "E"
+           | Canary_mechanism.Ctypes -> "T"
+           | Canary_mechanism.Cffi -> "F"
+           | Canary_mechanism.Dynlink -> "D"))
+
+(** The lag of ONE rendered row, over its own cells. *)
+let row_lag (row : overview_row) : int option =
+  let idx_of f =
+    List.filter_mapi row.ov_cells ~f:(fun i (_, m) ->
+        if f m then Some i else None)
+  in
+  let roots =
+    idx_of (function Rooted | Rooted_and_detected -> true | _ -> false)
+  in
+  let dets =
+    idx_of (function Detected | Rooted_and_detected -> true | _ -> false)
+  in
+  match (roots, dets) with
+  | [], _ | _, [] -> None
+  | rs, ds ->
+      Some
+        (List.fold ds ~init:Int.max_value ~f:(fun best d ->
+             List.fold rs ~init:best ~f:(fun best rt ->
+                 Int.min best (abs (d - rt)))))
+
+let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
+  let rows = overview_rows ~provision () in
+  let cols = overview_columns () in
   let head =
-    Printf.sprintf "%-4s %-28s | " "code" "agreement"
+    Printf.sprintf "%-4s %-28s %-5s %-3s | %s | " "code" "agreement" "mech"
+      "fmt"
+      (String.concat ~sep:" "
+         (List.map overview_artifact_columns ~f:(fun k ->
+              pad_display 3 (artifact_col_label k))))
     ^ String.concat ~sep:" | "
         (List.map cols ~f:Canary_basic.string_of_action)
-    ^ " | lag | mech  | fmt | status"
+    ^ " | lag | status"
   in
   let body =
-    List.map m ~f:(fun (r, cells) ->
-        Printf.sprintf "%-4s %-28s | %s | %3s | %-5s | %-3s | %s"
-          (short_code_of_slug r.ag_slug)
-          r.ag_slug
+    List.map rows ~f:(fun row ->
+        let r = row.ov_agreement in
+        Printf.sprintf "%-4s %-28s %s %s | %s | %s | %3s | %s"
+          (short_code_of_slug r.ag_slug) r.ag_slug
+          (pad_display 5 (mech_group_marks row.ov_mechs))
+          (pad_display 3 (format_marks r))
+          (String.concat ~sep:" "
+             (List.map overview_artifact_columns ~f:(fun k ->
+                  pad_display 3
+                    (if List.mem row.ov_reads k ~equal:Poly.equal then "▣"
+                     else "·"))))
           (String.concat ~sep:" | "
-             (List.map cells ~f:(fun (a, mk) ->
+             (List.map row.ov_cells ~f:(fun (a, mk) ->
                   let w = String.length (Canary_basic.string_of_action a) in
-                  recovery_mark_char mk ^ String.make (max 0 (w - 1)) ' ')))
-          (match recovery_lag ~mechanism ~lang ~provision r with
-           | Some d -> Int.to_string d
-           | None -> "-")
-          (mechanism_marks r) (format_marks r)
+                  pad_display w (recovery_mark_char mk))))
+          (match row_lag row with Some d -> Int.to_string d | None -> "-")
           (string_of_status (status_of_row r)))
   in
   String.concat ~sep:"\n"
-    (Printf.sprintf "agreement overview — %s / %s, over a %s world"
-       (Canary_lang.string_of_lang lang)
-       (Canary_mechanism.string_of_mechanism mechanism)
+    (Printf.sprintf "agreement overview — over a %s world"
        (Canary_enumerate.string_of_provision provision)
      :: ""
      :: head :: body
     @ [ "";
-        "R  the tool's rule RAN here — this is where the information was lost";
+        "ONE ROW PER DISTINCT PATTERN. A claim whose firing differs between \
+         mechanisms";
+        "gets a row each — a cstubs row and a cext row mark different action \
+         columns —";
+        "and a claim that is uniform stays one row and says so in `mech`.";
+        "";
+        "▣  an ARTIFACT the claim ranges over (its target). A DECLARATION is \
+         not an";
+        "   artifact, so a declaration comparison shows exactly one ▣: the \
+         thing it is";
+        "   about. A peer comparison shows two — provider and consumer.";
+        "R  the action whose rule RAN — the ORIGIN, where the information was \
+         lost";
         "D  a method FIRES here, reading what survived";
         "◉  both: the check fires at the very action whose rule it recovers";
-        "·  neither";
         "";
-        "mech  = which MECHANISM can carry the claim, in catalogue order:";
-        "        S cstubs · E cext · T ctypes · F cffi · D dynlink";
-        "fmt   = which OBJECT FORMAT it can range over: E elf · M mach-o.";
-        "        `E·` is not a gap — Mach-O has no symbol versioning, so a";
-        "        version-node claim has nothing of that kind to read there.";
+        "mech = which MECHANISM carries the claim WITH THIS PATTERN, in \
+         catalogue order:";
+        "       S cstubs · E cext · T ctypes · F cffi · D dynlink. \
+         `·····` = none can.";
+        "fmt  = which OBJECT FORMAT it can range over: E elf · M mach-o. A \
+         format";
+        "       changes whether a claim APPLIES, never where it fires — so \
+         it annotates";
+        "       a row rather than splitting one. `E·` is not a gap: Mach-O \
+         has no";
+        "       symbol versioning, so a version-node claim has nothing of \
+         that kind there.";
         "";
-        "lag = action patterns between the root and the nearest firing. It is \
-         NOT";
-        "landing.md's DISTANCE, which measures how far apart the two SIDES of \
-         the";
-        "comparison are. required_symbols_exported is distance-1 (stub and \
-         library";
-        "come from adjacent actions) and lag-0 (it fires where the link ran).";
-        "";
-        "A row with no R roots in no action of this graph: the 3 unrooted \
-         ones, and";
-        "any whose rule ran in a world canary does not model — the catalogue \
-         says which.";
-        "A row with R and no D does not fire in THIS world \
-         (staged_interface_preserved";
-        "needs an Installed one) — re-run with a different provision." ])
+        "lag = action columns between the root and the nearest firing. NOT \
+         landing.md's";
+        "DISTANCE, which measures how far apart the two SIDES of a \
+         comparison are:";
+        "required_symbols_exported is distance-1 and lag-0." ])
 
 (** The fill list — every [Declared] cell (fires and is evaluated, but
     no counterexample yet). The concrete answer to "what is left to
