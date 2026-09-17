@@ -16,7 +16,7 @@ template from the record:
 
 | # | table | what it is |
 | --- | --- | --- |
-| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `mech`, `fmt`, lag, and what the rows below decided and blame |
+| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `implemented at`, `lang`, `mech`, `fmt`, lag, and what the rows below decided and blame |
 | 2 | the result matrix | one row per enumerated WORLD — what a run decided |
 
 Table 1 is table 2's TEMPLATE. An empty column in the matrix can be
@@ -40,10 +40,36 @@ where it fires — which is why `fmt` annotates rather than expands.
 them against the origin gives a classification the flat list did not
 have: [`agreement/theory.md`](agreement/theory.md) §5.11.
 
+**`lang` and `mech` are two columns, in full terms** (2026-09-17). They
+were one five-slot mark string (`S···D`, one character per catalogue
+mechanism), which was dense, needed the legend to read at all, and —
+the reason it went — could not distinguish a rule from a coincidence.
+`S···D` and `ocaml` + an empty `mech` denote the same set, but only the
+second says the claim is about the LANGUAGE. So `mech` names mechanisms
+only when the row is a **strict subset** of its language's, and is empty
+otherwise; `lang` reads `any` when the row spans every modelled
+language, which is what a claim about the LIBRARY looks like — no
+binding is involved, so nothing about a binding can narrow it.
+
+**`implemented at` is `<module>·<function>`** in
+`src/canary/agreement/canary_agreement_<module>.ml`, and a **red cell**
+is an agreement with no evaluator yet, naming the file it would go in.
+The module half is derived from the gathering list in
+[`canary_agreement.ml`](../../../src/canary/agreement/canary_agreement.ml)
+so it cannot drift; the function half is a string on the method
+(`m_impl`), because an OCaml closure carries neither its name nor its
+file. `agreements.impl_functions_exist` holds both directions — the
+named function must exist, **and** an agreement that has an evaluator
+must name it, because a landed agreement rendering red would make the
+colour worthless. Today the red cells are exactly the three unrooted
+agreements (`behavior_matches`, `repack_preserves_api`,
+`repack_complete`), which is not a coincidence: no tool enforced their
+relation, so there is nothing to re-derive.
+
 `make view` regenerates the page; `canary checks --firing` prints the
-same grid in the terminal, and `matrix.page_titles_and_recovery_grid`
+same grid in the terminal, and `matrix.page_titles_and_agreement_overview`
 pins the two renderings to one value — it counts the HTML's cells
-against what `recovery_table` computes.
+against what `overview_rows` computes.
 
 > 2026-08-19. Opened by the user's observation on the sqlite rows: "ref
 > is not the only world … how do you explain #6?" **Resolved the same

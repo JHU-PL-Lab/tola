@@ -153,7 +153,7 @@ let api_names_present : agreement =
                 [ Python_attrs
                     [ tag ^ "/inspect.json"; tag ^ "/inspect_attrs.json" ] ]
             | _ -> [])
-          ~eval:api_names_eval ~diagnostics:api_names_diagnostics
+          ~eval:api_names_eval ~impl:"api_names_eval" ~diagnostics:api_names_diagnostics
           ~limits:
             "coverage is bounded by the watchlist: names outside it are not \
              checked, and a name being present says nothing about the \

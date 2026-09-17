@@ -511,7 +511,7 @@ let soname_matches_declaration : agreement =
                [built_lib_evidence_paths] for why not the world's. *)
             declared_soname_input d
             @ [ Native_lib (built_lib_evidence_paths "inspect.json") ])
-          ~eval:soname_declaration_eval
+          ~eval:soname_declaration_eval ~impl:"soname_declaration_eval"
           ~limits:
             "matching a name does not identify a unique implementation: two \
              objects can advertise one soname and mean different things \
@@ -571,7 +571,7 @@ let soname_matches_requirement : agreement =
           ~firing:pair_firing
           ~inputs:
             consumer_record_inputs_native
-          ~eval:soname_requirement_eval
+          ~eval:soname_requirement_eval ~impl:"soname_requirement_eval"
           ~limits:
             "name equality only. It does not establish which object the \
              loader will select, nor that the selected object means the same \
@@ -619,7 +619,7 @@ let declared_versions_exported : agreement =
           ~inputs:(fun { ac_declared = d; _ } ->
             declared_version_tags_input d
             @ [ Versioned_exports (built_lib_evidence_paths "inspect.json") ])
-          ~eval:declared_versions_eval
+          ~eval:declared_versions_eval ~impl:"declared_versions_eval"
           ~limits:
             "presence of a tag says nothing about the symbols inside it, nor \
              about compatibility beyond the declared tags."
@@ -689,7 +689,7 @@ let required_versions_exported : agreement =
                     ^ "/inspect_abi.json";
                     binding_evidence_tag w l ^ "/inspect.json" ] ]
             else [])
-          ~eval:required_versions_eval
+          ~eval:required_versions_eval ~impl:"required_versions_eval"
           ~limits:
             "exact tag match, direct requirements only. It does not model \
              version ordering, and a world without symbol versioning is \
@@ -784,7 +784,7 @@ let dependencies_provided : agreement =
           ~applicable:needs_consumer_record ~firing:pair_firing
           ~inputs:
             consumer_record_inputs_native
-          ~eval:dependencies_provided_eval
+          ~eval:dependencies_provided_eval ~impl:"dependencies_provided_eval"
           ~limits:
             "ONE modeled provider, direct dependencies only, and an ambient \
              list that is code rather than a per-world policy. It does not \

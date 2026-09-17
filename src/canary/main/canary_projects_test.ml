@@ -4255,7 +4255,7 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
    recovery grid — the same value `canary checks --firing` prints. Two
    renderings of one table is how they drift, so this counts cells: the
    HTML must carry exactly one per (agreement × action column), and the
-   R / D / R+D tallies must match what [overview_table] computes.
+   R / D / R+D tallies must match what [overview_rows] computes.
 
    It also pins the TITLES, because the reason the page was hard to read
    was that three tables sat under one heading and a reader could not
@@ -4312,9 +4312,26 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           && count "class=\"g tgt\""
              = List.sum (module Int) rows ~f:(fun (row : overview_row) ->
                    List.length row.ov_reads)
-          (* the absorbed columns: mech and fmt per row, and the short
-             code that WAS the key's first column *)
-          && count "class=\"mk\"" >= 2 * List.length rows
+          (* the absorbed columns: fmt per row, and the short code that
+             WAS the key's first column *)
+          && count "class=\"mk\"" >= List.length rows
+          (* WHERE THE CODE IS, one cell per row — and the RED ones are
+             exactly the agreements with no evaluator (2026-09-17). The
+             count is what makes the colour mean something: if a landed
+             agreement ever rendered red the number would move, and a
+             red cell that is not a real hole is worse than no column.
+             Cross-checked against the registry rather than a literal,
+             so implementing one of the three moves both sides. *)
+          && count "class=\"impl" = List.length rows
+          && count "class=\"impl none\""
+             = List.count rows ~f:(fun (row : overview_row) ->
+                   Option.is_none (snd (impl_of row.ov_agreement)))
+          (* LANG and MECH, one cell each per row, full terms rather
+             than the letter marks they replaced (2026-09-17, user:
+             "single letters in mech is not reader-friendly") *)
+          && count "class=\"lm\"" = 2 * List.length rows
+          && String.is_substring h ~substring:">cstubs<"
+          && String.is_substring h ~substring:">any<"
           && List.for_all agreement_registry ~f:(fun r ->
                  String.is_substring h
                    ~substring:

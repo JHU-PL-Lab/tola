@@ -1901,7 +1901,7 @@ let render_html (m : t) ~(generated_at : string) : string =
       List.map (CR.summary_rows ()) ~f:(fun sr -> (sr.CR.sr_slug, sr))
     in
     "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
-     <th>mech</th><th>fmt</th>"
+     <th>implemented at</th><th>lang</th><th>mech</th><th>fmt</th>"
     ^ String.concat ~sep:""
         (List.map CR.overview_artifact_columns ~f:(fun k ->
              "<th class=\"seth\">" ^ esc (CR.artifact_col_label k) ^ "</th>"))
@@ -1922,9 +1922,32 @@ let render_html (m : t) ~(generated_at : string) : string =
                      (esc x.CR.sr_artifact)
                | _ -> ""
              in
+             (* WHERE THE CODE IS. A missing evaluator is a RED cell
+                naming the file it would go in, not a blank: the whole
+                point of the column is that "planned" should read as a
+                location rather than as a status word. *)
+             let family, fn = CR.impl_of r in
+             let impl_cell =
+               match fn with
+               | Some f ->
+                   Printf.sprintf
+                     "<td class=\"impl\" title=\"%s\"><span \
+                      class=\"kq\">%s&middot;</span>%s</td>"
+                     (esc (CR.family_file_of r.CR.ag_id))
+                     (esc family) (esc f)
+               | None ->
+                   Printf.sprintf
+                     "<td class=\"impl none\" title=\"no evaluator yet — it \
+                      would go in %s\"><span \
+                      class=\"kq\">%s&middot;</span>&mdash;</td>"
+                     (esc (CR.family_file_of r.CR.ag_id))
+                     (esc family)
+             in
              "<tr><td class=\"kc\">" ^ esc code ^ "</td><td>"
-             ^ esc r.CR.ag_slug ^ "</td><td class=\"mk\">"
-             ^ esc (CR.mech_group_marks row.CR.ov_mechs)
+             ^ esc r.CR.ag_slug ^ "</td>" ^ impl_cell ^ "<td class=\"lm\">"
+             ^ esc (CR.lang_label row.CR.ov_mechs)
+             ^ "</td><td class=\"lm\">"
+             ^ esc (CR.mech_label row.CR.ov_mechs)
              ^ "</td><td class=\"mk\">" ^ esc (CR.format_marks r) ^ "</td>"
              (* the TARGET artifacts — what the claim ranges over *)
              ^ String.concat ~sep:""
@@ -1958,8 +1981,16 @@ let render_html (m : t) ~(generated_at : string) : string =
        a peer comparison shows two. \
        R the action whose rule RAN (hover for the tool and the artifact) \
        &middot; D a method FIRES here &middot; R+D both. \
-       <b>mech</b> S cstubs &middot; E cext &middot; T ctypes &middot; \
-       F cffi &middot; D dynlink. \
+       <b>implemented at</b> <code>&lt;module&gt;&middot;&lt;function&gt;</code> \
+       in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
+       (hover for the file); a RED cell is an agreement with no evaluator \
+       yet, and names the file it would go in. \
+       <b>lang</b> the language(s) whose mechanisms carry this row; \
+       <code>any</code> = all of them, which is what a claim about the \
+       LIBRARY looks like, no binding being involved. \
+       <b>mech</b> the mechanism(s), and EMPTY when the row covers every \
+       mechanism of its language — then the claim is a fact about the \
+       language, and naming a mechanism would say less than the truth. \
        <b>fmt</b> E elf &middot; M mach-o — a format changes whether a claim \
        APPLIES, never where it fires, so it annotates a row rather than \
        splitting one; <code>E&middot;</code> is not a gap, Mach-O has no \
@@ -2174,6 +2205,13 @@ table.grid th.gcol { font-family: ui-monospace, monospace; font-size: .62rem;
   padding: .3rem .15rem; vertical-align: bottom; }
 table.grid td.g { text-align: center; font-family: ui-monospace, monospace;
   font-size: .65rem; font-weight: 700; padding: .2rem .25rem; }
+/* WHERE THE CODE IS. `none` is red because an agreement with no
+   evaluator is the table's real to-do list — the status word said
+   "planned" without saying planned WHERE. */
+table.grid td.impl { font-family: ui-monospace, monospace; font-size: .68rem;
+  white-space: nowrap; }
+table.grid td.impl.none { background: #ffebe9; color: #a40e26; font-weight: 700; }
+table.grid td.lm { font-size: .72rem; white-space: nowrap; }
 td.g.rd { background: #d1e7dd; color: #0a3622; }   /* rule and check together */
 td.g.rr { background: #ffe8cc; color: #7a3e00; }   /* the rule ran here */
 td.g.dd { background: #dbeafe; color: #0a3069; }   /* the check fires here */

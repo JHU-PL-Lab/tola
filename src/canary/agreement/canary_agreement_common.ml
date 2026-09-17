@@ -1082,6 +1082,24 @@ type checking_method = {
           churn; widening the one that reads evidence is the
           distinction. *)
   m_eval : evaluator option;
+  m_impl : string option;
+      (** THE EVALUATOR'S NAME (2026-09-17, user: "can we add another
+          column … to pinpoint the file and the most important
+          function").
+
+          An OCaml closure carries neither its name nor its file, so
+          [m_eval] can say THAT a method is implemented and never WHERE.
+          This says where, and it is a declaration rather than a
+          derivation for exactly that reason.
+
+          [None] means no evaluator exists yet — the overview renders
+          that cell red, pointing at the family file the function would
+          go in. The FILE is derived (from which family declared the
+          agreement) and only the function name is written down, so the
+          half that can drift is the small half — and
+          [agreements.impl_functions_exist] greps the family's source
+          for it, so a renamed evaluator fails rather than silently
+          pointing at nothing. *)
   m_planned : string;
       (** why there is no evaluator; reported as the [Not_implemented]
           reason. Empty exactly when [m_eval] is [Some]. *)
@@ -1302,9 +1320,10 @@ type agreement = {
 let always_applicable _ _ _ = Applicable
 
 let checking_method ~name ~kind ~reference ?(applicable = always_applicable)
-    ~firing ~inputs ?eval ?(planned = "") ?diagnostics ~limits
+    ~firing ~inputs ?eval ?impl ?(planned = "") ?diagnostics ~limits
     ?(counterexamples = []) () : checking_method =
   { m_name = name;
+    m_impl = impl;
     m_kind = kind;
     m_reference = reference;
     m_applicable = applicable;

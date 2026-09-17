@@ -212,7 +212,7 @@ let signatures_agree : agreement =
                 [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
                   Canary_agreement_cstubs.typed_stub_surface ]
             | _ -> [])
-          ~eval:signatures_eval
+          ~eval:signatures_eval ~impl:"signatures_eval"
           ~limits:
             "textual comparison of type SPELLINGS, not semantic type \
              equivalence, representation or ownership. Names on only one \

@@ -2683,6 +2683,87 @@ let agreement_module_shape_pin : pure_test =
                        && not (String.is_substring tail ~substring:"\nlet load_")
                    | _ -> false)) }
 
+(* WHERE THE CODE IS, KEPT TRUE (2026-09-17, user: "does we use the same
+   file (canary/agreement) to hold the agreement … pinpoint the file and
+   the most important function (use red cell if such a function doesn't
+   exist yet)").
+
+   The overview's `implemented at` column is half derived and half
+   written down, and only the derived half is safe. The FILE comes from
+   the gathering list, so it cannot drift. The FUNCTION is a string on
+   the method, because an OCaml closure carries neither its own name nor
+   its file — and a string beside code is exactly the thing that rots.
+
+   So the pin holds BOTH directions, and the second one is the one that
+   matters:
+
+   (a) a named function EXISTS in the file the gathering points at. A
+       rename that forgets the label turns the column into a lie that
+       still renders black;
+   (b) an agreement that HAS an evaluator NAMES it. Without this the
+       column fails the safe way — a landed agreement quietly rendering
+       a red "no evaluator yet" cell — and a red cell nobody believes is
+       worse than no column, because the three genuinely unimplemented
+       ones are the whole point of the colour. *)
+let agreement_impl_pin : pure_test =
+  { name = "agreements.impl_functions_exist";
+    check =
+      (fun () ->
+        let module CR = Canary_agreement in
+        match Sys_unix.file_exists agreement_dir with
+        | `No | `Unknown -> true (* not run from the repo root *)
+        | `Yes ->
+            let source_of id =
+              let f = CR.family_file_of id in
+              let base = Stdlib.Filename.basename f in
+              let p = agreement_dir ^ "/" ^ base in
+              match Sys_unix.file_exists p with
+              | `Yes -> Some (code_without_comments p)
+              | _ -> None
+            in
+            let bad =
+              List.concat_map CR.agreement_registry ~f:(fun r ->
+                  let ms = r.CR.ag.Canary_agreement_common.ag_methods in
+                  let named =
+                    List.filter_map ms ~f:(fun m ->
+                        m.Canary_agreement_common.m_impl)
+                  in
+                  let has_eval =
+                    List.exists ms ~f:(fun m ->
+                        Option.is_some m.Canary_agreement_common.m_eval)
+                  in
+                  (* (a) each named function is defined in that file *)
+                  let missing =
+                    List.filter_map named ~f:(fun fn ->
+                        match source_of r.CR.ag_id with
+                        | None -> None
+                        | Some code ->
+                            if
+                              String.is_substring code
+                                ~substring:("let " ^ fn ^ " ")
+                              || String.is_substring code
+                                   ~substring:("let " ^ fn ^ "\n")
+                            then None
+                            else
+                              Some
+                                (Printf.sprintf "%s: no `let %s` in %s"
+                                   r.CR.ag_slug fn (CR.family_file_of r.CR.ag_id)))
+                  in
+                  (* (b) an implemented agreement says where it is *)
+                  let unnamed =
+                    if has_eval && List.is_empty named then
+                      [ Printf.sprintf
+                          "%s: has an evaluator but no ~impl — the overview \
+                           would show it as unimplemented"
+                          r.CR.ag_slug ]
+                    else []
+                  in
+                  missing @ unnamed)
+            in
+            if not (List.is_empty bad) then
+              List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
+            List.is_empty bad) }
+
 let agreement_tiers_pin : pure_test =
   { name = "agreements.families_do_not_reach_sideways";
     check =
@@ -3363,7 +3444,7 @@ let all_tests : pure_test list =
   @ agreement_fixture_tests
   @ agreement_bridge_pins
   @ [ check_module_pattern_pin; agreement_tiers_pin;
-      agreement_module_shape_pin; surface_facts_pin;
+      agreement_module_shape_pin; agreement_impl_pin; surface_facts_pin;
       agreements_for_pin; agreement_action_path_pin;
       agreement_acceptance_pin; dummy_action_pin ]
 

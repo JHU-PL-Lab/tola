@@ -179,7 +179,7 @@ let staged_interface_preserved : agreement =
               Staged_lib
                 [ "probe_lib_staged/inspect.json"; "install_lib/inspect.json" ]
             ])
-          ~eval:staged_interface_eval
+          ~eval:staged_interface_eval ~impl:"staged_interface_eval"
           ~limits:
             "it compares the summary fields an inspector records — export \
              count, recorded identity, dependencies, embedded search paths. \

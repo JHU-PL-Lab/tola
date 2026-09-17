@@ -50,14 +50,46 @@ open Canary_agreement_common
     [checks : (agreement_id * agreement) list]; this concatenates them,
     and [agreements.ids_are_total] pins that the union covers
     [all_agreement_ids] exactly once each. *)
+(* The gathering, BY MODULE (2026-09-17). It used to be one flat
+   [List.concat] of seven [checks] lists, which threw away the only fact
+   that says where an agreement is implemented: an [agreement] record
+   carries closures, and a closure reports neither its name nor its file.
+
+   `composed` is in this list and is NOT a family — it publishes
+   `composes` and reads other families' verdicts (CLAUDE.md states the
+   property). It belongs here because the list's job is `id → module`,
+   and `repack_complete` does live in `canary_agreement_composed.ml`. *)
+let agreement_modules : (string * (agreement_id * agreement) list) list =
+  [ ("symbols", Canary_agreement_symbols.checks);
+    ("api_surface", Canary_agreement_api_surface.checks);
+    ("behaviour", Canary_agreement_behaviour.checks);
+    ("identity", Canary_agreement_identity.checks);
+    ("types", Canary_agreement_types.checks);
+    ("staging", Canary_agreement_staging.checks);
+    ("composed", Canary_agreement_composed.checks) ]
+
 let declared_agreements : (agreement_id * agreement) list =
-  Canary_agreement_symbols.checks
-  @ Canary_agreement_api_surface.checks
-  @ Canary_agreement_behaviour.checks
-  @ Canary_agreement_identity.checks
-  @ Canary_agreement_types.checks
-  @ Canary_agreement_staging.checks
-  @ Canary_agreement_composed.checks
+  List.concat_map agreement_modules ~f:snd
+
+(** WHICH MODULE DECLARED THIS — the topic half of
+    [canary_agreement_<topic>.ml] (2026-09-17).
+
+    Derived from the gathering above rather than declared per agreement,
+    so it cannot drift: the list that produces the registry is the list
+    that names the files. Only the FUNCTION half is written down
+    ([m_impl]), which is the half a closure cannot report. *)
+let family_of (id : agreement_id) : string =
+  match
+    List.find agreement_modules ~f:(fun (_, cs) ->
+        List.exists cs ~f:(fun (i, _) -> Poly.equal i id))
+  with
+  | Some (name, _) -> name
+  | None -> "?"
+
+(** The repo-relative PATH, not the basename: the string is shown as a
+    tooltip and copied into an editor, so it should be openable. *)
+let family_file_of (id : agreement_id) : string =
+  "src/canary/agreement/canary_agreement_" ^ family_of id ^ ".ml"
 
 let agreement_of (id : agreement_id) : agreement =
   match
@@ -996,18 +1028,93 @@ let pad_display (n : int) (s : string) : string =
   in
   s ^ String.make (max 0 (n - width)) ' '
 
-let mech_group_marks (ms : Canary_mechanism.mechanism list) : string =
-  String.concat ~sep:""
-    (List.map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
-         let m = i.Canary_mechanism.mi_mechanism in
-         if not (List.mem ms m ~equal:Poly.equal) then "·"
-         else
-           match m with
-           | Canary_mechanism.Cstubs -> "S"
-           | Canary_mechanism.Cext -> "E"
-           | Canary_mechanism.Ctypes -> "T"
-           | Canary_mechanism.Cffi -> "F"
-           | Canary_mechanism.Dynlink -> "D"))
+(* ── LANG AND MECH, SPELLED OUT (2026-09-17, user: "single letters in
+   mech is not reader-friendly … split mech into two columns as lang and
+   mech … if it's on ocaml but not mech related, we can leave the mech
+   empty").
+
+   The rule that makes the second column meaningful: a mechanism name
+   earns its place only when the row is a STRICT SUBSET of its
+   language's mechanisms. A row covering every mechanism of OCaml is a
+   fact about OCaml, not about cstubs, and writing "cstubs, dynlink"
+   there would say something narrower than the truth.
+
+   That is why `behavior_matches` renders as two rows reading `ocaml` /
+   `python` with an EMPTY mech: its firing differs by language (a
+   different probe action) and not by mechanism at all, which the
+   letter-marks could not distinguish from a coincidence. *)
+
+let langs_of_mechs (ms : Canary_mechanism.mechanism list) :
+    Canary_lang.lang list =
+  List.map ms ~f:(fun m ->
+      (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_lang)
+  |> List.dedup_and_sort ~compare:Poly.compare
+
+let mechs_of_lang (l : Canary_lang.lang) : Canary_mechanism.mechanism list =
+  List.filter_map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+      if Poly.equal i.Canary_mechanism.mi_lang l then
+        Some i.Canary_mechanism.mi_mechanism
+      else None)
+
+(* The languages canary MODELS, read off the mechanism catalogue rather
+   than listed here. `Canary_project_analysis.modelled_langs` is the same
+   set, but it sits in `project/`, above this layer — and the catalogue
+   is where the fact actually lives: a language canary models is one some
+   mechanism binds in. *)
+let catalogue_langs : Canary_lang.lang list =
+  List.map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+      i.Canary_mechanism.mi_lang)
+  |> List.dedup_and_sort ~compare:Poly.compare
+
+(** The LANG cell: the languages this row's mechanisms belong to, or
+    ["any"] when it spans every modelled language — which is what a
+    claim about the LIBRARY looks like, since no binding is involved. *)
+let lang_label (ms : Canary_mechanism.mechanism list) : string =
+  match langs_of_mechs ms with
+  | [] -> ""
+  | ls ->
+      if List.length ls >= List.length catalogue_langs then "any"
+      else String.concat ~sep:"," (List.map ls ~f:Canary_lang.string_of_lang)
+
+(** The MECH cell: empty when the row covers every mechanism of its
+    language(s), because then the row is not about a mechanism. *)
+let mech_label (ms : Canary_mechanism.mechanism list) : string =
+  match langs_of_mechs ms with
+  | [] -> ""
+  | ls ->
+      let covers_all_of l =
+        List.for_all (mechs_of_lang l) ~f:(fun m ->
+            List.mem ms m ~equal:Poly.equal)
+      in
+      if List.for_all ls ~f:covers_all_of then ""
+      else
+        String.concat ~sep:","
+          (List.map ms ~f:Canary_mechanism.string_of_mechanism)
+
+(** WHERE THE CODE IS: the family file's topic and the evaluator's name,
+    or [None] for the function when no evaluator exists — which the
+    renderers show as a RED cell pointing at the file it would go in. *)
+let impl_of (r : agreement_row) : string * string option =
+  ( family_of r.ag_id,
+    List.find_map r.ag.ag_methods ~f:(fun m -> m.m_impl) )
+
+(** The IMPL cell as one string: [family·function], or [family·—] when
+    no evaluator exists. The file is [canary_agreement_<family>.ml] —
+    spelled out in the legend rather than in every row, because the
+    prefix is the same thirteen times and the suffix is the answer. *)
+let impl_label (r : agreement_row) : string =
+  let family, fn = impl_of r in
+  family ^ "·" ^ Option.value fn ~default:"—"
+
+(* `mech_group_marks` lived here — a five-slot `S···D` string, one
+   character per catalogue mechanism. It was deleted on 2026-09-17 when
+   [lang_label] / [mech_label] replaced it, and the reason is worth
+   keeping: the marks were dense but unreadable without the legend, AND
+   they could not express the fact the split makes obvious — `S···D` and
+   `ocaml`/(empty) are the same set, but only the second says that the
+   claim is about the LANGUAGE rather than about two mechanisms that
+   happen to agree. A notation that cannot distinguish a rule from a
+   coincidence is the wrong notation. *)
 
 (** The lag of ONE rendered row, over its own cells. *)
 let row_lag (row : overview_row) : int option =
@@ -1033,8 +1140,8 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let rows = overview_rows ~provision () in
   let cols = overview_columns () in
   let head =
-    Printf.sprintf "%-4s %-28s %-5s %-3s | %s | " "code" "agreement" "mech"
-      "fmt"
+    Printf.sprintf "%-4s %-28s %-36s %-7s %-14s %-3s | %s | " "code"
+      "agreement" "implemented at" "lang" "mech" "fmt"
       (String.concat ~sep:" "
          (List.map overview_artifact_columns ~f:(fun k ->
               pad_display 3 (artifact_col_label k))))
@@ -1045,9 +1152,10 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let body =
     List.map rows ~f:(fun row ->
         let r = row.ov_agreement in
-        Printf.sprintf "%-4s %-28s %s %s | %s | %s | %3s | %s"
+        Printf.sprintf "%-4s %-28s %s %-7s %-14s %s | %s | %s | %3s | %s"
           (short_code_of_slug r.ag_slug) r.ag_slug
-          (pad_display 5 (mech_group_marks row.ov_mechs))
+          (pad_display 36 (impl_label r))
+          (lang_label row.ov_mechs) (mech_label row.ov_mechs)
           (pad_display 3 (format_marks r))
           (String.concat ~sep:" "
              (List.map overview_artifact_columns ~f:(fun k ->
@@ -1083,10 +1191,23 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         "D  a method FIRES here, reading what survived";
         "◉  both: the check fires at the very action whose rule it recovers";
         "";
-        "mech = which MECHANISM carries the claim WITH THIS PATTERN, in \
-         catalogue order:";
-        "       S cstubs · E cext · T ctypes · F cffi · D dynlink. \
-         `·····` = none can.";
+        "implemented at — `<family>·<function>` in \
+         src/canary/agreement/canary_agreement_<family>.ml.";
+        "       `·—` = NO EVALUATOR YET; the family names the file it would \
+         go in.";
+        "lang = the language(s) whose mechanisms carry this row. `any` = \
+         every modelled";
+        "       language, which is what a claim about the LIBRARY looks like \
+         — no binding";
+        "       is involved, so nothing about a binding can narrow it.";
+        "mech = the MECHANISM(s), when the row is a strict subset of its \
+         language's.";
+        "       EMPTY means the row covers every mechanism of its \
+         language(s), so the";
+        "       claim is a fact about the language and naming a mechanism \
+         would say less";
+        "       than the truth. A blank lang AND mech = no mechanism carries \
+         it at all.";
         "fmt  = which OBJECT FORMAT it can range over: E elf · M mach-o. A \
          format";
         "       changes whether a claim APPLIES, never where it fires — so \

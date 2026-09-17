@@ -293,7 +293,7 @@ let declared_symbols_exported : agreement =
                post-check, and in an Installed world those differ. *)
             declared_exports_input d
             @ [ Native_lib (built_lib_evidence_paths "inspect.json") ])
-          ~eval:declared_exports_eval
+          ~eval:declared_exports_eval ~impl:"declared_exports_eval"
           ~limits:
             "only declared names are covered; signatures, versions and \
              behaviour are not. A name present says nothing about what it \
@@ -399,7 +399,7 @@ let required_symbols_exported : agreement =
                  paths is simply not this method's evidence. *)
               [ C_stub [ tag ^ "/inspect_stub.json"; tag ^ "/inspect.json" ];
                 Native_lib (lib_evidence_paths w "inspect.json") ])
-          ~eval:required_symbols_eval
+          ~eval:required_symbols_eval ~impl:"required_symbols_eval"
           ~limits:
             "set inclusion only: it does not check signatures, symbol \
              versions, or which definition the loader will actually bind. \
