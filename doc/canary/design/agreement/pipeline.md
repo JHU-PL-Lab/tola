@@ -2,7 +2,7 @@
 
 **Kind: walkthrough.** One project, end to end, showing every point where
 the run consults the registry and what is *actually* in use at each. The
-model is in [`registry.md`](registry.md); what is landed is in
+model is in [`model.md`](model.md); what is landed is in
 [`landing.md`](landing.md).
 
 Read this when you are landing an agreement on a project and need to know
@@ -128,7 +128,7 @@ step-dir mapping and the variant key).
 > **Failure mode 3 — the step.** sqlite inspected its binding at the *probe*
 > step while the derivation names the step that *installs* it. Both work as
 > commands; only one is where anything looks. Installing is also the earliest
-> point the evidence exists, which is what §1.3 asks for.
+> point the evidence exists, which is what [`model.md`](model.md) §1.3 asks for.
 
 ### The dummy action
 
@@ -175,7 +175,7 @@ downstream could run.
 
 ## 5. `evaluate_step` — the only agreement-layer entry point a run uses
 
-One call, one record ([`registry.md`](registry.md) §7.1):
+One call, one record ([`model.md`](model.md) §2.1):
 
 - **selection** — every method whose `m_firing` contains this step's action,
   under this mechanism/language/world;

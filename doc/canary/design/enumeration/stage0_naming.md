@@ -137,7 +137,7 @@ Bad scenarios come in two flavors:
 The names are the registry's; the tags are what a scenario name carries.
 `canary checks` prints the live list, and the twelve agreements plus their
 reference expectations are in
-[`agreement/registry.md`](../agreement/registry.md) §1.7. The numbered
+[`agreement/model.md`](../agreement/model.md) §1.7. The numbered
 `c1`..`c9` identifiers were retired on 2026-09-12, and the three that compared
 an artifact against a DECLARATION became agreements of their own
 (`declared_symbols_exported`, `soname_matches_declaration`,

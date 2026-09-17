@@ -286,7 +286,7 @@ is still baked into the action catalogue, so:
   packagers still divide the implementation into different objects
   (Debian's one `libtinfo` IS the wide build; conda-forge ships
   `libtinfo` + `libtinfow`). Design note:
-  [`../design/agreement/registry.md`](../design/agreement/registry.md) §5.5; the
+  [`../design/agreement/components.md`](../design/agreement/components.md) §5.5; the
   per-project half, including two corrections to the survey's ncurses
   row, is in [`issues.md`](issues.md).
 
@@ -297,7 +297,7 @@ is still baked into the action catalogue, so:
   second form (containment: each solver lib statically absorbs the
   helper objects). Two forms, one instance each, found for free.
 
-  **Resume by** implementing the dependency agreements in `agreement/registry.md`
+  **Resume by** implementing the dependency agreements in `agreement/model.md`
   §5.6 (open work in its §7.4), after which D6
   lands at Level B with the vendored world as a derived `xfail`.
   Landing it stable-only is the cheap alternative and costs a (correct)
@@ -366,7 +366,7 @@ Framework-level; per-project ones live in [`issues.md`](issues.md).
    implementation into different objects. No c1..c8 states it; c4 is the
    nearest and wrong (its inputs are scalars a provider states about
    itself). Design + the run falsifier:
-   [`../design/agreement/registry.md`](../design/agreement/registry.md) §5.5. Blocks D6
+   [`../design/agreement/components.md`](../design/agreement/components.md) §5.5. Blocks D6
    at Level B and is the first contract addition since the registry
    landed. Ships with `Canary_prebuilt.env`, which the same world needs
    for an unrelated reason (a relocated prebuilt whose data path was

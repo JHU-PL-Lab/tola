@@ -216,7 +216,7 @@ let mechanism_catalogue : mechanism_info list =
       (* the extension's boundary is C source that a scanner could
          read, but canary has no extractor for it — a gap in canary
          rather than in the mechanism, so it is NOT stated as an
-         absence here (see registry.md §7.4.3) *)
+         absence here (see backlog.md §51) *)
       mi_exposes_typed_stub = false };
     { mi_mechanism = Ctypes; mi_lang = Canary_lang.Python;
       mi_discipline = Dynamic_ffi;

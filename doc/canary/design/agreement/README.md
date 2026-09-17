@@ -54,14 +54,15 @@ owns them.
 
 | you are… | read |
 | --- | --- |
-| meeting the idea | this file, then `registry.md` §1 |
+| meeting the idea | this file, then [`model.md`](model.md) §1 |
 | **asking why there is anything to check** | [`theory.md`](theory.md) |
 | **looking for the NEXT agreement** | [`theory.md`](theory.md) §5–§6 |
 | **asking what one agreement IS** | [`catalogue.md`](catalogue.md), or `canary checks --agreement NAME` |
 | landing an agreement on a project | [`pipeline.md`](pipeline.md) |
 | **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
 | asking what is actually in use | [`landing.md`](landing.md), or `canary checks --landing` |
-| writing the paper | `registry.md` §§2–6 — the component walk |
+| **asking why THIS agreement exists** | [`components.md`](components.md), at the anchor its registry row carries |
+| writing the paper | [`components.md`](components.md) — the component walk |
 | debugging an `unavailable` | [`catalogue.md`](catalogue.md) for where it looks, then [`pipeline.md`](pipeline.md) points 3–4 |
 
 - [`theory.md`](theory.md) — **where agreements come from.** An action's
@@ -79,16 +80,25 @@ owns them.
   world, what falsifies it, and what a pass does not establish. `make
   agreement-catalogue` rewrites it; a pin fails if it drifts from the
   registry.
-- [`registry.md`](registry.md) — **the model.** What an
-  agreement is (§1), the catalogue (§1.7), the component walk over
-  artifacts, bindings, versions, packaging and deployment (§§2–6), and
-  registry integration with its open items (§7).
+- [`model.md`](model.md) — **the model.** What an agreement is, what
+  separates a claim from the methods that check it, the eight outcomes
+  and why there are eight (§1); and how a running step gets from its own
+  action to a set of outcomes (§2).
+- [`components.md`](components.md) — **why each agreement exists.** A
+  walk over the five kinds of thing a binding world is made of —
+  artifacts, bindings, versions, packaging, deployment — saying for each
+  what could be claimed, what observation is available and what it does
+  not establish. Every registry row's `ag_doc` anchor points here, and
+  `agreements.doc_anchors_exist` fails if a cited section stops
+  existing.
 - [`pipeline.md`](pipeline.md) — **a project end to end.** The seven points
   where a run touches the registry, what each undecided outcome means and
   which of them is anyone's job, and the checklist for landing one.
-- [`landing.md`](landing.md) — **the tracker.** Planned (from the registry)
-  beside effective (from run logs), per agreement, with what each is
-  waiting on.
+- [`landing.md`](landing.md) — **what is left.** Per agreement, what it
+  is waiting on; the four undecided states and the four kinds of work
+  they mean; the distance-0 backlog. It does NOT carry a landed/not
+  table — `canary checks --landing` does, and the hand copy that used to
+  sit here went stale and contradicted itself.
 
 ## See it rather than read it
 
@@ -118,13 +128,21 @@ want one: **[`catalogue.md`](catalogue.md)**, which is generated and complete.
 | --- | --- | --- |
 | **what each one recovers** | [`catalogue.md`](catalogue.md) | the registry at a glance — action, tool, artifact, planned status. Start here |
 | per-agreement records | [`catalogue.md`](catalogue.md) | what IS this agreement — claim, whose rule it recovers, where it looks, worked examples |
-| effective | [`landing.md`](landing.md) | which ones actually run |
 | the distance-0 backlog | [`landing.md`](landing.md) | which unregistered checks are cheapest to add |
 | full-information per action | [`theory.md`](theory.md) §5 | what each real tool established, and what survives of it |
-| the summary catalogue | [`registry.md`](registry.md) §1.7 | a one-line index — largely superseded by `catalogue.md` |
+| **why an agreement exists** | [`components.md`](components.md) | the per-component rationale each `ag_doc` anchor points at |
+| **planned vs effective** | `canary checks --landing` | which ones a real run has decided. Not copied into any file — see below |
+| what each is waiting on | [`landing.md`](landing.md) | the half no code can answer |
 | agreement × action | `canary checks --firing` | where each one fires |
 | **scenario × check** | `canary result [<project>]` | what each agreement DECIDED, per world — check columns interleaved with the actions, `pre → action → artifact → post`, one agreement per cell, plus a counted **blame** for every cell that carries no verdict |
 | **could vs did, per project** | `canary checks <project>` | every action the project derives, every agreement that fires there, what the runs decided — ending in a five-class gap summary (`decided` / `could not` / `never asked` / `stood down` / `no evaluator`) |
+
+**And one rule about tables:** a table the tool generates does not get a
+hand copy. Three did — `registry.md` §1.7, `registry.md` §7.4.1 and
+`landing.md`'s effective table — and all three had gone stale in the same
+direction, still reporting `declared_symbols_exported` as `unavailable`
+months after it began deciding on sqlite and catching a real violation.
+That is why `registry.md` is gone and `landing.md` is half the size.
 
 ## Two claims worth keeping apart
 

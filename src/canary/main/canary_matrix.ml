@@ -547,7 +547,7 @@ let row_key (pr : Canary_project_run.project_run)
    MOVED TO [Canary_basic] on 2026-09-14. It is a pure function of
    [action] and two orderings existed — this one and the agreement
    views' — which could not share while it lived in [main/]; that is
-   the layering [registry.md] §7.4.4 recorded. The agreement catalogue
+   the layering [backlog.md] §51 records. The agreement catalogue
    now sorts its summary table by the same key, so the two tables list
    their rows in one order.
 

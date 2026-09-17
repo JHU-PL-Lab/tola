@@ -2096,7 +2096,20 @@ let lib_name_optional_pin : pure_test =
    than something noticed later. *)
 let agreement_bridge_pins : pure_test list =
   let module CR = Canary_agreement in
-  let doc = "doc/canary/design/agreement/registry.md" in
+  (* TWO FILES since 2026-09-17, when `registry.md` split. [model.md] is
+     the model and the integration; [components.md] is the per-component
+     walk and the target of every [ag_doc] anchor. The pins that read
+     "the doc" now say which half they mean, because they mean
+     different halves: names may appear in either, § cross-references
+     resolve WITHIN a file, and the anchors resolve only in the walk. *)
+  let model_doc = "doc/canary/design/agreement/model.md" in
+  let components_doc = "doc/canary/design/agreement/components.md" in
+  let agreement_docs = [ model_doc; components_doc ] in
+  let read_doc p =
+    if Stdlib.Sys.file_exists p then
+      Some (Stdlib.In_channel.with_open_text p Stdlib.In_channel.input_all)
+    else None
+  in
   [ { name = "agreements.slugs_unique_and_named";
       check =
         (fun () ->
@@ -2146,11 +2159,13 @@ let agreement_bridge_pins : pure_test list =
     { name = "agreements.doc_names_live_code";
       check =
         (fun () ->
-          if not (Stdlib.Sys.file_exists doc) then true
-          else
-            let text =
-              Stdlib.In_channel.with_open_text doc Stdlib.In_channel.input_all
-            in
+          (* BOTH halves: a code name may be introduced in either, and
+             the question — does this identifier exist in src? — does
+             not care which file said it *)
+          match List.filter_map agreement_docs ~f:read_doc with
+          | [] -> true
+          | texts ->
+            let text = String.concat ~sep:"\n" texts in
             let rec walk dir acc =
               Sys_unix.readdir dir |> Array.to_list
               |> List.fold ~init:acc ~f:(fun acc e ->
@@ -2292,11 +2307,15 @@ let agreement_bridge_pins : pure_test list =
     { name = "agreements.doc_cross_refs_resolve";
       check =
         (fun () ->
-          if not (Stdlib.Sys.file_exists doc) then true
-          else
-            let text =
-              Stdlib.In_channel.with_open_text doc Stdlib.In_channel.input_all
-            in
+          (* PER FILE: headings are a property of one document, so a §
+             reference resolves within the file that wrote it. A line
+             naming another `.md` is exempt — that is how the split's
+             cross-file references (model.md → components.md §5.5) stay
+             legal. *)
+          List.for_all agreement_docs ~f:(fun doc ->
+          match read_doc doc with
+          | None -> true
+          | Some text ->
             let lines = String.split_lines text in
             let take_tok s =
               let n = String.length s in
@@ -2346,9 +2365,9 @@ let agreement_bridge_pins : pure_test list =
               |> List.dedup_and_sort ~compare:String.compare
             in
             if not (List.is_empty bad) then
-              Fmt.pr "    unresolved doc refs: %s@."
+              Fmt.pr "    unresolved doc refs in %s: %s@." doc
                 (String.concat ~sep:", " (List.map bad ~f:(fun r -> "\xc2\xa7" ^ r)));
-            List.is_empty bad) };
+            List.is_empty bad)) };
     (* THE CATALOGUE IS A BUILD PRODUCT (2026-09-12, user: "they should
        be in one file which having this info").
 
@@ -2459,11 +2478,14 @@ let agreement_bridge_pins : pure_test list =
     { name = "agreements.doc_anchors_exist";
       check =
         (fun () ->
-          if not (Stdlib.Sys.file_exists doc) then true (* not in a checkout *)
-          else
-            let text =
-              Stdlib.In_channel.with_open_text doc Stdlib.In_channel.input_all
-            in
+          (* components.md ALONE: an [ag_doc] anchor names the section
+             that explains why the agreement exists, and those sections
+             are the component walk. Pointing this at the model would
+             pass vacuously — the model has a §1 and a §2 and nothing
+             the anchors name. *)
+          match read_doc components_doc with
+          | None -> true (* not in a checkout *)
+          | Some text ->
             List.for_all CR.all_agreements ~f:(fun e ->
                 (* "§6.3" resolves if the doc has a §6 or §6.3 heading *)
                 let num =

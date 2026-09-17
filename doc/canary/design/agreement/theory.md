@@ -3,7 +3,7 @@
 **Kind: theory.** Why there is anything to check at all, what an agreement
 *is* in terms of the actions that build software, and a procedure for finding
 the next one. Paper material; the engineering view is
-[`registry.md`](registry.md), the concrete records are
+[`model.md`](model.md), the concrete records are
 [`catalogue.md`](catalogue.md).
 
 This document does not describe what Canary runs. It describes the thing

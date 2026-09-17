@@ -99,8 +99,7 @@ eagerly.
 3. **You get a MIX.** The loaded set is conda's library plus the system's
    dependencies. Nothing about that mixture was ever tested by anyone
    upstream. It is exactly the "which lib actually loaded" hazard in
-   [`../design/agreement/registry.md`](../design/agreement/registry.md)
-   §10b/§10c, and the reason the closure deserves a check of its own.
+   [`../design/agreement/components.md`](../design/agreement/components.md) §5.5, and the reason the closure deserves a check of its own.
 
 **Selection criterion that follows**: the NEEDED closure is measurable
 before vendoring, so measure it. libffi (1 entry) is trivially safe;
@@ -230,7 +229,7 @@ check fail once on purpose.
   have reported cairo's 11 external dependencies *before* a run instead of
   leaving us to wonder. This is also the concrete motivation for the
   postponed "C smoke probe" in
-  [`../design/agreement/registry.md` App. C.1](../design/agreement/registry.md):
+  [`../design/agreement/model.md`](../design/agreement/model.md):
   a lib can be perfectly formed and still fail to load.
 - [ ] **Fetch the closure when the system cannot satisfy it.** For a
   cairo-shaped package on a machine lacking pixman/freetype, the honest

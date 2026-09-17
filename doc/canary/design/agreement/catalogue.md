@@ -6,13 +6,13 @@ Do not edit: regenerate with `make agreement-catalogue`. The fields come from th
 
 Evidence paths are shown for a BUILT world. The world decides where a binding's inspection sits — a Fetched binding's is at its fetch step — so the same method reads different paths in different worlds.
 
-The model these fields belong to is [`registry.md`](registry.md) §1; how a project reaches one is [`pipeline.md`](pipeline.md).
+The model these fields belong to is [`model.md`](model.md) §1; why each agreement exists is [`components.md`](components.md), at the anchor its row carries; how a project reaches one is [`pipeline.md`](pipeline.md).
 
 ## What each agreement recovers
 
 Every row is one action's rule, re-derived from what survived it. **Action** is where the rule ran — not where the check fires, which is wherever the evidence lands and is usually later. **Tool** is what applied it; **artifact** is what it ranged over.
 
-A `code-set` action is one THIS graph contains, so the row can be read against `canary paths`. A plain-prose one is not: the link that built a consumer ran in a world this graph never modelled, and "the link" is several actions depending on who is linking. Naming those in the action type would be a lie in both directions; drawing them needs the action-unit view, which is deferred in [`registry.md`](registry.md) §7.4.4.
+A `code-set` action is one THIS graph contains, so the row can be read against `canary paths`. A plain-prose one is not: the link that built a consumer ran in a world this graph never modelled, and "the link" is several actions depending on who is linking. Naming those in the action type would be a lie in both directions; drawing them needs the action-unit view, which is deferred in [`backlog.md`](../../backlog.md) §51.
 
 | code | agreement | action | tool | artifact | checked at | status |
 | --- | --- | --- | --- | --- | --- | --- |

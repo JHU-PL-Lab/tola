@@ -340,7 +340,7 @@ reconciling with, not duplicating.
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
 | `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
-| `src/canary/agreement/canary_agreement.ml`           | **TIER 3 — THE LIST AND THE VIEWS** (was `canary_agreement_registry.ml`, renamed 2026-09-02 for reading: it names the thing, not the shape of it, and sorts ahead of the families). A row is a NAME + doc anchor + enabled flag; the agreement itself comes from the family. Everything else is derived — `evaluate_in_context` (THE production path: action + mechanism + lang + world → selected methods → resolved evidence → `outcome`), `evaluate_over_inputs` / `predicted_by_agreement` / `predicted_contains_any` (the project-supplied-input path the compat expectations still use), `inputs_of_agreement`, `agreement_fixtures`, the firing table + fill list, `proposed_agreements`, `all_agreements`/`pp_agreements`/`pp_catalogue`, `agreements_for`. Holds NO per-agreement description of any kind. Design: `doc/canary/design/agreement/registry.md` |
+| `src/canary/agreement/canary_agreement.ml`           | **TIER 3 — THE LIST AND THE VIEWS** (was `canary_agreement_registry.ml`, renamed 2026-09-02 for reading: it names the thing, not the shape of it, and sorts ahead of the families). A row is a NAME + doc anchor + enabled flag; the agreement itself comes from the family. Everything else is derived — `evaluate_in_context` (THE production path: action + mechanism + lang + world → selected methods → resolved evidence → `outcome`), `evaluate_over_inputs` / `predicted_by_agreement` / `predicted_contains_any` (the project-supplied-input path the compat expectations still use), `inputs_of_agreement`, `agreement_fixtures`, the firing table + fill list, `proposed_agreements`, `all_agreements`/`pp_agreements`/`pp_catalogue`, `agreements_for`. Holds NO per-agreement description of any kind. Design: `doc/canary/design/agreement/model.md` |
 | `src/canary/agreement/canary_agreement_common.ml`     | **TIER 1 — what every family needs** (was `canary_agreement.ml`): the descriptive types an agreement uses to describe itself (`subject`, `claim`, `basis`, and the `agreement` record), the `checking_method` record (kind · reference · applicability · firing · inputs · evaluator-or-planned-reason · diagnostics · limits · counterexamples) and `evaluate_method`, the `outcome` type (holds/violated/unavailable/inconclusive/not_implemented/not_applicable/disabled/error), the `inspect_input` ADT that NAMES evidence — including the `Declared_*` constructors that make a declaration comparison the same shape as a peer comparison — `agreement_id` (12 descriptive constructors), the `evaluation_schema` cache epoch, the shared firing derivations + `binding_evidence_tag` + `uniform_world`, and the JSON primitives. Membership rule: a family owns what is only about its topic; this owns what more than one family needs |
 | `src/canary/agreement/canary_agreement_<topic>.ml`   | **TIER 2 — ONE MODULE PER CHECK FAMILY** (was `canary_chk_*`, renamed 2026-09-02: the FILE names the agreement, the FUNCTION names the act — it had been backwards on both sides). symbols · api_surface · identity · types · behaviour, each referring only to tier 1. One shape, top to bottom: the EVIDENCE it reads (records + loaders) → the COMPARATORS → the EVALUATORS → the AGREEMENTS it hands the registry, gathered last as `checks : (agreement_id * agreement) list`. A family holds every agreement about its topic, INCLUDING what used to be a second "cell" of one id: an artifact-vs-declaration claim and an artifact-vs-peer claim are two agreements with two names (2026-09-12). `canary_agreement_composed.ml` is NOT a family: it declares `composes` and reads other families' verdicts (`repack_complete` = `signatures_agree` ∧ `required_symbols_exported` ∧ `repack_preserves_api`, and reports `not_implemented` until they exist). **A family is DEFINED as a module publishing `checks` and no `composes`** — a property, not a filename, so renames cannot blind the pins: `agreements.families_do_not_reach_sideways` + `agreements.families_share_one_shape` + `agreements.families_declare_the_catalogue` |
 | `src/canary/agreement/canary_agreement_ocaml.ml`     | **TIER 1, per LANGUAGE** (2026-09-03, the first of these): what every OCaml binding has whatever its mechanism — `user_surface` (the installed `.mli` → `inspect_mli.json`). Read by a family, so it sits below them and publishes no `checks` — not a family. A family states the CLAIM (neutral); the language states its SURFACE |
@@ -551,7 +551,7 @@ See `surface_draft/implementation.md` §2.7.
 ### Current state
 
 Agreement catalogue review (2026-09-09):
-[`agreement/registry.md`](doc/canary/design/agreement/registry.md) now separates
+[`agreement/model.md`](doc/canary/design/agreement/model.md) now separates
 current checks from proposals; §7.4 collects open decisions.
 `signatures_agree` compares textual signatures, `dependencies_provided`
 reads one provider plus a fixed ambient list, and firing-table fixture
@@ -589,7 +589,7 @@ expectations only, so agreement-derived verdicts re-ran and nothing else
 did. `canary checks --catalogue` prints the generated catalogue.
 `required_symbols_exported` is verified end to end through the action
 path (`agreements.action_path_reports_outcomes`). The ordered backlog is
-`agreement/registry.md` §7.4.2.
+`backlog.md` §51.
 **Same day, the audit pass.** ONE evaluation record per step
 (`Canary_agreement.evaluate_step` → `step_evaluation`) now feeds BOTH
 the report and the step's acceptance; a compat step used to evaluate
@@ -627,7 +627,7 @@ selected by the inspector's declared `kind`, not by first-path-wins,
 which is what makes listing both filename conventions safe. NEXT, one
 at a time, verified from the log each time: Python `api_names_present`,
 then `required_symbols_exported` (needs a stub + native inspect on
-sqlite), then `signatures_agree`. See `agreement/registry.md` §7.1.1.
+sqlite), then `signatures_agree`. See `agreement/model.md` §2.1.1.
 **The agreement docs are a DIRECTORY now** (2026-09-12):
 `doc/canary/design/agreement/` — `README.md` (the map: what an agreement
 is, then which file for which job), `pipeline.md` (**a project end to
@@ -635,8 +635,10 @@ end** — the 7 points where a run touches the registry, the 4 failure
 modes behind an `unavailable`, and the landing checklist),
 `landing.md` (**the tracker**: PLANNED from the registry vs EFFECTIVE
 from run logs, per agreement, with what each is waiting on), and
-`registry.md` (the model + catalogue + component walk; moved from
-`design/agreement_registry.md`). `canary checks --landing` is the live
+`model.md` (the model + registry integration) and `components.md` (the
+per-component walk, and where every `ag_doc` anchor points — the two
+halves of the retired `registry.md`, split 2026-09-17).
+`canary checks --landing` is the live
 tracker; `--observed` is one project's last run. Pinned by
 `agreements.landing_doc_lists_every_agreement` (the planned column must
 match the registry, so a new agreement cannot land without the tracker
@@ -792,7 +794,7 @@ on every relocation. It is the one agreement whose two sides are two
 copies of one artifact.
 Pinned: `ag_rooted_in` well-formed in `agreements.registry_complete`
 (a rooted row must fill all three columns).
-**DEFERRED** (`registry.md` §7.4.3): the action-unit perspective — can
+**DEFERRED** (`backlog.md` §51): the action-unit perspective — can
 `canary result`'s action columns carry agreements BETWEEN actions? Not
 blocked by the medium (`--firing` is already that grid) but by missing
 data: `m_firing` is where an agreement is DETECTED; nothing typed

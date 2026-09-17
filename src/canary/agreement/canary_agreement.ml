@@ -1,5 +1,5 @@
 (** [Canary_agreement] — TIER 3: THE LIST, and everything derived from
-    it. Design: [doc/canary/design/agreement/registry.md].
+    it. Design: [doc/canary/design/agreement/model.md].
 
     The agreement layer is three tiers: [Canary_agreement_common]
     declares the types; each [Canary_agreement_<topic>] is one family
@@ -78,9 +78,15 @@ type agreement_row = {
           [string_of_agreement_id ag_id], carried on the row so the
           display layers do not each convert. *)
   ag_doc : string;
-      (** the anchor in doc/canary/design/agreement/registry.md, pinned
-          by [agreements.doc_anchors_exist]. The registry's to give: a
-          fact about the DOCUMENT, not about the agreement *)
+      (** the anchor in doc/canary/design/agreement/components.md —
+          where an agreement's RATIONALE lives, as against
+          [catalogue.md] which says what it is. Pinned by
+          [agreements.doc_anchors_exist], so the numbering over there is
+          load-bearing. The registry's to give: a fact about the
+          DOCUMENT, not about the agreement.
+
+          It pointed into `registry.md` until 2026-09-17, when that file
+          split; the §-numbers did not move, only the filename. *)
   ag_enabled : bool;
       (** switched on for this build. NOT an implementation status —
           that is per-method ([m_eval = None] ⇒ planned). Every row
@@ -1195,8 +1201,8 @@ let pp_rooting_table_md () : string =
      consumer ran in a world this graph never modelled, and \"the link\" is \
      several actions depending on who is linking. Naming those in the action \
      type would be a lie in both directions; drawing them needs the \
-     action-unit view, which is deferred in [`registry.md`](registry.md) \
-     §7.4.4.\n\n";
+     action-unit view, which is deferred in \
+     [`backlog.md`](../../backlog.md) §51.\n\n";
   add "| code | agreement | action | tool | artifact | checked at | status |\n";
   add "| --- | --- | --- | --- | --- | --- | --- |\n";
   List.iter rooted_rows ~f:(fun r ->
@@ -1243,8 +1249,10 @@ let pp_catalogue_md () : string =
      Evidence paths are shown for a BUILT world. The world decides where \
      a binding's inspection sits — a Fetched binding's is at its fetch step \
      — so the same method reads different paths in different worlds.\n\n\
-     The model these fields belong to is [`registry.md`](registry.md) §1; \
-     how a project reaches one is [`pipeline.md`](pipeline.md).\n\n";
+     The model these fields belong to is [`model.md`](model.md) §1; \
+     why each agreement exists is [`components.md`](components.md), at \
+     the anchor its row carries; how a project reaches one is \
+     [`pipeline.md`](pipeline.md).\n\n";
   Buffer.add_string b (pp_rooting_table_md ());
   Buffer.add_string b "\n---\n\n# The records\n";
   List.iter agreement_registry ~f:(fun r ->

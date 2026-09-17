@@ -68,7 +68,7 @@ open Base
    and inspect_native.py --emit-symbols, respectively. Output is a verdict
    on `requires ⊆ provides`.
 
-   See doc/canary/design/agreement_registry.md for the design. *)
+   See doc/canary/design/agreement/model.md for the design. *)
 
 (* ── Summary loaders ── *)
 
@@ -1243,7 +1243,7 @@ type agreement = {
           which is several actions depending on who is linking. A typed
           reference would have to lie about both. Drawing this as a
           relation needs a different field; that is deferred in
-          registry.md §7.4.4.
+          backlog.md §51.
 
           The FIRING sites remain [m_firing]. An agreement is rooted
           where the rule ran and detected wherever evidence survives,

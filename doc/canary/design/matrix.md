@@ -228,7 +228,7 @@ differ in **four cells out of ~105 populated**:
 
 | ref | cell | latest | this ref | why |
 | --- | --- | --- | --- | --- |
-| arbipher | #19 `probe_binding_ocaml` | ✓ | **✗** | the fork cannot serve a staged consumer — a deliberate red (`../../project/issues.md` §1) |
+| arbipher | #19 `probe_binding_ocaml` | ✓ | **✗** | the fork cannot serve a staged consumer — a deliberate red (`../project/issues.md` §1) |
 | pre-10549 | #24 `install_lib` | ✓ | **xfail** | predates PR #10549, which added the installed OCaml package |
 | pre-10549 | #24 `probe_binding_ocaml` | ✓ | **xfail** | consequence — nothing staged to probe |
 | pre-10549 | #25 `install_lib` | ✓ | **xfail** | same as #24 |
@@ -258,3 +258,81 @@ unread-source collapse is the same observation about *inputs* — a ref
 nothing reads produces identical runs, so only the canonical one survives.
 This is the *output* version: a ref that IS read but changes nothing still
 costs a full set of rows. Two different rules; only the first exists.
+
+## 8. A cell in a CHECK column — mark, then blame
+
+`canary result <project>`'s check columns carry the gap directly, which
+is where you meet it first. A **symbol** means the check reached a
+verdict; a **word** means it did not:
+
+| cell | outcome | means |
+| --- | --- | --- |
+| `✓` | holds | |
+| `✗` | violated / error | |
+| `no-evid` | unavailable | nothing wrote the inspection it reads |
+| `no-decl` | undeclared | the artifact is readable; the project declared nothing to hold it against |
+| `none` | vacuous | both sides reachable, nothing of this kind in this world |
+| `no-ref` | inconclusive | read, nothing to compare against |
+| `stale` | not_applicable | the log predates the registry — re-run |
+| `off` | disabled | |
+| `·` | — | no run has recorded this cell |
+
+Those five used to be one dot. A check column only exists where the
+claim *can* be decided (`check_cols_of_chain` requires an evaluator and
+static applicability), so a non-verdict cell in one is a **defect**, not
+a blank — which is why each carries a **blame**, counted under the table
+and per agreement in the HTML key:
+
+```
+gap: 50 evidence  18 vacuous  4 version      # sqlite, 2026-09-15
+```
+
+The numbers are a SNAPSHOT, not a fact about the code: every count is read
+off the cells the last recorded run left, so it moves whenever a project
+re-runs. What is stable is the vocabulary and which rows ask for work.
+
+| blame | owner | what to do |
+| --- | --- | --- |
+| `evidence` | wiring | nothing wrote the inspection, or the reader runs before the writer |
+| `declaration` | spec | the project declared nothing to hold the artifact against |
+| `version` | spec | one declared value, several version points — see [issues.md §1](../project/issues.md) |
+| `stale` | nobody | `make canary-refresh PROJECT=<p>` |
+| `vacuous` | nobody | both sides read, neither has anything of this kind |
+
+Every one is a **static scan** of the project spec plus the cell's
+recorded outcome, so a blame can be attributed before the thing it
+blames is fixed — which is the point: the count says how eager to be.
+
+**And the outcome now says which, rather than the table guessing.**
+`Unavailable` used to be one word for three situations — the artifact's
+inspection absent, the project's declaration absent, or genuinely
+nothing of this kind here — so a cell that needed nothing read exactly
+like one waiting on an inspector. The evaluators always knew (they said
+so in prose); the type discarded it. `unavailable_cause` is
+`Missing_evidence | Missing_declaration | Nothing_to_check`, and the
+three carry distinct outcome LABELS (`unavailable` / `undeclared` /
+`vacuous`) so every reader — log, tracker, result marks — gets the
+distinction at once. `Missing_evidence` keeps the old word, so nothing
+that matched `unavailable` changed meaning and old logs still read as
+what they were. No cache epoch: an `Unavailable` produces no prediction
+whichever cause it carries, so no compat verdict moves.
+
+It cost sqlite eight cells of false work queue on its first reading —
+`declared_versions_exported` reports that the project declares no
+symbol-version tags and adds, in the same sentence, that *"for most
+libraries that is the truth rather than an omission"*. `undeclared`
+fires on no live project cell today (every project that reaches those
+evaluators does declare its soname and c_api); it is exercised by a
+counterexample fixture, which is the honest way to keep a path that
+should stay empty.
+
+Two of them ask for nothing, deliberately. `vacuous` exists because a
+PEER comparison that reaches `inconclusive` read both artifacts and
+neither carried anything of this kind — sqlite's libsqlite3 has no
+symbol versioning, so `required_versions_exported` has nothing to
+compare and never will. Blaming that on the declaration put ten
+permanent rows on the work queue. `version` is the only blame that
+attaches to a **decided** cell: sqlite's four `dse ✗` are real
+violations of a declaration that cannot say "these two symbols exist
+from 3.44", so a reader counting findings has to be told which reds may
+be the spec's fault. Pinned by `matrix.blame_is_static_and_glossed`.

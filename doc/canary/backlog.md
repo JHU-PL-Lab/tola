@@ -457,7 +457,7 @@ No hurry — all items below are queued for when their forcing function arrives.
       FIRING needs a world and stays at realize. So the seam does not
       run between the two directories: part of the CLAIM's own
       machinery is already an enumeration pass.
-    - **Two action-column orders still exist** (`registry.md` §7.4.4):
+    - **Two action-column orders still exist** (§51 below):
       `canary result` uses `Canary_matrix.compare_column`, `--firing`
       uses `Canary_basic.actions_of_lang`. A unified pipeline doc that
       shows one grid has to pick.
@@ -655,3 +655,76 @@ No hurry — all items below are queued for when their forcing function arrives.
       Python binding's artifact, when the interpreter provides it?) and
       an inspector question second — which is why it is not simply the
       next `Native_lib_probe`-shaped win.
+
+51. **The agreement backlog** (moved out of the retired
+    `agreement/registry.md` §7.4 on
+    2026-09-17, when that file split into
+    [`design/agreement/model.md`](design/agreement/model.md) and
+    [`components.md`](design/agreement/components.md)). Open items live
+    here; the model does not carry a work queue.
+
+    **REFRESHED on the way, and most of the old list was already done.**
+    §7.4's ordered backlog still asked for `api_names_present` on
+    Python, `required_symbols_exported`, and "connect the
+    declaration-based agreements". All three landed between 2026-09-13
+    and 2026-09-15, and the section had not been updated —
+    `declared_symbols_exported` decides on sqlite and catches the
+    project's own forward cell. Read `canary checks --landing` first;
+    **8 of 13 are landed** as of 2026-09-17.
+
+    The five that are not, and what each waits on:
+
+    | agreement | state | waiting on |
+    | --- | --- | --- |
+    | `signatures_agree` | evaluated, never decided | the source-scanning inspectors, which no project wires. Also the fixed binding-signature table: replace it with a real extractor, so the check compares what the binding DECLARES rather than what the inspector was told to assume |
+    | `declared_versions_exported` | `vacuous` on sqlite | a project that BUILDS a lib carrying a version script. sqlite builds without one, so there are no version nodes — that is the truth rather than a gap. openssl has one and canary fetches its lib, so `build_lib` never fires |
+    | `behavior_matches` | no evaluator | somebody to state a spec. It is one row standing for a CATEGORY: derived compatibility tests, the project's own suite, a provider↔consumer round trip. Introduce ONE test-suite reuse case, then ONE C/binding differential case — the first supplies an expectation, the second a comparison, and the agreement needs both |
+    | `repack_preserves_api` | no evaluator | what "preserves" permits ([`components.md`](design/agreement/components.md) §6.3.1) |
+    | `repack_complete` | no evaluator | the same, plus the two agreements it composes |
+
+    Those last three are exactly the three with no `ag_rooted_in` — no
+    tool enforced the relation, so there is nothing to re-derive and
+    they wait on a specification, not on wiring. Prefer landing
+    tool-rooted ones.
+
+    Still open, and not about any one agreement:
+
+    - **Migrate the compat expectations off the declared-input route**
+      for projects whose layout the derivation already reproduces,
+      keeping LLVM's packed-binding case explicit until the publication
+      step is declarable. The merged record makes this incremental: a
+      derived and a declared evaluation of one method collapse into one
+      entry, so a project can move one expectation at a time.
+    - **Scope decisions, each needed before code**: which artifacts a
+      ctypes or CFFI binding can actually supply; how
+      `dependencies_provided` enumerates providers and takes an ambient
+      policy per world rather than from a constant; what the repacking
+      claims permit. Do not label one working because a comparator or a
+      constructor exists.
+    - **The GH backend renders neither the outcomes nor the closures**,
+      and decides a derived step's polarity from its own "did every
+      input resolve" flag rather than from outcomes. That flag answers a
+      narrower question than the record does — *did the evidence I named
+      exist* — so replacing it means handing the renderer `sv_inputs`,
+      not swapping a predicate. A green CI job therefore does not
+      establish parity with a local run.
+    - **The action-unit perspective** (was §7.4.4): can `canary result`'s
+      action columns carry agreements BETWEEN actions? Not blocked by
+      the medium — `--firing` is already that grid — but by missing
+      data: `m_firing` is where an agreement is DETECTED, and nothing
+      typed records where it is ROOTED. Cheap version when it earns its
+      place: a second mark letter (`R`) in the firing table. Also
+      recorded there: two action-column lists exist (`canary result`
+      uses `Canary_matrix.compare_column`, `--firing` uses
+      `Canary_basic.actions_of_lang`) and they cannot share until
+      `compare_column` moves down to `base/`.
+
+    ~~**Finish `mechanism_info`**~~ (was §7.4.3) — **substantially done.**
+    The decidable fields it asked for exist on the catalogue
+    (`mi_compiles_a_stub`, `mi_consumer_records_needed`,
+    `mi_exposes_typed_stub`, 2026-09-14) and the families read them.
+    `is_dynamic` survives only in the firing derivations, where the
+    question really is about the discipline. Part (b) is done too:
+    `mechanism_of_lang_exn` is the total answer, and
+    `default_mechanism_of_lang` has two real callers left, both of which
+    genuinely branch on absence.

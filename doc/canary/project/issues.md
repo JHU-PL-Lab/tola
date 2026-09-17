@@ -260,7 +260,7 @@ Either way `general_spec` goes.
 ### D6's landing is PAUSED on the contract it needs (2026-08-25)
 
 The instance behind
-[`../design/agreement/registry.md`](../design/agreement/registry.md) §5.5. apt 6.4 and
+[`../design/agreement/components.md`](../design/agreement/components.md) §5.5. apt 6.4 and
 conda-forge 6.6 agree on the soname (`libncursesw.so.6`), on all 463
 exported symbols (diff empty both ways) and on all ten `NCURSESW6_*` ELF
 version nodes — and the `LD_LIBRARY_PATH` repoint crashes, because the
@@ -325,8 +325,7 @@ against one object, so the recommended fix changes only `ncursesw.pc` —
 at the cost that binaries built on the new Debian will not run on an
 older one lacking the alias.
 
-**Pickable as:** [`../design/agreement/registry.md`](../design/agreement/registry.md)
-§5.6 and its open work in §7.4 (the finding was absorbed there 2026-09-01; `closure_shape.md`
+**Pickable as:** [`../design/agreement/components.md`](../design/agreement/components.md) §5.6 and its open work in [`../backlog.md`](../backlog.md) §51 (the finding was absorbed there 2026-09-01; `closure_shape.md`
 is gone), after which the vendored world is `xfail[cN]` with a
 derived reason and D6 lands at Level B. Landing it stable-only first is
 possible but takes a (correct) `lib_pair` warn and throws the finding

@@ -110,7 +110,7 @@ Tool / empirical (**agent-ownable**):
       runner side lands projects fine; what a landing *checks* is still
       per-project tables plus c1..c8. This is
       [`../status.md`](status.md) M2 step 6 and its catalogue is
-      [`agreement/registry.md`](design/agreement/registry.md)
+      [`agreement/model.md`](design/agreement/model.md)
       (§2 develops the artifact foundation; §7.4 collects open
       implementation work). **Not descopable** (user, 2026-08-26).
 - [ ] **Depth, not count** — the library count M2 originally asked for
@@ -346,14 +346,13 @@ all three. Proposed shape:
 **Checking (§4 stage 2)**
 
 - [ ] **Agreement catalogue** — resume at
-      [`agreement/registry.md`](design/agreement/registry.md)
-      §2 *Common artifact foundation* and §7.4's open work. The per-project
+      [`agreement/components.md`](design/agreement/components.md) §2 *Common artifact foundation* and [`backlog.md`](backlog.md) §51's open work. The per-project
       contract-binding tables converge onto it and get deleted
       ([`../status.md`](status.md) M2 steps 6–7).
 - [ ] **Closure-shape contract** — no c1..c8 states it, and ncurses is
       the specimen: two packagers agree on every symbol, soname and ELF
       version node and still segfault.
-      [`agreement/registry.md`](design/agreement/registry.md) §5.5. First contract
+      [`agreement/components.md`](design/agreement/components.md) §5.5. First contract
       addition since the registry landed.
 - [ ] **Real AST inspectors for `bpc1` / `bpe1`** — ctypes `argtypes`
       parse and cext `PyMethodDef` parse; today's stand-ins are grep.
