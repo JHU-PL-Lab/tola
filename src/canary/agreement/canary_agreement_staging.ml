@@ -113,7 +113,15 @@ let staged_interface_eval ~resolve inputs : outcome =
 (* ── the agreement ── *)
 
 let staged_interface_preserved : agreement =
-  { ag_subject = Staging;
+  (* PRESERVATION, which is the kind the `peer` label could not
+     express: its two sides are two COPIES of one library, so no
+     disagreement between distinct components can violate it — only a
+     move that changed something. That is also why this evaluator names
+     both sides positionally instead of going through
+     [lib_evidence_paths], which would have compared the staged copy
+     against itself. *)
+  { ag_kind = Preservation;
+    ag_subject = Staging;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
     ag_says =

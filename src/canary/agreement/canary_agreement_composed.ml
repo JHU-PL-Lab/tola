@@ -75,7 +75,8 @@ let check_api_faithfulness
           ; repack_issue = repack_bad }
 
 let repack_complete : agreement =
-  { ag_subject = Repacking;
+  { ag_kind = Composition;
+    ag_subject = Repacking;
     ag_claim = Behavioral;
     ag_basis = Behavioral_spec;
     ag_says = "the repack loses nothing the original had";

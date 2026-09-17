@@ -240,6 +240,68 @@ let string_of_basis = function
     artifact against a declaration finds disagreements between artifact
     and declaration, which is not the same finding as a consumer
     requirement the provider does not meet. *)
+(** WHAT THE CLAIM ASSERTS — the relation, not the second party
+    (2026-09-17, user: "I don't like the term `declaration` because it
+    doesn't distinguish the action-based … or on case exactly the
+    quality of an artifact (whether some bad flags are used)", and
+    "`peer` is also not clear since we are discussing the matching
+    between two different artifact").
+
+    Both objections are the same objection, and both are right.
+    [reference] below answers *what is the second side* — a file, a
+    string the project wrote, nothing at all — and that is what the
+    diagnostics need in order to say "this artifact is wrong" versus
+    "these two disagree". It is not what a reader of the table wants to
+    know, which is *what is being claimed*. One field was doing two
+    jobs, so `declaration` covered both "the library exports what we
+    said" and "the app's names are on the binding's surface" — the first
+    is a promise, the second is a pairing whose second side merely
+    happens to be written down.
+
+    So this is a second axis, not a rename, and the two are orthogonal:
+    [api_names_present] is a PAIRING asserted against a DECLARATION,
+    because the watchlist stands in for the application's actual uses
+    (theory.md §5.8 says so in as many words). Naming the evidence was
+    never the same as naming the claim. *)
+type agreement_kind =
+  | Pairing
+      (** could these two artifacts have been the inputs of ONE action —
+          would the tool have accepted the pair? This is the user's
+          "whether the arbitrary source/header and the lib aligned as if
+          they could be compiled", and it is the centre of the
+          catalogue: a stub's undefined references against a library's
+          exports, a recorded dependency against what provides it, a
+          header's signatures against a stub's calls. *)
+  | Promise
+      (** is this ONE artifact what its own producer said it would be?
+          The second side is the project's declaration, and the question
+          is about the artifact alone — nothing is being matched. *)
+  | Quality
+      (** is this artifact sound ON ITS OWN TERMS, whatever it is paired
+          with? The user's word, and their example: an installed library
+          that records a path into the build tree it was made in is
+          wrong however it is used. No second side at all. *)
+  | Preservation
+      (** is it still the same thing after a transformation? Two COPIES
+          of one artifact — a build tree against its staged copy, a
+          package against what it repacked. Distinct from [Pairing]:
+          this cannot be violated by two components disagreeing, only by
+          a move that changed something. *)
+  | Behaviour
+      (** does running it produce what was specified? The only kind
+          whose evidence is an execution rather than an artifact. *)
+  | Composition
+      (** a verdict derived from other agreements' verdicts, asserting
+          nothing of its own. *)
+
+let string_of_agreement_kind = function
+  | Pairing -> "pairing"
+  | Promise -> "promise"
+  | Quality -> "quality"
+  | Preservation -> "preservation"
+  | Behaviour -> "behaviour"
+  | Composition -> "composition"
+
 type reference =
   | Artifact_itself  (** the artifact's own format rule; no second party *)
   | Declared_facts   (** what the project declared *)
@@ -1264,6 +1326,13 @@ let after_binding : check_slot =
     anchor, the enabled flag, the position in the list — and derives
     the views. *)
 type agreement = {
+  ag_kind : agreement_kind;
+      (** WHAT IT ASSERTS — see {!agreement_kind}. The column a reader
+          scans to ask "what sort of claim is this", as distinct from
+          [m_reference]'s "what is the second side" and
+          [ag_rooted_in]'s "whose rule ran". Three questions, three
+          fields; they were two for a while and the middle one was
+          answering all three badly. *)
   ag_subject : subject;
   ag_claim : claim;
   ag_basis : basis;

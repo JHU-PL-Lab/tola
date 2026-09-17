@@ -877,6 +877,10 @@ let checks_cmd =
            whose rule was LOST on the same row, so the distance between
            them is visual rather than a column to look up. *)
         Fmt.pr "@.%s@." (Canary_agreement.pp_agreement_overview ());
+        (* THE CANDIDATES, in their own table (2026-09-17, user): they
+           have no methods, so every column the overview derives would
+           be blank. Name, kind, and what is in the way. *)
+        Fmt.pr "@.%s@." (Canary_agreement.pp_candidate_table ());
         let fill = Canary_agreement.fill_list () in
         Fmt.pr "@.fill list (%d cell(s) fire without a counterexample):@."
           (List.length fill);

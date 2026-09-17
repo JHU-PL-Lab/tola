@@ -107,7 +107,14 @@ let check_api_repack ~(stub_externals : string list) ~(user_vals : string list)
 (* ── what each agreement hands the registry ── *)
 
 let api_names_present : agreement =
-  { ag_subject = Api_names;
+  (* PAIRING, not promise, though its second side is a declaration. The
+     claim is that the application's uses resolve on the binding's
+     surface — could these two have been compiled together — and the
+     watchlist is a hand-written stand-in for the application's actual
+     uses (theory.md §5.8). Classifying it by its evidence rather than
+     its claim is exactly the conflation `ag_kind` exists to undo. *)
+  { ag_kind = Pairing;
+    ag_subject = Api_names;
     ag_claim = Structural;
     ag_basis = Project_declaration;
     ag_says =
@@ -193,7 +200,8 @@ let api_names_present : agreement =
           () ] }
 
 let repack_preserves_api : agreement =
-  { ag_subject = Repacking;
+  { ag_kind = Preservation;
+    ag_subject = Repacking;
     ag_claim = Behavioral;
     ag_basis = Behavioral_spec;
     ag_says = "the user-facing layer is a sound repacking of the stub-facing one";

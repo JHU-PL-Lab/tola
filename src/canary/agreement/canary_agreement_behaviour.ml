@@ -14,7 +14,8 @@
 open Canary_agreement_common
 
 let behavior_matches : agreement =
-  { ag_subject = Behavior;
+  { ag_kind = Behaviour;
+    ag_subject = Behavior;
     ag_claim = Behavioral;
     ag_basis = Behavioral_spec;
     ag_says = "the probe's trace matches what was recorded for it";

@@ -159,7 +159,8 @@ let signatures_eval ~resolve inputs : outcome =
 (* ── the agreement ── *)
 
 let signatures_agree : agreement =
-  { ag_subject = Signatures;
+  { ag_kind = Pairing;
+    ag_subject = Signatures;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
     ag_says = "the types a stub declares agree with the header it wraps";

@@ -500,7 +500,8 @@ let consumer_record_inputs_native
 (* ── the agreements ── *)
 
 let soname_matches_declaration : agreement =
-  { ag_subject = Identity;
+  { ag_kind = Promise;
+    ag_subject = Identity;
     ag_claim = Structural;
     ag_basis = Project_declaration;
     ag_says = "the built lib's recorded identity is the soname the project declared";
@@ -559,7 +560,8 @@ let soname_matches_declaration : agreement =
           () ] }
 
 let soname_matches_requirement : agreement =
-  { ag_subject = Identity;
+  { ag_kind = Pairing;
+    ag_subject = Identity;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
     ag_says = "the lib's soname is the one the consumer recorded it needs";
@@ -609,7 +611,8 @@ let soname_matches_requirement : agreement =
           () ] }
 
 let declared_versions_exported : agreement =
-  { ag_subject = Symbol_versions;
+  { ag_kind = Promise;
+    ag_subject = Symbol_versions;
     ag_claim = Structural;
     ag_basis = Project_declaration;
     ag_says =
@@ -667,7 +670,8 @@ let declared_versions_exported : agreement =
           () ] }
 
 let required_versions_exported : agreement =
-  { ag_subject = Symbol_versions;
+  { ag_kind = Pairing;
+    ag_subject = Symbol_versions;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
     ag_says = "the provider exports every version node the consumer requires";
@@ -765,7 +769,8 @@ let required_versions_exported : agreement =
           () ] }
 
 let dependencies_provided : agreement =
-  { ag_subject = Dependencies;
+  { ag_kind = Pairing;
+    ag_subject = Dependencies;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
     ag_says =

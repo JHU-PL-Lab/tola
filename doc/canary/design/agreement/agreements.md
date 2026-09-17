@@ -1209,9 +1209,9 @@ reads: `native summary bt.json`, `staged native summary absent.json`
 
 ## 3. What has no record yet — out of the table
 
-The [agreement overview](../matrix.md) shows the 13 implemented agreements of §2. These 8 have no row on it. The reason is carried on each proposal (`prop_frame`) and this grouping is generated from it, so the four kinds of work stay apart without anyone maintaining a list.
+The [agreement overview](../matrix.md) shows the 13 implemented agreements of §2. These 12 have no row on it. The reason is carried on each proposal (`prop_frame`) and this grouping is generated from it, so the four kinds of work stay apart without anyone maintaining a list.
 
-### Held up by a schema field (4)
+### Held up by a schema field (8)
 
 The per-action frame REACHES these. What is missing is that a proposal carries no rooting and no target list, so there is nothing to put in the overview's `R` and ▣ columns. Adding those two fields would put each of these on the grid with its origin marked and no `D` anywhere — which is worth seeing, since it says where the information was lost for a claim nobody checks yet. It costs the row's meaning: `lag`, decided and blame are undefined without a firing.
 
@@ -1234,6 +1234,34 @@ The per-action frame REACHES these. What is missing is that a proposal carries n
 **Claim:** the signatures the header declares are the ones the compiled library was built with — the strongest available answer to the type question, since it reads what the compiler recorded rather than what the header says now
 
 **Needs:** a DWARF inspector and libraries built with -g. Strictly stronger than signatures_agree, which compares two TEXTS and cannot see a changed struct layout behind an unchanged spelling
+
+
+#### no_build_paths_in_installed_library
+
+**Claim:** a library that is installed records no path into the tree it was built in — no RUNPATH, RPATH or embedded reference that resolves only on the machine that produced it. It is wrong ON ITS OWN TERMS: against no declaration and no peer, whatever it is later paired with
+
+**Needs:** NOTHING NEW TO RECORD — `inspect_native.py` already emits `runpath` and `rpath`, and canary already knows a world's build directory, which is the other half of the comparison. What it needs is the POLICY: which paths are legitimate in an installed artifact ($ORIGIN and @loader_path are, an absolute build path is not, a system prefix is arguably fine) and whether a relocatable-but-absolute prefix counts. Cheapest candidate on this list, and the first of its kind
+
+
+#### compatibility_version_satisfied
+
+**Claim:** on Mach-O, the provider's `compatibility_version` is at least what the consumer recorded — dyld's own gate, which has no ELF counterpart
+
+**Needs:** nothing recorded and nothing derived: `inspect_native.py` has extracted `compatibility_version` and `current_version` from LC_ID_DYLIB since the macOS port and NO agreement reads either. Written evidence with no reader. What blocks it is REPORTING, not evidence — `canary checks --landing` is platform-blind, so an agreement landed only on macOS would read as landed everywhere (platform.md §6)
+
+
+#### correspondence_holds_across_the_binding
+
+**Claim:** an operation performed through the binding agrees with the same operation performed directly against the C library — including over SEQUENCES, where state makes the interesting cases
+
+**Needs:** a GENERATOR and a new action, not a comparator. Distinct from `behavior_matches` in the one way that matters: it needs no project-supplied expectation, because the C side IS the oracle and canary already builds it. The generator is per-framework (`c_api.functions` is the pairing, the positional convention the argument mapping); a translation of a project's own suite is per-project and can come later. See directions.md §2
+
+
+#### discovery_matches_link
+
+**Claim:** the object a discovery mechanism ACCEPTED is the object the link resolved, and the object the loader finds. Three resolvers — `pkg-config` at solve time, the linker's search at build time, RUNPATH at run time — and nothing checks that they agreed
+
+**Needs:** the first resolver's answer RECORDED; nothing captures what a conf-* check accepted. Its falsifier already exists as a written-up finding — the ncurses/libtinfo report, where identical sonames, symbols and version nodes segfaulted because two prefixes answered differently. ⚠ Open question it raises: it roots in no toolchain's rule (nothing ENFORCES the three agreeing) yet it has an oracle (run both resolvers and compare), so it asks whether `rooted` should mean a tool ENFORCED it or a tool ANSWERED it. See directions.md §1
 
 
 #### interposition_binds_build_target

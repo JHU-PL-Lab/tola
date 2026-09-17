@@ -4346,8 +4346,14 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
              every method declared `Declared_facts`, say — fails here
              rather than rendering a constant column. *)
           && count "class=\"kind\"" = List.length rows
-          && String.is_substring h ~substring:">declaration<"
-          && String.is_substring h ~substring:">peer<"
+          (* the two kinds most of the catalogue is, asserted by name so
+             a registry that stopped distinguishing them — every claim
+             declared one kind — fails here rather than rendering a
+             constant column. They were `declaration` and `peer` until
+             2026-09-17, when the vocabulary moved from naming the
+             SECOND PARTY to naming the RELATION. *)
+          && String.is_substring h ~substring:">pairing<"
+          && String.is_substring h ~substring:">promise<"
           && count "class=\"lm\"></td>"
              = List.count rows ~f:(fun (row : overview_row) ->
                    String.is_empty (lang_label row.ov_mechs))

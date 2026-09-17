@@ -257,7 +257,8 @@ let lag_note ~resolve (inputs : inspect_input list) : string option =
 (* ── what each agreement hands the registry ── *)
 
 let declared_symbols_exported : agreement =
-  { ag_subject = Symbols;
+  { ag_kind = Promise;
+    ag_subject = Symbols;
     ag_claim = Structural;
     ag_basis = Project_declaration;
     ag_says =
@@ -344,7 +345,8 @@ let declared_symbols_exported : agreement =
           () ] }
 
 let required_symbols_exported : agreement =
-  { ag_subject = Symbols;
+  { ag_kind = Pairing;
+    ag_subject = Symbols;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
     ag_says =

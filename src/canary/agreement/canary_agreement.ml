@@ -1294,9 +1294,7 @@ let mech_label (ms : Canary_mechanism.mechanism list) : string =
     the build tree it was made in is wrong on its own terms, against no
     declaration and no peer — and it has no agreement. *)
 let kind_label (r : agreement_row) : string =
-  List.map r.ag.ag_methods ~f:(fun m -> string_of_reference m.m_reference)
-  |> List.dedup_and_sort ~compare:String.compare
-  |> String.concat ~sep:","
+  string_of_agreement_kind r.ag.ag_kind
 
 (** WHERE THE CODE IS: the family file's topic and the evaluator's name,
     or [None] for the function when no evaluator exists — which the
@@ -1422,42 +1420,47 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         "D  a method FIRES here, reading what survived";
         "◉  both: the check fires at the very action whose rule it recovers";
         "";
-        "kind = WHAT THE CLAIM IS HELD AGAINST — its second side. NOT \
-         where its rule";
-        "       RAN, which is the R column.";
-        "  declaration   the second side is something the PROJECT WROTE \
-         DOWN — a string";
-        "                in the spec, not a file. `declared_symbols_exported` \
-         subtracts the";
-        "                library's exports from the list the project \
-         declared.";
-        "  peer          the second side is ANOTHER ARTIFACT, and both are \
-         present in the";
-        "                world under test. `required_symbols_exported` \
-         compares a stub";
-        "                archive's undefined references against the \
-         library's exports:";
-        "                two real files, neither of them a declaration. \
-         The name is";
-        "                literal — the claim's reference is its peer in \
-         the same world.";
-        "                ⚠ it also covers two COPIES of one artifact \
-         (`staged_interface_";
-        "                preserved` compares a build tree against its \
-         staged copy), which";
-        "                is arguably a sixth kind rather than this one.";
-        "  artifact      NO second side at all — the artifact against its \
-         own format's";
-        "                rule. Modelled, used by nothing, and the emptiest \
-         of the five:";
-        "                an installed library recording a RUNPATH into the \
-         build tree it";
-        "                was made in is wrong on its own terms, and \
-         nothing checks it.";
-        "  sibling-world evidence kept from ANOTHER world.  test-suite \
-         expected results.";
-        "       All 13 are declaration or peer today; three of the five \
-         kinds are unused.";
+        "kind = WHAT THE CLAIM ASSERTS. Not what it is held against \
+         (that is the";
+        "       record's `against` field) and not where its rule RAN \
+         (that is R).";
+        "  pairing       could these two artifacts have been the inputs of \
+         ONE action —";
+        "                would the tool have accepted the pair? A stub's \
+         undefined";
+        "                references against a library's exports; a header's \
+         signatures";
+        "                against a stub's calls. The centre of the \
+         catalogue.";
+        "  promise       is this ONE artifact what its own producer said it \
+         would be?";
+        "                Nothing is being matched; the question is about \
+         the artifact";
+        "                alone, and the declaration is what it is measured \
+         against.";
+        "  quality       is it sound ON ITS OWN TERMS, whatever it is \
+         paired with? An";
+        "                installed library recording a path into the build \
+         tree it was";
+        "                made in is wrong however it is used. NO agreement \
+         yet.";
+        "  preservation  still the same thing after a transformation? Two \
+         COPIES of one";
+        "                artifact, so no disagreement between distinct \
+         components can";
+        "                violate it — only a move that changed something.";
+        "  behaviour     does running it produce what was specified? The \
+         only kind whose";
+        "                evidence is an execution.   composition  a verdict \
+         over verdicts.";
+        "";
+        "       `api_names_present` is a PAIRING whose second side is a \
+         declaration: the";
+        "       watchlist stands in for the application's actual uses. \
+         Naming the";
+        "       evidence was never the same as naming the claim, which is \
+         why `kind` and";
+        "       the record's `against` are two fields.";
         "implemented at — `<family>·<function>` in \
          src/canary/agreement/canary_agreement_<family>.ml.";
         "       `·—` = NO EVALUATOR YET; the family names the file it would \
@@ -1498,6 +1501,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         "DISTANCE, which measures how far apart the two SIDES of a \
          comparison are:";
         "required_symbols_exported is distance-1 and lag-0." ])
+
 
 (** The fill list — every [Declared] cell (fires and is evaluated, but
     no counterexample yet). The concrete answer to "what is left to
@@ -1564,6 +1568,16 @@ type proposed = {
   prop_claim : string;  (** falsifier-phrased, like [ag_says] *)
   prop_needs : string;  (** what implementing it requires *)
   prop_frame : frame_fit;  (** why it is not on the overview *)
+  prop_kind : agreement_kind;
+      (** WHAT IT WOULD ASSERT (2026-09-17, user: "we know their name,
+          kind well, but no concrete ideas how to implement them yet").
+
+          A candidate's kind is knowable long before its evidence is,
+          which is exactly why it belongs on the candidate table: it
+          says what sort of claim is missing. Three of the five kinds
+          have no implemented agreement, and it is the candidates that
+          would fill them — the first [Quality] claim and the first
+          [Behaviour] one are both here. *)
 }
 
 (* THE DISTANCE-0 HOLES (2026-09-15, user asked for the plan to live in
@@ -1584,7 +1598,8 @@ type proposed = {
    which is why they are proposals rather than lifts — an evaluator
    needs a recorded fact to read, and a shell assert leaves none. *)
 let proposed_agreements : proposed list =
-  [ { prop_slug = "exports_accounted_for";
+  [ { prop_kind = Promise;
+      prop_slug = "exports_accounted_for";
       prop_doc = "§5.3";
       prop_claim =
         "every symbol the library exports on its declared surface is \
@@ -1606,7 +1621,8 @@ let proposed_agreements : proposed list =
          project writes today — so this is a spec change, not a free \
          comparator";
       prop_frame = In_frame };
-    { prop_slug = "package_contains_declared_files";
+    { prop_kind = Promise;
+      prop_slug = "package_contains_declared_files";
       prop_doc = "§5.7";
       prop_claim =
         "the staged package contains every file the recipe said it \
@@ -1619,7 +1635,8 @@ let proposed_agreements : proposed list =
          pre-#10549 failure as two hand-written substrings; all four \
          retire when the claim has a row";
       prop_frame = In_frame };
-    { prop_slug = "source_is_declared_ref";
+    { prop_kind = Promise;
+      prop_slug = "source_is_declared_ref";
       prop_doc = "§5.1";
       prop_claim =
         "the source tree a build read is the ref the project declared — \
@@ -1638,7 +1655,8 @@ let proposed_agreements : proposed list =
            by different people. Canary already has a vocabulary for it: \
            the world assertions. The CHECK is worth having; the row is in \
            the wrong register" };
-    { prop_slug = "build_tree_configured_for_source";
+    { prop_kind = Pairing;
+      prop_slug = "build_tree_configured_for_source";
       prop_doc = "§5.2";
       prop_claim =
         "the build tree was configured for THIS source tree and these \
@@ -1656,7 +1674,8 @@ let proposed_agreements : proposed list =
            tree configured for the source we said\" has the same shape as \
            \"is the tree at the commit we said\". If so it is a world \
            assertion too. Nobody has decided, so it is not filed as either" };
-    { prop_slug = "signatures_match_debug_info";
+    { prop_kind = Pairing;
+      prop_slug = "signatures_match_debug_info";
       prop_doc = "§5.3";
       prop_claim =
         "the signatures the header declares are the ones the compiled \
@@ -1669,7 +1688,8 @@ let proposed_agreements : proposed list =
          cannot see a changed struct layout behind an unchanged \
          spelling";
       prop_frame = In_frame };
-    { prop_slug = "denotation_stable_across_worlds";
+    { prop_kind = Preservation;
+      prop_slug = "denotation_stable_across_worlds";
       prop_doc = "§5.6";
       prop_claim =
         "a recorded library identity denotes the SAME implementation in \
@@ -1684,7 +1704,8 @@ let proposed_agreements : proposed list =
            single action whose relation it recovers — it is a claim about \
            two runs of one action, and the per-action model has no \
            vocabulary for that" };
-    { prop_slug = "no_duplicate_implementation";
+    { prop_kind = Quality;
+      prop_slug = "no_duplicate_implementation";
       prop_doc = "§5.6";
       prop_claim =
         "the resolved set contains no two identities that are one \
@@ -1699,7 +1720,94 @@ let proposed_agreements : proposed list =
           "a SET property. It is about the whole resolved set rather than \
            about any one pairing, and nothing in the per-action model \
            speaks about sets" };
-    { prop_slug = "interposition_binds_build_target";
+    (* ── NAMED, KIND KNOWN, NO IMPLEMENTATION IDEA (2026-09-17, user:
+       "we know their name, kind well, but no concrete ideas how to
+       implement them yet").
+
+       These four had no row anywhere: three are the explorations in
+       `directions.md` and the fourth is the user's own standalone
+       example. They are proposals in exactly the sense the others are —
+       a claim with a falsifier and no evaluator — and keeping them in a
+       separate document meant the catalogue understated what is known
+       to be missing. The candidate table is what they are for.
+
+       Note that two of them are the FIRST of their kind: the RUNPATH
+       claim would be the first `Quality`, and the correspondence one
+       the first `Behaviour` with an oracle. Three of the six kinds have
+       no implemented agreement, and this is where they would come
+       from. *)
+    { prop_kind = Quality;
+      prop_slug = "no_build_paths_in_installed_library";
+      prop_doc = "§6.1";
+      prop_claim =
+        "a library that is installed records no path into the tree it \
+         was built in — no RUNPATH, RPATH or embedded reference that \
+         resolves only on the machine that produced it. It is wrong ON \
+         ITS OWN TERMS: against no declaration and no peer, whatever it \
+         is later paired with";
+      prop_needs =
+        "NOTHING NEW TO RECORD — `inspect_native.py` already emits \
+         `runpath` and `rpath`, and canary already knows a world's build \
+         directory, which is the other half of the comparison. What it \
+         needs is the POLICY: which paths are legitimate in an installed \
+         artifact ($ORIGIN and @loader_path are, an absolute build path \
+         is not, a system prefix is arguably fine) and whether a \
+         relocatable-but-absolute prefix counts. Cheapest candidate on \
+         this list, and the first of its kind";
+      prop_frame = In_frame };
+    { prop_kind = Promise;
+      prop_slug = "compatibility_version_satisfied";
+      prop_doc = "§4.1";
+      prop_claim =
+        "on Mach-O, the provider's `compatibility_version` is at least \
+         what the consumer recorded — dyld's own gate, which has no ELF \
+         counterpart";
+      prop_needs =
+        "nothing recorded and nothing derived: `inspect_native.py` has \
+         extracted `compatibility_version` and `current_version` from \
+         LC_ID_DYLIB since the macOS port and NO agreement reads either. \
+         Written evidence with no reader. What blocks it is REPORTING, \
+         not evidence — `canary checks --landing` is platform-blind, so \
+         an agreement landed only on macOS would read as landed \
+         everywhere (platform.md §6)";
+      prop_frame = In_frame };
+    { prop_kind = Behaviour;
+      prop_slug = "correspondence_holds_across_the_binding";
+      prop_doc = "§6.3.2";
+      prop_claim =
+        "an operation performed through the binding agrees with the same \
+         operation performed directly against the C library — including \
+         over SEQUENCES, where state makes the interesting cases";
+      prop_needs =
+        "a GENERATOR and a new action, not a comparator. Distinct from \
+         `behavior_matches` in the one way that matters: it needs no \
+         project-supplied expectation, because the C side IS the oracle \
+         and canary already builds it. The generator is per-framework \
+         (`c_api.functions` is the pairing, the positional convention \
+         the argument mapping); a translation of a project's own suite \
+         is per-project and can come later. See directions.md §2";
+      prop_frame = In_frame };
+    { prop_kind = Pairing;
+      prop_slug = "discovery_matches_link";
+      prop_doc = "§5.3";
+      prop_claim =
+        "the object a discovery mechanism ACCEPTED is the object the \
+         link resolved, and the object the loader finds. Three resolvers \
+         — `pkg-config` at solve time, the linker's search at build \
+         time, RUNPATH at run time — and nothing checks that they agreed";
+      prop_needs =
+        "the first resolver's answer RECORDED; nothing captures what a \
+         conf-* check accepted. Its falsifier already exists as a \
+         written-up finding — the ncurses/libtinfo report, where \
+         identical sonames, symbols and version nodes segfaulted because \
+         two prefixes answered differently. ⚠ Open question it raises: \
+         it roots in no toolchain's rule (nothing ENFORCES the three \
+         agreeing) yet it has an oracle (run both resolvers and compare), \
+         so it asks whether `rooted` should mean a tool ENFORCED it or a \
+         tool ANSWERED it. See directions.md §1";
+      prop_frame = In_frame };
+    { prop_kind = Pairing;
+      prop_slug = "interposition_binds_build_target";
       prop_doc = "§5.6";
       prop_claim =
         "the definition that wins for a shared symbol is the one the \
@@ -2223,6 +2331,55 @@ let pp_todo_table_md () : string =
        and they wait on somebody to STATE a specification rather than on \
        wiring. **Prefer landing a tool-rooted one.**\n\n"
   end;
+  Buffer.contents b
+
+(** THE CANDIDATE TABLE (2026-09-17, user: "I didn't see the rows for
+    the candidated agreements in the table. you can have another simple
+    table with just names, agreements, kinds and reasons or plans").
+
+    Deliberately NOT the overview's shape. The overview's columns —
+    targets, origin, firing, lag — are all derived from METHODS, and a
+    candidate has none, so every one of them would be blank and the row
+    would say less than a sentence does. Four columns instead: what it
+    is called, what kind of claim it is, what it claims, and what stands
+    between it and a row.
+
+    The KIND is the column that earns the table. A candidate's kind is
+    knowable long before its evidence is, so the table says which SORTS
+    of claim canary is missing — and three of the six kinds have no
+    implemented agreement at all, which is a fact about the catalogue
+    that nothing else reports. *)
+let pp_candidate_table () : string =
+  let b = Buffer.create 4096 in
+  let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
+  add "candidate agreements — named, kind known, no evaluator (%d)\n\n"
+    (List.length proposed_agreements);
+  add "%-38s %-13s %s\n" "name" "kind" "what stands in the way";
+  List.iter proposed_agreements ~f:(fun p ->
+      add "%-38s %-13s %s\n" p.prop_slug
+        (string_of_agreement_kind p.prop_kind)
+        (match p.prop_frame with
+         | In_frame -> "an evaluator, and the evidence it reads"
+         | Unfiled _ -> "NOT FILED — is it even an agreement? (theory §7.1)"
+         | Not_an_agreement _ ->
+             "not an agreement: it recovers canary's own rule"
+         | Outside_the_frame _ -> "outside the per-action frame (theory §7)"));
+  add "\nOne line each; the claim and the full plan are in the catalogue.\n";
+  let implemented =
+    List.map agreement_registry ~f:(fun r ->
+        string_of_agreement_kind r.ag.ag_kind)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  let candidate_only =
+    List.map proposed_agreements ~f:(fun p ->
+        string_of_agreement_kind p.prop_kind)
+    |> List.dedup_and_sort ~compare:String.compare
+    |> List.filter ~f:(fun k ->
+           not (List.mem implemented k ~equal:String.equal))
+  in
+  add "Kinds no implemented agreement covers, and a candidate would: %s\n"
+    (if List.is_empty candidate_only then "none"
+     else String.concat ~sep:", " candidate_only);
   Buffer.contents b
 
 (** ONE PLACE FOR EVERYTHING THE OVERVIEW CANNOT SHOW (2026-09-17,

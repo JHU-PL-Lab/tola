@@ -1996,23 +1996,26 @@ let render_html (m : t) ~(generated_at : string) : string =
        a peer comparison shows two. \
        R the action whose rule RAN (hover for the tool and the artifact) \
        &middot; D a method FIRES here &middot; R+D both. \
-       <b>kind</b> WHAT THE CLAIM IS HELD AGAINST — its second side, not \
-       where its rule RAN (that is the <b>R</b> column). \
-       <code>declaration</code>: the second side is something the PROJECT \
-       WROTE DOWN, a string in the spec and not a file &middot; \
-       <code>peer</code>: the second side is ANOTHER ARTIFACT, both present \
-       in the world under test — <code>required_symbols_exported</code> \
-       compares a stub archive's undefined references against the library's \
-       exports, two real files and neither a declaration (it also covers two \
-       COPIES of one artifact, as <code>staged_interface_preserved</code> \
-       does, which is arguably a sixth kind rather than this one) &middot; \
-       <code>artifact</code>: NO second side at all, the artifact against \
-       its own format's rule &middot; <code>sibling-world</code>: evidence \
-       kept from another world &middot; <code>test-suite</code>: expected \
-       results. All 13 are declaration or peer today; three of the five \
-       kinds are unused, and <code>artifact</code> is the emptiest — an \
-       installed library recording a RUNPATH into the build tree it was made \
-       in is wrong on its own terms and nothing checks it. \
+       <b>kind</b> WHAT THE CLAIM ASSERTS — not what it is held against, \
+       and not where its rule RAN (that is <b>R</b>). \
+       <code>pairing</code>: could these two artifacts have been the inputs \
+       of ONE action, would the tool have accepted the pair — a stub's \
+       undefined references against a library's exports, a header's \
+       signatures against a stub's calls; the centre of the catalogue \
+       &middot; <code>promise</code>: is this ONE artifact what its own \
+       producer said it would be — nothing is matched, the declaration is \
+       simply what it is measured against &middot; <code>quality</code>: is \
+       it sound ON ITS OWN TERMS whatever it is paired with, as an installed \
+       library recording a path into the build tree it was made in is not — \
+       NO agreement yet &middot; <code>preservation</code>: still the same \
+       thing after a transformation, two COPIES of one artifact, so no \
+       disagreement between distinct components can violate it &middot; \
+       <code>behaviour</code>: does running it produce what was specified \
+       &middot; <code>composition</code>: a verdict over verdicts. \
+       <code>api_names_present</code> is a PAIRING whose second side is a \
+       declaration — the watchlist stands in for the application's actual \
+       uses — which is why naming the evidence is not the same as naming \
+       the claim. \
        <b>implemented at</b> <code>&lt;module&gt;&middot;&lt;function&gt;</code> \
        in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
        (hover for the file); a RED cell is an agreement with no evaluator \

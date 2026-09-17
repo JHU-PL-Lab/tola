@@ -2542,6 +2542,58 @@ let agreement_bridge_pins : pure_test list =
             List.length rows > List.length CR.agreement_registry
           in
           per_row_ok && covers_every && expands) };
+    (* THE KIND IS A REAL PARTITION (2026-09-17, user: "I don't like the
+       term `declaration` … `peer` is also not clear").
+
+       `ag_kind` replaced a column derived from `m_reference`, which
+       named the SECOND PARTY rather than the relation and so put "the
+       library exports what we said" and "the app's names are on the
+       binding's surface" in one bucket. A taxonomy is only worth the
+       churn if it actually divides things, so:
+
+       (a) at least three kinds are in use among the 13 — one or two
+           would mean the old conflation had simply been renamed;
+       (b) `Pairing` and `Promise` are both used, since those are the
+           two the split was FOR;
+       (c) every candidate carries a kind too, because the candidate
+           table's whole argument is that a kind is knowable before an
+           evaluator is;
+       (d) some kind is covered ONLY by candidates. That is the claim
+           the table makes in its last line, and if it ever became false
+           the line would be a lie rather than a finding. *)
+    { name = "agreements.kind_partitions_the_catalogue";
+      check =
+        (fun () ->
+          let k r =
+            Canary_agreement_common.string_of_agreement_kind
+              r.CR.ag.Canary_agreement_common.ag_kind
+          in
+          let used =
+            List.map CR.agreement_registry ~f:k
+            |> List.dedup_and_sort ~compare:String.compare
+          in
+          let cand =
+            List.map CR.proposed_agreements ~f:(fun p ->
+                Canary_agreement_common.string_of_agreement_kind p.CR.prop_kind)
+            |> List.dedup_and_sort ~compare:String.compare
+          in
+          let only_candidate =
+            List.filter cand ~f:(fun c ->
+                not (List.mem used c ~equal:String.equal))
+          in
+          let ok =
+            List.length used >= 3
+            && List.mem used "pairing" ~equal:String.equal
+            && List.mem used "promise" ~equal:String.equal
+            && (not (List.is_empty cand))
+            && not (List.is_empty only_candidate)
+          in
+          if not ok then
+            Fmt.pr
+              "    kinds in use: %s | candidate-only: %s@."
+              (String.concat ~sep:"," used)
+              (String.concat ~sep:"," only_candidate);
+          ok) };
     (* ONE CLAIM'S ROWS ARE ADJACENT (2026-09-17, user: "then we will
        group the same agreement").
 
