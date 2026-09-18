@@ -6,11 +6,19 @@ rules, where they are checked, what is implemented, and what runs decided.
 The candidate table records proposed claims and their blockers. We do not
 maintain another catalogue or status list in these docs.
 
-For a row's full claim, evidence, limits, and examples:
+For a row's full claim, evidence, limits, and examples — and for where
+its code is, both halves:
 
 ```sh
 canary checks --agreement NAME
 ```
+
+That record's `declared at` names the value holding the agreement's
+METADATA (kind, subject, claim, rooting, methods) and the overview's
+`implemented at` names its EVALUATOR. Both are derived rather than
+stored: every agreement binds as `let <slug> : agreement` in its family
+file, which `agreements.metadata_is_declared_under_its_slug` keeps
+true.
 
 The remaining documents explain what the table cannot:
 
@@ -29,12 +37,31 @@ can have several methods and occupy several overview rows when firing
 differs by mechanism. A pass covers only that method's stated scope;
 matching symbol names does not establish correct types or behaviour.
 
-Keep three questions separate. `ag_kind` says what the claim asserts:
-pairing, promise, quality, preservation, behaviour, or composition.
-`m_reference` says what a method compares against: an artifact, declaration,
-peer, sibling world, or test suite. `ag_rooted_in` names the tool's original
-rule and action. For example, `api_names_present` is a pairing claim whose
-method uses a declared watchlist to approximate an application's uses.
+Keep three questions separate, because two of them shared a field until
+2026-09-17 and the confusion outlived it. `ag_kind` says **what the claim
+asserts**; `m_reference` says **what a method compares against** — an
+artifact, declaration, peer, sibling world, or test suite; `ag_rooted_in`
+names **the tool's original rule and action**. They are independent:
+`api_names_present` is a PAIRING claim whose method uses a declared
+watchlist to approximate an application's uses, so its kind and its
+reference disagree and both are right.
+
+`ag_kind` is the overview's `kind` column, and the six values are model
+vocabulary rather than a list of agreements, so they are defined here:
+
+| kind | asserts |
+| --- | --- |
+| `pairing` | could these two artifacts have been the inputs of ONE action — would the tool have accepted the pair? |
+| `promise` | is this ONE artifact what its own producer said it would be? Nothing is matched |
+| `quality` | is it sound on its own terms, whatever it is paired with? No second side at all |
+| `preservation` | still the same thing after a transformation? Two COPIES of one artifact, so no disagreement between distinct components can violate it |
+| `behaviour` | does running it produce what was specified? The only kind whose evidence is an execution |
+| `composition` | a verdict over other verdicts, asserting nothing of its own |
+
+Which agreements are which is the overview's business, not this
+document's. The table's legend repeats these definitions beside the
+data, and `canary checks --agreement NAME` prints one row's `asserts`
+with the rest of its record.
 
 Authority matters when interpreting a violation. A declaration mismatch
 implicates the artifact only if the declaration is trusted; a peer mismatch

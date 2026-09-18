@@ -1931,18 +1931,28 @@ let render_html (m : t) ~(generated_at : string) : string =
              let impl_cell =
                match fn with
                | Some f ->
+                   (* the tooltip names BOTH halves of "where the code
+                      is": the record that DECLARES this agreement —
+                      kind, rooting, methods — and the evaluator the
+                      cell shows. Both are derived, neither is stored:
+                      the declaration is `let <slug> : agreement` in the
+                      family file, pinned by
+                      `agreements.metadata_is_declared_under_its_slug`. *)
                    Printf.sprintf
-                     "<td class=\"impl\" title=\"%s\"><span \
+                     "<td class=\"impl\" title=\"declared at %s, as `let %s \
+                      : agreement`; evaluator %s\"><span \
                       class=\"kq\">%s&middot;</span>%s</td>"
                      (esc (CR.family_file_of r.CR.ag_id))
+                     (esc r.CR.ag_slug) (esc f)
                      (esc family) (esc f)
                | None ->
                    Printf.sprintf
-                     "<td class=\"impl none\" title=\"no evaluator yet — it \
-                      would go in %s\"><span \
+                     "<td class=\"impl none\" title=\"declared at %s, as \
+                      `let %s : agreement` — but NO evaluator yet; it would \
+                      go in the same file\"><span \
                       class=\"kq\">%s&middot;</span>&mdash;</td>"
                      (esc (CR.family_file_of r.CR.ag_id))
-                     (esc family)
+                     (esc r.CR.ag_slug) (esc family)
              in
              "<tr><td class=\"kc\">" ^ esc code ^ "</td><td>"
              ^ esc r.CR.ag_slug ^ "</td><td class=\"kind\">"
@@ -2019,7 +2029,12 @@ let render_html (m : t) ~(generated_at : string) : string =
        <b>implemented at</b> <code>&lt;module&gt;&middot;&lt;function&gt;</code> \
        in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
        (hover for the file); a RED cell is an agreement with no evaluator \
-       yet, and names the file it would go in. \
+       yet, and names the file it would go in. That is the EVALUATOR — the \
+       agreement's METADATA (kind, subject, claim, rooting, methods) is code \
+       in the same file, bound as <code>let &lt;slug&gt; : agreement</code>, \
+       which the tooltip names too and \
+       <code>canary checks --agreement NAME</code> prints as \
+       <code>declared at</code>. Both are derived rather than stored. \
        <b>lang</b> and <b>mech</b> — an EMPTY cell means that axis does \
        not narrow the claim. An empty <b>lang</b> is every modelled \
        language, which is what a claim about the LIBRARY looks like: no \

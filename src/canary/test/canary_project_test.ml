@@ -2986,6 +2986,62 @@ let agreement_module_shape_pin : pure_test =
                        && not (String.is_substring tail ~substring:"\nlet load_")
                    | _ -> false)) }
 
+(* THE METADATA IS CODE TOO, AND FINDABLE (2026-09-17, user: "instead of
+   just mark the `implemented at`, we shall also track that the metadata
+   of an agreement should also be in the code").
+
+   `implemented at` tracks the EVALUATOR — the function that compares
+   evidence. It says nothing about where the agreement's metadata lives:
+   its kind, subject, claim, rooting, slot, fault tag and method list.
+   That metadata is code as much as the evaluator is, and a reader who
+   wants to know why a row says `pairing` has to find the record.
+
+   It does NOT need a field, because it is already derivable: every
+   agreement is bound to a value named exactly its slug, in the family
+   file the gathering list names. `soname_matches_requirement` is
+   `let soname_matches_requirement : agreement =` in
+   `canary_agreement_identity.ml`. Deriving beats declaring — a field
+   would be a second place to get it wrong — but a derivation is only
+   safe while the convention holds, and nothing was enforcing it.
+
+   So this pins the convention rather than adding the field. It is what
+   lets the record print "declared at" and the overview's tooltip name
+   the declaration, both without storing anything.
+
+   The binding must be `: agreement` explicitly. That is not pedantry:
+   the type annotation is what makes the value greppable at all, and
+   every one of the thirteen already carries it. *)
+let agreement_metadata_pin : pure_test =
+  { name = "agreements.metadata_is_declared_under_its_slug";
+    check =
+      (fun () ->
+        let module CR = Canary_agreement in
+        match Sys_unix.file_exists agreement_dir with
+        | `No | `Unknown -> true
+        | `Yes ->
+            let bad =
+              List.filter_map CR.agreement_registry ~f:(fun r ->
+                  let base =
+                    Stdlib.Filename.basename (CR.family_file_of r.CR.ag_id)
+                  in
+                  let p = agreement_dir ^ "/" ^ base in
+                  match Sys_unix.file_exists p with
+                  | `Yes ->
+                      let code = code_without_comments p in
+                      let want =
+                        "let " ^ r.CR.ag_slug ^ " : agreement ="
+                      in
+                      if String.is_substring code ~substring:want then None
+                      else
+                        Some
+                          (Printf.sprintf "%s: no `%s` in %s" r.CR.ag_slug want
+                             base)
+                  | _ -> Some (Printf.sprintf "%s: %s is missing" r.CR.ag_slug p))
+            in
+            if not (List.is_empty bad) then
+              List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
+            List.is_empty bad) }
+
 (* WHERE THE CODE IS, KEPT TRUE (2026-09-17, user: "does we use the same
    file (canary/agreement) to hold the agreement … pinpoint the file and
    the most important function (use red cell if such a function doesn't
@@ -3747,7 +3803,8 @@ let all_tests : pure_test list =
   @ agreement_fixture_tests
   @ agreement_bridge_pins
   @ [ check_module_pattern_pin; agreement_tiers_pin;
-      agreement_module_shape_pin; agreement_impl_pin; surface_facts_pin;
+      agreement_module_shape_pin; agreement_impl_pin;
+      agreement_metadata_pin; surface_facts_pin;
       agreements_for_pin; agreement_action_path_pin;
       agreement_acceptance_pin; dummy_action_pin ]
 

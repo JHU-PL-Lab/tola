@@ -1465,6 +1465,14 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
          src/canary/agreement/canary_agreement_<family>.ml.";
         "       `·—` = NO EVALUATOR YET; the family names the file it would \
          go in.";
+        "       That is the EVALUATOR. The agreement's METADATA — kind, \
+         subject, claim,";
+        "       rooting, methods — is code in the same file, bound as `let \
+         <slug> :";
+        "       agreement`; `canary checks --agreement NAME` prints it as \
+         `declared at`.";
+        "       Both are derived, neither stored, and the binding \
+         convention is pinned.";
         "lang / mech — AN EMPTY CELL MEANS THIS AXIS DOES NOT NARROW THE \
          CLAIM.";
         "       An empty `lang` = every modelled language, which is what a \
@@ -2016,6 +2024,10 @@ let pp_agreement ?(markdown = false) ?(depth = 0) (r : agreement_row) : string =
   let sub_of md s = if md then add "\n**%s**\n\n" s else add "  %s\n" s in
   h2 r.ag_slug;
   if markdown then add "| | |\n| --- | --- |\n";
+  (* WHAT IT ASSERTS, first — it is the coarsest thing about a claim and
+     it was missing from the record entirely, so the overview's `kind`
+     column had no per-agreement explanation to point at. *)
+  field "asserts" (string_of_agreement_kind r.ag.ag_kind);
   field "subject" (string_of_subject r.ag.ag_subject);
   (* "claim" was this row's label until 2026-09-17, which made it read
      as though the claim were the word "structural". The claim is the
@@ -2030,6 +2042,19 @@ let pp_agreement ?(markdown = false) ?(depth = 0) (r : agreement_row) : string =
   (* the anchor names a FILE as well as a section now: a bare "§2.2"
      told a reader the number and not where to look *)
   field "why it exists" ("components.md " ^ r.ag_doc);
+  (* WHERE THE METADATA IS (2026-09-17, user: "we shall also track that
+     the metadata of an agreement should also be in the code"). The
+     overview's `implemented at` names the EVALUATOR; this names the
+     record — kind, subject, claim, rooting, methods — which is code
+     too, and which a reader asking "why does this say pairing" needs.
+
+     Derived, not stored: every agreement binds to a value named exactly
+     its slug in its family file, which
+     `agreements.metadata_is_declared_under_its_slug` holds true. A
+     field would be a second place to get it wrong. *)
+  field "declared at"
+    (Printf.sprintf "%s, as `let %s : agreement`" (family_file_of r.ag_id)
+       r.ag_slug);
   (* ONLY WHEN IT IS OFF. Every row ships enabled, so printing "yes"
      thirteen times said nothing; printing "no" would be the news. *)
   if not r.ag_enabled then field "enabled" "no";
