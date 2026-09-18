@@ -208,6 +208,70 @@ same set difference.
 | `sibling-world` | Corresponding evidence retained from another world |
 | `test-suite`    | An upstream or translated suite's expected results |
 
+### 1.5.1 Three questions, three fields
+
+*(2026-09-17. Added after the agreement overview grew a `kind` column
+and the vocabulary turned out to be doing two jobs at once.)*
+
+An agreement is described along three axes that are routinely confused,
+because for a long time two of them shared a field:
+
+| field | question | example, for `api_names_present` |
+| --- | --- | --- |
+| `ag_kind` | **what does it assert?** | a PAIRING — the application's uses resolve on the binding's surface |
+| `m_reference` | **what is the second side?** | a DECLARATION — the watchlist, which stands in for those uses |
+| `ag_rooted_in` | **whose rule was it?** | the language compiler's, when it checked an application against the binding's interface |
+
+`api_names_present` is the case that forces them apart. Classified by
+its second side it looks like `declared_symbols_exported` — both are
+held against something the project wrote down — and they are different
+kinds of claim: one asks *is the thing you made what you said*, the
+other asks *could these two have been compiled together*. The watchlist
+is a hand-written approximation of the application's actual uses
+([`theory.md`](theory.md) §5.8 says so), so it is EVIDENCE for a pairing
+claim, not the claim's nature.
+
+`m_reference` keeps its own job: the diagnostics' *implicates* split —
+"this artifact is wrong" versus "these two disagree" — is a question
+about the second side, not about the relation, and the result matrix's
+blame column reads it.
+
+#### 1.5.2 The six kinds
+
+| kind | asserts | today |
+| --- | --- | --- |
+| `pairing` | could these two artifacts have been the inputs of ONE action — would the tool have accepted the pair? | 6 agreements; the centre of the catalogue |
+| `promise` | is this ONE artifact what its own producer said it would be? Nothing is matched | 3 |
+| `quality` | is it sound ON ITS OWN TERMS, whatever it is paired with? | **none** — 2 candidates |
+| `preservation` | still the same thing after a transformation? Two COPIES of one artifact | 2 |
+| `behaviour` | does running it produce what was specified? | 1, unimplemented |
+| `composition` | a verdict over other verdicts | 1, unimplemented |
+
+Three things the taxonomy settles that the previous one could not.
+
+**`preservation` is not `pairing`.** `staged_interface_preserved`
+compares a build tree against its own staged copy. No disagreement
+between distinct components can violate it — only a move that changed
+something. That is why its evaluator names both sides positionally
+instead of going through `lib_evidence_paths`, which would have compared
+the staged copy against itself and held on every relocation. The
+workaround predates the vocabulary; the vocabulary explains it.
+
+**`quality` is empty, and that is the finding.** A claim about ONE
+artifact against its own format's rule, with no second side at all:
+an installed library that records a path into the tree it was built in
+is wrong however it is later used. Nothing in the catalogue is of this
+kind. It is the cheapest gap on the list — `inspect_native.py` already
+emits `runpath` and `rpath`, and canary knows the build directory — and
+what it lacks is a POLICY (which paths are legitimate in an installed
+artifact), not evidence.
+
+**A kind is knowable before an evaluator is.** That is why the candidate
+table carries one: it can say which SORTS of claim are missing, which no
+count of unimplemented agreements can. `canary checks --firing` prints
+it after the overview, and its last line names the kinds that only
+candidates cover.
+
 ### 1.6 Source of the claim and attribution
 
 Every check needs an authority against which an observation can disagree. Each

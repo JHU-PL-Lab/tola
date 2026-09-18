@@ -8,6 +8,14 @@
 - Old code has special actions `probe_lib` (which _checks_ the parse result), `probe_binding_<lang>` (which runs the sanity-check examples)
   - the above two is not uniformed on when to check and the meaning for probe.
   - working on treating <action>_post a dispatching moment, so `build_lib`, `fetch_lib`, `install_lib` can both have a `<action_post>` but invoke the same set of lib checking.
-  - 
 
 2. Solidating the agreement table, which lies between the doc and the code. The kind of agreements are
+
+origin of agreenment
+- concrete action somewhere else
+- quality of artifact, stardard/spec/conversion
+- run-time behavior (testcases):
+  - versioning, generate testcases. project, fork-project
+  - cross-pm, 
+  - origin testcase..
+  - cross-api,   (src C)-(OCaml src)
