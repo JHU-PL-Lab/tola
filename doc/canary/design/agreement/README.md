@@ -49,14 +49,14 @@ reference disagree and both are right.
 `ag_kind` is the overview's `kind` column, and the six values are model
 vocabulary rather than a list of agreements, so they are defined here:
 
-| kind | asserts |
-| --- | --- |
-| `pairing` | could these two artifacts have been the inputs of ONE action — would the tool have accepted the pair? |
-| `promise` | is this ONE artifact what its own producer said it would be? Nothing is matched |
-| `quality` | is it sound on its own terms, whatever it is paired with? No second side at all |
+| kind           | asserts                                                                                                                                |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `pairing`      | could these two artifacts have been the inputs of ONE action — would the tool have accepted the pair?                                  |
+| `promise`      | is this ONE artifact what its own producer said it would be? Nothing is matched                                                        |
+| `quality`      | is it sound on its own terms, whatever it is paired with? No second side at all                                                        |
 | `preservation` | still the same thing after a transformation? Two COPIES of one artifact, so no disagreement between distinct components can violate it |
-| `behaviour` | does running it produce what was specified? The only kind whose evidence is an execution |
-| `composition` | a verdict over other verdicts, asserting nothing of its own |
+| `behaviour`    | does running it produce what was specified? The only kind whose evidence is an execution                                               |
+| `composition`  | a verdict over other verdicts, asserting nothing of its own                                                                            |
 
 Which agreements are which is the overview's business, not this
 document's. The table's legend repeats these definitions beside the
@@ -81,6 +81,32 @@ the comparison (`inconclusive`). `not_implemented`, `disabled`,
 `not_applicable`, and `error` explain why evaluation did not decide.
 These ten labels come from eight outcome constructors: `Unavailable` has
 three typed causes.
+
+### The short code, and why rows repeat it
+
+The code (`dse`, `rse`) names the AGREEMENT; an overview row is a
+(language, mechanism) PATTERN, so one claim can occupy several rows and
+they all carry the same code. That is safe because **nothing downstream
+keys on the code** — it is a display label, and the thing that
+disambiguates is always the step or the column:
+
+| | what tells two patterns apart |
+| --- | --- |
+| the log | the step tag. A line is `<tag> agreement_outcome (<slug>/<method>: <label>)`, and the tag carries the language |
+| the result matrix | the column, which is (action, stage, code); the action carries the language, so `build_binding_ocaml_pre:rse` and `probe_binding_python_pre:rse` are different columns. The worst-wins merge happens only WITHIN one |
+| the cache | nothing — neither the code nor the agreement enters a step fingerprint. Verdict markers are per step, and two patterns are two steps |
+
+⚠ **The mechanism is recoverable, not recorded.** Nothing writes it
+down: the log gives a language and the reader infers the mechanism from
+the project's spec. That inference is sound only while a project
+declares one mechanism per language, and **tiny-full already declares
+two for Python** (`Cext` and `Ctypes`, deliberately — it is the witness
+project). `Probe_binding` carries a language and no mechanism, so both
+realize ONE `probe_binding_python` step: one log tag, one matrix column,
+and `mechanism_for` returns the first, so pass 2 never asks about the
+second. The artifact axis distinguishes them and the action axis does
+not. `analysis.one_mechanism_per_language` names tiny-full as the known
+case and fails on a second one.
 
 A finding and a step verdict are separate. Normally an `Expect_success`
 step passes when its command and postcondition succeed, even if an agreement

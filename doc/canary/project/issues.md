@@ -524,6 +524,39 @@ Two consequences, both visible in `canary emit libffi --stage analyse`:
    the registry-wide `[OCaml; Python]`, so libffi reports one thing its
    *Python* binding cannot carry — and it has no Python binding.
 
+### tiny-full: two mechanisms for one language, and one step for both
+
+**tiny-full** (found 2026-09-17, tracing how an agreement's short code
+reaches the log). A sibling of the gap above and a different shape: the
+declaration is read, and the pipeline has nowhere to put it.
+
+tiny-full declares BOTH `Cext` and `Ctypes` for Python, deliberately —
+it is the witness project and exercising both is its job. Its artifact
+table distinguishes them (`a_binding Python Cext` vs `… Ctypes`). The
+ACTION vocabulary does not: `Probe_binding of lang` and
+`Build_binding of lang` carry a language and no mechanism. So
+
+- `canary emit tiny-full --stage realize` shows ONE
+  `build_binding_python` / `probe_binding_python` pair, not two;
+- that is one log tag and one `canary result` column, so an
+  `agreement_outcome` cannot say which binding produced it;
+- `an_mechanisms` is an assoc list and `mechanism_for` takes the first,
+  so pass 2 computes applicability for **Cext alone** and never asks
+  what the Ctypes binding can carry.
+
+Nothing is wrong in any other project — every one of them declares one
+mechanism per language, which is why the log's language is enough to
+recover the mechanism there. `analysis.one_mechanism_per_language` names
+tiny-full as the known case and fails on a second, so this cannot spread
+quietly.
+
+The fix is a mechanism in the action vocabulary, which is a `base/`
+change touching the step model, the log tags and the matrix columns —
+not worth doing for one witness project, and worth knowing before a
+second one wants it. Related: the provider-linkage axis in
+[`../design/agreement/mechanism.md`](../design/agreement/mechanism.md)
+§3 has the same shape — a real axis with no home in the action graph.
+
 **Why it was not simply fixed when it was found.** Routing the artifact
 table's mechanism into pass 2 would move libffi's OCaml side from
 `Cstubs` to `Ctypes`, and Ctypes is inapplicable for

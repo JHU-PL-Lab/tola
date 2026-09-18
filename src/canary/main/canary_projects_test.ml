@@ -786,6 +786,95 @@ let pm_gate_pin : Canary_project_test.pure_test =
         in
         groups_ok && freedom_ok && all_gated) }
 
+(* ONE MECHANISM PER LANGUAGE, WHICH EVERYTHING DOWNSTREAM ASSUMES
+   (2026-09-17, user asking how an agreement's short code is handled and
+   "how may it affect the cache or log").
+
+   The overview repeats a claim's short code across rows because a row
+   is a (lang, mech) PATTERN and the code names the AGREEMENT. That is
+   safe only because nothing downstream keys on the code, and what
+   disambiguates instead is always the step or the column:
+
+     log     `<step tag> agreement_outcome (<slug>/<method>: <label>)` —
+             the tag carries the language, the slug the claim
+     matrix   a check column is (action, stage, code) and the action
+             carries the language, so `build_binding_ocaml_pre:rse` and
+             `probe_binding_python_pre:rse` are different columns; the
+             worst-wins merge happens only WITHIN one
+     cache    neither the code nor the agreement enters a fingerprint;
+             verdict markers are per step, and two patterns are two steps
+
+   THE MECHANISM IS RECOVERABLE, NOT RECORDED. Nothing writes it down:
+   the log gives the language and the reader infers the mechanism from
+   the project's spec. That inference is sound exactly while a project
+   declares one mechanism per language — `an_mechanisms` is an assoc
+   list and `List.Assoc.find` takes the first, so a second declaration
+   for one language would be silently shadowed, and BOTH the log line
+   and the matrix column would become ambiguous with nothing to say so.
+
+   ⚠ AND IT IS ALREADY FALSE ONCE. tiny-full declares BOTH `Cext` and
+   `Ctypes` for Python — deliberately, it is the witness project — and
+   the consequences are exactly the ones above, today:
+
+     * `Probe_binding of lang` carries no mechanism, so both bindings
+       realize ONE `probe_binding_python` step. `emit tiny-full --stage
+       realize` shows one, not two;
+     * that step is one log tag and one matrix column, so an outcome
+       cannot say which binding produced it;
+     * `mechanism_for Python` returns the FIRST — Cext — so pass 2
+       computes applicability for Cext alone and the Ctypes side is
+       never asked.
+
+   The artifact axis distinguishes the two (`a_binding Python Cext` vs
+   `… Ctypes`); the ACTION axis does not, and that is the gap. Fixing it
+   means a mechanism in the action vocabulary, which is a base/ change
+   and not this pin's business.
+
+   So tiny-full is a NAMED exception rather than a failure, and the pin
+   is a ratchet: a second project doing this fails here, and adding to
+   the list requires saying why. *)
+let mechanism_collision_known : string list = [ "tiny-full" ]
+let one_mechanism_per_language_pin : Canary_project_test.pure_test =
+  { name = "analysis.one_mechanism_per_language";
+    check =
+      (fun () ->
+        let bad =
+          List.concat_map Canary_registry.all_projects ~f:(fun (name, pr) ->
+              (* a decl carries a MECHANISM, and the language comes off
+                 the catalogue — which is the same derivation
+                 `an_mechanisms` does when it builds the assoc list this
+                 pin protects *)
+              let langs =
+                List.map pr.Canary_project_run.pr_binding_decls ~f:(fun d ->
+                    (Canary_mechanism.info_of_mechanism
+                       d.Canary_binding_decl.mechanism)
+                      .Canary_mechanism.mi_lang)
+              in
+              List.filter_map
+                (List.dedup_and_sort langs ~compare:Poly.compare)
+                ~f:(fun l ->
+                  let n =
+                    List.count langs ~f:(fun x -> Poly.equal x l)
+                  in
+                  if
+                    n > 1
+                    && not
+                         (List.mem mechanism_collision_known name
+                            ~equal:String.equal)
+                  then
+                    Some
+                      (Printf.sprintf "%s declares %d mechanisms for %s" name n
+                         (Canary_lang.string_of_lang l))
+                  else None))
+        in
+        if not (List.is_empty bad) then
+          List.iter bad ~f:(fun b ->
+              Fmt.pr
+                "    %s — the log records a language, not a mechanism, so \
+                 its outcomes become ambiguous@."
+                b);
+        List.is_empty bad) }
+
 (* THE MISMATCH MATRIX on z3 (2026-08-19, user: "for each artifact, either
    c lib or any binding, we need two choices, one stable and one latest").
    With the binding's channel freed from the lib's, each dev ref carries
@@ -4844,6 +4933,7 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_registry_shape_pin;
       matrix_check_cell_pin;
       matrix_page_has_the_grid_pin;
+      one_mechanism_per_language_pin;
       matrix_key_covers_codes_pin;
       platform_single_source_pin;
       strict_mode_pin;
