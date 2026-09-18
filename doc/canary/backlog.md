@@ -481,7 +481,7 @@ No hurry — all items below are queued for when their forcing function arrives.
       it is not a further pass; where the evidence address comes from;
       and the bundling direction with its named blocker;
     - ~~`agreement/pipeline.md` (retired 2026-09-17, absorbed into
-      `agreement/agreements.md`) already WAS that document, filed in the
+      `agreement/README.md`) already WAS that document, filed in the
       wrong directory~~ — its points 2–4 now say what a PROJECT AUTHOR
       has to get right and point at §2b for the mechanics. It keeps the
       four failure modes, which are its real value and are diagnostic
@@ -657,38 +657,20 @@ No hurry — all items below are queued for when their forcing function arrives.
       an inspector question second — which is why it is not simply the
       next `Native_lib_probe`-shaped win.
 
-51. **The agreement backlog** (moved out of the retired
-    `agreement/registry.md` §7.4 on
-    2026-09-17, when that file split into
-    [`design/agreement/agreements.md`](design/agreement/agreements.md) and
-    [`components.md`](design/agreement/components.md)). Open items live
-    here; the model does not carry a work queue.
+51. **Agreement engineering.** Per-claim implementation status and blockers
+    belong to the Agreement overview and candidate table in `canary result`;
+    use `canary checks --agreement NAME` for details. The short procedure is
+    [agreement/README.md](design/agreement/README.md) §4. This list keeps only
+    work that cuts across individual rows:
 
-    **REFRESHED on the way, and most of the old list was already done.**
-    §7.4's ordered backlog still asked for `api_names_present` on
-    Python, `required_symbols_exported`, and "connect the
-    declaration-based agreements". All three landed between 2026-09-13
-    and 2026-09-15, and the section had not been updated —
-    `declared_symbols_exported` decides on sqlite and catches the
-    project's own forward cell. Read `canary checks --landing` first;
-    **8 of 13 are landed** as of 2026-09-17.
-
-    The five that are not, and what each waits on:
-
-    | agreement | state | waiting on |
-    | --- | --- | --- |
-    | `signatures_agree` | evaluated, never decided | the source-scanning inspectors, which no project wires. Also the fixed binding-signature table: replace it with a real extractor, so the check compares what the binding DECLARES rather than what the inspector was told to assume |
-    | `declared_versions_exported` | `vacuous` on sqlite | a project that BUILDS a lib carrying a version script. sqlite builds without one, so there are no version nodes — that is the truth rather than a gap. openssl has one and canary fetches its lib, so `build_lib` never fires |
-    | `behavior_matches` | no evaluator | somebody to state a spec. It is one row standing for a CATEGORY: derived compatibility tests, the project's own suite, a provider↔consumer round trip. Introduce ONE test-suite reuse case, then ONE C/binding differential case — the first supplies an expectation, the second a comparison, and the agreement needs both |
-    | `repack_preserves_api` | no evaluator | what "preserves" permits ([`components.md`](design/agreement/components.md) §6.3.1) |
-    | `repack_complete` | no evaluator | the same, plus the two agreements it composes |
-
-    Those last three are exactly the three with no `ag_rooted_in` — no
-    tool enforced the relation, so there is nothing to re-derive and
-    they wait on a specification, not on wiring. Prefer landing
-    tool-rooted ones.
-
-    Still open, and not about any one agreement:
+    - **Reference and target vocabulary:** decide the actual oracle before
+      implementing the planned behaviour and repacking methods; composition
+      may not have an ordinary second side. The package-content candidates
+      also need a package target absent from the current artifact kinds.
+    - **Independent checking tools:** distinguish a tool whose rule is being
+      recovered from one run alongside Canary for comparison. Match each
+      method's scope, evidence, and prerequisites before treating different
+      answers as a defect. An ABI diff and a watchlist check need not agree.
 
     - **Migrate the compat expectations off the declared-input route**
       for projects whose layout the derivation already reproduces,

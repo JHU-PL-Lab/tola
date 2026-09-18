@@ -108,8 +108,8 @@ As actions those become *more* honest, not less.
 
 ## 5. Why the agreement registry is the natural home
 
-[`agreement/agreements.md`](agreement/agreements.md) is the catalogue this
-section means.
+The Agreement overview in `canary result` shows this registry;
+`canary checks --agreement NAME` prints a complete record.
 
 A contract is a check with declared inputs and an expected outcome, so
 "registry → check actions" is a projection rather than a translation. That

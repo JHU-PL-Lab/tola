@@ -1,210 +1,109 @@
-# Agreements — the map
+# Agreements
 
-**Kind: index.** What an agreement is in twenty lines, then which file for
-which job.
+**Start with the Agreement overview in `canary result` (`make view`).**
+It is the reference for which claims exist, their targets and originating
+rules, where they are checked, what is implemented, and what runs decided.
+The candidate table records proposed claims and their blockers. We do not
+maintain another catalogue or status list in these docs.
 
-## What an agreement is
-
-Building establishes relations, and most are checked once, by a tool, on one
-machine. A compiler checks what its own rules cover; it does not check that
-the library finally loaded is the one the header described, because at
-compile time there is no such library, and by the time there is, the
-compiler is gone. Distribution loses more: a `.so` does not remember which
-headers it agreed with, and a consumer remembers only the *name* it recorded.
-
-An **agreement** names one such relation and says how to observe it again,
-from evidence that did survive. A **checking method** is one way to observe
-it — what it compares, against what, where its evidence appears, and what a
-pass does not establish. Evaluating a method yields one **outcome**:
-
-```text
-holds · violated · unavailable · inconclusive
-not_implemented · not_applicable · disabled · error
-```
-
-Eight, because the previous API returned a substring list and an empty list
-meant all of them at once. `holds` is bounded by the method's stated scope;
-it never means "compatible".
-
-## What is NOT here — the seam
-
-*agreement/ owns the CLAIM, enumeration/ owns the OCCASION* (2026-09-16).
-
-A **claim** is what an agreement asserts, whose rule it recovers, what
-evidence it reads and what falsifies it. None of that mentions a world,
-and all of it is here.
-
-An **occasion** is `(world, action, mechanism, lang)` — which step a
-check fires at, and where its evidence sits in the output tree. That is
-the enumeration's vocabulary, and it is stated once, over there:
-
-| question | lives in |
-| --- | --- |
-| can this PROJECT carry the claim? | [`../enumeration/stage2_analyse_spec.md`](../enumeration/stage2_analyse_spec.md) — pass 2, no world needed |
-| does it fire HERE, and where does it read? | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — pass 6 |
-| what does it claim, and what falsifies it? | this directory |
-
-One thing still crosses it in code: `binding_evidence_tag` /
-`lib_evidence_tags` in `canary_agreement_common.ml` map a world to a
-step tag. The fix is not to move them — it is to derive them (backlog
-§50, [`../action_model.md`](../action_model.md) §6), after which nobody
-owns them.
-
-## Which file
-
-| you are… | read |
-| --- | --- |
-| meeting the idea | this file, then [`agreements.md`](agreements.md) §1 |
-| **asking what canary checks today, and what is left** | [`agreements.md`](agreements.md) — the whole question, in one document |
-| asking what ONE agreement is | [`agreements.md`](agreements.md) §2, or `canary checks --agreement NAME` |
-| asking what has NO row, and why | [`agreements.md`](agreements.md) §3 |
-| landing an agreement on a project | [`agreements.md`](agreements.md) §4, then §5.1's checklist |
-| **asking why there is anything to check at all** | [`theory.md`](theory.md) |
-| **asking why THIS agreement exists** | [`components.md`](components.md), at the anchor its registry row carries |
-| looking for the NEXT agreement | [`theory.md`](theory.md) §5–§6 |
-| **asking WHEN a check fires** | [`../enumeration/stage6_realize_steps.md`](../enumeration/stage6_realize_steps.md) §2b — the occasion is not here |
-| asking why a claim is `not_applicable` here | [`mechanism.md`](mechanism.md) §2 — the three facts that gate it |
-| writing the paper | [`theory.md`](theory.md) and [`components.md`](components.md) |
-
-**Four files, two questions.** *What is there and what is left* is one
-document; *why* is two; mechanisms gate both.
-
-- [`agreements.md`](agreements.md) — **what there is, and what is left.**
-  §1 the model (what a claim is, the eight outcomes, claim vs checking
-  method). §2 every agreement's complete record and §3 everything that
-  has no record yet — both GENERATED from the registry between markers,
-  so they cannot drift; `make agreement-catalogue` rewrites them. §4 how
-  a run gets from a step to a verdict, one project end to end. §5 the
-  remaining work: the checklist, the four undecided states, what a
-  landing has cost, the distance-0 backlog and `--strict`. Merged
-  2026-09-17 from `model.md` + `landing.md` + the generated
-  `catalogue.md`, which answered one question between them.
-- [`theory.md`](theory.md) — **where agreements come from.** An action's
-  implementation embodies a relation over its inputs; running it is the only
-  witness that a tuple satisfies it; the tuple is then discarded and only a
-  projection survives. An agreement is a necessary condition for membership in
-  that relation, decidable from what survived. §5 walks Canary's action
-  catalogue and states, per action, the full-information agreement the real
-  tool established and what post-fact checking can recover of it; §6 turns
-  that into a procedure for finding the next one.
-- [`components.md`](components.md) — **why each agreement exists.** A
-  walk over the five kinds of thing a binding world is made of —
-  artifacts, bindings, versions, packaging, deployment — saying for each
-  what could be claimed, what observation is available and what it does
-  not establish. Every registry row's `ag_doc` anchor points here, and
-  `agreements.doc_anchors_exist` fails if a cited section stops
-  existing.
-- [`mechanism.md`](mechanism.md) — **what a binding IS, and which
-  claims it can carry.** Two axes: the consumer's mechanism (a value,
-  with three decidable facts that `m_applicable` dispatches on) and the
-  provider's linkage (shared `.so` vs static `.a` — NOT a value yet, and
-  it turns off the same agreements for the same reason). Carries every
-  cell of the 2×4 grid, how a project declares its binding, and the open
-  question the catalogue exists to ask.
-
-> **`theory.md` and `components.md` deliberately stay apart.** They are
-> orthogonal walks over one space — one by ACTION, one by COMPONENT —
-> and each defines itself against the other, so a candidate found on one
-> axis is checked against the other. Merging them would put one sequence
-> where there are two axes. Reasoning:
-> [`agreements.md`](agreements.md) §5.7.
-
-## See it rather than read it
+For a row's full claim, evidence, limits, and examples:
 
 ```sh
-canary checks --agreement NAME       # ONE agreement's complete record
-canary checks                        # the catalogue, grouped by subject
-canary checks --catalogue            # every agreement, its reference expectation, its methods
-canary checks --firing               # the agreement × action grid
-canary checks --landing              # planned vs effective
-canary checks --dummies              # every DUMMY ACTION and why it is empty
-canary checks <project>              # what this project's actions select, what ran, and the GAP
-canary checks <project> --observed   # what its LAST RUN actually evaluated
-canary result <project>              # the scenario × check table, with blame counted
-
+canary checks --agreement NAME
 ```
 
-The last two are the pair that matters. The first says what would be
-checked; the second says what was. They disagreed for every agreement on
-every real project until 2026-09-12, and only the second could tell.
+The remaining documents explain what the table cannot:
 
-## Which table is which
+- [theory.md](theory.md): why recombining artifacts creates something to
+  check, and how to find claims by following build actions.
+- [components.md](components.md): why particular evidence is useful and
+  where it stops, including the ncurses counterexample.
+- [mechanism.md](mechanism.md): which evidence a binding mechanism can
+  supply, and the provider-linkage cases not yet modeled.
 
-**If you only want one: the RECOVERY GRID** — `canary checks --firing`,
-or table 1 of `make view`. One row per agreement, the action patterns as
-columns, `R` where the rule ran and `D` where the check fires, plus the
-short code, the mechanisms that can carry it, the object formats it
-ranges over, and the lag between root and firing. It absorbed the
-result page's separate check-key table on 2026-09-17, because that key's
-columns were five of the grid's and two of its tooltips.
+## 1. What a row means
 
-The rest answer different questions:
+An **agreement** is a falsifiable claim about artifacts or an execution.
+A **method** is a way of checking it from available evidence. One agreement
+can have several methods and occupy several overview rows when firing
+differs by mechanism. A pass covers only that method's stated scope;
+matching symbol names does not establish correct types or behaviour.
 
-| table | in | answers |
-| --- | --- | --- |
-| **the recovery grid** | `canary checks --firing`, `make view` table 1 | **start here** — every agreement, where its rule ran, where it is checked, which mechanisms and formats carry it |
-| what each one recovers, in prose | [`agreements.md`](agreements.md) | the same rooting as a sentence per row, with the tool and the artifact spelled out |
-| per-agreement records | [`agreements.md`](agreements.md) | what IS this agreement — claim, whose rule it recovers, where it looks, worked examples |
-| the distance-0 backlog | [`agreements.md`](agreements.md) | which unregistered checks are cheapest to add |
-| full-information per action | [`theory.md`](theory.md) §5 | what each real tool established, and what survives of it |
-| **why an agreement exists** | [`components.md`](components.md) | the per-component rationale each `ag_doc` anchor points at |
-| **planned vs effective** | `canary checks --landing` | which ones a real run has decided. Not copied into any file — see below |
-| **what is done, and what is left** | [`agreements.md`](agreements.md) | per agreement, what is in its way — GENERATED from `ag_waiting_on`, so it cannot go stale the way the hand-maintained version did |
-| agreement × action | `canary checks --firing` | where each one fires |
-| **scenario × check** | `canary result [<project>]` | what each agreement DECIDED, per world — check columns interleaved with the actions, `pre → action → artifact → post`, one agreement per cell, plus a counted **blame** for every cell that carries no verdict |
-| **could vs did, per project** | `canary checks <project>` | every action the project derives, every agreement that fires there, what the runs decided — ending in a five-class gap summary (`decided` / `could not` / `never asked` / `stood down` / `no evaluator`) |
+Keep three questions separate. `ag_kind` says what the claim asserts:
+pairing, promise, quality, preservation, behaviour, or composition.
+`m_reference` says what a method compares against: an artifact, declaration,
+peer, sibling world, or test suite. `ag_rooted_in` names the tool's original
+rule and action. For example, `api_names_present` is a pairing claim whose
+method uses a declared watchlist to approximate an application's uses.
 
-**And one rule about tables:** a table the tool generates does not get a
-hand copy. Three did — `registry.md` §1.7, `registry.md` §7.4.1 and
-`landing.md`'s effective table — and all three had gone stale in the same
-direction, still reporting `declared_symbols_exported` as `unavailable`
-months after it began deciding on sqlite and catching a real violation.
-That is why `registry.md` is gone, and why the per-agreement status
-table `landing.md` used to keep by hand is generated into the catalogue
-now (2026-09-17).
+Authority matters when interpreting a violation. A declaration mismatch
+implicates the artifact only if the declaration is trusted; a peer mismatch
+initially implicates the pairing. Version direction helps explain a failure
+but does not exclude packaging or environment faults.
 
-## Two claims worth keeping apart
+World assertions answer a different question: did Canary realize the world
+it says it tested? A wrong package pin or source ref calls the run's evidence
+into question. It is not an agreement finding about the tested software.
 
-[`theory.md`](theory.md) says what an agreement *is*; the rest of this
-directory says which ones exist and whether they run. The first is a claim
-about software; the second is a claim about this repository. Confusing them
-is how a catalogue comes to describe checks that never executed.
+## 2. Reading a result
 
-## And a third — an agreement is not a harness assertion
+Only `holds` and `violated` are decided comparisons. Other labels distinguish
+missing evidence (`unavailable`), a missing declaration (`undeclared`),
+nothing of that kind to check (`vacuous`), and evidence that cannot settle
+the comparison (`inconclusive`). `not_implemented`, `disabled`,
+`not_applicable`, and `error` explain why evaluation did not decide.
+These ten labels come from eight outcome constructors: `Unavailable` has
+three typed causes.
 
-An agreement is a claim about **the project's artifacts**: what the library
-exports, what the stub requires, what the package contains. Canary also makes
-claims about **itself** — that the switch holds the pin this scenario
-declares, that the probe reported the library this world placed, that the
-source tree is at the declared ref. Those are **world assertions**
-(`Canary_world.Log_names`, `Opam_pin`, `pin_check_post`), and they are not
-agreements however much they look like one.
+A finding and a step verdict are separate. Normally an `Expect_success`
+step passes when its command and postcondition succeed, even if an agreement
+finds a mismatch. An expected-failure test can confirm a finding by observing
+its predicted diagnostic. `--strict` instead fails the step that observes a
+violation; intentional mismatch worlds can therefore fail correctly in that
+mode. Strict and permissive verdicts have different cache fingerprints.
 
-They fail differently, and that is the test. A violated agreement is a
-finding *about the software*. A failed world assertion means *this run tested
-something other than what it says*, and every verdict in it is suspect. Put
-the second on the first's list and "our harness misconfigured itself" ends up
-ranked beside "this library dropped a symbol".
+The overview's implementation and observed-result columns are also separate:
+an evaluator can exist without ever reaching useful evidence. A cached step
+does not re-evaluate methods or emit fresh outcomes. Inspect a last run with
+`canary checks <project> --observed`; its skip count explains coverage lost
+to warm steps. [matrix.md](../matrix.md) owns the table layout and cell legend.
 
-When it is not obvious which you have, ask `ag_rooted_in`'s question: **whose
-rule does it recover?** If the answer is "canary's own", it is an assertion.
-Worked through for `source_is_declared_ref` in [`theory.md`](theory.md) §7.1,
-which is the case that looks most like an agreement and is not one.
+## 3. Where results come from
 
-## The rule this directory exists to enforce
+Project analysis determines which claims a mechanism can carry. Realization
+places inspections and attaches a world, language, and mechanism to steps.
+The runner's `evaluate_step` selects firing, suitable methods, resolves their
+evidence, and merges results into one record used by reporting and acceptance.
+The log records `agreement_outcome` events, from which the result page is read.
+The full pipeline belongs to [enumeration/](../enumeration/README.md), with
+applicability in pass 2 and firing/evidence placement in pass 6.
 
-> An agreement is landed when a **real project's log** shows it `holds` or
-> `violated`, and a deliberate break flips it the other way.
+Compat expectations can also supply explicit evidence paths for layouts the
+derivation cannot express. Both routes use the same evaluators; a violation
+outranks a holding result, and a decided result outranks an undecided one.
+Readers select inspection files by their declared kind. A fetched binding's
+evidence is normally at its fetch step, a built binding's at its build step.
 
-Not when the comparator exists. Not when the fixture passes. Not when the
-catalogue describes it. Those are all necessary and none of them is
-evidence that anything was checked.
+Local checks are not all rendered into GitHub Actions: some symbol checks
+and expected-failure verification are, but local pre/postcondition closures
+and the full agreement record are not. The remaining backend work belongs to
+[check_evaluation.md](../check_evaluation.md).
 
-## Related
+## 4. Making a row decide
 
-- [`../enumeration/README.md`](../enumeration/README.md) — where worlds come
-  from; an agreement's firing and evidence both depend on the world.
-- [`../check_evaluation.md`](../check_evaluation.md) — the proposal for
-  explicit check actions across backends.
-- [`../staged_parity.md`](../staged_parity.md) — build tree vs install
-  prefix as a checking principle.
+Use the overview to choose an unimplemented or undecided claim and read its
+blocker. If the specification is missing, state the claim and falsifier
+first. If the method exists, inspect `canary checks <project>` and
+`canary emit <project> --stage realize`: the chosen world needs both a firing
+action and the inspections that method reads, ordered before the reader.
+
+Run with the deciding step uncached, inspect `--observed`, introduce a
+controlled counterexample, then restore the good case. A landing needs the
+same real-project check to flip between `holds` and `violated`. Fixtures
+alone cannot show that the project's evidence reaches the comparator.
+
+`make canary-refresh PROJECT=<project>` refreshes probes, binding builds,
+and staging. Fetches and library builds stay warm, so changing evidence
+produced there requires rerunning that producer too. `--strict` is useful
+for debugging. Update the registry blocker when resolved; fresh runs supply
+the overview's observed outcomes.

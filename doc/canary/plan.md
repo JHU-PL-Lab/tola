@@ -109,10 +109,11 @@ Tool / empirical (**agent-ownable**):
 - [ ] **Concrete checking** — the agreement registry (§4 stage 2). The
       runner side lands projects fine; what a landing *checks* is still
       per-project tables plus c1..c8. This is
-      [`../status.md`](status.md) M2 step 6 and its catalogue is
-      [`agreement/agreements.md`](design/agreement/agreements.md)
-      (§2 develops the artifact foundation; §7.4 collects open
-      implementation work). **Not descopable** (user, 2026-08-26).
+      [`../status.md`](status.md) M2 step 6. The Agreement overview in
+      `canary result` is the live catalogue; rationale is in
+      [components.md](design/agreement/components.md) and open engineering
+      work in [backlog.md](backlog.md) §51.
+      **Not descopable** (user, 2026-08-26).
 - [ ] **Depth, not count** — the library count M2 originally asked for
       (3 → 5–8) is **met**: ten registry projects plus tiny1. The honest
       gap is the 2×2: two projects have the full matrix (sqlite —

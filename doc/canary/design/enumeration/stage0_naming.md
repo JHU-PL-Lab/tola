@@ -138,9 +138,9 @@ Bad scenarios come in two flavors:
 ## Agreement catalogue
 
 The names are the registry's; the tags are what a scenario name carries.
-`canary checks` prints the live list, and the twelve agreements plus their
-reference expectations are in
-[`agreement/agreements.md`](../agreement/agreements.md) §1.7. The numbered
+The Agreement overview in `canary result` shows the live list;
+`canary checks --agreement NAME` prints a claim and its reference expectations.
+The numbered
 `c1`..`c9` identifiers were retired on 2026-09-12, and the three that compared
 an artifact against a DECLARATION became agreements of their own
 (`declared_symbols_exported`, `soname_matches_declaration`,
@@ -233,4 +233,3 @@ Rename chronicle 2026-07-21 (`project_spec → runner_spec`,
 `rule → action`, `action_rule → action_graph`, `action_step → step`,
 `step → step_body`, `stage → artifact_status`) captured in
 [`worklog_2026_07.md`](../../worklog/worklog_2026_07.md).
-

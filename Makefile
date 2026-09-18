@@ -84,7 +84,7 @@ canary-agreement-roundtrip:
 	       echo "  A decided outcome means the evidence was produced AND read," ; \
 	       echo "  by steps ordered so the reader runs after the writer." ; \
 	       echo "  Check 'canary emit sqlite --stage realize' for the inspect step," ; \
-	       echo "  and doc/canary/design/agreement/pipeline.md for the reasons" ; \
+	       echo "  and doc/canary/design/agreement/README.md for the reasons" ; \
 	       echo "  an agreement reports unavailable." ; \
 	       exit 1; }; \
 	done
@@ -116,18 +116,11 @@ canary-refresh:
 	$(CANARY) action $(PROJECT)
 	@echo "refresh: $(PROJECT) re-decided its agreements — 'canary result $(PROJECT)' to see the gap"
 
-# The generated half of `agreements.md` — §2 (every agreement's record)
-# and §3 (what has no record yet). SPLICED between the markers rather
-# than written as a whole file, because that document is half narrative
-# and half registry dump, and the merge on 2026-09-17 put them in one
-# place on purpose. `agreements.catalogue_doc_is_generated` fails if the
-# region on disk differs from what the registry would emit, so the
-# generated half cannot drift; the prose around it is edited by hand.
-AGREEMENTS_DOC = doc/canary/design/agreement/agreements.md
+# Print the live catalogue. The Agreement overview is the primary reference;
+# no generated catalogue is maintained in the design docs.
+.PHONY: agreement-catalogue
 agreement-catalogue:
-	@$(CANARY) checks --catalogue --md > $@.tmp
-	@python3 canary/scripts/splice_generated.py $(AGREEMENTS_DOC) $@.tmp
-	@rm -f $@.tmp
+	@$(CANARY) checks --catalogue
 
 # THE WEB VIEW — three tables on one page: the check key, the RECOVERY
 # GRID (where each rule ran vs where it is checked), and the result

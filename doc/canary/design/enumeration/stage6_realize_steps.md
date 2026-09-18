@@ -14,10 +14,8 @@ what happened. The map is [`README.md`](README.md).
 **It also owns the OCCASION** (§2b, added 2026-09-16) — when a check
 fires and against what evidence. That is a function of `(world, action,
 mechanism, lang)`, which is this directory's vocabulary; `agreement/`
-owns what a check CLAIMS. The account used to live entirely in
-[`../agreement/agreements.md`](../agreement/agreements.md), which left this
-doc — the doc for the pass that attaches `agreement_ctx` to every step —
-mentioning "agreement" zero times.
+owns what a check CLAIMS. [The agreement guide](../agreement/README.md)
+explains how the runner consumes this context and reports outcomes.
 
 > Created 2026-08-24, closing the last stage gap. It ABSORBED
 > `algorithm_explainer.md`, the walkthrough that predated the stage map:
@@ -109,10 +107,8 @@ subshell that exits the group before the status is recorded.
 what a check CLAIMS; this pass owns **when it is triggered and against
 what** — and that is a function of `(world, action, mechanism, lang)`,
 which is this directory's vocabulary and not the agreement layer's.
-Until 2026-09-16 the split was declared the other way round, the
-account lived in [`../agreement/agreements.md`](../agreement/agreements.md),
-and this doc mentioned "agreement" zero times while being the doc for
-the pass that attaches the context.
+The agreement guide links here for the derivation rather than maintaining
+a second account of firing and evidence placement.
 
 ### The three questions, and where each is answered
 
@@ -163,7 +159,7 @@ holds", and a disagreement found there is a finding about ARTIFACTS that
 the action was never asked to fail on — ssl's `dependencies_provided:
 violated libcrypto.so.3` is real and must not turn ssl red. `--strict`
 makes the two views agree by failing the step that READ the disagreeing
-evidence. See [`../agreement/agreements.md`](../agreement/agreements.md).
+evidence. See [the runtime guide](../agreement/README.md).
 
 ### Where the evidence is, and why that is this pass's problem
 

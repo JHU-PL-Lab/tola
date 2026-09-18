@@ -2,8 +2,9 @@
 
 **Kind: theory.** Why there is anything to check at all, what an agreement
 *is* in terms of the actions that build software, and a procedure for finding
-the next one. Paper material: the engineering view — what is implemented, what each
-agreement is, and what is left — is [`agreements.md`](agreements.md).
+the next one. [components.md](components.md) explores the same space by
+component. The Agreement overview in `canary result` contains the registered
+claims; [README.md](README.md) explains how to read their results.
 
 This document does not describe what Canary runs. It describes the thing
 Canary is an implementation of, and it is written so that a reader who never
@@ -15,9 +16,9 @@ places.
 Take a project where every file has exactly one copy and every artifact is
 rebuilt from source in dependency order. The header the library was compiled
 against *is* the header on disk. The binding was compiled against *that*
-library. The application was compiled against *that* binding. Nothing can
-disagree, and there is nothing for a checking tool to do — the build already
-did it.
+library. The application was compiled against *that* binding. For the
+relations those tools actually enforce, no recombination has invalidated
+the build's evidence. This does not rule out bugs or unspecified behaviour.
 
 Real worlds are not like that, for reasons that have nothing to do with
 carelessness. A library arrives prebuilt from a distribution. A binding
@@ -110,8 +111,8 @@ criterion, not a better comparator.
 
 For each action in Canary's catalogue: the relation the real tool established
 when it ran, what survives of it afterwards, and what post-fact checking can
-recover. Status is as of 2026-09-12; `canary checks --landing` is what a real run
-has actually decided.
+recover. These are accounts of the tools' relations, not a landing-status
+table; `canary checks --landing` reports what real runs have decided.
 
 ### 5.1 `fetch_source` — a resolver picks a tree
 
@@ -229,64 +230,43 @@ Three patterns fall out, and none was designed in:
 2. **Identity rows close; relation rows converge.** `fetch_source` is *done* —
    re-resolving the ref settles it. `build_lib`'s type agreement will never be
    done, only deepened.
-3. **The action that owns a claim is rarely the action with the evidence.**
-   `build_lib` roots the header↔library agreement; the evidence for it is read
-   at `build_binding` and `probe_binding`. Any implementation needs to keep
-   those two apart, and Canary's does.
+3. **Origin and observation site are separate.** A fetched consumer can be
+   checked at a probe against a provider its original linker never saw.
+   A producer-declaration check can instead run at `build_lib` itself.
+   Recovering a rule does not require every check to have a later observation site.
 
 ### 5.11 Target and origin — a decomposition the table made visible
 
-*(2026-09-17, from the user: "for `declared_symbols_exported` we can
-mark the `lib` as this is the target, mark the `build_lib` which is the
-origin of the agreement. Check if this perspective is valid to describe
-one group of agreements.")*
+The agreement overview (`canary checks --firing`, `make view` table 1)
+marks target artifact kinds with ▣ and rule origins with R. Ask whether
+the originating action produces or consumes the target:
 
-It is valid, it describes more than one group, and the groups fall out
-of two questions rather than one. The agreement overview
-(`canary checks --firing`, `make view` table 1) now marks both — the
-artifact columns carry the TARGET, the action columns carry the ORIGIN —
-so this is read off a generated table rather than asserted.
+Count the ▣ in a row and the claims fall into three groups — one
+target, two targets, none — and the groups are worth reading off the
+live table rather than listed here. Within the one-target group,
+`build_lib` produces the library for the promise checks, `install_lib`
+produces a copy for preservation, and application compilation consumes
+the binding surface for `api_names_present`, so the second question
+separates claims the first would have merged.
 
-**How many artifacts does the claim range over?** Count the ▣.
+*(A transcription of the three groups stood here until 2026-09-17, kept
+honest by a pin that compared it against the generated table. The
+overview is the up-to-date truth, so the pin and the copy both go: the
+argument is which QUESTIONS decompose the catalogue, and that does not
+need the membership lists to be repeated.)*
 
-**Does the origin action PRODUCE that artifact, or CONSUME it?**
+This decomposition helps find candidates, but it does not determine
+`ag_kind` or `m_reference`. The promise and preservation examples both
+show one artifact kind produced by an action, yet one compares against a
+declaration and the other against a build-tree copy. The watchlist example
+uses a declaration as evidence for a pairing. [README.md](README.md) §1
+defines those independent axes.
 
-|  | origin **produces** the target | origin **consumes** the target |
-| --- | --- | --- |
-| **one target** | `declared_symbols_exported`, `soname_matches_declaration`, `declared_versions_exported` (at `build_lib`); `staged_interface_preserved` (at `install_lib`) | `api_names_present` (at `build_app_*`) |
-| **two targets** | — *(empty; see below)* | `required_symbols_exported`, `soname_matches_requirement`, `required_versions_exported`, `dependencies_provided` (at the binding's build/probe); `signatures_agree` (at `build_binding_*`) |
-| **no target** | — | `behavior_matches`, `repack_preserves_api`, `repack_complete` |
-
-Three things this says that the flat list did not.
-
-**The user's group is the top-left, and its question is
-*"is the thing you made what you said it would be?"*** One artifact, and
-the rule recovered is the one that MADE it — so origin and target are
-1:1 and the check is a comparison against a declaration. That is exactly
-`m_reference = Declared_facts`, arrived at from the other direction,
-which is a decent sign the decomposition is real rather than a
-re-labelling.
-
-**`api_names_present` is the exception that proves the axis is two and
-not one.** It has one target like the top-left group, but its origin
-CONSUMES that target: the rule is the compiler's when it checked an
-application against the binding's interface, not any rule that made the
-interface. Grouping by target count alone would have put it with
-`declared_symbols_exported`, and they are different kinds of claim.
-
-**The empty cell is a place to look.** An origin that produces TWO
-artifacts which must agree — nothing occupies it today. The candidate is
-already in the catalogue as a proposal: *declared signatures match the
-library's debug information*, rooted at `build_lib`, targets the headers
-and the library, both produced by that one build. §6's procedure would
-find it; this table says where the hole is without running the
-procedure, which is what a good classification buys.
-
-**A caveat on the granularity.** ▣ counts artifact KINDS, so
-`staged_interface_preserved` shows one target although it compares two
-copies of the library. Kind is the granularity the column has; where a
-claim is about two instances of one kind, the table under-counts and the
-catalogue's prose is the finer statement.
+Count instances separately from displayed kinds: a staging comparison has
+two library instances and one kind column. Similarly, an absent target mark
+on a planned row means its target has not been represented; it does not
+establish that the intended claim has no subject. An empty grid cell is a
+reason to investigate a relation, not proof that the relation is missing.
 
 ## 6. The procedure
 

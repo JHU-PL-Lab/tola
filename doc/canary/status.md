@@ -176,7 +176,7 @@ Steps (each step keeps the suite green before the next):
    2026-08-15). Remaining: the raw-override warning; delete
    `mi_artifact_shape` prose.
 6. [ ] **Contract registry unification** — design in
-   [`agreement/agreements.md`](design/agreement/agreements.md)
+   [`agreement/README.md`](design/agreement/README.md)
    (2026-08-17, merged 2026-08-21): one
    statement per contract (invariant as a FALSIFIER, tool-based inputs,
    evidence kind, firing derived from mechanism × provision); the
@@ -239,14 +239,14 @@ Steps (each step keeps the suite green before the next):
    `errored? / output_present?` — its own header calls the real
    detector "postponed to a later seam" — and the obligation axis is
    typed `Intrinsic | Added` where
-   [`agreement/agreements.md`](design/agreement/agreements.md) §1.6 has
-   seven sources of belief, each with a blame column. Two steps, in
+   [agreement/README.md](design/agreement/README.md) §1 distinguishes
+   authority from the parties a finding implicates. Two steps, in
    order:
    - **(a)** `Canary_detect.finding` carries what the registry already
      knows — the agreement, its category, its source. Record change
      plus filling it from the row; the transport and call site exist.
-   - **(b)** type the seven sources beside `Intrinsic | Added`, with
-     the blamed party a function of the source (§1.6 has the table, so
+   - **(b)** type the sources beside `Intrinsic | Added`, with
+     the blamed party a function of the source (the model gives the distinction, so
      this is transcription). That also answers §9.4's open question:
      if the source carries blame, no per-row blame field is needed.
 

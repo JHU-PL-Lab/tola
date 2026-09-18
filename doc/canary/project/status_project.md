@@ -228,7 +228,7 @@ is still baked into the action catalogue, so:
   arriving one row earlier. The honest 2×2 predicts an xfail in each
   cross cell (deploy: load-time soname failure; forward: build failure on
   the 6.x path against a 7.x header) rather than the green pair the
-  survey advertised. Declare it by [`agreements.md`](agreements.md) §3 as
+  survey advertised. Declare it by [landing.md](landing.md) §3 as
   measured — do NOT retreat to a conda-forge 6.x to manufacture green,
   which is §3's rule read backwards.
 
@@ -297,7 +297,7 @@ is still baked into the action catalogue, so:
   second form (containment: each solver lib statically absorbs the
   helper objects). Two forms, one instance each, found for free.
 
-  **Resume by** implementing the dependency agreements in `agreement/agreements.md`
+  **Resume by** implementing the dependency agreements in `agreement/README.md`
   §5.6 (open work in its §7.4), after which D6
   lands at Level B with the vendored world as a derived `xfail`.
   Landing it stable-only is the cheap alternative and costs a (correct)

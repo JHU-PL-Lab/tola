@@ -257,7 +257,7 @@ _Material: design/enumeration/ (one doc per pass); project/projects.md._
   a probe establish different facts. Observe early where possible; retain later
   observations where they add coverage.
 
-*Material: [agreement design](../design/agreement/agreements.md), §§1–2.* -->
+*Material: [agreement design](../design/agreement/README.md), §§1–2.* -->
 
 ## 5
 

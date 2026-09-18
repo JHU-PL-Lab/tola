@@ -273,15 +273,14 @@ Two consequences:
    `official = false`, and a ref. That is machinery canary already has,
    and it means the branch is a version point the enumeration can range
    over rather than something a human remembers to update.
-2. **The drivers are a BUILD PRODUCT under version control**, in the
-   same sense as `catalogue.md`: committed so the fork builds without
+2. **The drivers are a BUILD PRODUCT under version control**:
+   committed so the fork builds without
    canary present, generated so they cannot drift from the declaration.
    The pin is the same shape — regenerate, diff, fail if they differ —
    and it is the reason to keep the generator pure text.
 
-⚠ The pin has to run where the fork is checked out, which
-`agreement-catalogue`'s does not. That is the one genuinely new
-mechanism here, and it is worth deciding before writing the generator:
+The pin has to run where the fork is checked out. Decide that integration
+before writing the generator:
 either canary regenerates into the fork and diffs (needs the checkout,
 which the source-repo record already gives it), or the fork's own CI
 runs the generator (needs canary installed there). **The first**, for

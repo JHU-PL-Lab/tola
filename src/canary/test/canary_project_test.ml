@@ -2114,9 +2114,19 @@ let agreement_bridge_pins : pure_test list =
      "the doc" now say which half they mean, because they mean
      different halves: names may appear in either, § cross-references
      resolve WITHIN a file, and the anchors resolve only in the walk. *)
-  let model_doc = "doc/canary/design/agreement/agreements.md" in
+  (* THE MODEL MOVED TO README.md (2026-09-17), when `agreements.md`
+     was deleted and the overview became THE reference. These two pins
+     read a LIST, and `read_doc` answers [None] for a missing file, so
+     pointing at the deleted file did not fail them — it just stopped
+     them checking half of what they used to. `agreements.pinned_docs_exist`
+     is the guard that makes that loud next time. *)
+  let model_doc = "doc/canary/design/agreement/README.md" in
   let components_doc = "doc/canary/design/agreement/components.md" in
-  let agreement_docs = [ model_doc; components_doc ] in
+  let theory_doc = "doc/canary/design/agreement/theory.md" in
+  let mechanism_doc = "doc/canary/design/agreement/mechanism.md" in
+  let agreement_docs =
+    [ model_doc; components_doc; theory_doc; mechanism_doc ]
+  in
   let read_doc p =
     if Stdlib.Sys.file_exists p then
       Some (Stdlib.In_channel.with_open_text p Stdlib.In_channel.input_all)
@@ -2389,94 +2399,59 @@ let agreement_bridge_pins : pure_test list =
               Fmt.pr "    unresolved doc refs in %s: %s@." doc
                 (String.concat ~sep:", " (List.map bad ~f:(fun r -> "\xc2\xa7" ^ r)));
             List.is_empty bad)) };
-    (* THE CATALOGUE IS A BUILD PRODUCT (2026-09-12, user: "they should
-       be in one file which having this info").
+    (* A PIN WHOSE INPUT VANISHED PASSES SILENTLY (2026-09-17).
 
-       "What is api_names_present?" used to have six answers in six
-       places — the claim in the family module, the doc anchor and the
-       enabled flag on the registry row, the evidence paths behind a
-       closure, the counterexamples inside the method, the fault tag
-       wherever scenario naming needed it. catalogue.md is the one
-       place, and it is GENERATED, so it cannot become a seventh copy
-       that disagrees with the rest. This fails when the file on disk
-       differs from what the registry would emit today. *)
-    { name = "agreements.catalogue_doc_is_generated";
+       This replaces `agreements.catalogue_doc_is_generated`, which
+       compared a generated region in `agreements.md` against the
+       registry. That file was deleted when the overview became THE
+       reference and the docs stopped carrying a catalogue — a good
+       change — and the pin did not fail. It began with
+
+           if not (Sys.file_exists path) then true
+
+       which is the right answer for "not run from the repo root" and
+       the wrong one for "the document is gone", and nothing can tell
+       those apart from inside the check. Two more pins went quiet the
+       same way: `doc_names_live_code` and `doc_cross_refs_resolve` read
+       a LIST of docs through `read_doc`, which returns [None] for a
+       missing file, so they silently halved their coverage.
+
+       So the guard is one level up: every document a pin reads must
+       EXIST. It fails loudly when a doc is renamed or deleted, which is
+       exactly the moment the pins that read it stop meaning anything —
+       and it is cheap, because the list is the pins' own. Removing a
+       doc is then a deliberate edit here rather than a silent loss.
+
+       Not pinned, and worth saying: that the docs carry no hand
+       catalogue. `README.md` states the rule ("We do not maintain
+       another catalogue or status list in these docs") and it is not
+       mechanically checkable — a table listing agreements is forbidden
+       when it restates status and fine when it adds an axis the
+       overview lacks, as `mechanism.md`'s static-provider table does.
+       That one is a reading job. *)
+    { name = "agreements.pinned_docs_exist";
       check =
         (fun () ->
-          (* A SPLICED REGION, NOT A WHOLE FILE (2026-09-17). The
-             catalogue was merged into `agreements.md`, which is half
-             narrative and half registry dump; only the half between the
-             markers is generated, so only that half is pinned. A
-             missing marker fails rather than passing vacuously — that
-             is the failure mode a region pin has and a file pin does
-             not. *)
-          let path = "doc/canary/design/agreement/agreements.md" in
-          if not (Stdlib.Sys.file_exists path) then true
-          else
-            let whole =
-              Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
-            in
-            let region =
-              match
-                ( String.substr_index whole ~pattern:"<!-- BEGIN GENERATED",
-                  String.substr_index whole ~pattern:"<!-- END GENERATED -->" )
-              with
-              | Some i, Some j when j > i -> (
-                  match String.substr_index whole ~pos:i ~pattern:"-->" with
-                  | Some h when h + 3 <= j ->
-                      Some (String.sub whole ~pos:(h + 3) ~len:(j - h - 3))
-                  | _ -> None)
-              | _ -> None
-            in
-            let on_disk =
-              match region with
-              | Some r -> r
-              | None ->
-                  Fmt.pr
-                    "    agreements.md: generated-region markers missing or \
-                     out of order@.";
-                  "<<no region>>"
-            in
-            let generated = Canary_agreement.pp_catalogue_md () in
-            (* COMPARE CONTENT, NOT BYTES (2026-09-12). The first version
-               of this compared the file to the generator's output
-               exactly, and a markdown formatter — the user's editor,
-               opening the file — realigned every table and failed it.
-               The drift that matters is a changed claim, not a changed
-               column width, so both sides are normalized: runs of
-               whitespace collapse and trailing space is dropped. A file
-               a human might open cannot be pinned byte-for-byte. *)
-            let normalize t =
-              (* a table SEPARATOR line — only pipes, dashes, colons and
-                 space — carries no content at all, and a formatter
-                 widens its dashes to match the column. Collapsed to a
-                 single token so column widths cannot fail the pin.
-                 Matched on the whole line rather than on dash runs,
-                 because the prose contains `--flag` names that must
-                 survive intact. *)
-              let is_separator l =
-                (not (String.is_empty (String.strip l)))
-                && String.exists l ~f:(Char.equal '|')
-                && String.for_all l ~f:(fun c ->
-                       Char.equal c '|' || Char.equal c '-' || Char.equal c ':'
-                       || Char.equal c ' ')
+          match Sys_unix.file_exists "doc/canary/design/agreement" with
+          | `No | `Unknown -> true (* not run from the repo root *)
+          | `Yes ->
+              let required =
+                [ "doc/canary/design/agreement/README.md";
+                  "doc/canary/design/agreement/components.md";
+                  "doc/canary/design/agreement/theory.md";
+                  "doc/canary/design/agreement/mechanism.md";
+                  "doc/canary/design/matrix.md" ]
               in
-              String.split_lines t
-              |> List.map ~f:(fun l ->
-                     if is_separator l then "|SEP|"
-                     else
-                       String.split l ~on:' '
-                       |> List.filter ~f:(fun w -> not (String.is_empty w))
-                       |> String.concat ~sep:" ")
-              |> List.filter ~f:(fun l -> not (String.is_empty l))
-              |> String.concat ~sep:"\n"
-            in
-            if String.equal (normalize on_disk) (normalize generated) then true
-            else (
-              Fmt.pr
-                "    agreements.md §2–§3 are stale — run `make \
-                 agreement-catalogue`@.";
-              false)) };
+              let missing =
+                List.filter required ~f:(fun p ->
+                    not (Stdlib.Sys.file_exists p))
+              in
+              if not (List.is_empty missing) then
+                Fmt.pr
+                  "    doc(s) a pin reads are gone — the pins that read \
+                   them now pass vacuously: %s@."
+                  (String.concat ~sep:", " missing);
+              List.is_empty missing) };
     (* A PLANNED AGREEMENT SAYS WHAT IT IS WAITING ON (2026-09-17).
 
        Replaces [agreements.landing_doc_lists_every_agreement], which
@@ -2751,95 +2726,52 @@ let agreement_bridge_pins : pure_test list =
           List.equal String.equal elf_only
             [ "declared_versions_exported"; "required_versions_exported" ]
           && all_both) };
-    (* THE PAPER TABLE IS TRANSCRIBED FROM A GENERATED ONE (2026-09-17).
+    (* A CLAIM RANGES OVER THE SAME NUMBER OF ARTIFACTS, WHATEVER
+       CARRIES IT (2026-09-17).
 
-       `theory.md` §5.11 classifies every agreement by how many
-       artifacts it ranges over, and says in its own prose that this is
-       "read off a generated table rather than asserted" — the ▣ marks
-       in the agreement overview. The table itself is still typed out by
-       hand, because it is the ARGUMENT of a paper section and deleting
-       it would gut the section.
+       What is left of `agreements.theory_target_groups_match_the_table`,
+       which also compared `theory.md` §5.11's transcribed membership
+       lists against the ▣ counts. The overview is the up-to-date truth
+       now, so the transcription was deleted and the half of the pin
+       that guarded it went with it — a pin for a copy has no work once
+       the copy is gone.
 
-       So it gets a pin instead of a deletion. This is the fourth
-       instance of the hand-copy class and the first where the copy
-       should STAY: the rule is that a generated table gets no
-       unchecked hand copy, not that prose may not restate a result.
-
-       It pins a second thing worth having independently: the target
-       COUNT does not vary across an agreement's patterns. A claim
-       ranges over the same number of artifacts whatever mechanism
-       carries it — `required_symbols_exported` reads (lib, ml) under
-       cstubs and (lib, py) under cext, two either way. If that ever
-       stops being true, §5.11's rows stop being well-defined and the
-       classification needs a finer cell before the doc is edited. *)
-    { name = "agreements.theory_target_groups_match_the_table";
+       This half stands on its own and is the more useful one anyway.
+       `required_symbols_exported` reads (lib, ml) under cstubs and
+       (lib, py) under cext: different artifacts, two either way. If a
+       claim ever ranged over one artifact under one mechanism and two
+       under another, "how many does it target" would stop being a
+       property of the CLAIM and become a property of the row — and
+       theory.md §5.11's decomposition, which asks exactly that
+       question, would need a finer cell before anyone wrote another
+       sentence about it. *)
+    { name = "agreements.target_count_is_a_property_of_the_claim";
       check =
         (fun () ->
-          match read_doc "doc/canary/design/agreement/theory.md" with
-          | None -> true (* not in a checkout *)
-          | Some text ->
-              let line_after marker =
-                match String.substr_index text ~pattern:marker with
-                | None -> None
-                | Some i ->
-                    let rest = String.subo text ~pos:i in
+          let rows = CR.overview_rows () in
+          let bad =
+            List.filter_map CR.agreement_registry ~f:(fun r ->
+                let counts =
+                  List.filter rows ~f:(fun (row : CR.overview_row) ->
+                      String.equal row.CR.ov_agreement.CR.ag_slug r.CR.ag_slug)
+                  |> List.map ~f:(fun (row : CR.overview_row) ->
+                         List.length row.CR.ov_reads)
+                  |> List.dedup_and_sort ~compare:Int.compare
+                in
+                match counts with
+                | [] | [ _ ] -> None
+                | ns ->
                     Some
-                      (match String.lsplit2 rest ~on:'\n' with
-                       | Some (l, _) -> l
-                       | None -> rest)
-              in
-              let buckets =
-                [ (1, line_after "| **one target** |");
-                  (2, line_after "| **two targets** |");
-                  (0, line_after "| **no target** |") ]
-              in
-              let rows = CR.overview_rows () in
-              let bad =
-                List.concat_map CR.agreement_registry ~f:(fun r ->
-                    let mine =
-                      List.filter rows ~f:(fun (row : CR.overview_row) ->
-                          String.equal row.CR.ov_agreement.CR.ag_slug
-                            r.CR.ag_slug)
-                    in
-                    let counts =
-                      List.map mine ~f:(fun (row : CR.overview_row) ->
-                          List.length row.CR.ov_reads)
-                      |> List.dedup_and_sort ~compare:Int.compare
-                    in
-                    match counts with
-                    | [ n ] ->
-                        (* the slug must be in ITS bucket and no other *)
-                        List.filter_map buckets ~f:(fun (b, line) ->
-                            match line with
-                            | None ->
-                                Some
-                                  (Printf.sprintf
-                                     "theory.md §5.11: no row for bucket %d" b)
-                            | Some l ->
-                                let here =
-                                  String.is_substring l
-                                    ~substring:r.CR.ag_slug
-                                in
-                                if Bool.equal here (b = n) then None
-                                else
-                                  Some
-                                    (Printf.sprintf
-                                       "%s ranges over %d artifact(s) but is \
-                                        %sin §5.11's %d-target row"
-                                       r.CR.ag_slug n
-                                       (if here then "" else "NOT ")
-                                       b))
-                    | ns ->
-                        [ Printf.sprintf
-                            "%s: target count varies by pattern (%s) — \
-                             §5.11's rows are no longer well-defined"
-                            r.CR.ag_slug
-                            (String.concat ~sep:","
-                               (List.map ns ~f:Int.to_string)) ])
-              in
-              if not (List.is_empty bad) then
-                List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
-              List.is_empty bad) };
+                      (Printf.sprintf
+                         "%s targets %s artifacts depending on the mechanism \
+                          — the count is no longer a property of the claim"
+                         r.CR.ag_slug
+                         (String.concat ~sep:"/"
+                            (List.map ns ~f:Int.to_string))))
+          in
+          if not (List.is_empty bad) then
+            List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
+          List.is_empty bad) };
     (* THE MODEL AND THE REGISTRY NAME THE SAME EXCLUSIONS (2026-09-17).
 
        `prop_frame` says why a proposal has no row; `theory.md` §7 and

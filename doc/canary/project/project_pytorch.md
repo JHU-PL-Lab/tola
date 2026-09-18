@@ -114,7 +114,7 @@ axis turns out to be the best in the registry.
 opam carries `libtorch` as **four versioned packages** —
 `1.13.0+linux-x86_64`, `2.0.0`, `2.1.2`, `2.2.1` — each of which just
 downloads an official binary from `download.pytorch.org`. That makes
-PyTorch the **first project where [`agreements.md`](agreements.md) §3 *step 2*
+PyTorch the **first project where [landing.md](landing.md) §3 *step 2*
 applies**: the upstream project publishes a Linux prebuilt, so we take it
 instead of falling through to conda-forge.
 

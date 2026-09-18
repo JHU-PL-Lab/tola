@@ -10,9 +10,8 @@
 **Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
 
 
-**THE PAGE HAS THREE TABLES NOW** (2026-09-17), each with a title,
-because three under one heading gave a reader no way to tell the
-template from the record:
+The page presents the Agreement overview and its candidate list, followed
+by the per-world result matrix:
 
 | # | table | what it is |
 | --- | --- | --- |
@@ -45,7 +44,7 @@ preservation, behaviour, composition — which is a different question
 from what it is held against (`m_reference`) and from whose rule it
 recovers (the `R` column). The three were two fields until 2026-09-17
 and the middle one was answering all three badly; the model is
-[`agreement/agreements.md`](agreement/agreements.md) §1.5.1.
+[agreement/README.md](agreement/README.md) §1.
 
 **`lang` and `mech` are two columns, in full terms** (2026-09-17). They
 were one five-slot mark string (`S···D`, one character per catalogue

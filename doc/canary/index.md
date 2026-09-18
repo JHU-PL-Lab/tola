@@ -125,19 +125,18 @@ All six stages now have a standalone doc.
 | [check_evaluation.md](design/check_evaluation.md) | … `canary_gh.ml` holds no verdict logic — a check is an action the runner interprets and every backend merely renders. Records the live finding that CI evaluates NO `check_pre`/`check_post`, so a green job means only "every command exited 0" |
 | [step_identity.md](design/step_identity.md) | … a step tag is (action × location KIND) alone — `tag_of_probe_lib_location` called unconditionally, and no tag anywhere containing a PM name |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
-| [agreement/README.md](design/agreement/README.md) | **The agreement map** — what an agreement is in twenty lines, the seam with `enumeration/` (claim vs occasion), then which of the four files for which job. Start here. |
+| [agreement/README.md](design/agreement/README.md) | Short companion to the Agreement overview: interpreting claims and results, where evaluations come from, and making a row decide. |
 | [agreement/theory.md](design/agreement/theory.md) | **Where agreements come from** — an action embodies a relation over its inputs and running it is the only witness; the tuple is discarded and a projection survives, so an agreement is a necessary condition decidable from what survived. §5 gives, per action in the catalogue, the full-information agreement the real tool established and what post-fact checking recovers; §6 is a procedure for finding the next one. Paper material. |
-| [agreement/agreements.md](design/agreement/agreements.md) | **What there is, and what is left** (2026-09-17, merging `model.md` + `landing.md` + the generated `catalogue.md` — they answered one question between them). §1 the model: what a claim is, claim vs checking method, the eight outcomes and why eight. §2 every agreement's complete record and §3 everything with no record yet — both GENERATED from the registry between markers and pinned. §4 how a run gets from a step to a verdict, sqlite end to end, with the four failure modes behind an `unavailable`. §5 what is left: the checklist, the four undecided states, the distance-0 backlog, `--strict`. Aligned with the agreement overview — §2's n'th record is the table's n'th row. |
 
 | [agreement/mechanism.md](design/agreement/mechanism.md) | **What a binding IS, and which claims it can carry** (2026-09-17, merging the retired `design/mechanism.md` + `mechanism_payload.md`, 412 lines → ~250) — the two axes (consumer mechanism × provider linkage), the three decidable facts the agreement layer dispatches on, **every cell of the 2×4 grid** with the one impossible one and why, how a project declares its binding, and the open "derive a mechanism from first principles" question |
-| [agreement/components.md](design/agreement/components.md) | **Why each agreement exists** (2026-09-17, the other half of `registry.md`) — a walk over artifacts, bindings, versions, packaging and deployment, saying per kind what could be claimed, what observation is available and what it does not establish. Every registry row's `ag_doc` anchor points here, so its §-numbering is pinned. Paper material. |
+| [agreement/components.md](design/agreement/components.md) | Evidence rationale and limits, including the ncurses counterexample. Complements the overview without repeating its claims and implementation list; registry rationale anchors are preserved. |
 
 ### Retired
 
 | File | |
 | ---- | --- |
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
-| ~~contract_model.md~~ | Merged into `agreement/registry.md` (2026-08-21), which itself split into `agreement/agreements.md` + `agreement/components.md` on 2026-09-17 |
+| ~~contract_model.md~~ | The current explanation is in `agreement/README.md` and `agreement/components.md`; the overview owns the catalogue. |
 | ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage6_realize_steps.md` (2026-08-24) |
 | ~~enumeration/algorithm_explainer.md~~ | Purged 2026-08-24 — the walkthrough that predated the stage map; its sections went to the stage docs they belonged to |
 | ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `matrix.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |

@@ -4,21 +4,9 @@
 each one decides about applicability, how a project declares its side of
 it, and the open question the catalogue exists to make askable.
 
-**Why this is in `agreement/`** (moved 2026-09-17, user: *"given the
-agreement for mechanism is more close to agreement, how about put it in
-the agreement"*): the mechanism catalogue's decidable fields exist to
-answer *can this project carry this claim* — they are read by
-`m_applicable`, and nothing else dispatches on them. A mechanism's
-relationship to agreements is the mechanism's most load-bearing
-property, so it belongs beside the claims rather than in the general
-design bucket.
-
-> Merges `design/mechanism.md` (the catalogue, 2026-08-05) and
-> `design/mechanism_payload.md` (the typed declaration, 2026-08-13),
-> both retired here. 412 lines → this. What was cut: the M2 sequence
-> checklist (all landed — `git show` the originals), the runner_spec
-> absorption map (a plan that executed), and the per-mechanism prose
-> that the generated catalogue now prints.
+The mechanism catalogue supplies the facts that `m_applicable` reads.
+Project analysis reports suitability; runtime selection uses the same
+predicate. [README.md](README.md) §3 describes that path.
 
 ## 1. Two axes, and only one of them is modelled
 
@@ -52,12 +40,11 @@ group of agreements on or off:
 | `mi_consumer_records_needed` | does that artifact record WHICH library it needs? | `soname_matches_requirement`, `required_versions_exported`, `dependencies_provided` |
 | `mi_exposes_typed_stub` | is the boundary spelled where a signature can be read? | `signatures_agree` |
 
-**The field that the one-bit approximation got wrong.** Before these
-existed, the families used `is_dynamic` — and cstubs and cext share a
-discipline while differing on the middle field: a `.a` records no
-`DT_NEEDED` and no `SONAME` (those appear when the executable is
-linked), while a cext is a `.so` that records both. One bit cannot say
-that, and four families were guessing.
+The relevant carrier can be later in the chain than the binding archive.
+An OCaml `.a` has no dynamic dependency record, but the linked probe
+executable does; Canary inspects that executable. Both cstubs and cext
+therefore support dependency claims today, through different artifacts.
+The static/dynamic discipline alone does not determine available evidence.
 
 | | lang | discipline | stub? | records NEEDED? | typed stub? | wired |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -128,20 +115,20 @@ Reading the grid:
   where "static" and "dynamic" are both true at different levels, and it
   is where a duplicate-implementation question becomes real: two plugins
   each embedding the archive means two copies of the library's state in
-  one process. That is `no_duplicate_implementation`, one of the three
-  standing proposals — **this cell is its specimen**, and canary has no
-  other.
-- **The three unwired-but-possible cells are cheap** and differ only in
-  the provider inspection plus the four `not_applicable`s above.
+  one process. That is a specimen for the candidate
+  `no_duplicate_implementation`.
+- **Possible does not mean implemented.** Static providers need inspection,
+  applicability, and realization support; the steps below identify that work.
 
 ### What landing it needs, in order
 
-1. **A value in base** — `linkage = Shared | Static` on the native
-   artifact. `canary_store`/`canary_artifact` vocabulary; the agreements
+1. **A value in base** — a proposed *linkage* with shared/static cases on the native
+   artifact. `canary_store.ml`/`canary_artifact.ml` vocabulary; the agreements
    dispatch on it, they do not own it.
 2. **`nm_cmd` reads it** instead of assuming `-D`.
 3. **Per-agreement applicability**, mirroring the consumer's three
-   fields: `provider_records_needed`, `provider_carries_version_nodes`.
+   fields, with proposed facts such as *provider_records_needed* and
+   *provider_carries_version_nodes*.
 4. **An enumeration constraint** refusing `ctypes × static`, with the
    reason in the message.
 5. **A witness** — a `libtiny.a` beside tiny's `libtiny.so.1` is one
@@ -251,8 +238,7 @@ The long-term question, in two steps:
 ## Where this sits
 
 - The generated per-mechanism facts — `canary spec <project>`, and
-  [`agreements.md`](agreements.md) for what each agreement's applicability
-  does with them.
+  `canary checks --agreement NAME` for a method's applicability.
 - Applicability as a pipeline pass —
   [`../enumeration/stage2_analyse_spec.md`](../enumeration/stage2_analyse_spec.md).
 - What a project declares, as a pass —

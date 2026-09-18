@@ -449,20 +449,20 @@ binding and the C header and native binary that can be located.
 
 #### 4.4.1 Agreements for Python
 
-*Material: [agreement design](../design/agreement/agreements.md), §3.*
+*Material: [component agreements](../design/agreement/components.md), §3.2.*
 
 ### 4.5 Versions, packaging and provenance
 
-*Material: [agreement design](../design/agreement/agreements.md), §§4–5.*
+*Material: [component agreements](../design/agreement/components.md), §§4–5.*
 
 ### 4.6 Deployment and behavioural evidence
 
-*Material: [agreement design](../design/agreement/agreements.md), §6 and §7.2.*
+*Material: [component agreements](../design/agreement/components.md), §6.*
 
 ### 4.7 Registry integration and coverage
 
-*Material: [agreement design](../design/agreement/agreements.md), §7 and Appendices
-A–B; [checker integration discussion](related/canary-practical-cross-language-bindings-report.md),
+*Material: [agreement guide](../design/agreement/README.md), §§3–4;
+[checker integration discussion](related/canary-practical-cross-language-bindings-report.md),
 section 9; `src/canary/agreement/`.*
 
 ## 5. Attribution and Blame
