@@ -82,6 +82,35 @@ the comparison (`inconclusive`). `not_implemented`, `disabled`,
 These ten labels come from eight outcome constructors: `Unavailable` has
 three typed causes.
 
+### Auditing a row
+
+Every cell of the overview is derived, so most of it can be wrong in a
+way no build error catches: a kind that disagrees with the row's
+targets, an `implemented at` naming a function that moved, an object
+cell that narrows nothing and says so anyway.
+
+The laws each row must satisfy are **data**, in
+`Canary_agreement.row_rules` — a name, the law in one sentence, and the
+complaint when a row breaks it. `canary checks --firing` prints them
+beside the table with any violation;
+`agreements.rows_obey_their_own_laws` fails the build on one. The list
+is meant to grow: a rule added there is enforced without touching a
+test, and it is not copied here, so it cannot go stale.
+
+A law relates **two cells of one row**. Single-cell facts (does this
+function exist, does this anchor resolve) are ordinary pins, and so are
+facts across rows (is a claim's target count the same under every
+mechanism).
+
+**Why a `pairing` can show one target.** A pairing has two SIDES, and
+the ▣ columns count artifact TARGETS, so a side that is a DECLARATION
+contributes none. Five of the six pairings show two artifacts;
+`api_names_present` shows one because its second side is the watchlist,
+standing in for the application's uses. The law encodes exactly that
+exception — one target is honest for a pairing only when some method
+references a declaration — so a future one-target pairing without one
+is a complaint rather than a precedent.
+
 ### The short code, and why rows repeat it
 
 The code (`dse`, `rse`) names the AGREEMENT; an overview row is a

@@ -265,7 +265,12 @@ let string_of_platform = function
     direction those two already have. *)
 type object_format = Elf | Macho [@@deriving eq]
 
-let string_of_object_format = function Elf -> "elf" | Macho -> "macho"
+(* The formats' own spellings (2026-09-17, user asked for the full
+   names in the agreement overview). `mach-o` with the hyphen is how
+   Apple writes it and how every tool's documentation does; `macho`
+   was a compression that saved one character in a column that no
+   longer exists. Display only — nothing parses these. *)
+let string_of_object_format = function Elf -> "elf" | Macho -> "mach-o"
 
 (** Derived, not declared: a platform has exactly one format, and giving
     it its own declaration would be a second place to get it wrong. *)

@@ -15,7 +15,7 @@ by the per-world result matrix:
 
 | # | table | what it is |
 | --- | --- | --- |
-| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `kind`, `implemented at`, `lang`, `mech`, `fmt`, lag, and what the rows below decided and blame. **Followed by a second, simple CANDIDATE table** — name, kind, and what stands in the way — for the claims that have no methods and so no columns to fill |
+| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `kind`, `implemented at`, `lang`, `mech`, `object`, lag, and what the rows below decided and blame. **Followed by a second, simple CANDIDATE table** — name, kind, and what stands in the way — for the claims that have no methods and so no columns to fill |
 | 2 | the result matrix | one row per enumerated WORLD — what a run decided |
 
 Table 1 is table 2's TEMPLATE. An empty column in the matrix can be
@@ -33,7 +33,12 @@ drift.
 mark different action columns; collapsing them showed only the first.
 Claims whose pattern is uniform stay one row and say so in `mech`. A
 FORMAT never splits a row — it changes whether a claim applies, not
-where it fires — which is why `fmt` annotates rather than expands.
+where it fires — which is why `object` annotates rather than expands.
+That column reads `elf` or `mach-o` and is EMPTY when the claim ranges
+over both, following `lang` and `mech`: an axis that does not narrow
+says nothing. It was `fmt` with letter marks until 2026-09-17, where
+the common case — both formats — was the loudest cell in the column,
+and the header read as a style rather than an object format.
 
 **The leading artifact columns are the claim's TARGET**, and reading
 them against the origin gives a classification the flat list did not

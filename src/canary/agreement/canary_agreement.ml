@@ -902,14 +902,25 @@ let mechanism_marks (r : agreement_row) : string =
            | Canary_mechanism.Cffi -> "F"
            | Canary_mechanism.Dynlink -> "D"))
 
+(** THE OBJECT-FORMAT CELL, spelled out and EMPTY when it does not
+    narrow (2026-09-17, user: "can we use the full name `elf` or
+    `mach-o` to be more clear, and if a check has nothing to do with it,
+    do you check the cell is empty. I also think `fmt` is not a good
+    column name since it looks too like style format").
+
+    Three changes, one rule. It was `EM` / `E·`: two letter marks that
+    needed the legend, and `EM` — the common case, meaning "both, so
+    this axis says nothing" — was the LOUDEST thing in the column.
+
+    Now it follows `lang` and `mech`: an empty cell means the axis does
+    not narrow the claim. Eleven of thirteen are empty and the two that
+    are not say `elf`, which is the whole content of the column. The
+    header is `object` rather than `fmt`, which read as a style. *)
 let format_marks (r : agreement_row) : string =
-  String.concat ~sep:""
-    (List.map all_formats ~f:(fun f ->
-         if
-           List.exists r.ag_formats ~f:(fun g ->
-               Canary_store.equal_object_format f g)
-         then match f with Canary_store.Elf -> "E" | Canary_store.Macho -> "M"
-         else "·"))
+  if List.length r.ag_formats >= List.length all_formats then ""
+  else
+    String.concat ~sep:","
+      (List.map r.ag_formats ~f:Canary_store.string_of_object_format)
 
 (* ── ONE ROW PER PATTERN, NOT PER AGREEMENT (2026-09-17, user) ──────
 
@@ -1345,8 +1356,8 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let rows = overview_rows ~provision () in
   let cols = overview_columns () in
   let head =
-    Printf.sprintf "%-4s %-28s %-12s %-36s %-7s %-14s %-3s | %s | " "code"
-      "agreement" "kind" "implemented at" "lang" "mech" "fmt"
+    Printf.sprintf "%-4s %-28s %-12s %-36s %-7s %-14s %-7s | %s | " "code"
+      "agreement" "kind" "implemented at" "lang" "mech" "object"
       (String.concat ~sep:" "
          (List.map overview_artifact_columns ~f:(fun k ->
               pad_display 3 (artifact_col_label k))))
@@ -1361,7 +1372,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
           (short_code_of_slug r.ag_slug) r.ag_slug (kind_label r)
           (pad_display 36 (impl_label r))
           (lang_label row.ov_mechs) (mech_label row.ov_mechs)
-          (pad_display 3 (format_marks r))
+          (pad_display 7 (format_marks r))
           (String.concat ~sep:" "
              (List.map overview_artifact_columns ~f:(fun k ->
                   pad_display 3
@@ -2356,6 +2367,191 @@ let pp_todo_table_md () : string =
        and they wait on somebody to STATE a specification rather than on \
        wiring. **Prefer landing a tool-rooted one.**\n\n"
   end;
+  Buffer.contents b
+
+(* ── THE ROW AUDIT (2026-09-17, user: "I plan to check all the
+   agreement which declared to be landed from the table, based on all
+   the cells to ensure each cell is correct. I wish we can make a
+   harness somewhere so you can check on your own … we can write it
+   down and revise it continuously").
+
+   The overview says a lot per row and most of it is derived, which
+   means most of it can be WRONG in a way no build error catches: a kind
+   that does not match what the row's targets show, an `implemented at`
+   naming a function that moved, an object-format cell that narrows
+   nothing and says so anyway.
+
+   These are the laws the cells must satisfy, as data. Each is a NAME, a
+   sentence saying what it requires, and a function returning the
+   complaint when a row breaks it. That shape is the point: the list is
+   meant to grow, `canary checks --audit` prints it as a report, and
+   `agreements.rows_obey_their_own_laws` fails the build on any
+   violation, so a rule added here is enforced without touching a test.
+
+   A rule belongs here when it relates two cells of ONE row. Facts about
+   a single cell (does this function exist, is this doc anchor real) are
+   ordinary pins; facts across rows (is a claim's target count stable)
+   are too. This list is for "these two columns must agree". *)
+
+type row_rule = {
+  rr_name : string;
+  rr_says : string;  (** the law, in one sentence *)
+  rr_check : overview_row -> string option;
+      (** [None] = the row obeys it; [Some complaint] = it does not *)
+}
+
+let n_targets (row : overview_row) : int = List.length row.ov_reads
+
+let references (row : overview_row) (f : reference -> bool) : bool =
+  List.exists row.ov_agreement.ag.ag_methods ~f:(fun m -> f m.m_reference)
+
+let row_rules : row_rule list =
+  [ { rr_name = "kind_matches_target_count";
+      rr_says =
+        "a PAIRING ranges over two artifacts, unless one of its two \
+         sides is a declaration standing in for an artifact; a PROMISE \
+         over exactly one; BEHAVIOUR and COMPOSITION over none";
+      rr_check =
+        (fun row ->
+          let n = n_targets row in
+          let says what =
+            Some
+              (Printf.sprintf "%s is %s but shows %d target(s) — %s"
+                 row.ov_agreement.ag_slug
+                 (string_of_agreement_kind row.ov_agreement.ag.ag_kind)
+                 n what)
+          in
+          match row.ov_agreement.ag.ag_kind with
+          | Pairing ->
+              (* THE `api_names_present` CASE, which the user asked
+                 about: a pairing has two SIDES, and ▣ counts ARTIFACT
+                 targets, so a side that is a DECLARATION contributes
+                 none. The watchlist stands in for the application's
+                 uses, so that row is one artifact and two sides. Any
+                 other one-target pairing is a real complaint. *)
+              if n = 2 then None
+              else if n = 1 && references row (function
+                                | Declared_facts -> true
+                                | _ -> false)
+              then None
+              else
+                says
+                  "a pairing needs two sides; one target is only honest \
+                   when the other side is a declaration"
+          | Promise -> if n = 1 then None else says "a promise is about one artifact"
+          | Behaviour | Composition ->
+              if n = 0 then None
+              else says "its evidence is an execution or other verdicts, not an artifact"
+          | Quality -> if n = 1 then None else says "a quality claim is about one artifact"
+          | Preservation ->
+              (* one KIND, two instances — ▣ counts kinds, so a
+                 preservation claim comparing two copies of a library
+                 shows one. Zero means it ranges over nothing, which
+                 for an unimplemented row is the honest state. *)
+              if n <= 1 then None else says "two copies of one artifact is one KIND") };
+    { rr_name = "promise_is_held_against_a_declaration";
+      rr_says =
+        "a PROMISE compares an artifact with what the project declared, \
+         so some method of it must reference Declared_facts";
+      rr_check =
+        (fun row ->
+          match row.ov_agreement.ag.ag_kind with
+          | Promise
+            when not
+                   (references row (function
+                     | Declared_facts -> true
+                     | _ -> false)) ->
+              Some
+                (Printf.sprintf
+                   "%s is a promise but no method references a declaration"
+                   row.ov_agreement.ag_slug)
+          | _ -> None) };
+    { rr_name = "object_format_narrows_or_is_empty";
+      rr_says =
+        "the object column is EMPTY unless the claim is restricted to \
+         fewer formats than exist — an axis that does not narrow says \
+         nothing";
+      rr_check =
+        (fun row ->
+          let r = row.ov_agreement in
+          let narrows = List.length r.ag_formats < List.length all_formats in
+          let shown = not (String.is_empty (format_marks r)) in
+          if Bool.equal narrows shown then None
+          else
+            Some
+              (Printf.sprintf
+                 "%s declares %d of %d formats but its object cell is %s"
+                 r.ag_slug (List.length r.ag_formats)
+                 (List.length all_formats)
+                 (if shown then "not empty" else "empty"))) };
+    { rr_name = "an_evaluator_is_named";
+      rr_says =
+        "a row with an evaluator names it in `implemented at`, and a \
+         row without one shows no function — the red cell must mean \
+         what it says";
+      rr_check =
+        (fun row ->
+          let r = row.ov_agreement in
+          let has_eval =
+            List.exists r.ag.ag_methods ~f:(fun m -> Option.is_some m.m_eval)
+          in
+          match (has_eval, snd (impl_of r)) with
+          | true, None ->
+              Some
+                (Printf.sprintf
+                   "%s has an evaluator but names none — the overview \
+                    would show it as unimplemented"
+                   r.ag_slug)
+          | false, Some f ->
+              Some
+                (Printf.sprintf
+                   "%s names the evaluator %s but has none wired" r.ag_slug f)
+          | _ -> None) };
+    { rr_name = "a_row_does_something";
+      rr_says =
+        "every row is either rooted somewhere or fires somewhere; a row \
+         that is neither describes a claim no action can reach";
+      rr_check =
+        (fun row ->
+          let any f = List.exists row.ov_cells ~f:(fun (_, m) -> f m) in
+          let rooted =
+            any (function Rooted | Rooted_and_detected -> true | _ -> false)
+          in
+          let fires =
+            any (function Detected | Rooted_and_detected -> true | _ -> false)
+          in
+          if rooted || fires then None
+          else
+            Some
+              (Printf.sprintf "%s neither roots nor fires at any action"
+                 row.ov_agreement.ag_slug)) } ]
+
+(** Run every rule over every row. [[]] = the table obeys its own
+    laws. *)
+let audit_rows ?(provision = Canary_store.Built) () : (string * string) list =
+  List.concat_map (overview_rows ~provision ()) ~f:(fun row ->
+      List.filter_map row_rules ~f:(fun rule ->
+          Option.map (rule.rr_check row) ~f:(fun c -> (rule.rr_name, c))))
+
+(** The audit as a report — the laws, then what breaks them. *)
+let pp_row_audit () : string =
+  let b = Buffer.create 4096 in
+  let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
+  let rows = overview_rows () in
+  add "agreement overview — row audit (%d rows, %d laws)\n\n"
+    (List.length rows) (List.length row_rules);
+  List.iter row_rules ~f:(fun r -> add "  %-34s %s\n" r.rr_name r.rr_says);
+  let bad = audit_rows () in
+  add "\n";
+  if List.is_empty bad then
+    add "every row obeys every law.\n"
+  else (
+    add "%d violation(s):\n" (List.length bad);
+    List.iter bad ~f:(fun (n, c) -> add "  [%s] %s\n" n c));
+  add
+    "\nA law relates two CELLS of one row. Single-cell facts (does this \n\
+     function exist, does this anchor resolve) are ordinary pins; so are \n\
+     facts across rows. Add one to `row_rules` and it is enforced.\n";
   Buffer.contents b
 
 (** THE CANDIDATE TABLE (2026-09-17, user: "I didn't see the rows for

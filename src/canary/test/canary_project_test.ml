@@ -2517,6 +2517,28 @@ let agreement_bridge_pins : pure_test list =
             List.length rows > List.length CR.agreement_registry
           in
           per_row_ok && covers_every && expands) };
+    (* THE ROWS OBEY THEIR OWN LAWS (2026-09-17, user: "I wish we can
+       make a harness somewhere so you can check on your own … we can
+       write it down and revise it continuously").
+
+       The laws are DATA, in `Canary_agreement.row_rules`, so this pin
+       is four lines and never needs editing again: a rule added there
+       is enforced here the moment it exists. That is the property the
+       user asked for — a list you revise, not a test you rewrite.
+
+       `canary checks --firing` prints the same laws beside the table,
+       with any violation, so the harness is readable as well as
+       enforced. The pin is the half that fails a build. *)
+    { name = "agreements.rows_obey_their_own_laws";
+      check =
+        (fun () ->
+          let bad = CR.audit_rows () in
+          if not (List.is_empty bad) then
+            List.iter bad ~f:(fun (rule, complaint) ->
+                Fmt.pr "    [%s] %s@." rule complaint);
+          (* and the laws must be doing something: an empty rule list
+             would pass over any table at all *)
+          List.is_empty bad && List.length CR.row_rules >= 4) };
     (* THE KIND IS A REAL PARTITION (2026-09-17, user: "I don't like the
        term `declaration` … `peer` is also not clear").
 

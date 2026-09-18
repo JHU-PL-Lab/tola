@@ -881,6 +881,12 @@ let checks_cmd =
            have no methods, so every column the overview derives would
            be blank. Name, kind, and what is in the way. *)
         Fmt.pr "@.%s@." (Canary_agreement.pp_candidate_table ());
+        (* THE ROW AUDIT (2026-09-17, user: "I wish we can make a
+           harness somewhere so you can check on your own"). Printed
+           BESIDE the table it audits, because a reader checking a row
+           is looking at the row; the same laws fail the build through
+           `agreements.rows_obey_their_own_laws`. *)
+        Fmt.pr "@.%s@." (Canary_agreement.pp_row_audit ());
         let fill = Canary_agreement.fill_list () in
         Fmt.pr "@.fill list (%d cell(s) fire without a counterexample):@."
           (List.length fill);

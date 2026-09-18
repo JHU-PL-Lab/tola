@@ -1902,7 +1902,7 @@ let render_html (m : t) ~(generated_at : string) : string =
     in
     "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
      <th>kind</th><th>implemented at</th><th>lang</th><th>mech</th>\
-     <th>fmt</th>"
+     <th>object</th>"
     ^ String.concat ~sep:""
         (List.map CR.overview_artifact_columns ~f:(fun k ->
              "<th class=\"seth\">" ^ esc (CR.artifact_col_label k) ^ "</th>"))
@@ -2049,10 +2049,16 @@ let render_html (m : t) ~(generated_at : string) : string =
        and the <code>LC_ID_DYLIB</code> install name on Mach-O, which the \
        inspector writes into one field; those rows are <code>EM</code>, and \
        only the two version-node claims are really ELF-only. \
-       <b>fmt</b> E elf &middot; M mach-o — a format changes whether a claim \
-       APPLIES, never where it fires, so it annotates a row rather than \
-       splitting one; <code>E&middot;</code> is not a gap, Mach-O has no \
-       symbol versioning at all. \
+       <b>object</b> the OBJECT FORMAT a claim can range over, EMPTY when \
+       it ranges over all of them — the same rule as <b>lang</b> and \
+       <b>mech</b>, since an axis that does not narrow says nothing. Eleven \
+       of thirteen are empty; the two that are not read <code>elf</code>, \
+       because Mach-O has no symbol versioning and a version-node claim has \
+       nothing of that kind there. A format changes whether a claim APPLIES, \
+       never where it fires, so it annotates a row rather than splitting \
+       one. (It was <code>fmt</code> with letter marks until 2026-09-17, \
+       where the common case &mdash; both formats, saying nothing &mdash; \
+       was the loudest cell in the column, and the header read as a style.) \
        <b>lag</b> action columns from the root to the nearest firing; NOT \
        the landing tracker's distance, which measures how far apart the two \
        SIDES of a comparison are.</p>"
