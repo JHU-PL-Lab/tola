@@ -102,6 +102,28 @@ function exist, does this anchor resolve) are ordinary pins, and so are
 facts across rows (is a claim's target count the same under every
 mechanism).
 
+**Saturation — is anything unwatched?** The row laws ask whether a row
+is self-consistent. `canary checks --firing` also prints the question no
+row can ask, because the overview is organised by claim and an absence
+has no row to appear in: the modelled world is the product of the
+catalogue's five mechanisms and the two object formats, and a cell
+nothing covers is a combination canary can enumerate, build and run
+while checking nothing about it.
+
+Coverage counts an unimplemented claim — an absent one means nobody has
+looked, a planned one means somebody has. Every cell is covered today;
+`agreements.every_mechanism_format_cell_is_watched` fails on the first
+that is not, which is what makes adding a sixth mechanism say so.
+
+⚠ **The grid cannot see a finer asymmetry**, so the report names it
+underneath: two claims are specific to ELF and **none is specific to
+Mach-O**, although Mach-O has a version gate with no ELF counterpart —
+`compatibility_version` in `LC_ID_DYLIB`, which `inspect_native.py` has
+extracted since the macOS port and no agreement reads. Every cell looks
+covered because the format-neutral claims cover them all; what is
+missing is a claim that uses what only Mach-O has. It is in the
+candidate table.
+
 **Why a `pairing` can show one target.** A pairing has two SIDES, and
 the ▣ columns count artifact TARGETS, so a side that is a DECLARATION
 contributes none. Five of the six pairings show two artifacts;

@@ -887,6 +887,10 @@ let checks_cmd =
            is looking at the row; the same laws fail the build through
            `agreements.rows_obey_their_own_laws`. *)
         Fmt.pr "@.%s@." (Canary_agreement.pp_row_audit ());
+        (* SATURATION — the question no ROW can ask: is any part of the
+           modelled world unwatched? The overview is organised by claim,
+           so an absence has no row to appear in. *)
+        Fmt.pr "@.%s@." (Canary_agreement.pp_saturation ());
         let fill = Canary_agreement.fill_list () in
         Fmt.pr "@.fill list (%d cell(s) fire without a counterexample):@."
           (List.length fill);

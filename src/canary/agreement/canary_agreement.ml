@@ -2526,6 +2526,120 @@ let row_rules : row_rule list =
               (Printf.sprintf "%s neither roots nor fires at any action"
                  row.ov_agreement.ag_slug)) } ]
 
+(* ── SATURATION (2026-09-17, user: "if currently we target ocaml and
+   python with their mechanism, and consider the c side provider on
+   platform elf and machos, can we also let the harness to ensure the
+   row saturation (no missing check even it's not implement). currently
+   this is no check for mach-o on the table").
+
+   The row laws ask whether a row is self-consistent. This asks a
+   question no row can: is any part of the modelled world UNWATCHED?
+
+   The world canary models here is a product of two declared axes — the
+   consumer's MECHANISM (the catalogue's five, across two languages) and
+   the provider's OBJECT FORMAT (elf, mach-o). Ten cells. A cell with no
+   claim is a combination canary can enumerate, build and run while
+   checking nothing about it, and nothing else in the tool would say so:
+   the overview is organised by claim, so an absence has no row to
+   appear in.
+
+   ⚠ TWO DIFFERENT EMPTINESSES, and only one is a hole. A cell is
+   covered when some claim can be carried by that mechanism AND ranges
+   over that format. `declared_versions_exported` is elf-only, so it
+   covers (cstubs, elf) and not (cstubs, mach-o) — that is not a gap,
+   because Mach-O genuinely has no symbol versioning. The gap is a cell
+   NOTHING covers.
+
+   The asymmetry the user names is finer than the grid and is reported
+   under it: two claims are specific to ELF and NONE is specific to
+   Mach-O, although Mach-O has a version gate with no ELF counterpart
+   (`compatibility_version` in LC_ID_DYLIB, which `inspect_native.py`
+   has extracted since the macOS port and no agreement reads). The grid
+   cannot see that — every cell is covered by the format-neutral claims
+   — which is exactly why it is said in words underneath. *)
+
+let saturation_grid () :
+    (Canary_mechanism.mechanism * (Canary_store.object_format * int * int) list)
+    list =
+  List.map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+      let m = i.Canary_mechanism.mi_mechanism in
+      ( m,
+        List.map all_formats ~f:(fun f ->
+            let carried r =
+              List.exists (carrying_mechanisms r) ~f:(fun (m', ok) ->
+                  ok && Poly.equal m' m)
+            in
+            let ranges r =
+              List.exists r.ag_formats ~f:(Canary_store.equal_object_format f)
+            in
+            let here = List.filter agreement_registry ~f:(fun r -> carried r && ranges r) in
+            let implemented =
+              List.count here ~f:(fun r ->
+                  List.exists r.ag.ag_methods ~f:(fun mm ->
+                      Option.is_some mm.m_eval))
+            in
+            (f, List.length here, implemented)) ))
+
+(** The cells of (mechanism × object format) that NO claim covers. *)
+let saturation_holes () :
+    (Canary_mechanism.mechanism * Canary_store.object_format) list =
+  List.concat_map (saturation_grid ()) ~f:(fun (m, cells) ->
+      List.filter_map cells ~f:(fun (f, total, _) ->
+          if total = 0 then Some (m, f) else None))
+
+(** How many claims are SPECIFIC to one format — the asymmetry the grid
+    cannot show, because a format-neutral claim covers every cell. *)
+let format_specific (f : Canary_store.object_format) : string list =
+  List.filter_map agreement_registry ~f:(fun r ->
+      match r.ag_formats with
+      | [ g ] when Canary_store.equal_object_format g f -> Some r.ag_slug
+      | _ -> None)
+
+let pp_saturation () : string =
+  let b = Buffer.create 2048 in
+  let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
+  add
+    "saturation — is any (mechanism × object format) cell unwatched?\n\n\
+    \  cells are `covered/implemented`; a claim covers a cell when that \
+     mechanism\n\
+    \  can carry it and it ranges over that format.\n\n";
+  add "  %-10s" "mechanism";
+  List.iter all_formats ~f:(fun f ->
+      add " %-10s" (Canary_store.string_of_object_format f));
+  add "\n";
+  List.iter (saturation_grid ()) ~f:(fun (m, cells) ->
+      add "  %-10s" (Canary_mechanism.string_of_mechanism m);
+      List.iter cells ~f:(fun (_, total, impl) ->
+          add " %-10s" (Printf.sprintf "%d/%d" total impl));
+      add "\n");
+  let holes = saturation_holes () in
+  add "\n";
+  if List.is_empty holes then
+    add "  no unwatched cell: every mechanism × format has some claim.\n"
+  else
+    List.iter holes ~f:(fun (m, f) ->
+        add "  UNWATCHED: %s × %s has no claim at all\n"
+          (Canary_mechanism.string_of_mechanism m)
+          (Canary_store.string_of_object_format f));
+  add "\n  format-specific claims — the asymmetry the grid cannot show:\n";
+  List.iter all_formats ~f:(fun f ->
+      let s = format_specific f in
+      add "    %-8s %s\n"
+        (Canary_store.string_of_object_format f)
+        (if List.is_empty s then "none"
+         else String.concat ~sep:", " s));
+  add
+    "\n  A format with NO specific claim is not automatically a gap — it \
+     is one\n\
+    \  only where that format has something the other lacks. Mach-O \
+     does: the\n\
+    \  `compatibility_version` gate in LC_ID_DYLIB, which \
+     inspect_native.py has\n\
+    \  extracted since the macOS port and no agreement reads. It is in \
+     the\n\
+    \  candidate table, unimplemented.\n";
+  Buffer.contents b
+
 (** Run every rule over every row. [[]] = the table obeys its own
     laws. *)
 let audit_rows ?(provision = Canary_store.Built) () : (string * string) list =

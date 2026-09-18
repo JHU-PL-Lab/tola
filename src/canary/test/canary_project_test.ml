@@ -2539,6 +2539,41 @@ let agreement_bridge_pins : pure_test list =
           (* and the laws must be doing something: an empty rule list
              would pass over any table at all *)
           List.is_empty bad && List.length CR.row_rules >= 4) };
+    (* NO PART OF THE MODELLED WORLD IS UNWATCHED (2026-09-17, user:
+       "can we also let the harness to ensure the row saturation (no
+       missing check even it's not implement)").
+
+       The row laws ask whether a row is self-consistent; this asks the
+       question no row can, because the overview is organised BY CLAIM
+       and an absence has no row to appear in. The world is the product
+       of two declared axes — the catalogue's five mechanisms and the
+       two object formats — and a cell nothing covers is a combination
+       canary can enumerate, build and run while checking nothing.
+
+       COVERAGE, NOT IMPLEMENTATION, exactly as asked: a claim covers a
+       cell when that mechanism can carry it and it ranges over that
+       format, whether or not it has an evaluator. An unimplemented
+       claim still says the combination is watched-for; an absent one
+       says nobody has looked.
+
+       It is non-vacuous in the way that matters: adding a sixth
+       mechanism to the catalogue fails here until some claim reaches
+       it, which is the moment the gap is cheapest to see. The grid size
+       is asserted too, so an empty catalogue cannot pass. *)
+    { name = "agreements.every_mechanism_format_cell_is_watched";
+      check =
+        (fun () ->
+          let holes = CR.saturation_holes () in
+          List.iter holes ~f:(fun (m, f) ->
+              Fmt.pr
+                "    UNWATCHED: %s × %s — canary can build this and checks \
+                 nothing about it@."
+                (Canary_mechanism.string_of_mechanism m)
+                (Canary_store.string_of_object_format f));
+          List.is_empty holes
+          && List.length (CR.saturation_grid ()) >= 5
+          && List.for_all (CR.saturation_grid ()) ~f:(fun (_, cells) ->
+                 List.length cells >= 2)) };
     (* THE KIND IS A REAL PARTITION (2026-09-17, user: "I don't like the
        term `declaration` … `peer` is also not clear").
 
