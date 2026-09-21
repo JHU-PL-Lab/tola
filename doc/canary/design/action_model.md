@@ -288,12 +288,14 @@ in §9 touches code on the far side of the line.
 | whether a claim applies at all | pass 2 ([`stage2_analyse_spec.md`](enumeration/stage2_analyse_spec.md)) |
 | **when it fires, where its evidence is, who evaluates it** | here, and [`stage6_realize_steps.md`](enumeration/stage6_realize_steps.md) §2b |
 
-**The line is crossed in code today, in one place.**
-`binding_evidence_tag` and `lib_evidence_tags` live in
-`agreement/canary_agreement_common.ml` and map a world to the step tag
-where evidence should be. That is an occasion fact inside the claim layer.
-It is waiting to be **derived** from `producers_of` (§9 step 5) — *not
-moved*, because moving it would relocate the duplication rather than
+**The line is MISPLACED in code today, in one place** — which is not the
+same as the five legitimate READS the subsection below enumerates. The
+agreement layer is entitled to read this model; what it should not do is
+host a fact belonging to it. `binding_evidence_tag` and `lib_evidence_tags`
+live in `agreement/canary_agreement_common.ml` and map a world to the step
+tag where evidence should be. That is an occasion fact inside the claim
+layer. It is waiting to be **derived** from `producers_of` (§9 step 5) —
+*not moved*, because moving it would relocate the duplication rather than
 remove it.
 
 **Two distinctions to hold while doing this work**, because both are easy
@@ -469,6 +471,11 @@ deletions and depend on nothing; step 3 gates everything below it.
    instances, each fixed individually) and settles the ownership question
    backlog §49 turns on: derived from the join, the map stops living in
    the agreement layer at all.
+   ⚠ **This is the dangerous step, and its acceptance criterion is not
+   `make canary-test`** — it is `make canary-agreement-roundtrip` staying
+   green, because getting the paths wrong turns a landed claim into a
+   silent `unavailable`, which no test failure reports. §6 has the
+   argument and the other four couplings.
 6. **Derive `check_post` from the join.** Same mechanism as 4 and the
    reason 3 is shared: *did the artifacts in `produced_at` appear at their
    locations?* The remaining hand-written compositors dissolve, and the
@@ -480,8 +487,16 @@ deletions and depend on nothing; step 3 gates everything below it.
 
 **Do them in that order.** 4 without 3 hand-writes a locator per project;
 5 without 4 leaves two addressing schemes; 6 without 3 rebuilds the
-locator a third time. 8 is independent, and is new coverage rather than a
-repair, so it is not urgent.
+locator a third time.
+
+⚠ **And 8 after 5, which corrects an earlier reading of this list.** Step
+8 looked independent — it is new coverage rather than a repair, so it
+carried no urgency. It is not independent: `lib_evidence_tags` names
+`probe_lib`, `probe_lib_staged` and `probe_lib_apt`, so splitting
+`probe_lib` renames the tag role 2 writes evidence under. After 5 those
+tags are derived and 8 is a rename the derivation follows; before 5 it is
+four hand-edits and a silent `unavailable`. §6 measured this from the
+code.
 
 ## 10. Where this sits, and what it does not cover
 
