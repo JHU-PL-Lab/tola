@@ -88,7 +88,17 @@ code the lowering reads.
 
 ## 2. Open now
 
-Four items, in the order they are worth doing.
+Five items, in the order they are worth doing. §2.5 is the forward look
+— what the unlanded claims would take — and is where the manuscript's
+plan material comes from.
+
+⚠ **Before dispatching an agent at the ACTION MODEL** (the §9 plan in
+[`design/action_model.md`](design/action_model.md)): that document now
+carries, under §6, what the agreement layer READS from the action model
+— five couplings, the pin that catches each, and the acceptance gate for
+its step 5. Steps 5, 7 and 8 all touch code the agreement work depends
+on, and step 5 can turn every landed claim into a silent `unavailable`,
+which is not a test failure but a check that stopped checking.
 
 ### 2.1 macOS is unwatched, and the host/runner question behind it
 
@@ -219,6 +229,70 @@ have no good participle — which is why they stayed. Cheap to revisit:
 each name is one constructor and one display string, and
 `agreements.kind_partitions_the_catalogue` holds the partition
 regardless of spelling.
+
+### 2.5 The three unlanded directions — how close each is to working code
+
+*(2026-09-21. Assessed against the code rather than the plan; the
+manuscript can lead with these as rationale, but a plan is only credible
+if each names its falsifier — [`design/agreement/theory.md`](design/agreement/theory.md)
+§6 step 5.)*
+
+**Take them 1 → 2 → 3.** The order is by external blocker, not by value.
+
+**1. Cross-API correspondence — closest, and tiny is already shaped for
+it.** `canary/examples/tiny/c/src/tiny.c` gives two properties that make
+it a near-perfect witness:
+
+```c
+int tiny_offset = 42;
+int tiny_sum(int a, int b)  { return a + b + tiny_offset; }
+int tiny_diff(int a, int b) { return a - b; }
+```
+
+`tiny_diff` is NON-COMMUTATIVE, so an argument-order fault is detectable
+(`3-4` against `1`). `tiny_sum` reads a GLOBAL, so a binding that
+reimplements the arithmetic instead of calling the library returns 7
+where the library returns 49 — and **no symbol check, type check or ABI
+tool can see that**, `abidiff` included. That is the clearest evidence
+this claim is not a subset of anything in the `_ext` rows.
+
+No new evidence plumbing, no platform blocker, no external tool, all
+in-tree; the falsifier costs one line. It would land `behaviour`, which
+is 0/1 and has no external answerer. **First increment is the MUTATION,
+not the generator** — make the conversion fault, confirm the table stays
+green while the code is wrong, then write one hand-written
+correspondence probe. Generate only after one case has caught something
+([`design/directions.md`](design/directions.md) §2).
+
+**2. Cross-package-manager `discovery_matches_link` — one recorded fact
+away, and we have already lived the failure.** Both halves are one shell
+command and one already exists: `Native_lib_probe` holds the resolved
+library path, and `canary_toolchain.ml` already emits
+`pkg-config --variable=libdir`. What is missing is recording
+pkg-config's answer as EVIDENCE at the `conf-*` step, then comparing.
+
+⚠ The falsifier is in our own history. z3's `Probe_lib` override
+resolved the library with `pkg-config --variable=libdir z3` — the SYSTEM
+one — in **every world, including those that build their own**. We
+treated it as a canary bug and fixed it by deleting the override. It is
+exactly the phenomenon this claim names: a discovery mechanism answering
+differently from what the world intends. We had the failure and did not
+have the claim. Applies to cairo/libffi/zarith today; the ncurses report
+is the stronger falsifier but needs a conda prefix.
+
+**3. Versioning `compatibility_version_satisfied` — cheapest evidence,
+furthest from running.** Half of what §2.1 says: `inspect_native.py`
+captures `compatibility_version` only under `LC_ID_DYLIB`, so we have
+the PROVIDER's promise and not the CONSUMER's requirement, which lives
+on `LC_LOAD_DYLIB`. The pairing claim needs a one-line inspector change.
+
+A cheaper first step needs no new evidence at all: a PROMISE claim — the
+library's `compatibility_version` is what the project declared — is
+decidable from what is already extracted. But both are Mach-O only and
+`canary checks --landing` is platform-blind, so landing either would
+report dishonestly on Linux. That is §2.1's reporting question rather
+than this claim's, and it is why this one is third despite being the
+cheapest to evaluate.
 
 ---
 

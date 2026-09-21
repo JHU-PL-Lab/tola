@@ -317,6 +317,64 @@ to lose and each has already cost a bug:
    introduced to undo. A derived `check_post` should stay boolean and stay
    separate; it is not an evaluator.
 
+### What the agreement layer READS from this model
+
+*(2026-09-21, before dispatching an agent at §9. The seam above says who
+OWNS what; this says what breaks if the model moves, because §9 steps 5,
+7 and 8 all touch code the agreement work depends on.)*
+
+Five couplings, each with the pin that catches it. Run
+`make canary-test` after every step; it is five seconds and every one of
+these is in it.
+
+| what the agreement layer reads | where | if §9 moves it |
+| --- | --- | --- |
+| **`ag_rooted_in.rt_action` is a STRING**, parsed by `action_of_string` | 10 registry rows | a renamed or split action stops parsing → the `R` mark silently vanishes. `agreements.rooting_names_an_action` and `agreements.overview_matches_rooting` |
+| **`ag_slot` maps a claim to (action, stage)** — its column in `canary result` | every row | a moved action moves or deletes a check column. `matrix.key_explains_every_check_column`, `checks.index_speaks_each_action_language` |
+| **`m_firing` names actions** — `firing_default`, `firing_lib_declaration`, `firing_probe_only` | `canary_agreement_common.ml` | a split changes WHERE claims fire, which is a semantic change, not a rename. `agreements.firing_defaults` |
+| **The overview's columns ARE `store_actions`** | `overview_columns ()` | the table's width, row order and `lag` all move with the catalogue. `agreements.rows_obey_their_own_laws`, `agreements.overview_groups_a_claims_patterns`, `matrix.page_titles_and_agreement_overview` |
+| **`retarget_action` enumerates the lang-carrying constructors** | `canary_agreement.ml` | a NEW constructor carrying a language must be added there, or a row's `R` lands in another language's column again. `agreements.rooting_speaks_the_rows_language` |
+
+**Step 5 is the dangerous one, and it has an acceptance gate.** Retiring
+`binding_evidence_tag` / `lib_evidence_tags` changes where every method
+LOOKS for its evidence. Get it wrong and each landed agreement quietly
+reports `unavailable` — which is not a test failure, it is a check that
+stopped checking. The guard already exists:
+
+```sh
+make canary-agreement-roundtrip      # inside make canary-post-check
+```
+
+It clears the deciding steps' markers, runs sqlite cold, and requires
+seven NAMED agreements to reach `holds` or `violated` from that run
+(`CANARY_LANDED_AGREEMENTS` in the Makefile). **That gate staying green
+is the acceptance criterion for step 5**, and it is the only one that
+distinguishes "the paths still resolve" from "the tests still pass".
+`agreements.derived_evidence_matches_projects` is its static half.
+
+**Step 8 inherits the same risk.** `lib_evidence_tags` names
+`probe_lib`, `probe_lib_staged` and `probe_lib_apt`; splitting
+`probe_lib` into three roles renames the tag that role 2 (inspection)
+writes under. Do 5 first and the tags are derived, so 8 becomes a
+rename the derivation follows. Do 8 first and it is four hand-edits and
+a silent `unavailable`.
+
+**An opportunity while in here, not a requirement.**
+`Probe_binding of lang` carries a language and no MECHANISM, so
+tiny-full's two Python bindings (`Cext` and `Ctypes`) realize one step,
+one log tag and one matrix column, and pass 2 sees only the first.
+`analysis.one_mechanism_per_language` ratchets it as a named exception.
+If §9 is opening the action vocabulary anyway, that is the cheapest
+moment to add the mechanism — and the most expensive moment to do it is
+any other. [`../project/issues.md`](../project/issues.md) §2.
+
+**What is NOT coupled, so it does not need guarding.** The kind
+taxonomy, the row laws' content, the external-tool rows and the
+saturation grid are all about claims and mechanisms rather than actions;
+only `a_row_does_something` reads the action cells, and it reads them as
+a guard — a claim left firing nowhere by a split is exactly what it
+should report.
+
 ## 7. One design under two names: the umbrella and `[Pre; Action; Post]`
 
 These were proposed independently and they are the same design.
