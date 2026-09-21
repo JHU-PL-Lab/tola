@@ -1933,9 +1933,20 @@ let render_html (m : t) ~(generated_at : string) : string =
     ^ "<dt>implemented at</dt><dd><code>&lt;module&gt;&middot;&lt;function&gt;</code> \
        — the EVALUATOR, in \
        <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code>. \
-       A RED cell has no evaluator yet and names the file it would go in. \
-       The tooltip also names where the agreement's METADATA is declared; \
-       both are derived, neither stored.</dd>"
+       A RED cell means this check DOES NOT RUN here, and the cell says \
+       which of the two reasons: <code>&lt;module&gt;&middot;&mdash;</code> \
+       is a claim of ours with no evaluator, naming the file it would go \
+       in; an ITALIC tool name is an existing tool we name but never \
+       invoke. The tooltip also names where the agreement's METADATA is \
+       declared; both are derived, neither stored.</dd>"
+    ^ "<dt><code>_ext</code> rows</dt><dd>an EXISTING TOOL that answers the \
+       same claim — same kind, same targets, same rooting, because it is \
+       the same question. The code carries <code>*</code>; \
+       <b>lang</b>/<b>object</b> state the TOOL's reach, not the claim's; \
+       <b>decided</b> and <b>blame</b> are empty because nothing here has \
+       run it. One row per (tool × claim), so a tool answering two claims \
+       appears twice — the duplication IS that fact. Hover for what it \
+       does BEYOND our claim.</dd>"
     ^ "<dt>lang &middot; mech &middot; object</dt><dd>an EMPTY cell means \
        that axis does not narrow the claim — every modelled language, \
        every mechanism of this row's language, or every object format. A \
@@ -2329,14 +2340,20 @@ table.grid td.g { text-align: center; font-family: ui-monospace, monospace;
 table.grid td.impl { font-family: ui-monospace, monospace; font-size: .68rem;
   white-space: nowrap; }
 table.grid td.impl.none { background: #ffebe9; color: #a40e26; font-weight: 700; }
-/* AN EXISTING TOOL that answers the same claim. Tinted, not coloured:
-   it is not a verdict, it is a second answerer, and it should read as
-   an annotation on the claim above it rather than as a row of its own
-   standing. Hover gives what it checks and what it does BEYOND our
-   claim — the feature we would overlook by filing it under one. */
-tr.extrow { background: #fbfaff; }
-tr.extrow td.kc { color: #8250df; }
-table.grid td.impl.ext { color: #8250df; font-style: italic; }
+/* AN EXISTING TOOL that answers the same claim, and RED like any other
+   unimplemented cell (2026-09-21, user: "given the tool is not
+   implemented yet, can we also show them in red").
+
+   The column answers one question — does this check run here — and for
+   a tool we name but never invoke the answer is no, exactly as it is
+   for a claim nobody wrote an evaluator for. Two different reasons, one
+   honest colour; the CELL still distinguishes them, because an
+   unimplemented claim of ours reads `family·—` and a tool's row reads
+   the tool's name. Italic keeps the second recognisable at a glance. */
+tr.extrow { background: #fffafa; }
+tr.extrow td.kc { color: #a40e26; }
+table.grid td.impl.ext { background: #ffebe9; color: #a40e26;
+  font-style: italic; }
 table.grid td.lm { font-size: .72rem; white-space: nowrap; }
 /* WHERE THE CLAIM COMES FROM. Its own class, not `lm`'s, because the
    overview pin counts `lm` cells against the lang/mech labels and a
