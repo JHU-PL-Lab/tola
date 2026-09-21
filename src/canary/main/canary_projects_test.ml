@@ -4412,9 +4412,21 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
              Cross-checked against the registry rather than a literal,
              so implementing one of the three moves both sides. *)
           && count "class=\"impl" = List.length rows
+          (* A RED cell is one of OUR rows with no evaluator. An
+             external row names a tool, so it is never red however
+             unimplemented the claim it answers is — the colour means
+             "nobody has written this", and somebody has. *)
           && count "class=\"impl none\""
              = List.count rows ~f:(fun (row : overview_row) ->
-                   Option.is_none (snd (impl_of row.ov_agreement)))
+                   Option.is_none row.ov_external
+                   && Option.is_none (snd (impl_of row.ov_agreement)))
+          (* THE EXISTING TOOLS, one row per (tool × claim it answers)
+             (2026-09-21, user: "even a tool is mainly for one agreement
+             claim, I also wish to have it as a row"). The count is the
+             list's, so adding a checker shows up here rather than
+             silently rendering nothing. *)
+          && count "class=\"impl ext\"" = List.length external_checkers
+          && count "class=\"extrow\"" = List.length external_checkers
           (* LANG and MECH, one cell each per row, full terms rather
              than the letter marks they replaced (2026-09-17, user:
              "single letters in mech is not reader-friendly").

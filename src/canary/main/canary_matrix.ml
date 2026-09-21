@@ -2002,7 +2002,15 @@ let render_html (m : t) ~(generated_at : string) : string =
     ^ String.concat ~sep:""
         (List.map rows ~f:(fun (row : CR.overview_row) ->
              let r = row.CR.ov_agreement in
-             let code = Canary_agreement_common.short_code_of_slug r.CR.ag_slug in
+             (* AN EXTERNAL ROW is the same claim as answered by an
+                existing tool: same kind, same targets, same rooting,
+                and a `*` on the code so the pair reads as one claim
+                with two answerers. *)
+             let ext = row.CR.ov_external in
+             let code =
+               Canary_agreement_common.short_code_of_slug r.CR.ag_slug
+               ^ (match ext with None -> "" | Some _ -> "*")
+             in
              let sr = List.Assoc.find rooting r.CR.ag_slug ~equal:String.equal in
              let root_title =
                match sr with
@@ -2042,8 +2050,17 @@ let render_html (m : t) ~(generated_at : string) : string =
                      (esc (CR.family_file_of r.CR.ag_id))
                      (esc r.CR.ag_slug) (esc family)
              in
-             "<tr><td class=\"kc\">" ^ esc code ^ "</td><td>"
-             ^ esc r.CR.ag_slug ^ "</td><td class=\"kind\">"
+             let impl_cell =
+               match ext with
+               | None -> impl_cell
+               | Some x ->
+                   Printf.sprintf
+                     "<td class=\"impl ext\" title=\"%s — %s\">%s</td>"
+                     (esc x.CR.xc_what) (esc x.CR.xc_beyond) (esc x.CR.xc_tool)
+             in
+             "<tr class=\"" ^ (match ext with None -> "" | Some _ -> "extrow")
+             ^ "\"><td class=\"kc\">" ^ esc code ^ "</td><td>"
+             ^ esc (CR.row_slug row) ^ "</td><td class=\"kind\">"
              ^ esc (CR.kind_label r)
              ^ "</td>" ^ impl_cell ^ "<td class=\"lm\">"
              ^ esc (CR.lang_label row.CR.ov_mechs)
@@ -2070,8 +2087,18 @@ let render_html (m : t) ~(generated_at : string) : string =
              ^ (match CR.row_lag row with
                 | Some d -> Int.to_string d
                 | None -> "<span class=\"kq\">—</span>")
-             ^ "</td><td>" ^ tally code
-             ^ "</td><td>" ^ blame_tally code ^ "</td></tr>"))
+             (* decided / blame are facts about what OUR runs recorded,
+                so an external row leaves them empty rather than
+                borrowing the claim's — nothing here has run a tool. *)
+             ^ "</td><td>"
+             ^ (match ext with
+                | None -> tally (Canary_agreement_common.short_code_of_slug r.CR.ag_slug)
+                | Some _ -> "<span class=\"kq\">—</span>")
+             ^ "</td><td>"
+             ^ (match ext with
+                | None -> blame_tally (Canary_agreement_common.short_code_of_slug r.CR.ag_slug)
+                | Some _ -> "")
+             ^ "</td></tr>"))
     ^ "</tbody></table>"
     (* THE LEGEND IS A LIST, NOT A PARAGRAPH (2026-09-21, user: "very
        verbose and no line break"). It had grown into a 79-line run-on
@@ -2298,6 +2325,14 @@ table.grid td.g { text-align: center; font-family: ui-monospace, monospace;
 table.grid td.impl { font-family: ui-monospace, monospace; font-size: .68rem;
   white-space: nowrap; }
 table.grid td.impl.none { background: #ffebe9; color: #a40e26; font-weight: 700; }
+/* AN EXISTING TOOL that answers the same claim. Tinted, not coloured:
+   it is not a verdict, it is a second answerer, and it should read as
+   an annotation on the claim above it rather than as a row of its own
+   standing. Hover gives what it checks and what it does BEYOND our
+   claim — the feature we would overlook by filing it under one. */
+tr.extrow { background: #fbfaff; }
+tr.extrow td.kc { color: #8250df; }
+table.grid td.impl.ext { color: #8250df; font-style: italic; }
 table.grid td.lm { font-size: .72rem; white-space: nowrap; }
 /* WHERE THE CLAIM COMES FROM. Its own class, not `lm`'s, because the
    overview pin counts `lm` cells against the lang/mech labels and a

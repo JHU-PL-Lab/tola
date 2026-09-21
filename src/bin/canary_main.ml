@@ -887,6 +887,11 @@ let checks_cmd =
            have no methods, so every column the overview derives would
            be blank. Name, kind, and what is in the way. *)
         Fmt.pr "@.%s@." (Canary_agreement.pp_candidate_table ());
+        (* THE SAME TOOLS THE `_ext` ROWS NAME, TRANSPOSED (2026-09-21,
+           user: "It's also a good way to understand their roles"). The
+           table reads by claim; this reads by tool, and carries what
+           each does BEYOND the claim it is filed under. *)
+        Fmt.pr "@.%s@." (Canary_agreement.pp_external_tools ());
         (* THE ROW AUDIT (2026-09-17, user: "I wish we can make a
            harness somewhere so you can check on your own"). Printed
            BESIDE the table it audits, because a reader checking a row

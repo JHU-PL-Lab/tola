@@ -942,8 +942,50 @@ let format_marks (r : agreement_row) : string =
    annotates a whole row rather than splitting it — which is why the
    column belongs beside the name rather than at the far end. *)
 
+(** AN EXISTING TOOL THAT ANSWERS ONE OF OUR CLAIMS (2026-09-21, user:
+    "even a tool is mainly for one agreement claim, I also wish to have
+    it as a row … The agreement is sth abstract, while a tool is use to
+    check under some implementation").
+
+    The first design put the tool in a FIELD on the agreement, and that
+    was wrong for a reason worth keeping: the relation is MANY-TO-MANY.
+    `abidiff` answers four of our claims and does more besides, so
+    filing it under one loses the rest — the user's objection, and it is
+    correct. A row per (tool × claim it answers) keeps the plural, and
+    the duplication that produces is honest: `abidiff` appearing four
+    times IS the fact that it covers four claims.
+
+    THE ROW IS NAMED AFTER OUR CLAIM, suffixed `_ext`, and sits adjacent
+    to it — same kind, same targets, same rooting, because it answers
+    the same question. What differs is `implemented at`: ours names a
+    function in this tree, an external row names the tool. That column
+    generalizes to "who implements this check", which is what makes the
+    comparison a side-by-side read rather than two tables.
+
+    ⚠ [xc_beyond] IS THE GUARD AGAINST THE ORIGINAL MISTAKE. A tool
+    filed under one claim would still hide its other features, so each
+    row says what the tool does that THIS claim does not. Where that
+    sentence describes something we have no claim for at all, it is a
+    candidate we have not written down — which is the second reason to
+    carry these rows: a mature tool is a list of claims someone already
+    thought were worth checking. *)
+type external_checker = {
+  xc_tool : string;  (** the tool, as it is invoked or published *)
+  xc_answers : agreement_id;  (** which of our claims it decides *)
+  xc_what : string;  (** what it compares, in its own terms *)
+  xc_beyond : string;
+      (** what it does that our claim does not — the feature we would
+          otherwise overlook by filing it under one claim *)
+  xc_adoption : string;  (** the adoption class, from related/adoption-in-practice.md *)
+}
+
 type overview_row = {
   ov_agreement : agreement_row;
+  ov_external : external_checker option;
+      (** [None] = our own row. [Some t] = the same claim as answered by
+          an EXISTING tool: the claim's kind, targets and rooting are
+          reused (it is the same question), and the tool replaces
+          `implemented at`. *)
   ov_mechs : Canary_mechanism.mechanism list;
       (** the mechanisms sharing this pattern; [[]] = carried by none,
           and the row is shown anyway, because "no mechanism can carry
@@ -955,6 +997,123 @@ type overview_row = {
           what makes the declaration group read as a single target. *)
   ov_cells : (Canary_basic.action * recovery_mark) list;
 }
+
+(* THE TOOLS THAT ALREADY ANSWER SOME OF THESE CLAIMS.
+
+   Drawn from `research/related/canary-practical-cross-language-bindings-report.md`
+   §9, which sketches this mapping in prose, and the adoption classes in
+   `research/related/adoption-in-practice.md`. Prose was the right place
+   to work it out and the wrong place to keep it: a claim's row should
+   say whether somebody already answers it.
+
+   ⚠ WHAT THIS LIST IS FOR, and it is not flattering. Seven of the eight
+   LANDED claims have a mature external answerer, and several answer
+   better than we do — `abidiff` reads DWARF where `signatures_agree`
+   compares two texts. The claims that are uniquely ours are mostly
+   still CANDIDATES. Having that on the table rather than in a paper's
+   prose is the point: it says which claims to stop deepening and call a
+   tool for, and it keeps the gap honest as tools are added.
+
+   NOT MODELLED YET, deliberately, and recorded so it is not mistaken
+   for done: a tool's OWN applicability. `auditwheel` is Linux+Python
+   while the claim it answers is format-neutral, so an external row
+   currently inherits the claim's lang/mech/object rather than stating
+   the tool's. And nothing here is RUN — naming a tool is what makes the
+   overlap visible; invoking one needs the transport work in
+   status.md §2.1. *)
+let external_checkers : external_checker list =
+  [ { xc_tool = "abicompat (libabigail)";
+      xc_answers = Required_symbols_exported;
+      xc_what =
+        "takes an application and two versions of a library it links \
+         against, and reports whether the newer one still satisfies what \
+         the application needs";
+      xc_beyond =
+        "TYPES, not just names. Our claim is the linker's rule \
+         re-implemented exactly for symbol NAMES; abicompat reads DWARF \
+         and catches a changed struct layout behind an unchanged \
+         spelling, which no symbol table can show";
+      xc_adoption = "mature specialist infrastructure" };
+    { xc_tool = "abidiff (libabigail)";
+      xc_answers = Signatures_agree;
+      xc_what =
+        "compares two binaries' ABI as recorded in DWARF — function \
+         types, struct layout, enum values, symbol versions";
+      xc_beyond =
+        "STRICTLY STRONGER than this claim, which compares return-type \
+         and argument-type STRINGS scanned from source. Everything a \
+         text comparison cannot see — padding, size, a typedef that \
+         changed underneath — abidiff sees. This is the clearest case \
+         for calling a tool rather than deepening ours; the candidate \
+         `signatures_match_debug_info` is that plan";
+      xc_adoption = "mature specialist infrastructure" };
+    { xc_tool = "abidiff (libabigail)";
+      xc_answers = Required_versions_exported;
+      xc_what =
+        "reports symbol-version changes between two builds of a library";
+      xc_beyond =
+        "it compares two LIBRARY builds; our claim compares a consumer's \
+         recorded requirements against one provider. Different pairing, \
+         overlapping evidence — and abidiff also reports the type \
+         changes that motivated the version bump";
+      xc_adoption = "mature specialist infrastructure" };
+    { xc_tool = "abicheck";
+      xc_answers = Declared_symbols_exported;
+      xc_what =
+        "checks an artifact's exported surface against what its \
+         consumers require, across a whole set rather than one pairing";
+      xc_beyond =
+        "it has no notion of a project's DECLARATION — the half that \
+         makes our claim a promise rather than a pairing. Too new for \
+         established adoption, so it is a comparison target rather than \
+         something to depend on";
+      xc_adoption = "emerging tool" };
+    { xc_tool = "ldd -r";
+      xc_answers = Dependencies_provided;
+      xc_what =
+        "resolves a binary's recorded dependencies and reports the ones \
+         that do not resolve, including undefined symbols";
+      xc_beyond =
+        "IT ACTUALLY LOADS. Our claim reasons about RECORDED \
+         dependencies and never asks the loader — the role-3 gap written \
+         up at `native_lib_probe_cmd`. A library can pass every static \
+         check here and fail to load, and this is the cheapest tool that \
+         would notice";
+      xc_adoption = "universal" };
+    { xc_tool = "auditwheel";
+      xc_answers = Dependencies_provided;
+      xc_what =
+        "`auditwheel show` lists the external shared libraries a Python \
+         wheel depends on and the manylinux policy it satisfies";
+      xc_beyond =
+        "POLICY and REPAIR. It judges against a published platform \
+         policy rather than against this world's providers, and it can \
+         vendor the libraries in — changing the artifact, which no claim \
+         of ours does. Python + Linux only";
+      xc_adoption = "production infrastructure" };
+    { xc_tool = "abi3audit";
+      xc_answers = Repack_preserves_api;
+      xc_what =
+        "scans Python packages for violations of the Stable ABI they \
+         claim to target";
+      xc_beyond =
+        "it checks a claim the PACKAGE makes about itself, which is a \
+         narrower and more decidable question than `repack_preserves_api` \
+         — and the reason that claim is unimplemented is exactly that \
+         nobody has stated its scope. abi3audit's scope is stated for \
+         it, by PEP 384";
+      xc_adoption = "real but specialized" };
+    { xc_tool = "rpminspect";
+      xc_answers = Staged_interface_preserved;
+      xc_what =
+        "compares a built RPM against its predecessor, including \
+         artifact-level inspections of the installed payload";
+      xc_beyond =
+        "it compares two RELEASES; ours compares a build tree against \
+         its own staged copy in one run. And it carries dozens of other \
+         inspections — permissions, licences, changelogs — which is what \
+         a distribution needs and a checker of bindings does not";
+      xc_adoption = "production distribution QA" } ]
 
 (** The action columns: the union over BOTH modelled languages, because
     a row's mechanism decides which half it can mark and the emptiness
@@ -1098,6 +1257,12 @@ let sort_overview_rows (rows : overview_row list) : overview_row list =
          variants rather than as separate entries that happen to share a
          name. *)
       row.ov_agreement.ag_slug,
+      (* ALL OF OUR PATTERNS FIRST, then the tools that answer the same
+         claim — so the comparison reads downward: here is what we
+         check, in every mechanism that carries it; here is who else
+         checks it. Putting this key AFTER language would interleave a
+         tool between a claim's own OCaml and Python rows. *)
+      (match row.ov_external with None -> (0, "") | Some x -> (1, x.xc_tool)),
       (match row.ov_mechs with
        | m :: _ ->
            lang_rank (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_lang
@@ -1121,6 +1286,7 @@ let overview_rows ?(provision = Canary_store.Built) () : overview_row list =
              own default language would give, so the reader sees WHAT is
              unreachable rather than a blank. *)
           [ { ov_agreement = r;
+              ov_external = None;
               ov_mechs = [];
               ov_reads = [];
               ov_cells =
@@ -1146,8 +1312,20 @@ let overview_rows ?(provision = Canary_store.Built) () : overview_row list =
                       else x)
               | None -> acc @ [ ([ m ], cells, reads) ])
           |> List.map ~f:(fun (ms, cells, reads) ->
-                 { ov_agreement = r; ov_mechs = ms; ov_reads = reads;
-                   ov_cells = cells }))
+                 { ov_agreement = r; ov_external = None; ov_mechs = ms;
+                   ov_reads = reads; ov_cells = cells }))
+  (* THE EXISTING TOOLS, one row per (tool × claim it answers). Each
+     reuses the claim's FIRST pattern — same kind, same targets, same
+     rooting, because it is the same question — and differs in
+     `implemented at`, which names the tool instead of one of our
+     functions. Sorting puts it next to the claim it mirrors, which is
+     what makes the comparison a side-by-side read. *)
+  |> fun ours ->
+  ours
+  @ List.filter_map external_checkers ~f:(fun xc ->
+        List.find ours ~f:(fun row ->
+            Poly.equal row.ov_agreement.ag_id xc.xc_answers)
+        |> Option.map ~f:(fun row -> { row with ov_external = Some xc }))
   |> sort_overview_rows
 
 
@@ -1322,6 +1500,29 @@ let impl_label (r : agreement_row) : string =
   let family, fn = impl_of r in
   family ^ "·" ^ Option.value fn ~default:"—"
 
+(** THE ROW'S NAME. Ours is the claim's slug; an external row is the
+    same slug suffixed `_ext`, so the two sort and read adjacent and a
+    reader can tell at a glance which is the abstract claim and which is
+    somebody's implementation of it. *)
+let row_slug (row : overview_row) : string =
+  match row.ov_external with
+  | None -> row.ov_agreement.ag_slug
+  | Some _ -> row.ov_agreement.ag_slug ^ "_ext"
+
+(** WHO IMPLEMENTS THIS CHECK — the column that carries the whole
+    difference between our row and a tool's. Ours names a function in
+    this tree; an external row names the tool. *)
+let row_impl_label (row : overview_row) : string =
+  match row.ov_external with
+  | None -> impl_label row.ov_agreement
+  | Some x -> x.xc_tool
+
+(** An external row has not run here, so it has no status of ours. *)
+let row_status_label (row : overview_row) : string =
+  match row.ov_external with
+  | None -> string_of_status (status_of_row row.ov_agreement)
+  | Some _ -> "external"
+
 (* `mech_group_marks` lived here — a five-slot `S···D` string, one
    character per catalogue mechanism. It was deleted on 2026-09-17 when
    [lang_label] / [mech_label] replaced it, and the reason is worth
@@ -1356,7 +1557,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let rows = overview_rows ~provision () in
   let cols = overview_columns () in
   let head =
-    Printf.sprintf "%-4s %-28s %-14s %-36s %-7s %-14s %-7s | %s | " "code"
+    Printf.sprintf "%-4s %-32s %-14s %-36s %-7s %-14s %-7s | %s | " "code"
       "agreement" "kind" "implemented at" "lang" "mech" "object"
       (String.concat ~sep:" "
          (List.map overview_artifact_columns ~f:(fun k ->
@@ -1368,9 +1569,12 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let body =
     List.map rows ~f:(fun row ->
         let r = row.ov_agreement in
-        Printf.sprintf "%-4s %-28s %-14s %s %-7s %-14s %s | %s | %s | %3s | %s"
-          (short_code_of_slug r.ag_slug) r.ag_slug (kind_label r)
-          (pad_display 36 (impl_label r))
+        Printf.sprintf "%-4s %-32s %-14s %s %-7s %-14s %s | %s | %s | %3s | %s"
+          (match row.ov_external with
+           | None -> short_code_of_slug r.ag_slug
+           | Some _ -> short_code_of_slug r.ag_slug ^ "*")
+          (row_slug row) (kind_label r)
+          (pad_display 36 (row_impl_label row))
           (lang_label row.ov_mechs) (mech_label row.ov_mechs)
           (pad_display 7 (format_marks r))
           (String.concat ~sep:" "
@@ -1383,7 +1587,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
                   let w = String.length (Canary_basic.string_of_action a) in
                   pad_display w (recovery_mark_char mk))))
           (match row_lag row with Some d -> Int.to_string d | None -> "-")
-          (string_of_status (status_of_row r)))
+          (row_status_label row))
   in
   String.concat ~sep:"\n"
     (Printf.sprintf "agreement overview — over a %s world"
@@ -1441,6 +1645,22 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: "kind       what the claim ASSERTS — the six values are glossed \
          just below,"
      :: "           next to the table that uses them."
+     :: "`_ext` rows an EXISTING TOOL that answers the same claim — same \
+         kind, same"
+     :: "           targets, same rooting, because it is the same \
+         question. The code"
+     :: "           carries `*` and `implemented at` names the tool \
+         instead of one of"
+     :: "           our functions. `decided` and `blame` are empty: \
+         nothing here has run"
+     :: "           it. One row per (tool × claim), so a tool answering \
+         four claims"
+     :: "           appears four times — the duplication IS the fact \
+         that it covers"
+     :: "           four. The table below the candidates says what each \
+         does BEYOND"
+     :: "           our claim, which is what filing a tool under one \
+         claim would hide."
      :: ""
      :: "Why the table is shaped this way — the row-order key, why a \
          code repeats, why an"
@@ -2617,7 +2837,14 @@ let pp_saturation () : string =
 (** Run every rule over every row. [[]] = the table obeys its own
     laws. *)
 let audit_rows ?(provision = Canary_store.Built) () : (string * string) list =
-  List.concat_map (overview_rows ~provision ()) ~f:(fun row ->
+  (* OUR ROWS ONLY. An external row reuses its claim's kind, targets and
+     rooting, so every law would reach the same verdict twice and a
+     failure would be reported once per tool that answers it. The laws
+     are about the claim, and the claim has its own row. *)
+  List.concat_map
+    (List.filter (overview_rows ~provision ()) ~f:(fun r ->
+         Option.is_none r.ov_external))
+    ~f:(fun row ->
       List.filter_map row_rules ~f:(fun rule ->
           Option.map (rule.rr_check row) ~f:(fun c -> (rule.rr_name, c))))
 
@@ -2718,6 +2945,83 @@ let pp_candidate_table () : string =
   add "Kinds no implemented agreement covers, and a candidate would: %s\n"
     (if List.is_empty candidate_only then "none"
      else String.concat ~sep:", " candidate_only);
+  Buffer.contents b
+
+(** THE TOOLS, TRANSPOSED (2026-09-21, user: "It's also a good way to
+    understand their roles").
+
+    The overview reads by CLAIM — here is ours, here is who else answers
+    it. This reads by TOOL: what each covers, and what it does beyond
+    the claim it is filed under. Both are the same list inverted, so
+    neither can drift from the other.
+
+    The last line is the one that matters for the paper's argument, and
+    it is computed rather than asserted: how many of our claims no
+    existing tool answers. The related-work doc draws that gap as an
+    illustrative bar chart; this counts it. *)
+let pp_external_tools () : string =
+  let b = Buffer.create 4096 in
+  let add fmt = Printf.ksprintf (Buffer.add_string b) fmt in
+  let tools =
+    List.map external_checkers ~f:(fun x -> x.xc_tool)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  add "existing tools that answer one of these claims (%d tools, %d rows)\n\n"
+    (List.length tools) (List.length external_checkers);
+  List.iter tools ~f:(fun t ->
+      let mine = List.filter external_checkers ~f:(fun x -> String.equal x.xc_tool t) in
+      let adoption =
+        match mine with x :: _ -> x.xc_adoption | [] -> ""
+      in
+      add "%s  — %s\n" t adoption;
+      List.iter mine ~f:(fun x ->
+          add "    answers  %s\n" (string_of_agreement_id x.xc_answers);
+          add "      what   %s\n" x.xc_what;
+          add "      BEYOND %s\n" x.xc_beyond);
+      add "\n");
+  let answered =
+    List.map external_checkers ~f:(fun x -> x.xc_answers)
+    |> List.dedup_and_sort ~compare:Poly.compare
+  in
+  let unanswered =
+    List.filter agreement_registry ~f:(fun r ->
+        not (List.mem answered r.ag_id ~equal:Poly.equal))
+  in
+  add "%d of our %d claims have an existing external answerer.\n"
+    (List.length answered) (List.length agreement_registry);
+  add "NO existing tool answers: %s\n\n"
+    (if List.is_empty unanswered then "none"
+     else
+       String.concat ~sep:", " (List.map unanswered ~f:(fun r -> r.ag_slug)));
+  (* BY KIND, because the interesting pattern is not a count.
+     COMPUTED rather than asserted: the first prose version of this
+     claimed "seven of the eight landed claims have a mature external
+     answerer", and writing the list down said otherwise. Whatever the
+     numbers become, they will be the numbers. *)
+  add "by kind — answered / total:\n";
+  let kinds =
+    List.map agreement_registry ~f:(fun r ->
+        string_of_agreement_kind r.ag.ag_kind)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  List.iter kinds ~f:(fun k ->
+      let of_kind =
+        List.filter agreement_registry ~f:(fun r ->
+            String.equal (string_of_agreement_kind r.ag.ag_kind) k)
+      in
+      let n =
+        List.count of_kind ~f:(fun r ->
+            List.mem answered r.ag_id ~equal:Poly.equal)
+      in
+      add "  %-14s %d / %d\n" k n (List.length of_kind));
+  add
+    "\nWhat that split says: existing tools answer ADMISSIBILITY — would \n\
+     these two have been accepted together — because both sides are \n\
+     artifacts they can read. They do not answer PROMISE, and they \n\
+     cannot: the second side is the PROJECT'S DECLARATION, and no tool \n\
+     outside this one has it. That is a sharper statement of the gap \n\
+     than a count, and it is a fact about this registry rather than a \n\
+     paragraph in a paper.\n";
   Buffer.contents b
 
 (** ONE PLACE FOR EVERYTHING THE OVERVIEW CANNOT SHOW (2026-09-17,
