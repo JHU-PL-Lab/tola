@@ -1396,6 +1396,66 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         screens of rows is meeting them too late. The detailed prose
         that used to sit in the trailing legend moved HERE rather than
         being copied: one place, before the data that uses it. *)
+     :: "ROW ORDER  trigger action, then agreement, then language, then \
+         mechanism —"
+     :: "           so a claim's mechanisms sit together. Unimplemented \
+         claims sort last."
+     :: "code       the AGREEMENT's identity, so a repeated code is ONE \
+         claim with"
+     :: "           several patterns, shown adjacent. It is the key to \
+         the result"
+     :: "           table's check-column headings."
+     :: "one row    per distinct PATTERN: a claim whose firing differs \
+         between mechanisms"
+     :: "           gets a row each; a uniform claim stays one row and \
+         leaves `mech` empty."
+     :: "▣          an ARTIFACT the claim ranges over — its target. A \
+         declaration is not"
+     :: "           an artifact, which is why some claims show one."
+     :: "R · D · ◉  R = the action whose rule RAN; D = a method FIRES \
+         here; ◉ = both."
+     :: "           A row with no R roots in no action of this graph."
+     :: "impl. at   `<module>·<function>` — the EVALUATOR, in \
+         canary_agreement_<module>.ml."
+     :: "           `·—` = none yet, and the module names the file it \
+         would go in. The"
+     :: "           agreement's METADATA is `let <slug> : agreement` in \
+         the same file;"
+     :: "           `canary checks --agreement NAME` prints it as \
+         `declared at`."
+     :: "lang mech  an EMPTY cell means that axis does not narrow the \
+         claim — every"
+     :: "object     modelled language, every mechanism of this row's \
+         language, or every"
+     :: "           object format. A value appears only where the row is \
+         a strict subset;"
+     :: "           `none` in lang and mech = no mechanism carries this \
+         at all."
+     :: "lag        action columns from the root to the nearest firing. \
+         NOT the distance"
+     :: "           between the two SIDES of a comparison, which is a \
+         different measure."
+     (* `kind` is the one column with no prior vocabulary, so it gets
+        the glossary immediately above the table rather than a line
+        here. A pointer, so the legend is still a complete list. *)
+     :: "kind       what the claim ASSERTS — the six values are glossed \
+         just below,"
+     :: "           next to the table that uses them."
+     :: ""
+     :: "Why the table is shaped this way — the row-order key, why a \
+         code repeats, why an"
+     :: "empty cell is the right notation, why the rooting is \
+         re-languaged per row — is"
+     :: "doc/canary/design/matrix.md. One note that belongs here \
+         because it misleads in"
+     :: "the cell: `soname` is an ELF word for a format-neutral fact, \
+         the library's own"
+     :: "recorded identity — `DT_SONAME` on ELF, the `LC_ID_DYLIB` \
+         install name on Mach-O,"
+     :: "which the inspector writes into one field. Those claims are \
+         NOT elf-only; the two"
+     :: "version-node ones are."
+     :: ""
      :: "KIND — what the claim ASSERTS. Not what it is held against \
          (the record's `against`),"
      :: "       and not whose rule it recovers (that is the R column)."
@@ -1425,60 +1485,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: "  record's `against` are two fields."
      :: ""
      :: head :: body
-    @ [ "";
-        "ROW ORDER  trigger action, then agreement, then language, then \
-         mechanism —";
-        "           so a claim's mechanisms sit together. Unimplemented \
-         claims sort last.";
-        "code       the AGREEMENT's identity, so a repeated code is ONE \
-         claim with";
-        "           several patterns, shown adjacent. It is the key to \
-         the result";
-        "           table's check-column headings.";
-        "one row    per distinct PATTERN: a claim whose firing differs \
-         between mechanisms";
-        "           gets a row each; a uniform claim stays one row and \
-         leaves `mech` empty.";
-        "▣          an ARTIFACT the claim ranges over — its target. A \
-         declaration is not";
-        "           an artifact, which is why some claims show one.";
-        "R · D · ◉  R = the action whose rule RAN; D = a method FIRES \
-         here; ◉ = both.";
-        "           A row with no R roots in no action of this graph.";
-        "impl. at   `<module>·<function>` — the EVALUATOR, in \
-         canary_agreement_<module>.ml.";
-        "           `·—` = none yet, and the module names the file it \
-         would go in. The";
-        "           agreement's METADATA is `let <slug> : agreement` in \
-         the same file;";
-        "           `canary checks --agreement NAME` prints it as \
-         `declared at`.";
-        "lang mech  an EMPTY cell means that axis does not narrow the \
-         claim — every";
-        "object     modelled language, every mechanism of this row's \
-         language, or every";
-        "           object format. A value appears only where the row is \
-         a strict subset;";
-        "           `none` in lang and mech = no mechanism carries this \
-         at all.";
-        "lag        action columns from the root to the nearest firing. \
-         NOT the distance";
-        "           between the two SIDES of a comparison, which is a \
-         different measure.";
-        "";
-        "Why the table is shaped this way — the row-order key, why a \
-         code repeats, why an";
-        "empty cell is the right notation, why the rooting is \
-         re-languaged per row — is";
-        "doc/canary/design/matrix.md. One note that belongs here \
-         because it misleads in";
-        "the cell: `soname` is an ELF word for a format-neutral fact, \
-         the library's own";
-        "recorded identity — `DT_SONAME` on ELF, the `LC_ID_DYLIB` \
-         install name on Mach-O,";
-        "which the inspector writes into one field. Those claims are \
-         NOT elf-only; the two";
-        "version-node ones are." ])
+    @ [ "" ])
 
 
 (** The fill list — every [Declared] cell (fires and is evaluated, but

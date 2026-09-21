@@ -1914,6 +1914,58 @@ let render_html (m : t) ~(generated_at : string) : string =
      Printf.sprintf "<p class=\"verdict%s\">%s</p>"
        (if bad then " bad" else "")
        (esc v))
+    ^ "<dl class=\"legend\">"
+    ^ "<dt>row order</dt><dd>trigger action, then agreement, then language, \
+       then mechanism — so a claim's mechanisms sit together. \
+       Unimplemented claims sort last.</dd>"
+    ^ "<dt>code</dt><dd>the AGREEMENT's identity, so a repeated code is one \
+       claim with several patterns, shown adjacent. It is the key to the \
+       result matrix's check-column headings.</dd>"
+    ^ "<dt>one row per pattern</dt><dd>a claim whose firing differs between \
+       mechanisms gets a row each; a uniform claim stays one row and says \
+       so by leaving <b>mech</b> empty.</dd>"
+    ^ "<dt>&#9635;</dt><dd>an ARTIFACT the claim ranges over — its target. \
+       A declaration is not an artifact, which is why some claims show \
+       one.</dd>"
+    ^ "<dt>R &middot; D &middot; R+D</dt><dd>R = the action whose rule RAN \
+       (hover for the tool and the artifact); D = a method FIRES here; R+D \
+       = both. A row with no R roots in no action of this graph.</dd>"
+    ^ "<dt>implemented at</dt><dd><code>&lt;module&gt;&middot;&lt;function&gt;</code> \
+       — the EVALUATOR, in \
+       <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code>. \
+       A RED cell has no evaluator yet and names the file it would go in. \
+       The tooltip also names where the agreement's METADATA is declared; \
+       both are derived, neither stored.</dd>"
+    ^ "<dt>lang &middot; mech &middot; object</dt><dd>an EMPTY cell means \
+       that axis does not narrow the claim — every modelled language, \
+       every mechanism of this row's language, or every object format. A \
+       value appears only where the row is a strict subset; \
+       <code>none</code> in lang and mech means no mechanism carries this \
+       at all.</dd>"
+    ^ "<dt>lag</dt><dd>action columns from the root to the nearest firing. \
+       NOT the distance between the two SIDES of a comparison, which is a \
+       different measure.</dd>"
+    (* `kind` is the one column with no prior vocabulary, so it gets the
+       glossary immediately above the table rather than a line here. A
+       pointer, so the legend is still a complete list of columns. *)
+    ^ "<dt>kind</dt><dd>what the claim ASSERTS — the six values are \
+       glossed just below, next to the table that uses them.</dd>"
+    ^ "</dl>"
+    ^ "<p class=\"kq\">Why the table is shaped this way — the row-order \
+       key, why a code repeats, why an empty cell is the right notation, \
+       and why the rooting is re-languaged per row — is \
+       <code>doc/canary/design/matrix.md</code>. \
+       One note that belongs here because it misleads in the cell: \
+       <code>soname</code> is an ELF word for a format-neutral fact, the \
+       library's own recorded identity — <code>DT_SONAME</code> on ELF and \
+       the <code>LC_ID_DYLIB</code> install name on Mach-O, which the \
+       inspector writes into one field. Those claims are NOT elf-only; the \
+       two version-node ones are.</p>"
+    ^ "<p class=\"kq\">blame: "
+    ^ String.concat ~sep:" &middot; "
+        (List.map blame_gloss ~f:(fun (w, g) ->
+             "<b>" ^ esc w ^ "</b> " ^ esc g))
+    ^ "</p>"
     ^ "<div class=\"kinds\"><b>kind</b> — what the claim ASSERTS; not what \
        it is held against (the record's <code>against</code>), and not \
        whose rule it recovers (the <b>R</b> column)."
@@ -2038,53 +2090,6 @@ let render_html (m : t) ~(generated_at : string) : string =
        The `kind` entry is GONE from here: it is the prepended glossary
        above the table. Leaving both was a duplication introduced the
        same day the glossary landed. *)
-    ^ "<dl class=\"legend\">"
-    ^ "<dt>row order</dt><dd>trigger action, then agreement, then language, \
-       then mechanism — so a claim's mechanisms sit together. \
-       Unimplemented claims sort last.</dd>"
-    ^ "<dt>code</dt><dd>the AGREEMENT's identity, so a repeated code is one \
-       claim with several patterns, shown adjacent. It is the key to the \
-       result matrix's check-column headings.</dd>"
-    ^ "<dt>one row per pattern</dt><dd>a claim whose firing differs between \
-       mechanisms gets a row each; a uniform claim stays one row and says \
-       so by leaving <b>mech</b> empty.</dd>"
-    ^ "<dt>&#9635;</dt><dd>an ARTIFACT the claim ranges over — its target. \
-       A declaration is not an artifact, which is why some claims show \
-       one.</dd>"
-    ^ "<dt>R &middot; D &middot; R+D</dt><dd>R = the action whose rule RAN \
-       (hover for the tool and the artifact); D = a method FIRES here; R+D \
-       = both. A row with no R roots in no action of this graph.</dd>"
-    ^ "<dt>implemented at</dt><dd><code>&lt;module&gt;&middot;&lt;function&gt;</code> \
-       — the EVALUATOR, in \
-       <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code>. \
-       A RED cell has no evaluator yet and names the file it would go in. \
-       The tooltip also names where the agreement's METADATA is declared; \
-       both are derived, neither stored.</dd>"
-    ^ "<dt>lang &middot; mech &middot; object</dt><dd>an EMPTY cell means \
-       that axis does not narrow the claim — every modelled language, \
-       every mechanism of this row's language, or every object format. A \
-       value appears only where the row is a strict subset; \
-       <code>none</code> in lang and mech means no mechanism carries this \
-       at all.</dd>"
-    ^ "<dt>lag</dt><dd>action columns from the root to the nearest firing. \
-       NOT the distance between the two SIDES of a comparison, which is a \
-       different measure.</dd>"
-    ^ "</dl>"
-    ^ "<p class=\"kq\">Why the table is shaped this way — the row-order \
-       key, why a code repeats, why an empty cell is the right notation, \
-       and why the rooting is re-languaged per row — is \
-       <code>doc/canary/design/matrix.md</code>. \
-       One note that belongs here because it misleads in the cell: \
-       <code>soname</code> is an ELF word for a format-neutral fact, the \
-       library's own recorded identity — <code>DT_SONAME</code> on ELF and \
-       the <code>LC_ID_DYLIB</code> install name on Mach-O, which the \
-       inspector writes into one field. Those claims are NOT elf-only; the \
-       two version-node ones are.</p>"
-    ^ "<p class=\"kq\">blame: "
-    ^ String.concat ~sep:" &middot; "
-        (List.map blame_gloss ~f:(fun (w, g) ->
-             "<b>" ^ esc w ^ "</b> " ^ esc g))
-    ^ "</p>"
   in
   let header =
     (* the two identity columns are FROZEN (2026-08-20, user: the page is
