@@ -976,7 +976,30 @@ type external_checker = {
   xc_beyond : string;
       (** what it does that our claim does not — the feature we would
           otherwise overlook by filing it under one claim *)
-  xc_adoption : string;  (** the adoption class, from related/adoption-in-practice.md *)
+  xc_adoption : string;
+      (** the adoption class. Mostly from related/adoption-in-practice.md;
+          where a row is NOT from that survey it says so, because the
+          paper's comparison is against surveyed checkers and a system
+          utility is a different population (2026-09-21, user: "I don't
+          treat `ldd` as external research tool"). *)
+  xc_langs : Canary_lang.lang list;
+      (** THE TOOL'S OWN reach, not the claim's. [[]] = language-
+          agnostic, following the table's convention that an empty cell
+          does not narrow — `abicompat` reads ELF binaries and has no
+          opinion about OCaml, while `auditwheel` is Python only.
+
+          This exists because the first version INHERITED the claim's
+          axes (2026-09-21, user: "why do we have lang non-empty for
+          these tool rows?"). An external row showed `ocaml cstubs`
+          because the claim's first pattern did, which said something
+          false about the tool. *)
+  xc_formats : Canary_store.object_format list;
+      (** likewise the tool's own: libabigail is ELF+DWARF and does not
+          read Mach-O, so an empty `object` cell on its row — meaning
+          "ranges over both" — was a lie (user: "the object column for
+          these tools e.g. abicompact, is empty, but is that only on one
+          platform?"). Never empty: a tool that genuinely worked on both
+          would list both. *)
 }
 
 type overview_row = {
@@ -1033,7 +1056,11 @@ let external_checkers : external_checker list =
          re-implemented exactly for symbol NAMES; abicompat reads DWARF \
          and catches a changed struct layout behind an unchanged \
          spelling, which no symbol table can show";
-      xc_adoption = "mature specialist infrastructure" };
+      xc_adoption = "mature specialist infrastructure";
+      (* ELF + DWARF. libabigail does not read Mach-O, so this row
+         must SAY elf even though the claim it answers is
+         format-neutral. Language-agnostic: it reads binaries. *)
+      xc_langs = []; xc_formats = [ Canary_store.Elf ] };
     { xc_tool = "abidiff (libabigail)";
       xc_answers = Signatures_agree;
       xc_what =
@@ -1046,7 +1073,8 @@ let external_checkers : external_checker list =
          changed underneath — abidiff sees. This is the clearest case \
          for calling a tool rather than deepening ours; the candidate \
          `signatures_match_debug_info` is that plan";
-      xc_adoption = "mature specialist infrastructure" };
+      xc_adoption = "mature specialist infrastructure";
+      xc_langs = []; xc_formats = [ Canary_store.Elf ] };
     { xc_tool = "abidiff (libabigail)";
       xc_answers = Required_versions_exported;
       xc_what =
@@ -1056,7 +1084,8 @@ let external_checkers : external_checker list =
          recorded requirements against one provider. Different pairing, \
          overlapping evidence — and abidiff also reports the type \
          changes that motivated the version bump";
-      xc_adoption = "mature specialist infrastructure" };
+      xc_adoption = "mature specialist infrastructure";
+      xc_langs = []; xc_formats = [ Canary_store.Elf ] };
     { xc_tool = "abicheck";
       xc_answers = Declared_symbols_exported;
       xc_what =
@@ -1067,7 +1096,12 @@ let external_checkers : external_checker list =
          makes our claim a promise rather than a pairing. Too new for \
          established adoption, so it is a comparison target rather than \
          something to depend on";
-      xc_adoption = "emerging tool" };
+      xc_adoption = "emerging tool";
+      (* ⚠ formats ASSERTED, not verified: the ABI-checking
+         tools in this space are ELF, and the survey says only
+         that abicheck is too new for established adoption.
+         Narrow it if that turns out wrong. *)
+      xc_langs = []; xc_formats = [ Canary_store.Elf ] };
     { xc_tool = "ldd -r";
       xc_answers = Dependencies_provided;
       xc_what =
@@ -1079,7 +1113,12 @@ let external_checkers : external_checker list =
          up at `native_lib_probe_cmd`. A library can pass every static \
          check here and fail to load, and this is the cheapest tool that \
          would notice";
-      xc_adoption = "universal" };
+      xc_adoption =
+        "system utility — NOT from the related-work survey (2026-09-21, \
+         user: \"I don't treat `ldd` as external research tool\"). Kept \
+         because its BEYOND is the most useful line here, and marked \
+         because the paper's comparison is against surveyed checkers";
+      xc_langs = []; xc_formats = [ Canary_store.Elf ] };
     { xc_tool = "auditwheel";
       xc_answers = Dependencies_provided;
       xc_what =
@@ -1090,7 +1129,11 @@ let external_checkers : external_checker list =
          policy rather than against this world's providers, and it can \
          vendor the libraries in — changing the artifact, which no claim \
          of ours does. Python + Linux only";
-      xc_adoption = "production infrastructure" };
+      xc_adoption = "production infrastructure";
+      (* Python wheels on Linux — both axes real, both were
+         being inherited from the claim before. *)
+      xc_langs = [ Canary_lang.Python ];
+      xc_formats = [ Canary_store.Elf ] };
     { xc_tool = "abi3audit";
       xc_answers = Repack_preserves_api;
       xc_what =
@@ -1102,7 +1145,11 @@ let external_checkers : external_checker list =
          — and the reason that claim is unimplemented is exactly that \
          nobody has stated its scope. abi3audit's scope is stated for \
          it, by PEP 384";
-      xc_adoption = "real but specialized" };
+      xc_adoption = "real but specialized";
+      (* Python-specific but format-agnostic: it reads wheels,
+         which exist for every platform. *)
+      xc_langs = [ Canary_lang.Python ];
+      xc_formats = all_formats };
     { xc_tool = "rpminspect";
       xc_answers = Staged_interface_preserved;
       xc_what =
@@ -1113,7 +1160,8 @@ let external_checkers : external_checker list =
          its own staged copy in one run. And it carries dozens of other \
          inspections — permissions, licences, changelogs — which is what \
          a distribution needs and a checker of bindings does not";
-      xc_adoption = "production distribution QA" } ]
+      xc_adoption = "production distribution QA";
+      xc_langs = []; xc_formats = [ Canary_store.Elf ] } ]
 
 (** The action columns: the union over BOTH modelled languages, because
     a row's mechanism decides which half it can mark and the emptiness
@@ -1517,6 +1565,47 @@ let row_impl_label (row : overview_row) : string =
   | None -> impl_label row.ov_agreement
   | Some x -> x.xc_tool
 
+(* THE AXIS CELLS COME FROM WHOEVER IMPLEMENTS THE ROW (2026-09-21,
+   user: "why do we have lang non-empty for these tool rows?" and "the
+   object column for these tools e.g. abicompact, is empty, but is that
+   only on one platform?").
+
+   Both were bugs, and the same bug: an external row inherited the
+   CLAIM's pattern, so it showed `ocaml cstubs` because the claim's
+   first pattern did, and an empty `object` — meaning "ranges over both
+   formats" — because the claim ranges over both. Neither said anything
+   true about the tool. abicompat has no opinion about OCaml and cannot
+   read Mach-O; auditwheel is Python and Linux.
+
+   The convention is unchanged and now applies to the tool: an empty
+   cell means that axis does not narrow THIS ROW. For our rows the
+   narrowing is the claim's; for a tool's row it is the tool's. *)
+let row_lang_label (row : overview_row) : string =
+  match row.ov_external with
+  | None -> lang_label row.ov_mechs
+  | Some x ->
+      if List.is_empty x.xc_langs then ""
+      else
+        String.concat ~sep:","
+          (List.map x.xc_langs ~f:Canary_lang.string_of_lang)
+
+(** A tool is not mechanism-specific in any way this table models — it
+    reads artifacts, not bindings — so the cell is empty rather than
+    borrowing the claim's. *)
+let row_mech_label (row : overview_row) : string =
+  match row.ov_external with
+  | None -> mech_label row.ov_mechs
+  | Some _ -> ""
+
+let row_format_label (row : overview_row) : string =
+  match row.ov_external with
+  | None -> format_marks row.ov_agreement
+  | Some x ->
+      if List.length x.xc_formats >= List.length all_formats then ""
+      else
+        String.concat ~sep:","
+          (List.map x.xc_formats ~f:Canary_store.string_of_object_format)
+
 (** An external row has not run here, so it has no status of ours. *)
 let row_status_label (row : overview_row) : string =
   match row.ov_external with
@@ -1575,8 +1664,8 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
            | Some _ -> short_code_of_slug r.ag_slug ^ "*")
           (row_slug row) (kind_label r)
           (pad_display 36 (row_impl_label row))
-          (lang_label row.ov_mechs) (mech_label row.ov_mechs)
-          (pad_display 7 (format_marks r))
+          (row_lang_label row) (row_mech_label row)
+          (pad_display 7 (row_format_label row))
           (String.concat ~sep:" "
              (List.map overview_artifact_columns ~f:(fun k ->
                   pad_display 3
@@ -2682,9 +2771,16 @@ let row_rules : row_rule list =
       rr_says =
         "a row with an evaluator names it in `implemented at`, and a \
          row without one shows no function — the red cell must mean \
-         what it says";
+         what it says (OUR rows: an external row names a tool)";
       rr_check =
         (fun row ->
+          (* SCOPE, stated in the law rather than in the runner. This
+             one is about OUR implementation; an external row names a
+             tool and is never red. Before 2026-09-21 the runner
+             skipped external rows wholesale, which is how their own
+             errors went unchecked. *)
+          if Option.is_some row.ov_external then None
+          else
           let r = row.ov_agreement in
           let has_eval =
             List.exists r.ag.ag_methods ~f:(fun m -> Option.is_some m.m_eval)
@@ -2701,6 +2797,58 @@ let row_rules : row_rule list =
                 (Printf.sprintf
                    "%s names the evaluator %s but has none wired" r.ag_slug f)
           | _ -> None) };
+    { rr_name = "external_reach_is_declared_and_possible";
+      rr_says =
+        "a tool's row states the TOOL's reach, not the claim's: at \
+         least one object format, and neither a format nor a language \
+         the claim it answers cannot have";
+      rr_check =
+        (fun row ->
+          match row.ov_external with
+          | None -> None
+          | Some x ->
+              let claim = row.ov_agreement in
+              let bad_fmt =
+                List.filter x.xc_formats ~f:(fun f ->
+                    not
+                      (List.exists claim.ag_formats
+                         ~f:(Canary_store.equal_object_format f)))
+              in
+              let carried =
+                List.filter_map (carrying_mechanisms claim) ~f:(fun (m, ok) ->
+                    if ok then
+                      Some
+                        (Canary_mechanism.info_of_mechanism m)
+                          .Canary_mechanism.mi_lang
+                    else None)
+              in
+              let bad_lang =
+                List.filter x.xc_langs ~f:(fun l ->
+                    not (List.mem carried l ~equal:Poly.equal))
+              in
+              if List.is_empty x.xc_formats then
+                Some
+                  (Printf.sprintf
+                     "%s (%s) declares no object format — an empty cell \
+                      would read as `both`, which is what the bug was"
+                     claim.ag_slug x.xc_tool)
+              else if not (List.is_empty bad_fmt) then
+                Some
+                  (Printf.sprintf
+                     "%s (%s) claims a format the claim does not range \
+                      over: %s"
+                     claim.ag_slug x.xc_tool
+                     (String.concat ~sep:","
+                        (List.map bad_fmt ~f:Canary_store.string_of_object_format)))
+              else if not (List.is_empty bad_lang) then
+                Some
+                  (Printf.sprintf
+                     "%s (%s) claims a language no mechanism carries the \
+                      claim in: %s"
+                     claim.ag_slug x.xc_tool
+                     (String.concat ~sep:","
+                        (List.map bad_lang ~f:Canary_lang.string_of_lang)))
+              else None) };
     { rr_name = "a_row_does_something";
       rr_says =
         "every row is either rooted somewhere or fires somewhere; a row \
@@ -2837,14 +2985,21 @@ let pp_saturation () : string =
 (** Run every rule over every row. [[]] = the table obeys its own
     laws. *)
 let audit_rows ?(provision = Canary_store.Built) () : (string * string) list =
-  (* OUR ROWS ONLY. An external row reuses its claim's kind, targets and
-     rooting, so every law would reach the same verdict twice and a
-     failure would be reported once per tool that answers it. The laws
-     are about the claim, and the claim has its own row. *)
-  List.concat_map
-    (List.filter (overview_rows ~provision ()) ~f:(fun r ->
-         Option.is_none r.ov_external))
-    ~f:(fun row ->
+  (* EVERY ROW (2026-09-21, user: "why doesn't our agreement table
+     checker find these errors?").
+
+     It used to filter external rows out here, and that is exactly why
+     it found none of them: the exemption was written in the same commit
+     that introduced the rows, justified by the five laws that existed
+     at the time, and became a blanket skip that no later law could see
+     past. A checker whose scope excludes the new thing reports success
+     about it forever.
+
+     Now the audit runs over everything and each LAW states its own
+     scope — the ones about our implementation return [None] for an
+     external row, visibly, in one line each. Adding a law now covers
+     external rows unless it says otherwise, which is the right default. *)
+  List.concat_map (overview_rows ~provision ()) ~f:(fun row ->
       List.filter_map row_rules ~f:(fun rule ->
           Option.map (rule.rr_check row) ~f:(fun c -> (rule.rr_name, c))))
 

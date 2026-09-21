@@ -4473,11 +4473,14 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
               with
               | Some glossary, Some first_row -> glossary < first_row
               | _ -> false)
+          (* the blank count reads the ROW's labels, not the claim's —
+             an external row's axes are the TOOL's, and counting the
+             claim's here is the same mistake the renderer made *)
           && count "class=\"lm\"></td>"
              = List.count rows ~f:(fun (row : overview_row) ->
-                   String.is_empty (lang_label row.ov_mechs))
+                   String.is_empty (row_lang_label row))
                + List.count rows ~f:(fun (row : overview_row) ->
-                     String.is_empty (mech_label row.ov_mechs))
+                     String.is_empty (row_mech_label row))
           && List.for_all agreement_registry ~f:(fun r ->
                  String.is_substring h
                    ~substring:

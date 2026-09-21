@@ -2063,10 +2063,14 @@ let render_html (m : t) ~(generated_at : string) : string =
              ^ esc (CR.row_slug row) ^ "</td><td class=\"kind\">"
              ^ esc (CR.kind_label r)
              ^ "</td>" ^ impl_cell ^ "<td class=\"lm\">"
-             ^ esc (CR.lang_label row.CR.ov_mechs)
+             (* the axis cells state THIS ROW's reach — the claim's for
+                ours, the tool's for an external row. They used to
+                inherit the claim's in both cases, which said something
+                false about every tool. *)
+             ^ esc (CR.row_lang_label row)
              ^ "</td><td class=\"lm\">"
-             ^ esc (CR.mech_label row.CR.ov_mechs)
-             ^ "</td><td class=\"mk\">" ^ esc (CR.format_marks r) ^ "</td>"
+             ^ esc (CR.row_mech_label row)
+             ^ "</td><td class=\"mk\">" ^ esc (CR.row_format_label row) ^ "</td>"
              (* the TARGET artifacts — what the claim ranges over *)
              ^ String.concat ~sep:""
                  (List.map CR.overview_artifact_columns ~f:(fun k ->
