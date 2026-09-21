@@ -129,12 +129,15 @@ What would have to change, in order:
    `check_post : output_dir:string -> variant_key:string -> bool` close
    over the local filesystem, so they would run on the host while the
    files sit on the mac. This is the SAME boundary
-   [`design/check_evaluation.md`](design/check_evaluation.md) records for
+   [`design/action_model.md`](design/action_model.md) §§4–5 records for
    the GH backend, where a closure cannot cross into rendered YAML and a
    green CI job therefore means only "every command exited 0". **One fix
-   serves both**: a check's predicate and its rendering must come from
-   the same constructor. `inspect` is already on the right side — it
-   returns a command string, which crosses fine.
+   serves both**, and it is smaller than it looks: `check_pre` carries no
+   project logic at all, and every project-supplied `check_post` is the
+   one `pin_check_post` compositor, which splits into a postcondition and
+   a world assertion. The ordered plan is that doc's §9. `inspect` is
+   already on the right side — it returns a command string, which crosses
+   fine.
 3. **Evidence has to come back.** The evaluators read `inspect.json` from
    local paths, so either the project's `_out` subtree syncs after the
    steps that write evidence, or `resolve_input` learns a remote
@@ -294,7 +297,7 @@ template, mechanism as a derivation axis — each pinned; details in
     whether slow mode needs anything beyond today's default-marker table
     plus per-action overrides.
     ⚠ This is the same closure boundary §2.1 and
-    [`design/check_evaluation.md`](design/check_evaluation.md) describe.
+    [`design/action_model.md`](design/action_model.md) §§4–5 describe.
 12. [ ] **Attribution — from "which check failed" to "who is to blame"**
     (2026-09-03). What EXISTS: which claim confirmed a failure is
     persisted in the verdict marker (pinned by
@@ -361,12 +364,14 @@ world). Not done:
   enumeration — every cell IS an action in the graph, and the coverage
   pin becomes an enumeration invariant.
   **This is the same closure boundary as §2.1 and step 11**, and
-  [`design/check_evaluation.md`](design/check_evaluation.md) records what
-  is cheap (`check_post` is already file tests plus one shell command)
-  versus what is not (expectation evaluation parses `inspect.json` and
-  drives the comparators), plus the one constraint: a check's predicate
-  and its rendering must come from the SAME constructor, never two
-  hand-written forms.
+  [`design/action_model.md`](design/action_model.md) records what is cheap
+  (`check_post` is already file tests plus one shell command) versus what
+  is not (expectation evaluation parses `inspect.json` and drives the
+  comparators), plus the one constraint: a check's predicate and its
+  rendering must come from the SAME constructor, never two hand-written
+  forms. That doc's §7 also argues this item and the `probe_lib` umbrella
+  are ONE design rather than two, and its §9 sequences both behind a
+  single locator vocabulary.
 - **Action/artifact property unification** — `build_deps_of`,
   `ax_follows`, `ax_runtime`, `c_runtime`/`cxx_abi` and probe location
   all sit at the action↔artifact boundary.

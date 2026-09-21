@@ -106,7 +106,7 @@ All six stages now have a standalone doc.
 | File | Topic |
 | ---- | ----- |
 | [index.md](design/index.md) | **The design narrative** (not the doc map): vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
-| [action_model.md](design/action_model.md) | **What an action IS, and what `_post` means** (2026-09-16) — a hook is a MOMENT, not a specification of what runs at it; the action × declaration join that a hook needs (landed, pass 2); `probe_lib` as three roles wearing one name; the three locator vocabularies that block deriving an inspection |
+| [action_model.md](design/action_model.md) | **What an action IS, what happens at its EDGES, and who decides** (2026-09-16; absorbed `check_evaluation.md` 2026-09-21) — a hook is a MOMENT, not a specification of what runs at it; the action × declaration join a hook needs (landed, pass 2); why the `check_pre`/`check_post` closures go (`check_pre` carries no project logic; every project `check_post` is one compositor) and the seam with `agreement/` that the work must not cross; the umbrella and `[Pre; Action; Post]` as ONE design; the three locator vocabularies that block all of it; §9 the ordered plan |
 | [action_playbook.md](design/action_playbook.md) | *How-to*: **adding an action** — the fork (new action vs new artifact kind on an existing one), the ten touch points, the lighter extension checklist, and what two worked examples taught. The model it realizes is `action_model.md`; its refactoring plan moved to `backlog.md` §52 |
 | [matrix.md](design/matrix.md) | The result matrix — what a row is and what names it, plus why a `·` cell is not neutral. NOT an enumeration pass: `canary result` reads `actions.log` after a run |
 | [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation. Moved out of `enumeration/` 2026-08-24: not a stage |
@@ -122,7 +122,6 @@ All six stages now have a standalone doc.
 | File | Falsifier — it landed when … |
 | ---- | ---------------------------- |
 | [artifact_cache.md](design/artifact_cache.md) | … a step's cache key includes the identity of its INPUT artifacts, not only its own cmd/expectation fingerprint |
-| [check_evaluation.md](design/check_evaluation.md) | … `canary_gh.ml` holds no verdict logic — a check is an action the runner interprets and every backend merely renders. Records the live finding that CI evaluates NO `check_pre`/`check_post`, so a green job means only "every command exited 0" |
 | [step_identity.md](design/step_identity.md) | … a step tag is (action × location KIND) alone — `tag_of_probe_lib_location` called unconditionally, and no tag anywhere containing a PM name |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
 | [agreement/README.md](design/agreement/README.md) | Short companion to the Agreement overview: interpreting claims and results, where evaluations come from, and making a row decide. |
@@ -136,6 +135,7 @@ All six stages now have a standalone doc.
 | File | |
 | ---- | --- |
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
+| ~~check_evaluation.md~~ | Absorbed 2026-09-21 into `action_model.md` §§4–6, §9 — it had reached the second half of one subject from the other side (a CI backend re-implementing verdicts), and the two shared a single blocker; the merged doc adds the measurement of what the closures actually carry |
 | ~~contract_model.md~~ | The current explanation is in `agreement/README.md` and `agreement/components.md`; the overview owns the catalogue. |
 | ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage6_realize_steps.md` (2026-08-24) |
 | ~~enumeration/algorithm_explainer.md~~ | Purged 2026-08-24 — the walkthrough that predated the stage map; its sections went to the stage docs they belonged to |

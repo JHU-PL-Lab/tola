@@ -191,7 +191,10 @@ evidence is normally at its fetch step, a built binding's at its build step.
 Local checks are not all rendered into GitHub Actions: some symbol checks
 and expected-failure verification are, but local pre/postcondition closures
 and the full agreement record are not. The remaining backend work belongs to
-[check_evaluation.md](../check_evaluation.md).
+[action_model.md](../action_model.md), whose §6 states this seam from the
+other side and names the one place it is crossed in code —
+`binding_evidence_tag` / `lib_evidence_tags`, which live here and are
+occasion facts awaiting derivation, not relocation.
 
 ## 4. Making a row decide
 

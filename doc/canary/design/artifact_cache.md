@@ -131,6 +131,14 @@ becomes a set of artifact references plus its own step records.
 5. **Interaction with `check_post`.** A postcondition proves an artifact's
    existence at a path; with a store, the natural check is "the key is
    present and its recorded hash matches", which is stronger and uniform.
+   ⚠ That postcondition is itself being redesigned:
+   [`action_model.md`](action_model.md) §9 step 6 derives it from the
+   action × declaration join rather than from the hand-written
+   compositors, and §10 there records why the two documents stay
+   separate. The two designs must agree on ONE question — what a
+   postcondition asserts about an artifact — so whichever lands second
+   reads the other first. §6 below is the argument this document
+   contributes to it.
 6. **The key must carry the WORLD'S TOOLCHAIN, and nothing records it**
    (2026-09-16). Two libraries built from the same source ref by
    different compilers are different artifacts — different symbol
