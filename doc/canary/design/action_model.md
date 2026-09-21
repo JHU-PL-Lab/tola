@@ -306,12 +306,45 @@ to lose and each has already cost a bug:
    acceptance policy is "the command succeeded and its postcondition
    holds", and a disagreement about artifacts the action was never asked
    to fail on stays a finding (`--strict` flips this, deliberately, for
-   one landing at a time). So when §9 step 7 gives the checks under a
-   moment their names from the registry, **it must answer explicitly
-   whether a named check's failure fails the step.** Today the two
-   vocabularies answer oppositely, and inheriting that by accident would
-   either turn ssl red for a real-but-tolerated finding, or silently
-   demote `check_post` to advisory.
+   one landing at a time). Inheriting either semantics by accident would
+   turn ssl red for a real-but-tolerated finding, or silently demote
+   `check_post` to advisory.
+
+   **DECIDED 2026-09-21** (asked by the agent who would own §9 step 7,
+   answered from the agreement side, which owns `outcome` and the
+   acceptance policy).
+
+   **A named check's failure fails its step iff the check is a
+   POSTCONDITION — an assertion about what THIS action was asked to
+   produce. Never because it carries an agreement's name.** Naming is
+   not authority: step 7's win is that a reader sees *which* check
+   failed instead of "the probe failed", and a label must not smuggle
+   semantics with it. So the check constructor carries its authority as
+   its own field; it is not read off the name, and it is not read off
+   the registry.
+
+   The distinguishing question is **whose obligation was it**, and there
+   are THREE registers, not two. Two of them §9 step 2 already
+   separates:
+
+   | the check asserts | fails the step | because |
+   | --- | --- | --- |
+   | an artifact the action was asked to produce is at its location | **yes** | the action's own contract. This is what `check_post` is |
+   | the world is the one this scenario declared — the pin holds, the ref resolves | **yes, and loudest** | not a finding about software: it says this run tested something other than what it claims, so every verdict in it is suspect ([`agreement/theory.md`](agreement/theory.md) §7.1). `Canary_world`'s `Opam_pin` / `Log_names` |
+   | an agreement over the artifacts | **no** — yes under `--strict` | the action was never asked to make the claim true. sqlite's `dse ✗` at `build_lib` is a real violation of a declaration the compiler was not asked to satisfy; the build did its job |
+
+   Two constraints that fall out, and both are easy to lose:
+
+   - **`--strict` stays a RUN-WIDE policy.** It is the one switch that
+     makes the two views agree, it rides the step fingerprint so a
+     permissive verdict is never served to a strict run, and it is
+     pinned (`strict.acceptance_policy`). Step 7 must not turn it into
+     per-check configuration; a pile of switches does not mean "make the
+     two views agree".
+   - **A check's verdict stays boolean** — see distinction 2. A named
+     check that evaluated an agreement would still not fail its step, so
+     it has no need of `outcome`, and giving it one would invite exactly
+     the collapse `unavailable_cause` undid.
 2. **A check's verdict is a boolean; an agreement's is an `outcome` with
    eight constructors and ten labels.** `unavailable` / `undeclared` /
    `vacuous` are all reasons a claim reached no verdict, and collapsing

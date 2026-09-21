@@ -92,6 +92,16 @@ Five items, in the order they are worth doing. §2.5 is the forward look
 — what the unlanded claims would take — and is where the manuscript's
 plan material comes from.
 
+**One question came back and is answered** (2026-09-21): §6's
+distinction 1 — does a named check's failure fail its step? — was
+flagged, not decided, and the agent who would own step 7 asked the
+agreement side to settle it, since we own `outcome` and the acceptance
+policy. Decided in `action_model.md` §6: **a named check's failure fails
+its step iff the check is a POSTCONDITION, never because it carries an
+agreement's name.** There are three registers, not two — postcondition,
+world assertion, agreement — and §9 step 2 already separates the first
+two.
+
 ⚠ **Before dispatching an agent at the ACTION MODEL** (the §9 plan in
 [`design/action_model.md`](design/action_model.md)): that document now
 carries, under §6, what the agreement layer READS from the action model
