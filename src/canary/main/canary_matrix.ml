@@ -2008,8 +2008,9 @@ let render_html (m : t) ~(generated_at : string) : string =
        &middot; D a method FIRES here &middot; R+D both. \
        <b>kind</b> WHAT THE CLAIM ASSERTS — not what it is held against, \
        and not where its rule RAN (that is <b>R</b>). \
-       <code>pairing</code>: could these two artifacts have been the inputs \
-       of ONE action, would the tool have accepted the pair — a stub's \
+       <code>admissibility</code>: are these artifacts an ADMISSIBLE input \
+       tuple for some action, would the tool have accepted them together — \
+       a stub's \
        undefined references against a library's exports, a header's \
        signatures against a stub's calls; the centre of the catalogue \
        &middot; <code>promise</code>: is this ONE artifact what its own \
@@ -2022,10 +2023,10 @@ let render_html (m : t) ~(generated_at : string) : string =
        disagreement between distinct components can violate it &middot; \
        <code>behaviour</code>: does running it produce what was specified \
        &middot; <code>composition</code>: a verdict over verdicts. \
-       <code>api_names_present</code> is a PAIRING whose second side is a \
-       declaration — the watchlist stands in for the application's actual \
-       uses — which is why naming the evidence is not the same as naming \
-       the claim. \
+       <code>api_names_present</code> is an ADMISSIBILITY claim one of \
+       whose members is a declaration — the watchlist stands in for the \
+       application's actual uses — which is why naming the evidence is not \
+       the same as naming the claim. \
        <b>implemented at</b> <code>&lt;module&gt;&middot;&lt;function&gt;</code> \
        in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
        (hover for the file); a RED cell is an agreement with no evaluator \

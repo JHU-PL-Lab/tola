@@ -2615,7 +2615,7 @@ let agreement_bridge_pins : pure_test list =
           in
           let ok =
             List.length used >= 3
-            && List.mem used "pairing" ~equal:String.equal
+            && List.mem used "admissibility" ~equal:String.equal
             && List.mem used "promise" ~equal:String.equal
             && (not (List.is_empty cand))
             && not (List.is_empty only_candidate)

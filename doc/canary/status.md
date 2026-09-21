@@ -40,11 +40,11 @@ the result matrix, of which it is the template. Layout and row order:
 [`design/matrix.md`](design/matrix.md).
 
 **Three axes describe a claim, and they are independent** — `ag_kind`
-(what it asserts: pairing · promise · quality · preservation · behaviour
+(what it asserts: admissibility · promise · quality · preservation · behaviour
 · composition), `m_reference` (what the second side is), `ag_rooted_in`
 (whose rule, at which action). Two of them shared a field until
-2026-09-17. `api_names_present` is the case that forces them apart: a
-pairing whose second side is a declaration.
+2026-09-17. `api_names_present` is the case that forces them apart: an
+admissibility claim one of whose members is a declaration.
 
 **Two harnesses check the table itself** (2026-09-17). `row_rules` holds
 the laws relating two cells of one row — five today, as data, printed by
@@ -171,15 +171,39 @@ silently vacuous when `agreements.md` was deleted, and
 disappears. **The user is doing the remaining cleanup by hand**
 (2026-09-21); leave these files alone.
 
-### 2.4 The kind vocabulary is not research-tone
+### 2.4 The kind vocabulary — `admissibility` landed, the rest open
 
-`pairing` · `promise` · `quality` · `preservation` · `behaviour` ·
-`composition` — chosen on 2026-09-17 to replace `declaration`/`peer`,
-which named the second party rather than the relation. The partition is
-right and the words are plain. The two doing the most work are `pairing`
-and `promise`; the conventional terms for roughly those are
-*correspondence* and *conformance*. Open, not urgent: the names are
-display labels plus one constructor each, and
+`admissibility` · `promise` · `quality` · `preservation` · `behaviour` ·
+`composition`.
+
+**`pairing` became `admissibility` on 2026-09-21** (user: "if one action
+uses to establish the connection between several inputs and outputs,
+when here is doing to try to recover/recall the post factum. Do we have
+a precise term"). The answer has two halves. The RECOVERY cannot be in
+the name, because it is what an agreement IS — [`theory.md`](design/agreement/theory.md)
+§3 defines one as a necessary condition recovered from surviving
+evidence, so every kind is post factum and that is the genus, not the
+difference. What differs is WHICH relation, and theory.md §2 already
+names this one: `R_A ⊆ I₁×…×Iₙ`, the tuples an action's rules accept.
+The word for belonging to it is **admissible**.
+
+Three rejected, each for a reason worth keeping: `compatibility` is what
+a reader reaches for and theory.md forbids it (a pass is necessary,
+never sufficient, and "compatible" promises sufficiency);
+`correspondence` is already claimed by the cross-API direction, so it
+would be ambiguous inside canary; `realizability` collides with pass 6.
+And `pairing` itself baked in an arity the model does not have — `R_A`
+is n-ary, so a three-input action's claim is not a pair.
+
+**Still open: the register.** The six are nouns, which suits the column
+header `kind` — "what kind of claim is this". The alternative is
+participles describing the thing (`admissible` · `promised` ·
+`well-formed` · `preserved` · …), which would suit the per-agreement
+record's header `asserts` better. Both registers are internally
+coherent; mixing them is the only real error, so `promised` alone would
+be wrong. Nouns degrade more gracefully — `quality` and `composition`
+have no good participle — which is why they stayed. Cheap to revisit:
+each name is one constructor and one display string, and
 `agreements.kind_partitions_the_catalogue` holds the partition
 regardless of spelling.
 

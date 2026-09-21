@@ -264,14 +264,36 @@ let string_of_basis = function
     (theory.md §5.8 says so in as many words). Naming the evidence was
     never the same as naming the claim. *)
 type agreement_kind =
-  | Pairing
-      (** could these two artifacts have been the inputs of ONE action —
-          would the tool have accepted the pair? This is the user's
-          "whether the arbitrary source/header and the lib aligned as if
-          they could be compiled", and it is the centre of the
-          catalogue: a stub's undefined references against a library's
-          exports, a recorded dependency against what provides it, a
-          header's signatures against a stub's calls. *)
+  | Admissibility
+      (** are these artifacts an ADMISSIBLE input tuple for some action —
+          would the tool have accepted them together? theory.md §2 gives
+          the relation this names: an action `A : I₁×…×Iₙ → O` embodies
+          `R_A ⊆ I₁×…×Iₙ`, the tuples its rules accept, and running `A`
+          is the only witness that a tuple is in it. This kind is the
+          claim that a tuple we did NOT see accepted still satisfies a
+          necessary condition for membership.
+
+          The centre of the catalogue: a stub's undefined references
+          against a library's exports, a recorded dependency against
+          what provides it, a header's signatures against a stub's
+          calls.
+
+          ⚠ NAMED FOR THE RELATION, NOT FOR THE RECOVERY (2026-09-21,
+          user: "if one action uses to establish the connection between
+          several inputs and outputs, when here is doing to try to
+          recover/recall the post factum. Do we have a precise term").
+          The recovery cannot be in the name, because it is what an
+          agreement IS — every kind here is recovered post factum, so
+          that is the genus and not the difference. What differs is
+          WHICH relation, and for this one it is membership in `R_A`.
+
+          It was `Pairing` for four days, which baked in an arity the
+          model does not have: `R_A` is n-ary, so a three-input action's
+          claim is not a pair. `Compatibility` is the word a reader
+          reaches for and theory.md forbids it — a pass is a necessary
+          condition, never sufficiency, and "compatible" promises
+          sufficiency. `Realizability` collides with pass 6.
+          Admissibility says exactly what is claimed and no more. *)
   | Promise
       (** is this ONE artifact what its own producer said it would be?
           The second side is the project's declaration, and the question
@@ -295,7 +317,7 @@ type agreement_kind =
           nothing of its own. *)
 
 let string_of_agreement_kind = function
-  | Pairing -> "pairing"
+  | Admissibility -> "admissibility"
   | Promise -> "promise"
   | Quality -> "quality"
   | Preservation -> "preservation"

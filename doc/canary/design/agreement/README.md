@@ -51,7 +51,7 @@ vocabulary rather than a list of agreements, so they are defined here:
 
 | kind           | asserts                                                                                                                                |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `pairing`      | could these two artifacts have been the inputs of ONE action — would the tool have accepted the pair?                                  |
+| `admissibility` | are these artifacts an ADMISSIBLE input tuple for some action — would the tool have accepted them together?                           |
 | `promise`      | is this ONE artifact what its own producer said it would be? Nothing is matched                                                        |
 | `quality`      | is it sound on its own terms, whatever it is paired with? No second side at all                                                        |
 | `preservation` | still the same thing after a transformation? Two COPIES of one artifact, so no disagreement between distinct components can violate it |
@@ -124,14 +124,14 @@ covered because the format-neutral claims cover them all; what is
 missing is a claim that uses what only Mach-O has. It is in the
 candidate table.
 
-**Why a `pairing` can show one target.** A pairing has two SIDES, and
-the ▣ columns count artifact TARGETS, so a side that is a DECLARATION
-contributes none. Five of the six pairings show two artifacts;
-`api_names_present` shows one because its second side is the watchlist,
-standing in for the application's uses. The law encodes exactly that
-exception — one target is honest for a pairing only when some method
-references a declaration — so a future one-target pairing without one
-is a complaint rather than a precedent.
+**Why an `admissibility` claim can show one target.** Such a claim is
+about a TUPLE, and the ▣ columns count artifact TARGETS, so a member of
+the tuple that is a DECLARATION contributes none. Five of the six show
+two artifacts; `api_names_present` shows one because its other member is
+the watchlist, standing in for the application's uses. The law encodes
+exactly that exception — one target is honest only when some method
+references a declaration — so a future one-target admissibility claim
+without one is a complaint rather than a precedent.
 
 ### The short code, and why rows repeat it
 

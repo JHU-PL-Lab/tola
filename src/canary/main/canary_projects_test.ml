@@ -4441,7 +4441,7 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
              constant column. They were `declaration` and `peer` until
              2026-09-17, when the vocabulary moved from naming the
              SECOND PARTY to naming the RELATION. *)
-          && String.is_substring h ~substring:">pairing<"
+          && String.is_substring h ~substring:">admissibility<"
           && String.is_substring h ~substring:">promise<"
           && count "class=\"lm\"></td>"
              = List.count rows ~f:(fun (row : overview_row) ->

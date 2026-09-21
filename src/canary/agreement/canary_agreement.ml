@@ -1356,7 +1356,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let rows = overview_rows ~provision () in
   let cols = overview_columns () in
   let head =
-    Printf.sprintf "%-4s %-28s %-12s %-36s %-7s %-14s %-7s | %s | " "code"
+    Printf.sprintf "%-4s %-28s %-14s %-36s %-7s %-14s %-7s | %s | " "code"
       "agreement" "kind" "implemented at" "lang" "mech" "object"
       (String.concat ~sep:" "
          (List.map overview_artifact_columns ~f:(fun k ->
@@ -1368,7 +1368,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
   let body =
     List.map rows ~f:(fun row ->
         let r = row.ov_agreement in
-        Printf.sprintf "%-4s %-28s %-12s %s %-7s %-14s %s | %s | %s | %3s | %s"
+        Printf.sprintf "%-4s %-28s %-14s %s %-7s %-14s %s | %s | %s | %3s | %s"
           (short_code_of_slug r.ag_slug) r.ag_slug (kind_label r)
           (pad_display 36 (impl_label r))
           (lang_label row.ov_mechs) (mech_label row.ov_mechs)
@@ -1435,10 +1435,10 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
          (that is the";
         "       record's `against` field) and not where its rule RAN \
          (that is R).";
-        "  pairing       could these two artifacts have been the inputs of \
-         ONE action —";
-        "                would the tool have accepted the pair? A stub's \
-         undefined";
+        "  admissibility are these artifacts an ADMISSIBLE input tuple for \
+         some action —";
+        "                would the tool have accepted them together? A \
+         stub's undefined";
         "                references against a library's exports; a header's \
          signatures";
         "                against a stub's calls. The centre of the \
@@ -1465,8 +1465,9 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         "                evidence is an execution.   composition  a verdict \
          over verdicts.";
         "";
-        "       `api_names_present` is a PAIRING whose second side is a \
-         declaration: the";
+        "       `api_names_present` is an ADMISSIBILITY claim one of whose \
+         members is a";
+        "       declaration: the";
         "       watchlist stands in for the application's actual uses. \
          Naming the";
         "       evidence was never the same as naming the claim, which is \
@@ -1674,7 +1675,7 @@ let proposed_agreements : proposed list =
            by different people. Canary already has a vocabulary for it: \
            the world assertions. The CHECK is worth having; the row is in \
            the wrong register" };
-    { prop_kind = Pairing;
+    { prop_kind = Admissibility;
       prop_slug = "build_tree_configured_for_source";
       prop_doc = "§5.2";
       prop_claim =
@@ -1693,7 +1694,7 @@ let proposed_agreements : proposed list =
            tree configured for the source we said\" has the same shape as \
            \"is the tree at the commit we said\". If so it is a world \
            assertion too. Nobody has decided, so it is not filed as either" };
-    { prop_kind = Pairing;
+    { prop_kind = Admissibility;
       prop_slug = "signatures_match_debug_info";
       prop_doc = "§5.3";
       prop_claim =
@@ -1806,7 +1807,7 @@ let proposed_agreements : proposed list =
          the argument mapping); a translation of a project's own suite \
          is per-project and can come later. See directions.md §2";
       prop_frame = In_frame };
-    { prop_kind = Pairing;
+    { prop_kind = Admissibility;
       prop_slug = "discovery_matches_link";
       prop_doc = "§5.3";
       prop_claim =
@@ -1825,7 +1826,7 @@ let proposed_agreements : proposed list =
          so it asks whether `rooted` should mean a tool ENFORCED it or a \
          tool ANSWERED it. See directions.md §1";
       prop_frame = In_frame };
-    { prop_kind = Pairing;
+    { prop_kind = Admissibility;
       prop_slug = "interposition_binds_build_target";
       prop_doc = "§5.6";
       prop_claim =
@@ -2408,9 +2409,10 @@ let references (row : overview_row) (f : reference -> bool) : bool =
 let row_rules : row_rule list =
   [ { rr_name = "kind_matches_target_count";
       rr_says =
-        "a PAIRING ranges over two artifacts, unless one of its two \
-         sides is a declaration standing in for an artifact; a PROMISE \
-         over exactly one; BEHAVIOUR and COMPOSITION over none";
+        "an ADMISSIBILITY claim ranges over two artifacts, unless one \
+         member of its tuple is a declaration standing in for an \
+         artifact; a PROMISE over exactly one; BEHAVIOUR and COMPOSITION \
+         over none";
       rr_check =
         (fun row ->
           let n = n_targets row in
@@ -2422,13 +2424,20 @@ let row_rules : row_rule list =
                  n what)
           in
           match row.ov_agreement.ag.ag_kind with
-          | Pairing ->
+          | Admissibility ->
               (* THE `api_names_present` CASE, which the user asked
-                 about: a pairing has two SIDES, and ▣ counts ARTIFACT
-                 targets, so a side that is a DECLARATION contributes
-                 none. The watchlist stands in for the application's
-                 uses, so that row is one artifact and two sides. Any
-                 other one-target pairing is a real complaint. *)
+                 about: an admissibility claim is about a TUPLE, and ▣
+                 counts ARTIFACT targets, so a member of the tuple that
+                 is a DECLARATION contributes none. The watchlist stands
+                 in for the application's uses, so that row is one
+                 artifact and two members. Any other one-target
+                 admissibility claim is a real complaint.
+
+                 The law reads `n = 2` because every tuple in the
+                 catalogue is a pair today; `R_A` is n-ary, so the day a
+                 three-input claim lands this becomes `n >= 2`. Left
+                 strict on purpose — an unexpected arity should be
+                 looked at rather than waved through. *)
               if n = 2 then None
               else if n = 1 && references row (function
                                 | Declared_facts -> true
@@ -2436,8 +2445,8 @@ let row_rules : row_rule list =
               then None
               else
                 says
-                  "a pairing needs two sides; one target is only honest \
-                   when the other side is a declaration"
+                  "an admissibility claim needs two members; one target \
+                   is only honest when another member is a declaration"
           | Promise -> if n = 1 then None else says "a promise is about one artifact"
           | Behaviour | Composition ->
               if n = 0 then None

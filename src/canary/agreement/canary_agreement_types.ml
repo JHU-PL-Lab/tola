@@ -159,7 +159,7 @@ let signatures_eval ~resolve inputs : outcome =
 (* ── the agreement ── *)
 
 let signatures_agree : agreement =
-  { ag_kind = Pairing;
+  { ag_kind = Admissibility;
     ag_subject = Signatures;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;

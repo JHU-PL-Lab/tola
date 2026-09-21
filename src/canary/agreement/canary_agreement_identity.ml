@@ -560,7 +560,7 @@ let soname_matches_declaration : agreement =
           () ] }
 
 let soname_matches_requirement : agreement =
-  { ag_kind = Pairing;
+  { ag_kind = Admissibility;
     ag_subject = Identity;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
@@ -670,7 +670,7 @@ let declared_versions_exported : agreement =
           () ] }
 
 let required_versions_exported : agreement =
-  { ag_kind = Pairing;
+  { ag_kind = Admissibility;
     ag_subject = Symbol_versions;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
@@ -769,7 +769,7 @@ let required_versions_exported : agreement =
           () ] }
 
 let dependencies_provided : agreement =
-  { ag_kind = Pairing;
+  { ag_kind = Admissibility;
     ag_subject = Dependencies;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;

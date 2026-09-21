@@ -113,7 +113,7 @@ let api_names_present : agreement =
      watchlist is a hand-written stand-in for the application's actual
      uses (theory.md §5.8). Classifying it by its evidence rather than
      its claim is exactly the conflation `ag_kind` exists to undo. *)
-  { ag_kind = Pairing;
+  { ag_kind = Admissibility;
     ag_subject = Api_names;
     ag_claim = Structural;
     ag_basis = Project_declaration;

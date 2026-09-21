@@ -345,7 +345,7 @@ let declared_symbols_exported : agreement =
           () ] }
 
 let required_symbols_exported : agreement =
-  { ag_kind = Pairing;
+  { ag_kind = Admissibility;
     ag_subject = Symbols;
     ag_claim = Structural;
     ag_basis = Toolchain_rule;
