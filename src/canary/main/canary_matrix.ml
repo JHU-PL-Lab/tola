@@ -2021,84 +2021,65 @@ let render_html (m : t) ~(generated_at : string) : string =
              ^ "</td><td>" ^ tally code
              ^ "</td><td>" ^ blame_tally code ^ "</td></tr>"))
     ^ "</tbody></table>"
-    ^ "<p class=\"kq\"><b>Row order: trigger action, then AGREEMENT, then \
-       language, then mechanism.</b> The trigger is language-FREE — \
-       <code>build_binding</code>, not <code>build_binding_ocaml</code> — \
-       which is what lets one claim's mechanisms sit together: they fire at \
-       the same action in different languages, seven columns apart. \
-       Unimplemented claims sort to the bottom whatever they fire at, and a \
-       row that fires nowhere sorts last. \
-       <b>code</b> is the AGREEMENT's identity, so a repeated code is ONE \
-       claim with several patterns, shown adjacent — deliberately not \
-       per-row, because the same code names this agreement's column in the \
-       result matrix below, and a row is a pattern, which that table has no \
-       column for. \
-       <b>One row per distinct pattern:</b> a claim whose \
-       firing differs between mechanisms gets a row each — a cstubs row and \
-       a cext row mark different action columns — and a uniform claim stays \
-       one row and says so in <b>mech</b>. \
-       &#9635; an ARTIFACT the claim ranges over (its TARGET); a declaration \
-       is not an artifact, so a declaration comparison shows exactly one and \
-       a peer comparison shows two. \
-       R the action whose rule RAN (hover for the tool and the artifact) \
-       &middot; D a method FIRES here &middot; R+D both. \
-       <b>kind</b> WHAT THE CLAIM ASSERTS — not what it is held against, \
-       and not where its rule RAN (that is <b>R</b>). \
-       <code>admissibility</code>: are these artifacts an ADMISSIBLE input \
-       tuple for some action, would the tool have accepted them together — \
-       a stub's \
-       undefined references against a library's exports, a header's \
-       signatures against a stub's calls; the centre of the catalogue \
-       &middot; <code>promise</code>: is this ONE artifact what its own \
-       producer said it would be — nothing is matched, the declaration is \
-       simply what it is measured against &middot; <code>quality</code>: is \
-       it sound ON ITS OWN TERMS whatever it is paired with, as an installed \
-       library recording a path into the build tree it was made in is not — \
-       NO agreement yet &middot; <code>preservation</code>: still the same \
-       thing after a transformation, two COPIES of one artifact, so no \
-       disagreement between distinct components can violate it &middot; \
-       <code>behaviour</code>: does running it produce what was specified \
-       &middot; <code>composition</code>: a verdict over verdicts. \
-       <code>api_names_present</code> is an ADMISSIBILITY claim one of \
-       whose members is a declaration — the watchlist stands in for the \
-       application's actual uses — which is why naming the evidence is not \
-       the same as naming the claim. \
-       <b>implemented at</b> <code>&lt;module&gt;&middot;&lt;function&gt;</code> \
-       in <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code> \
-       (hover for the file); a RED cell is an agreement with no evaluator \
-       yet, and names the file it would go in. That is the EVALUATOR — the \
-       agreement's METADATA (kind, subject, claim, rooting, methods) is code \
-       in the same file, bound as <code>let &lt;slug&gt; : agreement</code>, \
-       which the tooltip names too and \
-       <code>canary checks --agreement NAME</code> prints as \
-       <code>declared at</code>. Both are derived rather than stored. \
-       <b>lang</b> and <b>mech</b> — an EMPTY cell means that axis does \
-       not narrow the claim. An empty <b>lang</b> is every modelled \
-       language, which is what a claim about the LIBRARY looks like: no \
-       binding is involved, so nothing about a binding can narrow it. An \
-       empty <b>mech</b> is every mechanism of this row's language(s), so \
-       the claim is a fact about the LANGUAGE and naming a mechanism would \
-       say less than the truth. A name appears only where the row is a \
-       strict subset; <code>none</code> in both means no mechanism carries \
-       this at all. \
-       Note <code>soname</code> is an ELF word for a format-neutral fact — \
-       the library's own recorded identity, <code>DT_SONAME</code> on ELF \
-       and the <code>LC_ID_DYLIB</code> install name on Mach-O, which the \
-       inspector writes into one field; those rows are <code>EM</code>, and \
-       only the two version-node claims are really ELF-only. \
-       <b>object</b> the OBJECT FORMAT a claim can range over, EMPTY when \
-       it ranges over all of them — the same rule as <b>lang</b> and \
-       <b>mech</b>, since an axis that does not narrow says nothing. Eleven \
-       of thirteen are empty; the two that are not read <code>elf</code>, \
-       because Mach-O has no symbol versioning and a version-node claim has \
-       nothing of that kind there. A format changes whether a claim APPLIES, \
-       never where it fires, so it annotates a row rather than splitting \
-       one. (It was <code>fmt</code> with letter marks until 2026-09-17, \
-       where the common case &mdash; both formats, saying nothing &mdash; \
-       was the loudest cell in the column, and the header read as a style.) \
-       <b>lag</b> action columns from the root to the nearest firing; NOT \
-       the landing tracker's distance, which measures how far apart the two \
-       SIDES of a comparison are.</p>"
+    (* THE LEGEND IS A LIST, NOT A PARAGRAPH (2026-09-21, user: "very
+       verbose and no line break"). It had grown into a 79-line run-on
+       by accretion — every column added its explanation to the end of
+       one <p>, so a reader looking up what `lag` means read six other
+       columns first.
+
+       Two fixes. A definition list gives each column its own row, so
+       the column name is findable rather than buried mid-sentence. And
+       each entry is cut to what the CELL means; the reasoning behind it
+       — why the trigger is language-free, why a code repeats, why an
+       empty cell is the right notation — is `design/matrix.md`, which
+       is where someone asking "why is it like that" already goes. The
+       page is a legend; the doc is the argument.
+
+       The `kind` entry is GONE from here: it is the prepended glossary
+       above the table. Leaving both was a duplication introduced the
+       same day the glossary landed. *)
+    ^ "<dl class=\"legend\">"
+    ^ "<dt>row order</dt><dd>trigger action, then agreement, then language, \
+       then mechanism — so a claim's mechanisms sit together. \
+       Unimplemented claims sort last.</dd>"
+    ^ "<dt>code</dt><dd>the AGREEMENT's identity, so a repeated code is one \
+       claim with several patterns, shown adjacent. It is the key to the \
+       result matrix's check-column headings.</dd>"
+    ^ "<dt>one row per pattern</dt><dd>a claim whose firing differs between \
+       mechanisms gets a row each; a uniform claim stays one row and says \
+       so by leaving <b>mech</b> empty.</dd>"
+    ^ "<dt>&#9635;</dt><dd>an ARTIFACT the claim ranges over — its target. \
+       A declaration is not an artifact, which is why some claims show \
+       one.</dd>"
+    ^ "<dt>R &middot; D &middot; R+D</dt><dd>R = the action whose rule RAN \
+       (hover for the tool and the artifact); D = a method FIRES here; R+D \
+       = both. A row with no R roots in no action of this graph.</dd>"
+    ^ "<dt>implemented at</dt><dd><code>&lt;module&gt;&middot;&lt;function&gt;</code> \
+       — the EVALUATOR, in \
+       <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code>. \
+       A RED cell has no evaluator yet and names the file it would go in. \
+       The tooltip also names where the agreement's METADATA is declared; \
+       both are derived, neither stored.</dd>"
+    ^ "<dt>lang &middot; mech &middot; object</dt><dd>an EMPTY cell means \
+       that axis does not narrow the claim — every modelled language, \
+       every mechanism of this row's language, or every object format. A \
+       value appears only where the row is a strict subset; \
+       <code>none</code> in lang and mech means no mechanism carries this \
+       at all.</dd>"
+    ^ "<dt>lag</dt><dd>action columns from the root to the nearest firing. \
+       NOT the distance between the two SIDES of a comparison, which is a \
+       different measure.</dd>"
+    ^ "</dl>"
+    ^ "<p class=\"kq\">Why the table is shaped this way — the row-order \
+       key, why a code repeats, why an empty cell is the right notation, \
+       and why the rooting is re-languaged per row — is \
+       <code>doc/canary/design/matrix.md</code>. \
+       One note that belongs here because it misleads in the cell: \
+       <code>soname</code> is an ELF word for a format-neutral fact, the \
+       library's own recorded identity — <code>DT_SONAME</code> on ELF and \
+       the <code>LC_ID_DYLIB</code> install name on Mach-O, which the \
+       inspector writes into one field. Those claims are NOT elf-only; the \
+       two version-node ones are.</p>"
     ^ "<p class=\"kq\">blame: "
     ^ String.concat ~sep:" &middot; "
         (List.map blame_gloss ~f:(fun (w, g) ->
@@ -2330,6 +2311,18 @@ div.kinds dl { margin: .4rem 0 .4rem; display: grid;
 div.kinds dt { font-family: ui-monospace, monospace; font-weight: 700;
   color: #0a3069; }
 div.kinds dd { margin: 0; }
+/* THE COLUMN LEGEND, one row per column. It used to be a single
+   paragraph that every new column appended to, so looking up `lag`
+   meant reading six others first; a list makes the term findable.
+   Entries say what the CELL means — the reasoning lives in
+   design/matrix.md. (No angle brackets in this comment on purpose: a
+   CSS comment is raw text to the parser, but a tag spelled here makes
+   every tool that greps the page report a paragraph that is not one.) */
+dl.legend { font-size: .78rem; margin: .5rem 0 .6rem; max-width: 62rem;
+  display: grid; grid-template-columns: max-content 1fr; gap: .2rem .8rem; }
+dl.legend dt { font-family: ui-monospace, monospace; font-weight: 700;
+  color: #0a3069; white-space: nowrap; }
+dl.legend dd { margin: 0; color: #57606a; }
 td.g.rd { background: #d1e7dd; color: #0a3622; }   /* rule and check together */
 td.g.rr { background: #ffe8cc; color: #7a3e00; }   /* the rule ran here */
 td.g.dd { background: #dbeafe; color: #0a3069; }   /* the check fires here */
@@ -2346,18 +2339,11 @@ th.gs, td.gs { border-left: 1px solid #afb8c1; }
 <h1>canary — what is checked, and what it decided</h1>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
 <h2>1 &middot; Agreement overview — every agreement, where its rule RAN, and where it is CHECKED</h2>
-<p class="meta">One row per agreement over the same action columns as the
-result table, for an OCaml/cstubs binding in a Built world. <b>This is
-the TEMPLATE of the table below</b>: that one says what a run decided,
-this one says what the shape of the checking IS — so an empty column down
-there can be looked up here to see whether anything was ever meant to
-fill it, and the <code>code</code> column is the key to its headings.
-<br>It absorbed the separate check-key table on 2026-09-17: the key
-listed code, agreement, the rooting action, the tool and the artifact,
-which are five of this table&rsquo;s columns and two of its tooltips. Two
-tables explaining one thing is how they drift.
-<br>A row with no R roots in no action of this graph — the three unrooted
-agreements, and any whose rule ran in a world canary does not model.</p>
+<p class="meta"><b>This is the TEMPLATE of the table below.</b>
+That one says what a run decided; this one says what the shape of the
+checking IS.
+<br>So an empty column down there can be looked up here, to see whether
+anything was ever meant to fill it.</p>
 %s
 
 <h2>2 &middot; The result matrix — one row per enumerated world</h2>

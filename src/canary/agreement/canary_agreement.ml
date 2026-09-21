@@ -1426,94 +1426,59 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: ""
      :: head :: body
     @ [ "";
-        "ROW ORDER: trigger action, then AGREEMENT, then language, then \
-         mechanism.";
-        "The trigger is language-FREE — `build_binding`, not \
-         `build_binding_ocaml` —";
-        "which is what lets one claim's mechanisms sit together: they fire \
-         at the same";
-        "action in different languages, seven columns apart. So the table \
-         reads as";
-        "\"what fires when the binding is built, claim by claim, and per \
-         claim the";
-        "mechanisms that carry it\". Unimplemented claims sort to the \
-         BOTTOM whatever";
-        "they fire at, and a row that fires nowhere sorts last.";
-        "";
-        "code = the AGREEMENT's identity, so a repeated code is ONE claim \
-         with several";
-        "       patterns — and they are adjacent, which is what the \
-         grouping is for. It";
-        "       is deliberately not per-row: the same code names this \
-         agreement's column";
-        "       in the result table, and a row is a pattern, which that \
-         table has no";
-        "       column for.";
-        "";
-        "ONE ROW PER DISTINCT PATTERN. A claim whose firing differs between \
-         mechanisms";
-        "gets a row each — a cstubs row and a cext row mark different action \
-         columns —";
-        "and a claim that is uniform stays one row and says so in `mech`.";
-        "";
-        "▣  an ARTIFACT the claim ranges over (its target). A DECLARATION is \
-         not an";
-        "   artifact, so a declaration comparison shows exactly one ▣: the \
-         thing it is";
-        "   about. A peer comparison shows two — provider and consumer.";
-        "R  the action whose rule RAN — the ORIGIN, where the information was \
-         lost";
-        "D  a method FIRES here, reading what survived";
-        "◉  both: the check fires at the very action whose rule it recovers";
-        "";
-        "implemented at — `<family>·<function>` in \
-         src/canary/agreement/canary_agreement_<family>.ml.";
-        "       `·—` = NO EVALUATOR YET; the family names the file it would \
-         go in.";
-        "       That is the EVALUATOR. The agreement's METADATA — kind, \
-         subject, claim,";
-        "       rooting, methods — is code in the same file, bound as `let \
-         <slug> :";
-        "       agreement`; `canary checks --agreement NAME` prints it as \
+        "ROW ORDER  trigger action, then agreement, then language, then \
+         mechanism —";
+        "           so a claim's mechanisms sit together. Unimplemented \
+         claims sort last.";
+        "code       the AGREEMENT's identity, so a repeated code is ONE \
+         claim with";
+        "           several patterns, shown adjacent. It is the key to \
+         the result";
+        "           table's check-column headings.";
+        "one row    per distinct PATTERN: a claim whose firing differs \
+         between mechanisms";
+        "           gets a row each; a uniform claim stays one row and \
+         leaves `mech` empty.";
+        "▣          an ARTIFACT the claim ranges over — its target. A \
+         declaration is not";
+        "           an artifact, which is why some claims show one.";
+        "R · D · ◉  R = the action whose rule RAN; D = a method FIRES \
+         here; ◉ = both.";
+        "           A row with no R roots in no action of this graph.";
+        "impl. at   `<module>·<function>` — the EVALUATOR, in \
+         canary_agreement_<module>.ml.";
+        "           `·—` = none yet, and the module names the file it \
+         would go in. The";
+        "           agreement's METADATA is `let <slug> : agreement` in \
+         the same file;";
+        "           `canary checks --agreement NAME` prints it as \
          `declared at`.";
-        "       Both are derived, neither stored, and the binding \
-         convention is pinned.";
-        "lang / mech — AN EMPTY CELL MEANS THIS AXIS DOES NOT NARROW THE \
-         CLAIM.";
-        "       An empty `lang` = every modelled language, which is what a \
-         claim about";
-        "       the LIBRARY looks like: no binding is involved, so nothing \
-         about a";
-        "       binding can narrow it. An empty `mech` = every mechanism of \
-         this row's";
-        "       language(s), so the claim is a fact about the LANGUAGE and \
-         naming a";
-        "       mechanism would say less than the truth. A name appears \
-         only where the";
-        "       row is a strict subset. `none` in both = NO mechanism \
-         carries this at all.";
-        "     NOTE `soname` is an ELF word for a format-neutral fact — the \
-         library's";
-        "     own recorded identity, `DT_SONAME` on ELF and the \
-         `LC_ID_DYLIB` install";
-        "     name on Mach-O, which the inspector writes into one field. \
-         Those rows";
-        "     are `EM`, and only the two version-node claims are really \
-         ELF-only.";
-        "fmt  = which OBJECT FORMAT it can range over: E elf · M mach-o. A \
-         format";
-        "       changes whether a claim APPLIES, never where it fires — so \
-         it annotates";
-        "       a row rather than splitting one. `E·` is not a gap: Mach-O \
-         has no";
-        "       symbol versioning, so a version-node claim has nothing of \
-         that kind there.";
+        "lang mech  an EMPTY cell means that axis does not narrow the \
+         claim — every";
+        "object     modelled language, every mechanism of this row's \
+         language, or every";
+        "           object format. A value appears only where the row is \
+         a strict subset;";
+        "           `none` in lang and mech = no mechanism carries this \
+         at all.";
+        "lag        action columns from the root to the nearest firing. \
+         NOT the distance";
+        "           between the two SIDES of a comparison, which is a \
+         different measure.";
         "";
-        "lag = action columns between the root and the nearest firing. NOT \
-         landing.md's";
-        "DISTANCE, which measures how far apart the two SIDES of a \
-         comparison are:";
-        "required_symbols_exported is distance-1 and lag-0." ])
+        "Why the table is shaped this way — the row-order key, why a \
+         code repeats, why an";
+        "empty cell is the right notation, why the rooting is \
+         re-languaged per row — is";
+        "doc/canary/design/matrix.md. One note that belongs here \
+         because it misleads in";
+        "the cell: `soname` is an ELF word for a format-neutral fact, \
+         the library's own";
+        "recorded identity — `DT_SONAME` on ELF, the `LC_ID_DYLIB` \
+         install name on Mach-O,";
+        "which the inspector writes into one field. Those claims are \
+         NOT elf-only; the two";
+        "version-node ones are." ])
 
 
 (** The fill list — every [Declared] cell (fires and is evaluated, but
