@@ -876,6 +876,12 @@ let checks_cmd =
            says where a check is DETECTED; this one puts the action
            whose rule was LOST on the same row, so the distance between
            them is visual rather than a column to look up. *)
+        (* THE VERDICT FIRST (2026-09-21, user asked where the harness's
+           checking result was). The audit and the saturation grid print
+           their detail below; this says in one line whether the table
+           passed its own laws, so a reader does not have to scroll past
+           the data to find out. *)
+        Fmt.pr "@.%s@." (Canary_agreement.overview_verdict ());
         Fmt.pr "@.%s@." (Canary_agreement.pp_agreement_overview ());
         (* THE CANDIDATES, in their own table (2026-09-17, user): they
            have no methods, so every column the overview derives would

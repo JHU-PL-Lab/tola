@@ -1389,6 +1389,41 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
     (Printf.sprintf "agreement overview — over a %s world"
        (Canary_enumerate.string_of_provision provision)
      :: ""
+     (* THE KIND GLOSSARY GOES FIRST (2026-09-21, user: "can we prepend
+        the kind explanation"). `kind` is the column a reader has no
+        prior vocabulary for — every other one is a name, a file, a
+        language or a mark — so meeting the six words after three
+        screens of rows is meeting them too late. The detailed prose
+        that used to sit in the trailing legend moved HERE rather than
+        being copied: one place, before the data that uses it. *)
+     :: "KIND — what the claim ASSERTS. Not what it is held against \
+         (the record's `against`),"
+     :: "       and not whose rule it recovers (that is the R column)."
+     :: "  admissibility  would ONE action have accepted these artifacts \
+         together as its"
+     :: "                 inputs? theory.md §2's `R_A` — the tuples a \
+         rule accepts."
+     :: "  promise        is this ONE artifact what its own producer \
+         said it would be?"
+     :: "  quality        is it sound on its own terms, whatever it is \
+         paired with?"
+     :: "  preservation   still the same thing after a transformation — \
+         two COPIES of one"
+     :: "                 artifact, so no disagreement between distinct \
+         components can"
+     :: "                 violate it."
+     :: "  behaviour      does running it produce what was specified?  \
+         composition — a"
+     :: "                 verdict over other verdicts."
+     :: ""
+     :: "  `api_names_present` is an ADMISSIBILITY claim one of whose \
+         members is a"
+     :: "  DECLARATION — the watchlist stands in for the application's \
+         uses. Naming the"
+     :: "  evidence is not the same as naming the claim, which is why \
+         `kind` and the"
+     :: "  record's `against` are two fields."
+     :: ""
      :: head :: body
     @ [ "";
         "ROW ORDER: trigger action, then AGREEMENT, then language, then \
@@ -1431,48 +1466,6 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         "D  a method FIRES here, reading what survived";
         "◉  both: the check fires at the very action whose rule it recovers";
         "";
-        "kind = WHAT THE CLAIM ASSERTS. Not what it is held against \
-         (that is the";
-        "       record's `against` field) and not where its rule RAN \
-         (that is R).";
-        "  admissibility are these artifacts an ADMISSIBLE input tuple for \
-         some action —";
-        "                would the tool have accepted them together? A \
-         stub's undefined";
-        "                references against a library's exports; a header's \
-         signatures";
-        "                against a stub's calls. The centre of the \
-         catalogue.";
-        "  promise       is this ONE artifact what its own producer said it \
-         would be?";
-        "                Nothing is being matched; the question is about \
-         the artifact";
-        "                alone, and the declaration is what it is measured \
-         against.";
-        "  quality       is it sound ON ITS OWN TERMS, whatever it is \
-         paired with? An";
-        "                installed library recording a path into the build \
-         tree it was";
-        "                made in is wrong however it is used. NO agreement \
-         yet.";
-        "  preservation  still the same thing after a transformation? Two \
-         COPIES of one";
-        "                artifact, so no disagreement between distinct \
-         components can";
-        "                violate it — only a move that changed something.";
-        "  behaviour     does running it produce what was specified? The \
-         only kind whose";
-        "                evidence is an execution.   composition  a verdict \
-         over verdicts.";
-        "";
-        "       `api_names_present` is an ADMISSIBILITY claim one of whose \
-         members is a";
-        "       declaration: the";
-        "       watchlist stands in for the application's actual uses. \
-         Naming the";
-        "       evidence was never the same as naming the claim, which is \
-         why `kind` and";
-        "       the record's `against` are two fields.";
         "implemented at — `<family>·<function>` in \
          src/canary/agreement/canary_agreement_<family>.ml.";
         "       `·—` = NO EVALUATOR YET; the family names the file it would \
@@ -2655,6 +2648,35 @@ let audit_rows ?(provision = Canary_store.Built) () : (string * string) list =
   List.concat_map (overview_rows ~provision ()) ~f:(fun row ->
       List.filter_map row_rules ~f:(fun rule ->
           Option.map (rule.rr_check row) ~f:(fun c -> (rule.rr_name, c))))
+
+(** THE TABLE'S OWN VERDICT, in one line (2026-09-21, user: "I recall we
+    are doing a harness or checking, how about the checking result").
+
+    The audit and the saturation grid both printed their findings BELOW
+    the table and only in the terminal, so the web page — the view the
+    table is actually read in — never said whether the table had been
+    checked at all. A harness whose result is invisible is a harness
+    nobody trusts.
+
+    One line, beside the table in both views: how many laws ran, whether
+    any row broke one, and whether any part of the modelled world is
+    unwatched. The detail stays in the report below; this is the
+    answer. *)
+let overview_verdict () : string =
+  let bad = audit_rows () in
+  let holes = saturation_holes () in
+  let laws =
+    if List.is_empty bad then
+      Printf.sprintf "%d laws, every row obeys them" (List.length row_rules)
+    else
+      Printf.sprintf "%d laws, %d VIOLATION(S)" (List.length row_rules)
+        (List.length bad)
+  in
+  let sat =
+    if List.is_empty holes then "no unwatched mechanism × format cell"
+    else Printf.sprintf "%d UNWATCHED cell(s)" (List.length holes)
+  in
+  Printf.sprintf "checked: %s · %s" laws sat
 
 (** The audit as a report — the laws, then what breaks them. *)
 let pp_row_audit () : string =

@@ -5,6 +5,7 @@
 
 ## Gotchas
 - [CAML_LD_LIBRARY_PATH shadows fresh dlls](gotcha_caml_ld_shadow.md) — bytecode dll search beats -dllpath; opam stublibs can fake an "upstream break" (z3 2026-08-13); env_guard on ninja_build_binding
+- [Reaching the mac runner](gotcha_mac_runner_reachability.md) — DHCP moves its IP (not a port problem), mDNS connects only ~50%, and its checkout is orphaned by a force-push so it needs a reset not a pull
 
 ## Quick Reference
 - **Main research**: Package management (PL perspective) + canary testing

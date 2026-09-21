@@ -1900,7 +1900,43 @@ let render_html (m : t) ~(generated_at : string) : string =
     let rooting =
       List.map (CR.summary_rows ()) ~f:(fun sr -> (sr.CR.sr_slug, sr))
     in
-    "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
+    (* THE VERDICT AND THE VOCABULARY, BOTH BEFORE THE DATA (2026-09-21,
+       user). The harness printed only in the terminal, so this page —
+       the view the table is actually read in — never said whether the
+       table had been checked. And `kind` is the one column a reader has
+       no prior vocabulary for, so it is glossed here rather than three
+       screens down among the marks. *)
+    (let v = CR.overview_verdict () in
+     let bad =
+       String.is_substring v ~substring:"VIOLATION"
+       || String.is_substring v ~substring:"UNWATCHED"
+     in
+     Printf.sprintf "<p class=\"verdict%s\">%s</p>"
+       (if bad then " bad" else "")
+       (esc v))
+    ^ "<div class=\"kinds\"><b>kind</b> — what the claim ASSERTS; not what \
+       it is held against (the record's <code>against</code>), and not \
+       whose rule it recovers (the <b>R</b> column)."
+    ^ "<dl>"
+    ^ "<dt>admissibility</dt><dd>would ONE action have accepted these \
+       artifacts together as its inputs? <code>theory.md</code> §2's \
+       <code>R_A</code>, the tuples a rule accepts.</dd>"
+    ^ "<dt>promise</dt><dd>is this ONE artifact what its own producer said \
+       it would be? Nothing is matched.</dd>"
+    ^ "<dt>quality</dt><dd>is it sound on its own terms, whatever it is \
+       paired with? No second side at all — and NO agreement yet.</dd>"
+    ^ "<dt>preservation</dt><dd>still the same thing after a \
+       transformation — two COPIES of one artifact, so no disagreement \
+       between distinct components can violate it.</dd>"
+    ^ "<dt>behaviour</dt><dd>does running it produce what was specified? \
+       The only kind whose evidence is an execution.</dd>"
+    ^ "<dt>composition</dt><dd>a verdict over other verdicts.</dd>"
+    ^ "</dl><p class=\"kq\"><code>api_names_present</code> is an \
+       ADMISSIBILITY claim one of whose members is a DECLARATION — the \
+       watchlist stands in for the application's uses. Naming the evidence \
+       is not the same as naming the claim, which is why <b>kind</b> and \
+       the record's <code>against</code> are two fields.</p></div>"
+    ^ "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
      <th>kind</th><th>implemented at</th><th>lang</th><th>mech</th>\
      <th>object</th>"
     ^ String.concat ~sep:""
@@ -2281,6 +2317,19 @@ table.grid td.lm { font-size: .72rem; white-space: nowrap; }
    overview pin counts `lm` cells against the lang/mech labels and a
    third cell sharing the class silently broke that count. */
 table.grid td.kind { font-size: .72rem; white-space: nowrap; color: #57606a; }
+/* THE TABLE'S OWN VERDICT — whether it passed its own laws. Quiet when
+   it passes; a reader should notice it only when it has something to
+   say, which is why the failing form is the one that gets colour. */
+p.verdict { font-size: .78rem; color: #1a7f37; margin: .2rem 0 .6rem;
+  font-family: ui-monospace, monospace; }
+p.verdict.bad { color: #a40e26; font-weight: 700; }
+/* the kind glossary, above the data that uses it */
+div.kinds { font-size: .8rem; margin: 0 0 .8rem; max-width: 62rem; }
+div.kinds dl { margin: .4rem 0 .4rem; display: grid;
+  grid-template-columns: max-content 1fr; gap: .15rem .7rem; }
+div.kinds dt { font-family: ui-monospace, monospace; font-weight: 700;
+  color: #0a3069; }
+div.kinds dd { margin: 0; }
 td.g.rd { background: #d1e7dd; color: #0a3622; }   /* rule and check together */
 td.g.rr { background: #ffe8cc; color: #7a3e00; }   /* the rule ran here */
 td.g.dd { background: #dbeafe; color: #0a3069; }   /* the check fires here */

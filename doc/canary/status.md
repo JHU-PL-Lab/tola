@@ -46,12 +46,22 @@ the result matrix, of which it is the template. Layout and row order:
 2026-09-17. `api_names_present` is the case that forces them apart: an
 admissibility claim one of whose members is a declaration.
 
-**Two harnesses check the table itself** (2026-09-17). `row_rules` holds
-the laws relating two cells of one row — five today, as data, printed by
-`canary checks --firing` and enforced by
+**Two harnesses check the table itself, and the table says so**
+(2026-09-17, surfaced 2026-09-21). `row_rules` holds the laws relating
+two cells of one row — five today, as data, enforced by
 `agreements.rows_obey_their_own_laws`, so a rule added to the list needs
 no test edit. Beside it, the saturation grid asks what no row can: is
-any (mechanism × object format) cell unwatched? None is.
+any (mechanism × object format) cell unwatched?
+
+Current result, carried as a one-line verdict above the table in BOTH
+views (it used to print only in the terminal, so the page the table is
+read in never said whether it had been checked):
+
+> `checked: 5 laws, every row obeys them · no unwatched mechanism × format cell`
+
+The verdict is pinned to the page and pinned to AGREE with what the
+audit computes — a page claiming the laws hold beside a failing audit
+would be worse than no line at all.
 
 **Tests: 159 project + 113 artifact + 14 PM = 286.** `make canary-test`
 after every edit under `src/canary/`; `make canary-post-check` before

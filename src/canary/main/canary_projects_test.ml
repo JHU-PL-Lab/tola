@@ -4443,6 +4443,24 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
              SECOND PARTY to naming the RELATION. *)
           && String.is_substring h ~substring:">admissibility<"
           && String.is_substring h ~substring:">promise<"
+          (* THE HARNESS REPORTS ON THE PAGE (2026-09-21, user asked
+             where its checking result was). The row audit and the
+             saturation grid printed only in the terminal, so the view
+             the table is actually read in never said whether it had
+             been checked at all. The verdict must be there, and it must
+             be the SAME string the audit computes — a page claiming
+             "every row obeys them" beside a failing audit would be
+             worse than no line. *)
+          && String.is_substring h ~substring:"class=\"verdict"
+          && String.is_substring h ~substring:(Canary_agreement.overview_verdict ())
+          (* and the kind glossary sits ABOVE the data that uses it —
+             the whole point of prepending it *)
+          && (match
+                ( String.substr_index h ~pattern:"class=\"kinds\"",
+                  String.substr_index h ~pattern:"class=\"kc\"" )
+              with
+              | Some glossary, Some first_row -> glossary < first_row
+              | _ -> false)
           && count "class=\"lm\"></td>"
              = List.count rows ~f:(fun (row : overview_row) ->
                    String.is_empty (lang_label row.ov_mechs))
