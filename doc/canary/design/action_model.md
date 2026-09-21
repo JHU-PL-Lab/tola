@@ -323,9 +323,24 @@ to lose and each has already cost a bug:
    its own field; it is not read off the name, and it is not read off
    the registry.
 
+   ⚠ **And the field must be a function of the CONSTRUCTOR, not a value
+   an implementer supplies** — which is §5's "one constructor" discipline
+   applied to authority instead of to rendering. Each register has exactly
+   one origin: a check derived from the join is a postcondition, one built
+   from `Canary_world.t` is a world assertion, one selected from the
+   registry is an agreement. If authority is a free-standing field it can
+   be set wrong, and a wrong value here is invisible — the failure class
+   this whole document is about. Derived from which constructor made the
+   check, it cannot be set wrong at all.
+
    The distinguishing question is **whose obligation was it**, and there
-   are THREE registers, not two. Two of them §9 step 2 already
-   separates:
+   are THREE registers, not two. Two of them §9 step 2 already separates
+   — and that split needs no fresh judgement, because
+   [`agreement/theory.md`](agreement/theory.md) §7.1 already lists
+   `pin_check_post` among the world assertions (2026-09-15), beside
+   `Log_names`, `Opam_pin` and z3's `SYSTEM LIB MISSING`. The
+   classification existed in the theory before the code separated the
+   two halves; step 2 implements it rather than proposing it:
 
    | the check asserts | fails the step | because |
    | --- | --- | --- |
