@@ -330,6 +330,22 @@ library path, and `canary_toolchain.ml` already emits
 `pkg-config --variable=libdir`. What is missing is recording
 pkg-config's answer as EVIDENCE at the `conf-*` step, then comparing.
 
+**Reviewed against the specs 2026-09-21, and the conf hop turned out to
+be the richer half.** Eight of ten projects gate their binding on a
+`conf-*` package and **six of those eight have no effective version
+gate** — `opam install` succeeding establishes that a header was present.
+Three findings about our own instrumentation came with it: `pm_gate` is a
+typed declaration NOTHING reads (the twin of `compatibility_version`,
+which is evidence nothing reads); every opam install canary issues
+carries `--assume-depexts`, so we surveyed 370 conf packages and have
+never once exercised the mechanism; and five specs hand-transcribe
+`opam show --field=depends` output into comments, which is the hand-copy
+gotcha at spec level. Four claims look recoverable, and the one with a
+live falsifier on this box is **the gate admits the world** — llvm's gate
+pins generation 19 while this machine carries llvm-18, llvm-19 and
+llvm-24 side by side. Written up for outside discussion, with five open
+questions, in [`design/package_gates.md`](design/package_gates.md).
+
 ⚠ The falsifier is in our own history. z3's `Probe_lib` override
 resolved the library with `pkg-config --variable=libdir z3` — the SYSTEM
 one — in **every world, including those that build their own**. We
