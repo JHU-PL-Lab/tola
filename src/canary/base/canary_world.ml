@@ -125,12 +125,15 @@
     unification. Those say what happens in a world; this says which world
     it is.
 
-    That line was read back to this module in 2026-09-21's plan to split
-    [pin_check_post] into a marker half and an [Opam_pin] half, and it
-    holds — but see action_model.md §9 step 2 before doing it: the pin
-    half is also what INVALIDATES a warm marker, and this type has no
-    post position, so the split as first written would restore a skip
-    over a changed store.
+    2026-09-21's plan proposed splitting [pin_check_post] into a marker
+    half and an [Opam_pin] half on the strength of that line. The line
+    holds; the plan did not, and was withdrawn. [pin_check_post] is
+    evaluated BEFORE a step is skipped, where its failure removes the
+    verdict marker rather than failing anything — and a [pre_shell]
+    prelude cannot do that, because a skipped step runs no command to
+    prefix. So this type does not grow a post position and does not
+    acquire the pin check; the argument is action_model.md §5, "A check
+    is evaluated at three occasions".
 
     {1 Why one type at all}
 

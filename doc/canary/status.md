@@ -101,8 +101,18 @@ agreement side to settle it, since we own `outcome` and the acceptance
 policy. Decided in `action_model.md` §6: **a named check's failure fails
 its step iff the check is a POSTCONDITION, never because it carries an
 agreement's name.** There are three registers, not two — postcondition,
-world assertion, agreement — and §9 step 2 already separates the first
-two.
+world assertion, agreement.
+
+⚠ **Step 2 was to have separated the first two in code, and it was
+WITHDRAWN on 2026-09-21** (§9, argued in §5): a register says what a
+failure MEANS, and the missing axis is the OCCASION, which says what it
+does. `check_post` is evaluated at three — graph start, warm gate, after
+the command — and at the first two a failing world assertion invalidates
+a marker rather than failing anything. So the pin half cannot become a
+`Canary_world` prelude, because a skipped step runs no command. The
+decision above is unaffected; what moved is where the code change
+happens, which is now step 6. It also inherits a duplication: the
+still-valid half is written twice, in `run_step` and `run_graph`.
 
 ⚠ **Before dispatching an agent at the ACTION MODEL** (the §9 plan in
 [`design/action_model.md`](design/action_model.md)): that document now

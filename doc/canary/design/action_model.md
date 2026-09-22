@@ -245,7 +245,7 @@ reachable directly.
 `pin_check_post` calls `Canary_store.sh_in_switch`. As a command it
 becomes *more* honest, not less.
 
-### `pin_check_post` is split, not moved
+### `pin_check_post`: two claims, and neither one moves
 
 It is a conjunction of two different claims, and only one of them is a
 postcondition:
@@ -269,12 +269,64 @@ world; this says which world it is." So the move is a **split along that
 line**, not a relocation of the whole compositor. Reading it the other way
 would put "the marker exists" into a type about identity.
 
-Both halves then have a route out, and neither needs new vocabulary: the
-marker half is derived, and the pin half joins a type that already renders
-to shell — and whose own note records that `Opam_pin` is redundant given
-correct dispatch and is a legitimate future deletion.
+⚠ **But the pin half does not move to `Canary_world` either, and the
+reason is the next subsection.** That conclusion stood here until
+2026-09-21 and was wrong: `Opam_pin` renders as a `pre_shell` prelude that
+aborts a command, and aborting a command is not what the pin half does.
 
-**After the split, no project-supplied check closure remains.**
+### A check is evaluated at three occasions, not one
+
+Measured in `canary_local_runner.ml`, because this is the fact the split
+above was missing:
+
+| occasion | where | what a failure does |
+| --- | --- | --- |
+| **graph start** — should this step be seeded as already done? | `run_graph`, ~line 892 | removes the marker; the step runs fresh |
+| **warm gate** — should this step be skipped? | `run_step`, ~lines 453, 468 | removes the marker; the step runs |
+| **after the command** — did the action do its job? | `run_step`, ~line 634 | the step FAILS |
+
+The first two are one question — *is my cached verdict still true?* — and
+the third is acceptance. The same predicate is correct at all three, which
+is why the 2026-08-17 fix made the warm gate consult it; that is not an
+accident to be tidied away.
+
+**What differs between the compositors is whose hands the subject is in.**
+A marker, or a `.so` this step built, changes only when this step runs (or
+someone deletes a file), so evaluating it at the first two occasions is
+cheap insurance. `pin_check_post`'s pin half is the only one whose subject
+is a **shared, single-valued store that another scenario mutates** — so
+for it alone the early occasions are load-bearing rather than defensive.
+That is the whole reason it exists: scenario A's marker must not be served
+after scenario B re-pinned the switch.
+
+So `Canary_world` cannot take it. A prelude that aborts a command never
+runs when the step is *skipped*, and skipping is precisely the case the
+pin half is there to prevent. Nothing in that type can invalidate a
+marker, and adding a post position would not help — the decision happens
+before any command exists to prefix.
+
+**The reconciliation with §6, which this extends rather than contradicts:**
+`pin_check_post` *is* a world assertion by what it asserts, exactly as
+[`agreement/theory.md`](agreement/theory.md) §7.1 classifies it. §6's
+registers say what a failure **means**. The occasion says what it
+**does** — and for one register those differ: a world assertion caught
+before the command aborts loudly, while the same assertion caught at the
+warm gate invalidates and re-runs, which is the correct quiet response.
+Both are right. §6 answered the acceptance question and did not need this
+axis; step 2 did, and assumed a single occasion.
+
+⚠ **And the still-valid predicate is already written twice.**
+`run_step` (445-456) and `run_graph` (885-896) each hold the same three
+branches — marker exists, fingerprint matches, postcondition holds —
+with the same event names and the same removal. Two copies of one
+decision, which is §4's diagnosis about the GH backend appearing a second
+time inside the runner. Whatever names this occasion should collapse them.
+
+**So no project-supplied check closure is removed by a split.** It is
+removed by making `check_post` data with a constructor for the store
+predicate — one constructor, evaluated in process at all three occasions
+and rendered to shell for any other interpreter, which is §5's own rule
+and §9's step 6. Step 2 has nothing left of its own to do.
 
 ## 6. The seam with the agreement layer
 
@@ -334,13 +386,17 @@ to lose and each has already cost a bug:
    check, it cannot be set wrong at all.
 
    The distinguishing question is **whose obligation was it**, and there
-   are THREE registers, not two. Two of them §9 step 2 already separates
-   — and that split needs no fresh judgement, because
+   are THREE registers, not two. ⚠ A register says what a failure
+   **means**; §5's three-occasions subsection adds what it **does**, and
+   for the world register those differ — caught before the command it
+   aborts, caught at the warm gate it invalidates a marker. That is why
+   §9 step 2 was withdrawn and not because this table is wrong. Two of
+   the three registers were already separate in the theory, because
    [`agreement/theory.md`](agreement/theory.md) §7.1 already lists
    `pin_check_post` among the world assertions (2026-09-15), beside
    `Log_names`, `Opam_pin` and z3's `SYSTEM LIB MISSING`. The
-   classification existed in the theory before the code separated the
-   two halves; step 2 implements it rather than proposing it:
+   classification existed in the theory before the code had anywhere to
+   put it, so step 6 inherits it rather than proposing it:
 
    | the check asserts | fails the step | because |
    | --- | --- | --- |
@@ -498,8 +554,18 @@ does in §9 and why two separate refactors turn out to be one.
 
 ## 9. The ordered plan
 
-Tracked as [`../backlog.md`](../backlog.md) §52. Steps 1 and 2 are
-deletions and depend on nothing; step 3 gates everything below it.
+Tracked as [`../backlog.md`](../backlog.md) §52. **Step 3 gates everything
+below it**, and after 2026-09-21 it is the head of the queue: step 1 is
+landed and step 2 is withdrawn into step 6. Both slots are kept rather
+than renumbered, so a reference to "step 5" elsewhere still means step 5.
+
+Worth noting what the two cheap steps actually bought, since neither
+ended up being the deletion it was described as. Step 1 exchanged a
+closure for data and got the first pin this predicate has ever had; step 2
+dissolved on contact with the code and took a latent regression with it.
+The pattern to expect from the rest: the plan is a set of hypotheses about
+a codebase nobody has read closely at this depth, and the reading is where
+the work is.
 
 1. ~~**Delete `check_pre` as a field.**~~ **LANDED 2026-09-21**, and one
    detail came out differently: the field was not deleted, it was
@@ -520,31 +586,24 @@ deletions and depend on nothing; step 3 gates everything below it.
    fallback agree everywhere today. The pin guards the correspondence now
    and starts guarding the resolution as soon as step 4 gives the
    attached inspectors consumers.
-2. ⚠ **Split `pin_check_post`** along §5's line: marker half stays a
-   postcondition, pin half becomes a `Canary_world` assertion. The last
-   project-supplied closure goes; no new vocabulary appears.
-   **CORRECTED 2026-09-21, found while landing step 1 — do not do this as
-   written.** It would restore a bug that was fixed on 2026-08-17.
-   `check_post` has TWO jobs and §§4–5 knew of one: besides deciding
-   acceptance, `Canary_local_runner.run_step` calls it *before* deciding
-   to warm-skip, and on failure **deletes the marker and re-runs** rather
-   than failing anything. The pin half exists for that second job — its
-   own docstring says so ("the warm-cache skip therefore only fires when
-   the switch still holds the pin"). Move it to `Canary_world` and the
-   sequence is: scenario A pins `sqlite3.5.1.0` and writes its marker,
-   scenario B re-pins, A runs again, the marker-only `check_post` passes
-   → warm skip → the step never runs → the `Opam_pin` prelude, which is
-   `pre_shell` and has no post position, never executes. A stale marker
-   over a changed store, served as a silent PASS; the comment at that
-   gate names exactly this. **So the prerequisite is naming the overload:
-   `check_post` splits into an ACCEPTANCE predicate and a STILL-VALID
-   one, and the pin half is the latter.** Note what that means for §6's
-   decision — the three registers classify *acceptance*, what fails a
-   step; cache validity is a fourth thing, about what invalidates a
-   marker, and no register covers it, which is why the split looked clean
-   on paper. It is [`artifact_cache.md`](artifact_cache.md) §4.5's
-   territory ("the key is present and its recorded hash matches"), so
-   that document and this one settle it together.
+2. ~~**Split `pin_check_post`.**~~ **WITHDRAWN 2026-09-21** — it had
+   nothing of its own to do, and doing it as written would have restored
+   a bug fixed on 2026-08-17. The step was "move the pin half to
+   `Canary_world` and the last project-supplied closure is gone"; §5's
+   three-occasions subsection is why neither half moves. The short
+   version: the pin half is evaluated **before** a step is skipped, where
+   its failure invalidates a marker rather than failing anything, and a
+   `pre_shell` prelude cannot do that because a skipped step runs no
+   command. The closure it was trying to remove is removed by **step 6**
+   instead — `check_post` as data, with a constructor for the store
+   predicate, evaluated in process and rendered to shell from one
+   definition. Two things to carry into step 6 from here: the three
+   occasions are three consumers of that constructor, and the
+   still-valid half is currently written **twice** (`run_step` 445-456,
+   `run_graph` 885-896), so step 6 collapses a duplication as well as a
+   closure. [`artifact_cache.md`](artifact_cache.md) §4.5 is the same
+   question one strength up ("the key is present and its recorded hash
+   matches"), so read it when designing the constructor.
 3. **One locator vocabulary.** Three exist. Self-contained, and the
    blocking item for everything below.
 4. **Derive the inspection from the join.** At `<action>_post`, for each
