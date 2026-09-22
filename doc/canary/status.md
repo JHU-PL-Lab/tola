@@ -48,16 +48,18 @@ admissibility claim one of whose members is a declaration.
 
 **Two harnesses check the table itself, and the table says so**
 (2026-09-17, surfaced 2026-09-21). `row_rules` holds the laws relating
-two cells of one row — five today, as data, enforced by
+two cells of one row — six today, as data, enforced by
 `agreements.rows_obey_their_own_laws`, so a rule added to the list needs
 no test edit. Beside it, the saturation grid asks what no row can: is
 any (mechanism × object format) cell unwatched?
 
-Current result, carried as a one-line verdict above the table in BOTH
+The result is carried as a one-line verdict above the table in BOTH
 views (it used to print only in the terminal, so the page the table is
-read in never said whether it had been checked):
+read in never said whether it had been checked). It reads, today — and
+the count moves whenever a law is added, so read it from `canary checks
+--firing` rather than from here:
 
-> `checked: 5 laws, every row obeys them · no unwatched mechanism × format cell`
+> `checked: 6 laws, every row obeys them · no unwatched mechanism × format cell`
 
 The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
@@ -125,6 +127,43 @@ is platform-blind, so an agreement landed only on macOS would read as
 landed everywhere. Settle that first —
 [`design/platform.md`](design/platform.md) §6 asks the same question of
 the cross-platform viewer.
+
+**And that blocker is smaller than this section assumed** (measured
+2026-09-21, with a macOS session starting). The platform is ALREADY in
+the log, per step, on the same tag as the outcomes it would qualify:
+
+```
+build_lib  opam_switch  (canary)
+build_lib  platform     (wsl_ubuntu)
+build_lib  agreement_outcome  (soname_matches_declaration/…: holds)
+```
+
+`Canary_store.string_of_platform` writes it and `platform_of_string`
+parses it back, so the vocabulary round-trips and no new evidence has to
+be collected or transported. What is missing is only that
+`Canary_status.observe_lines` drops the `platform` line on the floor: it
+folds over a run's lines already, keys its table on `(agreement,
+method)`, and would have to carry the last-seen platform into that key.
+Three places change — the fold, `landing_row`, and `pp_landing`'s
+`decided in <projects>`, which becomes `decided in <project>@<platform>`.
+
+**Do it BEFORE the mac's results arrive, not after.** The report does not
+fail when a macOS outcome lands in it; it silently widens a claim's
+scope, which is the same shape as the pins that went vacuous when
+`agreements.md` was deleted. There is nothing to un-report if it is in
+place first, and the change is cheap enough that waiting buys nothing.
+
+⚠ **A file collision to sequence, not a conflict to resolve.**
+[`design/platform.md`](design/platform.md) §7 item 4 — tiny's Mach-O
+naming port, `libtiny.so.1` spelled out in ~40 declarations — lands in
+`project/canary_tiny_workspace.ml` (32 occurrences) and
+`project/canary_tiny_scenario.ml` (38). Those are exactly the two files
+§2.5's first direction needs: the first is the mutation dispatch, the
+second holds `all_scenario_specs`. Either order works; doing them
+concurrently does not. The naming port is mechanical and wide, the
+correspondence probe is narrow and additive, so the cheaper sequence is
+the port first — but it is the mac session's call, and whoever goes
+second rebases rather than merges.
 
 **The larger question** (user, 2026-09-21): the mac is reachable over
 ssh, and each machine has so far run standalone against its own fork.
