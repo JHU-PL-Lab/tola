@@ -501,11 +501,50 @@ does in §9 and why two separate refactors turn out to be one.
 Tracked as [`../backlog.md`](../backlog.md) §52. Steps 1 and 2 are
 deletions and depend on nothing; step 3 gates everything below it.
 
-1. **Delete `check_pre` as a field.** It is a pure function of `deps`, and
-   `run_graph` has the step list. Zero design cost, one closure gone.
-2. **Split `pin_check_post`** along §5's line: marker half stays a
+1. ~~**Delete `check_pre` as a field.**~~ **LANDED 2026-09-21**, and one
+   detail came out differently: the field was not deleted, it was
+   **exchanged for data** — `dep_dirs : string list`, the resolved
+   directories, with the predicate spelled in the runner. It cannot
+   simply be recomputed there from `deps`, because the resolution needs
+   the whole step list (a dep's `output_dir` differs from its tag's
+   directory when `output_tag` is set) and `derive_steps` is what has it;
+   recomputing in the runner would put that map in two places, which is
+   backlog §50's producer/consumer split. The closure carried an
+   **address**, not a decision.
+   Payoff, immediately: `Canary_run_info.load_run_state` no longer
+   fabricates a stub for it (two closures left, both §9 steps 6–7), and
+   `steps.dep_dirs_correspond_to_deps` pins it — the first pin this
+   predicate has ever had, because a closure can be called but not read.
+   ⚠ Measured while pinning it: **nothing currently depends on a step
+   that has an `output_tag`**, so the resolution and the tag-derived
+   fallback agree everywhere today. The pin guards the correspondence now
+   and starts guarding the resolution as soon as step 4 gives the
+   attached inspectors consumers.
+2. ⚠ **Split `pin_check_post`** along §5's line: marker half stays a
    postcondition, pin half becomes a `Canary_world` assertion. The last
    project-supplied closure goes; no new vocabulary appears.
+   **CORRECTED 2026-09-21, found while landing step 1 — do not do this as
+   written.** It would restore a bug that was fixed on 2026-08-17.
+   `check_post` has TWO jobs and §§4–5 knew of one: besides deciding
+   acceptance, `Canary_local_runner.run_step` calls it *before* deciding
+   to warm-skip, and on failure **deletes the marker and re-runs** rather
+   than failing anything. The pin half exists for that second job — its
+   own docstring says so ("the warm-cache skip therefore only fires when
+   the switch still holds the pin"). Move it to `Canary_world` and the
+   sequence is: scenario A pins `sqlite3.5.1.0` and writes its marker,
+   scenario B re-pins, A runs again, the marker-only `check_post` passes
+   → warm skip → the step never runs → the `Opam_pin` prelude, which is
+   `pre_shell` and has no post position, never executes. A stale marker
+   over a changed store, served as a silent PASS; the comment at that
+   gate names exactly this. **So the prerequisite is naming the overload:
+   `check_post` splits into an ACCEPTANCE predicate and a STILL-VALID
+   one, and the pin half is the latter.** Note what that means for §6's
+   decision — the three registers classify *acceptance*, what fails a
+   step; cache validity is a fourth thing, about what invalidates a
+   marker, and no register covers it, which is why the split looked clean
+   on paper. It is [`artifact_cache.md`](artifact_cache.md) §4.5's
+   territory ("the key is present and its recorded hash matches"), so
+   that document and this one settle it together.
 3. **One locator vocabulary.** Three exist. Self-contained, and the
    blocking item for everything below.
 4. **Derive the inspection from the join.** At `<action>_post`, for each

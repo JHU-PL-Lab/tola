@@ -697,10 +697,10 @@ let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
        see [agreement_ctx_of_action] *)
     agreement_ctx = None;
     dummy = None;
-    check_pre = (fun () ->
-      List.for_all deps ~f:(fun dep ->
-          let out = output_dir_for ~root ~project ~tag:dep in
-          Stdlib.Sys.file_exists out));
+    (* The tag-based default; [derive_steps] re-resolves it against the
+       actual sibling output_dirs once the whole list exists. *)
+    dep_dirs =
+      List.map deps ~f:(fun dep -> output_dir_for ~root ~project ~tag:dep);
     cmd;
     check_post;
   }
@@ -1386,27 +1386,32 @@ let derive_steps ~root ~project
                      steps @ [ mk_scan_source ~fetch_tag:tag scan_cmd ]
                  | _ -> steps))
   in
-  (* Resolve check_pre against actual sibling output_dirs.
-     Step constructors set check_pre = "every dep tag's output_dir
-     exists", but a dep's output_dir may differ from its tag's directory
-     when output_tag is set (e.g. scan_source writes inside fetch_source/).
-     Here we have the full step list, so re-bind each check_pre to look up
-     deps via a tag → output_dir map. *)
+  (* Resolve [dep_dirs] against actual sibling output_dirs.
+     Step constructors fill it from the dep TAG, but a dep's output_dir
+     differs from its tag's directory when output_tag is set (e.g.
+     scan_source writes inside fetch_source/). Here we have the full step
+     list, so re-resolve each dep through a tag → output_dir map.
+
+     THIS is the reason the precondition could not simply be recomputed
+     by the runner from [deps] (2026-09-21): the resolution needs the
+     whole list, and it is this function that has it. Resolving here and
+     carrying the answer keeps one place that knows where a dep's output
+     lives — the alternative duplicates this map in the runner, which is
+     the producer/consumer split backlog §50 is about. *)
   let by_tag = Hashtbl.create (module String) in
   List.iter raw_steps ~f:(fun s -> Hashtbl.set by_tag ~key:s.tag ~data:s.output_dir);
   List.map raw_steps ~f:(fun s ->
-      let check_pre () =
-        List.for_all s.deps ~f:(fun dep ->
+      let dep_dirs =
+        List.map s.deps ~f:(fun dep ->
             match Hashtbl.find by_tag dep with
-            | Some out -> Stdlib.Sys.file_exists out
+            | Some out -> out
             | None ->
                 (* Dep tag not in step list (filtered out by langs/spec).
                    Fall back to the old tag-based path. *)
-                Stdlib.Sys.file_exists
-                  (output_dir_for ~root ~project ~tag:dep))
+                output_dir_for ~root ~project ~tag:dep)
       in
       { s with
-        check_pre;
+        dep_dirs;
         agreement_ctx =
           agreement_ctx_of_action ~world ~mechanism_of
             ~declared:spec.api_source ~langs s.action;

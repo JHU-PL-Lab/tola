@@ -120,10 +120,17 @@
 
     A world assertion is a POSITIVE-scenario invariant about identity. It
     is not a [step_expectation] (what a MISmatched world must do), not a
-    [check_pre]/[check_post] (whether the step's inputs and outputs
+    [dep_dirs]/[check_post] (whether the step's inputs and outputs
     exist), and it does not belong to the contract/expectation
     unification. Those say what happens in a world; this says which world
     it is.
+
+    That line was read back to this module in 2026-09-21's plan to split
+    [pin_check_post] into a marker half and an [Opam_pin] half, and it
+    holds — but see action_model.md §9 step 2 before doing it: the pin
+    half is also what INVALIDATES a warm marker, and this type has no
+    post position, so the split as first written would restore a skip
+    over a changed store.
 
     {1 Why one type at all}
 

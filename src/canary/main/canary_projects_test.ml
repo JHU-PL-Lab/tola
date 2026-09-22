@@ -1771,7 +1771,7 @@ let canary_switch_pin : Canary_project_test.pure_test =
             { tag = "probe"; output_tag = "o"; output_dir = "d";
               project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
               deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
-              check_pre = (fun () -> true);
+              dep_dirs = [];
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
               disabled_agreements = []; agreement_ctx = None; dummy = None }
@@ -1872,7 +1872,7 @@ let platform_single_source_pin : Canary_project_test.pure_test =
             { tag = "probe"; output_tag = "o"; output_dir = "d";
               project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
               deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
-              check_pre = (fun () -> true);
+              dep_dirs = [];
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
               disabled_agreements = []; agreement_ctx = None; dummy = None }
@@ -1965,7 +1965,7 @@ let strict_mode_pin : Canary_project_test.pure_test =
           { tag = "probe"; output_tag = "o"; output_dir = "d";
             project_dir = "p"; variant_id = "v"; action = Canary_basic.Probe_lib;
             deps = []; cmd = (fun ~output_dir:_ ~variant_key:_ -> "echo hi");
-            check_pre = (fun () -> true);
+            dep_dirs = [];
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = Canary_step_model.Expect_success; symbol_check = None;
             disabled_agreements = []; agreement_ctx = None; dummy = None }
@@ -2066,6 +2066,86 @@ let inspect_clash_pin : Canary_project_test.pure_test =
           List.length loose = List.length tight + 1
         in
         attached && dropped && same_otherwise) }
+
+(* THE PRECONDITION IS CHECKABLE AT ALL (2026-09-21).
+
+   [check_pre : unit -> bool] was a closure, and nothing pinned it in
+   the years it existed — a closure can be called but not read, so a
+   test could only re-run it and get the same answer it would give in
+   production. Now it is [dep_dirs : string list] and there is something
+   to assert. That is the smallest concrete argument for
+   doc/canary/design/action_model.md §§4-5: making a check data makes it
+   testable, transportable and renderable in one move, and this pin is
+   the first of the three to arrive.
+
+   WHAT IT ASSERTS is the CORRESPONDENCE: one resolved directory per
+   dep, in the same order, each equal to that dep step's own
+   [output_dir] when the dep is in the list. That is exactly the
+   sentence the closure evaluated.
+
+   WHAT IT DOES NOT ASSERT, stated because a pin that overclaims is
+   worse than none: it cannot currently witness the RESOLUTION the
+   rebind in [derive_steps] performs. That rebind exists because a dep's
+   [output_dir] differs from its tag's directory when [output_tag] is
+   set — and measured across the roster (2026-09-21), **nothing depends
+   on a step that has an [output_tag]**. The steps that carry one are
+   the attached inspectors (`build_lib_inspect` writes into `build_lib/`)
+   and `scan_source`, and nothing lists any of them as a dep. So the
+   map lookup and the tag-derived fallback agree everywhere today, and a
+   revert to the fallback would not fire this pin.
+
+   It still earns its place: it catches the realistic failure, which is
+   a list that stops corresponding — a dep added without a directory, a
+   truncation, a misalignment — and it starts firing on the resolution
+   the moment any step depends on an inspector, which §9 step 4 makes
+   likely, since deriving inspections from the join is precisely about
+   giving those steps consumers. *)
+let dep_dirs_pin : Canary_project_test.pure_test =
+  { name = "steps.dep_dirs_correspond_to_deps";
+    check =
+      (fun () ->
+        let module SM = Canary_step_model in
+        let module SB = Canary_step_builder in
+        let probe ~output_dir:_ ~variant_key:_ = "true" in
+        let spec =
+          { SB.empty_runner_spec with
+            build_lib = Some probe;
+            build_binding = [ (Canary_lang.OCaml, probe) ];
+            probe_lib = [ (Canary_store.Build_tree, probe) ];
+            probe_binding =
+              [ (Canary_lang.OCaml, Canary_store.Build_tree, probe) ] }
+        in
+        let steps =
+          SB.derive_steps ~root:"_out/canary/test/no-such-run"
+            ~project:"dep-dirs-test"
+            ~langs:[ Canary_lang.OCaml; Canary_lang.Python ] spec
+        in
+        let by_tag = Hashtbl.create (module String) in
+        List.iter steps ~f:(fun (s : SM.step) ->
+            Hashtbl.set by_tag ~key:s.SM.tag ~data:s.SM.output_dir);
+        (* the list must be non-trivial, or the invariant below is
+           vacuous and the pin would pass on an empty graph *)
+        let saw_a_dep =
+          List.exists steps ~f:(fun (s : SM.step) ->
+              not (List.is_empty s.SM.deps))
+        in
+        let corresponds =
+          List.for_all steps ~f:(fun (s : SM.step) ->
+              List.length s.SM.deps = List.length s.SM.dep_dirs
+              && List.for_all2_exn s.SM.deps s.SM.dep_dirs
+                   ~f:(fun dep dir ->
+                     (not (String.is_empty dir))
+                     &&
+                     match Hashtbl.find by_tag dep with
+                     | Some out -> String.equal out dir
+                     | None -> true (* dep filtered out by langs/spec *)))
+        in
+        if not (saw_a_dep && corresponds) then
+          Fmt.pr
+            "    steps.dep_dirs_correspond_to_deps: saw_a_dep=%b \
+             corresponds=%b@."
+            saw_a_dep corresponds;
+        saw_a_dep && corresponds) }
 
 (* BLAME IS A STATIC SCAN, AND IT HAS TO BE RIGHT TO BE WORTH COUNTING
    (2026-09-15, user: "before we fix that, can we attribute it as one
@@ -2406,7 +2486,7 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
             output_dir = "d"; project_dir = "p"; variant_id = "v";
             action = Canary_basic.Probe_binding Canary_lang.OCaml; deps = [];
             cmd = (fun ~output_dir:_ ~variant_key:_ -> "run it");
-            check_pre = (fun () -> true);
+            dep_dirs = [];
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = exp; symbol_check = None; disabled_agreements = [];
             agreement_ctx = None; dummy = None }
@@ -4975,6 +5055,7 @@ let base_tests : Canary_project_test.pure_test list =
       touches_join_pin;
       blame_attribution_pin;
       inspect_clash_pin;
+      dep_dirs_pin;
       run_info_session_pin;
       machine_roots_pin;
       platform_enumeration_pin;

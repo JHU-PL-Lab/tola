@@ -120,9 +120,15 @@ let dump_run_info ?(filename = "run_info") ~dir (info : run_info) =
 
 (* ── Run-state serialisation ──
    Saves per-step verdicts so [view_project] can rebuild diagrams +
-   HTML without re-executing. The runtime closures ([cmd], [check_pre],
+   HTML without re-executing. The runtime closures ([cmd],
    [check_post]) aren't serialised; on load they default to stubs that
-   refuse to run. *)
+   refuse to run.
+
+   [dep_dirs] is no longer among them (2026-09-21) — it is data, so the
+   only reason it is empty on load is that [deps] is. THAT is what
+   making a check data buys, stated at its smallest: the field stopped
+   needing a stub. The remaining two are the argument for §9 steps 6-7
+   of action_model.md. *)
 
 let save_run_state ~dir ~project_name steps
     ?(artifact_name : (artifact_kind -> string option) = fun _ -> None)
@@ -202,7 +208,12 @@ let load_run_state ~dir =
       tag; output_tag; output_dir;
       project_dir = dir; variant_id; action; deps = [];
       cmd          = (fun ~output_dir:_ ~variant_key:_ -> "");
-      check_pre    = (fun () -> false);
+      (* [] beside [deps = []] above: a reloaded state records no
+         edges, so it asserts no precondition either. This used to be
+         [(fun () -> false)] — one of three dead closures this view had
+         to invent because the step type could not say that half of it
+         is execution (action_model.md §4). One down. *)
+      dep_dirs     = [];
       check_post   = (fun ~output_dir:_ ~variant_key:_ -> false);
       expectation; symbol_check = None;
       disabled_agreements = [];

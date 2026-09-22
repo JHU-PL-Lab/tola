@@ -20,9 +20,15 @@
     {!Canary_step_builder}.
 
     Communicates with the build half through the closure firewall on
-    [step]: this module only invokes [step.cmd] / [step.check_pre]
-    / [step.check_post] and never reads [runner_spec] directly.
-    Symmetric design with the other backends. *)
+    [step]: this module only invokes [step.cmd] / [step.check_post],
+    evaluates [step.dep_dirs], and never reads [runner_spec] directly.
+    Symmetric design with the other backends.
+
+    The firewall is one closure thinner since 2026-09-21: the
+    precondition is [step.dep_dirs], data, spelled into a predicate
+    here. A firewall made of closures is also a wall no other backend
+    can see through, which is why the GH renderer drops what it cannot
+    call — doc/canary/design/action_model.md §§4-5. *)
 
 open Base
 open Canary_step_model
@@ -479,7 +485,14 @@ let run_step logger ~root:_ ~project:_ (step : step) : step_status =
     (match step.dummy with
      | Some why -> log ~event:"dummy" ~detail:(Some why)
      | None -> ());
-    let pre_ok = step.check_pre () in
+    (* THE PRECONDITION IS SPELLED HERE, over data the step carries
+       (2026-09-21). It used to be [step.check_pre ()], a closure the
+       step builder captured; the step now carries the resolved
+       directories and the predicate lives at the one place that
+       evaluates it. Same sentence, same verdict, same log event — but a
+       step list read back from disk, or handed to a backend that is not
+       this runner, still says what its precondition was. *)
+    let pre_ok = List.for_all step.dep_dirs ~f:Stdlib.Sys.file_exists in
     log ~event:"check_pre" ~detail:(Some (if pre_ok then "pass" else "FAIL"));
     let result =
       (if not pre_ok then (

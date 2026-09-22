@@ -2291,7 +2291,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
            diagram's edge topology (hand-built above via add_edge) and the runner's
            step.deps are TWO SEPARATE dependency relations that have drifted apart,
            so this fails for ALL projects (z3/llvm/sqlite/tiny-full) even though
-           every RUN is correct — each step's check_pre enforces the real deps and
+           every RUN is correct — each step's dep_dirs enforce the real deps and
            execution is sound; only the picture is under-connected. Reconciling the
            two into ONE relation (draw one edge per step.deps pair) is the "one
            dependency relation" cleanup in status §A; diagram work is on hold, and

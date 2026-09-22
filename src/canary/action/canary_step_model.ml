@@ -120,7 +120,25 @@ type step = {
   action : Canary_basic.action;
   deps : string list;
   cmd : output_dir:string -> variant_key:string -> string;
-  check_pre : unit -> bool;
+  (* THE PRECONDITION, AS DATA (2026-09-21). Was
+     [check_pre : unit -> bool], a closure over the local filesystem.
+
+     It never carried any project logic: no project ever supplied one,
+     and every step's predicate was the same sentence — "every dep's
+     output directory exists". What the closure captured was not a
+     decision but an ADDRESS, and a resolved one: a dep's output_dir
+     differs from its tag's directory when [output_tag] is set (a
+     scan_source writes inside fetch_source/), so only [derive_steps],
+     holding the whole step list, can resolve it.
+
+     So the step carries the resolved directories and the runner spells
+     the predicate. The point is not that a field was removed — one was
+     exchanged — it is that what remains is data: it survives being
+     written to disk and read back, it crosses to a machine this process
+     is not running on, and any backend can render it (`test -d a && test
+     -d b`) instead of dropping it, which is what the GH backend does
+     with a closure. See doc/canary/design/action_model.md §§4-5. *)
+  dep_dirs : string list;
   check_post : output_dir:string -> variant_key:string -> bool;
   expectation : step_expectation;
   symbol_check : symbol_check option;

@@ -33,7 +33,7 @@ let mk_step ~(dir : string) ~(rc : int) : SM.step =
         Stdlib.Printf.sprintf
           "echo x >> %s/counter; echo out > %s/probe.log; exit %d" output_dir
           output_dir rc);
-    check_pre = (fun () -> true);
+    dep_dirs = [];
     check_post =
       (fun ~output_dir ~variant_key:_ ->
         Stdlib.Sys.file_exists (output_dir ^ "/probe.log"));
