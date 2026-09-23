@@ -492,7 +492,7 @@ the check until the derivation agrees with it:
 6. **Recorded run results on the case diagrams** — brought forward by
    the user on 2026-09-23 and planned as §2.7.
 
-### 2.7 Run results on the overview diagrams — A and B1 landed; B2 awaits two decisions
+### 2.7 Run results on the overview diagrams — A and B landed; C next
 
 *(2026-09-23, user: "the cases in section 2 are generated from
 hardcoded code, not from the running result. I wish a feature to
@@ -683,15 +683,13 @@ does not matter to it. Three rules shape B2:
 - *Siblings can land on no edge.* `probe_lib_staged` observes the staged
   copy, which has no observation edge on the page; B2's guard lists it.
 
-Two decisions stay open. **Before B2:** how an edge names its action.
-Edges are language-free (`probe_binding`) and steps are not
-(`probe_binding_ocaml`), and `base/` has no language-free form. The
-recommendation is a small action-family type there, with a `family_of`
-the compiler keeps total; the alternative, a predicate per edge, cannot
-be printed. **Before C:** the matrix reads the active projects, so muted
-z3 — the only project whose built world also probes its published
-package — is never drawn. Either the record reads the catalogue, as the
-topology table does, or z3 waits until it is unmuted.
+Two decisions were open, and the user took both (2026-09-23). **How an
+edge names its action:** a small action-family type in `base/`, the
+names placeholders to settle later — and more than that, *"the edge in
+the diagram can be used to annotate either action, or agreement, or
+customized information"*, so an edge's annotation is one of the three
+rather than an optional action. **z3:** stays muted; the record reads
+the active projects, and the other projects carry enough special cases.
 
 For C: the `.js` record is a per-machine file like `matrix.html` — the
 same `_mac` suffix, and a `--platform` render never writes the tracked
@@ -771,6 +769,76 @@ facts again. The phase A pin now shares its fixture
 - *Two steps have no edge on the page:* ssl's `probe_app_ocaml`, which
   carries no location, and `probe_lib_staged` (sqlite, llvm), which
   observes the staged copy. B2's guard will list both.
+
+**Phase B2 landed 2026-09-23** — B2a in one commit, B2b and B2c in the
+next.
+
+*B2a — an edge carries an action family, a claim, or information.*
+`Canary_action_family` (`base/`) is an action with its language erased;
+the names are placeholders. `eg_action : string option` became a typed
+annotation. Sixteen edges carry an `Action`; `same_program` carries an
+`Agreement`, the end-to-end candidate `package_resolution_suffices`,
+drawn by its code `prs`; the four edges we run nothing at carry `Info`
+and say, in italics, what does establish them — packager, depext table,
+conf predicate, pkg-config. The page's "Not yet every step" note is now
+computed from the catalogue: 10 of its 19 action families have no edge,
+where the note used to name two. `topology.graph_matches_the_registry`
+now holds what its comment had long claimed, action coverage: every
+annotation well-formed, all three kinds in use, a family spelled as its
+actions minus the language, and the families without an edge listed.
+A headless render showed two of the longer labels clipped by node boxes;
+those two now start at their edge's midpoint.
+
+*B2b — every step has a place.* `Canary_topology.place_step`: a step
+realizes the edges annotated with its family, narrowed by what the step
+and the world say. A binding probe goes to `run_packaged` or `run` by
+its location. A lib probe of the staged copy, or of a system copy the
+world does not use, has no edge; nor does a library fetched through a
+language PM (torch). A binding fetch realizes `depends` only where a
+symbolic bridge — a conf package, or a depext bound — is declared. An
+inspection is evidence for its parent, and a dummy performs nothing.
+Only an `Action` annotation can be realized: an `Info` edge names
+someone else's rule, which our step may set off but does not perform.
+Every unplaced step carries a typed reason, and
+`topology.every_step_has_a_place` lists them over every world the runner
+derives, with no log read: configure, fetch_source, scan_sources,
+fetch_binding_source and probe_app have no edge; sqlite's stdlib fetch
+is a dummy; torch's library fetch comes from a language PM; lib probes
+of a staged copy or an unused system copy. It also requires every action
+edge on the page to be realized in some world, and both consumer edges
+and both `depends` outcomes to occur.
+
+*B2c — the join's result is in the record.* Each row now carries
+`edges` — every edge its world realizes, with the steps realizing it —
+and `claims`, every placed claim with its check columns' outcomes, so
+the overlay draws and computes nothing. zarith's built world realizes
+`run` and not `run_packaged`: the unprobed published package, as an
+absent edge. Guard: `matrix.record_joins_edges_and_claims`, which
+recomputes the edges from the steps and checks each claim against its
+cell.
+
+Each of the three guards turned red under deliberate breaks, and the
+text and markdown views of `canary result` are still byte-identical to
+before phase A.
+
+**Found during B2:**
+
+1. *A declaration that contradicts its command.* The opam-binding
+   template's vendored-library world (cairo, libffi, zlib, zstd) keeps
+   its lib probe at `Pm (Sys_pm apt)`, while the command probes the
+   prebuilt copy. No rule over typed facts can tell that from a
+   legitimate probe of an unused system copy — sqlite's `probe_lib_apt`
+   in its built worlds is one — so those four read as
+   `unused_system_copy`, and the pin's comment says so. The fix is a
+   decision: `Canary_store.location` has no constructor for a supplied
+   copy at a path, so either `base/` gains one or the prebuilt is
+   declared a build tree.
+2. *A vendored world still fetches the system package.* The same worlds
+   run `apt-get install libzstd-dev` beside the prebuilt they use, so
+   the system package's edges are realized there too. The rule follows
+   what the fetch asked — its provider — not where the world's library
+   came from; the first cut read the world's provision and called the
+   fetch a supplied copy.
 
 ---
 

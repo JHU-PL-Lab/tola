@@ -80,6 +80,11 @@ type world_step = {
   ws_inspects : string option;
       (** the step an inspection summarizes; [None] for a step that
           performs its action *)
+  ws_dummy : string option;
+      (** a dummy step's reason for being empty ([Canary_step_model]) *)
+  ws_place : Canary_topology.place;
+      (** WHERE IT SITS on the overview's graph (phase B2): the edges it
+          realizes, the step it is evidence for, or why it has no edge *)
   ws_state : Canary_status.step_state;
   ws_at : string option;
   ws_detail : string option;
@@ -163,6 +168,14 @@ type row = {
       (** every step of this world, in the realize pass's order — the
           record's view, which no text renderer draws (status.md §2.7
           B1) *)
+  edges : (string * string list) list;
+      (** THE JOIN, per edge of the overview's graph that this world
+          REALIZES: the tags of the steps realizing it, in edge order
+          (phase B2). An edge absent here is dead in this world *)
+  claims : (string * (string * string option) list) list;
+      (** per claim the overview places on an edge ([Canary_topology]'s
+          claim sites) that has a check column in this row: each column
+          and its outcome ([None] = no run evaluated it) *)
 }
 
 (** A COLUMN IS AN ACTION OR A CHECK SLOT (2026-09-14, user).
@@ -1389,6 +1402,64 @@ let matrix_of ?(root = "_out")
             let implicated_kinds =
               List.concat_map check_cells ~f:(fun (_, (_, impl)) -> impl)
             in
+            (* every step, each in its own log line's state — the
+               siblings and inspections the cells have no column for *)
+            let row_steps =
+              List.map world_steps ~f:(fun (s : Canary_step_model.step) ->
+                  let state, at, detail =
+                    reading_of_run sl s.Canary_step_model.tag
+                  in
+                  { ws_tag = s.Canary_step_model.tag;
+                    ws_action = s.Canary_step_model.action;
+                    ws_location = s.Canary_step_model.location;
+                    ws_inspects = s.Canary_step_model.inspects;
+                    ws_dummy = s.Canary_step_model.dummy;
+                    ws_place =
+                      Canary_topology.place_step ~pr ~world:a
+                        ~action:s.Canary_step_model.action
+                        ~location:s.Canary_step_model.location
+                        ~inspects:s.Canary_step_model.inspects
+                        ~dummy:s.Canary_step_model.dummy;
+                    ws_state = state;
+                    ws_at = at;
+                    ws_detail = detail })
+            in
+            (* THE JOIN'S RESULT (phase B2): each realized edge with the
+               steps realizing it, and each placed claim with its
+               outcomes here — so the overlay draws and computes nothing *)
+            let row_edges =
+              List.filter_map Canary_topology.edges ~f:(fun e ->
+                  let tags =
+                    List.filter_map row_steps ~f:(fun s ->
+                        match s.ws_place with
+                        | Canary_topology.On ids
+                          when List.mem ids e.Canary_topology.eg_id
+                                 ~equal:String.equal ->
+                            Some s.ws_tag
+                        | _ -> None)
+                  in
+                  if List.is_empty tags then None
+                  else Some (e.Canary_topology.eg_id, tags))
+            in
+            let row_claims =
+              List.filter_map Canary_topology.claim_sites ~f:(fun cs ->
+                  let slug = cs.Canary_topology.cs_claim in
+                  let outcomes =
+                    List.filter_map cols ~f:(fun col ->
+                        match col with
+                        | Check (_, _, s) when String.equal s slug ->
+                            Option.map
+                              (List.Assoc.find check_cells (label_of_col col)
+                                 ~equal:String.equal)
+                              ~f:(fun ((c : cell), _) ->
+                                ( label_of_col col,
+                                  match c.recorded with
+                                  | R_check o -> o
+                                  | R_act _ | R_artifact -> None ))
+                        | _ -> None)
+                  in
+                  if List.is_empty outcomes then None else Some (slug, outcomes))
+            in
             { project;
               scenario;
               index = 0;
@@ -1400,20 +1471,9 @@ let matrix_of ?(root = "_out")
                 Option.value_map sl ~default:[]
                   ~f:(fun (sl : Canary_status.scenario_log) ->
                     sl.Canary_status.sl_platforms);
-              (* every step, each in its own log line's state — the
-                 siblings and inspections the cells have no column for *)
-              steps =
-                List.map world_steps ~f:(fun (s : Canary_step_model.step) ->
-                    let state, at, detail =
-                      reading_of_run sl s.Canary_step_model.tag
-                    in
-                    { ws_tag = s.Canary_step_model.tag;
-                      ws_action = s.Canary_step_model.action;
-                      ws_location = s.Canary_step_model.location;
-                      ws_inspects = s.Canary_step_model.inspects;
-                      ws_state = state;
-                      ws_at = at;
-                      ws_detail = detail });
+              steps = row_steps;
+              edges = row_edges;
+              claims = row_claims;
               (* the SETTING block: this world's placement per artifact.
                  A source artifact carries its own repo link — so a
                  project with a lib source AND an off-tree binding source
@@ -1927,6 +1987,16 @@ let json_of_cell (c : cell) : Yojson.Basic.t =
    action apart — beside its typed action. The location is spelled by
    [Canary_store.string_of_location]: [build_tree], [staged],
    [sys_pm:apt], [ocaml:opam]. *)
+(* where a step sits: the edges it realizes, the step it is evidence
+   for, or the reason it has none — a stable code and its sentence *)
+let json_of_place : Canary_topology.place -> Yojson.Basic.t = function
+  | Canary_topology.On ids -> `Assoc [ ("on", `List (List.map ids ~f:(fun i -> `String i))) ]
+  | Canary_topology.Evidence_for p -> `Assoc [ ("evidence_for", `String p) ]
+  | Canary_topology.Unplaced u ->
+      `Assoc
+        [ ("unplaced", `String (Canary_topology.code_of_unplaced u));
+          ("why", `String (Canary_topology.string_of_unplaced u)) ]
+
 let json_of_world_step (s : world_step) : Yojson.Basic.t =
   let opt key = function Some v -> [ (key, `String v) ] | None -> [] in
   `Assoc
@@ -1934,6 +2004,8 @@ let json_of_world_step (s : world_step) : Yojson.Basic.t =
        ("action", `String (Canary_basic.string_of_action s.ws_action)) ]
     @ opt "location" (Option.map s.ws_location ~f:Canary_store.string_of_location)
     @ opt "inspects" s.ws_inspects
+    @ opt "dummy" s.ws_dummy
+    @ [ ("place", json_of_place s.ws_place) ]
     @ state_fields s.ws_state
     @ opt "at" s.ws_at @ opt "detail" s.ws_detail)
 
@@ -1963,7 +2035,24 @@ let to_json (m : t) : Yojson.Basic.t =
                        (List.filter_map r.cells ~f:(fun (tag, c) ->
                             Option.map c ~f:(fun c -> (tag, json_of_cell c))))
                    );
-                   ("steps", `List (List.map r.steps ~f:json_of_world_step))
+                   ("steps", `List (List.map r.steps ~f:json_of_world_step));
+                   ( "edges",
+                     `Assoc
+                       (List.map r.edges ~f:(fun (id, tags) ->
+                            (id, `List (List.map tags ~f:(fun t -> `String t)))))
+                   );
+                   ( "claims",
+                     `Assoc
+                       (List.map r.claims ~f:(fun (slug, outcomes) ->
+                            ( slug,
+                              `List
+                                (List.map outcomes ~f:(fun (column, o) ->
+                                     `Assoc
+                                       [ ("column", `String column);
+                                         ( "outcome",
+                                           match o with
+                                           | Some s -> `String s
+                                           | None -> `Null ) ])) ))) )
                  ])) ) ]
 
 (** THE RECORD AS PRINTED — what [canary result --json] writes to stdout,

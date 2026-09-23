@@ -790,6 +790,115 @@ let topology_graph_pin : Canary_project_test.pure_test =
                "pack_lib"; "pack_app" ])
   }
 
+(* EVERY STEP HAS A PLACE ON THE GRAPH, OR A LISTED REASON (2026-09-23,
+   status.md §2.7 phase B2). The join from recorded steps onto the
+   overview's edges, checked over every world of every active project as
+   the RUNNER derives it — no log is read, so this holds on a checkout that
+   has never run anything:
+
+   - no step falls through the rule ([Unexpected]);
+   - an edge a step realizes exists, and an inspection is evidence for a
+     step of its own world that performs the same action;
+   - the steps the page cannot place are LISTED, as (action family,
+     reason) — each is a page error or a model gap, so a new one must
+     fail here rather than render as a quiet grey;
+   - every action edge on the page is realized by some world, so the
+     page draws nothing canary never does.
+
+   ⚠ One listed gap is a DECLARATION bug, not a model gap: the
+   opam-binding template's vendored-library world keeps its lib probe at
+   [Pm (Sys_pm _)] while the command probes the prebuilt copy (cairo,
+   libffi, zlib, zstd), so those four read as observing an unused system
+   copy. [Canary_store.location] has no constructor for a supplied copy;
+   the fix is a decision (status.md §2.7). When it lands, the
+   [unused_system_copy] entry stays — sqlite's [probe_lib_apt] is the
+   legitimate case — and this comment goes. *)
+let every_step_placed_pin : Canary_project_test.pure_test =
+  { name = "topology.every_step_has_a_place";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module SM = Canary_step_model in
+        let placed =
+          List.concat_map Canary_registry.all_projects ~f:(fun (_, pr) ->
+              List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  let steps =
+                    Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
+                      ~ctx:(Canary_pipeline.ctx_of pr a) a
+                  in
+                  ( steps,
+                    List.map steps ~f:(fun (s : SM.step) ->
+                        ( s,
+                          T.place_step ~pr ~world:a ~action:s.SM.action
+                            ~location:s.SM.location ~inspects:s.SM.inspects
+                            ~dummy:s.SM.dummy )) )))
+        in
+        let all = List.concat_map placed ~f:snd in
+        let edge_exists id =
+          List.exists T.edges ~f:(fun e -> String.equal e.T.eg_id id)
+        in
+        let family (s : SM.step) =
+          Canary_action_family.to_string (Canary_action_family.of_action s.SM.action)
+        in
+        let well_formed =
+          List.for_all placed ~f:(fun (steps, places) ->
+              List.for_all places ~f:(fun ((s : SM.step), p) ->
+                  match p with
+                  | T.On ids -> (not (List.is_empty ids)) && List.for_all ids ~f:edge_exists
+                  | T.Evidence_for parent ->
+                      List.exists steps ~f:(fun (q : SM.step) ->
+                          String.equal q.SM.tag parent
+                          && Option.is_none q.SM.inspects
+                          && Poly.equal q.SM.action s.SM.action)
+                  | T.Unplaced (T.Unexpected _) -> false
+                  | T.Unplaced _ -> true))
+        in
+        (* THE LISTED GAPS — by action family, so a second language does
+           not add a row *)
+        let gaps =
+          List.filter_map all ~f:(fun (s, p) ->
+              match p with
+              | T.Unplaced u -> Some (family s ^ " " ^ T.code_of_unplaced u)
+              | T.On _ | T.Evidence_for _ -> None)
+          |> List.dedup_and_sort ~compare:String.compare
+        in
+        let listed =
+          [ "configure no_edge"; "fetch_binding dummy";
+            "fetch_binding_source no_edge"; "fetch_lib lib_from_language_pm";
+            "fetch_source no_edge"; "probe_app no_edge";
+            "probe_lib staged_copy"; "probe_lib unused_system_copy";
+            "scan_sources no_edge" ]
+        in
+        (* every ACTION edge is realized somewhere *)
+        let realized =
+          List.concat_map all ~f:(fun (_, p) ->
+              match p with T.On ids -> ids | T.Evidence_for _ | T.Unplaced _ -> [])
+        in
+        let action_edges_realized =
+          List.for_all T.edges ~f:(fun e ->
+              match e.T.eg_annotation with
+              | T.Action _ -> List.mem realized e.T.eg_id ~equal:String.equal
+              | T.Agreement _ | T.Info _ -> true)
+        in
+        (* and the narrowings are EXERCISED, not merely written: both
+           consumer programs, and [depends] both present and withheld *)
+        let fetch_binding_places =
+          List.filter_map all ~f:(fun ((s : SM.step), p) ->
+              match (s.SM.action, p) with
+              | Canary_basic.Fetch (Canary_basic.Binding _), T.On ids -> Some ids
+              | _ -> None)
+        in
+        well_formed
+        && List.equal String.equal gaps listed
+        && action_edges_realized
+        && List.mem realized "run" ~equal:String.equal
+        && List.mem realized "run_packaged" ~equal:String.equal
+        && List.exists fetch_binding_places ~f:(fun ids ->
+               List.mem ids "depends" ~equal:String.equal)
+        && List.exists fetch_binding_places ~f:(fun ids ->
+               not (List.mem ids "depends" ~equal:String.equal)))
+  }
+
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
    template numbers its sections by hand, and moving the agreement table
    in produced two sections called "3." — found by reading the page, not
@@ -5519,6 +5628,115 @@ let record_steps_pin : Canary_project_test.pure_test =
         in
         exact_and_typed && linking_typed && states_ok && exported && covers) }
 
+(* THE JOIN'S RESULT IS IN THE RECORD (2026-09-23, status.md §2.7 phase
+   B2). Each row carries the edges its world realizes, with the steps that
+   realize them, and each placed claim with its outcomes — so the overlay
+   draws and computes nothing. Over the real registry:
+
+   (1) the row's edges ARE its steps' places, grouped by edge in the
+       graph's order — recomputed here from the steps, so the two views
+       cannot drift;
+   (2) a claim listed is one the graph places, each column is a check
+       column of that very agreement, its outcome is that cell's, and no
+       such column of the row is left out;
+   (3) the printed JSON decodes to both, unchanged. *)
+let record_join_pin : Canary_project_test.pure_test =
+  { name = "matrix.record_joins_edges_and_claims";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module T = Canary_topology in
+        let module F = Record_fixture in
+        let m = M.matrix_of Canary_registry.all_projects in
+        let placed_claims =
+          List.map T.claim_sites ~f:(fun cs -> cs.T.cs_claim)
+        in
+        let slug_of_label label =
+          List.find_map m.M.typed_columns ~f:(fun c ->
+              match c with
+              | M.Check (_, _, slug) when String.equal (M.label_of_col c) label ->
+                  Some slug
+              | _ -> None)
+        in
+        let row_ok (r : M.row) =
+          let expected_edges =
+            List.filter_map T.edges ~f:(fun e ->
+                let tags =
+                  List.filter_map r.M.steps ~f:(fun w ->
+                      match w.M.ws_place with
+                      | T.On ids when List.mem ids e.T.eg_id ~equal:String.equal ->
+                          Some w.M.ws_tag
+                      | _ -> None)
+                in
+                if List.is_empty tags then None else Some (e.T.eg_id, tags))
+          in
+          let check_cells_of_placed_claims =
+            List.filter_map r.M.cells ~f:(fun (label, c) ->
+                match (c, slug_of_label label) with
+                | Some (c : M.cell), Some slug
+                  when List.mem placed_claims slug ~equal:String.equal ->
+                    Some (label, slug, c)
+                | _ -> None)
+          in
+          Poly.equal r.M.edges expected_edges
+          && List.for_all r.M.claims ~f:(fun (slug, outcomes) ->
+                 List.mem placed_claims slug ~equal:String.equal
+                 && List.for_all outcomes ~f:(fun (label, o) ->
+                        List.exists check_cells_of_placed_claims
+                          ~f:(fun (l, s, c) ->
+                            String.equal l label && String.equal s slug
+                            && Poly.equal c.M.recorded (M.R_check o))))
+          && List.for_all check_cells_of_placed_claims ~f:(fun (label, slug, _) ->
+                 match List.Assoc.find r.M.claims slug ~equal:String.equal with
+                 | Some outcomes ->
+                     List.Assoc.mem outcomes label ~equal:String.equal
+                 | None -> false)
+        in
+        let exported =
+          match Yojson.Basic.from_string (M.json_export m) with
+          | exception _ -> false
+          | j ->
+              let jrows = F.items j "rows" in
+              List.length jrows = List.length m.M.rows
+              && List.for_all2_exn m.M.rows jrows ~f:(fun (r : M.row) jr ->
+                     let edges =
+                       match F.field jr "edges" with
+                       | Some (`Assoc kv) ->
+                           List.map kv ~f:(fun (id, v) ->
+                               ( id,
+                                 match v with
+                                 | `List xs ->
+                                     List.filter_map xs ~f:(function
+                                       | `String s -> Some s
+                                       | _ -> None)
+                                 | _ -> [] ))
+                       | _ -> []
+                     in
+                     let claims =
+                       match F.field jr "claims" with
+                       | Some (`Assoc kv) ->
+                           List.map kv ~f:(fun (slug, v) ->
+                               ( slug,
+                                 match v with
+                                 | `List xs ->
+                                     List.map xs ~f:(fun x ->
+                                         ( Option.value (F.str x "column") ~default:"",
+                                           F.str x "outcome" ))
+                                 | _ -> [] ))
+                       | _ -> []
+                     in
+                     Poly.equal edges r.M.edges && Poly.equal claims r.M.claims)
+        in
+        let realized id =
+          List.exists m.M.rows ~f:(fun (r : M.row) ->
+              List.Assoc.mem r.M.edges id ~equal:String.equal)
+        in
+        List.for_all m.M.rows ~f:row_ok
+        && exported
+        && realized "run" && realized "run_packaged"
+        && List.exists m.M.rows ~f:(fun (r : M.row) -> not (List.is_empty r.M.claims)))
+  }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -5883,6 +6101,8 @@ let base_tests : Canary_project_test.pure_test list =
       matrix_key_covers_codes_pin;
       record_export_pin;
       record_steps_pin;
+      record_join_pin;
+      every_step_placed_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

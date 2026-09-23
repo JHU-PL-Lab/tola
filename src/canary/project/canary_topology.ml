@@ -858,6 +858,151 @@ let families_without_edge () : Canary_action_family.t list =
   List.filter (Canary_action_family.of_catalogue ()) ~f:(fun f ->
       not (List.mem placed f ~equal:Canary_action_family.equal))
 
+(* ── WHERE A RECORDED STEP SITS (2026-09-23, status.md §2.7 phase B2) ──
+
+   The join from a run's steps onto this graph. The rule is short: a
+   step realizes the edges annotated with its action FAMILY, narrowed by
+   what the step and the world say. Only an [Action] annotation can be
+   realized — [Info] names someone else's rule, which our step may set
+   off (installing an opam package runs its conf predicate) but does not
+   perform.
+
+   Every step lands somewhere, and "nowhere" carries a reason, so a step
+   the page cannot place is a listed gap rather than a silent omission. *)
+
+(** Why a step has no edge. Typed so the guard can LIST the gaps and fail
+    on a new kind — each one is a page error or a model gap, and deciding
+    which is the work. *)
+type unplaced =
+  | No_edge_for_family
+      (** no edge on the page is annotated with this action family *)
+  | Observes_staged_copy
+      (** a probe of the install-prefix copy: that node has no
+          observation edge *)
+  | Observes_unused_system_copy
+      (** a probe of the system package's library in a world whose
+          library is not that package's *)
+  | Lib_from_language_pm
+      (** the library arrived through a language package manager — the
+          unified case, which has no edge from that side to the library *)
+  | Does_no_work
+      (** a dummy step: it holds a place in the graph and performs nothing *)
+  | Unexpected of string
+      (** a combination the rules do not cover — the guard fails on it *)
+
+(* the stable word a record carries for each; [string_of_unplaced] is
+   the sentence *)
+let code_of_unplaced = function
+  | No_edge_for_family -> "no_edge"
+  | Observes_staged_copy -> "staged_copy"
+  | Observes_unused_system_copy -> "unused_system_copy"
+  | Lib_from_language_pm -> "lib_from_language_pm"
+  | Does_no_work -> "dummy"
+  | Unexpected _ -> "unexpected"
+
+let string_of_unplaced = function
+  | No_edge_for_family -> "no edge for this action on the page"
+  | Observes_staged_copy -> "observes the staged copy, which has no observation edge"
+  | Observes_unused_system_copy ->
+      "observes the system package's library, which this world does not use"
+  | Lib_from_language_pm ->
+      "the library comes from a language package manager: no edge from there"
+  | Does_no_work -> "a dummy step: it performs nothing"
+  | Unexpected why -> "UNEXPECTED: " ^ why
+
+type place =
+  | On of string list  (** the edges this step realizes, by id *)
+  | Evidence_for of string
+      (** an inspection: it records evidence about the step named and
+          realizes no relation of its own — its outcomes belong to claim
+          badges, not to an edge's colour *)
+  | Unplaced of unplaced
+
+(** The world's artifact of one kind: its provision there, and the
+    provider its row declares for a fetch. *)
+let origin_of ~(pr : Canary_project_run.project_run)
+    ~(world : Canary_artifact.assignment) (k : Canary_basic.artifact_kind) :
+    (Canary_store.provision * SC.provider option) option =
+  List.find_map world ~f:(fun (id, (pl : Canary_artifact.placement)) ->
+      if Poly.equal (Canary_artifact.kind_of id) k then
+        Some (pl.Canary_artifact.provision, Canary_project_run.provenance_of pr id)
+      else None)
+
+(* WHAT A FETCH ASKED — the provider — which is not the same question as
+   where the world's artifact comes from. A vendored world still runs its
+   fetch: zstd's installs libzstd-dev beside the prebuilt it uses, and
+   that install realizes the system package's edges all the same. The
+   first cut read the world's provision here and called the fetch a
+   supplied copy. *)
+let fetched_from ~pr ~world k : SC.provider option =
+  Option.bind (origin_of ~pr ~world k) ~f:snd
+
+(** THE RULE. [location], [inspects] and [dummy] are the step's own
+    fields ([Canary_step_model.step]); the world and the project answer
+    what the step alone cannot — where the library came from, and whether
+    a symbolic bridge sits between the binding package and the system. *)
+let place_step ~(pr : Canary_project_run.project_run)
+    ~(world : Canary_artifact.assignment) ~(action : Canary_basic.action)
+    ~(location : Canary_store.location option) ~(inspects : string option)
+    ~(dummy : string option) : place =
+  let fam = Canary_action_family.of_action action in
+  let candidates =
+    List.filter_map edges ~f:(fun e ->
+        match e.eg_annotation with
+        | Action f when Canary_action_family.equal f fam -> Some e.eg_id
+        | Action _ | Agreement _ | Info _ -> None)
+  in
+  let keep ids =
+    List.filter candidates ~f:(fun c -> List.mem ids c ~equal:String.equal)
+  in
+  match (inspects, dummy) with
+  | Some parent, _ -> Evidence_for parent
+  | None, Some _ -> Unplaced Does_no_work
+  | None, None -> (
+      if List.is_empty candidates then Unplaced No_edge_for_family
+      else
+        match action with
+        | Canary_basic.Probe_binding _ -> (
+            (* THE CONSUMER PROGRAM IS THE LOCATION: named by package, or
+               handed every input by path (status.md §2.7, B1) *)
+            match location with
+            | Some (Canary_store.Pm (Canary_store.Lang_pm _)) ->
+                On (keep [ "run_packaged" ])
+            | Some (Canary_store.Build_tree | Canary_store.Staged) ->
+                On (keep [ "run" ])
+            | Some (Canary_store.Pm (Canary_store.Sys_pm _)) | None ->
+                Unplaced (Unexpected "a binding probe with no binding location"))
+        | Canary_basic.Probe_lib -> (
+            match location with
+            | Some Canary_store.Staged -> Unplaced Observes_staged_copy
+            | Some (Canary_store.Pm (Canary_store.Sys_pm _)) -> (
+                match origin_of ~pr ~world Canary_basic.Lib with
+                | Some (Canary_store.Fetched, _) -> On candidates
+                | _ -> Unplaced Observes_unused_system_copy)
+            | _ -> On candidates)
+        | Canary_basic.Fetch Canary_basic.Lib -> (
+            match fetched_from ~pr ~world Canary_basic.Lib with
+            | Some (SC.Sys_pkg _) -> On candidates
+            | Some (SC.Lang_pkg _) -> Unplaced Lib_from_language_pm
+            | _ -> Unplaced (Unexpected "a library fetch from no package"))
+        | Canary_basic.Fetch (Canary_basic.Binding lang) -> (
+            match fetched_from ~pr ~world (Canary_basic.Binding lang) with
+            | Some (SC.Lang_pkg _) ->
+                (* the constraint on a bridge is resolved only where a
+                   SYMBOLIC bridge is declared: a conf package, or a
+                   depext bound inside the package *)
+                let symbolic =
+                  List.exists (bridges_of_join (join_of pr lang)) ~f:(function
+                    | Conf_package _ | Depext_field _ -> true
+                    | Capability_file _ -> false)
+                in
+                On
+                  (keep
+                     ((if symbolic then [ "depends" ] else [])
+                     @ [ "resolve_lang"; "install_lang"; "install_surf" ]))
+            | _ -> Unplaced (Unexpected "a binding fetch from no language package"))
+        | _ -> On candidates)
+
 (* ── THE ARTIFACT BAND IS ONE BINDING MECHANISM ───────────────────────
 
    (user, 2026-09-22: "for the artifact layer, this is actually one
