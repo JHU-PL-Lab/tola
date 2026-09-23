@@ -37,8 +37,17 @@ let layout : (string * pos) list =
   [ ("pm_sys", { px = 150; py = 62 });
     ("pm_lang", { px = 1070; py = 62 });
     ("pkg_sys", { px = 150; py = 212 });
-    ("bridge", { px = 610; py = 176 });
-    ("cap", { px = 610; py = 268 });
+    (* THE TWO BRIDGES SIT WITH THEIR OWNERS (user, 2026-09-22). Both
+       were centred, which drew them as neutral machinery between the
+       ecosystems. They are not neutral and they are not co-owned: a
+       capability file ships INSIDE the native package and is written by
+       whoever packaged it, while a bridge package belongs to the
+       language ecosystem and is written by one of its maintainers.
+       Different authors, different release cycles — which is the whole
+       reason the symbolic path and the artifact path can disagree. A
+       layout that hid the ownership hid the motive. *)
+    ("cap", { px = 390; py = 252 });
+    ("bridge", { px = 840; py = 190 });
     ("pkg_lang", { px = 1070; py = 212 });
     ("src_sys", { px = 150; py = 392 });
     ("hdr_sys", { px = 150; py = 466 });
@@ -49,7 +58,11 @@ let layout : (string * pos) list =
     ("mod_lang", { px = 1070; py = 550 });
     ("surf_lang", { px = 1070; py = 624 });
     ("app", { px = 610; py = 762 });
-    ("decl", { px = 610; py = 466 }) ]
+    (* the oracle sits in the GAP between the package and artifact bands,
+       not inside either — it belongs to neither. It was at the centre of
+       the artifact band, where its box masked the headers→stub edge that
+       runs straight across at the same height. *)
+    ("decl", { px = 610; py = 330 }) ]
 
 let pos_of id =
   match List.Assoc.find layout id ~equal:String.equal with
@@ -259,12 +272,14 @@ color:var(--mut);margin:.4rem 0 1.4rem}
 .foot{color:var(--mut);font-size:.84rem;margin-top:3rem;
 border-top:1px solid var(--line);padding-top:1rem}
 a{color:var(--acc)}
-.mechbar{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 .3rem}
-.mechbar button{font:600 13px ui-sans-serif,system-ui,sans-serif;
+.selbar{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 .3rem}
+.selbar button{font:600 13px ui-sans-serif,system-ui,sans-serif;
 padding:.42rem .8rem;border:1px solid var(--line);border-radius:999px;
 background:var(--card);color:var(--fg);cursor:pointer}
-.mechbar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-.mechbar .bl{opacity:.65;font-weight:400;font-size:.85em}
+.selbar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.selbar button:hover{border-color:var(--acc)}
+.selbar .bl{opacity:.65;font-weight:400;font-size:.85em}
+section.case>p{color:var(--mut);font-size:.92rem;margin:.4rem 0 0}
 .mechnote{color:var(--mut);font-size:.9rem;margin:.3rem 0 0}
 .edet{font:12px ui-monospace,monospace;color:var(--mut);min-height:2.4em;
 margin:.2rem 0 1.4rem;padding:.45rem .6rem;border:1px dashed var(--line);
@@ -386,33 +401,65 @@ let mechanism_panels () =
       (List.map (T.artifact_variants ()) ~f:(fun v ->
            let m = Canary_mechanism.string_of_mechanism v.T.av_mechanism in
            Printf.sprintf
-             {|<button data-m="%s"%s>%s <span class="bl">%s</span></button>|}
-             (esc m)
-             (if String.equal m "cstubs" then " class=\"on\"" else "")
-             (esc m)
+             {|<button data-m="%s">%s <span class="bl">%s</span></button>|}
+             (esc m) (esc m)
              (esc (Canary_lang.string_of_lang v.T.av_lang))))
   in
-  Printf.sprintf {|<div class="mechbar">%s</div>%s|} buttons
+  Printf.sprintf {|<div class="selbar" data-group="mech">%s</div>%s|} buttons
     (String.concat (List.map (T.artifact_variants ()) ~f:one))
+
+(** A concrete case: the same graph, named, with what it does not have
+    removed. Selected rather than stacked, for the same reason the
+    mechanisms are — three diagrams down a page are compared by
+    scrolling, which is the one thing that makes them hard to compare. *)
+type case = {
+  ca_key : string;
+  ca_title : string;
+  ca_blurb : string;
+  ca_rename : string -> string option;
+  ca_sub : string -> string option;
+  ca_hide : string -> bool;
+  ca_dead : string -> bool;
+}
+
+let case_panels (cases : case list) =
+  let buttons =
+    String.concat
+      (List.map cases ~f:(fun c ->
+           Printf.sprintf {|<button data-m="%s">%s</button>|} (esc c.ca_key)
+             (esc c.ca_title)))
+  in
+  let panels =
+    String.concat
+      (List.map cases ~f:(fun c ->
+           Printf.sprintf {|<section class="case" id="case-%s"><p>%s</p>%s</section>|}
+             (esc c.ca_key) c.ca_blurb
+             (diagram ~rename:c.ca_rename ~sublabel:c.ca_sub ~hide:c.ca_hide
+                ~dead:c.ca_dead ())))
+  in
+  Printf.sprintf {|<div class="selbar" data-group="case">%s</div>%s|} buttons
+    panels
 
 let script =
   {|<script>
 (function(){
-// the mechanism selector: the artifact band IS one binding mechanism, so
-// switching it swaps which chain is on screen. Pre-rendered per
-// mechanism rather than re-laid-out, so nothing can shift underfoot.
-var bar=document.querySelector('.mechbar');
-if(bar){
-  var show=function(m){
-    document.querySelectorAll('.mech').forEach(function(s){
-      s.hidden = s.id !== 'mech-'+m; });
+// ONE selector for both bars. The mechanism bar swaps the artifact band
+// (a binding-table row); the case bar swaps the whole chain (a concrete
+// instance). Panels are pre-rendered rather than re-laid-out, so nothing
+// shifts underfoot when you switch.
+document.querySelectorAll('[data-group]').forEach(function(bar){
+  var g=bar.dataset.group;
+  var show=function(k){
+    document.querySelectorAll('section.'+g).forEach(function(s){
+      s.hidden = s.id !== g+'-'+k; });
     bar.querySelectorAll('button').forEach(function(b){
-      b.classList.toggle('on', b.dataset.m===m); });
+      b.classList.toggle('on', b.dataset.m===k); });
   };
   bar.addEventListener('click',function(e){
     var b=e.target.closest('button'); if(b) show(b.dataset.m); });
-  show('cstubs');
-}
+  var first=bar.querySelector('button');
+  if(first) show(first.dataset.m);
+});
 // hovering an edge fills the detail strip. The SVG <title> is still
 // there for keyboard and for people who hover slowly, but a strip that
 // stays put is readable while comparing two edges.
@@ -434,66 +481,126 @@ let render (projects : (string * Canary_project_run.project_run) list)
     ~(generated_at : string) : string =
   let bare = T.bare_edges () in
   let assoc l = fun id -> List.Assoc.find l id ~equal:String.equal in
-  (* CASE 1 — the conf-* shape, and the shape of every opam binding over
-     a system library. Both bridges present. *)
-  let case_conf =
-    diagram
-      ~rename:
-        (assoc
-           [ ("pm_sys", "apt"); ("pkg_sys", "libgmp-dev");
-             ("bridge", "conf-gmp"); ("cap", "gmp.pc"); ("pm_lang", "opam");
-             ("pkg_lang", "zarith"); ("lib_sys", "libgmp.so.10");
-             ("hdr_sys", "gmp.h"); ("src_lang", "Zarith.git");
-             ("stub_lang", "zarith_stubs.a"); ("mod_lang", "zarith.cmxa");
-             ("surf_lang", "zarith.mli"); ("app", "zarith_example") ])
-      ~sublabel:
-        (assoc
-           [ ("bridge", "presence only — bounds no version");
-             ("cap", "declared by nobody; read by the conf predicate") ])
-      ~hide:(fun id -> List.mem [ "src_sys"; "staged_sys" ] id ~equal:String.equal)
-      ()
-  in
-  (* CASE 2 — the bad practice: the wheel carries the library. The whole
-     system side and both bridges vanish. *)
-  let case_wheel =
-    diagram
-      ~rename:
-        (assoc
-           [ ("pm_lang", "pip"); ("pkg_lang", "z3-solver (wheel)");
-             ("lib_sys", "libz3.so — INSIDE the wheel");
-             ("mod_lang", "z3/*.py + native ext"); ("surf_lang", "z3.__all__");
-             ("app", "python -c 'import z3'") ])
-      ~sublabel:
-        (assoc
-           [ ("lib_sys", "no system package, no bridge, no discovery");
-             ("pkg_lang", "one package supplies both sides") ])
-      ~hide:(fun id ->
-        List.mem
-          [ "pm_sys"; "pkg_sys"; "bridge"; "cap"; "src_sys"; "staged_sys";
-            "hdr_sys"; "src_lang"; "stub_lang" ]
-          id ~equal:String.equal)
-      ()
-  in
-  (* CASE 3 — the world builds its own library, and the bridge STILL
-     gates. The finding that fell out of the derivation. *)
-  let case_built =
-    diagram
-      ~rename:
-        (assoc
-           [ ("src_sys", "llvm-project @ ref"); ("lib_sys", "libLLVM.so (built)");
-             ("staged_sys", "install prefix"); ("pm_sys", "apt — not used here");
-             ("pkg_sys", "llvm-19-dev — not used here");
-             ("bridge", "conf-llvm-shared {= 19}"); ("cap", "llvm-config");
-             ("pm_lang", "opam"); ("pkg_lang", "llvm.19-shared");
-             ("mod_lang", "llvm.cmxa"); ("app", "llvm_example") ])
-      ~sublabel:
-        (assoc
-           [ ("bridge", "still runs — against the SYSTEM, not this build");
-             ("pkg_sys", "the gate validates this, the world uses that") ])
-      ~dead:(fun id ->
-        List.mem [ "resolve_sys"; "realize_sys"; "realize_hdr"; "realize_cap" ]
-          id ~equal:String.equal)
-      ()
+  let hides ids id = List.mem ids id ~equal:String.equal in
+  let cases =
+    [ { ca_key = "conf"; ca_title = "conf-* over a system library";
+        ca_blurb =
+          "Both bridges present, and each sits with its author. The \
+           SYMBOLIC path runs <code>binding → conf → depext → system \
+           package</code>; the ARTIFACT path runs <code>conf predicate → \
+           capability query → the library on disk</code>. They can land \
+           on different libraries, and nothing today compares them.";
+        ca_rename =
+          assoc
+            [ ("pm_sys", "apt"); ("pkg_sys", "libgmp-dev");
+              ("bridge", "conf-gmp"); ("cap", "gmp.pc"); ("pm_lang", "opam");
+              ("pkg_lang", "zarith"); ("lib_sys", "libgmp.so.10");
+              ("hdr_sys", "gmp.h"); ("src_lang", "Zarith.git");
+              ("stub_lang", "zarith_stubs.a"); ("mod_lang", "zarith.cmxa");
+              ("surf_lang", "zarith.mli"); ("app", "zarith_example") ];
+        ca_sub =
+          assoc
+            [ ("bridge", "an opam package — written by an opam maintainer");
+              ("cap", "inside libgmp-dev — written by the Debian packager") ];
+        ca_hide = hides [ "src_sys"; "staged_sys" ]; ca_dead = (fun _ -> false)
+      };
+      { ca_key = "wheel"; ca_title = "the library inside the wheel";
+        ca_blurb =
+          "The consumer package carries the native artifact. The system \
+           PM, the system package and <em>both</em> bridges disappear — \
+           there is no cooperation left, which is a different statement \
+           from having no bridge. Every claim that compared two \
+           ecosystems has nothing to compare.";
+        ca_rename =
+          assoc
+            [ ("pm_lang", "pip"); ("pkg_lang", "z3-solver (wheel)");
+              ("lib_sys", "libz3.so — INSIDE the wheel");
+              ("mod_lang", "z3/*.py + native ext");
+              ("surf_lang", "z3.__all__"); ("app", "python -c 'import z3'") ];
+        ca_sub =
+          assoc
+            [ ("lib_sys", "no system package, no bridge, no discovery");
+              ("pkg_lang", "one package supplies both sides") ];
+        ca_hide =
+          hides
+            [ "pm_sys"; "pkg_sys"; "bridge"; "cap"; "src_sys"; "staged_sys";
+              "hdr_sys"; "src_lang"; "stub_lang" ];
+        ca_dead = (fun _ -> false) };
+      { ca_key = "built"; ca_title = "built here — and the bridge still gates";
+        ca_blurb =
+          "The native side is built here, so the system package is not \
+           used. The binding package's <code>conf-llvm-shared {= \
+           \"19\"}</code> constraint is still in its depends and opam \
+           still evaluates it — against the system, which this world is \
+           not using. The gate passes or fails on evidence unrelated to \
+           the artifacts under test.";
+        ca_rename =
+          assoc
+            [ ("src_sys", "llvm-project @ ref");
+              ("lib_sys", "libLLVM.so (built)");
+              ("staged_sys", "install prefix");
+              ("pm_sys", "apt — not used here");
+              ("pkg_sys", "llvm-19-dev — not used here");
+              ("bridge", "conf-llvm-shared {= 19}"); ("cap", "llvm-config");
+              ("pm_lang", "opam"); ("pkg_lang", "llvm.19-shared");
+              ("mod_lang", "llvm.cmxa"); ("app", "llvm_example") ];
+        ca_sub =
+          assoc
+            [ ("bridge", "still runs — against the SYSTEM, not this build");
+              ("pkg_sys", "the gate validates this, the world uses that") ];
+        ca_hide = (fun _ -> false);
+        ca_dead =
+          hides [ "resolve_sys"; "realize_sys"; "realize_hdr"; "realize_cap" ]
+      };
+      { ca_key = "unified"; ca_title = "one package universe";
+        ca_blurb =
+          "Both sides come from the same package manager, so there is no \
+           second ecosystem to bridge to — the constraint travels as an \
+           ordinary dependency in one namespace. This is torch: the \
+           library arrives through opam as an upstream binary, named \
+           directly by a depext bound rather than through a conf hop.";
+        ca_rename =
+          assoc
+            [ ("pm_lang", "opam"); ("pkg_lang", "torch");
+              ("bridge", "depext: libtorch >=2.1.0 <2.2.0");
+              ("lib_sys", "libtorch.so (opam binary)");
+              ("hdr_sys", "torch/*.h"); ("src_lang", "ocaml-torch.git");
+              ("stub_lang", "libtorch_core_stubs.a");
+              ("mod_lang", "torch.cmxa"); ("surf_lang", "torch.mli");
+              ("app", "torch_example") ];
+        ca_sub =
+          assoc
+            [ ("bridge",
+               "metadata inside the consumer — not a package of its own");
+              ("pkg_lang", "same PM on both sides") ];
+        ca_hide = hides [ "pm_sys"; "pkg_sys"; "cap"; "src_sys"; "staged_sys" ];
+        ca_dead = (fun _ -> false) };
+      { ca_key = "none"; ca_title = "no package manager between them";
+        ca_blurb =
+          "The binding and the library were joined by whoever built the \
+           interpreter, outside any package manager we can observe. \
+           CPython's stdlib <code>sqlite3</code> is the case. The \
+           coupling is entirely real — the extension records a NEEDED on \
+           libsqlite3 and the loader resolves it — but there is no \
+           declaration anywhere to check it against. <em>No gate</em> and \
+           <em>no gate mechanism</em> are different situations.";
+        ca_rename =
+          assoc
+            [ ("pm_sys", "apt"); ("pkg_sys", "libsqlite3-0");
+              ("lib_sys", "libsqlite3.so.0"); ("hdr_sys", "sqlite3.h");
+              ("pm_lang", "(the interpreter build)");
+              ("pkg_lang", "CPython stdlib");
+              ("stub_lang", "_sqlite3.cpython-*.so");
+              ("mod_lang", "sqlite3/__init__.py");
+              ("surf_lang", "dir(sqlite3)");
+              ("app", "python -c 'import sqlite3'") ];
+        ca_sub =
+          assoc
+            [ ("pkg_lang", "chosen at interpreter build time, not here");
+              ("lib_sys", "the loader picks it; nothing declared which") ];
+        ca_hide =
+          hides [ "bridge"; "cap"; "src_sys"; "staged_sys"; "src_lang" ];
+        ca_dead = (fun _ -> false) } ]
   in
   Printf.sprintf
     {|<!DOCTYPE html>
@@ -597,29 +704,11 @@ about us and not part of the row.</p>
 %s
 
 <h2>4. Concrete cases</h2>
-<p>The same graph with its nodes named. Hidden nodes do not exist in that
-case; greyed edges exist and do not fire.</p>
-
-<h3>4.1 A binding over a system library — the <code>conf-*</code> shape</h3>
-<p>Both bridges present. The symbolic path runs
-<code>binding → conf → depext → system package</code>; the artifact path
-runs <code>conf predicate → capability query → the library on disk</code>.
-They can land on different libraries, and nothing today compares them.</p>
-%s
-
-<h3>4.2 The library inside the wheel</h3>
-<p>The consumer package carries the native artifact. The system PM, the
-system package and <em>both</em> bridges disappear — there is no
-cooperation left, which is a different statement from having no bridge.
-Every claim that compared two ecosystems has nothing to compare.</p>
-%s
-
-<h3>4.3 The world builds its own library — and the bridge still gates</h3>
-<p>The native side is built here, so the system package is not used. The
-binding package's <code>conf-llvm-shared {= "19"}</code> constraint is
-still in its depends, and opam still evaluates it — against the system,
-which this world is not using. The gate passes or fails on evidence
-unrelated to the artifacts under test.</p>
+<p>The same graph with its nodes named. A node that is absent does not
+exist in that case; a greyed edge exists and does not fire. Switch
+between them rather than scrolling — three chains laid end to end are
+compared by memory, which is the one thing that makes them hard to
+compare.</p>
 %s
 
 <div class="foot">Generated %s from the project declarations — nodes,
@@ -635,7 +724,7 @@ coordinate per node. Nothing on this page is hand-maintained. ·
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
     (topology_table projects)
-    case_conf case_wheel case_built (esc generated_at) script
+    (case_panels cases) (esc generated_at) script
 
 let docs_path = "docs/canary/model.html"
 
