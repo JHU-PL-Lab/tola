@@ -659,12 +659,19 @@ they can disagree. Cargo's <code>*-sys</code> topology has only the
 second, which is what makes it artifact-centric rather than
 bridgeless.</div>
 
-<h2>1. The generic chain, with every step</h2>
+<h2>1. The generic chain</h2>
 <p>Nodes are what exists; edges are relations some real tool establishes,
 labelled with the action of ours that realizes them. An edge labelled
 <code>·</code> is a relation that really happens and that we run nothing
 at. The badge on an edge counts the claims that sit there. Hover an edge
 for what it establishes.</p>
+<p class="mechnote"><strong>Not yet every step.</strong>
+<code>fetch_source</code> and <code>fetch_binding_source</code> have no
+edge, so both source nodes appear with no producer. Adding them is not a
+drawing fix: it needs a decision about what a source repository
+<em>is</em> in this picture — canary treats a repo as a provider beside
+the system and language packages, which would put it in the package
+layer.</p>
 <div class="key">
 <span><i class="sw"></i> within a layer, or down one</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
@@ -701,7 +708,18 @@ install can omit a file the consumer needs, a META can be wrong, a conf
 chain can fail to resolve, and none of that is visible to the first
 probe. <strong>They should be the same program</strong> — that is what
 makes the pair informative rather than merely two tests, and the edge
-between them is a claim nothing else in this graph can make.</div>
+between them is a claim nothing else in this graph can make.
+<br><br><strong>The linking lift</strong> is the method that derives the
+second from the first: same source, same expected result, only the
+resolution changes — from inputs named by path to a package named by
+the consumer. It should be universal, computed from the binding
+mechanism plus a project's static facts (what the package is called,
+what the consumer imports). Where a project must customize it, the
+customization comes in two kinds that must not be confused: telling the
+lift a <em>name</em> it cannot derive is static information, while
+supplying a <em>resolution</em> the package failed to provide — an
+environment variable pointing at the native library — is the package
+admitting its recipe is insufficient, and is recorded as a finding.</div>
 
 <div class="note"><strong>The declaration is a badge, not a node.</strong>
 It used to be drawn as a box, and its position was arbitrary — nothing in
@@ -721,7 +739,16 @@ inside its package-rewrite cases, never in the base picture.</div>
 <h3>1.1 What each node is</h3>
 %s
 
-<h2 id="overview">2. The agreement overview</h2>
+<h2 id="cases">2. Concrete cases</h2>
+<p>The general shape above, instantiated: the same graph with its nodes
+named. A node that is absent does not exist in that case; a greyed edge
+exists and does not fire. Switch between them rather than scrolling —
+chains laid end to end are compared by memory, which is the one thing
+that makes them hard to compare. Each case is a row of the topology
+table in §5.</p>
+%s
+
+<h2 id="overview">3. The agreement overview</h2>
 <p>Every agreement, where its rule RAN and where it is CHECKED, over the
 same action columns the result matrix uses — of which it is the
 template, so an empty column there can be looked up here. It lives on
@@ -734,18 +761,19 @@ on run state — unlike everything else here. Splitting the table at that
 seam would have shown one row's halves on two pages, which is worse.</div>
 %s
 
-<h2>3. Where every claim sits, and the edges where none do</h2>
-<p>Twenty-five claims — %d implemented, %d candidates — placed on the
-edges above. A placement is a <em>set</em> of edges rather than one, so
-an end-to-end claim spanning several has somewhere to go; none does
-yet.</p>
+<h2 id="census">4. Where every claim sits, and the edges where none do</h2>
+<p>%d claims — %d implemented, %d candidates — placed on the edges of §1.
+A placement is a <em>set</em> of edges rather than one. Three already
+span several: the library's declaration-facing claims sit on both edges
+that can produce a library, and <code>package_resolution_suffices</code>
+runs end to end from the language PM to the package-linked program.</p>
 %s
 
 <div class="note warn"><strong>%d edges carry no claim at all</strong>
 (%s). Every one is a relation a real tool establishes and from which we
-recover nothing. They are not obscure: they are the package layer and
-the cooperation between the two ecosystems. Almost everything we have
-sits on the two edges where a compiler or a linker ran.</div>
+recover nothing. Most are the package layer and the cooperation between
+the two ecosystems; almost everything we have sits on the two edges
+where a compiler or a linker ran.</div>
 
 <div class="note"><strong>The network analogy, and where it breaks.</strong>
 Two hosts in a network stack implement the <em>same protocol</em> at each
@@ -757,35 +785,43 @@ while dropping version, which in network terms is a layer that forwards
 the address and silently discards the checksum. That asymmetry is why the
 end-to-end invariants are the ones we do not have.</div>
 
-<h2>3. Cooperation topologies</h2>
+<h2 id="topologies">5. Cooperation topologies</h2>
 <p>One row per distinct shape, derived from what each project declares —
 never from a table anyone maintains by hand. The last column is a fact
 about us and not part of the row.</p>
 %s
 
-<h2>4. Concrete cases</h2>
-<p>The same graph with its nodes named. A node that is absent does not
-exist in that case; a greyed edge exists and does not fire. Switch
-between them rather than scrolling — three chains laid end to end are
-compared by memory, which is the one thing that makes them hard to
-compare.</p>
-%s
-
-<div class="foot">Generated %s from the project declarations — nodes,
-edges and claim placements live in <code>canary_topology.ml</code>;
-the diagrams are SVG emitted from that data, with one hand-placed
-coordinate per node. Nothing on this page is hand-maintained. ·
-<a href="projects/matrix.html">result matrix</a></div>
+<div class="foot">Generated %s. <strong>What is derived and what is not</strong>,
+since the page is meant to trade the second for the first over time:
+the cooperation topologies are derived from each project's declared
+provisions and gates; the mechanism variants from the mechanism
+catalogue; the agreement overview from the registry and recorded runs.
+The nodes, the edges, which edge each claim sits on, and the labels of
+the concrete cases are <em>hand-written lists</em> in
+<code>canary_topology.ml</code> and here — placeholders, checked by pins
+against the registry but not yet computed from the action catalogue.
+The diagrams are SVG emitted from that data, with one hand-placed
+coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
-    css Canary_matrix.overview_css (mechanism_panels ()) (node_legend ())
+    css Canary_matrix.overview_css
+    (* §1 the chain, §1.1 its legend *)
+    (mechanism_panels ()) (node_legend ())
+    (* §2 the cases — moved up so the general shape is followed at once by
+       its instances (user, 2026-09-23) *)
+    (case_panels cases)
+    (* §3 the agreement overview *)
     overview
+    (* §4 the census — the total is COUNTED: it was a literal
+       "Twenty-five" and went stale the day a candidate was added *)
+    (List.length T.placements)
     (List.count T.placements ~f:(fun p -> p.T.pl_implemented))
     (List.count T.placements ~f:(fun p -> not p.T.pl_implemented))
     (placements_table ()) (List.length bare)
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
+    (* §5 the topologies *)
     (topology_table projects)
-    (case_panels cases) (esc generated_at) script
+    (esc generated_at) script
 
 let docs_path = "docs/canary/model.html"
 

@@ -804,25 +804,8 @@ let checks_cmd =
            not remove its cooperation from the view. z3 is the case —
            muted for cost, and the only project whose opam package builds
            the native lib itself. *)
-        Fmt.pr "%s@." (Canary_topology.pp_topologies Canary_registry.all_specs);
-        let now =
-          let t = Unix.localtime (Unix.time ()) in
-          Printf.sprintf "%04d-%02d-%02d %02d:%02d" (t.Unix.tm_year + 1900)
-            (t.Unix.tm_mon + 1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min
-        in
-        (* the AGREEMENT OVERVIEW moved here (2026-09-23, user). It is
-           rendered by the matrix — one block built from the registry —
-           and two of its columns are counted from recorded runs, so the
-           matrix has to be built to get it. That is the cost of moving
-           a table whose last two columns are not mechanism. *)
-        let overview =
-          Canary_matrix.agreement_overview
-            (Canary_matrix.matrix_of Canary_registry.all_specs)
-            ~generated_at:now
-        in
-        Canary_model_page.write Canary_registry.all_specs ~overview
-          ~generated_at:now;
-        Fmt.pr "wrote %s@." Canary_model_page.docs_path
+        (* terminal view only; the page is `canary overview` *)
+        Fmt.pr "%s@." (Canary_topology.pp_topologies Canary_registry.all_specs)
     | _, _, _ when Option.is_some agreement -> (
         let name = Option.get agreement in
         match Canary_agreement.agreement_named name with
@@ -1633,6 +1616,52 @@ let result_cmd =
           refreshes the web page (docs/canary/projects/matrix.html).")
     Term.(const run $ project $ md $ json $ const ())
 
+(* THE OVERVIEW PAGE (2026-09-23, user: "the page contains more material
+   than `canary checks --topology` suggests"). It holds the layered chain,
+   the concrete cases, the agreement overview, the claim census and the
+   cooperation topologies — so it gets a command named for the page, and
+   `checks --topology` goes back to being the one terminal view it was.
+
+   Named `overview` rather than `theory`: `agreement/theory.md` already
+   owns that word for the argument about what an agreement recovers, and
+   this page is a map generated from code — the next thing it is meant to
+   carry is recorded run results, which is the opposite of theory.
+
+   ⚠ TWO PROJECT LISTS, deliberately. The agreement overview's `decided`
+   and `blame` columns are counted from recorded runs, and they were
+   counted over the ACTIVE list when the table lived on the result page,
+   so they still are — reading the catalogue would have added muted z3's
+   stale logs to every count and changed a table this move was meant to
+   leave alone. The topologies read DECLARATIONS, where muting must not
+   hide a project, so they use the catalogue. *)
+let overview_cmd =
+  let run () =
+    let now =
+      let tm = Unix.localtime (Unix.gettimeofday ()) in
+      Printf.sprintf "%04d-%02d-%02d %02d:%02d" (tm.tm_year + 1900)
+        (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
+    in
+    let overview =
+      Canary_matrix.agreement_overview
+        (Canary_matrix.matrix_of Canary_registry.all_projects)
+        ~generated_at:now
+    in
+    Canary_model_page.write Canary_registry.all_specs ~overview
+      ~generated_at:now;
+    Fmt.pr "wrote %s@." Canary_model_page.docs_path
+  in
+  Cmd.v
+    (Cmd.info "overview"
+       ~doc:
+         "Render the OVERVIEW page (docs/canary/model.html): the layered \
+          chain from the package managers down to the running program, \
+          the concrete cooperation cases, the agreement overview, where \
+          every claim sits and which relations carry none, and the \
+          cooperation topologies. General mechanism, except the agreement \
+          overview's decided/blame columns, which are counted from \
+          recorded runs. Pure read.")
+    Term.(const run $ const ())
+
 let tiny_scenarios_list_cmd =
   Cmd.v
     (Cmd.info "list" ~doc:"Print scenario names (one per line)")
@@ -2341,6 +2370,7 @@ let () =
         verify_cmd;
         index_cmd;
         result_cmd;
+        overview_cmd;
         prebuilt_cmd;
       ]
   in

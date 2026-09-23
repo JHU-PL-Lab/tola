@@ -744,6 +744,49 @@ let topology_graph_pin : Canary_project_test.pure_test =
         && List.for_all (T.bare_edges ()) ~f:(fun e -> not e.T.eg_observation))
   }
 
+(* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
+   template numbers its sections by hand, and moving the agreement table
+   in produced two sections called "3." — found by reading the page, not
+   by any check. Reordering sections is now a thing the user asks for, so
+   the numbering needs a guard rather than care. *)
+let overview_sections_pin : Canary_project_test.pure_test =
+  { name = "overview.sections_numbered_in_order";
+    check =
+      (fun () ->
+        let path = "docs/canary/model.html" in
+        if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
+        else
+          let h =
+            Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
+          in
+          (* every "<h2 ...>N. " in document order *)
+          let nums =
+            let rec go i acc =
+              match String.substr_index h ~pos:i ~pattern:"<h2" with
+              | None -> List.rev acc
+              | Some j -> (
+                  match String.index_from h j '>' with
+                  | None -> List.rev acc
+                  | Some k ->
+                      let rest = String.drop_prefix h (k + 1) in
+                      let digits =
+                        match String.lfindi rest ~f:(fun _ c -> not (Char.is_digit c)) with
+                        | None -> rest
+                        | Some n -> String.prefix rest n
+                      in
+                      let acc =
+                        if String.is_empty digits then acc
+                        else Int.of_string digits :: acc
+                      in
+                      go (k + 1) acc)
+            in
+            go 0 []
+          in
+          (not (List.is_empty nums))
+          && List.equal Int.equal nums
+               (List.init (List.length nums) ~f:(fun i -> i + 1)))
+  }
+
 let pm_gate_pin : Canary_project_test.pure_test =
   { name = "spec.pm_dep_gate_groups";
     check =
@@ -5126,6 +5169,7 @@ let base_tests : Canary_project_test.pure_test list =
       pm_gate_pin;
       topology_joins_pin;
       topology_graph_pin;
+      overview_sections_pin;
       vendored_prebuilt_pin;
       z3_mismatch_matrix_pin;
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);

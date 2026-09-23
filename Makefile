@@ -130,9 +130,13 @@ agreement-catalogue:
 # the template beside the concrete: an empty column in the matrix can be
 # looked up in the grid to see whether anything was ever meant to fill
 # it.
+# Both pages, since the agreement overview moved off the result page on
+# 2026-09-23: running only `result` left the overview unrefreshed.
 view:
 	@$(CANARY) result > /dev/null
-	@echo "open docs/canary/projects/matrix.html"
+	@$(CANARY) overview > /dev/null
+	@echo "open docs/canary/projects/matrix.html  (what ran)"
+	@echo "open docs/canary/model.html            (the overview: chain, cases, agreements)"
 
 canary-post-check: canary-sqlite canary-agreement-roundtrip canary-tiny1-bridge
 	@echo "post-check: sqlite + round-trip + tiny1 bridge all passed"
