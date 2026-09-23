@@ -636,6 +636,74 @@ let vendored_prebuilt_pin : Canary_project_test.pure_test =
         && rationale_ok Canary_project_libffi.libffi_run
         && rationale_ok Canary_project_cairo.cairo_run) }
 
+(* THE FIVE JOINS STAY FIVE (2026-09-22). [Canary_topology]'s first cut
+   had one value — an empty bridge list — standing for four different
+   situations, and the terminal view made all four read as "no bridge".
+   This pin holds the distinction that fixed it, because the collapse is
+   invisible in the output once it happens: an unreachable declaration
+   and a deliberate absence render identically unless something asserts
+   they do not.
+
+   Each clause names a project that is the SPECIMEN of its constructor,
+   so a project changing its declaration fails here rather than quietly
+   moving rows. *)
+let topology_joins_pin : Canary_project_test.pure_test =
+  { name = "topology.joins_are_distinguished";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let join name lang =
+          match
+            List.Assoc.find Canary_registry.all_specs name
+              ~equal:String.equal
+          with
+          | None -> None
+          | Some pr -> Some (T.join_of pr lang)
+        in
+        let is_bridged = function Some (T.Bridged _) -> true | _ -> false in
+        let is_absorbed = function
+          | Some (T.Bridge_absorbed _) -> true
+          | _ -> false
+        in
+        let is_no_pm = function Some (T.No_pm_between _) -> true | _ -> false in
+        let is_undeclared = function
+          | Some T.Undeclared_join -> true
+          | _ -> false
+        in
+        (* zarith declares conf-gmp and routes it *)
+        is_bridged (join "zarith" Canary_lang.OCaml)
+        (* z3's opam package builds libz3 — the bridge is absorbed, not
+           absent, and the native side is therefore opam's own *)
+        && is_absorbed (join "z3" Canary_lang.OCaml)
+        && is_absorbed (join "z3" Canary_lang.Python)
+        (* sqlite's Python side is CPython's stdlib: a declaration EXISTS
+           and states that no package manager is in between. This is the
+           clause that fails if the two [None]s are conflated again *)
+        && is_no_pm (join "sqlite" Canary_lang.Python)
+        (* ...while sqlite's OCaml side does declare a conf package *)
+        && is_bridged (join "sqlite" Canary_lang.OCaml)
+        (* ⚠ project/issues.md §2, held as a KNOWN gap rather than
+           tolerated silently: these four declare a gate on the template's
+           record and leave pr_binding_decls empty. When the routing is
+           fixed this pin fails, which is the point — the fix must move
+           them into a bridged row deliberately, not by accident *)
+        && List.for_all
+             [ "cairo"; "libffi"; "zlib"; "zstd" ]
+             ~f:(fun p -> is_undeclared (join p Canary_lang.OCaml))
+        (* and an absorbed join collapses the native side onto the
+           language side, so one topology is not counted once per
+           irrelevant native provision *)
+        &&
+        let rows = T.topologies Canary_registry.all_specs in
+        let absorbed =
+          List.filter rows ~f:(fun ((t : T.t), _) ->
+              match t.T.tp_join with T.Bridge_absorbed _ -> true | _ -> false)
+        in
+        List.for_all absorbed ~f:(fun ((t : T.t), _) ->
+            Poly.equal t.T.tp_sys t.T.tp_lang)
+        && List.length absorbed = 3)
+  }
+
 let pm_gate_pin : Canary_project_test.pure_test =
   { name = "spec.pm_dep_gate_groups";
     check =
@@ -4992,6 +5060,7 @@ let base_tests : Canary_project_test.pure_test list =
          mismatch-matrix pin below asserts the opposite claim for it;
          llvm still follows, so the lockstep pin still applies there *)
       pm_gate_pin;
+      topology_joins_pin;
       vendored_prebuilt_pin;
       z3_mismatch_matrix_pin;
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
