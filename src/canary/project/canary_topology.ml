@@ -274,25 +274,38 @@ let symbolic_bridges_of_gate (g : BD.pm_dep_gate) : bridge list =
   | BD.Pinned_depext { depext; _ } -> [ Depext_field depext ]
   | BD.Package_builds_lib | BD.Bundled _ -> []
 
-(** The ARTIFACT-FACING bridges a project declares, read from the lib
-    row's components. Empty everywhere today — see finding (1). The
-    caller must distinguish this [] from "we looked and there is none";
-    {!capability_bridges_are_undeclared} is that distinction. *)
-let capability_bridges (components : Canary_artifact.api_component list) :
-    bridge list =
-  List.filter_map components ~f:(function
-    | Canary_artifact.Pc_file -> Some (Capability_file "pkg-config (.pc)")
-    | Canary_artifact.Headers | Canary_artifact.Runtime_lib
-    | Canary_artifact.Link_lib ->
-        None)
+(** The ARTIFACT-FACING bridges a project declares: the [Pc_file]
+    components of the C API it declares, read through pass 2
+    ({!Canary_project_analysis.declared_api_of}).
 
-(** TRUE while no project has declared a [Pc_file] component. A view must
-    say "undeclared" rather than "none" while this holds: pkg-config is
+    ⚠ THIS WAS WRITTEN AND NEVER CALLED until 2026-09-23 — it and its
+    companion were the "declared with no reader" pattern the overview
+    page exists to point at, sitting in the module that draws the page.
+    What finally wired it was deleting `checks --topology`, whose footer
+    was the only place the capability finding was stated, and stated as
+    a hand-written sentence. Now the page computes it.
+
+    Empty everywhere today: projects declare [Headers], [Runtime_lib],
+    [Link_lib], and no project declares a [Pc_file]. *)
+let capability_bridges (pr : Canary_project_run.project_run) : bridge list =
+  match Canary_project_analysis.declared_api_of pr with
+  | None -> []
+  | Some api ->
+      List.filter_map api.Canary_artifact.native_api.Canary_artifact.components
+        ~f:(function
+        | Canary_artifact.Pc_file -> Some (Capability_file "pkg-config (.pc)")
+        | Canary_artifact.Headers | Canary_artifact.Runtime_lib
+        | Canary_artifact.Link_lib ->
+            None)
+
+(** TRUE while no project declares a capability file. A view must say
+    "undeclared" rather than "none" while this holds: pkg-config is
     demonstrably in use — conf packages' build predicates run it, and our
-    own [Pm_lib] locator does — so an empty list here records that nobody
-    declared it, not that nothing is there. *)
-let capability_bridges_are_undeclared (bs : bridge list) : bool =
-  not (List.exists bs ~f:(function Capability_file _ -> true | _ -> false))
+    own [Pm_lib] locator does — so an empty answer records that nobody
+    declared one, not that nothing is there. *)
+let no_capability_bridge_declared
+    (projects : (string * Canary_project_run.project_run) list) : bool =
+  List.for_all projects ~f:(fun (_, pr) -> List.is_empty (capability_bridges pr))
 
 (* ── the project-level derivation ─────────────────────────────────── *)
 
@@ -321,19 +334,30 @@ let gate_of (pr : Canary_project_run.project_run) (lang : Canary_lang.lang) :
     sixth meaning for an empty list. *)
 let join_of (pr : Canary_project_run.project_run) (lang : Canary_lang.lang) :
     joining =
+  (* the capability bridge joins whatever the gate says, because it is
+     the OTHER bridge — shipped inside the provider rather than written
+     by the language ecosystem. Absorbed and no-PM joins do not take it:
+     with no second ecosystem there is nothing for it to bridge to *)
+  let cap = capability_bridges pr in
   match gate_of pr lang with
   | None -> Undeclared_join
   | Some None ->
       No_pm_between "no package manager stands between these two artifacts"
   | Some (Some g) -> (
-      match symbolic_bridges_of_gate g with
-      | [] -> (
+      match (symbolic_bridges_of_gate g, cap) with
+      | [], [] -> (
           match g with
           | BD.Package_builds_lib ->
               Bridge_absorbed "the consumer package builds the native lib"
           | BD.Bundled what -> Bridge_absorbed ("bundled: " ^ what)
           | _ -> Artifacts_only)
-      | bs -> Bridged bs)
+      | [], _ -> (
+          match g with
+          | BD.Package_builds_lib ->
+              Bridge_absorbed "the consumer package builds the native lib"
+          | BD.Bundled what -> Bridge_absorbed ("bundled: " ^ what)
+          | _ -> Bridged cap)
+      | bs, _ -> Bridged (bs @ cap))
 
 (** One instance: the (project, language, world-class) that realizes a
     topology. A project appears several times — once per declared native
@@ -978,68 +1002,9 @@ let dangling_placements () : string list =
       List.filter p.pl_edges ~f:(fun eid ->
           not (List.exists edges ~f:(fun e -> String.equal e.eg_id eid))))
 
-(** The terminal view. One row per topology; the instances beneath it are
-    what realizes it, and a project appears under several rows. *)
-let pp_topologies (projects : (string * Canary_project_run.project_run) list) :
-    string =
-  let rows = topologies projects in
-  let buf = Buffer.create 4096 in
-  let add fmt = Printf.ksprintf (Buffer.add_string buf) fmt in
-  add
-    "PM COOPERATION — one row per topology, derived from the declared \
-     provisions and gates\n\n";
-  add
-    "  a BRIDGE is concrete, separate package content that exists for \
-     cooperation.\n\
-    \  No bridge is a real answer: the language side may link whatever the \
-     system\n\
-    \  installed. Two bridges is the common case — a conf package carries \
-     package\n\
-    \  IDENTITY, a .pc file carries CAPABILITY, and they can disagree.\n\n";
-  (* pad by CODEPOINTS, not bytes: the join column holds em-dashes and a
-     warning sign, and [%-34s] counts the bytes of those, so every row
-     carrying one shifted the two columns after it *)
-  let pad n s =
-    let width =
-      String.fold s ~init:0 ~f:(fun acc c ->
-          if Char.to_int c land 0xC0 = 0x80 then acc else acc + 1)
-    in
-    if width >= n then s else s ^ String.make (n - width) ' '
-  in
-  add "%s %s %s %s\n" (pad 10 "native") (pad 34 "bridge(s)") (pad 9 "language")
-    "character";
-  add "%s\n" (String.make 108 '-');
-  List.iter rows ~f:(fun (t, insts) ->
-      add "%s %s %s %s\n"
-        (pad 10 (string_of_supplier t.tp_sys))
-        (pad 34 (short_of_join t.tp_join))
-        (pad 9 (string_of_supplier t.tp_lang))
-        (character t);
-      let named =
-        List.map insts ~f:(fun i ->
-            Printf.sprintf "%s/%s%s" i.in_project
-              (Canary_lang.string_of_lang i.in_lang)
-              (if i.in_gate_reachable then "" else " ⚠"))
-        |> List.dedup_and_sort ~compare:String.compare
-      in
-      add "             %s\n" (String.concat ~sep:", " named));
-  let unreachable = unreachable_gates rows in
-  add "\n";
-  if not (List.is_empty unreachable) then (
-    add
-      "⚠ %d instance(s) marked ⚠ declare a gate this view cannot read \
-       (project/issues.md §2):\n"
-      (List.length unreachable);
-    add
-      "  the opam-binding template keeps its gate on its own record and \
-       leaves\n\
-      \  pr_binding_decls empty, so those rows show NO bridge while \
-       declaring a conf\n\
-      \  package. They are in the wrong row until the gate is routed.\n\n");
-  add
-    "⚠ no project declares a Pc_file component, so no CAPABILITY bridge \
-     appears\n\
-    \  above. pkg-config is demonstrably in use — conf predicates run it \
-     and our\n\
-    \  own lib locator does — so that column is UNDECLARED, not empty.\n";
-  Buffer.contents buf
+(* The terminal view [pp_topologies] was DELETED 2026-09-23 (user: it
+   printed facts the overview page already shows). Its two footnotes —
+   the unreachable gates and the undeclared capability bridge — were the
+   only things it said that the page did not, and both moved to the
+   page's topology section, the second now computed by
+   {!no_capability_bridge_declared} rather than written as a sentence. *)

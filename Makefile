@@ -136,7 +136,7 @@ view:
 	@$(CANARY) result > /dev/null
 	@$(CANARY) overview > /dev/null
 	@echo "open docs/canary/projects/matrix.html  (what ran)"
-	@echo "open docs/canary/model.html            (the overview: chain, cases, agreements)"
+	@echo "open docs/canary/overview.html         (the overview: chain, cases, agreements)"
 
 canary-post-check: canary-sqlite canary-agreement-roundtrip canary-tiny1-bridge
 	@echo "post-check: sqlite + round-trip + tiny1 bridge all passed"

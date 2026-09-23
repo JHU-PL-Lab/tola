@@ -750,19 +750,6 @@ let checks_cmd =
               needs no installing; this is how they stay countable as \
               they accumulate.")
   in
-  let topology =
-    Arg.(value & flag & info [ "topology" ]
-           ~doc:
-             "PM COOPERATION: one row per distinct topology — who \
-              supplies the native side, what BRIDGE joins the two \
-              package ecosystems, who supplies the language side. A \
-              bridge is concrete, separate package content that exists \
-              for cooperation (a conf-* package, a .pc file); no bridge \
-              is a real answer, and two bridges is the common case. \
-              Every field is derived from declared provisions and gates. \
-              A project appears under several rows, because a topology \
-              is a fact about a provisioned world, not about a project.")
-  in
   let landing =
     Arg.(value & flag & info [ "landing" ]
            ~doc:
@@ -791,21 +778,11 @@ let checks_cmd =
               compares, where its evidence appears, whether it is \
               implemented, and what a pass does not establish.")
   in
-  let run project firing catalogue observed landing dummies agreement md
-      topology () =
+  (* `--topology` was DELETED 2026-09-23 (user): it printed the topology
+     table the overview page already carries. The topologies are on
+     `canary overview` §5. *)
+  let run project firing catalogue observed landing dummies agreement md () =
     match (project, firing, catalogue) with
-    | _, _, _ when topology ->
-        (* THE THIRD VIEW (2026-09-22): the agreement overview is about
-           artifacts and bindings; this is about how the two package
-           ecosystems either side of a binding are joined. Derived —
-           nothing declares a topology. *)
-        (* the CATALOGUE, not the active list: a topology is derived from
-           declarations and nothing here runs, so muting a project must
-           not remove its cooperation from the view. z3 is the case —
-           muted for cost, and the only project whose opam package builds
-           the native lib itself. *)
-        (* terminal view only; the page is `canary overview` *)
-        Fmt.pr "%s@." (Canary_topology.pp_topologies Canary_registry.all_specs)
     | _, _, _ when Option.is_some agreement -> (
         let name = Option.get agreement in
         match Canary_agreement.agreement_named name with
@@ -977,7 +954,7 @@ let checks_cmd =
           COULD DECIDE vs DID DECIDE summary whose gap rows are the work \
           queue. No execution.")
     Term.(const run $ project $ firing $ catalogue $ observed $ landing
-          $ dummies $ agreement $ md $ topology $ const ())
+          $ dummies $ agreement $ md $ const ())
 
 let spec_check_cmd =
   let project =
@@ -1620,7 +1597,9 @@ let result_cmd =
    than `canary checks --topology` suggests"). It holds the layered chain,
    the concrete cases, the agreement overview, the claim census and the
    cooperation topologies — so it gets a command named for the page, and
-   `checks --topology` goes back to being the one terminal view it was.
+   the file is named for it too (docs/canary/overview.html; was
+   model.html). `checks --topology` printed the topology table again and
+   was deleted the same day; its two footnotes moved onto the page.
 
    Named `overview` rather than `theory`: `agreement/theory.md` already
    owns that word for the argument about what an agreement recovers, and
@@ -1646,14 +1625,14 @@ let overview_cmd =
         (Canary_matrix.matrix_of Canary_registry.all_projects)
         ~generated_at:now
     in
-    Canary_model_page.write Canary_registry.all_specs ~overview
+    Canary_overview_page.write Canary_registry.all_specs ~overview
       ~generated_at:now;
-    Fmt.pr "wrote %s@." Canary_model_page.docs_path
+    Fmt.pr "wrote %s@." Canary_overview_page.docs_path
   in
   Cmd.v
     (Cmd.info "overview"
        ~doc:
-         "Render the OVERVIEW page (docs/canary/model.html): the layered \
+         "Render the OVERVIEW page (docs/canary/overview.html): the layered \
           chain from the package managers down to the running program, \
           the concrete cooperation cases, the agreement overview, where \
           every claim sits and which relations carry none, and the \

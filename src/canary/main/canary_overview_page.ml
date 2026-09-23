@@ -1,4 +1,5 @@
-(** [Canary_model_page] — the METHODOLOGY page (2026-09-22).
+(** [Canary_overview_page] — the OVERVIEW page, `canary overview`
+    (2026-09-22; renamed from the "model" page 2026-09-23, user).
 
     A separate page from `matrix.html`, deliberately. That one is a
     RECORD: per project, per scenario, what a run decided. This one is
@@ -382,6 +383,46 @@ let topology_table (projects : (string * Canary_project_run.project_run) list) =
      side</th><th>character</th><th>case</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map rows ~f:row))
 
+(** The two things the deleted `checks --topology` said that the table
+    does not (2026-09-23): which rows are wrong for a known reason, and
+    why no capability bridge appears. Both computed — the second was a
+    hand-written sentence in the terminal view, and is now a question
+    asked of every project's declared C API. *)
+let topology_notes (projects : (string * Canary_project_run.project_run) list) =
+  let unreachable =
+    T.unreachable_gates (T.topologies projects)
+    |> List.map ~f:(fun i ->
+           Printf.sprintf "%s/%s" i.T.in_project
+             (Canary_lang.string_of_lang i.T.in_lang))
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  let gates =
+    if List.is_empty unreachable then ""
+    else
+      Printf.sprintf
+        "<div class=\"note warn\"><strong>%d bindings sit in a wrong row, \
+         for a known reason</strong> (%s). Each declares a conf package, \
+         but on the opam-binding template's own record: the template leaves \
+         <code>pr_binding_decls</code> empty, so the gate never reaches this \
+         derivation and the row reads <code>⚠ UNDECLARED</code>. That is \
+         <code>project/issues.md</code> §2 — a mechanism declared in two \
+         places, one of them read — at its second consumer.</div>"
+        (List.length unreachable)
+        (esc (String.concat ~sep:", " unreachable))
+  in
+  let cap =
+    if T.no_capability_bridge_declared projects then
+      "<div class=\"note warn\"><strong>No capability bridge appears in any \
+       row, because no project declares one.</strong> The projects declare \
+       <code>Headers</code>, <code>Runtime_lib</code> and \
+       <code>Link_lib</code> as their C API's components and none declares \
+       a <code>Pc_file</code>. That is an absence of DECLARATION, not of \
+       the bridge: pkg-config is demonstrably in use — the conf packages' \
+       build predicates run it, and canary's own library locator does.</div>"
+    else ""
+  in
+  gates ^ cap
+
 (** The node legend. It exists because a reader asked what a "capability
     file" and a "staged copy" were — the glosses were already on the
     nodes as SVG tooltips, which is exactly where a reader who is
@@ -631,7 +672,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
     {|<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cooperation Model</title>
+<title>Canary Overview</title>
 <style>%s
 %s</style></head><body><main>
 
@@ -790,11 +831,12 @@ end-to-end invariants are the ones we do not have.</div>
 never from a table anyone maintains by hand. The last column is a fact
 about us and not part of the row.</p>
 %s
+%s
 
 <div class="foot">Generated %s. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
 the cooperation topologies are derived from each project's declared
-provisions and gates; the mechanism variants from the mechanism
+provisions, gates and C-API components; the mechanism variants from the mechanism
 catalogue; the agreement overview from the registry and recorded runs.
 The nodes, the edges, which edge each claim sits on, and the labels of
 the concrete cases are <em>hand-written lists</em> in
@@ -824,10 +866,10 @@ coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
     (* §5 the topologies *)
-    (topology_table projects)
+    (topology_table projects) (topology_notes projects)
     (esc generated_at) script
 
-let docs_path = "docs/canary/model.html"
+let docs_path = "docs/canary/overview.html"
 
 let write (projects : (string * Canary_project_run.project_run) list)
     ~(overview : string) ~(generated_at : string) : unit =

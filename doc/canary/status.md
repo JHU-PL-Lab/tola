@@ -27,7 +27,7 @@ prints any of them. Map:
 
 **The agreement layer: 13 implemented claims, 8 landed** — landed
 meaning a real project's run decided `holds` or `violated`, which is the
-only evidence a check works. Plus **12 candidates**: named, classified,
+only evidence a check works. Plus **13 candidates**: named, classified,
 no evaluator. The live answers are `canary checks --landing` and
 `canary checks --firing`; the docs maintain no second catalogue.
 
@@ -35,8 +35,10 @@ no evaluator. The live answers are `canary checks --landing` and
 per (agreement × firing pattern), carrying the claim's kind, where its
 code is, the languages and mechanisms that carry it, the object format
 it ranges over, its target artifacts, and the action grid marking where
-the rule RAN against where the check FIRES. `make view` renders it above
-the result matrix, of which it is the template. Layout and row order:
+the rule RAN against where the check FIRES. It is the template of the
+result matrix, and since 2026-09-23 it lives on the overview page
+(`canary overview`, `docs/canary/overview.html`; `make view` renders
+both), not above the matrix. Layout and row order:
 [`design/matrix.md`](design/matrix.md).
 
 **Three axes describe a claim, and they are independent** — `ag_kind`
@@ -65,7 +67,7 @@ The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 159 project + 113 artifact + 14 PM = 286.** `make canary-test`
+**Tests: 163 project + 113 artifact + 14 PM = 290.** `make canary-test`
 after every edit under `src/canary/`; `make canary-post-check` before
 committing.
 
@@ -376,7 +378,7 @@ cheapest to evaluate.
 spare time, to be taken slowly and confirmed step by step.)*
 
 **The goal** (user): place the framework's actions and agreements on the
-layered diagram of `docs/canary/model.html` (`canary overview`), sync
+layered diagram of `docs/canary/overview.html` (`canary overview`), sync
 the terminology, and replace the page's placeholders with code —
 **bottom-up**, so neither side's ideas get invented to fit the other's.
 
@@ -384,7 +386,7 @@ the terminology, and replace the page's placeholders with code —
 (from declared provisions and gates), the mechanism variants (from the
 mechanism catalogue), the agreement overview (registry plus recorded
 runs). **Hand-written placeholders** in `canary_topology.ml`: 16 nodes,
-21 edges, 26 claim sites, and 5 case labels in `canary_model_page.ml`.
+21 edges, 26 claim sites, and 5 case labels in `canary_overview_page.ml`.
 Pins hold the claim sites to the registry; nothing yet computes them.
 
 **Found before proposing anything: three of the page's concepts already

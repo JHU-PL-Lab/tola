@@ -753,7 +753,7 @@ let overview_sections_pin : Canary_project_test.pure_test =
   { name = "overview.sections_numbered_in_order";
     check =
       (fun () ->
-        let path = "docs/canary/model.html" in
+        let path = "docs/canary/overview.html" in
         if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
         else
           let h =
@@ -4593,7 +4593,7 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
 
            Both files are asserted, so the split cannot silently become a
            duplication: the overview must be on exactly one of them. *)
-        let path = "docs/canary/model.html" in
+        let path = "docs/canary/overview.html" in
         let matrix_path = "docs/canary/projects/matrix.html" in
         if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
         else
@@ -4642,7 +4642,7 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           (* and the result page still POINTS at it — a split that loses
              the link is worse than no split, because the overview is the
              template an empty column there is looked up in *)
-          && matrix_has "model.html"
+          && matrix_has "overview.html"
           (* one ACTION cell per (row × action column) and one TARGET
              cell per (row × artifact column) — both in the `g` family,
              so the total counts them together *)
