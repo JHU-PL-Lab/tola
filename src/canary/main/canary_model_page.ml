@@ -259,6 +259,20 @@ color:var(--mut);margin:.4rem 0 1.4rem}
 .foot{color:var(--mut);font-size:.84rem;margin-top:3rem;
 border-top:1px solid var(--line);padding-top:1rem}
 a{color:var(--acc)}
+.mechbar{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 .3rem}
+.mechbar button{font:600 13px ui-sans-serif,system-ui,sans-serif;
+padding:.42rem .8rem;border:1px solid var(--line);border-radius:999px;
+background:var(--card);color:var(--fg);cursor:pointer}
+.mechbar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.mechbar .bl{opacity:.65;font-weight:400;font-size:.85em}
+.mechnote{color:var(--mut);font-size:.9rem;margin:.3rem 0 0}
+.edet{font:12px ui-monospace,monospace;color:var(--mut);min-height:2.4em;
+margin:.2rem 0 1.4rem;padding:.45rem .6rem;border:1px dashed var(--line);
+border-radius:6px;background:var(--card)}
+.edet.lit{border-style:solid;border-color:var(--acc);color:var(--fg)}
+svg .edge{cursor:default}
+svg .edge:hover line,svg .edge:hover path{stroke-width:3;opacity:1}
+tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}|}
 
@@ -289,26 +303,132 @@ let placements_table () =
      runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map T.edges ~f:row))
 
+(** LANGUAGE SIDE FIRST (user, 2026-09-22), so the rows group by it.
+    The language PM is what a reader arrives with — they are holding an
+    opam package and asking what it rests on — and sorting by the native
+    side scattered the opam rows through the table. *)
 let topology_table (projects : (string * Canary_project_run.project_run) list) =
-  let rows = T.topologies projects in
+  let rows =
+    T.topologies projects
+    |> List.sort ~compare:(fun ((a : T.t), _) ((b : T.t), _) ->
+           match
+             String.compare
+               (T.string_of_supplier a.T.tp_lang)
+               (T.string_of_supplier b.T.tp_lang)
+           with
+           | 0 -> (
+               match
+                 String.compare
+                   (T.short_of_join a.T.tp_join)
+                   (T.short_of_join b.T.tp_join)
+               with
+               | 0 ->
+                   String.compare
+                     (T.string_of_supplier a.T.tp_sys)
+                     (T.string_of_supplier b.T.tp_sys)
+               | c -> c)
+           | c -> c)
+  in
   let row ((t : T.t), (insts : T.instance list)) =
-    let realized =
+    let cases =
       List.map insts ~f:(fun i -> i.T.in_project)
       |> List.dedup_and_sort ~compare:String.compare
     in
     Printf.sprintf
       "<tr><td class=\"mono\">%s</td><td class=\"mono\">%s</td><td \
        class=\"mono\">%s</td><td>%s</td><td class=\"n\">%s</td></tr>"
-      (esc (T.string_of_supplier t.T.tp_sys))
-      (esc (T.short_of_join t.T.tp_join))
       (esc (T.string_of_supplier t.T.tp_lang))
+      (esc (T.short_of_join t.T.tp_join))
+      (esc (T.string_of_supplier t.T.tp_sys))
       (esc (T.character t))
-      (esc (String.concat ~sep:", " realized))
+      (esc (String.concat ~sep:", " cases))
   in
   Printf.sprintf
-    "<table><thead><tr><th>native side</th><th>bridge</th><th>language \
-     side</th><th>character</th><th>we realize it in</th></tr></thead><tbody>%s</tbody></table>"
+    "<table><thead><tr><th>language side</th><th>bridge</th><th>native \
+     side</th><th>character</th><th>case</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map rows ~f:row))
+
+(** The node legend. It exists because a reader asked what a "capability
+    file" and a "staged copy" were — the glosses were already on the
+    nodes as SVG tooltips, which is exactly where a reader who is
+    scrolling will not find them. A tooltip is a reminder, not an
+    explanation. *)
+let node_legend () =
+  let row (n : T.node) =
+    Printf.sprintf
+      "<tr><td><b>%s</b></td><td class=\"n\">%s</td><td>%s</td></tr>"
+      (esc n.T.nd_label)
+      (esc (T.string_of_layer n.T.nd_layer))
+      (esc n.T.nd_gloss)
+  in
+  Printf.sprintf
+    "<table><thead><tr><th>node</th><th>layer</th><th>what it \
+     is</th></tr></thead><tbody>%s</tbody></table>"
+    (String.concat (List.map T.nodes ~f:row))
+
+(** The artifact band, once per binding mechanism. Each is a row of the
+    binding table instantiated — which is the point: the whole chain is
+    the JOIN of one of these with one cooperation topology. *)
+let mechanism_panels () =
+  let one (v : T.artifact_variant) =
+    let m = Canary_mechanism.string_of_mechanism v.T.av_mechanism in
+    let hidden id = List.mem v.T.av_hidden id ~equal:String.equal in
+    Printf.sprintf
+      {|<section class="mech" id="mech-%s"><p class="mechnote">%s%s</p>%s</section>|}
+      (esc m)
+      (if v.T.av_wired then ""
+       else "<b>Not wired — no live project binds through it.</b> ")
+      (esc v.T.av_note)
+      (diagram ~hide:hidden ())
+  in
+  let buttons =
+    String.concat
+      (List.map (T.artifact_variants ()) ~f:(fun v ->
+           let m = Canary_mechanism.string_of_mechanism v.T.av_mechanism in
+           Printf.sprintf
+             {|<button data-m="%s"%s>%s <span class="bl">%s</span></button>|}
+             (esc m)
+             (if String.equal m "cstubs" then " class=\"on\"" else "")
+             (esc m)
+             (esc (Canary_lang.string_of_lang v.T.av_lang))))
+  in
+  Printf.sprintf {|<div class="mechbar">%s</div>%s|} buttons
+    (String.concat (List.map (T.artifact_variants ()) ~f:one))
+
+let script =
+  {|<script>
+(function(){
+// the mechanism selector: the artifact band IS one binding mechanism, so
+// switching it swaps which chain is on screen. Pre-rendered per
+// mechanism rather than re-laid-out, so nothing can shift underfoot.
+var bar=document.querySelector('.mechbar');
+if(bar){
+  var show=function(m){
+    document.querySelectorAll('.mech').forEach(function(s){
+      s.hidden = s.id !== 'mech-'+m; });
+    bar.querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('on', b.dataset.m===m); });
+  };
+  bar.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(b) show(b.dataset.m); });
+  show('cstubs');
+}
+// hovering an edge fills the detail strip. The SVG <title> is still
+// there for keyboard and for people who hover slowly, but a strip that
+// stays put is readable while comparing two edges.
+var strip=document.getElementById('edet');
+if(strip){
+  document.querySelectorAll('svg .edge').forEach(function(g){
+    g.addEventListener('mouseenter',function(){
+      var t=g.querySelector('title');
+      strip.textContent = t ? t.textContent : '';
+      strip.classList.add('lit');
+    });
+    g.addEventListener('mouseleave',function(){ strip.classList.remove('lit'); });
+  });
+}
+})();
+</script>|}
 
 let render (projects : (string * Canary_project_run.project_run) list)
     ~(generated_at : string) : string =
@@ -410,14 +530,25 @@ bridgeless.</div>
 <p>Nodes are what exists; edges are relations some real tool establishes,
 labelled with the action of ours that realizes them. An edge labelled
 <code>·</code> is a relation that really happens and that we run nothing
-at. The badge on an edge counts the claims that sit there.</p>
+at. The badge on an edge counts the claims that sit there. Hover an edge
+for what it establishes.</p>
 <div class="key">
 <span><i class="sw"></i> within a layer, or down one</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
 <span>? = candidate, no evaluator</span>
 </div>
+
+<div class="note"><strong>The artifact band is one binding mechanism.</strong>
+As first drawn it was the C-shim shape — headers, a compiled stub, a
+language module. A <code>ctypes</code> binding compiles nothing and has
+no stub node at all; its library is opened by name at import, so two of
+these edges do not merely go quiet, they do not exist. So the whole
+diagram is a <em>join</em>: one artifact-layer row (a binding mechanism)
+with one package-and-PM row (a cooperation topology). Neither table
+alone draws a chain; the pair does. Switch the band below.</div>
 %s
+<p id="edet" class="edet">hover an edge</p>
 
 <div class="note warn"><strong>One edge runs both ways.</strong>
 <code>binding package</code> ↔ <code>language module</code> is an
@@ -432,6 +563,9 @@ compare an artifact against the experiment's own spec, which is not a
 layer but an oracle attached to whatever node it speaks about. And the
 <em>source</em>, which the layered model has only inside its
 package-rewrite cases, never in the base picture.</div>
+
+<h3>1.1 What each node is</h3>
+%s
 
 <h2>2. Where every claim sits, and the edges where none do</h2>
 <p>Twenty-five claims — %d implemented, %d candidates — placed on the
@@ -490,17 +624,18 @@ unrelated to the artifacts under test.</p>
 
 <div class="foot">Generated %s from the project declarations — nodes,
 edges and claim placements live in <code>canary_topology.ml</code>;
-nothing on this page is hand-maintained. ·
+the diagrams are SVG emitted from that data, with one hand-placed
+coordinate per node. Nothing on this page is hand-maintained. ·
 <a href="projects/matrix.html">result matrix</a></div>
-</main></body></html>|}
-    css (diagram ())
+%s</main></body></html>|}
+    css (mechanism_panels ()) (node_legend ())
     (List.count T.placements ~f:(fun p -> p.T.pl_implemented))
     (List.count T.placements ~f:(fun p -> not p.T.pl_implemented))
     (placements_table ()) (List.length bare)
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
     (topology_table projects)
-    case_conf case_wheel case_built (esc generated_at)
+    case_conf case_wheel case_built (esc generated_at) script
 
 let docs_path = "docs/canary/model.html"
 

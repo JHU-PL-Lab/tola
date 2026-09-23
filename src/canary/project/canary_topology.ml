@@ -689,6 +689,79 @@ let actions_covered () : string list =
   List.filter_map edges ~f:(fun e -> e.eg_action)
   |> List.dedup_and_sort ~compare:String.compare
 
+(* ── THE ARTIFACT BAND IS ONE BINDING MECHANISM ───────────────────────
+
+   (user, 2026-09-22: "for the artifact layer, this is actually one
+   binding mechanism, so it opens one choice of table 2".) Correct, and
+   it is the structural point the first drawing hid: the band as drawn —
+   headers, a compiled stub, a language module — is the C-SHIM shape.
+   A ctypes binding compiles nothing and has no stub node at all; its
+   library is not linked but dlopen'd at import, so two of the edges do
+   not merely go quiet, they do not exist.
+
+   So the whole diagram is the JOIN of one artifact-layer row (a
+   mechanism — the binding table) with one package-and-PM row (a
+   topology — the cooperation table). Neither table alone draws a
+   chain; the pair does.
+
+   Every field below is read from [Canary_mechanism.mechanism_catalogue]
+   rather than restated: [mi_compiles_a_stub] is exactly the question
+   "is there a stub node", and it is already answered there. *)
+
+type artifact_variant = {
+  av_mechanism : Canary_mechanism.mechanism;
+  av_lang : Canary_lang.lang;
+  av_hidden : string list;  (** node and edge ids this shape does not have *)
+  av_note : string;
+  av_wired : bool;  (** does a live project bind through it today *)
+}
+
+let artifact_variant_of (m : Canary_mechanism.mechanism) : artifact_variant =
+  let i = Canary_mechanism.info_of_mechanism m in
+  let base =
+    { av_mechanism = m;
+      av_lang = i.Canary_mechanism.mi_lang;
+      av_hidden = [];
+      av_note = "";
+      av_wired = i.Canary_mechanism.mi_wired }
+  in
+  if not i.Canary_mechanism.mi_compiles_a_stub then
+    { base with
+      (* nothing is compiled on the consumer side, so there is no stub
+         artifact, nothing links, and the library is bound at IMPORT by
+         name. [build_stub] and [link_mod] do not exist here — and the
+         claims that sat on them have nothing to read, which is why a
+         dynamic binding's coverage is thin for a reason rather than by
+         neglect *)
+      av_hidden = [ "stub_lang"; "build_stub"; "link_mod" ];
+      av_note =
+        "Nothing is compiled on the consumer side. The library is opened \
+         by name at import and symbols resolve per call, so there is no \
+         stub artifact to read and no link step to recover anything \
+         from — the probe's own failure is the evidence."
+        ^
+        if i.Canary_mechanism.mi_exposes_typed_stub then
+          " A cdef still RE-DECLARES the C surface, so a typed boundary \
+           exists as a declaration even though no object carries it."
+        else "" }
+  else
+    { base with
+      av_note =
+        "A compiled artifact sits between the language and the library, \
+         so it records what it requires — which is what makes the \
+         link-time claims decidable at all."
+        ^
+        if i.Canary_mechanism.mi_consumer_records_needed then
+          " It also records NEEDED and its version requirements."
+        else
+          " Its archive records no NEEDED or SONAME — those appear when \
+           the consumer executable is linked." }
+
+let artifact_variants () : artifact_variant list =
+  List.map Canary_mechanism.mechanism_catalogue
+    ~f:(fun (i : Canary_mechanism.mechanism_info) ->
+      artifact_variant_of i.Canary_mechanism.mi_mechanism)
+
 (* ── WHERE EVERY CLAIM SITS ───────────────────────────────────────────
 
    A placement is a SET of edges, not one, from the start (user,

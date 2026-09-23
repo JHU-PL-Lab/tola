@@ -64,6 +64,20 @@ color:var(--mut);margin:.4rem 0 1.4rem}
 .foot{color:var(--mut);font-size:.84rem;margin-top:3rem;
 border-top:1px solid var(--line);padding-top:1rem}
 a{color:var(--acc)}
+.mechbar{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 .3rem}
+.mechbar button{font:600 13px ui-sans-serif,system-ui,sans-serif;
+padding:.42rem .8rem;border:1px solid var(--line);border-radius:999px;
+background:var(--card);color:var(--fg);cursor:pointer}
+.mechbar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.mechbar .bl{opacity:.65;font-weight:400;font-size:.85em}
+.mechnote{color:var(--mut);font-size:.9rem;margin:.3rem 0 0}
+.edet{font:12px ui-monospace,monospace;color:var(--mut);min-height:2.4em;
+margin:.2rem 0 1.4rem;padding:.45rem .6rem;border:1px dashed var(--line);
+border-radius:6px;background:var(--card)}
+.edet.lit{border-style:solid;border-color:var(--acc);color:var(--fg)}
+svg .edge{cursor:default}
+svg .edge:hover line,svg .edge:hover path{stroke-width:3;opacity:1}
+tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}</style></head><body><main>
 
@@ -95,14 +109,24 @@ bridgeless.</div>
 <p>Nodes are what exists; edges are relations some real tool establishes,
 labelled with the action of ours that realizes them. An edge labelled
 <code>·</code> is a relation that really happens and that we run nothing
-at. The badge on an edge counts the claims that sit there.</p>
+at. The badge on an edge counts the claims that sit there. Hover an edge
+for what it establishes.</p>
 <div class="key">
 <span><i class="sw"></i> within a layer, or down one</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
 <span>? = candidate, no evaluator</span>
 </div>
-<svg viewBox="0 0 1220 900" class="diagram" role="img">
+
+<div class="note"><strong>The artifact band is one binding mechanism.</strong>
+As first drawn it was the C-shim shape — headers, a compiled stub, a
+language module. A <code>ctypes</code> binding compiles nothing and has
+no stub node at all; its library is opened by name at import, so two of
+these edges do not merely go quiet, they do not exist. So the whole
+diagram is a <em>join</em>: one artifact-layer row (a binding mechanism)
+with one package-and-PM row (a cooperation topology). Neither table
+alone draws a chain; the pair does. Switch the band below.</div>
+<div class="mechbar"><button data-m="cstubs" class="on">cstubs <span class="bl">ocaml</span></button><button data-m="cext">cext <span class="bl">python</span></button><button data-m="ctypes">ctypes <span class="bl">python</span></button><button data-m="cffi">cffi <span class="bl">python</span></button><button data-m="dynlink">dynlink <span class="bl">ocaml</span></button></div><section class="mech" id="mech-cstubs"><p class="mechnote">A compiled artifact sits between the language and the library, so it records what it requires — which is what makes the link-time claims decidable at all. It also records NEEDED and its version requirements.</p><svg viewBox="0 0 1220 900" class="diagram" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
  markerHeight="7" orient="auto-start-reverse">
 <path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
@@ -184,7 +208,306 @@ at. The badge on an edge counts the claims that sit there.</p>
 <rect x="506" y="739" width="208" height="46" rx="7"/>
 <text class="nlabel" x="610" y="767">consumer program</text></g><g class="node oracle"><title>what the experiment says should be true. NOT a layer: an oracle attached to whatever node it speaks about</title>
 <rect x="506" y="443" width="208" height="46" rx="7"/>
-<text class="nlabel" x="610" y="471">declaration</text></g></svg>
+<text class="nlabel" x="610" y="471">declaration</text></g></svg></section><section class="mech" id="mech-cext"><p class="mechnote">A compiled artifact sits between the language and the library, so it records what it requires — which is what makes the link-time claims decidable at all. It also records NEEDED and its version requirements.</p><svg viewBox="0 0 1220 900" class="diagram" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+ markerHeight="7" orient="auto-start-reverse">
+<path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/>
+<text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
+<text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
+<text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<line x1="150" y1="212" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="233">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<line x1="610" y1="176" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="187">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<line x1="1070" y1="212" x2="610" y2="176" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="187">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<line x1="610" y1="176" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="215">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<line x1="610" y1="268" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="402">·</text><circle class="cbadge" cx="426" cy="409" r="9"/><text class="cnum" x="426" y="413">1</text></g><g class="edge bare"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="130">fetch_binding</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<line x1="1070" y1="392" x2="1070" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<line x1="150" y1="466" x2="1070" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<line x1="1070" y1="466" x2="1070" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<line x1="150" y1="550" x2="1070" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="1070" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="649">probe_binding</text><circle class="cbadge" cx="886" cy="656" r="9"/><text class="cnum" x="886" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="150" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="649">probe_binding</text><circle class="cbadge" cx="426" cy="656" r="9"/><text class="cnum" x="426" y="660">5</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<rect x="46" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
+<rect x="46" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="217">native package</text></g><g class="node artifact"><title>the library's own repository at a ref — present when the world builds rather than fetches</title>
+<rect x="46" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="397">native source</text></g><g class="node artifact"><title>the syntactic native surface a binding compiles against</title>
+<rect x="46" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="471">headers</text></g><g class="node artifact"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
+<rect x="46" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="555">native library</text></g><g class="node artifact"><title>the install-prefix face of the same library — a second copy, which is why a claim can compare them</title>
+<rect x="46" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="629">staged copy</text></g><g class="node package"><title>a .pc file, a CMake config, a *-config script: content inside the provider whose purpose is to be read from outside. THE ARTIFACT-FACING BRIDGE</title>
+<rect x="506" y="245" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="273">capability file</text></g><g class="node package"><title>a separate package existing only for cooperation (opam's conf-*). Carries package IDENTITY and the depext mapping. THE SYMBOLIC BRIDGE</title>
+<rect x="506" y="153" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="181">bridge package</text></g><g class="node pm"><title>opam, pip, cargo — solves constraints and installs</title>
+<rect x="966" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="67">language PM</text></g><g class="node package"><title>the unit the language PM ships, with its declared depends</title>
+<rect x="966" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="217">binding package</text></g><g class="node artifact"><title>the binding's own repository — separate from the library's, and often at a different ref</title>
+<rect x="966" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="397">binding source</text></g><g class="node artifact"><title>the C shim the binding compiles: what records the symbols it requires of the library</title>
+<rect x="966" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="471">compiled stub</text></g><g class="node artifact"><title>the compiled language-side artifact the consumer links</title>
+<rect x="966" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="555">language module</text></g><g class="node artifact"><title>the names and types the binding offers its own users</title>
+<rect x="966" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="629">user surface</text></g><g class="node program"><title>the only node where anything RUNS — everything above is static</title>
+<rect x="506" y="739" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="767">consumer program</text></g><g class="node oracle"><title>what the experiment says should be true. NOT a layer: an oracle attached to whatever node it speaks about</title>
+<rect x="506" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="471">declaration</text></g></svg></section><section class="mech" id="mech-ctypes"><p class="mechnote">Nothing is compiled on the consumer side. The library is opened by name at import and symbols resolve per call, so there is no stub artifact to read and no link step to recover anything from — the probe's own failure is the evidence.</p><svg viewBox="0 0 1220 900" class="diagram" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+ markerHeight="7" orient="auto-start-reverse">
+<path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/>
+<text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
+<text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
+<text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<line x1="150" y1="212" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="233">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<line x1="610" y1="176" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="187">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<line x1="1070" y1="212" x2="610" y2="176" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="187">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<line x1="610" y1="176" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="215">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<line x1="610" y1="268" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="402">·</text><circle class="cbadge" cx="426" cy="409" r="9"/><text class="cnum" x="426" y="413">1</text></g><g class="edge bare"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="130">fetch_binding</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="1070" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="649">probe_binding</text><circle class="cbadge" cx="886" cy="656" r="9"/><text class="cnum" x="886" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="150" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="649">probe_binding</text><circle class="cbadge" cx="426" cy="656" r="9"/><text class="cnum" x="426" y="660">5</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<rect x="46" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
+<rect x="46" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="217">native package</text></g><g class="node artifact"><title>the library's own repository at a ref — present when the world builds rather than fetches</title>
+<rect x="46" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="397">native source</text></g><g class="node artifact"><title>the syntactic native surface a binding compiles against</title>
+<rect x="46" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="471">headers</text></g><g class="node artifact"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
+<rect x="46" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="555">native library</text></g><g class="node artifact"><title>the install-prefix face of the same library — a second copy, which is why a claim can compare them</title>
+<rect x="46" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="629">staged copy</text></g><g class="node package"><title>a .pc file, a CMake config, a *-config script: content inside the provider whose purpose is to be read from outside. THE ARTIFACT-FACING BRIDGE</title>
+<rect x="506" y="245" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="273">capability file</text></g><g class="node package"><title>a separate package existing only for cooperation (opam's conf-*). Carries package IDENTITY and the depext mapping. THE SYMBOLIC BRIDGE</title>
+<rect x="506" y="153" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="181">bridge package</text></g><g class="node pm"><title>opam, pip, cargo — solves constraints and installs</title>
+<rect x="966" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="67">language PM</text></g><g class="node package"><title>the unit the language PM ships, with its declared depends</title>
+<rect x="966" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="217">binding package</text></g><g class="node artifact"><title>the binding's own repository — separate from the library's, and often at a different ref</title>
+<rect x="966" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="397">binding source</text></g><g class="node artifact"><title>the compiled language-side artifact the consumer links</title>
+<rect x="966" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="555">language module</text></g><g class="node artifact"><title>the names and types the binding offers its own users</title>
+<rect x="966" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="629">user surface</text></g><g class="node program"><title>the only node where anything RUNS — everything above is static</title>
+<rect x="506" y="739" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="767">consumer program</text></g><g class="node oracle"><title>what the experiment says should be true. NOT a layer: an oracle attached to whatever node it speaks about</title>
+<rect x="506" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="471">declaration</text></g></svg></section><section class="mech" id="mech-cffi"><p class="mechnote"><b>Not wired — no live project binds through it.</b> Nothing is compiled on the consumer side. The library is opened by name at import and symbols resolve per call, so there is no stub artifact to read and no link step to recover anything from — the probe's own failure is the evidence. A cdef still RE-DECLARES the C surface, so a typed boundary exists as a declaration even though no object carries it.</p><svg viewBox="0 0 1220 900" class="diagram" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+ markerHeight="7" orient="auto-start-reverse">
+<path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/>
+<text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
+<text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
+<text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<line x1="150" y1="212" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="233">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<line x1="610" y1="176" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="187">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<line x1="1070" y1="212" x2="610" y2="176" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="187">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<line x1="610" y1="176" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="215">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<line x1="610" y1="268" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="402">·</text><circle class="cbadge" cx="426" cy="409" r="9"/><text class="cnum" x="426" y="413">1</text></g><g class="edge bare"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="130">fetch_binding</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="1070" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="649">probe_binding</text><circle class="cbadge" cx="886" cy="656" r="9"/><text class="cnum" x="886" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="150" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="649">probe_binding</text><circle class="cbadge" cx="426" cy="656" r="9"/><text class="cnum" x="426" y="660">5</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<rect x="46" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
+<rect x="46" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="217">native package</text></g><g class="node artifact"><title>the library's own repository at a ref — present when the world builds rather than fetches</title>
+<rect x="46" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="397">native source</text></g><g class="node artifact"><title>the syntactic native surface a binding compiles against</title>
+<rect x="46" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="471">headers</text></g><g class="node artifact"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
+<rect x="46" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="555">native library</text></g><g class="node artifact"><title>the install-prefix face of the same library — a second copy, which is why a claim can compare them</title>
+<rect x="46" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="629">staged copy</text></g><g class="node package"><title>a .pc file, a CMake config, a *-config script: content inside the provider whose purpose is to be read from outside. THE ARTIFACT-FACING BRIDGE</title>
+<rect x="506" y="245" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="273">capability file</text></g><g class="node package"><title>a separate package existing only for cooperation (opam's conf-*). Carries package IDENTITY and the depext mapping. THE SYMBOLIC BRIDGE</title>
+<rect x="506" y="153" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="181">bridge package</text></g><g class="node pm"><title>opam, pip, cargo — solves constraints and installs</title>
+<rect x="966" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="67">language PM</text></g><g class="node package"><title>the unit the language PM ships, with its declared depends</title>
+<rect x="966" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="217">binding package</text></g><g class="node artifact"><title>the binding's own repository — separate from the library's, and often at a different ref</title>
+<rect x="966" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="397">binding source</text></g><g class="node artifact"><title>the compiled language-side artifact the consumer links</title>
+<rect x="966" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="555">language module</text></g><g class="node artifact"><title>the names and types the binding offers its own users</title>
+<rect x="966" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="629">user surface</text></g><g class="node program"><title>the only node where anything RUNS — everything above is static</title>
+<rect x="506" y="739" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="767">consumer program</text></g><g class="node oracle"><title>what the experiment says should be true. NOT a layer: an oracle attached to whatever node it speaks about</title>
+<rect x="506" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="471">declaration</text></g></svg></section><section class="mech" id="mech-dynlink"><p class="mechnote"><b>Not wired — no live project binds through it.</b> Nothing is compiled on the consumer side. The library is opened by name at import and symbols resolve per call, so there is no stub artifact to read and no link step to recover anything from — the probe's own failure is the evidence.</p><svg viewBox="0 0 1220 900" class="diagram" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+ markerHeight="7" orient="auto-start-reverse">
+<path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/>
+<text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
+<text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
+<text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<line x1="150" y1="212" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="233">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<line x1="610" y1="176" x2="150" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="187">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<line x1="1070" y1="212" x2="610" y2="176" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="187">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<line x1="610" y1="176" x2="610" y2="268" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="215">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<line x1="610" y1="268" x2="150" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="402">·</text><circle class="cbadge" cx="426" cy="409" r="9"/><text class="cnum" x="426" y="413">1</text></g><g class="edge bare"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="130">fetch_binding</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="1070" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="840" y="649">probe_binding</text><circle class="cbadge" cx="886" cy="656" r="9"/><text class="cnum" x="886" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran — the only edge with a loader on it</title>
+<line x1="150" y1="550" x2="610" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="380" y="649">probe_binding</text><circle class="cbadge" cx="426" cy="656" r="9"/><text class="cnum" x="426" y="660">5</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<rect x="46" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
+<rect x="46" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="217">native package</text></g><g class="node artifact"><title>the library's own repository at a ref — present when the world builds rather than fetches</title>
+<rect x="46" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="397">native source</text></g><g class="node artifact"><title>the syntactic native surface a binding compiles against</title>
+<rect x="46" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="471">headers</text></g><g class="node artifact"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
+<rect x="46" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="555">native library</text></g><g class="node artifact"><title>the install-prefix face of the same library — a second copy, which is why a claim can compare them</title>
+<rect x="46" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="150" y="629">staged copy</text></g><g class="node package"><title>a .pc file, a CMake config, a *-config script: content inside the provider whose purpose is to be read from outside. THE ARTIFACT-FACING BRIDGE</title>
+<rect x="506" y="245" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="273">capability file</text></g><g class="node package"><title>a separate package existing only for cooperation (opam's conf-*). Carries package IDENTITY and the depext mapping. THE SYMBOLIC BRIDGE</title>
+<rect x="506" y="153" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="181">bridge package</text></g><g class="node pm"><title>opam, pip, cargo — solves constraints and installs</title>
+<rect x="966" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="67">language PM</text></g><g class="node package"><title>the unit the language PM ships, with its declared depends</title>
+<rect x="966" y="189" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="217">binding package</text></g><g class="node artifact"><title>the binding's own repository — separate from the library's, and often at a different ref</title>
+<rect x="966" y="369" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="397">binding source</text></g><g class="node artifact"><title>the compiled language-side artifact the consumer links</title>
+<rect x="966" y="527" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="555">language module</text></g><g class="node artifact"><title>the names and types the binding offers its own users</title>
+<rect x="966" y="601" width="208" height="46" rx="7"/>
+<text class="nlabel" x="1070" y="629">user surface</text></g><g class="node program"><title>the only node where anything RUNS — everything above is static</title>
+<rect x="506" y="739" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="767">consumer program</text></g><g class="node oracle"><title>what the experiment says should be true. NOT a layer: an oracle attached to whatever node it speaks about</title>
+<rect x="506" y="443" width="208" height="46" rx="7"/>
+<text class="nlabel" x="610" y="471">declaration</text></g></svg></section>
+<p id="edet" class="edet">hover an edge</p>
 
 <div class="note warn"><strong>One edge runs both ways.</strong>
 <code>binding package</code> ↔ <code>language module</code> is an
@@ -199,6 +522,9 @@ compare an artifact against the experiment's own spec, which is not a
 layer but an oracle attached to whatever node it speaks about. And the
 <em>source</em>, which the layered model has only inside its
 package-rewrite cases, never in the base picture.</div>
+
+<h3>1.1 What each node is</h3>
+<table><thead><tr><th>node</th><th>layer</th><th>what it is</th></tr></thead><tbody><tr><td><b>system PM</b></td><td class="n">pm</td><td>apt, brew, dnf — resolves and installs native packages</td></tr><tr><td><b>native package</b></td><td class="n">package</td><td>the unit the system PM ships: payload plus metadata</td></tr><tr><td><b>native source</b></td><td class="n">artifact</td><td>the library's own repository at a ref — present when the world builds rather than fetches</td></tr><tr><td><b>headers</b></td><td class="n">artifact</td><td>the syntactic native surface a binding compiles against</td></tr><tr><td><b>native library</b></td><td class="n">artifact</td><td>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</td></tr><tr><td><b>staged copy</b></td><td class="n">artifact</td><td>the install-prefix face of the same library — a second copy, which is why a claim can compare them</td></tr><tr><td><b>capability file</b></td><td class="n">package</td><td>a .pc file, a CMake config, a *-config script: content inside the provider whose purpose is to be read from outside. THE ARTIFACT-FACING BRIDGE</td></tr><tr><td><b>bridge package</b></td><td class="n">package</td><td>a separate package existing only for cooperation (opam's conf-*). Carries package IDENTITY and the depext mapping. THE SYMBOLIC BRIDGE</td></tr><tr><td><b>language PM</b></td><td class="n">pm</td><td>opam, pip, cargo — solves constraints and installs</td></tr><tr><td><b>binding package</b></td><td class="n">package</td><td>the unit the language PM ships, with its declared depends</td></tr><tr><td><b>binding source</b></td><td class="n">artifact</td><td>the binding's own repository — separate from the library's, and often at a different ref</td></tr><tr><td><b>compiled stub</b></td><td class="n">artifact</td><td>the C shim the binding compiles: what records the symbols it requires of the library</td></tr><tr><td><b>language module</b></td><td class="n">artifact</td><td>the compiled language-side artifact the consumer links</td></tr><tr><td><b>user surface</b></td><td class="n">artifact</td><td>the names and types the binding offers its own users</td></tr><tr><td><b>consumer program</b></td><td class="n">program</td><td>the only node where anything RUNS — everything above is static</td></tr><tr><td><b>declaration</b></td><td class="n">oracle</td><td>what the experiment says should be true. NOT a layer: an oracle attached to whatever node it speaks about</td></tr></tbody></table>
 
 <h2>2. Where every claim sits, and the edges where none do</h2>
 <p>Twenty-five claims — 13 implemented, 12 candidates — placed on the
@@ -227,7 +553,7 @@ end-to-end invariants are the ones we do not have.</div>
 <p>One row per distinct shape, derived from what each project declares —
 never from a table anyone maintains by hand. The last column is a fact
 about us and not part of the row.</p>
-<table><thead><tr><th>native side</th><th>bridge</th><th>language side</th><th>character</th><th>we realize it in</th></tr></thead><tbody><tr><td class="mono">apt</td><td class="mono">— no PM between —</td><td class="mono">pip</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">apt</td><td class="mono">conf-gmp (presence only)</td><td class="mono">opam</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">zarith</td></tr><tr><td class="mono">apt</td><td class="mono">conf-libssl (presence only)</td><td class="mono">opam</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">ssl</td></tr><tr><td class="mono">apt</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">opam</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">llvm</td></tr><tr><td class="mono">apt</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">opam</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">apt</td><td class="mono">⚠ UNDECLARED</td><td class="mono">opam</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">built</td><td class="mono">— no PM between —</td><td class="mono">pip</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">built</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">opam</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">llvm</td></tr><tr><td class="mono">built</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">opam</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">— absorbed by the consumer —</td><td class="mono">opam</td><td>the consumer package builds the native lib</td><td class="n">z3</td></tr><tr><td class="mono">opam</td><td class="mono">depext:libtorch</td><td class="mono">opam</td><td>unified package universe</td><td class="n">torch</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: llvmlite wheel's bundled libLLVM</td><td class="n">llvm</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: z3-solver wheel's bundled libz3</td><td class="n">z3</td></tr><tr><td class="mono">staged</td><td class="mono">— no PM between —</td><td class="mono">pip</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">staged</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">opam</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">vendored</td><td class="mono">— no PM between —</td><td class="mono">vendored</td><td>no package manager stands between these two artifacts</td><td class="n">tiny-full</td></tr><tr><td class="mono">vendored</td><td class="mono">⚠ UNDECLARED</td><td class="mono">opam</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr></tbody></table>
+<table><thead><tr><th>language side</th><th>bridge</th><th>native side</th><th>character</th><th>case</th></tr></thead><tbody><tr><td class="mono">opam</td><td class="mono">conf-gmp (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">zarith</td></tr><tr><td class="mono">opam</td><td class="mono">conf-libssl (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">ssl</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">staged</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">depext:libtorch</td><td class="mono">opam</td><td>unified package universe</td><td class="n">torch</td></tr><tr><td class="mono">opam</td><td class="mono">— absorbed by the consumer —</td><td class="mono">opam</td><td>the consumer package builds the native lib</td><td class="n">z3</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">apt</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">vendored</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: llvmlite wheel's bundled libLLVM</td><td class="n">llvm</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: z3-solver wheel's bundled libz3</td><td class="n">z3</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">apt</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">built</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">staged</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">vendored</td><td class="mono">— no PM between —</td><td class="mono">vendored</td><td>no package manager stands between these two artifacts</td><td class="n">tiny-full</td></tr></tbody></table>
 
 <h2>4. Concrete cases</h2>
 <p>The same graph with its nodes named. Hidden nodes do not exist in that
@@ -443,8 +769,41 @@ unrelated to the artifacts under test.</p>
 <rect x="506" y="443" width="208" height="46" rx="7"/>
 <text class="nlabel" x="610" y="471">declaration</text></g></svg>
 
-<div class="foot">Generated 2026-09-22 22:40 from the project declarations — nodes,
+<div class="foot">Generated 2026-09-22 23:26 from the project declarations — nodes,
 edges and claim placements live in <code>canary_topology.ml</code>;
-nothing on this page is hand-maintained. ·
+the diagrams are SVG emitted from that data, with one hand-placed
+coordinate per node. Nothing on this page is hand-maintained. ·
 <a href="projects/matrix.html">result matrix</a></div>
-</main></body></html>
+<script>
+(function(){
+// the mechanism selector: the artifact band IS one binding mechanism, so
+// switching it swaps which chain is on screen. Pre-rendered per
+// mechanism rather than re-laid-out, so nothing can shift underfoot.
+var bar=document.querySelector('.mechbar');
+if(bar){
+  var show=function(m){
+    document.querySelectorAll('.mech').forEach(function(s){
+      s.hidden = s.id !== 'mech-'+m; });
+    bar.querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('on', b.dataset.m===m); });
+  };
+  bar.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(b) show(b.dataset.m); });
+  show('cstubs');
+}
+// hovering an edge fills the detail strip. The SVG <title> is still
+// there for keyboard and for people who hover slowly, but a strip that
+// stays put is readable while comparing two edges.
+var strip=document.getElementById('edet');
+if(strip){
+  document.querySelectorAll('svg .edge').forEach(function(g){
+    g.addEventListener('mouseenter',function(){
+      var t=g.querySelector('title');
+      strip.textContent = t ? t.textContent : '';
+      strip.classList.add('lit');
+    });
+    g.addEventListener('mouseleave',function(){ strip.classList.remove('lit'); });
+  });
+}
+})();
+</script></main></body></html>
