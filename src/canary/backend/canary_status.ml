@@ -47,6 +47,18 @@ let parse_line (line : string) : (string * string * string option) option =
            Some (tag, event, detail)
        | _ -> None)
 
+(* The line's own timestamp — the "[2026-09-15 18:47:32.849]" prefix
+   [parse_line] steps over. Local wall-clock time with NO zone, exactly
+   as [Canary_step_model.now] wrote it, so it orders the lines of one
+   machine and says nothing across two. [None] for a line that does not
+   open with one: the continuation lines of a multi-line command. *)
+let stamp_of_line (line : string) : string option =
+  if not (String.is_prefix line ~prefix:"[") then None
+  else
+    match String.index line ']' with
+    | None -> None
+    | Some i -> Some (String.sub line ~pos:1 ~len:(i - 1))
+
 let strip_parens s =
   s
   |> String.chop_prefix_if_exists ~prefix:"("
@@ -57,10 +69,10 @@ let is_verdict = function
   | "done" | "failed" | "blocked" | "skip" | "unexpected_success" -> true
   | _ -> false
 
-(* The confirming-agreement suffix the runner appends to xfail details
-   (" [api_names_present]" / " [a,b]") — extracted so the mark itself
-   can name the agreement ("xfail[api_names_present]"). "" when the
-   detail carries none (an unattributed xfail, or an older log line).
+(* The confirming agreements the runner appends to xfail details
+   (" [api_names_present]" / " [a,b]"), so the mark itself can name them
+   ("xfail[api_names_present]"). [] when the detail carries none (an
+   unattributed xfail, or an older log line).
 
    It used to search for the literal "[c", which was the c1..c9
    numbering baked into a parser (2026-09-12). Now it takes the
@@ -68,19 +80,24 @@ let is_verdict = function
    REGISTERED agreement — so a log line ending in some other bracketed
    text is not mistaken for an attribution, and a line naming a retired
    id shows as an unattributed xfail rather than citing something that
-   no longer exists. *)
-let agreement_suffix (detail : string option) : string =
+   no longer exists.
+
+   NAMES, not the bracket text (2026-09-23): the typed step state below
+   carries them, and the mark re-spells them the way the runner writes
+   them ([xfail_id_suffix]: comma, no space) — so every mark the runner
+   can produce reads exactly as it did when this returned the text. *)
+let xfail_agreements (detail : string option) : string list =
   match detail with
-  | None -> ""
+  | None -> []
   | Some d -> (
       (* the LAST bracket group in the line — the detail may still be
          wrapped in the log's own parentheses, so this does not anchor
          at the end *)
       match String.rindex d ']' with
-      | None -> ""
+      | None -> []
       | Some j -> (
           match String.rindex (String.sub d ~pos:0 ~len:j) '[' with
-          | None -> ""
+          | None -> []
           | Some i ->
               let inner = String.sub d ~pos:(i + 1) ~len:(j - i - 1) in
               let names =
@@ -91,32 +108,105 @@ let agreement_suffix (detail : string option) : string =
                 && List.for_all names ~f:(fun s ->
                        Option.is_some
                          (Canary_agreement_common.agreement_id_of_string s))
-              then String.sub d ~pos:i ~len:(j - i + 1)
-              else ""))
+              then names
+              else []))
 
-(* Compact mark from (event, detail). `xfail` = an *expected* failure that
-   was confirmed (a pass) — the "done (expected failure confirmed)" text is
-   redundant with the mark, so the row drops it; the confirming contract
-   (if the runner named one) rides the mark: "xfail[c2]". *)
-let mark event detail =
+(** WHAT THE LOG SAYS HAPPENED TO ONE STEP, typed (2026-09-23, status.md
+    §2.7 phase A — the record a run overlay draws from).
+
+    The mark went straight from the event to a glyph, and a glyph cannot
+    say whether the step RAN: a [done] and a warm [skip (prior success)]
+    both print ✓. The difference matters to anything drawing a run — a
+    warm step re-checked nothing, its verdict was earned by an earlier
+    run, and it logs no agreement outcome at all. So the classification
+    is a type, and {!mark} renders it: one source, so the glyph on the
+    page and the state in the record cannot disagree.
+
+    It lives here rather than in [base/] because it is a READING of the
+    runner's log vocabulary ([done], [skip], [blocked] …), which the
+    backend runner writes and this module alone parses — the same reason
+    {!agreement_obs} lives here. Readers above take the typed value. *)
+type verdict =
+  | Pass
+  | Fail
+      (** the step failed: [failed], or [unexpected_success] — a failure
+          that was predicted did not come *)
+  | Xfail of string list
+      (** a CONFIRMED expected failure, which is a pass; the names are
+          the registered agreements that confirmed it ([] = unattributed) *)
+
+type step_state =
+  | Ran of verdict  (** the step executed in the run that logged it *)
+  | Warm of verdict
+      (** served from a verdict marker: nothing was re-checked, and the
+          verdict is one an EARLIER run earned *)
+  | Blocked  (** its precondition failed, so it never started *)
+  | Unrecorded
+      (** in the chain, and no run has logged a verdict for it. A step
+          left UNREACHED because a dependency failed lands here too: the
+          runner marks it skipped in memory and logs nothing, so the log
+          cannot tell "blocked upstream" from "never attempted" *)
+
+(* The names a RECORD spells them with (the JSON export). Words, not the
+   glyphs: a consumer tests them, and a glyph is what [mark] is for. *)
+let string_of_verdict = function
+  | Pass -> "pass"
+  | Fail -> "fail"
+  | Xfail _ -> "xfail"
+
+let string_of_step_state = function
+  | Ran _ -> "ran"
+  | Warm _ -> "warm"
+  | Blocked -> "blocked"
+  | Unrecorded -> "unrecorded"
+
+(* The typed state of one verdict event; [None] for an event that is not
+   a verdict. A [skip] that names no verdict marker has no verdict to
+   report — every skip the runner writes today names one. *)
+let state_of_event (event : string) (detail : string option) :
+    step_state option =
   match event with
   | "done" -> (
       match detail with
       | Some d when String.is_substring d ~substring:"expected failure" ->
-          "xfail" ^ agreement_suffix detail
-      | _ -> "✓")
-  | "failed" -> "✗"
-  | "unexpected_success" -> "✗"
+          Some (Ran (Xfail (xfail_agreements detail)))
+      | _ -> Some (Ran Pass))
+  | "failed" | "unexpected_success" -> Some (Ran Fail)
   | "skip" -> (
       (* a cache skip on a MET expectation is a pass, not a not-run: the
          verdict marker's flavor tells which pass. *)
       match detail with
       | Some d when String.is_substring d ~substring:"prior xfail" ->
-          "xfail" ^ agreement_suffix detail
-      | Some d when String.is_substring d ~substring:"prior success" -> "✓"
-      | _ -> "·")
-  | "blocked" -> "⊘"
-  | _ -> "?"
+          Some (Warm (Xfail (xfail_agreements detail)))
+      | Some d when String.is_substring d ~substring:"prior success" ->
+          Some (Warm Pass)
+      | _ -> Some Unrecorded)
+  | "blocked" -> Some Blocked
+  | _ -> None
+
+(* `xfail` = an *expected* failure that was confirmed (a pass) — the
+   "done (expected failure confirmed)" text is redundant with the mark,
+   so the row drops it; the confirming agreements (if the runner named
+   any) ride the mark: "xfail[api_names_present]". *)
+let mark_of_verdict = function
+  | Pass -> "✓"
+  | Fail -> "✗"
+  | Xfail [] -> "xfail"
+  | Xfail names -> "xfail[" ^ String.concat ~sep:"," names ^ "]"
+
+(* WARM AND RAN RENDER ALIKE on purpose: the glyph answers "what is the
+   verdict", and a warm one is still a verdict. Whether it was re-checked
+   is the typed state's to say, not the glyph's. *)
+let mark_of_state = function
+  | Ran v | Warm v -> mark_of_verdict v
+  | Blocked -> "⊘"
+  | Unrecorded -> "·"
+
+(* Compact mark from (event, detail) — the typed state, rendered. *)
+let mark event detail =
+  match state_of_event event detail with
+  | Some s -> mark_of_state s
+  | None -> "?"
 
 let read_file_or_empty path =
   try Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
@@ -362,25 +452,56 @@ let print_witness ~root ~project ~variant ~tag ~mark =
           List.iter tail ~f:(fun l -> Stdlib.Printf.printf "            | %s\n" l)
         end)
 
-(** The per-scenario × per-tag verdict matrix read from the shared
+(** One verdict line, as the log recorded it. *)
+type logged = {
+  lg_event : string;
+  lg_detail : string option;
+  lg_at : string;  (** the line's timestamp ({!stamp_of_line}); "" if it had none *)
+}
+
+(** One scenario's part of the log. *)
+type scenario_log = {
+  sl_scenario : string;
+  sl_verdicts : (string * logged) list;
+      (** tag → its LAST verdict, in first-seen tag order *)
+  sl_platforms : string list;
+      (** every platform this scenario's steps logged, first-seen, no
+          repeats (2026-09-23). WHAT THE RUN SAW, not what the machine
+          reading the log is: a step logs [platform] when it executes,
+          so a mac run's log says [macos_local] wherever it is read.
+          Normally one value — a verdict marker is fingerprinted by the
+          platform, so a warm skip cannot serve another platform's
+          verdict. A warm step logs no platform, but the whole log is
+          read, so the run that earned the marker supplies it; [] only
+          for a log that predates the event (2026-08-26), or one cleared
+          while the markers survived *)
+}
+
+(** The per-scenario × per-tag verdict record read from the shared
     actions.log — the ONLY per-scenario run record (run_state.json
     merges scenarios last-writer-wins; verdict markers exist only on
-    MET expectations). [(scenario, (tag, (event, detail)) list)] in
-    first-seen scenario order, first-seen tag order, last verdict
-    winning. Shared by the [status] view and the cross-project result
-    matrix ([Canary_matrix]). *)
-let project_matrix ~root ~project :
-    (string * (string * (string * string option)) list) list =
+    MET expectations). First-seen scenario order, first-seen tag order,
+    last verdict winning. Read by the [status] view (through
+    {!project_matrix}) and by the cross-project result matrix
+    ([Canary_matrix]), which is what exports it as a run record. *)
+let project_log ~root ~project : scenario_log list =
   let path = log_path ~root ~project in
   if not (Stdlib.Sys.file_exists path) then []
   else begin
     let lines =
       Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_lines
     in
-    (* Ordered variants (first-seen); each a tag→(event,detail) assoc kept
-       in first-seen order with last verdict winning. *)
+    (* Ordered variants (first-seen); each a tag→logged assoc kept in
+       first-seen order with last verdict winning. *)
     let order = ref [] in
-    let table : (string, (string * (string * string option)) list ref) Hashtbl.t =
+    let table : (string, (string * logged) list ref) Hashtbl.t =
+      Hashtbl.create (module String)
+    in
+    (* kept APART from [table] and [order]: a scenario enters the record
+       at its first VERDICT, exactly as before, so a scenario that logged
+       a platform and then died before any verdict does not appear as an
+       empty row *)
+    let platforms : (string, string list) Hashtbl.t =
       Hashtbl.create (module String)
     in
     let cur = ref "(run)" in
@@ -397,18 +518,41 @@ let project_matrix ~root ~project :
         match parse_line line with
         | Some (_, "variant_start", detail) ->
             cur := Option.value_map detail ~default:"(run)" ~f:strip_parens
+        | Some (_, "platform", Some detail) ->
+            let p = strip_parens detail in
+            Hashtbl.update platforms !cur ~f:(function
+              | None -> [ p ]
+              | Some ps ->
+                  if List.mem ps p ~equal:String.equal then ps else ps @ [ p ])
         | Some (tag, event, detail) when is_verdict event ->
             let r = ensure !cur in
+            let l =
+              { lg_event = event;
+                lg_detail = detail;
+                lg_at = Option.value (stamp_of_line line) ~default:"" }
+            in
             (* drop any prior verdict for this tag, then append (last wins,
                preserves first-seen column order) *)
             r :=
               List.filter !r ~f:(fun (t, _) -> not (String.equal t tag))
-              @ [ (tag, (event, detail)) ]
+              @ [ (tag, l) ]
         | _ -> ());
     List.map (List.rev !order) ~f:(fun name ->
-        ( name,
-          match Hashtbl.find table name with Some r -> !r | None -> [] ))
+        { sl_scenario = name;
+          sl_verdicts =
+            (match Hashtbl.find table name with Some r -> !r | None -> []);
+          sl_platforms =
+            Option.value (Hashtbl.find platforms name) ~default:[] })
   end
+
+(** {!project_log} as [(scenario, (tag, (event, detail)) list)] — the
+    shape the [status] view reads. *)
+let project_matrix ~root ~project :
+    (string * (string * (string * string option)) list) list =
+  List.map (project_log ~root ~project) ~f:(fun sl ->
+      ( sl.sl_scenario,
+        List.map sl.sl_verdicts ~f:(fun (tag, l) ->
+            (tag, (l.lg_event, l.lg_detail))) ))
 
 let print_status ?(verbose = false) ~root ~project () =
   let path = log_path ~root ~project in
@@ -620,6 +764,11 @@ type agreement_obs = {
   ao_agreement : string;
   ao_method : string;
   ao_outcome : string;  (** holds | violated | unavailable | … *)
+  ao_at : string;
+      (** the line's timestamp; "" if it had none. It is how a reader
+          of the record sees the staleness described below: a warm step
+          logs no agreement line, so an outcome can be much older than
+          the verdict beside it (2026-09-23) *)
 }
 
 (** Every agreement outcome in the log, per scenario.
@@ -667,7 +816,8 @@ let project_agreements ~root ~project :
                 let r = ensure !cur in
                 let o =
                   { ao_tag = tag; ao_agreement = ag; ao_method = meth;
-                    ao_outcome = label }
+                    ao_outcome = label;
+                    ao_at = Option.value (stamp_of_line line) ~default:"" }
                 in
                 (* last wins per (tag, agreement, method), first-seen
                    order preserved — the same rule the verdict table

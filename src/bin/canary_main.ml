@@ -1554,7 +1554,12 @@ let result_cmd =
     Arg.(
       value & flag
       & info [ "json" ]
-          ~doc:"Emit JSON (machine-readable) instead of the text view.")
+          ~doc:
+            "Print the RUN RECORD as JSON instead of the text view: typed \
+             columns, and per cell the step's state (ran/warm/blocked/\
+             unrecorded), the agreement outcome, and when the log recorded \
+             it; per row the platform the run logged. Stdout carries the \
+             JSON and nothing else, and the web page is not rewritten.")
   in
   let run project md json () =
     let projects =
@@ -1569,28 +1574,40 @@ let result_cmd =
     in
     let m = Canary_matrix.matrix_of projects in
     if json then
-      print_string
-        (Yojson.Basic.pretty_to_string (Canary_matrix.to_json m) ^ "\n")
-    else if md then Canary_matrix.pp_md m
-    else Canary_matrix.pp_text m;
-    (* the web page refresh rides the pure read (the [canary index]
-       precedent — web copies live in docs/canary for GH Pages) *)
-    let now =
-      let t = Unix.gettimeofday () in
-      let tm = Unix.localtime t in
-      Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" (tm.tm_year + 1900)
-        (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec
-    in
-    Canary_matrix.write_web ~projects_root:"_out/canary/projects" m
-      ~generated_at:now
+      (* THE RUN RECORD (2026-09-23, status.md §2.7 phase A): the JSON
+         and nothing else on stdout — the page notice used to follow it,
+         so no consumer could parse the output (finding 1).
+
+         And NO page write. A machine read is often of one project, and
+         the page is the tracked all-project record: `result zarith
+         --json` replaced docs/canary/projects/matrix.html with a
+         two-row table the first time it was run for this plan. An
+         export that rewrites a committed file as a side effect is not a
+         read. *)
+      print_string (Canary_matrix.json_export m)
+    else begin
+      if md then Canary_matrix.pp_md m else Canary_matrix.pp_text m;
+      (* the web page refresh rides the pure read (the [canary index]
+         precedent — web copies live in docs/canary for GH Pages) *)
+      let now =
+        let t = Unix.gettimeofday () in
+        let tm = Unix.localtime t in
+        Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" (tm.tm_year + 1900)
+          (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec
+      in
+      Canary_matrix.write_web ~projects_root:"_out/canary/projects" m
+        ~generated_at:now
+    end
   in
   Cmd.v
     (Cmd.info "result"
        ~doc:
          "The result table: rows = project × scenario (the enumerated \
           worlds), columns = actions, cells = last-run verdicts \
-          (✓/✗/xfail[cN]/·/⊘). Pure read of the run artifacts; also \
-          refreshes the web page (docs/canary/projects/matrix.html).")
+          (✓/✗/xfail[cN]/·/⊘). Pure read of the run artifacts; the text \
+          and markdown views also refresh the web page \
+          (docs/canary/projects/matrix.html). --json prints the run \
+          record and writes nothing.")
     Term.(const run $ project $ md $ json $ const ())
 
 (* THE OVERVIEW PAGE (2026-09-23, user: "the page contains more material

@@ -5,12 +5,27 @@ open Base
    ENUMERATED worlds — a stable shape, never-run scenarios show all
    [·]), COLUMNS = actions (the union across the registry in
    catalogue order). Cells carry the last-run verdict from the shared
-   actions.log (via {!Canary_status.project_matrix} — the only
+   actions.log (via {!Canary_status.project_log} — the only
    per-scenario run record). The future extension: pre/post-check
    columns ("each checks") appended to the action set.
 
    Rendered in the cmd (text/md/json) and as the web page
    [docs/canary/projects/matrix.html]. Pure read — no execution. *)
+
+(** WHAT A CELL'S MARK WAS RENDERED FROM (2026-09-23, status.md §2.7
+    phase A — the record a run overlay reads). The mark is for a reader
+    scanning a table and it is lossy on purpose: a warm skip and a real
+    run both print ✓, and [violated] and [error] both print ✗. A program
+    drawing a run needs the value, so the cell carries it and the mark is
+    its rendering. *)
+type recorded =
+  | R_act of Canary_status.step_state
+  | R_check of string option
+      (** the agreement outcome label ([holds], [violated],
+          [unavailable] …); [None] = no recorded run evaluated it *)
+  | R_artifact
+      (** an artifact column: the mark IS the reading, a summary of the
+          inspection the step left on disk *)
 
 (** One matrix cell: the verdict mark (✓/✗/xfail[cN]/·/⊘ — the
     {!Canary_status} vocabulary) plus the PROVISION CHOICE of the
@@ -25,6 +40,14 @@ open Base
     run). *)
 type cell = {
   mark : string;
+  recorded : recorded;
+  at : string option;
+      (** WHEN the log recorded what this cell shows — the timestamp of
+          the verdict or outcome line that won. Per cell rather than per
+          row because the table is last-wins over every run the log
+          holds, so one row's cells can come from different runs. Local
+          wall-clock time with no zone ({!Canary_status.stamp_of_line}).
+          [None] for an artifact cell and for a cell nothing recorded. *)
   provision : string;
   detail : string option;
   blame : string option;
@@ -102,6 +125,14 @@ type row = {
       (** the remote link to the exact commit/tree, when the repo has
           a Git remote *)
   platform : string;
+      (** the platform this TABLE is rendered for ({!platform_label}) —
+          the page's column. Not what the run saw: see [recorded_on] *)
+  recorded_on : string list;
+      (** the platform(s) the run LOGGED for this world
+          ({!Canary_status.scenario_log}), which is what a record of a
+          run must carry (2026-09-23, status.md §2.7). It differs from
+          [platform] exactly when it matters — a mac run's log read on
+          WSL, or a [--platform] render. [] = the log recorded none *)
   settings : (string * setting option) list;
       (** per SETTING column (artifact label) in column order; [None] =
           the project does not declare that artifact *)
@@ -109,11 +140,61 @@ type row = {
       (** per column tag in column order; [None] = not in the chain *)
 }
 
+(** A COLUMN IS AN ACTION OR A CHECK SLOT (2026-09-14, user).
+
+    The chain reads [action, artifact, action, artifact …], so a check
+    has a place in it: [Check (a, Pre)] states what [a] needs before it
+    runs, [Check (a, Post)] validates what it made. Both sit adjacent
+    to [a], which is what makes a failing check legible — the reader
+    does not have to work out which step it was talking about.
+
+    The check columns are DERIVED from the registry's [ag_slot], not
+    from the log: a scenario that has never run still shows its check
+    columns, all [·], exactly as it shows its action columns. Filling
+    them from the log instead would make the table's shape depend on
+    what happened to be run, which is the property this table has
+    always avoided. *)
+type col =
+  | Act of Canary_basic.action
+  | Check of Canary_basic.action * Canary_agreement_common.stage * string
+      (** ONE AGREEMENT PER COLUMN (2026-09-14, user: "not 2/3 in one
+          cell, but one check per cell"). The aggregate cell said two
+          of the three claims here reached a verdict and would not say
+          WHICH — so a reader who wanted the answer had to hover, and a
+          reader scanning a column could not compare rows.
+
+          The cost is width, and it is paid down by only giving a
+          column to a claim that can actually be decided at that point:
+          one with an evaluator, applicable in at least one of the
+          project's worlds. A planned agreement would be a column of
+          dots forever, and a claim the mechanism cannot carry — three
+          of the six at an OCaml cstubs probe — would be a column of
+          [not_applicable]. Neither is worth 14 characters. *)
+  | Artifact of Canary_basic.action
+      (** WHAT THE ACTION LEFT BEHIND (2026-09-14, user). The chain
+          reads [action, artifact, action, artifact …] and until now
+          the table showed only the first of each pair, plus the
+          world's placements in the leading block. Those say what a
+          scenario IS; this says what each step actually produced, read
+          back off the inspection the step wrote.
+
+          Only where an inspection EXISTS — same omit-empty rule as the
+          check columns. A column of blanks would be worse than no
+          column, and an artifact with nothing recorded about it has
+          nothing concise to show. *)
+
 type t = {
   setting_columns : string list;
       (** the leading block: one artifact label per declared artifact,
           union across the table's projects in kind order *)
   columns : string list;
+  typed_columns : col list;
+      (** the same columns, TYPED — [columns] is their labels, in the
+          same order (2026-09-23, status.md §2.7 finding 3). The JSON
+          record exports these, because a label is a string a consumer
+          would have to parse back into an action, a slot and an
+          agreement, and the join onto the overview's edges wants the
+          action itself *)
   check_columns : string list;
       (** which of [columns] are CHECK slots rather than actions. The
           labels are self-describing ([probe_binding_ocaml_pre]), but a
@@ -134,30 +215,33 @@ type t = {
   rows : row list;
 }
 
-let mark_of_run ?(run : (string * (string * string option)) list = [])
-    (tag : string) : string =
-  match List.Assoc.find run tag ~equal:String.equal with
-  | Some (event, detail) -> Canary_status.mark event detail
-  | None -> "·"
+(** The scenario's part of the log ([None] when the project has no
+    actions.log or the scenario never logged a verdict). *)
+let log_of_scenario ~scenario (logs : Canary_status.scenario_log list) :
+    Canary_status.scenario_log option =
+  List.find logs ~f:(fun (sl : Canary_status.scenario_log) ->
+      String.equal sl.Canary_status.sl_scenario scenario)
 
-(** The verdict's DETAIL — the log event's reason line (the xfail's
-    "expected failure confirmed: … predates …" names the fix; a
-    failure's "postcondition failed"/command output explains it). The
-    tooltip content the user asked for. *)
-let detail_of_run ?(run : (string * (string * string option)) list = [])
-    (tag : string) : string option =
-  match List.Assoc.find run tag ~equal:String.equal with
-  | Some (_, detail) -> detail
-  | None -> None
-
-(** The scenario's run verdicts keyed by tag ([] when the project has
-    no actions.log or the scenario never ran). *)
-let run_of_scenario ~scenario
-    (runs : (string * (string * (string * string option)) list) list) :
-    (string * (string * string option)) list =
-  match List.Assoc.find runs scenario ~equal:String.equal with
-  | Some v -> v
-  | None -> []
+(** One ACTION cell's reading of the log: the step's typed state, and —
+    when a line recorded it — that line's timestamp and its DETAIL, the
+    event's reason (the xfail's "expected failure confirmed: … predates
+    …" names the fix; a failure's "postcondition failed"/command output
+    explains it — the tooltip content the user asked for). *)
+let reading_of_run (sl : Canary_status.scenario_log option) (tag : string) :
+    Canary_status.step_state * string option * string option =
+  match
+    Option.bind sl ~f:(fun (sl : Canary_status.scenario_log) ->
+        List.Assoc.find sl.Canary_status.sl_verdicts tag ~equal:String.equal)
+  with
+  | None -> (Canary_status.Unrecorded, None, None)
+  | Some (l : Canary_status.logged) ->
+      ( Option.value
+          (Canary_status.state_of_event l.Canary_status.lg_event
+             l.Canary_status.lg_detail)
+          ~default:Canary_status.Unrecorded,
+        (if String.is_empty l.Canary_status.lg_at then None
+         else Some l.Canary_status.lg_at),
+        l.Canary_status.lg_detail )
 
 (* ── the web row's identity: repo ref + platform (2026-08-17, user's
    web refinement) ──
@@ -560,48 +644,15 @@ let row_key (pr : Canary_project_run.project_run)
 
 let compare_column = Canary_basic.compare_column
 
-(** A COLUMN IS AN ACTION OR A CHECK SLOT (2026-09-14, user).
+(* [type col] is defined with the other matrix types, above [t], since
+   2026-09-23: [t] carries the typed columns now. *)
 
-    The chain reads [action, artifact, action, artifact …], so a check
-    has a place in it: [Check (a, Pre)] states what [a] needs before it
-    runs, [Check (a, Post)] validates what it made. Both sit adjacent
-    to [a], which is what makes a failing check legible — the reader
-    does not have to work out which step it was talking about.
-
-    The check columns are DERIVED from the registry's [ag_slot], not
-    from the log: a scenario that has never run still shows its check
-    columns, all [·], exactly as it shows its action columns. Filling
-    them from the log instead would make the table's shape depend on
-    what happened to be run, which is the property this table has
-    always avoided. *)
-type col =
-  | Act of Canary_basic.action
-  | Check of Canary_basic.action * Canary_agreement_common.stage * string
-      (** ONE AGREEMENT PER COLUMN (2026-09-14, user: "not 2/3 in one
-          cell, but one check per cell"). The aggregate cell said two
-          of the three claims here reached a verdict and would not say
-          WHICH — so a reader who wanted the answer had to hover, and a
-          reader scanning a column could not compare rows.
-
-          The cost is width, and it is paid down by only giving a
-          column to a claim that can actually be decided at that point:
-          one with an evaluator, applicable in at least one of the
-          project's worlds. A planned agreement would be a column of
-          dots forever, and a claim the mechanism cannot carry — three
-          of the six at an OCaml cstubs probe — would be a column of
-          [not_applicable]. Neither is worth 14 characters. *)
-  | Artifact of Canary_basic.action
-      (** WHAT THE ACTION LEFT BEHIND (2026-09-14, user). The chain
-          reads [action, artifact, action, artifact …] and until now
-          the table showed only the first of each pair, plus the
-          world's placements in the leading block. Those say what a
-          scenario IS; this says what each step actually produced, read
-          back off the inspection the step wrote.
-
-          Only where an inspection EXISTS — same omit-empty rule as the
-          check columns. A column of blanks would be worse than no
-          column, and an artifact with nothing recorded about it has
-          nothing concise to show. *)
+(* the kind an artifact column's action produces — the half of its label
+   after the [=], and the record's [artifact] field *)
+let produced_label (a : Canary_basic.action) : string =
+  match Canary_action.produces_of_action a with
+  | k :: _ -> kind_label k
+  | [] -> "?"
 
 let label_of_col = function
   | Act a -> Canary_basic.string_of_action a
@@ -626,10 +677,7 @@ let label_of_col = function
          column UNIQUE — two actions can produce the same kind
          ([build_lib] and [fetch_lib] both yield [Lib]) and the cells
          are keyed by label. *)
-      Canary_basic.string_of_action a ^ "="
-      ^ (match Canary_action.produces_of_action a with
-        | k :: _ -> kind_label k
-        | [] -> "?")
+      Canary_basic.string_of_action a ^ "=" ^ produced_label a
 
 let action_of_col = function Act a | Check (a, _, _) | Artifact a -> a
 
@@ -1130,8 +1178,32 @@ let check_cell ~(chain : Canary_basic.action list)
       ~is_declaration:(not (List.is_empty against))
       ~version_blind
   in
+  (* the observation that SUPPLIED the outcome: the MOST RECENT one
+     reporting it, when several methods or firing sites agree. Its tag
+     names the step in the tooltip and its timestamp is the cell's [at],
+     so the two always describe the same line. Until 2026-09-23 the
+     tooltip named the FIRST in list order — on zarith, an inspection
+     step's [holds] from a run eighty minutes older than the probe that
+     last confirmed it. The stamps sort as text because the log writes
+     them fixed-width, most significant field first. *)
+  let supplier =
+    List.fold mine ~init:None ~f:(fun acc o ->
+        if not (String.equal o.Canary_status.ao_outcome outcome) then acc
+        else
+          match acc with
+          | Some p
+            when String.( > ) p.Canary_status.ao_at o.Canary_status.ao_at ->
+              acc
+          | _ -> Some o)
+  in
   let c =
     { mark = mark_of_outcome outcome;
+      recorded =
+        R_check (if String.is_empty outcome then None else Some outcome);
+      at =
+        Option.bind supplier ~f:(fun o ->
+            if String.is_empty o.Canary_status.ao_at then None
+            else Some o.Canary_status.ao_at);
       provision = "";
       blame;
       detail =
@@ -1142,10 +1214,7 @@ let check_cell ~(chain : Canary_basic.action list)
              else
                (* the reason, where the log carried one — "unavailable"
                   alone never told anybody what was missing *)
-               match
-                 List.find mine ~f:(fun o ->
-                     String.equal o.Canary_status.ao_outcome outcome)
-               with
+               match supplier with
                | Some o ->
                    outcome ^ " (at " ^ o.Canary_status.ao_tag ^ ")"
                | None -> outcome)
@@ -1186,9 +1255,11 @@ let check_cell ~(chain : Canary_basic.action list)
   in
   (c, implicated)
 
-let matrix_of (projects : (string * Canary_project_run.project_run) list) :
-    t =
-  let root = "_out" in
+(* [?root] is where the run logs are read from — the default is the one
+   every run writes. A pin passes a fixture tree, which is how the record
+   export is checked against a log whose every line it wrote itself. *)
+let matrix_of ?(root = "_out")
+    (projects : (string * Canary_project_run.project_run) list) : t =
   let setting_cols = setting_columns_of projects in
   let cols =
     List.concat_map projects ~f:(fun (_, pr) ->
@@ -1213,7 +1284,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
   let columns = List.map cols ~f:label_of_col in
   let rows =
     List.concat_map projects ~f:(fun (project, pr) ->
-        let runs = Canary_status.project_matrix ~root ~project in
+        let logs = Canary_status.project_log ~root ~project in
         (* the agreement half of the same log, read once per project *)
         let agmts = Canary_status.project_agreements ~root ~project in
         (* PASS 2's value, once per project. It carries what the project
@@ -1241,7 +1312,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
               Stdlib.Filename.basename
                 (Canary_project_run.scenario_dir_of ~pr_name:project a)
             in
-            let run = run_of_scenario ~scenario runs in
+            let sl = log_of_scenario ~scenario logs in
             let scenario_obs =
               match List.Assoc.find agmts scenario ~equal:String.equal with
               | Some o -> o
@@ -1297,6 +1368,10 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
               ref_label;
               ref_url;
               platform;
+              recorded_on =
+                Option.value_map sl ~default:[]
+                  ~f:(fun (sl : Canary_status.scenario_log) ->
+                    sl.Canary_status.sl_platforms);
               (* the SETTING block: this world's placement per artifact.
                  A source artifact carries its own repo link — so a
                  project with a lib source AND an off-tree binding source
@@ -1381,6 +1456,8 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                                          ~compare:String.compare
                                   in
                                   { mark = s;
+                                    recorded = R_artifact;
+                                    at = None;
                                     provision = "";
                                     blame = None;
                                     detail =
@@ -1424,12 +1501,15 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                             | None -> "")
                         | None -> ""
                       in
+                      let state, at, detail = reading_of_run sl tag in
                       ( tag,
                         Some
-                          { mark = mark_of_run ~run tag;
+                          { mark = Canary_status.mark_of_state state;
+                            recorded = R_act state;
+                            at;
                             provision;
                             blame = None;
-                            detail = detail_of_run ~run tag } )
+                            detail } )
                     else (tag, None)) }))
   in
   (* the GLOBAL row index: the ordinal follows the rendered row order;
@@ -1455,8 +1535,8 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
       | Artifact _ as c -> Some (label_of_col c)
       | Act _ | Check _ -> None)
   in
-  { setting_columns = List.map setting_cols ~f:fst; columns; check_columns;
-    artifact_columns; rows }
+  { setting_columns = List.map setting_cols ~f:fst; columns;
+    typed_columns = cols; check_columns; artifact_columns; rows }
 
 (* ── text renderer ── *)
 
@@ -1729,14 +1809,78 @@ let pp_md (m : t) : unit =
                 rr.scenario);
           Fmt.pr "@.")
 
-(* ── JSON ── *)
+(* ── JSON — THE RUN RECORD (2026-09-23, status.md §2.7 phase A) ──
+
+   What a program reads to draw a recorded run — first the overview's
+   case diagrams — rather than what a person scans. So it carries the
+   typed values the marks are rendered from: each column as its action,
+   slot and agreement instead of a label to parse; each action cell's
+   step STATE (ran / warm / blocked / unrecorded) and verdict, because a
+   warm ✓ re-checked nothing; each check cell's outcome label, because
+   [violated] and [error] share a ✗; WHEN the log recorded each cell;
+   and the platform the run LOGGED, not the one reading it.
+
+   The mark stays in every cell, so a consumer that wants the table's
+   glyph does not re-derive it. A cell NOT in the world's chain has no
+   key at all — which is what lets a diagram grey out an edge that does
+   not exist in this world without being told.
+
+   ⚠ One field is not the run's: a system package's version inside a
+   SETTING is asked of the machine rendering the record
+   ({!sys_pkg_version}) unless the spec pins it. The run never recorded
+   it (§2.7 finding 2); phase E is where it will. *)
+
+let json_of_col (c : col) : Yojson.Basic.t =
+  let head kind a =
+    [ ("label", `String (label_of_col c));
+      ("kind", `String kind);
+      ("action", `String (Canary_basic.string_of_action a)) ]
+  in
+  match c with
+  | Act a -> `Assoc (head "action" a)
+  | Check (a, s, slug) ->
+      `Assoc
+        (head "check" a
+        @ [ ("stage", `String (Canary_agreement_common.string_of_stage s));
+            ("agreement", `String slug);
+            ("code", `String (Canary_agreement_common.short_code_of_slug slug))
+          ])
+  | Artifact a ->
+      `Assoc (head "artifact" a @ [ ("artifact", `String (produced_label a)) ])
+
+let json_of_cell (c : cell) : Yojson.Basic.t =
+  let opt key = function Some s -> [ (key, `String s) ] | None -> [] in
+  let reading =
+    match c.recorded with
+    | R_act st -> (
+        ("state", `String (Canary_status.string_of_step_state st))
+        ::
+        (match st with
+         | Canary_status.Ran v | Canary_status.Warm v -> (
+             ("verdict", `String (Canary_status.string_of_verdict v))
+             ::
+             (match v with
+              | Canary_status.Xfail (_ :: _ as names) ->
+                  [ ("agreements", `List (List.map names ~f:(fun n -> `String n)))
+                  ]
+              | _ -> []))
+         | Canary_status.Blocked | Canary_status.Unrecorded -> []))
+    | R_check o ->
+        [ ("outcome", match o with Some s -> `String s | None -> `Null) ]
+    | R_artifact -> []
+  in
+  `Assoc
+    ((("mark", `String c.mark) :: reading)
+    @ opt "at" c.at
+    @ (if String.is_empty c.provision then []
+       else [ ("provision", `String c.provision) ])
+    @ opt "detail" c.detail @ opt "blame" c.blame)
 
 let to_json (m : t) : Yojson.Basic.t =
   `Assoc
     [ ( "setting_columns",
         `List (List.map m.setting_columns ~f:(fun c -> `String c)) );
-      ( "columns",
-        `List (List.map m.columns ~f:(fun c -> `String c)) );
+      ("columns", `List (List.map m.typed_columns ~f:json_of_col));
       ( "rows",
         `List
           (List.map m.rows ~f:(fun (r : row) ->
@@ -1745,6 +1889,8 @@ let to_json (m : t) : Yojson.Basic.t =
                    ("scenario", `String r.scenario);
                    ("index", `Int r.index);
                    ("code", `String r.code);
+                   ( "recorded_on",
+                     `List (List.map r.recorded_on ~f:(fun p -> `String p)) );
                    ( "settings",
                      `Assoc
                        (List.filter_map r.settings ~f:(fun (label, s) ->
@@ -1754,10 +1900,15 @@ let to_json (m : t) : Yojson.Basic.t =
                    ( "cells",
                      `Assoc
                        (List.filter_map r.cells ~f:(fun (tag, c) ->
-                            match c with
-                            | Some c -> Some (tag, `String c.mark)
-                            | None -> None)) ) ])) )
-    ]
+                            Option.map c ~f:(fun c -> (tag, json_of_cell c))))
+                   ) ])) ) ]
+
+(** THE RECORD AS PRINTED — what [canary result --json] writes to stdout,
+    and ALL it writes (§2.7 finding 1: the page notice used to follow it,
+    and the output did not parse). A function rather than a line in the
+    command so a pin can parse exactly the text a consumer receives. *)
+let json_export (m : t) : string =
+  Yojson.Basic.pretty_to_string (to_json m) ^ "\n"
 
 (* ── HTML (the web page) ── *)
 

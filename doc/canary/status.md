@@ -492,7 +492,7 @@ the check until the derivation agrees with it:
 6. **Recorded run results on the case diagrams** — brought forward by
    the user on 2026-09-23 and planned as §2.7.
 
-### 2.7 Run results on the overview diagrams — PLANNED, for a new session
+### 2.7 Run results on the overview diagrams — phase A landed; B awaits confirmation
 
 *(2026-09-23, user: "the cases in section 2 are generated from
 hardcoded code, not from the running result. I wish a feature to
@@ -580,6 +580,79 @@ to record what each package-manager BRIDGE actually did.
 already runs; E then adds bridges one at a time; D can go alongside.
 Stop for the user after each phase. The record carries the platform from
 the first phase, so the macOS session's runs can be drawn too.
+
+**Phase A landed 2026-09-23: `canary result --json` is the record.**
+Per column, its `kind` (action, check, artifact) and the `action`
+itself, plus for a check its `stage`, `agreement` and `code`. Per action
+cell, the step's `state` — `ran`, `warm`, `blocked` or `unrecorded` —
+and for the first two its `verdict` (`pass`, `fail`, `xfail`, with the
+confirming `agreements`). Per check cell, the `outcome` label, `null`
+when no run evaluated it. `at` on every cell the log dated, and
+`recorded_on` on every row: the platform the run logged. The mark stays
+in every cell, and a cell missing from a row is an action outside that
+world's chain.
+
+It is one reading of the log, not two. The typed state is
+`Canary_status.step_state`, and `mark` now renders it, so the page's
+glyph and the record's state cannot disagree; `project_matrix` became a
+projection of the new `project_log`. Finding 1 turned out to be half the
+problem: besides printing after the JSON, the command rewrote the
+tracked page, and `result zarith --json` had replaced `matrix.html` with
+a two-row table. `--json` now prints the JSON and writes nothing. The
+text and markdown views still refresh the page, and with a project
+argument they still write a one-project table to the tracked file —
+unchanged; whether they should is the user's call.
+
+The guard is `matrix.record_export_is_the_matrix`. It writes a log in
+the runner's own line shape over zarith's real scenarios — one script
+per step state plus a re-run, a platform that is not this machine's, two
+claim outcomes and an inspection — and requires the matrix to read each
+back typed and dated, and the printed text to parse and decode to the
+same columns and cells. Four deliberate breaks each turned it red: warm
+spelled as ran, the renderer's platform, a dropped timestamp, dropped
+artifact cells.
+
+One visible change on the result page: a check cell's tooltip names the
+step that supplied its outcome, and that is now the most recent step
+reporting it rather than the first in list order, so that the step and
+the new `at` describe the same line. 69 of 618 tooltips moved; nothing
+else on the page did.
+
+The record already says what the table could not. On zarith's built
+row, three of the six actions were warm in the last run, and the
+`build_binding_ocaml_pre` outcomes date from four hours before it: the
+step was warm, and a warm step evaluates nothing. Over all 28 rows on
+the day it landed, 67 action cells were warm passes and 73 were passes
+that ran — the same ✓ on the page.
+
+**Found during A, for the later phases:**
+
+1. *The matrix never reads the sibling steps.* The logs carry
+   `probe_lib_apt` and `probe_lib_staged` (sqlite, llvm, z3),
+   `probe_binding_ocaml_opam` (z3 — the step that realizes
+   `run_packaged`) and every `…_inspect`, but an action cell is looked up
+   by the canonical tag, so the record has none of them. Phase B's
+   tag → action map must read them from `project_log`, which keeps them.
+2. *`action_of_string` does not invert `string_of_action`* for
+   `fetch_binding_source_<lang>` — a zarith column — nor for
+   `pack_source`, `pack_headers`, `pack_app` and
+   `pack_binding_source_<lang>`. The OCaml half of the join does not
+   need it, since `typed_columns` carries the actions, but step tags are
+   strings.
+3. *An unreached step logs nothing.* When a dependency fails the runner
+   marks the dependents skipped in memory only, so the record cannot
+   tell "blocked upstream" from "never attempted"; both read
+   `unrecorded`. `blocked` means a failed precondition, and no current
+   log contains one.
+4. *Timestamps have no zone.* They order one machine's lines and say
+   nothing across two, which matters the day the mac's records are
+   drawn beside WSL's.
+5. *Six rows have no platform.* llvm's `latest` world never ran; the
+   other five last ran before 2026-08-26, when the event was added.
+   Honest, but a re-run is the only fix.
+6. *Finding 2 stands.* A system package's version inside a setting is
+   still asked of the rendering machine unless the spec pins it; the
+   record carries it unchanged, and the encoder's comment says so.
 
 ---
 
