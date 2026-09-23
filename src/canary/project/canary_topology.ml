@@ -441,6 +441,383 @@ let unreachable_gates (rows : (t * instance list) list) : instance list =
   List.concat_map rows ~f:(fun (_, insts) ->
       List.filter insts ~f:(fun i -> not i.in_gate_reachable))
 
+(* ── THE LAYERED GRAPH ────────────────────────────────────────────────
+
+   The table above says WHICH topology. This says what a topology IS:
+   the nodes a full chain passes through, the edges between them, and
+   which of our actions realizes each edge.
+
+   It is GENERAL MECHANISM — no project, no package, no version. A
+   concrete case is this graph with its nodes named and its inapplicable
+   edges greyed, which is why the two are one vocabulary rather than two
+   drawings.
+
+   ⚠ TWO THINGS THE THREE-LAYER PICTURE DOES NOT HAVE, and our claims
+   need both:
+
+   - THE DECLARATION. Four implemented agreements compare an artifact
+     against canary's own spec — not against package metadata, not
+     against another artifact. It is not a layer; it is an ORACLE
+     attached to whatever node it speaks about, and drawing it as a
+     layer would suggest it is produced by something below it.
+   - THE SOURCE. [source_is_declared_ref] and
+     [build_tree_configured_for_source] are about a node beneath the
+     native artifact. The layered model has source only inside its
+     package-rewrite cases, never in the base picture.
+
+   ⚠ AND ONE EDGE RUNS BOTH WAYS. [Pkg_lang]—[Module_lang] is an
+   INSTALL when the binding is fetched and a PACK when it is built here,
+   and those are different actions establishing different relations. The
+   direction is a function of the provision, which is exactly what our
+   enumeration already ranges over — so the diagram has to read it from
+   the world rather than draw one arrow and be wrong half the time. *)
+
+type layer = L_pm | L_package | L_artifact | L_program | L_oracle
+
+let string_of_layer = function
+  | L_pm -> "pm"
+  | L_package -> "package"
+  | L_artifact -> "artifact"
+  | L_program -> "program"
+  | L_oracle -> "oracle"
+
+type side = S_sys | S_bridge | S_lang
+
+type node = {
+  nd_id : string;
+  nd_label : string;  (** the GENERIC name — never a package *)
+  nd_layer : layer;
+  nd_side : side;
+  nd_gloss : string;
+}
+
+let nodes : node list =
+  [ { nd_id = "pm_sys"; nd_label = "system PM"; nd_layer = L_pm;
+      nd_side = S_sys;
+      nd_gloss = "apt, brew, dnf — resolves and installs native packages" };
+    { nd_id = "pkg_sys"; nd_label = "native package"; nd_layer = L_package;
+      nd_side = S_sys;
+      nd_gloss = "the unit the system PM ships: payload plus metadata" };
+    { nd_id = "src_sys"; nd_label = "native source"; nd_layer = L_artifact;
+      nd_side = S_sys;
+      nd_gloss =
+        "the library's own repository at a ref — present when the world \
+         builds rather than fetches" };
+    { nd_id = "hdr_sys"; nd_label = "headers"; nd_layer = L_artifact;
+      nd_side = S_sys;
+      nd_gloss = "the syntactic native surface a binding compiles against" };
+    { nd_id = "lib_sys"; nd_label = "native library"; nd_layer = L_artifact;
+      nd_side = S_sys;
+      nd_gloss =
+        "the link-time and runtime carrier: exported symbols, identity, \
+         recorded dependencies" };
+    { nd_id = "staged_sys"; nd_label = "staged copy"; nd_layer = L_artifact;
+      nd_side = S_sys;
+      nd_gloss =
+        "the install-prefix face of the same library — a second copy, \
+         which is why a claim can compare them" };
+    { nd_id = "cap"; nd_label = "capability file"; nd_layer = L_package;
+      nd_side = S_bridge;
+      nd_gloss =
+        "a .pc file, a CMake config, a *-config script: content inside \
+         the provider whose purpose is to be read from outside. THE \
+         ARTIFACT-FACING BRIDGE" };
+    { nd_id = "bridge"; nd_label = "bridge package"; nd_layer = L_package;
+      nd_side = S_bridge;
+      nd_gloss =
+        "a separate package existing only for cooperation (opam's \
+         conf-*). Carries package IDENTITY and the depext mapping. THE \
+         SYMBOLIC BRIDGE" };
+    { nd_id = "pm_lang"; nd_label = "language PM"; nd_layer = L_pm;
+      nd_side = S_lang;
+      nd_gloss = "opam, pip, cargo — solves constraints and installs" };
+    { nd_id = "pkg_lang"; nd_label = "binding package"; nd_layer = L_package;
+      nd_side = S_lang;
+      nd_gloss = "the unit the language PM ships, with its declared depends" };
+    { nd_id = "src_lang"; nd_label = "binding source"; nd_layer = L_artifact;
+      nd_side = S_lang;
+      nd_gloss =
+        "the binding's own repository — separate from the library's, and \
+         often at a different ref" };
+    { nd_id = "stub_lang"; nd_label = "compiled stub"; nd_layer = L_artifact;
+      nd_side = S_lang;
+      nd_gloss =
+        "the C shim the binding compiles: what records the symbols it \
+         requires of the library" };
+    { nd_id = "mod_lang"; nd_label = "language module"; nd_layer = L_artifact;
+      nd_side = S_lang;
+      nd_gloss = "the compiled language-side artifact the consumer links" };
+    { nd_id = "surf_lang"; nd_label = "user surface"; nd_layer = L_artifact;
+      nd_side = S_lang;
+      nd_gloss = "the names and types the binding offers its own users" };
+    { nd_id = "app"; nd_label = "consumer program"; nd_layer = L_program;
+      nd_side = S_lang;
+      nd_gloss =
+        "the only node where anything RUNS — everything above is static" };
+    { nd_id = "decl"; nd_label = "declaration"; nd_layer = L_oracle;
+      nd_side = S_bridge;
+      nd_gloss =
+        "what the experiment says should be true. NOT a layer: an oracle \
+         attached to whatever node it speaks about" } ]
+
+let node_by_id id = List.find nodes ~f:(fun n -> String.equal n.nd_id id)
+
+(** An edge is a relation some tool establishes, and [eg_action] names
+    the action of ours that realizes it. Where that is [None] the
+    relation is real and we run nothing at it — which is itself the
+    finding, not an omission. *)
+type edge = {
+  eg_id : string;
+  eg_from : string list;  (** several inputs: an action is n-ary *)
+  eg_to : string;
+  eg_action : string option;
+  eg_tool : string;  (** whose rule runs here *)
+  eg_says : string;
+  eg_diagonal : bool;  (** crosses layers rather than staying within one *)
+  eg_observation : bool;
+      (** TRUE when the step RECORDS evidence rather than establishing a
+          relation between two things. [probe_lib] is the case: it runs
+          `nm` and writes a summary, and nothing about that is a claim
+          two parties could disagree on. Carrying no claim is therefore
+          the expected state for it, and counting it among the gaps
+          would inflate the one number on this page anybody will quote. *)
+}
+
+let edges : edge list =
+  [ { eg_id = "resolve_sys"; eg_from = [ "pm_sys" ]; eg_to = "pkg_sys";
+      eg_action = Some "fetch_lib"; eg_tool = "the system PM's solver";
+      eg_says = "a package of this name and version is installable here";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "realize_sys"; eg_from = [ "pkg_sys" ];
+      eg_to = "lib_sys"; eg_action = Some "fetch_lib";
+      eg_tool = "the system PM's unpacker";
+      eg_says = "the package's payload is on disk where it claims";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "realize_hdr"; eg_from = [ "pkg_sys" ]; eg_to = "hdr_sys";
+      eg_action = Some "fetch_lib"; eg_tool = "the system PM's unpacker";
+      eg_says = "the package ships the headers it claims";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "realize_cap"; eg_from = [ "pkg_sys" ]; eg_to = "cap";
+      eg_action = None; eg_tool = "the packager";
+      eg_says =
+        "the capability file describes the payload beside it — and \
+         nothing we run reads it";
+      eg_diagonal = true; eg_observation = false };
+    { eg_id = "build_lib"; eg_from = [ "src_sys" ]; eg_to = "lib_sys";
+      eg_action = Some "build_lib"; eg_tool = "the C compiler and linker";
+      eg_says = "this source produced this library";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "build_hdr"; eg_from = [ "src_sys" ]; eg_to = "hdr_sys";
+      eg_action = Some "build_headers"; eg_tool = "the build system";
+      eg_says = "the public headers are where the build puts them";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "stage"; eg_from = [ "lib_sys" ]; eg_to = "staged_sys";
+      eg_action = Some "install_lib"; eg_tool = "the install tool";
+      eg_says = "what survived being copied out of the build tree";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "depext"; eg_from = [ "bridge" ]; eg_to = "pkg_sys";
+      eg_action = None; eg_tool = "the bridge package's depext table";
+      eg_says =
+        "this virtual capability corresponds to THAT system package — a \
+         hand-maintained mapping, reviewed rather than computed";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "depends"; eg_from = [ "pkg_lang" ]; eg_to = "bridge";
+      eg_action = Some "fetch_binding"; eg_tool = "the language PM's solver";
+      eg_says =
+        "the binding package's declared constraint on the bridge is \
+         satisfiable";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "conf_probe"; eg_from = [ "bridge" ]; eg_to = "cap";
+      eg_action = None; eg_tool = "the bridge package's build predicate";
+      eg_says =
+        "something on this system answers the capability query — THE \
+         DIAGONAL, and the one place the symbolic path touches reality";
+      eg_diagonal = true; eg_observation = false };
+    { eg_id = "discover"; eg_from = [ "cap" ]; eg_to = "lib_sys";
+      eg_action = None; eg_tool = "pkg-config, CMake, a *-config script";
+      eg_says =
+        "the capability query resolves to THIS library on disk — which \
+         may not be the one the world provisioned";
+      eg_diagonal = true; eg_observation = false };
+    { eg_id = "resolve_lang"; eg_from = [ "pm_lang" ]; eg_to = "pkg_lang";
+      eg_action = Some "fetch_binding"; eg_tool = "the language PM's solver";
+      eg_says = "the whole dependency set is simultaneously satisfiable";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "install_lang"; eg_from = [ "pkg_lang" ]; eg_to = "mod_lang";
+      eg_action = Some "fetch_binding"; eg_tool = "the language PM's installer";
+      eg_says =
+        "the package put its artifacts in the store — the FETCHED \
+         direction of the one edge that runs both ways";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "install_surf"; eg_from = [ "pkg_lang" ]; eg_to = "surf_lang";
+      eg_action = Some "fetch_binding"; eg_tool = "the language PM's installer";
+      eg_says = "the user-facing surface is installed as the package claims";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "build_stub"; eg_from = [ "src_lang"; "hdr_sys" ];
+      eg_to = "stub_lang"; eg_action = Some "build_binding";
+      eg_tool = "the C compiler";
+      eg_says =
+        "the shim's types agree with the header — everything ABOVE the \
+         types it did not establish";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "link_mod"; eg_from = [ "stub_lang"; "lib_sys" ];
+      eg_to = "mod_lang"; eg_action = Some "build_binding";
+      eg_tool = "the linker";
+      eg_says = "every symbol the stub requires was resolved";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "pack"; eg_from = [ "mod_lang" ]; eg_to = "pkg_lang";
+      eg_action = Some "pack_binding"; eg_tool = "the packaging tool";
+      eg_says =
+        "a package was assembled from what was built — the BUILT \
+         direction of the same edge, and a different relation entirely";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "probe_lib"; eg_from = [ "lib_sys" ]; eg_to = "lib_sys";
+      eg_action = Some "probe_lib"; eg_tool = "nm, and nothing else";
+      eg_says =
+        "the library exists and exports something — STATIC: nothing here \
+         loads it";
+      eg_diagonal = false; eg_observation = true };
+    { eg_id = "run"; eg_from = [ "mod_lang"; "lib_sys" ]; eg_to = "app";
+      eg_action = Some "probe_binding"; eg_tool = "the dynamic loader";
+      eg_says =
+        "it linked, loaded and ran — the only edge with a loader on it";
+      eg_diagonal = false; eg_observation = false } ]
+
+(** Every action our graph has, against whether an edge names it. An
+    action with no edge is a hole in this model, not in the graph. *)
+let actions_covered () : string list =
+  List.filter_map edges ~f:(fun e -> e.eg_action)
+  |> List.dedup_and_sort ~compare:String.compare
+
+(* ── WHERE EVERY CLAIM SITS ───────────────────────────────────────────
+
+   A placement is a SET of edges, not one, from the start (user,
+   2026-09-22: "we can have more advanced agreement that spans several
+   edges, so even for the diagram, I wish it can be a generic data
+   structure"). Nothing spans two yet. Retrofitting a list onto a scalar
+   would touch every row, and the cost of starting with the list is one
+   pair of brackets.
+
+   The network analogy is the user's and it is the right one, with one
+   asymmetry worth stating. In a network stack both hosts implement the
+   SAME protocol at each layer, so a per-layer invariant and an
+   end-to-end invariant each have a stated contract to check against.
+   Here the horizontal relation at the package layer is a bridge
+   somebody wrote, or nothing — not a protocol, and not symmetric. A
+   bridge may carry identity while dropping version, which in network
+   terms is a layer that forwards the address and silently discards the
+   checksum. That is why the end-to-end invariants are the ones we do
+   not have. *)
+
+type placement = {
+  pl_claim : string;
+  pl_edges : string list;  (** edge ids — a SET, see above *)
+  pl_implemented : bool;
+}
+
+let placements : placement list =
+  [ (* --- the library against what the experiment declared ---
+
+       ⚠ TWO EDGES, and the first cut had one. These claims are about the
+       LIBRARY NODE, and the node has two producers: a local build and a
+       system package's payload. A fetched library is checked exactly as
+       a built one is — what differs is whose rule is being recovered
+       (our compiler, or a packager's build that happened on someone
+       else's machine years ago). Placing them on [build_lib] alone made
+       [realize_sys] look bare, which is what caught it: the page said
+       nothing checks a package's payload, and something does.
+
+       This is also the multi-edge structure paying for itself on its
+       first day rather than hypothetically. *)
+    { pl_claim = "declared_symbols_exported";
+      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = true };
+    { pl_claim = "soname_matches_declaration";
+      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = true };
+    { pl_claim = "declared_versions_exported";
+      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = true };
+    { pl_claim = "exports_accounted_for";
+      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = false };
+    (* --- the binding against the library --- *)
+    { pl_claim = "required_symbols_exported"; pl_edges = [ "link_mod" ];
+      pl_implemented = true };
+    { pl_claim = "soname_matches_requirement"; pl_edges = [ "link_mod" ];
+      pl_implemented = true };
+    { pl_claim = "required_versions_exported"; pl_edges = [ "link_mod" ];
+      pl_implemented = true };
+    { pl_claim = "dependencies_provided"; pl_edges = [ "link_mod" ];
+      pl_implemented = true };
+    { pl_claim = "signatures_agree"; pl_edges = [ "build_stub" ];
+      pl_implemented = true };
+    { pl_claim = "signatures_match_debug_info"; pl_edges = [ "build_stub" ];
+      pl_implemented = false };
+    (* --- the package against its own artifacts --- *)
+    { pl_claim = "api_names_present"; pl_edges = [ "install_surf" ];
+      pl_implemented = true };
+    { pl_claim = "package_contains_declared_files";
+      pl_edges = [ "install_lang" ]; pl_implemented = false };
+    { pl_claim = "repack_preserves_api"; pl_edges = [ "pack" ];
+      pl_implemented = true };
+    { pl_claim = "repack_complete"; pl_edges = [ "pack" ];
+      pl_implemented = true };
+    (* --- staging --- *)
+    { pl_claim = "staged_interface_preserved"; pl_edges = [ "stage" ];
+      pl_implemented = true };
+    { pl_claim = "no_build_paths_in_installed_library"; pl_edges = [ "stage" ];
+      pl_implemented = false };
+    (* --- source --- *)
+    { pl_claim = "source_is_declared_ref"; pl_edges = [ "build_lib" ];
+      pl_implemented = false };
+    { pl_claim = "build_tree_configured_for_source"; pl_edges = [ "build_lib" ];
+      pl_implemented = false };
+    (* --- runtime: the only claims with a loader under them --- *)
+    { pl_claim = "behavior_matches"; pl_edges = [ "run" ];
+      pl_implemented = true };
+    { pl_claim = "correspondence_holds_across_the_binding";
+      pl_edges = [ "run" ]; pl_implemented = false };
+    { pl_claim = "no_duplicate_implementation"; pl_edges = [ "run" ];
+      pl_implemented = false };
+    { pl_claim = "interposition_binds_build_target"; pl_edges = [ "run" ];
+      pl_implemented = false };
+    { pl_claim = "denotation_stable_across_worlds"; pl_edges = [ "run" ];
+      pl_implemented = false };
+    { pl_claim = "compatibility_version_satisfied"; pl_edges = [ "link_mod" ];
+      pl_implemented = false };
+    (* --- the diagonal: the ONE candidate on a cooperation edge --- *)
+    { pl_claim = "discovery_matches_link"; pl_edges = [ "discover" ];
+      pl_implemented = false } ]
+
+(** The claims sitting on one edge. *)
+let placements_on (edge_id : string) : placement list =
+  List.filter placements ~f:(fun p ->
+      List.mem p.pl_edges edge_id ~equal:String.equal)
+
+(** ⚠ THE CENSUS, and it is the reason this model was worth drawing.
+    RELATIONS with no claim on them — each is something a real tool
+    established and from which we recover nothing.
+
+    Observations are excluded: [probe_lib] records evidence rather than
+    relating two parties, so carrying no claim is its normal state and
+    counting it would inflate the one number on this page anybody will
+    quote. *)
+let bare_edges () : edge list =
+  List.filter edges ~f:(fun e ->
+      (not e.eg_observation) && List.is_empty (placements_on e.eg_id))
+
+(** ⚠ Claims named in [placements] that no registry row backs. Held at
+    zero by a pin: this list is hand-written, so a renamed agreement
+    would otherwise leave a placement pointing at nothing and the page
+    would keep drawing a badge for a claim that no longer exists. *)
+let unknown_placements ~(known : string list) : string list =
+  List.filter_map placements ~f:(fun p ->
+      if List.mem known p.pl_claim ~equal:String.equal then None
+      else Some p.pl_claim)
+
+(** ⚠ Placements naming an edge that does not exist. Same reason. *)
+let dangling_placements () : string list =
+  List.concat_map placements ~f:(fun p ->
+      List.filter p.pl_edges ~f:(fun eid ->
+          not (List.exists edges ~f:(fun e -> String.equal e.eg_id eid))))
+
 (** The terminal view. One row per topology; the instances beneath it are
     what realizes it, and a project appears under several rows. *)
 let pp_topologies (projects : (string * Canary_project_run.project_run) list) :

@@ -804,7 +804,14 @@ let checks_cmd =
            not remove its cooperation from the view. z3 is the case —
            muted for cost, and the only project whose opam package builds
            the native lib itself. *)
-        Fmt.pr "%s@." (Canary_topology.pp_topologies Canary_registry.all_specs)
+        Fmt.pr "%s@." (Canary_topology.pp_topologies Canary_registry.all_specs);
+        let now =
+          let t = Unix.localtime (Unix.time ()) in
+          Printf.sprintf "%04d-%02d-%02d %02d:%02d" (t.Unix.tm_year + 1900)
+            (t.Unix.tm_mon + 1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min
+        in
+        Canary_model_page.write Canary_registry.all_specs ~generated_at:now;
+        Fmt.pr "wrote %s@." Canary_model_page.docs_path
     | _, _, _ when Option.is_some agreement -> (
         let name = Option.get agreement in
         match Canary_agreement.agreement_named name with

@@ -704,6 +704,46 @@ let topology_joins_pin : Canary_project_test.pure_test =
         && List.length absorbed = 3)
   }
 
+(* THE LAYERED GRAPH DOES NOT DRIFT FROM THE REGISTRY (2026-09-22).
+   [Canary_topology.placements] is hand-written — it says which edge each
+   claim sits on — and the page draws a badge per placement. Two ways it
+   rots silently: a renamed agreement leaves a placement pointing at
+   nothing, and a renamed edge leaves one pointing nowhere. Neither is
+   visible on the page, which would carry on drawing a count.
+
+   It also holds the ACTION coverage, because the point of the diagram is
+   that it has every step: an action in the graph with no edge naming it
+   is a hole in the model. *)
+let topology_graph_pin : Canary_project_test.pure_test =
+  { name = "topology.graph_matches_the_registry";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let known =
+          List.map Canary_agreement.agreement_registry ~f:(fun r ->
+              r.Canary_agreement.ag_slug)
+          @ List.map Canary_agreement.proposed_agreements ~f:(fun p ->
+                p.Canary_agreement.prop_slug)
+        in
+        (* every placed claim is a real registry row or candidate *)
+        List.is_empty (T.unknown_placements ~known)
+        (* every placed edge exists *)
+        && List.is_empty (T.dangling_placements ())
+        (* every node an edge names exists *)
+        && List.for_all T.edges ~f:(fun e ->
+               List.for_all (e.T.eg_to :: e.T.eg_from) ~f:(fun n ->
+                   Option.is_some (T.node_by_id n)))
+        (* the multi-edge structure is EXERCISED, not merely available:
+           the declaration-facing lib claims sit on both producers of the
+           library node, which is what stopped `realize_sys` reading as
+           an edge nothing checks *)
+        && List.exists T.placements ~f:(fun p -> List.length p.T.pl_edges > 1)
+        (* the bare-relation census excludes observations, so probe_lib —
+           which records evidence rather than relating two parties — does
+           not inflate it *)
+        && List.for_all (T.bare_edges ()) ~f:(fun e -> not e.T.eg_observation))
+  }
+
 let pm_gate_pin : Canary_project_test.pure_test =
   { name = "spec.pm_dep_gate_groups";
     check =
@@ -5061,6 +5101,7 @@ let base_tests : Canary_project_test.pure_test list =
          llvm still follows, so the lockstep pin still applies there *)
       pm_gate_pin;
       topology_joins_pin;
+      topology_graph_pin;
       vendored_prebuilt_pin;
       z3_mismatch_matrix_pin;
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
