@@ -57,12 +57,11 @@ let layout : (string * pos) list =
     ("stub_lang", { px = 1070; py = 466 });
     ("mod_lang", { px = 1070; py = 550 });
     ("surf_lang", { px = 1070; py = 624 });
-    ("app", { px = 610; py = 762 });
-    (* the oracle sits in the GAP between the package and artifact bands,
-       not inside either — it belongs to neither. It was at the centre of
-       the artifact band, where its box masked the headers→stub edge that
-       runs straight across at the same height. *)
-    ("decl", { px = 610; py = 330 }) ]
+    (* the two consumers sit under the side whose resolution they use:
+       the artifact-linked one names paths, the package-linked one names
+       a package *)
+    ("app_artifact", { px = 390; py = 762 });
+    ("app_package", { px = 840; py = 762 }) ]
 
 let pos_of id =
   match List.Assoc.find layout id ~equal:String.equal with
@@ -92,19 +91,35 @@ let node_svg ~(live : bool) ~(label : string) ~(sub : string option)
     (n : T.node) =
   let p = pos_of n.T.nd_id in
   let x = p.px - (box_w / 2) and y = p.py - (box_h / 2) in
+  let decl = T.declaration_at n.T.nd_id in
   let cls =
-    Printf.sprintf "node %s%s"
+    Printf.sprintf "node %s%s%s"
       (T.string_of_layer n.T.nd_layer)
       (if live then "" else " dim")
+      (if Option.is_some decl then " declared" else "")
+  in
+  (* THE DECLARATION IS A BADGE, NOT A BOX. It used to be a node with a
+     position, and the position was arbitrary — nothing produces it and
+     it takes part in no action. As a mark on the artifacts the spec
+     speaks about, it is where a reader looks for it. *)
+  let badge =
+    match decl with
+    | None -> ""
+    | Some what ->
+        Printf.sprintf
+          {|<g class="declmark"><title>DECLARED by the experiment: %s</title>
+<circle cx="%d" cy="%d" r="8"/><text x="%d" y="%d">◇</text></g>|}
+          (esc what)
+          (x + box_w - 10) (y + 10) (x + box_w - 10) (y + 14)
   in
   let main =
     Printf.sprintf
       {|<g class="%s"><title>%s</title>
 <rect x="%d" y="%d" width="%d" height="%d" rx="7"/>
-<text class="nlabel" x="%d" y="%d">%s</text>|}
+<text class="nlabel" x="%d" y="%d">%s</text>%s|}
       cls (esc n.T.nd_gloss) x y box_w box_h p.px
       (if Option.is_some sub then p.py - 2 else p.py + 5)
-      (esc label)
+      (esc label) badge
   in
   let subline =
     match sub with
@@ -262,6 +277,10 @@ text-anchor:middle}
 .edge.bare .elabel{fill:var(--warn);font-weight:700}
 .edge.dim{opacity:.18}
 .cbadge{fill:var(--acc);opacity:.9}
+.node.declared rect{stroke-dasharray:none}
+.declmark circle{fill:var(--card);stroke:var(--acc);stroke-width:1.4}
+.declmark text{font:11px ui-sans-serif,sans-serif;fill:var(--acc);
+text-anchor:middle}
 .cnum{font:700 11px ui-sans-serif,sans-serif;fill:#fff;text-anchor:middle}
 .key{display:flex;flex-wrap:wrap;gap:1.1rem;font-size:.85rem;
 color:var(--mut);margin:.4rem 0 1.4rem}
@@ -497,7 +516,9 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("pkg_lang", "zarith"); ("lib_sys", "libgmp.so.10");
               ("hdr_sys", "gmp.h"); ("src_lang", "Zarith.git");
               ("stub_lang", "zarith_stubs.a"); ("mod_lang", "zarith.cmxa");
-              ("surf_lang", "zarith.mli"); ("app", "zarith_example") ];
+              ("surf_lang", "zarith.mli");
+              ("app_artifact", "zarith_example (paths)");
+              ("app_package", "zarith_example (-package zarith)") ];
         ca_sub =
           assoc
             [ ("bridge", "an opam package — written by an opam maintainer");
@@ -516,7 +537,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
             [ ("pm_lang", "pip"); ("pkg_lang", "z3-solver (wheel)");
               ("lib_sys", "libz3.so — INSIDE the wheel");
               ("mod_lang", "z3/*.py + native ext");
-              ("surf_lang", "z3.__all__"); ("app", "python -c 'import z3'") ];
+              ("surf_lang", "z3.__all__");
+              ("app_package", "python -c 'import z3'") ];
         ca_sub =
           assoc
             [ ("lib_sys", "no system package, no bridge, no discovery");
@@ -543,7 +565,9 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("pkg_sys", "llvm-19-dev — not used here");
               ("bridge", "conf-llvm-shared {= 19}"); ("cap", "llvm-config");
               ("pm_lang", "opam"); ("pkg_lang", "llvm.19-shared");
-              ("mod_lang", "llvm.cmxa"); ("app", "llvm_example") ];
+              ("mod_lang", "llvm.cmxa");
+              ("app_artifact", "llvm_example (build tree)");
+              ("app_package", "llvm_example (-package llvm)") ];
         ca_sub =
           assoc
             [ ("bridge", "still runs — against the SYSTEM, not this build");
@@ -567,7 +591,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("hdr_sys", "torch/*.h"); ("src_lang", "ocaml-torch.git");
               ("stub_lang", "libtorch_core_stubs.a");
               ("mod_lang", "torch.cmxa"); ("surf_lang", "torch.mli");
-              ("app", "torch_example") ];
+              ("app_artifact", "torch_example (paths)");
+              ("app_package", "torch_example (-package torch)") ];
         ca_sub =
           assoc
             [ ("bridge",
@@ -593,7 +618,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("stub_lang", "_sqlite3.cpython-*.so");
               ("mod_lang", "sqlite3/__init__.py");
               ("surf_lang", "dir(sqlite3)");
-              ("app", "python -c 'import sqlite3'") ];
+              ("app_package", "python -c 'import sqlite3'") ];
         ca_sub =
           assoc
             [ ("pkg_lang", "chosen at interpreter build time, not here");
@@ -643,6 +668,7 @@ for what it establishes.</p>
 <span><i class="sw"></i> within a layer, or down one</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
+<span>◇ the experiment declares something here</span>
 <span>? = candidate, no evaluator</span>
 </div>
 
@@ -664,12 +690,32 @@ is built here. Those are different actions establishing different
 relations, and which one applies is a fact about the world, not about the
 project. Both are drawn; in any given world exactly one is live.</div>
 
-<div class="note warn"><strong>Two nodes the three-layer picture does not
-have.</strong> The <em>declaration</em> — four of our implemented claims
-compare an artifact against the experiment's own spec, which is not a
-layer but an oracle attached to whatever node it speaks about. And the
-<em>source</em>, which the layered model has only inside its
-package-rewrite cases, never in the base picture.</div>
+<div class="note warn"><strong>There are two consumer programs, not
+one.</strong> The <em>artifact-linked</em> one is handed the language
+module and the native library by path — every input named explicitly. It
+answers <em>is the code right</em>. The <em>package-linked</em> one names
+only the binding package and lets the package manager resolve the rest.
+It answers <em>is the recipe right</em>, which fails differently: an
+install can omit a file the consumer needs, a META can be wrong, a conf
+chain can fail to resolve, and none of that is visible to the first
+probe. <strong>They should be the same program</strong> — that is what
+makes the pair informative rather than merely two tests, and the edge
+between them is a claim nothing else in this graph can make.</div>
+
+<div class="note"><strong>The declaration is a badge, not a node.</strong>
+It used to be drawn as a box, and its position was arbitrary — nothing in
+the chain produces it, it takes part in no action, and no tool ever
+enforced it. It is the <em>experiment's own statement</em> about one
+artifact, so it is now a ◇ on the two nodes that carry one; hover for
+what is declared there. Those two account for all four
+declaration-facing claims. It also explains why they behave differently:
+such a claim cannot fail because two tools disagreed — it fails because
+the world differs from what we <em>said</em> it would be, which is a
+defect in the spec as often as in the software.</div>
+
+<div class="note warn"><strong>One node the three-layer picture does not
+have:</strong> the <em>source</em>, which the layered model carries only
+inside its package-rewrite cases, never in the base picture.</div>
 
 <h3>1.1 What each node is</h3>
 %s

@@ -491,6 +491,41 @@ type node = {
   nd_gloss : string;
 }
 
+(** ⚠ THE DECLARATION IS NOT A NODE (user, 2026-09-23: "I still don't get
+    the declaration, where will we use it... is it a random place?").
+    It was one, and the position WAS arbitrary — it sat between two bands
+    because that was the only gap where its box did not cover an edge,
+    which is a layout reason wearing a semantic costume.
+
+    What it actually is: the experiment's own statement about ONE
+    artifact. Nothing in the chain produces it, it participates in no
+    action, and no tool ever enforced it — drawing it as a peer of the
+    library implied all three. So it is an ANNOTATION on the nodes it
+    speaks about, and this is that annotation: node id → what the spec
+    declares there.
+
+    Only two nodes carry one, and between them they account for all four
+    declaration-facing claims. That is the whole answer to "where will we
+    use it".
+
+    It also explains why those claims behave differently. A claim against
+    a declaration cannot fail because two tools disagreed — it fails
+    because the world differs from what the experiment SAID it would be,
+    which is a defect in the spec exactly as often as in the software.
+    That is why [Missing_declaration] is its own [unavailable_cause] and
+    why `blame: declaration` exists in the result table. *)
+let declared_on : (string * string) list =
+  [ ("lib_sys",
+     "the c_api's exported functions, the soname, and the symbol-version \
+      tags — read by declared_symbols_exported, soname_matches_declaration \
+      and declared_versions_exported");
+    ("surf_lang",
+     "the watchlist of names the binding must offer — read by \
+      api_names_present") ]
+
+let declaration_at (id : string) : string option =
+  List.Assoc.find declared_on id ~equal:String.equal
+
 let nodes : node list =
   [ { nd_id = "pm_sys"; nd_label = "system PM"; nd_layer = L_pm;
       nd_side = S_sys;
@@ -550,15 +585,37 @@ let nodes : node list =
     { nd_id = "surf_lang"; nd_label = "user surface"; nd_layer = L_artifact;
       nd_side = S_lang;
       nd_gloss = "the names and types the binding offers its own users" };
-    { nd_id = "app"; nd_label = "consumer program"; nd_layer = L_program;
-      nd_side = S_lang;
+    (* ⚠ THERE ARE TWO CONSUMER PROGRAMS, NOT ONE (user, 2026-09-23),
+       and collapsing them lost the more interesting of the two.
+
+       The LOW-LEVEL one lives in the artifact world: it is handed the
+       language module and the native library by path, and every input is
+       named explicitly. It answers "is the CODE right".
+
+       The HIGH-LEVEL one talks only to the binding PACKAGE, and
+       everything else — the module's location, the native library, the
+       transitive dependencies — is resolved indirectly by the package
+       manager. It answers "is the RECIPE right", which is a different
+       question with a different failure mode: an install can omit a file
+       the consumer needs, a META can be wrong, a conf chain can fail to
+       resolve, and not one of those is visible to the low-level probe.
+
+       THE TWO SHOULD BE THE SAME PROGRAM. That is what makes the pair
+       informative rather than merely two tests, and it is already true
+       by accident: z3's build-tree probe and its opam-package probe
+       both compile `canary/examples/z3/z3_example.ml`. Nothing holds
+       them to it. *)
+    { nd_id = "app_artifact"; nd_label = "consumer (artifact-linked)";
+      nd_layer = L_program; nd_side = S_sys;
       nd_gloss =
-        "the only node where anything RUNS — everything above is static" };
-    { nd_id = "decl"; nd_label = "declaration"; nd_layer = L_oracle;
-      nd_side = S_bridge;
+        "every input named by path — the language module and the native \
+         library. Says the CODE is right" };
+    { nd_id = "app_package"; nd_label = "consumer (package-linked)";
+      nd_layer = L_program; nd_side = S_lang;
       nd_gloss =
-        "what the experiment says should be true. NOT a layer: an oracle \
-         attached to whatever node it speaks about" } ]
+        "names only the binding package and lets the PM resolve the rest. \
+         Says the RECIPE is right — which is the half a build-tree probe \
+         cannot see" } ]
 
 let node_by_id id = List.find nodes ~f:(fun n -> String.equal n.nd_id id)
 
@@ -677,10 +734,31 @@ let edges : edge list =
         "the library exists and exports something — STATIC: nothing here \
          loads it";
       eg_diagonal = false; eg_observation = true };
-    { eg_id = "run"; eg_from = [ "mod_lang"; "lib_sys" ]; eg_to = "app";
-      eg_action = Some "probe_binding"; eg_tool = "the dynamic loader";
+    { eg_id = "run"; eg_from = [ "mod_lang"; "lib_sys" ];
+      eg_to = "app_artifact"; eg_action = Some "probe_binding";
+      eg_tool = "the linker and the dynamic loader";
       eg_says =
-        "it linked, loaded and ran — the only edge with a loader on it";
+        "it linked, loaded and ran when we named every input ourselves";
+      eg_diagonal = false; eg_observation = false };
+    { eg_id = "run_packaged"; eg_from = [ "pkg_lang" ];
+      eg_to = "app_package"; eg_action = Some "probe_binding";
+      eg_tool =
+        "the language PM's RESOLUTION — ocamlfind and META, pip's \
+         metadata — and then the loader";
+      eg_says =
+        "naming only the package was enough to build and run the same \
+         program: the recipe resolves to everything the code needs";
+      eg_diagonal = false; eg_observation = false };
+    (* THE AGREEMENT EDGE, and the reason for splitting the node. Two
+       programs from ONE source, resolved two ways, must agree. Where
+       they do not, the package is at fault and the code is not — which
+       no other edge in this graph can tell you. *)
+    { eg_id = "same_program"; eg_from = [ "app_artifact" ];
+      eg_to = "app_package"; eg_action = None;
+      eg_tool = "nobody — this is ours to check";
+      eg_says =
+        "the same source, resolved through the package instead of by \
+         hand, does the same thing";
       eg_diagonal = false; eg_observation = false } ]
 
 (** Every action our graph has, against whether an edge names it. An
@@ -852,6 +930,15 @@ let placements : placement list =
     { pl_claim = "interposition_binds_build_target"; pl_edges = [ "run" ];
       pl_implemented = false };
     { pl_claim = "denotation_stable_across_worlds"; pl_edges = [ "run" ];
+      pl_implemented = false };
+    (* ⚠ THE FIRST END-TO-END CLAIM. Every placement above sits on one
+       edge — a per-layer invariant, in the network analogy. This one
+       spans three: the PM resolved, the package realized what it
+       promised, and the program built from the package alone did what
+       the hand-resolved one did. It is the kind the asymmetry between
+       apt and opam makes hard and the kind we had none of. *)
+    { pl_claim = "package_resolution_suffices";
+      pl_edges = [ "resolve_lang"; "run_packaged"; "same_program" ];
       pl_implemented = false };
     { pl_claim = "compatibility_version_satisfied"; pl_edges = [ "link_mod" ];
       pl_implemented = false };

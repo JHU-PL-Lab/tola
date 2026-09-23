@@ -2082,6 +2082,33 @@ let proposed_agreements : proposed list =
          is per-project and can come later. See directions.md §2";
       prop_frame = In_frame };
     { prop_kind = Admissibility;
+      prop_slug = "package_resolution_suffices";
+      prop_doc = "§5.8";
+      prop_claim =
+        "the SAME consumer source, built by naming only the binding \
+         PACKAGE, does what it does when every input is named by path. \
+         Two programs, one source, two resolutions — and where they \
+         disagree the package is at fault and the code is not, which no \
+         other check in the registry can separate";
+      prop_needs =
+        "nothing new to record, and the axis already exists: \
+         `runner_spec.probe_binding` is a (lang × LOCATION × command) \
+         list, so a package-resolved probe is another entry with \
+         `Pm (Lang_pm _)` as its location. z3 already runs both — \
+         `probe_binding_ocaml` against the build tree and \
+         `probe_binding_ocaml_opam` against the published package, both \
+         compiling `canary/examples/z3/z3_example.ml`. What is missing is \
+         (a) the lift being DERIVED rather than hand-written per project, \
+         (b) something holding the two to one source, and (c) this claim \
+         comparing their outcomes. ⚠ THE ESCAPE IS THE FINDING: where a \
+         package cannot resolve the native library and the environment \
+         has to settle it (ocaml-torch reaching libtorch through a \
+         variable), that is this claim VIOLATED, not inapplicable — a \
+         declared override is the project admitting the recipe is \
+         insufficient, and recording it as a violation is the only way it \
+         stays counted";
+      prop_frame = In_frame };
+    { prop_kind = Admissibility;
       prop_slug = "discovery_matches_link";
       prop_doc = "§5.3";
       prop_claim =
