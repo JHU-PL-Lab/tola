@@ -90,7 +90,8 @@ code the lowering reads.
 
 ## 2. Open now
 
-Five items, in the order they are worth doing. §2.5 is the forward look
+Six items, in the order they are worth doing. §2.6 is the proposed plan
+for merging the overview page into the framework. §2.5 is the forward look
 — what the unlanded claims would take — and is where the manuscript's
 plan material comes from.
 
@@ -368,6 +369,97 @@ decidable from what is already extracted. But both are Mach-O only and
 report dishonestly on Linux. That is §2.1's reporting question rather
 than this claim's, and it is why this one is third despite being the
 cheapest to evaluate.
+
+### 2.6 Merging the overview page into the framework — PROPOSED, step 0 awaits confirmation
+
+*(2026-09-23. The user is on the manuscript; this is the plan for the
+spare time, to be taken slowly and confirmed step by step.)*
+
+**The goal** (user): place the framework's actions and agreements on the
+layered diagram of `docs/canary/model.html` (`canary overview`), sync
+the terminology, and replace the page's placeholders with code —
+**bottom-up**, so neither side's ideas get invented to fit the other's.
+
+**What the page rests on today.** Derived: the cooperation topologies
+(from declared provisions and gates), the mechanism variants (from the
+mechanism catalogue), the agreement overview (registry plus recorded
+runs). **Hand-written placeholders** in `canary_topology.ml`: 16 nodes,
+21 edges, 26 claim sites, and 5 case labels in `canary_model_page.ml`.
+Pins hold the claim sites to the registry; nothing yet computes them.
+
+**Found before proposing anything: three of the page's concepts already
+exist in canary under other names.**
+
+1. **A topology row is projects.md §1's dimension triple** —
+   native-lib origin × lib discovery × binding origin. That triple is a
+   doc table with no type, so `Canary_topology.t` is its first typed
+   form, under different names and with values the doc cannot express:
+   torch's library comes from opam, which the doc's `System` does not
+   cover; the doc has no `pip`; and its `Locator` mixes how the
+   *ecosystem* discovers the library with how *canary* locates it.
+2. **The artifact layer is `Canary_action.artifact_node`** — a graph
+   whose `built_from` edges are derived from the action catalogue, built
+   for the M2 graph merge and read today only by two tests.
+3. **An edge is an action's `consumes_of_action → produces_of_action`**
+   over `artifact_kind`. The page's edges are hand-drawn projections of
+   exactly that relation.
+
+**Mismatches a derivation will have to resolve — decisions, not fixes:**
+
+- *Granularity.* The catalogue has one `Binding lang` kind; the page
+  splits it into stub / module / surface. The native side already has a
+  component list (`api_component`: Headers · Runtime_lib · Link_lib ·
+  Pc_file); the binding side has none.
+- *The consumer program.* The catalogue says probes produce nothing;
+  the page draws the program as the probe's product. canary has three
+  words for it — `App` (A_app, Build_app, Probe_app), the probe's
+  `example`, and the page's "consumer program".
+- *Missing steps.* `fetch_source` and `fetch_binding_source` have no
+  edge, so the source nodes have no producer; `Configure`,
+  `Scan_sources`, `Build_app` and `Probe_app` are not on the page.
+  Adding the first two needs a decision: canary's `provider = Repo`
+  sits beside `Sys_pkg` and `Lang_pkg`, which would make a source
+  repository a PACKAGE-layer node.
+- *"Implemented" on the census means "is a registry row".* Three of
+  those thirteen have no evaluator, which the overview colours red two
+  sections later.
+
+**Step 0 — terminology, to settle before any code.** Each collision is
+cheapest to resolve now:
+
+| page term | collides with | proposal |
+| --- | --- | --- |
+| placement (claim → edge) | `Canary_artifact.placement` — base vocabulary, per-artifact provision + version | rename the page's: *claim site* |
+| layer (PM / package / artifact) | the code layers `base/ → agreement/ → …` — "the agreement layer" is a directory | keep *layer* for the model, never unqualified in prose? |
+| edge (a relation an action establishes) | step-graph dependency edges (`step.deps`) | open |
+| topology | projects.md §1's *dimensions* | one name for one typed triple |
+| consumer program | `App` / the probe's `example` | open |
+| linking lift (user, 2026-09-23) | nothing yet — the method deriving the package-linked probe | adopt |
+
+**Then, one placeholder at a time**, keeping the hand-written version as
+the check until the derivation agrees with it:
+
+1. **Actions onto edges.** Type each edge's action as the real
+   `Canary_basic.action` family instead of a string, and COMPUTE which
+   actions have no edge from the catalogue — the missing-steps list
+   above, derived rather than asserted.
+2. **Edges from the catalogue.** Generate the artifact-layer edges from
+   consumes → produces and diff them against the hand edges. Each
+   disagreement is a page error or a catalogue gap, and deciding which
+   is the work.
+3. **Claim sites from rooting.** Derive each claim's edges from
+   `ag_rooted_in.rt_action` and the artifacts it reads, and diff against
+   the hand sites. After this the overview's R column and the diagram's
+   badges come from one source.
+4. **One typed triple.** Reconcile `Canary_topology.t` with projects.md
+   §1, in whichever direction step 0 chose.
+5. **The linking lift.** Derive the package-linked probe from the
+   artifact-linked one — mechanism plus static project facts, with the
+   two kinds of customization kept apart (a *name* is static
+   information; a *resolution* the package failed to provide is a
+   finding) — and give `package_resolution_suffices` an evaluator. The
+   first step that changes what a run does.
+6. **Later** (user): draw recorded run results on the case diagrams.
 
 ---
 

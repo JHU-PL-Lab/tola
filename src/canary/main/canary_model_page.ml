@@ -763,7 +763,7 @@ seam would have shown one row's halves on two pages, which is worse.</div>
 
 <h2 id="census">4. Where every claim sits, and the edges where none do</h2>
 <p>%d claims — %d implemented, %d candidates — placed on the edges of §1.
-A placement is a <em>set</em> of edges rather than one. Three already
+A placement is a <em>set</em> of edges rather than one, and %d already
 span several: the library's declaration-facing claims sit on both edges
 that can produce a library, and <code>package_resolution_suffices</code>
 runs end to end from the language PM to the package-linked program.</p>
@@ -816,6 +816,10 @@ coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
     (List.length T.placements)
     (List.count T.placements ~f:(fun p -> p.T.pl_implemented))
     (List.count T.placements ~f:(fun p -> not p.T.pl_implemented))
+    (* counted, like the total above: a literal "Three" was written here
+       in the same edit that removed the stale "Twenty-five", and it was
+       wrong on arrival — five sites span several edges *)
+    (List.count T.placements ~f:(fun p -> List.length p.T.pl_edges > 1))
     (placements_table ()) (List.length bare)
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
