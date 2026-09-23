@@ -810,7 +810,18 @@ let checks_cmd =
           Printf.sprintf "%04d-%02d-%02d %02d:%02d" (t.Unix.tm_year + 1900)
             (t.Unix.tm_mon + 1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min
         in
-        Canary_model_page.write Canary_registry.all_specs ~generated_at:now;
+        (* the AGREEMENT OVERVIEW moved here (2026-09-23, user). It is
+           rendered by the matrix — one block built from the registry —
+           and two of its columns are counted from recorded runs, so the
+           matrix has to be built to get it. That is the cost of moving
+           a table whose last two columns are not mechanism. *)
+        let overview =
+          Canary_matrix.agreement_overview
+            (Canary_matrix.matrix_of Canary_registry.all_specs)
+            ~generated_at:now
+        in
+        Canary_model_page.write Canary_registry.all_specs ~overview
+          ~generated_at:now;
         Fmt.pr "wrote %s@." Canary_model_page.docs_path
     | _, _, _ when Option.is_some agreement -> (
         let name = Option.get agreement in

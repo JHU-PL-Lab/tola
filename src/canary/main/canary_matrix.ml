@@ -1766,7 +1766,23 @@ let to_json (m : t) : Yojson.Basic.t =
     cells showing the provision choice + the verdict. The long
     scenario ids live in the cell tooltips. The styling mirrors
     {!Canary_html}'s badge tones without importing its machinery. *)
-let render_html (m : t) ~(generated_at : string) : string =
+(** Returns [(agreement_overview, result_page)] (2026-09-23, user: the
+    agreement table moves to the methodology page).
+
+    A PAIR RATHER THAN A MOVE. The overview is ~250 lines of rendering
+    built from the registry, and lifting it into another module means
+    retyping it — which CLAUDE.md is explicit about being the expensive
+    kind of edit, and it would have bought nothing: the block is already
+    one self-contained string. So it is computed here as before and
+    RETURNED, and the two pages each embed it or not.
+
+    ⚠ The overview is NOT pure mechanism, which is why moving it needed
+    a decision rather than a cut. Its last two columns — `decided` and
+    `blame` — are counted from recorded runs, per agreement. So the page
+    that receives it inherits a dependency on run state, and says so;
+    the alternative was to split the table at that seam and show a
+    reader two halves of one row in two places. *)
+let render_parts (m : t) ~(generated_at : string) : string * string =
   let esc s =
     s
     |> String.substr_replace_all ~pattern:"&" ~with_:"&amp;"
@@ -2257,8 +2273,9 @@ let render_html (m : t) ~(generated_at : string) : string =
              (esc r.code) r.index (esc r.project) setting_cells
              (esc r.platform) cells))
   in
-  Printf.sprintf
-    {|<!doctype html>
+  let page =
+    Printf.sprintf
+      {|<!doctype html>
 <html><head><meta charset="utf-8"><title>canary result matrix</title>
 <style>
 /* THE SCROLL BOX (2026-08-20, user: "the page is too width"). The wrap
@@ -2404,18 +2421,89 @@ bridges that join two package ecosystems, and where a claim could sit —
 see <a href="../model.html">the cooperation model</a>. It carries no
 verdicts, deliberately.</p>
 <div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
-<h2>1 &middot; Agreement overview — every agreement, where its rule RAN, and where it is CHECKED</h2>
-<p class="meta"><b>This is the TEMPLATE of the table below.</b>
-That one says what a run decided; this one says what the shape of the
-checking IS.
-<br>So an empty column down there can be looked up here, to see whether
-anything was ever meant to fill it.</p>
-%s
+<p class="meta"><b>The agreement overview has moved</b> to
+<a href="../model.html#overview">the cooperation model</a>. It is the
+TEMPLATE of the table below — that one says what a run decided, this one
+says what the shape of the checking IS — so an empty column here can be
+looked up there, to see whether anything was ever meant to fill it. The
+link is the cost of the split; the reason is that the template describes
+mechanism and this page describes one machine's record.</p>
 
-<h2>2 &middot; The result matrix — one row per enumerated world</h2>
+<h2>The result matrix — one row per enumerated world</h2>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
-    (esc generated_at) recovery_grid header body
+      (esc generated_at) header body
+  in
+  (recovery_grid, page)
+
+(** THE OVERVIEW'S OWN STYLING, so the table can be rendered somewhere
+    other than this page (2026-09-23).
+
+    Found the hard way: moving the block produced a table using 21
+    classes the receiving page did not define, so every R/D mark, every
+    red unimplemented cell and the verdict line rendered as plain text.
+    A table whose whole point is the SHAPE the marks make across a row
+    is not readable without them.
+
+    Written against the receiving page's colour tokens rather than this
+    page's literals, so it follows dark mode where the host supports it
+    and degrades to the same greys where it does not.
+
+    ⚠ TO CLEAN UP: this page's own style block still carries the
+    originals, now dead here since the overview left. They are unused
+    rather than wrong, and deleting thirty scattered rules from one
+    literal is its own edit. *)
+let overview_css =
+  {|table.grid{border-collapse:collapse;font-size:.8rem;width:100%}
+table.grid th,table.grid td{border:1px solid var(--line);padding:.22rem .4rem}
+table.grid th.gcol{font-family:ui-monospace,monospace;font-size:.62rem;
+writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;
+padding:.3rem .15rem;vertical-align:bottom}
+table.grid td.g{text-align:center;font-family:ui-monospace,monospace;
+font-size:.65rem;font-weight:700;padding:.2rem .25rem}
+table.grid td.impl{font-family:ui-monospace,monospace;font-size:.68rem;
+white-space:nowrap}
+table.grid td.impl.none,table.grid td.impl.ext{
+background:color-mix(in srgb,var(--warn) 16%,transparent);
+color:var(--warn);font-weight:700}
+table.grid td.impl.ext{font-style:italic;font-weight:400}
+tr.extrow{background:color-mix(in srgb,var(--warn) 6%,transparent)}
+tr.extrow td.kc{color:var(--warn)}
+table.grid td.lm{font-size:.72rem;white-space:nowrap}
+table.grid td.kind{font-size:.72rem;white-space:nowrap;color:var(--mut)}
+th.seth{background:var(--card)}
+td .mk{font-weight:600}
+table.keytbl{border-collapse:collapse;margin-top:.5rem;font-size:.82rem}
+table.keytbl th,table.keytbl td{border:1px solid var(--line);
+padding:.2rem .5rem;text-align:left;font-weight:400}
+table.keytbl th{background:var(--card);font-weight:600}
+table.keytbl td.kc{font-family:ui-monospace,monospace;font-weight:700}
+span.kq{color:var(--mut)}
+p.verdict{font-size:.78rem;color:#1a7f37;margin:.2rem 0 .6rem;
+font-family:ui-monospace,monospace}
+p.verdict.bad{color:var(--warn);font-weight:700}
+div.kinds{font-size:.8rem;margin:0 0 .8rem;max-width:62rem}
+div.kinds dl,dl.legend{margin:.4rem 0;display:grid;
+grid-template-columns:max-content 1fr;gap:.18rem .8rem}
+div.kinds dt,dl.legend dt{font-family:ui-monospace,monospace;
+font-weight:700;color:var(--acc);white-space:nowrap}
+div.kinds dd,dl.legend dd{margin:0}
+dl.legend{font-size:.78rem;max-width:62rem}
+dl.legend dd{color:var(--mut)}
+td.g.rd{background:#d1e7dd;color:#0a3622}
+td.g.rr{background:#ffe8cc;color:#7a3e00}
+td.g.dd{background:#dbeafe;color:#0a3069}
+td.g.nn{background:transparent}
+td.g.tgt{background:#f0e6ff;color:#512a97}
+.grid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}|}
+
+(** The result page alone — what [write_web] needs. *)
+let render_html (m : t) ~(generated_at : string) : string =
+  snd (render_parts m ~generated_at)
+
+(** The agreement overview alone — what the methodology page needs. *)
+let agreement_overview (m : t) ~(generated_at : string) : string =
+  fst (render_parts m ~generated_at)
 
 (* The web file locations (the docs copy is the GH Pages view).
 

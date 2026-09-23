@@ -497,7 +497,7 @@ if(strip){
 </script>|}
 
 let render (projects : (string * Canary_project_run.project_run) list)
-    ~(generated_at : string) : string =
+    ~(overview : string) ~(generated_at : string) : string =
   let bare = T.bare_edges () in
   let assoc l = fun id -> List.Assoc.find l id ~equal:String.equal in
   let hides ids id = List.mem ids id ~equal:String.equal in
@@ -632,7 +632,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cooperation Model</title>
-<style>%s</style></head><body><main>
+<style>%s
+%s</style></head><body><main>
 
 <h1>How two package ecosystems are joined</h1>
 <p class="lede">General mechanism only — no project, no version, no verdict.
@@ -720,7 +721,20 @@ inside its package-rewrite cases, never in the base picture.</div>
 <h3>1.1 What each node is</h3>
 %s
 
-<h2>2. Where every claim sits, and the edges where none do</h2>
+<h2 id="overview">2. The agreement overview</h2>
+<p>Every agreement, where its rule RAN and where it is CHECKED, over the
+same action columns the result matrix uses — of which it is the
+template, so an empty column there can be looked up here. It lives on
+this page because it describes the <em>shape</em> of the checking rather
+than one machine's record.</p>
+<div class="note warn"><strong>Two of its columns are not
+mechanism.</strong> <code>decided</code> and <code>blame</code> are
+counted from recorded runs, per agreement, so this section alone depends
+on run state — unlike everything else here. Splitting the table at that
+seam would have shown one row's halves on two pages, which is worse.</div>
+%s
+
+<h2>3. Where every claim sits, and the edges where none do</h2>
 <p>Twenty-five claims — %d implemented, %d candidates — placed on the
 edges above. A placement is a <em>set</em> of edges rather than one, so
 an end-to-end claim spanning several has somewhere to go; none does
@@ -763,7 +777,8 @@ the diagrams are SVG emitted from that data, with one hand-placed
 coordinate per node. Nothing on this page is hand-maintained. ·
 <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
-    css (mechanism_panels ()) (node_legend ())
+    css Canary_matrix.overview_css (mechanism_panels ()) (node_legend ())
+    overview
     (List.count T.placements ~f:(fun p -> p.T.pl_implemented))
     (List.count T.placements ~f:(fun p -> not p.T.pl_implemented))
     (placements_table ()) (List.length bare)
@@ -775,6 +790,6 @@ coordinate per node. Nothing on this page is hand-maintained. ·
 let docs_path = "docs/canary/model.html"
 
 let write (projects : (string * Canary_project_run.project_run) list)
-    ~(generated_at : string) : unit =
-  let html = render projects ~generated_at in
+    ~(overview : string) ~(generated_at : string) : unit =
+  let html = render projects ~overview ~generated_at in
   Stdio.Out_channel.write_all docs_path ~data:html

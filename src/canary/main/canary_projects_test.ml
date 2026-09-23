@@ -4542,11 +4542,29 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
   { name = "matrix.page_titles_and_agreement_overview";
     check =
       (fun () ->
-        let path = "docs/canary/projects/matrix.html" in
+        (* THE OVERVIEW MOVED (2026-09-23, user), and this pin caught it
+           — which is what it is for. It reads the METHODOLOGY page now,
+           because the table describes the shape of the checking and that
+           page is where shape lives; the result matrix keeps only
+           verdicts and a link.
+
+           Both files are asserted, so the split cannot silently become a
+           duplication: the overview must be on exactly one of them. *)
+        let path = "docs/canary/model.html" in
+        let matrix_path = "docs/canary/projects/matrix.html" in
         if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
         else
           let h =
             Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
+          in
+          let matrix_has sub =
+            (not (Stdlib.Sys.file_exists matrix_path))
+            ||
+            let mh =
+              Stdlib.In_channel.with_open_text matrix_path
+                Stdlib.In_channel.input_all
+            in
+            String.is_substring mh ~substring:sub
           in
           let count sub =
             let n = String.length sub and len = String.length h in
@@ -4572,10 +4590,16 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           (* every table on the page is named. TWO since 2026-09-17:
              the check key was absorbed into the overview, because its
              columns were five of its columns and two of its tooltips. *)
-          count "<h2>" = 2
-          && String.is_substring h ~substring:"Agreement overview"
-          && String.is_substring h ~substring:"The result matrix"
+          String.is_substring h ~substring:"agreement overview"
           && not (String.is_substring h ~substring:"The check key")
+          (* it is on the methodology page and NOT on the result page,
+             so the move cannot decay into a copy on both *)
+          && (not (matrix_has "Agreement overview"))
+          && matrix_has "The result matrix"
+          (* and the result page still POINTS at it — a split that loses
+             the link is worse than no split, because the overview is the
+             template an empty column there is looked up in *)
+          && matrix_has "model.html"
           (* one ACTION cell per (row × action column) and one TARGET
              cell per (row × artifact column) — both in the `g` family,
              so the total counts them together *)
