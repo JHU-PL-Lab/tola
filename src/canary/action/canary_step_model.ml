@@ -155,6 +155,24 @@ type step = {
      this graph" stays a question the step list can answer — see
      [Canary_step_builder.Dummy]. *)
   dummy : string option;
+  (* WHERE A PROBE LOOKS (2026-09-23, status.md §2.7 phase B1): the
+     location of the artifact a probe step reads — and an inspection of
+     that probe — as its entry declared it. [None] for every other step.
+
+     The TAG cannot answer this. A lone probe entry keeps the canonical
+     tag whatever its location, so zarith's `probe_binding_ocaml` is a
+     [Build_tree] probe (`-I <build tree>`) in one world and a
+     [Pm (Lang_pm opam)] probe (`-package zarith`) in the next, and only
+     this field tells the artifact-linked consumer program from the
+     package-linked one. *)
+  location : Canary_store.location option;
+  (* WHAT AN INSPECTION STEP INSPECTS (2026-09-23): the tag of the
+     parent step whose artifact it summarizes. It carries the parent's
+     action but realizes no relation of its own — it records evidence —
+     so a reader that colours what an action DID must be able to tell it
+     from the step that did it without reading a tag suffix. [None] for
+     a step that performs its action. *)
+  inspects : string option;
 }
 
 type logger = {

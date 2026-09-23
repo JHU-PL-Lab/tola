@@ -41,7 +41,9 @@ let mk_step ~(dir : string) ~(rc : int) : SM.step =
     symbol_check = None;
     disabled_agreements = [];
     agreement_ctx = None;
-    dummy = None }
+    dummy = None;
+    location = None;
+    inspects = None }
 
 (* How many times the step's command actually ran (one "x" line per run). *)
 let run_count ~dir : int =

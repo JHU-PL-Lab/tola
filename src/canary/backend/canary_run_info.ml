@@ -221,6 +221,10 @@ let load_run_state ~dir =
          no agreements, so it carries no action context *)
       agreement_ctx = None;
       dummy = None;
+      (* nor where a probe looked or what an inspection inspected:
+         run_state.json does not record them *)
+      location = None;
+      inspects = None;
     } in
     (step, status_str)
   in

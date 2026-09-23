@@ -264,7 +264,7 @@ let with_declared_facts (pr : project_run)
   in
   { spec with Canary_step_builder.api_source; binding_store_pkg }
 
-let steps_of ~(root : string) (pr : project_run) ~(ctx : scenario_ctx)
+let steps_of ?warn ~(root : string) (pr : project_run) ~(ctx : scenario_ctx)
     (a : Canary_artifact.assignment) : Canary_step_model.step list =
   let spec =
     with_declared_facts pr (pr.pr_runner_spec a ~workspace:ctx.sc_workspace ())
@@ -273,22 +273,37 @@ let steps_of ~(root : string) (pr : project_run) ~(ctx : scenario_ctx)
      scenario's steps: the assignment records how every artifact was
      provisioned, which is exactly what a firing derivation asks. *)
   Canary_step_builder.derive_steps ~root ~project:ctx.sc_project ~langs
-    ~world:a ~mechanism_of:(mechanism_of_project pr) spec
+    ~world:a ~mechanism_of:(mechanism_of_project pr) ?warn spec
+
+(** One scenario's steps FOR DISPLAY: {!steps_of} itself, over a
+    throwaway workspace. None of what a reader needs (tag, action, where a
+    probe looks, what an inspection inspects) depends on the output path,
+    and the throwaway keeps a display query from materializing a
+    scenario's real tree.
+
+    THE RUNNER'S DERIVATION, NOT A SECOND ONE (2026-09-23). This first
+    re-derived from the bare runner spec, as [actions_of] always had, and
+    so skipped {!with_declared_facts}: the declared binding package is
+    what earns a fetched binding its stub inspection, so every such world
+    showed one step fewer than it runs. The action SET came out the same —
+    an inspection carries its parent's action — which is why nothing
+    caught it until a record listed steps. *)
+let display_steps_of (pr : project_run) (a : Canary_artifact.assignment) :
+    Canary_step_model.step list =
+  steps_of ~warn:false ~root:"_out" pr
+    ~ctx:{ sc_workspace = "_out/tmp"; sc_project = pr.pr_name }
+    a
 
 (** The ACTIONS one scenario's steps carry, for callers that want the
-    chain shape and not the commands (the result matrix). Uses a
-    throwaway workspace: the action set does not depend on the output
-    path, and this keeps a display query from materializing a scenario's
-    real tree. *)
-let actions_of (pr : project_run) (a : Canary_artifact.assignment) :
+    chain shape and not the commands (the result matrix). *)
+let actions_of_steps (steps : Canary_step_model.step list) :
     Canary_basic.action list =
-  let spec = pr.pr_runner_spec a ~workspace:"_out/tmp" () in
-  let steps =
-    Canary_step_builder.derive_steps ~root:"_out" ~project:pr.pr_name ~langs
-      spec
-  in
   List.map (fun (s : Canary_step_model.step) -> s.Canary_step_model.action) steps
   |> List.sort_uniq Stdlib.compare
+
+let actions_of (pr : project_run) (a : Canary_artifact.assignment) :
+    Canary_basic.action list =
+  actions_of_steps (display_steps_of pr a)
 
 (* ── JSON per pass (2026-08-24) ──
 

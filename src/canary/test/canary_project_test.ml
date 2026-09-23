@@ -1940,7 +1940,7 @@ let marker_stale_on_spec_change_pin : pure_test =
           symbol_check = None;
           disabled_agreements = [];
           agreement_ctx = None;
-          dummy = None }
+          dummy = None; location = None; inspects = None }
       in
       let s1 = mk_step "echo build v1" in
       let marker = Canary_local_runner.verdict_marker s1 in
@@ -3472,7 +3472,7 @@ let agreement_action_path_pin : pure_test =
                   ac_lang = Canary_lang.OCaml;
                   ac_world = world;
                   ac_declared = None };
-            dummy = None }
+            dummy = None; location = None; inspects = None }
         in
         let status = Canary_local_runner.run_step logger ~root ~project step in
         logger.Canary_step_model.close ();
@@ -3642,7 +3642,7 @@ let agreement_acceptance_pin : pure_test =
                   ac_lang = Canary_lang.OCaml;
                   ac_world = world;
                   ac_declared = None };
-            dummy = None }
+            dummy = None; location = None; inspects = None }
         in
         let status = Canary_local_runner.run_step logger ~root ~project step in
         logger.Canary_step_model.close ();

@@ -677,7 +677,7 @@ let out_of ~root ~project ~tag =
 
 let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None)
-    ?(disabled_agreements = []) ~check_post () =
+    ?(disabled_agreements = []) ?location ?inspects ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
   let output_dir = output_dir_for ~root ~project ~tag:output_tag in
   let project_dir = project_dir_of ~root ~project in
@@ -697,6 +697,8 @@ let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
        see [agreement_ctx_of_action] *)
     agreement_ctx = None;
     dummy = None;
+    location;
+    inspects;
     (* The tag-based default; [derive_steps] re-resolves it against the
        actual sibling output_dirs once the whole list exists. *)
     dep_dirs =
@@ -1048,8 +1050,13 @@ let derive_steps ~root ~project
     ?(langs = Canary_lang.[ OCaml ]) ?(world = [])
     ?(mechanism_of =
       fun l -> Canary_mechanism.mechanism_of_lang_exn l)
+    ?(warn = true)
     (spec : runner_spec) : step list =
-  check_api_consistency spec;
+  (* [~warn:false] is for a DISPLAY of the steps (2026-09-23): the
+     consistency warning is about what a RUN of this world cannot do, and
+     a read-only view deriving the same steps should not repeat it —
+     spec-check reports it, and the run itself still does *)
+  if warn then check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
   let mk_one ~tag ~action ~deps ~cmd =
     let check_post = match spec.check_post action with
@@ -1067,18 +1074,22 @@ let derive_steps ~root ~project
      [tag_suffix] is appended to parent_tag (e.g. "_inspect", "_stub_inspect");
      [filename] is the basename written by [inspect_cmd] (e.g. "inspect.json",
      "stub_inspect.json"). The cmd is responsible for redirecting to that file. *)
-  let mk_inspect ~parent_tag ~action ~tag_suffix ~base_name ~inspect_cmd =
+  let mk_inspect ~parent_tag ~action ?loc ~tag_suffix ~base_name ~inspect_cmd
+      () =
     let tag = parent_tag ^ tag_suffix in
     (* base_name is the variant-independent base (e.g. "inspect", "inspect_stub").
        The actual filename is base_name + "_" + variant_key + ".json" at run time. *)
     let check_post ~output_dir ~variant_key =
       has_file ~output_dir (Canary_basic.filename ~variant_key ~base:base_name ~ext:"json")
     in
+    (* the step says what it inspects, and where: a reader must not have
+       to recover either from [tag_suffix] (2026-09-23) *)
     mk_step ~root ~project ~tag
       ~output_tag:parent_tag ~action
       ~deps:[ parent_tag ]
       ~cmd:inspect_cmd ~check_post ~expectation:Expect_success
-      ~symbol_check:None ~disabled_agreements:spec.disabled_agreements ()
+      ~symbol_check:None ~disabled_agreements:spec.disabled_agreements
+      ?location:loc ~inspects:parent_tag ()
   in
   (* A summary attached to a parent step: (tag suffix, filename, command).
      OCaml bindings get two: mli (semantic) and stub (C-symbol consumer). *)
@@ -1287,8 +1298,8 @@ let derive_steps ~root ~project
     | summaries ->
         base_step
         :: List.map summaries ~f:(fun (tag_suffix, base_name, inspect_cmd) ->
-               mk_inspect ~parent_tag ~action ~tag_suffix ~base_name
-                 ~inspect_cmd)
+               mk_inspect ~parent_tag ~action ?loc ~tag_suffix ~base_name
+                 ~inspect_cmd ())
   in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
@@ -1337,7 +1348,8 @@ let derive_steps ~root ~project
                       (cmd ~output_dir ~variant_key)
                 in
                 let base = mk_step ~root ~project ~tag:ptag ~action
-                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements () in
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements
+                  ~location:loc () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
         | Probe_binding lang ->
             Hashtbl.set seen ~key:tag ~data:true;
@@ -1369,7 +1381,8 @@ let derive_steps ~root ~project
                       (cmd ~output_dir ~variant_key)
                 in
                 let base = mk_step ~root ~project ~tag:ptag ~action
-                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements () in
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_agreements:spec.disabled_agreements
+                  ~location:loc () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
         | _ ->
             match script_of_action spec action with

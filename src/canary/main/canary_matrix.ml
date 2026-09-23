@@ -64,6 +64,27 @@ type cell = {
           fixed. [None] on a cell that is simply fine. *)
 }
 
+(** ONE STEP OF A WORLD, as the record carries it (2026-09-23, status.md
+    §2.7 phase B1). The cells hold one entry per ACTION, and a world has
+    more steps than that: a lib probe per location ([probe_lib_apt]), a
+    package-linked consumer beside the artifact-linked one
+    ([probe_binding_ocaml_opam]), an inspection after each artifact it
+    summarizes. The overview joins STEPS onto its edges, so the record
+    lists every step the realize pass derives for the world — typed as
+    the builder typed it, in the state its log line says. *)
+type world_step = {
+  ws_tag : string;
+  ws_action : Canary_basic.action;
+  ws_location : Canary_store.location option;
+      (** where a probe looks — [Canary_step_model.step.location] *)
+  ws_inspects : string option;
+      (** the step an inspection summarizes; [None] for a step that
+          performs its action *)
+  ws_state : Canary_status.step_state;
+  ws_at : string option;
+  ws_detail : string option;
+}
+
 (** One SETTING cell (2026-08-19, user: "move all the provider ahead, so
     we have source ref, fetched lib and ocaml ones … more clear to
     readers on which is the setting for this row"): the placement of ONE
@@ -138,6 +159,10 @@ type row = {
           the project does not declare that artifact *)
   cells : (string * cell option) list;
       (** per column tag in column order; [None] = not in the chain *)
+  steps : world_step list;
+      (** every step of this world, in the realize pass's order — the
+          record's view, which no text renderer draws (status.md §2.7
+          B1) *)
 }
 
 (** A COLUMN IS AN ACTION OR A CHECK SLOT (2026-09-14, user).
@@ -1304,7 +1329,10 @@ let matrix_of ?(root = "_out")
            the enumeration, and every row of the project shares it *)
         let version_points = version_points_of_kind scenarios in
         List.map scenarios ~f:(fun a ->
-            let chain_acts = actions_of pr a in
+            (* the world's steps, derived ONCE: the chain the cells range
+               over is their actions, and the record lists them all *)
+            let world_steps = Canary_pipeline.display_steps_of pr a in
+            let chain_acts = Canary_pipeline.actions_of_steps world_steps in
             let chain_tags =
               List.map chain_acts ~f:Canary_basic.string_of_action
             in
@@ -1372,6 +1400,20 @@ let matrix_of ?(root = "_out")
                 Option.value_map sl ~default:[]
                   ~f:(fun (sl : Canary_status.scenario_log) ->
                     sl.Canary_status.sl_platforms);
+              (* every step, each in its own log line's state — the
+                 siblings and inspections the cells have no column for *)
+              steps =
+                List.map world_steps ~f:(fun (s : Canary_step_model.step) ->
+                    let state, at, detail =
+                      reading_of_run sl s.Canary_step_model.tag
+                    in
+                    { ws_tag = s.Canary_step_model.tag;
+                      ws_action = s.Canary_step_model.action;
+                      ws_location = s.Canary_step_model.location;
+                      ws_inspects = s.Canary_step_model.inspects;
+                      ws_state = state;
+                      ws_at = at;
+                      ws_detail = detail });
               (* the SETTING block: this world's placement per artifact.
                  A source artifact carries its own repo link — so a
                  project with a lib source AND an off-tree binding source
@@ -1848,23 +1890,28 @@ let json_of_col (c : col) : Yojson.Basic.t =
   | Artifact a ->
       `Assoc (head "artifact" a @ [ ("artifact", `String (produced_label a)) ])
 
+(* A step state's fields — ONE spelling, shared by an action cell and a
+   world step, so the two halves of the record cannot disagree about
+   what [warm] or an attributed [xfail] looks like. *)
+let state_fields (st : Canary_status.step_state) : (string * Yojson.Basic.t) list
+    =
+  ("state", `String (Canary_status.string_of_step_state st))
+  ::
+  (match st with
+   | Canary_status.Ran v | Canary_status.Warm v -> (
+       ("verdict", `String (Canary_status.string_of_verdict v))
+       ::
+       (match v with
+        | Canary_status.Xfail (_ :: _ as names) ->
+            [ ("agreements", `List (List.map names ~f:(fun n -> `String n))) ]
+        | _ -> []))
+   | Canary_status.Blocked | Canary_status.Unrecorded -> [])
+
 let json_of_cell (c : cell) : Yojson.Basic.t =
   let opt key = function Some s -> [ (key, `String s) ] | None -> [] in
   let reading =
     match c.recorded with
-    | R_act st -> (
-        ("state", `String (Canary_status.string_of_step_state st))
-        ::
-        (match st with
-         | Canary_status.Ran v | Canary_status.Warm v -> (
-             ("verdict", `String (Canary_status.string_of_verdict v))
-             ::
-             (match v with
-              | Canary_status.Xfail (_ :: _ as names) ->
-                  [ ("agreements", `List (List.map names ~f:(fun n -> `String n)))
-                  ]
-              | _ -> []))
-         | Canary_status.Blocked | Canary_status.Unrecorded -> []))
+    | R_act st -> state_fields st
     | R_check o ->
         [ ("outcome", match o with Some s -> `String s | None -> `Null) ]
     | R_artifact -> []
@@ -1875,6 +1922,20 @@ let json_of_cell (c : cell) : Yojson.Basic.t =
     @ (if String.is_empty c.provision then []
        else [ ("provision", `String c.provision) ])
     @ opt "detail" c.detail @ opt "blame" c.blame)
+
+(* A step keeps its TAG — the log's key, and what tells two probes of one
+   action apart — beside its typed action. The location is spelled by
+   [Canary_store.string_of_location]: [build_tree], [staged],
+   [sys_pm:apt], [ocaml:opam]. *)
+let json_of_world_step (s : world_step) : Yojson.Basic.t =
+  let opt key = function Some v -> [ (key, `String v) ] | None -> [] in
+  `Assoc
+    ([ ("tag", `String s.ws_tag);
+       ("action", `String (Canary_basic.string_of_action s.ws_action)) ]
+    @ opt "location" (Option.map s.ws_location ~f:Canary_store.string_of_location)
+    @ opt "inspects" s.ws_inspects
+    @ state_fields s.ws_state
+    @ opt "at" s.ws_at @ opt "detail" s.ws_detail)
 
 let to_json (m : t) : Yojson.Basic.t =
   `Assoc
@@ -1901,7 +1962,9 @@ let to_json (m : t) : Yojson.Basic.t =
                      `Assoc
                        (List.filter_map r.cells ~f:(fun (tag, c) ->
                             Option.map c ~f:(fun c -> (tag, json_of_cell c))))
-                   ) ])) ) ]
+                   );
+                   ("steps", `List (List.map r.steps ~f:json_of_world_step))
+                 ])) ) ]
 
 (** THE RECORD AS PRINTED — what [canary result --json] writes to stdout,
     and ALL it writes (§2.7 finding 1: the page notice used to follow it,

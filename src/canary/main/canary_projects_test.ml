@@ -1925,7 +1925,8 @@ let canary_switch_pin : Canary_project_test.pure_test =
               dep_dirs = [];
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
-              disabled_agreements = []; agreement_ctx = None; dummy = None }
+              disabled_agreements = []; agreement_ctx = None; dummy = None;
+              location = None; inspects = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -2026,7 +2027,8 @@ let platform_single_source_pin : Canary_project_test.pure_test =
               dep_dirs = [];
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
-              disabled_agreements = []; agreement_ctx = None; dummy = None }
+              disabled_agreements = []; agreement_ctx = None; dummy = None;
+              location = None; inspects = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -2119,7 +2121,8 @@ let strict_mode_pin : Canary_project_test.pure_test =
             dep_dirs = [];
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = Canary_step_model.Expect_success; symbol_check = None;
-            disabled_agreements = []; agreement_ctx = None; dummy = None }
+            disabled_agreements = []; agreement_ctx = None; dummy = None;
+              location = None; inspects = None }
         in
         let fingerprint_under b =
           Canary_agreement_common.set_strict b;
@@ -2640,7 +2643,8 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
             dep_dirs = [];
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = exp; symbol_check = None; disabled_agreements = [];
-            agreement_ctx = None; dummy = None }
+            agreement_ctx = None; dummy = None;
+              location = None; inspects = None }
         in
         let rendered exp =
           String.concat ~sep:"\n"
@@ -4873,6 +4877,132 @@ let matrix_key_covers_codes_pin : Canary_project_test.pure_test =
             | Some (_, code) -> List.mem known code ~equal:String.equal
             | None -> false)) }
 
+(* THE FIXTURE THE RECORD PINS WRITE (2026-09-23, status.md §2.7): a run
+   log in the runner's own line shape ([Canary_step_model.create_logger]),
+   stamped from a counter so every line's time is distinct and known; one
+   script per step state the log can express; and the reading of a state
+   back out of the JSON, by field name and independently of the encoder.
+   Shared, so the pins cannot come to disagree about what a state is. *)
+module Record_fixture = struct
+  module S = Canary_status
+
+  let rec mkdir_p dir =
+    let parent = Stdlib.Filename.dirname dir in
+    if String.equal dir parent || Stdlib.Sys.file_exists dir then ()
+    else begin
+      mkdir_p parent;
+      (try Stdlib.Sys.mkdir dir 0o755 with _ -> ())
+    end
+
+  let write path text =
+    mkdir_p (Stdlib.Filename.dirname path);
+    let oc = Stdlib.open_out path in
+    Stdlib.output_string oc text;
+    Stdlib.close_out oc
+
+  (* the platform this machine is NOT: a record that answered with the
+     renderer's platform fails on either machine *)
+  let elsewhere () =
+    if String.equal (Canary_matrix.platform_label ()) "wsl_ubuntu" then
+      "macos_local"
+    else "wsl_ubuntu"
+
+  (* ONE SCRIPT PER STATE the log can express: the lines the runner
+     writes for it, and the state they must read as. Every script's last
+     line is its verdict. *)
+  let scripts ~platform : ((string * string option) list * S.step_state) list
+      =
+    let xfail_confirmed =
+      "expected failure confirmed (derived) [api_names_present]"
+    in
+    [ ([ ("platform", Some platform); ("done", None) ], S.Ran S.Pass);
+      ( [ ("warm_gate", Some "marker + fingerprint + check_post passed");
+          ("skip", Some "verdict marker (prior success)") ],
+        S.Warm S.Pass );
+      ( [ ("platform", Some platform); ("done", Some xfail_confirmed) ],
+        S.Ran (S.Xfail [ "api_names_present" ]) );
+      ( [ ("platform", Some platform); ("failed", Some "postcondition failed") ],
+        S.Ran S.Fail );
+      ( [ ("skip", Some "verdict marker (prior xfail) [api_names_present]") ],
+        S.Warm (S.Xfail [ "api_names_present" ]) );
+      ( [ ("check_pre", Some "FAIL"); ("blocked", Some "precondition failed") ],
+        S.Blocked );
+      ([], S.Unrecorded);
+      (* a RE-RUN: the last verdict wins, and so does its time *)
+      ( [ ("platform", Some platform);
+          ("failed", Some "postcondition failed");
+          ("platform", Some platform); ("done", None) ],
+        S.Ran S.Pass ) ]
+
+  type log = { buf : Buffer.t; mutable n : int }
+
+  let create () = { buf = Buffer.create 4096; n = 0 }
+
+  (* one line; returns its stamp *)
+  let line (log : log) tag event detail =
+    log.n <- log.n + 1;
+    let stamp =
+      Printf.sprintf "2026-01-01 00:%02d:%02d.000" (log.n / 60)
+        (Int.rem log.n 60)
+    in
+    let padded =
+      if String.length tag < 25 then
+        tag ^ String.make (25 - String.length tag) ' '
+      else tag
+    in
+    Buffer.add_string log.buf
+      (Printf.sprintf "[%s] %s  %s%s\n" stamp padded event
+         (match detail with Some d -> "  (" ^ d ^ ")" | None -> ""));
+    stamp
+
+  (* one script for [tag]: the stamp of its verdict line, which is the
+     WHEN the record must report — [None] when it writes nothing *)
+  let play (log : log) ~tag ((lines, _) : (string * string option) list * _) =
+    List.fold lines ~init:None ~f:(fun _ (event, detail) ->
+        Some (line log tag event detail))
+
+  let save (log : log) ~root ~project =
+    write
+      (Printf.sprintf "%s/canary/projects/%s/-run/actions.log" root project)
+      (Buffer.contents log.buf)
+
+  let uniq xs =
+    List.fold xs ~init:[] ~f:(fun acc x ->
+        if List.mem acc x ~equal:String.equal then acc else acc @ [ x ])
+
+  let field j k =
+    match j with
+    | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
+    | _ -> None
+
+  let str j k = match field j k with Some (`String s) -> Some s | _ -> None
+
+  let strs j k =
+    match field j k with
+    | Some (`List xs) ->
+        Some (List.filter_map xs ~f:(function `String s -> Some s | _ -> None))
+    | _ -> None
+
+  let items j k = match field j k with Some (`List xs) -> xs | _ -> []
+
+  (* a step state, read back by its field names *)
+  let step_state_of_json jc : S.step_state option =
+    let verdict =
+      match str jc "verdict" with
+      | Some "pass" -> Some S.Pass
+      | Some "fail" -> Some S.Fail
+      | Some "xfail" ->
+          Some (S.Xfail (Option.value (strs jc "agreements") ~default:[]))
+      | _ -> None
+    in
+    match (str jc "state", verdict) with
+    | Some "ran", Some v -> Some (S.Ran v)
+    | Some "warm", Some v -> Some (S.Warm v)
+    | Some "blocked", None -> Some S.Blocked
+    | Some "unrecorded", None -> Some S.Unrecorded
+    | _ -> None
+end
+
 (* THE RUN RECORD (2026-09-23, status.md §2.7 phase A). `canary result
    --json` is what the overview will draw recorded runs from, so two
    things must hold, and this pins both against a log it writes itself.
@@ -4911,78 +5041,13 @@ let record_export_pin : Canary_project_test.pure_test =
         | None -> false
         | Some pr ->
             let root = "_out/canary/test/record-fixture" in
-            let rec mkdir_p dir =
-              let parent = Stdlib.Filename.dirname dir in
-              if String.equal dir parent || Stdlib.Sys.file_exists dir then ()
-              else begin
-                mkdir_p parent;
-                (try Stdlib.Sys.mkdir dir 0o755 with _ -> ())
-              end
-            in
-            let write path text =
-              mkdir_p (Stdlib.Filename.dirname path);
-              let oc = Stdlib.open_out path in
-              Stdlib.output_string oc text;
-              Stdlib.close_out oc
-            in
-            let there =
-              if String.equal (M.platform_label ()) "wsl_ubuntu" then
-                "macos_local"
-              else "wsl_ubuntu"
-            in
-            let xfail_confirmed =
-              "expected failure confirmed (derived) [api_names_present]"
-            in
-            (* ONE SCRIPT PER STATE the log can express: the lines the
-               runner writes for it, and the state they must read as *)
-            let scripts =
-              [ ([ ("platform", Some there); ("done", None) ], S.Ran S.Pass);
-                ( [ ("warm_gate", Some "marker + fingerprint + check_post passed");
-                    ("skip", Some "verdict marker (prior success)") ],
-                  S.Warm S.Pass );
-                ( [ ("platform", Some there); ("done", Some xfail_confirmed) ],
-                  S.Ran (S.Xfail [ "api_names_present" ]) );
-                ( [ ("platform", Some there);
-                    ("failed", Some "postcondition failed") ],
-                  S.Ran S.Fail );
-                ( [ ("skip",
-                     Some "verdict marker (prior xfail) [api_names_present]") ],
-                  S.Warm (S.Xfail [ "api_names_present" ]) );
-                ( [ ("check_pre", Some "FAIL");
-                    ("blocked", Some "precondition failed") ],
-                  S.Blocked );
-                ([], S.Unrecorded);
-                (* a RE-RUN: the last verdict wins, and so does its time *)
-                ( [ ("platform", Some there);
-                    ("failed", Some "postcondition failed");
-                    ("platform", Some there); ("done", None) ],
-                  S.Ran S.Pass ) ]
-            in
-            (* the runner's own line shape ([Canary_step_model.create_logger]),
-               stamped from a counter so every line's time is distinct and
-               known *)
-            let n = ref 0 in
-            let buf = Buffer.create 4096 in
-            let line tag event detail =
-              Int.incr n;
-              let stamp =
-                Printf.sprintf "2026-01-01 00:%02d:%02d.000" (!n / 60)
-                  (Int.rem !n 60)
-              in
-              let padded =
-                if String.length tag < 25 then
-                  tag ^ String.make (25 - String.length tag) ' '
-                else tag
-              in
-              Buffer.add_string buf
-                (Printf.sprintf "[%s] %s  %s%s\n" stamp padded event
-                   (match detail with Some d -> "  (" ^ d ^ ")" | None -> ""));
-              stamp
-            in
-            let uniq xs =
-              List.fold xs ~init:[] ~f:(fun acc x ->
-                  if List.mem acc x ~equal:String.equal then acc else acc @ [ x ])
-            in
+            let module F = Record_fixture in
+            let write = F.write in
+            let there = F.elsewhere () in
+            let scripts = F.scripts ~platform:there in
+            let log = F.create () in
+            let line = F.line log in
+            let uniq = F.uniq in
             let dealt = ref 0 in
             let expected = Hashtbl.Poly.create () in
             let logged_platform = Hashtbl.Poly.create () in
@@ -5030,9 +5095,7 @@ let record_export_pin : Canary_project_test.pure_test =
                           Some (line tag event detail))
                     in
                     Hashtbl.set expected ~key:(scenario, tag) ~data:(state, last)));
-            write
-              (Printf.sprintf "%s/canary/projects/%s/-run/actions.log" root project)
-              (Buffer.contents buf);
+            F.save log ~root ~project;
             let m = M.matrix_of ~root [ (project, pr) ] in
             let cells =
               List.concat_map m.M.rows ~f:(fun (r : M.row) ->
@@ -5080,49 +5143,19 @@ let record_export_pin : Canary_project_test.pure_test =
               match Yojson.Basic.from_string (M.json_export m) with
               | exception _ -> false
               | j ->
-                  let field j k =
-                    match j with
-                    | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
-                    | _ -> None
-                  in
-                  let str j k =
-                    match field j k with Some (`String s) -> Some s | _ -> None
-                  in
-                  let strs j k =
-                    match field j k with
-                    | Some (`List xs) ->
-                        Some
-                          (List.filter_map xs ~f:(function
-                            | `String s -> Some s
-                            | _ -> None))
-                    | _ -> None
-                  in
-                  let items j k =
-                    match field j k with Some (`List xs) -> xs | _ -> []
-                  in
-                  let verdict jc =
-                    match str jc "verdict" with
-                    | Some "pass" -> Some S.Pass
-                    | Some "fail" -> Some S.Fail
-                    | Some "xfail" ->
-                        Some
-                          (S.Xfail
-                             (Option.value (strs jc "agreements") ~default:[]))
-                    | _ -> None
-                  in
+                  let field = F.field and str = F.str and strs = F.strs
+                  and items = F.items in
                   let recorded kind jc : M.recorded option =
-                    match (kind, str jc "state", verdict jc) with
-                    | "action", Some "ran", Some v -> Some (M.R_act (S.Ran v))
-                    | "action", Some "warm", Some v -> Some (M.R_act (S.Warm v))
-                    | "action", Some "blocked", None -> Some (M.R_act S.Blocked)
-                    | "action", Some "unrecorded", None ->
-                        Some (M.R_act S.Unrecorded)
-                    | "check", _, _ -> (
+                    match kind with
+                    | "action" ->
+                        Option.map (F.step_state_of_json jc) ~f:(fun st ->
+                            M.R_act st)
+                    | "check" -> (
                         match field jc "outcome" with
                         | Some (`String o) -> Some (M.R_check (Some o))
                         | Some `Null -> Some (M.R_check None)
                         | _ -> None)
-                    | "artifact", _, _ -> Some M.R_artifact
+                    | "artifact" -> Some M.R_artifact
                     | _ -> None
                   in
                   let jcols = items j "columns" in
@@ -5212,6 +5245,233 @@ let record_export_pin : Canary_project_test.pure_test =
                                          c.M.provision))
             in
             reads_the_log && covers && export_is_the_matrix) }
+
+(* EVERY STEP OF A WORLD IS IN THE RECORD (2026-09-23, status.md §2.7
+   phase B1). The cells hold one entry per action, while the overview
+   joins STEPS onto its edges, and a world has more of them: a lib probe
+   per location, a package-linked consumer beside the artifact-linked one,
+   an inspection after each artifact. Pinned over a log the fixture
+   writes, for zarith — whose one probe tag is two different consumer
+   programs — and sqlite, whose library is probed at several locations.
+
+   (1) EXACTLY THE WORLD'S STEPS: each row lists the realize pass's
+       steps, in its order. Not the log's tags — a tag no current step
+       has (the fixture writes one) is history, not a step.
+   (2) TYPED AS THE BUILDER TYPED THEM. A probe carries its location and
+       nothing else does; an inspection names a step of the same world
+       that performs the same action; a probe's tag is the one the
+       builder derives from its location, canonical when it is alone.
+       And, for zarith, the fact the join rests on: the fetched binding's
+       probe is [Pm (Lang_pm opam)], the built binding's [Build_tree].
+   (3) IN THE STATE ITS OWN LOG LINE SAYS, dated by that line.
+   (4) EXPORTED AS SUCH: the printed JSON decodes to the same steps. *)
+let record_steps_pin : Canary_project_test.pure_test =
+  { name = "matrix.record_carries_every_step";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module F = Record_fixture in
+        let module SM = Canary_step_model in
+        let names = [ "zarith"; "sqlite" ] in
+        let projects =
+          List.filter_map names ~f:(fun n ->
+              Option.map
+                (List.Assoc.find Canary_registry.all_projects n
+                   ~equal:String.equal)
+                ~f:(fun pr -> (n, pr)))
+        in
+        List.length projects = List.length names
+        &&
+        let root = "_out/canary/test/steps-fixture" in
+        let scripts = F.scripts ~platform:(F.elsewhere ()) in
+        (* the steps per world AS THE RUNNER DERIVES THEM — its own call,
+           [steps_of] over the scenario's real context, keyed the way the
+           rows are. Not [display_steps_of]: the first version of this pin
+           compared the record against the very function the record is
+           built from, and so could not catch the gap that function had
+           (it skipped the declared facts, and every fetched binding lost
+           its stub inspection). [~warn:false] only silences a print. *)
+        let worlds =
+          List.concat_map projects ~f:(fun (project, pr) ->
+              List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  ( project,
+                    Stdlib.Filename.basename
+                      (Canary_project_run.scenario_dir_of ~pr_name:project a),
+                    a,
+                    Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
+                      ~ctx:(Canary_pipeline.ctx_of pr a) a )))
+        in
+        let stale = "retired_step_inspect" in
+        let dealt = ref 0 in
+        let expected = Hashtbl.Poly.create () in
+        List.iter projects ~f:(fun (project, _) ->
+            let log = F.create () in
+            List.iter worlds ~f:(fun (p, scenario, _, steps) ->
+                if String.equal p project then begin
+                  ignore (F.line log "*" "variant_start" (Some scenario) : string);
+                  ignore (F.line log stale "done" None : string);
+                  List.iter steps ~f:(fun (s : SM.step) ->
+                      let script =
+                        List.nth_exn scripts
+                          (Int.rem !dealt (List.length scripts))
+                      in
+                      Int.incr dealt;
+                      let at = F.play log ~tag:s.SM.tag script in
+                      Hashtbl.set expected ~key:(project, scenario, s.SM.tag)
+                        ~data:(snd script, at))
+                end);
+            F.save log ~root ~project);
+        let m = M.matrix_of ~root projects in
+        let row_of project scenario =
+          List.find m.M.rows ~f:(fun (r : M.row) ->
+              String.equal r.M.project project
+              && String.equal r.M.scenario scenario)
+        in
+        let is_probe = function
+          | Canary_basic.Probe_lib | Canary_basic.Probe_binding _ -> true
+          | _ -> false
+        in
+        (* (1) exactly the world's steps, and (2) typed as the builder
+           typed them *)
+        let exact_and_typed =
+          List.length m.M.rows = List.length worlds
+          && List.for_all worlds ~f:(fun (project, scenario, _, steps) ->
+                 match row_of project scenario with
+                 | None -> false
+                 | Some r -> (
+                     let ws = r.M.steps in
+                     match List.zip ws steps with
+                     | List.Or_unequal_lengths.Unequal_lengths -> false
+                     | List.Or_unequal_lengths.Ok pairs ->
+                         List.for_all pairs ~f:(fun ((w : M.world_step), s) ->
+                             String.equal w.M.ws_tag s.SM.tag
+                             && Poly.equal w.M.ws_action s.SM.action
+                             && Poly.equal w.M.ws_location s.SM.location
+                             && Poly.equal w.M.ws_inspects s.SM.inspects)
+                         && (not
+                               (List.exists ws ~f:(fun w ->
+                                    String.equal w.M.ws_tag stale)))
+                         && List.for_all ws ~f:(fun w ->
+                                Bool.equal (is_probe w.M.ws_action)
+                                  (Option.is_some w.M.ws_location))
+                         && List.for_all ws ~f:(fun w ->
+                                match w.M.ws_inspects with
+                                | None -> true
+                                | Some p ->
+                                    List.exists ws ~f:(fun p' ->
+                                        String.equal p'.M.ws_tag p
+                                        && Option.is_none p'.M.ws_inspects
+                                        && Poly.equal p'.M.ws_action
+                                             w.M.ws_action))
+                         &&
+                         let probes =
+                           List.filter ws ~f:(fun w ->
+                               is_probe w.M.ws_action
+                               && Option.is_none w.M.ws_inspects)
+                         in
+                         List.for_all probes ~f:(fun w ->
+                             let alone =
+                               List.count probes ~f:(fun w' ->
+                                   Poly.equal w'.M.ws_action w.M.ws_action)
+                               = 1
+                             in
+                             match (w.M.ws_action, w.M.ws_location) with
+                             | _, None -> false
+                             | a, Some _ when alone ->
+                                 String.equal w.M.ws_tag
+                                   (Canary_basic.string_of_action a)
+                             | Canary_basic.Probe_lib, Some loc ->
+                                 String.equal w.M.ws_tag
+                                   (Canary_step_builder.tag_of_probe_lib_location
+                                      loc)
+                             | Canary_basic.Probe_binding lang, Some loc ->
+                                 String.equal w.M.ws_tag
+                                   (Canary_step_builder.tag_of_probe_location
+                                      ~lang loc)
+                             | _ -> false)))
+        in
+        (* the fact the join rests on: one tag, two consumer programs *)
+        let consumer_of (a : Canary_artifact.assignment) (r : M.row) =
+          ( List.find_map a ~f:(fun (id, (pl : Canary_artifact.placement)) ->
+                match Canary_artifact.kind_of id with
+                | Canary_basic.Binding Canary_lang.OCaml ->
+                    Some pl.Canary_artifact.provision
+                | _ -> None),
+            Option.bind
+              (List.find r.M.steps ~f:(fun w ->
+                   String.equal w.M.ws_tag "probe_binding_ocaml"))
+              ~f:(fun w -> w.M.ws_location) )
+        in
+        let zarith_pairs =
+          List.filter_map worlds ~f:(fun (project, scenario, a, _) ->
+              if not (String.equal project "zarith") then None
+              else Option.map (row_of project scenario) ~f:(consumer_of a))
+        in
+        let by_package =
+          Some
+            (Canary_store.Pm
+               (Canary_store.Lang_pm
+                  { lang = Canary_lang.OCaml; pm = Canary_store.Opam }))
+        in
+        let linking_typed =
+          List.for_all zarith_pairs ~f:(function
+            | Some Canary_artifact.Fetched, loc -> Poly.equal loc by_package
+            | Some Canary_artifact.Built, loc ->
+                Poly.equal loc (Some Canary_store.Build_tree)
+            | _ -> true)
+          && List.exists zarith_pairs ~f:(fun (p, _) ->
+                 Poly.equal p (Some Canary_artifact.Fetched))
+          && List.exists zarith_pairs ~f:(fun (p, _) ->
+                 Poly.equal p (Some Canary_artifact.Built))
+        in
+        (* (3) in the state its log line says, at that line's time *)
+        let states_ok =
+          List.for_all m.M.rows ~f:(fun (r : M.row) ->
+              List.for_all r.M.steps ~f:(fun w ->
+                  match
+                    Hashtbl.find expected (r.M.project, r.M.scenario, w.M.ws_tag)
+                  with
+                  | None -> false
+                  | Some (st, at) ->
+                      Poly.equal w.M.ws_state st && Poly.equal w.M.ws_at at))
+        in
+        (* (4) exported as such *)
+        let exported =
+          match Yojson.Basic.from_string (M.json_export m) with
+          | exception _ -> false
+          | j ->
+              let jrows = F.items j "rows" in
+              List.length jrows = List.length m.M.rows
+              && List.for_all2_exn m.M.rows jrows ~f:(fun (r : M.row) jr ->
+                     let jsteps = F.items jr "steps" in
+                     List.length jsteps = List.length r.M.steps
+                     && List.for_all2_exn r.M.steps jsteps ~f:(fun w js ->
+                            Poly.equal (F.str js "tag") (Some w.M.ws_tag)
+                            && Poly.equal (F.str js "action")
+                                 (Some (Canary_basic.string_of_action w.M.ws_action))
+                            && Poly.equal (F.str js "location")
+                                 (Option.map w.M.ws_location
+                                    ~f:Canary_store.string_of_location)
+                            && Poly.equal (F.str js "inspects") w.M.ws_inspects
+                            && Poly.equal (F.step_state_of_json js)
+                                 (Some w.M.ws_state)
+                            && Poly.equal (F.str js "at") w.M.ws_at
+                            && Poly.equal (F.str js "detail") w.M.ws_detail))
+        in
+        (* and not vacuously: every state, an inspection, both kinds of
+           consumer location, and a library probed at two locations *)
+        let all_steps = List.concat_map m.M.rows ~f:(fun r -> r.M.steps) in
+        let covers =
+          List.for_all scripts ~f:(fun (_, st) ->
+              List.exists all_steps ~f:(fun w -> Poly.equal w.M.ws_state st))
+          && List.exists all_steps ~f:(fun w -> Option.is_some w.M.ws_inspects)
+          && List.exists m.M.rows ~f:(fun (r : M.row) ->
+                 List.count r.M.steps ~f:(fun w ->
+                     Poly.equal w.M.ws_action Canary_basic.Probe_lib
+                     && Option.is_none w.M.ws_inspects)
+                 > 1)
+        in
+        exact_and_typed && linking_typed && states_ok && exported && covers) }
 
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
@@ -5576,6 +5836,7 @@ let base_tests : Canary_project_test.pure_test list =
       one_mechanism_per_language_pin;
       matrix_key_covers_codes_pin;
       record_export_pin;
+      record_steps_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

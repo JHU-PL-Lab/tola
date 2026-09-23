@@ -492,7 +492,7 @@ the check until the derivation agrees with it:
 6. **Recorded run results on the case diagrams** — brought forward by
    the user on 2026-09-23 and planned as §2.7.
 
-### 2.7 Run results on the overview diagrams — phase A landed; B awaits confirmation
+### 2.7 Run results on the overview diagrams — A and B1 landed; B2 awaits two decisions
 
 *(2026-09-23, user: "the cases in section 2 are generated from
 hardcoded code, not from the running result. I wish a feature to
@@ -546,12 +546,19 @@ to record what each package-manager BRIDGE actually did.
   status (ran ✓ / ✗ / xfail, warm-skipped, did not run), claim → outcome,
   platform, when. Reuse `matrix_of`; fix finding 1. *Guard:* the export
   parses, and its cells equal the matrix's.
-- **B. The join** (this is §2.6 step 1). Type each edge's action; map a
-  step tag — `probe_lib_apt`, `probe_binding_ocaml_opam`,
-  `…_inspect` — to its action and so to its edges. An edge's status is
-  the statuses of the steps realizing it; a claim site's is the outcomes
-  of its claims. *Guard:* every action column of every project maps to an
-  edge, or is listed as having none.
+- **B1. Every step in the record** (split out after A). A world's steps
+  are more than its action columns — sibling probes at other locations,
+  the package-linked probe, the inspections — and the matrix reads only
+  the columns. The record lists every step the realize pass derives for
+  the world, with its tag, its typed action, where it probes and what it
+  inspects, and the log's state and time for that tag. *Guard:* each
+  row's steps are exactly the realize pass's, typed as the builder typed
+  them, each in the state its log line says.
+- **B2. The join** (this is §2.6 step 1). Type each edge's action; map
+  each step to its edges by its action, its location and the world's
+  provision. An edge's status is the statuses of the steps realizing it;
+  a claim site's is the outcomes of its claims. *Guard:* every step of
+  every recorded world maps to an edge, or is listed as having none.
 - **C. The overlay.** The generic diagram is the template and a run is
   drawn on it: edges coloured by status, claim badges by outcome, dead
   edges greyed, node labels from the row's settings. A selector over
@@ -653,6 +660,117 @@ that ran — the same ✓ on the page.
 6. *Finding 2 stands.* A system package's version inside a setting is
    still asked of the rendering machine unless the spec pins it; the
    record carries it unchanged, and the encoder's comment says so.
+
+**The plan after A** (the user confirmed the B1/B2 split, 2026-09-23).
+Every step already carries a typed action out of the realize pass —
+`build_lib_inspect` is `build_lib`, `probe_lib_apt` is `probe_lib` — so
+the join parses no tags, and the `action_of_string` gap (item 2 above)
+does not matter to it. Three rules shape B2:
+
+- *A probe's edge is its LOCATION.* zarith's fetched-binding worlds
+  compile the consumer with `-package zarith` and its built worlds with
+  `-I <build tree>`, under one tag, `probe_binding_ocaml`. The
+  opam-binding template declares the first `Pm (Lang_pm opam)` and the
+  second `Build_tree`, so the typed location already says which consumer
+  program each is — `run_packaged` or `run`. It is invisible only
+  because a single probe entry keeps the canonical tag, and the step
+  record kept the tag and dropped the location. (First read the other
+  way round, from the tag, and reported so; corrected on reading the
+  template.)
+- *An inspection records evidence; it realizes no relation.* It carries
+  its parent's action, so without a rule it would colour the parent's
+  edge. It feeds claim badges instead.
+- *Siblings can land on no edge.* `probe_lib_staged` observes the staged
+  copy, which has no observation edge on the page; B2's guard lists it.
+
+Two decisions stay open. **Before B2:** how an edge names its action.
+Edges are language-free (`probe_binding`) and steps are not
+(`probe_binding_ocaml`), and `base/` has no language-free form. The
+recommendation is a small action-family type there, with a `family_of`
+the compiler keeps total; the alternative, a predicate per edge, cannot
+be printed. **Before C:** the matrix reads the active projects, so muted
+z3 — the only project whose built world also probes its published
+package — is never drawn. Either the record reads the catalogue, as the
+topology table does, or z3 waits until it is unmuted.
+
+For C: the `.js` record is a per-machine file like `matrix.html` — the
+same `_mac` suffix, and a `--platform` render never writes the tracked
+copy. The overview page loads whichever exist; the record never goes
+inside `overview.html`.
+
+Seen on the way, and for the overlay to show rather than fix: zarith's
+built world packs its binding and never probes the package, so
+`run_packaged` has no step there — the gap z3 closed with its `_opam`
+probe, and the concrete case for §2.6 step 5.
+
+**Phase B1 landed 2026-09-23: every step is in the record.** Each row
+now carries `steps`, every step the realize pass derives for the world
+and in its order: the `tag`, the `action`, the `location` a probe reads
+(`build_tree`, `staged`, `sys_pm:apt`, `ocaml:opam`, `python:pip`), the
+step an inspection `inspects`, and the same state, verdict and `at`
+fields an action cell has. Over the 28 rows that is 262 steps, 88 of
+them inspections.
+
+The step had to learn two things. `Canary_step_model.step` gained
+`location` and `inspects`, which the builder sets where it already knew
+them: a probe entry's declared location, an inspection's parent. No run
+behaves differently, and no warm verdict was invalidated, because the
+fingerprint hashes the command, the expectation, the switch, the
+platform and the strict flag, and none of those moved.
+
+**The result table had been deriving a different step list from the
+runner's.** Its chain came from `Canary_pipeline.actions_of`, which
+re-derived from the bare runner spec and skipped `with_declared_facts` —
+and the declared binding package is what earns a fetched binding its
+stub inspection. The action set came out the same, since an inspection
+carries its parent's action, so no table could show the difference. The
+first version of this record inherited it — one step short in every
+such world — and its write-up called the missing tag history. The
+display now goes through the runner's own `steps_of` over a throwaway
+workspace (`display_steps_of`), which added the 27 stub inspections the
+runs really perform. That path also brought the runner's spec warning
+into `canary result`; `derive_steps ~warn:false` keeps a display quiet,
+and the run and spec-check still report it.
+
+The record lists today's steps, not the log's tags. A tag the log holds
+and no current step has is history and is left out — zarith's
+`probe_binding_ocaml_inspect`, from before the template moved its
+inspection to the steps that provision the binding (2026-09-15), and
+the opam-binding projects' `fetch_source`, from before unread fetches
+were pruned. A current step that no run has logged reads `unrecorded`.
+
+The guard is `matrix.record_carries_every_step`, over zarith and sqlite.
+Each row's steps must be exactly the ones the RUNNER derives — through
+its own call, `steps_of` over the scenario's real context, because a pin
+that compared the record with `display_steps_of` compared it with
+itself and could not see the gap above — typed as the builder typed
+them (a probe's tag is the one derived from its location, an inspection
+names a step with its action), each in its own log line's state and
+time, with the printed JSON decoding to the same. Five breaks turned it
+red: the builder dropping a probe's location, the matrix leaving
+inspections out, the encoder garbling a location, the builder not
+marking an inspection, and the display derivation skipping the declared
+facts again. The phase A pin now shares its fixture
+(`Record_fixture`), so the two cannot disagree about what a state is.
+
+**What the typed locations already say, for B2:**
+
+- *The consumer program is readable.* Across the active projects,
+  `probe_binding_ocaml` sits at `ocaml:opam` in every world whose
+  binding is fetched, and at `build_tree` in every world whose binding
+  is built (llvm, zarith) or vendored (tiny-full) — the `run_packaged`
+  and `run` edges.
+- *torch probes its library at `ocaml:opam`* — the unified case, where
+  the language PM supplies the native side. `tag_of_probe_lib_location`
+  rejects that location with a `failwith`; torch escapes only because
+  it has one lib probe, which keeps the canonical tag. A second entry
+  would stop `derive_steps`.
+- *sqlite's stdlib Python probe is typed `python:pip`*, while the module
+  comes with the interpreter — the page's "no package manager between
+  them" case. Its edge is a decision, not a lookup.
+- *Two steps have no edge on the page:* ssl's `probe_app_ocaml`, which
+  carries no location, and `probe_lib_staged` (sqlite, llvm), which
+  observes the staged copy. B2's guard will list both.
 
 ---
 
