@@ -92,9 +92,10 @@ code the lowering reads.
 
 ## 2. Open now
 
-Six items, in the order they are worth doing. §2.6 is the plan for
+Seven items, in the order they are worth doing. §2.6 is the plan for
 merging the overview page into the framework (terminology settled,
-derivations next). §2.5 is the forward look
+derivations next); §2.7 draws recorded runs on its diagrams, planned for
+a new session. §2.5 is the forward look
 — what the unlanded claims would take — and is where the manuscript's
 plan material comes from.
 
@@ -488,7 +489,97 @@ the check until the derivation agrees with it:
    information; a *resolution* the package failed to provide is a
    finding) — and give `package_resolution_suffices` an evaluator. The
    first step that changes what a run does.
-6. **Later** (user): draw recorded run results on the case diagrams.
+6. **Recorded run results on the case diagrams** — brought forward by
+   the user on 2026-09-23 and planned as §2.7.
+
+### 2.7 Run results on the overview diagrams — PLANNED, for a new session
+
+*(2026-09-23, user: "the cases in section 2 are generated from
+hardcoded code, not from the running result. I wish a feature to
+retrofit the concrete running result to that diagram… a bottom-up way
+to enhance the overview, which is also guided by the overview.")*
+
+**The goal.** A concrete case on the overview page comes from a recorded
+run, not from hand-written labels: the run's result is exported in a
+machine-readable form, and the page loads it and draws it on the layered
+diagram. The work runs in both directions — the diagram shows which
+edges canary records nothing at, and closing those means canary learns
+to record what each package-manager BRIDGE actually did.
+
+**What already exists — checked before planning:**
+
+- `canary result --json` already exports, per project × scenario, a
+  verdict per action that ran (`fetch_lib: ✓`), an outcome per claim
+  column (`build_binding_ocaml_pre:rse: ✓`, `…_pre:dp: no-evid`), an
+  artifact summary per `=` column, and the provisioned settings (`lib:
+  apt libgmp-dev.2:6.3.0+dfsg`). An action that did not run in a world
+  has NO cell, so a world's dead edges come for free, and whether
+  `fetch_binding` or `pack_binding` ran settles the direction of the one
+  edge that runs both ways.
+- The run log carries a `platform` and an `opam_switch` event per step.
+- The package-manager drivers already have the queries a bridge record
+  needs: opam `list_depexts_cmd` / `version_of_cmd` / `is_installed`,
+  apt and brew `installed_version_cmd`, brew `prefix_cmd`.
+
+**Found while checking — each shapes a phase:**
+
+1. `canary result --json` prints `Wrote …matrix.html` on stdout AFTER
+   the JSON, so its output does not parse. Any consumer breaks.
+2. The installed system-package version on the result page is asked of
+   the machine RENDERING the page, at render time
+   (`Canary_matrix.sys_pkg_version`, "the matrix's one runtime read") —
+   the run never recorded it. It can be newer than what the run saw, and
+   a mac run rendered on WSL would show WSL's version. A record of a run
+   must carry what the run saw. Same shape as §2.1's platform-blind
+   landing report.
+3. The JSON flattens typed columns into strings; the typed column
+   (action · claim code · artifact) exists inside `Canary_matrix` and is
+   what the join should read.
+4. A browser blocks `fetch()` on `file://`, so a page loading
+   `runs.json` would work on GitHub Pages and show nothing when opened
+   locally. Emit the record as `overview_runs.js` setting a global,
+   loaded with a `<script src>` — that works in both.
+
+**Phases — each visible on the page, each with a guard:**
+
+- **A. The record.** A run export per (project, scenario): action →
+  status (ran ✓ / ✗ / xfail, warm-skipped, did not run), claim → outcome,
+  platform, when. Reuse `matrix_of`; fix finding 1. *Guard:* the export
+  parses, and its cells equal the matrix's.
+- **B. The join** (this is §2.6 step 1). Type each edge's action; map a
+  step tag — `probe_lib_apt`, `probe_binding_ocaml_opam`,
+  `…_inspect` — to its action and so to its edges. An edge's status is
+  the statuses of the steps realizing it; a claim site's is the outcomes
+  of its claims. *Guard:* every action column of every project maps to an
+  edge, or is listed as having none.
+- **C. The overlay.** The generic diagram is the template and a run is
+  drawn on it: edges coloured by status, claim badges by outcome, dead
+  edges greyed, node labels from the row's settings. A selector over
+  project × scenario; delivered per finding 4. *Guard:* every edge id the
+  overlay names exists in the template. At this point the artifact layer
+  and the probes light up from real runs, and the package-manager and
+  bridge edges say "nothing recorded" — honestly.
+- **D. Derived case labels.** Replace the five hand-written case renames
+  with labels read from each world's declarations and settings, so the
+  cases become real worlds.
+- **E. The bridges, one at a time.** For each bridge edge, a
+  package-manager-side inspection that RECORDS, at run time, what the
+  bridge did in this world (finding 2):
+  `resolve_sys` — the installed version, recorded by the run;
+  `depends` — the binding package's declared depends;
+  `depext` / `conf_probe` — whether the conf package is installed, and
+  its depexts; `discover` — what pkg-config answers (`--modversion`,
+  `--variable=libdir`); `realize_cap` — the `.pc` file the system package
+  ships. **Start with ONE bridge on ONE project — conf-gmp on zarith —
+  and generalize only after it lights up.** This is also the evidence the
+  claims in [`design/package_gates.md`](design/package_gates.md) need, so
+  phase E is the groundwork for `gate_admits_the_world` and
+  `discovery_matches_link`.
+
+**Order:** A → B → C gives a working overlay for everything canary
+already runs; E then adds bridges one at a time; D can go alongside.
+Stop for the user after each phase. The record carries the platform from
+the first phase, so the macOS session's runs can be drawn too.
 
 ---
 
