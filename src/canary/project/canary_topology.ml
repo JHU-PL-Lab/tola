@@ -659,20 +659,42 @@ let node_by_id id = List.find nodes ~f:(fun n -> String.equal n.nd_id id)
     an edge to point to two components, so use edge and leave it meaning
     open").
 
-    So: most edges here are a relation some tool establishes, and
-    [eg_action] names the action of ours that realizes it — that is the
-    backbone. But an edge is not REQUIRED to be an action. Where
-    [eg_action] is [None] the relation is real and we run nothing at it,
-    which is itself a finding; and [same_program] is an edge between two
-    consumers that no tool establishes at all — it exists because a claim
-    needs something to point at. The word also means a step-graph
-    dependency elsewhere in canary (`step.deps`); the two are not the
-    same thing and nothing here converts one into the other. *)
+    So: most edges here are a relation some tool establishes, and their
+    annotation names the action of ours that realizes it — that is the
+    backbone. But an edge is not REQUIRED to be an action. Where we run
+    nothing, the relation is still real, which is itself a finding; and
+    [same_program] is an edge between two consumers that no tool
+    establishes at all — it exists because a claim needs something to
+    point at. The word also means a step-graph dependency elsewhere in
+    canary (`step.deps`); the two are not the same thing and nothing here
+    converts one into the other. *)
+
+(** WHAT AN EDGE CARRIES (2026-09-23, user: "the edge in the diagram can
+    be used to annotate either action, or agreement, or customized
+    information"). It was [eg_action : string option] — the name of an
+    action or nothing — which could say neither why a relation with no
+    action of ours still belongs on the page, nor that one edge is there
+    only because of a claim.
+
+    The ACTION is a family ({!Canary_action_family}), because the page is
+    language-free and a step is not: [run] is realized by
+    [probe_binding_ocaml] in one world and [probe_binding_python] in
+    another. *)
+type annotation =
+  | Action of Canary_action_family.t
+      (** an action of ours realizes the relation *)
+  | Agreement of string
+      (** nothing realizes it but a claim of ours: the agreement's slug *)
+  | Info of string
+      (** someone else's relation, annotated with what we know about it —
+          today a short name for whatever establishes it; what a run
+          records about it is phase E's *)
+
 type edge = {
   eg_id : string;
   eg_from : string list;  (** several inputs: an action is n-ary *)
   eg_to : string;
-  eg_action : string option;
+  eg_annotation : annotation;
   eg_tool : string;  (** whose rule runs here *)
   eg_says : string;
   eg_diagonal : bool;  (** crosses layers rather than staying within one *)
@@ -687,106 +709,114 @@ type edge = {
 
 let edges : edge list =
   [ { eg_id = "resolve_sys"; eg_from = [ "pm_sys" ]; eg_to = "pkg_sys";
-      eg_action = Some "fetch_lib"; eg_tool = "the system PM's solver";
+      eg_annotation = Action Canary_action_family.Fetch_lib; eg_tool = "the system PM's solver";
       eg_says = "a package of this name and version is installable here";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "realize_sys"; eg_from = [ "pkg_sys" ];
-      eg_to = "lib_sys"; eg_action = Some "fetch_lib";
+      eg_to = "lib_sys"; eg_annotation = Action Canary_action_family.Fetch_lib;
       eg_tool = "the system PM's unpacker";
       eg_says = "the package's payload is on disk where it claims";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "realize_hdr"; eg_from = [ "pkg_sys" ]; eg_to = "hdr_sys";
-      eg_action = Some "fetch_lib"; eg_tool = "the system PM's unpacker";
+      eg_annotation = Action Canary_action_family.Fetch_lib; eg_tool = "the system PM's unpacker";
       eg_says = "the package ships the headers it claims";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "realize_cap"; eg_from = [ "pkg_sys" ]; eg_to = "cap";
-      eg_action = None; eg_tool = "the packager";
+      eg_annotation = Info "packager"; eg_tool = "the packager";
       eg_says =
         "the capability file describes the payload beside it — and \
          nothing we run reads it";
       eg_diagonal = true; eg_observation = false };
     { eg_id = "build_lib"; eg_from = [ "src_sys" ]; eg_to = "lib_sys";
-      eg_action = Some "build_lib"; eg_tool = "the C compiler and linker";
+      eg_annotation = Action Canary_action_family.Build_lib;
+      eg_tool = "the C compiler and linker";
       eg_says = "this source produced this library";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "build_hdr"; eg_from = [ "src_sys" ]; eg_to = "hdr_sys";
-      eg_action = Some "build_headers"; eg_tool = "the build system";
+      eg_annotation = Action Canary_action_family.Build_headers;
+      eg_tool = "the build system";
       eg_says = "the public headers are where the build puts them";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "stage"; eg_from = [ "lib_sys" ]; eg_to = "staged_sys";
-      eg_action = Some "install_lib"; eg_tool = "the install tool";
+      eg_annotation = Action Canary_action_family.Install_lib;
+      eg_tool = "the install tool";
       eg_says = "what survived being copied out of the build tree";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "depext"; eg_from = [ "bridge" ]; eg_to = "pkg_sys";
-      eg_action = None; eg_tool = "the bridge package's depext table";
+      eg_annotation = Info "depext table";
+      eg_tool = "the bridge package's depext table";
       eg_says =
         "this virtual capability corresponds to THAT system package — a \
          hand-maintained mapping, reviewed rather than computed";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "depends"; eg_from = [ "pkg_lang" ]; eg_to = "bridge";
-      eg_action = Some "fetch_binding"; eg_tool = "the language PM's solver";
+      eg_annotation = Action Canary_action_family.Fetch_binding; eg_tool = "the language PM's solver";
       eg_says =
         "the binding package's declared constraint on the bridge is \
          satisfiable";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "conf_probe"; eg_from = [ "bridge" ]; eg_to = "cap";
-      eg_action = None; eg_tool = "the bridge package's build predicate";
+      eg_annotation = Info "conf predicate";
+      eg_tool = "the bridge package's build predicate";
       eg_says =
         "something on this system answers the capability query — THE \
          DIAGONAL, and the one place the symbolic path touches reality";
       eg_diagonal = true; eg_observation = false };
     { eg_id = "discover"; eg_from = [ "cap" ]; eg_to = "lib_sys";
-      eg_action = None; eg_tool = "pkg-config, CMake, a *-config script";
+      eg_annotation = Info "pkg-config";
+      eg_tool = "pkg-config, CMake, a *-config script";
       eg_says =
         "the capability query resolves to THIS library on disk — which \
          may not be the one the world provisioned";
       eg_diagonal = true; eg_observation = false };
     { eg_id = "resolve_lang"; eg_from = [ "pm_lang" ]; eg_to = "pkg_lang";
-      eg_action = Some "fetch_binding"; eg_tool = "the language PM's solver";
+      eg_annotation = Action Canary_action_family.Fetch_binding; eg_tool = "the language PM's solver";
       eg_says = "the whole dependency set is simultaneously satisfiable";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "install_lang"; eg_from = [ "pkg_lang" ]; eg_to = "mod_lang";
-      eg_action = Some "fetch_binding"; eg_tool = "the language PM's installer";
+      eg_annotation = Action Canary_action_family.Fetch_binding; eg_tool = "the language PM's installer";
       eg_says =
         "the package put its artifacts in the store — the FETCHED \
          direction of the one edge that runs both ways";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "install_surf"; eg_from = [ "pkg_lang" ]; eg_to = "surf_lang";
-      eg_action = Some "fetch_binding"; eg_tool = "the language PM's installer";
+      eg_annotation = Action Canary_action_family.Fetch_binding; eg_tool = "the language PM's installer";
       eg_says = "the user-facing surface is installed as the package claims";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "build_stub"; eg_from = [ "src_lang"; "hdr_sys" ];
-      eg_to = "stub_lang"; eg_action = Some "build_binding";
+      eg_to = "stub_lang"; eg_annotation = Action Canary_action_family.Build_binding;
       eg_tool = "the C compiler";
       eg_says =
         "the shim's types agree with the header — everything ABOVE the \
          types it did not establish";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "link_mod"; eg_from = [ "stub_lang"; "lib_sys" ];
-      eg_to = "mod_lang"; eg_action = Some "build_binding";
+      eg_to = "mod_lang"; eg_annotation = Action Canary_action_family.Build_binding;
       eg_tool = "the linker";
       eg_says = "every symbol the stub requires was resolved";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "pack"; eg_from = [ "mod_lang" ]; eg_to = "pkg_lang";
-      eg_action = Some "pack_binding"; eg_tool = "the packaging tool";
+      eg_annotation = Action Canary_action_family.Pack_binding;
+      eg_tool = "the packaging tool";
       eg_says =
         "a package was assembled from what was built — the BUILT \
          direction of the same edge, and a different relation entirely";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "probe_lib"; eg_from = [ "lib_sys" ]; eg_to = "lib_sys";
-      eg_action = Some "probe_lib"; eg_tool = "nm, and nothing else";
+      eg_annotation = Action Canary_action_family.Probe_lib;
+      eg_tool = "nm, and nothing else";
       eg_says =
         "the library exists and exports something — STATIC: nothing here \
          loads it";
       eg_diagonal = false; eg_observation = true };
     { eg_id = "run"; eg_from = [ "mod_lang"; "lib_sys" ];
-      eg_to = "consumer_artifact"; eg_action = Some "probe_binding";
+      eg_to = "consumer_artifact"; eg_annotation = Action Canary_action_family.Probe_binding;
       eg_tool = "the linker and the dynamic loader";
       eg_says =
         "it linked, loaded and ran when we named every input ourselves";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "run_packaged"; eg_from = [ "pkg_lang" ];
-      eg_to = "consumer_package"; eg_action = Some "probe_binding";
+      eg_to = "consumer_package"; eg_annotation = Action Canary_action_family.Probe_binding;
       eg_tool =
         "the language PM's RESOLUTION — ocamlfind and META, pip's \
          metadata — and then the loader";
@@ -799,18 +829,34 @@ let edges : edge list =
        they do not, the package is at fault and the code is not — which
        no other edge in this graph can tell you. *)
     { eg_id = "same_program"; eg_from = [ "consumer_artifact" ];
-      eg_to = "consumer_package"; eg_action = None;
+      eg_to = "consumer_package";
+      (* the one edge a CLAIM carries: the end-to-end candidate that the
+         package-linked program does what the hand-resolved one did *)
+      eg_annotation = Agreement "package_resolution_suffices";
       eg_tool = "nobody — this is ours to check";
       eg_says =
         "the same source, resolved through the package instead of by \
          hand, does the same thing";
       eg_diagonal = false; eg_observation = false } ]
 
-(** Every action our graph has, against whether an edge names it. An
-    action with no edge is a hole in this model, not in the graph. *)
-let actions_covered () : string list =
-  List.filter_map edges ~f:(fun e -> e.eg_action)
-  |> List.dedup_and_sort ~compare:String.compare
+(** The action families some edge carries, in edge order. *)
+let families_on_edges () : Canary_action_family.t list =
+  List.filter_map edges ~f:(fun e ->
+      match e.eg_annotation with Action f -> Some f | Agreement _ | Info _ -> None)
+  |> List.fold ~init:[] ~f:(fun acc f ->
+         if List.mem acc f ~equal:Canary_action_family.equal then acc
+         else acc @ [ f ])
+
+(** THE CATALOGUE'S ACTIONS WITH NO EDGE (2026-09-23, status.md §2.6 step
+    1: "COMPUTE which actions have no edge from the catalogue — the
+    missing-steps list, derived rather than asserted"). An action the
+    catalogue can run and this graph cannot place is a hole in the MODEL,
+    not in the graph. The page prints this list; it used to print a
+    sentence naming two of them. *)
+let families_without_edge () : Canary_action_family.t list =
+  let placed = families_on_edges () in
+  List.filter (Canary_action_family.of_catalogue ()) ~f:(fun f ->
+      not (List.mem placed f ~equal:Canary_action_family.equal))
 
 (* ── THE ARTIFACT BAND IS ONE BINDING MECHANISM ───────────────────────
 

@@ -69,6 +69,15 @@ let pos_of id =
   | Some p -> p
   | None -> { px = 610; py = 440 }
 
+(* TWO LABELS START AT THEIR EDGE'S MIDPOINT INSTEAD OF CENTRING ON IT
+   (2026-09-23). Both edges leave the native column at a shallow angle,
+   so the midpoint sits against a node box, and the box — drawn over the
+   edges — clipped the label once it was longer than the dot it replaced
+   ("packager" read "ckager"). Placed by hand, like the coordinates
+   above: starting every label was tried and put a line through
+   "conf predicate". *)
+let label_starts_at_midpoint = [ "realize_cap"; "discover" ]
+
 (* ── svg primitives ──────────────────────────────────────────────── *)
 
 let esc (s : string) : string =
@@ -131,6 +140,25 @@ let node_svg ~(live : bool) ~(label : string) ~(sub : string option)
   in
   main ^ subline ^ "</g>"
 
+(* WHAT AN EDGE SAYS, per kind of annotation (2026-09-23): an action by
+   its family's name; a claim by its code, the way every table on this
+   page names one; information in italics, because it names someone
+   else's rule rather than ours. The tooltip spells each out. *)
+let annotation_label = function
+  | T.Action f -> Canary_action_family.to_string f
+  | T.Agreement slug -> Canary_agreement_common.short_code_of_slug slug
+  | T.Info s -> s
+
+let annotation_class = function
+  | T.Action _ -> "elabel"
+  | T.Agreement _ -> "elabel claim"
+  | T.Info _ -> "elabel info"
+
+let annotation_title = function
+  | T.Action f -> "our action " ^ Canary_action_family.to_string f
+  | T.Agreement slug -> "the claim " ^ slug
+  | T.Info s -> s ^ " (we run nothing here)"
+
 let edge_svg ~(live : bool) ~(claims : int) (e : T.edge) =
   let dst = pos_of e.eg_to in
   let cls =
@@ -158,14 +186,22 @@ let edge_svg ~(live : bool) ~(claims : int) (e : T.edge) =
                  {|<circle class="cbadge" cx="%d" cy="%d" r="9"/><text class="cnum" x="%d" y="%d">%d</text>|}
                  (mx + 46) my (mx + 46) (my + 4) claims
            in
+           (* an inline style, because the stylesheet's text-anchor would
+              beat a presentation attribute *)
+           let anchor =
+             if List.mem label_starts_at_midpoint e.T.eg_id ~equal:String.equal
+             then {| style="text-anchor:start"|}
+             else ""
+           in
            Printf.sprintf
              {|<g class="%s"><title>%s — %s</title>
 <line x1="%d" y1="%d" x2="%d" y2="%d" marker-end="url(#a)"/>
-<text class="elabel" x="%d" y="%d">%s</text>%s</g>|}
+<text class="%s" x="%d" y="%d"%s>%s</text>%s</g>|}
              cls
-             (esc (Option.value e.T.eg_action ~default:"(nothing we run)"))
-             (esc e.T.eg_says) src.px src.py dst.px dst.py mx (my - 7)
-             (esc (Option.value e.T.eg_action ~default:"·"))
+             (esc (annotation_title e.T.eg_annotation))
+             (esc e.T.eg_says) src.px src.py dst.px dst.py
+             (annotation_class e.T.eg_annotation) mx (my - 7) anchor
+             (esc (annotation_label e.T.eg_annotation))
              badge))
 
 (** THE one layout. [rename] substitutes a concrete label for a node,
@@ -276,6 +312,9 @@ text-anchor:middle}
 .edge .elabel{font:11px ui-monospace,monospace;fill:var(--mut);
 text-anchor:middle}
 .edge.bare .elabel{fill:var(--warn);font-weight:700}
+.edge .elabel.info{font-style:italic}
+.edge .elabel.claim{fill:var(--acc);font-weight:700}
+.clm{color:var(--acc)}
 .edge.dim{opacity:.18}
 .cbadge{fill:var(--acc);opacity:.9}
 .node.declared rect{stroke-dasharray:none}
@@ -325,18 +364,52 @@ let claim_sites_table () =
                Printf.sprintf "<code>%s</code>%s" (esc p.T.cs_claim)
                  (if p.T.cs_implemented then "" else "<sup>?</sup>")))
     in
+    let annotation =
+      match e.T.eg_annotation with
+      | T.Action f ->
+          Printf.sprintf "<code>%s</code>"
+            (esc (Canary_action_family.to_string f))
+      | T.Agreement slug -> Printf.sprintf "claim <code>%s</code>" (esc slug)
+      | T.Info s -> Printf.sprintf "<em>%s</em> — we run nothing" (esc s)
+    in
     Printf.sprintf
       "<tr%s><td><code>%s</code></td><td class=\"n\">%s</td><td>%s</td><td \
        class=\"n\">%d / %d</td><td>%s</td></tr>"
       (if List.is_empty ps then " class=\"bare\"" else "")
-      (esc e.T.eg_id)
-      (esc (Option.value e.T.eg_action ~default:"— we run nothing —"))
-      (esc e.T.eg_tool) impl cand names
+      (esc e.T.eg_id) annotation (esc e.T.eg_tool) impl cand names
   in
   Printf.sprintf
-    "<table><thead><tr><th>edge</th><th>our action</th><th>whose rule \
+    "<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule \
      runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map T.edges ~f:row))
+
+(* THE STEPS THE PAGE CANNOT PLACE, from the catalogue (2026-09-23,
+   status.md §2.6 step 1). This was a sentence naming two of them — the
+   source fetches — while eight more had no edge either. The source
+   sentence survives only while a source fetch is still on the list. *)
+let missing_steps_note () =
+  let missing = T.families_without_edge () in
+  let is_source f =
+    Canary_action_family.(
+      equal f Fetch_source || equal f Fetch_binding_source)
+  in
+  match missing with
+  | [] -> "Every action family in the catalogue has an edge."
+  | _ ->
+      Printf.sprintf
+        "%d of the catalogue's %d action families have no edge here: %s — \
+         computed from the action catalogue, not listed by hand.%s"
+        (List.length missing)
+        (List.length (Canary_action_family.of_catalogue ()))
+        (String.concat ~sep:", "
+           (List.map missing ~f:(fun f ->
+                "<code>" ^ esc (Canary_action_family.to_string f) ^ "</code>")))
+        (if List.exists missing ~f:is_source then
+           " The source fetches leave both source nodes with no producer, \
+            and adding them is a decision rather than a drawing fix: canary \
+            treats a repository as a provider beside the system and \
+            language packages, which would put it in the package layer."
+         else "")
 
 (** LANGUAGE SIDE FIRST (user, 2026-09-22), so the rows group by it.
     The language PM is what a reader arrives with — they are holding an
@@ -701,19 +774,18 @@ second, which is what makes it artifact-centric rather than
 bridgeless.</div>
 
 <h2>1. The generic chain</h2>
-<p>Nodes are what exists; edges are relations some real tool establishes,
-labelled with the action of ours that realizes them. An edge labelled
-<code>·</code> is a relation that really happens and that we run nothing
-at. The badge on an edge counts the claims that sit there. Hover an edge
-for what it establishes.</p>
-<p class="mechnote"><strong>Not yet every step.</strong>
-<code>fetch_source</code> and <code>fetch_binding_source</code> have no
-edge, so both source nodes appear with no producer. Adding them is not a
-drawing fix: it needs a decision about what a source repository
-<em>is</em> in this picture — canary treats a repo as a provider beside
-the system and language packages, which would put it in the package
-layer.</p>
+<p>Nodes are what exists. An edge points from components to a component
+and carries one annotation. Most carry the <strong>action</strong> of ours
+that realizes the relation. Where we run nothing, an edge carries
+<em>information</em> in italics: whatever does establish the relation, and
+in time what a run recorded about it. One edge carries a
+<strong class="clm">claim</strong>, by its code, because a claim of ours
+is the only thing relating its two ends. The badge on an edge counts the
+claims that sit there. Hover an edge for what it establishes.</p>
+<p class="mechnote"><strong>Not yet every step.</strong> %s</p>
 <div class="key">
+<span><code>fetch_lib</code> our action · <em>pkg-config</em> someone
+else's · <b class="clm">prs</b> a claim</span>
 <span><i class="sw"></i> within a layer, or down one</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
@@ -842,12 +914,16 @@ The nodes, the edges, which edge each claim sits on, and the labels of
 the concrete cases are <em>hand-written lists</em> in
 <code>canary_topology.ml</code> and here — placeholders, checked by pins
 against the registry but not yet computed from the action catalogue.
+Each edge's annotation is typed, though: an action family the catalogue
+has, a registered or candidate claim, or information; and which of the
+catalogue's actions have no edge is computed.
 The diagrams are SVG emitted from that data, with one hand-placed
 coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
     css Canary_matrix.overview_css
-    (* §1 the chain, §1.1 its legend *)
-    (mechanism_panels ()) (node_legend ())
+    (* §1 the chain — the missing steps COUNTED from the catalogue — and
+       §1.1 its legend *)
+    (missing_steps_note ()) (mechanism_panels ()) (node_legend ())
     (* §2 the cases — moved up so the general shape is followed at once by
        its instances (user, 2026-09-23) *)
     (case_panels cases)

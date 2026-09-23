@@ -325,6 +325,7 @@ one. The base vocabulary types:
 | `base/canary_artifact_api.ml` | `native_api`, `binding_api` (provider/consumer claims) |
 | `base/canary_mechanism.ml` | `discipline`, `mechanism` (binding identity — ssot §4.2.1b) |
 | `base/canary_surface.ml` | `native_surface`, `binding_surface`, `surface` (checking-point view) |
+| `base/canary_action_family.ml` | `t` — an action with its LANGUAGE erased (`Probe_binding OCaml` → `Probe_binding`); `of_action` (total), `of_catalogue`. What the overview's language-free edges name (2026-09-23; names are placeholders, user) |
 
 Example of the trap this prevents: `provision` and a redundant `slot`
 subset type were first defined in `action/canary_enumerate.ml`; `provision`

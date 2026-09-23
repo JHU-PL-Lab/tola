@@ -52,6 +52,9 @@ text-anchor:middle}
 .edge .elabel{font:11px ui-monospace,monospace;fill:var(--mut);
 text-anchor:middle}
 .edge.bare .elabel{fill:var(--warn);font-weight:700}
+.edge .elabel.info{font-style:italic}
+.edge .elabel.claim{fill:var(--acc);font-weight:700}
+.clm{color:var(--acc)}
 .edge.dim{opacity:.18}
 .cbadge{fill:var(--acc);opacity:.9}
 .node.declared rect{stroke-dasharray:none}
@@ -154,19 +157,18 @@ second, which is what makes it artifact-centric rather than
 bridgeless.</div>
 
 <h2>1. The generic chain</h2>
-<p>Nodes are what exists; edges are relations some real tool establishes,
-labelled with the action of ours that realizes them. An edge labelled
-<code>·</code> is a relation that really happens and that we run nothing
-at. The badge on an edge counts the claims that sit there. Hover an edge
-for what it establishes.</p>
-<p class="mechnote"><strong>Not yet every step.</strong>
-<code>fetch_source</code> and <code>fetch_binding_source</code> have no
-edge, so both source nodes appear with no producer. Adding them is not a
-drawing fix: it needs a decision about what a source repository
-<em>is</em> in this picture — canary treats a repo as a provider beside
-the system and language packages, which would put it in the package
-layer.</p>
+<p>Nodes are what exists. An edge points from components to a component
+and carries one annotation. Most carry the <strong>action</strong> of ours
+that realizes the relation. Where we run nothing, an edge carries
+<em>information</em> in italics: whatever does establish the relation, and
+in time what a run recorded about it. One edge carries a
+<strong class="clm">claim</strong>, by its code, because a claim of ours
+is the only thing relating its two ends. The badge on an edge counts the
+claims that sit there. Hover an edge for what it establishes.</p>
+<p class="mechnote"><strong>Not yet every step.</strong> 10 of the catalogue's 19 action families have no edge here: <code>fetch_source</code>, <code>configure</code>, <code>scan_sources</code>, <code>fetch_headers</code>, <code>fetch_binding_source</code>, <code>build_app</code>, <code>probe_app</code>, <code>fetch_app</code>, <code>pack_lib</code>, <code>pack_app</code> — computed from the action catalogue, not listed by hand. The source fetches leave both source nodes with no producer, and adding them is a decision rather than a drawing fix: canary treats a repository as a provider beside the system and language packages, which would put it in the package layer.</p>
 <div class="key">
+<span><code>fetch_lib</code> our action · <em>pkg-config</em> someone
+else's · <b class="clm">prs</b> a claim</span>
 <span><i class="sw"></i> within a layer, or down one</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
@@ -190,53 +192,53 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
 <line x1="150" y1="212" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="225">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<text class="elabel info" x="270" y="225" style="text-anchor:start">packager</text></g><g class="edge"><title>our action build_lib — this source produced this library</title>
 <line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>our action build_headers — the public headers are where the build puts them</title>
 <line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>our action install_lib — what survived being copied out of the build tree</title>
 <line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="495" y="194">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="214">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="394">·</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="1070" y1="392" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="150" y1="466" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="1070" y1="466" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="150" y1="550" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -278,53 +280,53 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
 <line x1="150" y1="212" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="225">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<text class="elabel info" x="270" y="225" style="text-anchor:start">packager</text></g><g class="edge"><title>our action build_lib — this source produced this library</title>
 <line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>our action build_headers — the public headers are where the build puts them</title>
 <line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>our action install_lib — what survived being copied out of the build tree</title>
 <line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="495" y="194">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="214">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="394">·</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="1070" y1="392" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="150" y1="466" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="1070" y1="466" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="150" y1="550" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -366,45 +368,45 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
 <line x1="150" y1="212" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="225">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<text class="elabel info" x="270" y="225" style="text-anchor:start">packager</text></g><g class="edge"><title>our action build_lib — this source produced this library</title>
 <line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>our action build_headers — the public headers are where the build puts them</title>
 <line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>our action install_lib — what survived being copied out of the build tree</title>
 <line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="495" y="194">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="214">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="394">·</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -444,45 +446,45 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
 <line x1="150" y1="212" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="225">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<text class="elabel info" x="270" y="225" style="text-anchor:start">packager</text></g><g class="edge"><title>our action build_lib — this source produced this library</title>
 <line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>our action build_headers — the public headers are where the build puts them</title>
 <line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>our action install_lib — what survived being copied out of the build tree</title>
 <line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="495" y="194">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="214">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="394">·</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -522,45 +524,45 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
 <line x1="150" y1="212" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="225">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<text class="elabel info" x="270" y="225" style="text-anchor:start">packager</text></g><g class="edge"><title>our action build_lib — this source produced this library</title>
 <line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>our action build_headers — the public headers are where the build puts them</title>
 <line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>our action install_lib — what survived being copied out of the build tree</title>
 <line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="495" y="194">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="214">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="394">·</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">system PM</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -658,47 +660,47 @@ table in §5.</p>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag bare"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
 <line x1="150" y1="212" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="225">·</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<text class="elabel info" x="270" y="225" style="text-anchor:start">packager</text></g><g class="edge bare"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="495" y="194">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="214">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="394">·</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="1070" y1="392" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="150" y1="466" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="1070" y1="466" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="150" y1="550" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">apt</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -736,23 +738,23 @@ table in §5.</p>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node artifact declared"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node artifact declared"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
 <rect x="46" y="527" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="548">libz3.so — INSIDE the wheel</text><g class="declmark"><title>DECLARED by the experiment: the c_api's exported functions, the soname, and the symbol-version tags — read by declared_symbols_exported, soname_matches_declaration and declared_versions_exported</title>
 <circle cx="244" cy="537" r="8"/><text x="244" y="541">◇</text></g><text class="nsub" x="150" y="564">no system package, no bridge, no discovery</text></g><g class="node pm"><title>opam, pip, cargo — solves constraints and installs</title>
@@ -776,53 +778,53 @@ table in §5.</p>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge dim bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge dim bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge dim"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge dim"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge dim bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge dim bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag dim bare"><title>(nothing we run) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge diag dim bare"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
 <line x1="150" y1="212" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="225">·</text></g><g class="edge"><title>build_lib — this source produced this library</title>
+<text class="elabel info" x="270" y="225" style="text-anchor:start">packager</text></g><g class="edge"><title>our action build_lib — this source produced this library</title>
 <line x1="150" y1="392" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>build_headers — the public headers are where the build puts them</title>
+<text class="elabel" x="150" y="464">build_lib</text><circle class="cbadge" cx="196" cy="471" r="9"/><text class="cnum" x="196" y="475">6</text></g><g class="edge bare"><title>our action build_headers — the public headers are where the build puts them</title>
 <line x1="150" y1="392" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>install_lib — what survived being copied out of the build tree</title>
+<text class="elabel" x="150" y="422">build_headers</text></g><g class="edge"><title>our action install_lib — what survived being copied out of the build tree</title>
 <line x1="150" y1="550" x2="150" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>(nothing we run) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<text class="elabel" x="150" y="580">install_lib</text><circle class="cbadge" cx="196" cy="587" r="9"/><text class="cnum" x="196" y="591">2</text></g><g class="edge bare"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="495" y="194">·</text></g><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>(nothing we run) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="214">·</text></g><g class="edge diag"><title>(nothing we run) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="394">·</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="1070" y1="392" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="150" y1="466" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="1070" y1="466" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="150" y1="550" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">apt — not used here</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -864,33 +866,33 @@ table in §5.</p>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="1070" y1="392" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<text class="elabel" x="1070" y="422">build_binding</text><circle class="cbadge" cx="1116" cy="429" r="9"/><text class="cnum" x="1116" y="433">2</text></g><g class="edge"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
 <line x1="150" y1="466" x2="1070" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="610" y="459">build_binding</text><circle class="cbadge" cx="656" cy="466" r="9"/><text class="cnum" x="656" y="470">2</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="1070" y1="466" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="150" y1="550" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node artifact"><title>the syntactic native surface a binding compiles against</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node artifact"><title>the syntactic native surface a binding compiles against</title>
 <rect x="46" y="443" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="471">torch/*.h</text></g><g class="node artifact declared"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
 <rect x="46" y="527" width="208" height="46" rx="7"/>
@@ -922,33 +924,33 @@ table in §5.</p>
 <text class="bandlabel" x="20" y="50">PM LAYER — who resolves and installs</text><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/>
 <text class="bandlabel" x="20" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/>
 <text class="bandlabel" x="20" y="370">ARTIFACT LAYER — what is actually on disk</text><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/>
-<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>fetch_lib — a package of this name and version is installable here</title>
+<text class="bandlabel" x="20" y="730">PROGRAM — the only band where anything runs</text><g class="edge bare"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="150" y1="62" x2="150" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>fetch_lib — the package's payload is on disk where it claims</title>
+<text class="elabel" x="150" y="130">fetch_lib</text></g><g class="edge"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="150" y1="212" x2="150" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>fetch_lib — the package ships the headers it claims</title>
+<text class="elabel" x="150" y="374">fetch_lib</text><circle class="cbadge" cx="196" cy="381" r="9"/><text class="cnum" x="196" y="385">4</text></g><g class="edge bare"><title>our action fetch_lib — the package ships the headers it claims</title>
 <line x1="150" y1="212" x2="150" y2="466" marker-end="url(#a)"/>
-<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge"><title>fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<text class="elabel" x="150" y="332">fetch_lib</text></g><g class="edge"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<text class="elabel" x="1070" y="130">fetch_binding</text><circle class="cbadge" cx="1116" cy="137" r="9"/><text class="cnum" x="1116" y="141">1</text></g><g class="edge"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
 <line x1="1070" y1="212" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>fetch_binding — the user-facing surface is installed as the package claims</title>
+<text class="elabel" x="1070" y="374">fetch_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">1</text></g><g class="edge"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
 <line x1="1070" y1="212" x2="1070" y2="624" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="1070" y="411">fetch_binding</text><circle class="cbadge" cx="1116" cy="418" r="9"/><text class="cnum" x="1116" y="422">1</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="1070" y1="466" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>build_binding — every symbol the stub requires was resolved</title>
+<text class="elabel" x="1070" y="501">build_binding</text><circle class="cbadge" cx="1116" cy="508" r="9"/><text class="cnum" x="1116" y="512">5</text></g><g class="edge"><title>our action build_binding — every symbol the stub requires was resolved</title>
 <line x1="150" y1="550" x2="1070" y2="550" marker-end="url(#a)"/>
-<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<text class="elabel" x="610" y="543">build_binding</text><circle class="cbadge" cx="656" cy="550" r="9"/><text class="cnum" x="656" y="554">5</text></g><g class="edge"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
 <line x1="1070" y1="550" x2="1070" y2="212" marker-end="url(#a)"/>
-<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="1070" y="374">pack_binding</text><circle class="cbadge" cx="1116" cy="381" r="9"/><text class="cnum" x="1116" y="385">2</text></g><g class="edge bare"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 104 540 a 30 26 0 1 1 22 0"/></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="1070" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<text class="elabel" x="730" y="649">probe_binding</text><circle class="cbadge" cx="776" cy="656" r="9"/><text class="cnum" x="776" y="660">5</text></g><g class="edge"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
 <line x1="150" y1="550" x2="390" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<text class="elabel" x="270" y="649">probe_binding</text><circle class="cbadge" cx="316" cy="656" r="9"/><text class="cnum" x="316" y="660">5</text></g><g class="edge"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
 <line x1="1070" y1="212" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>(nothing we run) — the same source, resolved through the package instead of by hand, does the same thing</title>
+<text class="elabel" x="955" y="480">probe_binding</text><circle class="cbadge" cx="1001" cy="487" r="9"/><text class="cnum" x="1001" y="491">1</text></g><g class="edge"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
 <line x1="390" y1="762" x2="840" y2="762" marker-end="url(#a)"/>
-<text class="elabel" x="615" y="755">·</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
+<text class="elabel claim" x="615" y="755">prs</text><circle class="cbadge" cx="661" cy="762" r="9"/><text class="cnum" x="661" y="766">1</text></g><g class="node pm"><title>apt, brew, dnf — resolves and installs native packages</title>
 <rect x="46" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="150" y="67">apt</text></g><g class="node package"><title>the unit the system PM ships: payload plus metadata</title>
 <rect x="46" y="189" width="208" height="46" rx="7"/>
@@ -993,7 +995,7 @@ A <em>claim site</em> is a set of edges rather than one, and 5 already
 span several: the library's declaration-facing claims sit on both edges
 that can produce a library, and <code>package_resolution_suffices</code>
 runs end to end from the language PM to the package-linked program.</p>
-<table><thead><tr><th>edge</th><th>our action</th><th>whose rule runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody><tr class="bare"><td><code>resolve_sys</code></td><td class="n">fetch_lib</td><td>the system PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>realize_sys</code></td><td class="n">fetch_lib</td><td>the system PM's unpacker</td><td class="n">3 / 1</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup></td></tr><tr class="bare"><td><code>realize_hdr</code></td><td class="n">fetch_lib</td><td>the system PM's unpacker</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>realize_cap</code></td><td class="n">— we run nothing —</td><td>the packager</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>build_lib</code></td><td class="n">build_lib</td><td>the C compiler and linker</td><td class="n">3 / 3</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup>, <code>source_is_declared_ref</code><sup>?</sup>, <code>build_tree_configured_for_source</code><sup>?</sup></td></tr><tr class="bare"><td><code>build_hdr</code></td><td class="n">build_headers</td><td>the build system</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>stage</code></td><td class="n">install_lib</td><td>the install tool</td><td class="n">1 / 1</td><td><code>staged_interface_preserved</code>, <code>no_build_paths_in_installed_library</code><sup>?</sup></td></tr><tr class="bare"><td><code>depext</code></td><td class="n">— we run nothing —</td><td>the bridge package's depext table</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>depends</code></td><td class="n">fetch_binding</td><td>the language PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>conf_probe</code></td><td class="n">— we run nothing —</td><td>the bridge package's build predicate</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>discover</code></td><td class="n">— we run nothing —</td><td>pkg-config, CMake, a *-config script</td><td class="n">0 / 1</td><td><code>discovery_matches_link</code><sup>?</sup></td></tr><tr><td><code>resolve_lang</code></td><td class="n">fetch_binding</td><td>the language PM's solver</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>install_lang</code></td><td class="n">fetch_binding</td><td>the language PM's installer</td><td class="n">0 / 1</td><td><code>package_contains_declared_files</code><sup>?</sup></td></tr><tr><td><code>install_surf</code></td><td class="n">fetch_binding</td><td>the language PM's installer</td><td class="n">1 / 0</td><td><code>api_names_present</code></td></tr><tr><td><code>build_stub</code></td><td class="n">build_binding</td><td>the C compiler</td><td class="n">1 / 1</td><td><code>signatures_agree</code>, <code>signatures_match_debug_info</code><sup>?</sup></td></tr><tr><td><code>link_mod</code></td><td class="n">build_binding</td><td>the linker</td><td class="n">4 / 1</td><td><code>required_symbols_exported</code>, <code>soname_matches_requirement</code>, <code>required_versions_exported</code>, <code>dependencies_provided</code>, <code>compatibility_version_satisfied</code><sup>?</sup></td></tr><tr><td><code>pack</code></td><td class="n">pack_binding</td><td>the packaging tool</td><td class="n">2 / 0</td><td><code>repack_preserves_api</code>, <code>repack_complete</code></td></tr><tr class="bare"><td><code>probe_lib</code></td><td class="n">probe_lib</td><td>nm, and nothing else</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>run</code></td><td class="n">probe_binding</td><td>the linker and the dynamic loader</td><td class="n">1 / 4</td><td><code>behavior_matches</code>, <code>correspondence_holds_across_the_binding</code><sup>?</sup>, <code>no_duplicate_implementation</code><sup>?</sup>, <code>interposition_binds_build_target</code><sup>?</sup>, <code>denotation_stable_across_worlds</code><sup>?</sup></td></tr><tr><td><code>run_packaged</code></td><td class="n">probe_binding</td><td>the language PM's RESOLUTION — ocamlfind and META, pip's metadata — and then the loader</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>same_program</code></td><td class="n">— we run nothing —</td><td>nobody — this is ours to check</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr></tbody></table>
+<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody><tr class="bare"><td><code>resolve_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>realize_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">3 / 1</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup></td></tr><tr class="bare"><td><code>realize_hdr</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>realize_cap</code></td><td class="n"><em>packager</em> — we run nothing</td><td>the packager</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>build_lib</code></td><td class="n"><code>build_lib</code></td><td>the C compiler and linker</td><td class="n">3 / 3</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup>, <code>source_is_declared_ref</code><sup>?</sup>, <code>build_tree_configured_for_source</code><sup>?</sup></td></tr><tr class="bare"><td><code>build_hdr</code></td><td class="n"><code>build_headers</code></td><td>the build system</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>stage</code></td><td class="n"><code>install_lib</code></td><td>the install tool</td><td class="n">1 / 1</td><td><code>staged_interface_preserved</code>, <code>no_build_paths_in_installed_library</code><sup>?</sup></td></tr><tr class="bare"><td><code>depext</code></td><td class="n"><em>depext table</em> — we run nothing</td><td>the bridge package's depext table</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>depends</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>conf_probe</code></td><td class="n"><em>conf predicate</em> — we run nothing</td><td>the bridge package's build predicate</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>discover</code></td><td class="n"><em>pkg-config</em> — we run nothing</td><td>pkg-config, CMake, a *-config script</td><td class="n">0 / 1</td><td><code>discovery_matches_link</code><sup>?</sup></td></tr><tr><td><code>resolve_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>install_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">0 / 1</td><td><code>package_contains_declared_files</code><sup>?</sup></td></tr><tr><td><code>install_surf</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">1 / 0</td><td><code>api_names_present</code></td></tr><tr><td><code>build_stub</code></td><td class="n"><code>build_binding</code></td><td>the C compiler</td><td class="n">1 / 1</td><td><code>signatures_agree</code>, <code>signatures_match_debug_info</code><sup>?</sup></td></tr><tr><td><code>link_mod</code></td><td class="n"><code>build_binding</code></td><td>the linker</td><td class="n">4 / 1</td><td><code>required_symbols_exported</code>, <code>soname_matches_requirement</code>, <code>required_versions_exported</code>, <code>dependencies_provided</code>, <code>compatibility_version_satisfied</code><sup>?</sup></td></tr><tr><td><code>pack</code></td><td class="n"><code>pack_binding</code></td><td>the packaging tool</td><td class="n">2 / 0</td><td><code>repack_preserves_api</code>, <code>repack_complete</code></td></tr><tr class="bare"><td><code>probe_lib</code></td><td class="n"><code>probe_lib</code></td><td>nm, and nothing else</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>run</code></td><td class="n"><code>probe_binding</code></td><td>the linker and the dynamic loader</td><td class="n">1 / 4</td><td><code>behavior_matches</code>, <code>correspondence_holds_across_the_binding</code><sup>?</sup>, <code>no_duplicate_implementation</code><sup>?</sup>, <code>interposition_binds_build_target</code><sup>?</sup>, <code>denotation_stable_across_worlds</code><sup>?</sup></td></tr><tr><td><code>run_packaged</code></td><td class="n"><code>probe_binding</code></td><td>the language PM's RESOLUTION — ocamlfind and META, pip's metadata — and then the loader</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>same_program</code></td><td class="n">claim <code>package_resolution_suffices</code></td><td>nobody — this is ours to check</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr></tbody></table>
 
 <div class="note warn"><strong>7 edges carry no claim at all</strong>
 (resolve_sys, realize_hdr, realize_cap, build_hdr, depext, depends, conf_probe). Every one is a relation a real tool establishes and from which we
@@ -1018,7 +1020,7 @@ about us and not part of the row.</p>
 <table><thead><tr><th>language side</th><th>bridge</th><th>native side</th><th>character</th><th>case</th></tr></thead><tbody><tr><td class="mono">opam</td><td class="mono">conf-gmp (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">zarith</td></tr><tr><td class="mono">opam</td><td class="mono">conf-libssl (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">ssl</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">staged</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">depext:libtorch</td><td class="mono">opam</td><td>unified package universe</td><td class="n">torch</td></tr><tr><td class="mono">opam</td><td class="mono">— absorbed by the consumer —</td><td class="mono">opam</td><td>the consumer package builds the native lib</td><td class="n">z3</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">apt</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">vendored</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: llvmlite wheel's bundled libLLVM</td><td class="n">llvm</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: z3-solver wheel's bundled libz3</td><td class="n">z3</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">apt</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">built</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">staged</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">vendored</td><td class="mono">— no PM between —</td><td class="mono">vendored</td><td>no package manager stands between these two artifacts</td><td class="n">tiny-full</td></tr></tbody></table>
 <div class="note warn"><strong>4 bindings sit in a wrong row, for a known reason</strong> (cairo/ocaml, libffi/ocaml, zlib/ocaml, zstd/ocaml). Each declares a conf package, but on the opam-binding template's own record: the template leaves <code>pr_binding_decls</code> empty, so the gate never reaches this derivation and the row reads <code>⚠ UNDECLARED</code>. That is <code>project/issues.md</code> §2 — a mechanism declared in two places, one of them read — at its second consumer.</div><div class="note warn"><strong>No capability bridge appears in any row, because no project declares one.</strong> The projects declare <code>Headers</code>, <code>Runtime_lib</code> and <code>Link_lib</code> as their C API's components and none declares a <code>Pc_file</code>. That is an absence of DECLARATION, not of the bridge: pkg-config is demonstrably in use — the conf packages' build predicates run it, and canary's own library locator does.</div>
 
-<div class="foot">Generated 2026-09-23 15:05. <strong>What is derived and what is not</strong>,
+<div class="foot">Generated 2026-09-23 17:32. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
 the cooperation topologies are derived from each project's declared
 provisions, gates and C-API components; the mechanism variants from the mechanism
@@ -1027,6 +1029,9 @@ The nodes, the edges, which edge each claim sits on, and the labels of
 the concrete cases are <em>hand-written lists</em> in
 <code>canary_topology.ml</code> and here — placeholders, checked by pins
 against the registry but not yet computed from the action catalogue.
+Each edge's annotation is typed, though: an action family the catalogue
+has, a registered or candidate claim, or information; and which of the
+catalogue's actions have no edge is computed.
 The diagrams are SVG emitted from that data, with one hand-placed
 coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
 <script>

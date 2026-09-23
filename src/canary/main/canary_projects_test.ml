@@ -713,7 +713,11 @@ let topology_joins_pin : Canary_project_test.pure_test =
 
    It also holds the ACTION coverage, because the point of the diagram is
    that it has every step: an action in the graph with no edge naming it
-   is a hole in the model. *)
+   is a hole in the model. (Until 2026-09-23 this sentence was all it
+   did: the body checked claims, edges and nodes, and nothing about
+   actions, because an edge's action was a string. It is typed now — an
+   action FAMILY, a claim, or information — and the clauses at the end
+   hold the coverage for real.) *)
 let topology_graph_pin : Canary_project_test.pure_test =
   { name = "topology.graph_matches_the_registry";
     check =
@@ -741,7 +745,49 @@ let topology_graph_pin : Canary_project_test.pure_test =
         (* the bare-relation census excludes observations, so probe_lib —
            which records evidence rather than relating two parties — does
            not inflate it *)
-        && List.for_all (T.bare_edges ()) ~f:(fun e -> not e.T.eg_observation))
+        && List.for_all (T.bare_edges ()) ~f:(fun e -> not e.T.eg_observation)
+        (* EACH ANNOTATION IS WELL-FORMED (2026-09-23): an action family
+           the catalogue actually runs, a claim the registry or the
+           candidate list knows *)
+        && List.for_all T.edges ~f:(fun e ->
+               match e.T.eg_annotation with
+               | T.Action f ->
+                   List.mem (Canary_action_family.of_catalogue ()) f
+                     ~equal:Canary_action_family.equal
+               | T.Agreement slug -> List.mem known slug ~equal:String.equal
+               | T.Info s -> not (String.is_empty s))
+        (* and all three kinds are in use — the user's point was that an
+           edge may carry any of them, so a graph that stopped using one
+           would quietly be the old action-or-nothing shape again *)
+        && List.exists T.edges ~f:(fun e ->
+               match e.T.eg_annotation with T.Action _ -> true | _ -> false)
+        && List.exists T.edges ~f:(fun e ->
+               match e.T.eg_annotation with T.Agreement _ -> true | _ -> false)
+        && List.exists T.edges ~f:(fun e ->
+               match e.T.eg_annotation with T.Info _ -> true | _ -> false)
+        (* A FAMILY IS ITS ACTIONS' NAME WITH THE LANGUAGE DROPPED — one
+           spelling, checked over the whole catalogue *)
+        && List.for_all
+             (Canary_basic.store_actions ~langs:Canary_lang.[ OCaml; Python ])
+             ~f:(fun a ->
+               let name = Canary_basic.string_of_action a in
+               let fam =
+                 Canary_action_family.to_string (Canary_action_family.of_action a)
+               in
+               String.equal name fam
+               || List.exists Canary_lang.[ OCaml; Python ] ~f:(fun l ->
+                      String.equal name
+                        (fam ^ "_" ^ Canary_lang.string_of_lang l)))
+        (* THE ACTIONS WITH NO EDGE, LISTED (status.md §2.6 step 1). The
+           page computes this list; pinning its value makes a change to it
+           a decision — an edge added for a source fetch, or an action
+           the catalogue grows — rather than a silent re-render *)
+        && List.equal String.equal
+             (List.map (T.families_without_edge ())
+                ~f:Canary_action_family.to_string)
+             [ "fetch_source"; "configure"; "scan_sources"; "fetch_headers";
+               "fetch_binding_source"; "build_app"; "probe_app"; "fetch_app";
+               "pack_lib"; "pack_app" ])
   }
 
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
