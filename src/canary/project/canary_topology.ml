@@ -496,14 +496,24 @@ let unreachable_gates (rows : (t * instance list) list) : instance list =
    enumeration already ranges over — so the diagram has to read it from
    the world rather than draw one arrow and be wrong half the time. *)
 
-type layer = L_pm | L_package | L_artifact | L_program | L_oracle
+(** LAYER keeps its name (user, 2026-09-23, terminology step 0) although
+    canary already uses the word for its CODE layers — base/ → agreement/
+    → tool/ → … — and `agreement/` is literally "the agreement layer".
+    The collision was put to the user and accepted: in the model a layer
+    is PM · package · artifact · program, the network sense the layered
+    diagram was drawn from.
+
+    [L_oracle] is GONE (2026-09-23). It existed for the declaration node,
+    and the declaration stopped being a node — it is a badge on the
+    artifacts it speaks about (see [declared_on]) — so a layer for it
+    would be a place nothing can be. *)
+type layer = L_pm | L_package | L_artifact | L_program
 
 let string_of_layer = function
   | L_pm -> "pm"
   | L_package -> "package"
   | L_artifact -> "artifact"
   | L_program -> "program"
-  | L_oracle -> "oracle"
 
 type side = S_sys | S_bridge | S_lang
 
@@ -629,12 +639,12 @@ let nodes : node list =
        by accident: z3's build-tree probe and its opam-package probe
        both compile `canary/examples/z3/z3_example.ml`. Nothing holds
        them to it. *)
-    { nd_id = "app_artifact"; nd_label = "consumer (artifact-linked)";
+    { nd_id = "consumer_artifact"; nd_label = "consumer (artifact-linked)";
       nd_layer = L_program; nd_side = S_sys;
       nd_gloss =
         "every input named by path — the language module and the native \
          library. Says the CODE is right" };
-    { nd_id = "app_package"; nd_label = "consumer (package-linked)";
+    { nd_id = "consumer_package"; nd_label = "consumer (package-linked)";
       nd_layer = L_program; nd_side = S_lang;
       nd_gloss =
         "names only the binding package and lets the PM resolve the rest. \
@@ -643,10 +653,21 @@ let nodes : node list =
 
 let node_by_id id = List.find nodes ~f:(fun n -> String.equal n.nd_id id)
 
-(** An edge is a relation some tool establishes, and [eg_action] names
-    the action of ours that realizes it. Where that is [None] the
-    relation is real and we run nothing at it — which is itself the
-    finding, not an omission. *)
+(** An EDGE points from components to a component, and its meaning is
+    deliberately left OPEN (user, 2026-09-23, terminology step 0: "the
+    backbone meaning is action, but for agreement use case, we just need
+    an edge to point to two components, so use edge and leave it meaning
+    open").
+
+    So: most edges here are a relation some tool establishes, and
+    [eg_action] names the action of ours that realizes it — that is the
+    backbone. But an edge is not REQUIRED to be an action. Where
+    [eg_action] is [None] the relation is real and we run nothing at it,
+    which is itself a finding; and [same_program] is an edge between two
+    consumers that no tool establishes at all — it exists because a claim
+    needs something to point at. The word also means a step-graph
+    dependency elsewhere in canary (`step.deps`); the two are not the
+    same thing and nothing here converts one into the other. *)
 type edge = {
   eg_id : string;
   eg_from : string list;  (** several inputs: an action is n-ary *)
@@ -759,13 +780,13 @@ let edges : edge list =
          loads it";
       eg_diagonal = false; eg_observation = true };
     { eg_id = "run"; eg_from = [ "mod_lang"; "lib_sys" ];
-      eg_to = "app_artifact"; eg_action = Some "probe_binding";
+      eg_to = "consumer_artifact"; eg_action = Some "probe_binding";
       eg_tool = "the linker and the dynamic loader";
       eg_says =
         "it linked, loaded and ran when we named every input ourselves";
       eg_diagonal = false; eg_observation = false };
     { eg_id = "run_packaged"; eg_from = [ "pkg_lang" ];
-      eg_to = "app_package"; eg_action = Some "probe_binding";
+      eg_to = "consumer_package"; eg_action = Some "probe_binding";
       eg_tool =
         "the language PM's RESOLUTION — ocamlfind and META, pip's \
          metadata — and then the loader";
@@ -777,8 +798,8 @@ let edges : edge list =
        programs from ONE source, resolved two ways, must agree. Where
        they do not, the package is at fault and the code is not — which
        no other edge in this graph can tell you. *)
-    { eg_id = "same_program"; eg_from = [ "app_artifact" ];
-      eg_to = "app_package"; eg_action = None;
+    { eg_id = "same_program"; eg_from = [ "consumer_artifact" ];
+      eg_to = "consumer_package"; eg_action = None;
       eg_tool = "nobody — this is ours to check";
       eg_says =
         "the same source, resolved through the package instead of by \
@@ -866,12 +887,18 @@ let artifact_variants () : artifact_variant list =
 
 (* ── WHERE EVERY CLAIM SITS ───────────────────────────────────────────
 
-   A placement is a SET of edges, not one, from the start (user,
+   A CLAIM SITE — where on the layered graph a claim sits. Named so on
+   2026-09-23 (user, terminology step 0); it was called a "placement",
+   which is base vocabulary for something else entirely:
+   [Canary_artifact.placement] is an artifact's provision and version in
+   one world, and the test file used both senses a few hundred lines
+   apart.
+
+   A claim site is a SET of edges, not one, from the start (user,
    2026-09-22: "we can have more advanced agreement that spans several
    edges, so even for the diagram, I wish it can be a generic data
-   structure"). Nothing spans two yet. Retrofitting a list onto a scalar
-   would touch every row, and the cost of starting with the list is one
-   pair of brackets.
+   structure"). Retrofitting a list onto a scalar would touch every row,
+   and the cost of starting with the list is one pair of brackets.
 
    The network analogy is the user's and it is the right one, with one
    asymmetry worth stating. In a network stack both hosts implement the
@@ -884,13 +911,13 @@ let artifact_variants () : artifact_variant list =
    checksum. That is why the end-to-end invariants are the ones we do
    not have. *)
 
-type placement = {
-  pl_claim : string;
-  pl_edges : string list;  (** edge ids — a SET, see above *)
-  pl_implemented : bool;
+type claim_site = {
+  cs_claim : string;
+  cs_edges : string list;  (** edge ids — a SET, see above *)
+  cs_implemented : bool;
 }
 
-let placements : placement list =
+let claim_sites : claim_site list =
   [ (* --- the library against what the experiment declared ---
 
        ⚠ TWO EDGES, and the first cut had one. These claims are about the
@@ -904,76 +931,76 @@ let placements : placement list =
 
        This is also the multi-edge structure paying for itself on its
        first day rather than hypothetically. *)
-    { pl_claim = "declared_symbols_exported";
-      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = true };
-    { pl_claim = "soname_matches_declaration";
-      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = true };
-    { pl_claim = "declared_versions_exported";
-      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = true };
-    { pl_claim = "exports_accounted_for";
-      pl_edges = [ "build_lib"; "realize_sys" ]; pl_implemented = false };
+    { cs_claim = "declared_symbols_exported";
+      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = true };
+    { cs_claim = "soname_matches_declaration";
+      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = true };
+    { cs_claim = "declared_versions_exported";
+      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = true };
+    { cs_claim = "exports_accounted_for";
+      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = false };
     (* --- the binding against the library --- *)
-    { pl_claim = "required_symbols_exported"; pl_edges = [ "link_mod" ];
-      pl_implemented = true };
-    { pl_claim = "soname_matches_requirement"; pl_edges = [ "link_mod" ];
-      pl_implemented = true };
-    { pl_claim = "required_versions_exported"; pl_edges = [ "link_mod" ];
-      pl_implemented = true };
-    { pl_claim = "dependencies_provided"; pl_edges = [ "link_mod" ];
-      pl_implemented = true };
-    { pl_claim = "signatures_agree"; pl_edges = [ "build_stub" ];
-      pl_implemented = true };
-    { pl_claim = "signatures_match_debug_info"; pl_edges = [ "build_stub" ];
-      pl_implemented = false };
+    { cs_claim = "required_symbols_exported"; cs_edges = [ "link_mod" ];
+      cs_implemented = true };
+    { cs_claim = "soname_matches_requirement"; cs_edges = [ "link_mod" ];
+      cs_implemented = true };
+    { cs_claim = "required_versions_exported"; cs_edges = [ "link_mod" ];
+      cs_implemented = true };
+    { cs_claim = "dependencies_provided"; cs_edges = [ "link_mod" ];
+      cs_implemented = true };
+    { cs_claim = "signatures_agree"; cs_edges = [ "build_stub" ];
+      cs_implemented = true };
+    { cs_claim = "signatures_match_debug_info"; cs_edges = [ "build_stub" ];
+      cs_implemented = false };
     (* --- the package against its own artifacts --- *)
-    { pl_claim = "api_names_present"; pl_edges = [ "install_surf" ];
-      pl_implemented = true };
-    { pl_claim = "package_contains_declared_files";
-      pl_edges = [ "install_lang" ]; pl_implemented = false };
-    { pl_claim = "repack_preserves_api"; pl_edges = [ "pack" ];
-      pl_implemented = true };
-    { pl_claim = "repack_complete"; pl_edges = [ "pack" ];
-      pl_implemented = true };
+    { cs_claim = "api_names_present"; cs_edges = [ "install_surf" ];
+      cs_implemented = true };
+    { cs_claim = "package_contains_declared_files";
+      cs_edges = [ "install_lang" ]; cs_implemented = false };
+    { cs_claim = "repack_preserves_api"; cs_edges = [ "pack" ];
+      cs_implemented = true };
+    { cs_claim = "repack_complete"; cs_edges = [ "pack" ];
+      cs_implemented = true };
     (* --- staging --- *)
-    { pl_claim = "staged_interface_preserved"; pl_edges = [ "stage" ];
-      pl_implemented = true };
-    { pl_claim = "no_build_paths_in_installed_library"; pl_edges = [ "stage" ];
-      pl_implemented = false };
+    { cs_claim = "staged_interface_preserved"; cs_edges = [ "stage" ];
+      cs_implemented = true };
+    { cs_claim = "no_build_paths_in_installed_library"; cs_edges = [ "stage" ];
+      cs_implemented = false };
     (* --- source --- *)
-    { pl_claim = "source_is_declared_ref"; pl_edges = [ "build_lib" ];
-      pl_implemented = false };
-    { pl_claim = "build_tree_configured_for_source"; pl_edges = [ "build_lib" ];
-      pl_implemented = false };
+    { cs_claim = "source_is_declared_ref"; cs_edges = [ "build_lib" ];
+      cs_implemented = false };
+    { cs_claim = "build_tree_configured_for_source"; cs_edges = [ "build_lib" ];
+      cs_implemented = false };
     (* --- runtime: the only claims with a loader under them --- *)
-    { pl_claim = "behavior_matches"; pl_edges = [ "run" ];
-      pl_implemented = true };
-    { pl_claim = "correspondence_holds_across_the_binding";
-      pl_edges = [ "run" ]; pl_implemented = false };
-    { pl_claim = "no_duplicate_implementation"; pl_edges = [ "run" ];
-      pl_implemented = false };
-    { pl_claim = "interposition_binds_build_target"; pl_edges = [ "run" ];
-      pl_implemented = false };
-    { pl_claim = "denotation_stable_across_worlds"; pl_edges = [ "run" ];
-      pl_implemented = false };
-    (* ⚠ THE FIRST END-TO-END CLAIM. Every placement above sits on one
+    { cs_claim = "behavior_matches"; cs_edges = [ "run" ];
+      cs_implemented = true };
+    { cs_claim = "correspondence_holds_across_the_binding";
+      cs_edges = [ "run" ]; cs_implemented = false };
+    { cs_claim = "no_duplicate_implementation"; cs_edges = [ "run" ];
+      cs_implemented = false };
+    { cs_claim = "interposition_binds_build_target"; cs_edges = [ "run" ];
+      cs_implemented = false };
+    { cs_claim = "denotation_stable_across_worlds"; cs_edges = [ "run" ];
+      cs_implemented = false };
+    (* ⚠ THE FIRST END-TO-END CLAIM. Every claim site above sits on one
        edge — a per-layer invariant, in the network analogy. This one
        spans three: the PM resolved, the package realized what it
        promised, and the program built from the package alone did what
        the hand-resolved one did. It is the kind the asymmetry between
        apt and opam makes hard and the kind we had none of. *)
-    { pl_claim = "package_resolution_suffices";
-      pl_edges = [ "resolve_lang"; "run_packaged"; "same_program" ];
-      pl_implemented = false };
-    { pl_claim = "compatibility_version_satisfied"; pl_edges = [ "link_mod" ];
-      pl_implemented = false };
+    { cs_claim = "package_resolution_suffices";
+      cs_edges = [ "resolve_lang"; "run_packaged"; "same_program" ];
+      cs_implemented = false };
+    { cs_claim = "compatibility_version_satisfied"; cs_edges = [ "link_mod" ];
+      cs_implemented = false };
     (* --- the diagonal: the ONE candidate on a cooperation edge --- *)
-    { pl_claim = "discovery_matches_link"; pl_edges = [ "discover" ];
-      pl_implemented = false } ]
+    { cs_claim = "discovery_matches_link"; cs_edges = [ "discover" ];
+      cs_implemented = false } ]
 
 (** The claims sitting on one edge. *)
-let placements_on (edge_id : string) : placement list =
-  List.filter placements ~f:(fun p ->
-      List.mem p.pl_edges edge_id ~equal:String.equal)
+let claim_sites_on (edge_id : string) : claim_site list =
+  List.filter claim_sites ~f:(fun p ->
+      List.mem p.cs_edges edge_id ~equal:String.equal)
 
 (** ⚠ THE CENSUS, and it is the reason this model was worth drawing.
     RELATIONS with no claim on them — each is something a real tool
@@ -985,21 +1012,21 @@ let placements_on (edge_id : string) : placement list =
     quote. *)
 let bare_edges () : edge list =
   List.filter edges ~f:(fun e ->
-      (not e.eg_observation) && List.is_empty (placements_on e.eg_id))
+      (not e.eg_observation) && List.is_empty (claim_sites_on e.eg_id))
 
-(** ⚠ Claims named in [placements] that no registry row backs. Held at
+(** ⚠ Claims named in [claim_sites] that no registry row backs. Held at
     zero by a pin: this list is hand-written, so a renamed agreement
-    would otherwise leave a placement pointing at nothing and the page
+    would otherwise leave a claim site pointing at nothing and the page
     would keep drawing a badge for a claim that no longer exists. *)
-let unknown_placements ~(known : string list) : string list =
-  List.filter_map placements ~f:(fun p ->
-      if List.mem known p.pl_claim ~equal:String.equal then None
-      else Some p.pl_claim)
+let unknown_claim_sites ~(known : string list) : string list =
+  List.filter_map claim_sites ~f:(fun p ->
+      if List.mem known p.cs_claim ~equal:String.equal then None
+      else Some p.cs_claim)
 
-(** ⚠ Placements naming an edge that does not exist. Same reason. *)
-let dangling_placements () : string list =
-  List.concat_map placements ~f:(fun p ->
-      List.filter p.pl_edges ~f:(fun eid ->
+(** ⚠ Claim sites naming an edge that does not exist. Same reason. *)
+let dangling_claim_sites () : string list =
+  List.concat_map claim_sites ~f:(fun p ->
+      List.filter p.cs_edges ~f:(fun eid ->
           not (List.exists edges ~f:(fun e -> String.equal e.eg_id eid))))
 
 (* The terminal view [pp_topologies] was DELETED 2026-09-23 (user: it

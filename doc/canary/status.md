@@ -92,8 +92,9 @@ code the lowering reads.
 
 ## 2. Open now
 
-Six items, in the order they are worth doing. §2.6 is the proposed plan
-for merging the overview page into the framework. §2.5 is the forward look
+Six items, in the order they are worth doing. §2.6 is the plan for
+merging the overview page into the framework (terminology settled,
+derivations next). §2.5 is the forward look
 — what the unlanded claims would take — and is where the manuscript's
 plan material comes from.
 
@@ -372,7 +373,7 @@ report dishonestly on Linux. That is §2.1's reporting question rather
 than this claim's, and it is why this one is third despite being the
 cheapest to evaluate.
 
-### 2.6 Merging the overview page into the framework — PROPOSED, step 0 awaits confirmation
+### 2.6 Merging the overview page into the framework — step 0 done; step 1 awaits confirmation
 
 *(2026-09-23. The user is on the manuscript; this is the plan for the
 spare time, to be taken slowly and confirmed step by step.)*
@@ -426,17 +427,43 @@ exist in canary under other names.**
   those thirteen have no evaluator, which the overview colours red two
   sections later.
 
-**Step 0 — terminology, to settle before any code.** Each collision is
-cheapest to resolve now:
+**Step 0 — terminology. DONE 2026-09-23** (user's decisions; renames
+landed in `canary_topology.ml` and `canary_overview_page.ml`):
 
-| page term | collides with | proposal |
+| term | decision | what changed |
 | --- | --- | --- |
-| placement (claim → edge) | `Canary_artifact.placement` — base vocabulary, per-artifact provision + version | rename the page's: *claim site* |
-| layer (PM / package / artifact) | the code layers `base/ → agreement/ → …` — "the agreement layer" is a directory | keep *layer* for the model, never unqualified in prose? |
-| edge (a relation an action establishes) | step-graph dependency edges (`step.deps`) | open |
-| topology | projects.md §1's *dimensions* | one name for one typed triple |
-| consumer program | `App` / the probe's `example` | open |
-| linking lift (user, 2026-09-23) | nothing yet — the method deriving the package-linked probe | adopt |
+| **claim site** | adopted — where on the layered graph a claim sits, a SET of edges | was *placement*, which is base vocabulary for an artifact's provision and version; the test file had used both senses a few hundred lines apart. `claim_site`, `claim_sites`, `cs_*` fields |
+| **layer** | kept, collision with the code layers accepted | none; recorded on the type |
+| **edge** | kept, meaning left OPEN — the backbone meaning is an action, but an edge only has to point from components to a component | none; recorded on the type. `same_program` is the case that needs the openness: no tool establishes it |
+| **consumer program** | adopted — the thing that uses the package, and its counterpart that uses the artifacts; `App` and `example` are too concrete | node ids `app_*` → `consumer_artifact` / `consumer_package` |
+| **topology** | kept; examined for the paper below | none |
+| **linking lift** | adopted | none yet |
+
+Also removed while there: `L_oracle`, a layer that existed only for the
+declaration node — which stopped being a node.
+
+**"Topology" as a paper term — examined (user asked).** The manuscript
+does not use the word yet, and it has no order theory for the word to
+collide with; its established structural word is *chain*. The sense we
+want is standard in systems and networking — the arrangement of
+components and their connections — and networking already uses it for a
+KIND ("a star topology"), which is exactly how the rows are used ("a
+conf-bridged topology"). The risk is the venue: a PL reader's first
+meaning is the mathematical one (open sets; the Scott topology of domain
+theory), so unqualified *topology* in an OOPSLA/PLDI paper invites the
+objection that the word is being used loosely, and would become a real
+clash if the paper ever formalizes worlds as an order. **Recommendation:
+keep it, never unqualified.** Define it once as the triple — who supplies
+the native side, what joins, who supplies the language side — and avoid
+topological vocabulary near it (open, continuous, neighbourhood). For
+the qualifier, *composition topology* reads better to a PL reviewer than
+*cooperation topology*: the draft already says *composition*, and it
+describes what happens (someone composes two stacks) instead of
+crediting package managers with agency. *PM cooperation* stays fine as
+the informal name of the view. Checked and rejected: *configuration*
+(build configuration, `./configure`), *wiring* (canary's `app_wiring`),
+*pattern* (retired — Pattern A–F), *shape* (already the draft's
+informal word, too weak for a defined term).
 
 **Then, one placeholder at a time**, keeping the hand-written version as
 the check until the derivation agrees with it:

@@ -705,9 +705,9 @@ let topology_joins_pin : Canary_project_test.pure_test =
   }
 
 (* THE LAYERED GRAPH DOES NOT DRIFT FROM THE REGISTRY (2026-09-22).
-   [Canary_topology.placements] is hand-written — it says which edge each
-   claim sits on — and the page draws a badge per placement. Two ways it
-   rots silently: a renamed agreement leaves a placement pointing at
+   [Canary_topology.claim_sites] is hand-written — it says which edge each
+   claim sits on — and the page draws a badge per claim site. Two ways it
+   rots silently: a renamed agreement leaves a claim site pointing at
    nothing, and a renamed edge leaves one pointing nowhere. Neither is
    visible on the page, which would carry on drawing a count.
 
@@ -726,9 +726,9 @@ let topology_graph_pin : Canary_project_test.pure_test =
                 p.Canary_agreement.prop_slug)
         in
         (* every placed claim is a real registry row or candidate *)
-        List.is_empty (T.unknown_placements ~known)
+        List.is_empty (T.unknown_claim_sites ~known)
         (* every placed edge exists *)
-        && List.is_empty (T.dangling_placements ())
+        && List.is_empty (T.dangling_claim_sites ())
         (* every node an edge names exists *)
         && List.for_all T.edges ~f:(fun e ->
                List.for_all (e.T.eg_to :: e.T.eg_from) ~f:(fun n ->
@@ -737,7 +737,7 @@ let topology_graph_pin : Canary_project_test.pure_test =
            the declaration-facing lib claims sit on both producers of the
            library node, which is what stopped `realize_sys` reading as
            an edge nothing checks *)
-        && List.exists T.placements ~f:(fun p -> List.length p.T.pl_edges > 1)
+        && List.exists T.claim_sites ~f:(fun p -> List.length p.T.cs_edges > 1)
         (* the bare-relation census excludes observations, so probe_lib —
            which records evidence rather than relating two parties — does
            not inflate it *)

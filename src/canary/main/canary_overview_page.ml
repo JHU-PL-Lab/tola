@@ -61,8 +61,8 @@ let layout : (string * pos) list =
     (* the two consumers sit under the side whose resolution they use:
        the artifact-linked one names paths, the package-linked one names
        a package *)
-    ("app_artifact", { px = 390; py = 762 });
-    ("app_package", { px = 840; py = 762 }) ]
+    ("consumer_artifact", { px = 390; py = 762 });
+    ("consumer_package", { px = 840; py = 762 }) ]
 
 let pos_of id =
   match List.Assoc.find layout id ~equal:String.equal with
@@ -200,7 +200,7 @@ let diagram ?(rename = fun (_ : string) -> None)
            then ""
            else
              edge_svg ~live:(not (dead e.T.eg_id))
-               ~claims:(List.length (T.placements_on e.T.eg_id))
+               ~claims:(List.length (T.claim_sites_on e.T.eg_id))
                e))
   in
   let ns =
@@ -311,10 +311,10 @@ tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}|}
 
-let placements_table () =
+let claim_sites_table () =
   let row (e : T.edge) =
-    let ps = T.placements_on e.T.eg_id in
-    let impl = List.count ps ~f:(fun p -> p.T.pl_implemented) in
+    let ps = T.claim_sites_on e.T.eg_id in
+    let impl = List.count ps ~f:(fun p -> p.T.cs_implemented) in
     let cand = List.length ps - impl in
     let names =
       if List.is_empty ps then
@@ -322,8 +322,8 @@ let placements_table () =
       else
         String.concat ~sep:", "
           (List.map ps ~f:(fun p ->
-               Printf.sprintf "<code>%s</code>%s" (esc p.T.pl_claim)
-                 (if p.T.pl_implemented then "" else "<sup>?</sup>")))
+               Printf.sprintf "<code>%s</code>%s" (esc p.T.cs_claim)
+                 (if p.T.cs_implemented then "" else "<sup>?</sup>")))
     in
     Printf.sprintf
       "<tr%s><td><code>%s</code></td><td class=\"n\">%s</td><td>%s</td><td \
@@ -558,8 +558,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("hdr_sys", "gmp.h"); ("src_lang", "Zarith.git");
               ("stub_lang", "zarith_stubs.a"); ("mod_lang", "zarith.cmxa");
               ("surf_lang", "zarith.mli");
-              ("app_artifact", "zarith_example (paths)");
-              ("app_package", "zarith_example (-package zarith)") ];
+              ("consumer_artifact", "zarith_example (paths)");
+              ("consumer_package", "zarith_example (-package zarith)") ];
         ca_sub =
           assoc
             [ ("bridge", "an opam package — written by an opam maintainer");
@@ -579,7 +579,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("lib_sys", "libz3.so — INSIDE the wheel");
               ("mod_lang", "z3/*.py + native ext");
               ("surf_lang", "z3.__all__");
-              ("app_package", "python -c 'import z3'") ];
+              ("consumer_package", "python -c 'import z3'") ];
         ca_sub =
           assoc
             [ ("lib_sys", "no system package, no bridge, no discovery");
@@ -607,8 +607,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("bridge", "conf-llvm-shared {= 19}"); ("cap", "llvm-config");
               ("pm_lang", "opam"); ("pkg_lang", "llvm.19-shared");
               ("mod_lang", "llvm.cmxa");
-              ("app_artifact", "llvm_example (build tree)");
-              ("app_package", "llvm_example (-package llvm)") ];
+              ("consumer_artifact", "llvm_example (build tree)");
+              ("consumer_package", "llvm_example (-package llvm)") ];
         ca_sub =
           assoc
             [ ("bridge", "still runs — against the SYSTEM, not this build");
@@ -632,8 +632,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("hdr_sys", "torch/*.h"); ("src_lang", "ocaml-torch.git");
               ("stub_lang", "libtorch_core_stubs.a");
               ("mod_lang", "torch.cmxa"); ("surf_lang", "torch.mli");
-              ("app_artifact", "torch_example (paths)");
-              ("app_package", "torch_example (-package torch)") ];
+              ("consumer_artifact", "torch_example (paths)");
+              ("consumer_package", "torch_example (-package torch)") ];
         ca_sub =
           assoc
             [ ("bridge",
@@ -659,7 +659,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("stub_lang", "_sqlite3.cpython-*.so");
               ("mod_lang", "sqlite3/__init__.py");
               ("surf_lang", "dir(sqlite3)");
-              ("app_package", "python -c 'import sqlite3'") ];
+              ("consumer_package", "python -c 'import sqlite3'") ];
         ca_sub =
           assoc
             [ ("pkg_lang", "chosen at interpreter build time, not here");
@@ -804,7 +804,7 @@ seam would have shown one row's halves on two pages, which is worse.</div>
 
 <h2 id="census">4. Where every claim sits, and the edges where none do</h2>
 <p>%d claims — %d implemented, %d candidates — placed on the edges of §1.
-A placement is a <em>set</em> of edges rather than one, and %d already
+A <em>claim site</em> is a set of edges rather than one, and %d already
 span several: the library's declaration-facing claims sit on both edges
 that can produce a library, and <code>package_resolution_suffices</code>
 runs end to end from the language PM to the package-linked program.</p>
@@ -855,14 +855,14 @@ coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
     overview
     (* §4 the census — the total is COUNTED: it was a literal
        "Twenty-five" and went stale the day a candidate was added *)
-    (List.length T.placements)
-    (List.count T.placements ~f:(fun p -> p.T.pl_implemented))
-    (List.count T.placements ~f:(fun p -> not p.T.pl_implemented))
+    (List.length T.claim_sites)
+    (List.count T.claim_sites ~f:(fun p -> p.T.cs_implemented))
+    (List.count T.claim_sites ~f:(fun p -> not p.T.cs_implemented))
     (* counted, like the total above: a literal "Three" was written here
        in the same edit that removed the stale "Twenty-five", and it was
        wrong on arrival — five sites span several edges *)
-    (List.count T.placements ~f:(fun p -> List.length p.T.pl_edges > 1))
-    (placements_table ()) (List.length bare)
+    (List.count T.claim_sites ~f:(fun p -> List.length p.T.cs_edges > 1))
+    (claim_sites_table ()) (List.length bare)
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
     (* §5 the topologies *)
