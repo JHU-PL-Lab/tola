@@ -122,12 +122,13 @@ let node_svg ~(live : bool) ~(label : string) ~(sub : string option)
           (esc what)
           (x + box_w - 10) (y + 10) (x + box_w - 10) (y + 14)
   in
+  (* [data-node] is the handle a recorded run's overlay finds the node by *)
   let main =
     Printf.sprintf
-      {|<g class="%s"><title>%s</title>
+      {|<g class="%s" data-node="%s"><title>%s</title>
 <rect x="%d" y="%d" width="%d" height="%d" rx="7"/>
 <text class="nlabel" x="%d" y="%d">%s</text>%s|}
-      cls (esc n.T.nd_gloss) x y box_w box_h p.px
+      cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y box_w box_h p.px
       (if Option.is_some sub then p.py - 2 else p.py + 5)
       (esc label) badge
   in
@@ -173,8 +174,8 @@ let edge_svg ~(live : bool) ~(claims : int) (e : T.edge) =
          if String.equal from_id e.T.eg_to then
            (* a self edge: probe_lib reads the artifact it stands on *)
            Printf.sprintf
-             {|<g class="%s"><title>%s</title><path d="M %d %d a 30 26 0 1 1 22 0"/></g>|}
-             cls
+             {|<g class="%s" data-edge="%s"><title>%s</title><path d="M %d %d a 30 26 0 1 1 22 0"/></g>|}
+             cls (esc e.T.eg_id)
              (esc (e.T.eg_says))
              (src.px - 46) (src.py - 10)
          else
@@ -194,10 +195,10 @@ let edge_svg ~(live : bool) ~(claims : int) (e : T.edge) =
              else ""
            in
            Printf.sprintf
-             {|<g class="%s"><title>%s — %s</title>
+             {|<g class="%s" data-edge="%s"><title>%s — %s</title>
 <line x1="%d" y1="%d" x2="%d" y2="%d" marker-end="url(#a)"/>
 <text class="%s" x="%d" y="%d"%s>%s</text>%s</g>|}
-             cls
+             cls (esc e.T.eg_id)
              (esc (annotation_title e.T.eg_annotation))
              (esc e.T.eg_says) src.px src.py dst.px dst.py
              (annotation_class e.T.eg_annotation) mx (my - 7) anchor
@@ -264,14 +265,14 @@ let diagram ?(rename = fun (_ : string) -> None)
 let css =
   {|:root{--bg:#fbfaf8;--fg:#1d1c1a;--mut:#6a665f;--line:#d9d4cb;
 --pm:#e8eef6;--pkg:#f3ecdf;--art:#e9f1e9;--prog:#f6e8e8;--warn:#b4451f;
---card:#fff;--acc:#2b5f8a}
+--card:#fff;--acc:#2b5f8a;--ok:#2f7d3a;--bad:#c0262d;--xf:#b07a12}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
 --bg:#161514;--fg:#eceae6;--mut:#a09a91;--line:#35322e;
 --pm:#1d2530;--pkg:#2a2519;--art:#1a241b;--prog:#2b1d1d;--card:#1f1e1c;
---acc:#7fb0dc;--warn:#e0805a}}
+--acc:#7fb0dc;--warn:#e0805a;--ok:#7cc488;--bad:#f07f84;--xf:#e8bf5c}}
 :root[data-theme="dark"]{--bg:#161514;--fg:#eceae6;--mut:#a09a91;--line:#35322e;
 --pm:#1d2530;--pkg:#2a2519;--art:#1a241b;--prog:#2b1d1d;--card:#1f1e1c;
---acc:#7fb0dc;--warn:#e0805a}
+--acc:#7fb0dc;--warn:#e0805a;--ok:#7cc488;--bad:#f07f84;--xf:#e8bf5c}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);margin:0;padding:0 16px 80px;
 font:15px/1.6 ui-serif,Georgia,serif;-webkit-text-size-adjust:100%}
@@ -315,6 +316,36 @@ text-anchor:middle}
 .edge .elabel.info{font-style:italic}
 .edge .elabel.claim{fill:var(--acc);font-weight:700}
 .clm{color:var(--acc)}
+.rec .edge line,.rec .edge path{stroke-dasharray:none}
+.rec .edge.st-ran line,.rec .edge.st-ran path{stroke:var(--ok);stroke-width:2.6;opacity:1}
+.rec .edge.st-warm line,.rec .edge.st-warm path{stroke:var(--ok);stroke-width:2.6;
+opacity:.9;stroke-dasharray:7 3}
+.rec .edge.st-xfail line,.rec .edge.st-xfail path{stroke:var(--xf);stroke-width:2.6;opacity:1}
+.rec .edge.st-fail line,.rec .edge.st-fail path{stroke:var(--bad);stroke-width:3.2;opacity:1}
+.rec .edge.st-blocked line,.rec .edge.st-blocked path{stroke:var(--bad);stroke-width:2.4;
+opacity:1;stroke-dasharray:5 3}
+.rec .edge.st-unrecorded line,.rec .edge.st-unrecorded path{stroke:var(--mut);
+stroke-width:2;opacity:1;stroke-dasharray:1 4}
+.rec .edge.st-absent{opacity:.14}
+.rec .edge.st-not_ours{opacity:.5}
+.rec .edge.st-not_ours line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 5}
+.rec .edge.st-claim line{stroke:var(--acc);stroke-width:1.6;stroke-dasharray:4 4}
+.rec .edge.cl-violated .cbadge{fill:var(--bad)}
+.rec .edge.cl-holds .cbadge{fill:var(--ok)}
+.rec .edge.cl-partial .cbadge{fill:var(--xf)}
+.rec .edge.cl-undecided .cbadge,.rec .edge.cl-unevaluated .cbadge{fill:var(--mut)}
+.rec .node .nsub{fill:var(--fg)}
+.sw.ok{border-top:3px solid var(--ok)}.sw.okw{border-top:3px dashed var(--ok)}
+.sw.xf{border-top:3px solid var(--xf)}.sw.bad{border-top:3px solid var(--bad)}
+.sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
+.sw.no{border-top:2px dashed var(--mut);opacity:.6}
+.o-violated{color:var(--bad);font-weight:700}.o-holds{color:var(--ok)}
+.o-undecided,.o-unevaluated{color:var(--mut)}
+select{font:13px ui-sans-serif,system-ui,sans-serif;max-width:100%;
+padding:.3rem .4rem;border:1px solid var(--line);border-radius:6px;
+background:var(--card);color:var(--fg)}
+.selbar button:disabled{opacity:.45;cursor:not-allowed}
+ul.unpl{margin:.2rem 0 0;padding-left:1.2rem;font-size:.88rem;color:var(--mut)}
 .edge.dim{opacity:.18}
 .cbadge{fill:var(--acc);opacity:.9}
 .node.declared rect{stroke-dasharray:none}
@@ -573,6 +604,56 @@ let case_panels (cases : case list) =
   Printf.sprintf {|<div class="selbar" data-group="case">%s</div>%s|} buttons
     panels
 
+(** THE SAME CASES, AS RECORDED (2026-09-23, status.md §2.7 phase C; user:
+    keep the hand-drawn cases, and give separate buttons to show the
+    running ones, so the two can be compared). A recorded world is drawn
+    on ONE template — the generic diagram, every node given an empty
+    sublabel to fill — by the script below, from the per-machine file
+    [Canary_overview_runs] writes. This page holds no run state: a button
+    exists for each case that has a counterpart, and whether the counterpart
+    has been recorded is the file's to say. *)
+let recorded_section (cases : case list) =
+  let buttons =
+    String.concat
+      (List.filter_map cases ~f:(fun c ->
+           if List.Assoc.mem Canary_overview_runs.counterparts c.ca_key
+                ~equal:String.equal
+           then
+             Some
+               (Printf.sprintf {|<button data-rec-case="%s">%s</button>|}
+                  (esc c.ca_key) (esc c.ca_title))
+           else None))
+  in
+  Printf.sprintf
+    {|<div id="recwrap"><h3 id="recorded">2.1 The same cases, as recorded</h3>
+<p>The cases above are drawn by hand: what we expect. Each button below
+draws a <em>recorded</em> world with that case's shape on the same layout,
+so the two can be compared by switching. An edge is coloured by what the
+steps realizing it did in the last recorded run, a claim badge by the
+outcomes of the claims placed there, and the world's placements sit under
+the node names. An edge this world realizes no step of is faint; an edge
+someone else's rule establishes is dotted, because nothing is recorded
+there yet. The wheel case has no counterpart while z3 is muted.</p>
+<div class="selbar recbar">%s</div>
+<p><label>any recorded world: <select id="recsel"></select></label></p>
+<p id="rechead" class="edet">no recorded runs loaded — <code>canary
+overview</code> writes them to <code>overview_runs.js</code> beside this
+page</p>
+<div id="rec" class="rec">%s</div>
+<div class="key reckey">
+<span><i class="sw ok"></i> ran</span>
+<span><i class="sw okw"></i> warm — an earlier run's verdict</span>
+<span><i class="sw xf"></i> expected failure confirmed</span>
+<span><i class="sw bad"></i> failed (dashed: blocked)</span>
+<span><i class="sw un"></i> in the chain, never logged</span>
+<span><i class="sw ab"></i> not in this world</span>
+<span><i class="sw no"></i> someone else's rule — nothing recorded</span>
+</div>
+<div id="recclaims"></div>
+<div id="recunplaced"></div></div>|}
+    buttons
+    (diagram ~sublabel:(fun _ -> Some "") ())
+
 let script =
   {|<script>
 (function(){
@@ -607,6 +688,82 @@ if(strip){
     g.addEventListener('mouseleave',function(){ strip.classList.remove('lit'); });
   });
 }
+})();
+</script>|}
+
+(** THE OVERLAY'S SCRIPT (2026-09-23). It loads every machine's record —
+    a missing file is a failed script tag and nothing more — and applies a
+    view's words to the template: a state class on each edge, an outcome
+    class on each badge, the placements as node sublabels. It decides
+    nothing; every word it applies was computed in [Canary_overview_runs].
+    [#rec=<view>] in the URL selects a view, so a world can be linked. *)
+let runs_script () =
+  String.concat
+    (List.map Canary_overview_runs.all_file_names ~f:(fun f ->
+         Printf.sprintf {|<script src="%s"></script>
+|} f))
+  ^ {|<script>
+(function(){
+var runs=window.CANARY_RUNS||[], views=[], byId={}, cases={};
+runs.forEach(function(r){
+  (r.views||[]).forEach(function(v){
+    v.key=v.id+'@'+r.machine; v.machine=r.machine; views.push(v); byId[v.key]=v; });
+  Object.keys(r.cases||{}).forEach(function(k){
+    if(!cases[k]) cases[k]=r.cases[k]+'@'+r.machine; });
+});
+var sel=document.getElementById('recsel'), head=document.getElementById('rechead'),
+    rec=document.getElementById('rec');
+if(!sel||!rec) return;
+document.querySelectorAll('.recbar button').forEach(function(b){
+  if(!cases[b.dataset.recCase]){ b.disabled=true; b.title='no recorded world for this case'; }
+});
+if(!views.length) return;
+views.forEach(function(v){
+  var o=document.createElement('option'); o.value=v.key;
+  o.textContent=v.project+' · '+v.lang+' · '+v.scenario+' ('+v.machine+')';
+  sel.appendChild(o); });
+var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','not_ours','claim'],
+    OUTS=['violated','holds','partial','undecided','unevaluated'];
+function esc(s){ var d=document.createElement('span'); d.textContent=s; return d.innerHTML; }
+function show(key){
+  var v=byId[key]; if(!v) return;
+  sel.value=key;
+  rec.querySelectorAll('[data-edge]').forEach(function(g){
+    var e=g.getAttribute('data-edge');
+    STATES.forEach(function(s){ g.classList.remove('st-'+s); });
+    OUTS.forEach(function(o){ g.classList.remove('cl-'+o); });
+    g.classList.add('st-'+(v.edges[e]||'absent'));
+    if(v.badges[e]) g.classList.add('cl-'+v.badges[e]);
+  });
+  rec.querySelectorAll('[data-node]').forEach(function(g){
+    var t=g.querySelector('.nsub'); if(t) t.textContent=v.nodes[g.getAttribute('data-node')]||'';
+  });
+  head.textContent=v.project+' — '+v.lang+' — '+v.scenario+' — recorded on '
+    +(v.recorded_on.length?v.recorded_on.join(', '):'(no platform logged)')
+    +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet');
+  var cl=Object.keys(v.claims);
+  document.getElementById('recclaims').innerHTML=cl.length
+    ?'<p class="mechnote"><strong>Claims the graph places, in this world:</strong> '
+      +cl.map(function(c){ return '<code>'+esc(c)+'</code> <span class="o-'+v.claims[c]+'">'
+        +esc(v.claims[c])+'</span>'; }).join(' · ')+'</p>'
+    :'';
+  var up=Object.keys(v.unplaced);
+  document.getElementById('recunplaced').innerHTML=up.length
+    ?'<p class="mechnote"><strong>Steps of this world with no edge on the page:</strong></p><ul class="unpl">'
+      +up.map(function(t){ return '<li><code>'+esc(t)+'</code> — '+esc(v.unplaced[t])+'</li>'; }).join('')+'</ul>'
+    :'';
+  document.querySelectorAll('.recbar button').forEach(function(b){
+    b.classList.toggle('on', cases[b.dataset.recCase]===key); });
+  try{ history.replaceState(null,'','#rec='+encodeURIComponent(key)); }catch(e){}
+}
+sel.addEventListener('change',function(){ show(sel.value); });
+document.querySelectorAll('.recbar button').forEach(function(b){
+  b.addEventListener('click',function(){ var k=cases[b.dataset.recCase]; if(k) show(k); });
+});
+var m=/#rec=([^&]+)/.exec(location.hash), want=m?decodeURIComponent(m[1]):null;
+show(want&&byId[want]?want:(cases.conf||views[0].key));
+// a link that names a world lands on it
+if(want&&byId[want]){ var h=document.getElementById('recorded'); if(h) h.scrollIntoView(); }
 })();
 </script>|}
 
@@ -750,11 +907,12 @@ let render (projects : (string * Canary_project_run.project_run) list)
 %s</style></head><body><main>
 
 <h1>How two package ecosystems are joined</h1>
-<p class="lede">General mechanism only — no project, no version, no verdict.
-What ran and what it decided is the
+<p class="lede">General mechanism — no project, no version, no verdict in
+the page itself. What ran and what it decided is the
 <a href="projects/matrix.html">result matrix</a>; this page is what
-<em>can</em> exist, which is a different question and does not belong on
-the same scroll.</p>
+<em>can</em> exist, which is a different question. The one exception is
+§2.1, which draws a recorded run over the same layout for comparison,
+from a separate per-machine file.</p>
 
 <div class="note"><strong>A bridge is a thing, not a relation.</strong>
 It is concrete, separate package content whose purpose is package-manager
@@ -918,15 +1076,20 @@ Each edge's annotation is typed, though: an action family the catalogue
 has, a registered or candidate claim, or information; and which of the
 catalogue's actions have no edge is computed.
 The diagrams are SVG emitted from that data, with one hand-placed
-coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
+coordinate per node. The recorded worlds of §2.1 are not in this page:
+they are read from <code>overview_runs.js</code> (one per machine), which
+<code>canary overview</code> computes from the run record — each edge's
+state from the steps placed on it, each badge from its claims' outcomes.
+· <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
     css Canary_matrix.overview_css
     (* §1 the chain — the missing steps COUNTED from the catalogue — and
        §1.1 its legend *)
     (missing_steps_note ()) (mechanism_panels ()) (node_legend ())
     (* §2 the cases — moved up so the general shape is followed at once by
-       its instances (user, 2026-09-23) *)
-    (case_panels cases)
+       its instances (user, 2026-09-23) — and §2.1, the same cases as
+       recorded, for comparison *)
+    (case_panels cases ^ recorded_section cases)
     (* §3 the agreement overview *)
     overview
     (* §4 the census — the total is COUNTED: it was a literal
@@ -943,7 +1106,7 @@ coordinate per node. · <a href="projects/matrix.html">result matrix</a></div>
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
     (* §5 the topologies *)
     (topology_table projects) (topology_notes projects)
-    (esc generated_at) script
+    (esc generated_at) (script ^ runs_script ())
 
 let docs_path = "docs/canary/overview.html"
 

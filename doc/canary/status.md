@@ -492,7 +492,7 @@ the check until the derivation agrees with it:
 6. **Recorded run results on the case diagrams** — brought forward by
    the user on 2026-09-23 and planned as §2.7.
 
-### 2.7 Run results on the overview diagrams — A and B landed; C next
+### 2.7 Run results on the overview diagrams — A, B and C landed; D next
 
 *(2026-09-23, user: "the cases in section 2 are generated from
 hardcoded code, not from the running result. I wish a feature to
@@ -839,6 +839,55 @@ before phase A.
    what the fetch asked — its provider — not where the world's library
    came from; the first cut read the world's provision and called the
    fetch a supplied copy.
+
+**Phase C landed 2026-09-23: the page draws recorded worlds.** The user
+asked to keep the hand-drawn cases and to show the recorded ones with
+separate buttons, so the running worlds can be compared with the
+proposed ones by switching — not literally side by side. §2.1 of the
+overview now has a button for each case that has a recorded counterpart,
+a menu of every recorded world, and one template diagram the script
+paints: each edge by what the steps placed on it did (ran, warm,
+expected failure, failed, blocked, never logged), an action edge the
+world does not realize faint, someone else's rule dotted, each claim
+badge by its claims' outcomes, and the world's placements under the node
+names. A link of the form `overview.html#rec=<view>` opens a world.
+
+Nothing is decided in the page. `Canary_overview_runs` computes a view
+per world and binding language — 39 on this machine — and writes them to
+`docs/canary/overview_runs.js`, one file per machine (`_mac` on macOS);
+the page loads each machine's file with a plain script tag and applies
+the words. A `--platform` render writes the file under `_out/` instead.
+The page holds no run state of its own, and its lede and footer now say
+where the one exception comes from.
+
+The counterparts, found by typed predicates over each project's worlds:
+conf → zarith's fetched world; built → sqlite's built-library world;
+unified → torch; none → sqlite's Python side. Two things the comparison
+already shows:
+
+- *The built case's recorded world is sqlite, not the llvm its text
+  names* — no llvm world builds the library under a fetched, gated
+  binding. The shape is the same (conf-sqlite3 checks the system copy
+  while the world uses its own build); the case's text may want updating.
+- *The wheel case has no counterpart* while z3 is muted, so its button is
+  not drawn.
+
+Guards: `overview.recorded_runs_are_an_overlay` — the file parses as the
+script expects; every view names every template edge with a known word,
+and only template nodes; each case resolves to a view of its project in
+its language; the facts the cases are about hold (the conf world's
+consumer is package-linked, torch has no system side, the built world
+builds its library and still resolves the bridge, sqlite's Python view
+is not painted by its OCaml fetch); the page carries the template, the
+buttons and the script tags; a hypothetical render stays out of `docs/`.
+And `overview.overlay_words_rank_worst_first` for the words themselves.
+Both turned red under deliberate breaks. Checked in a headless render:
+the conf, torch and sqlite-Python views draw as described.
+
+What C does not do yet: node labels are the result table's placement
+strings (`B:d`, `apt libgmp-dev.2:6.3.0+dfsg`), not the case diagrams'
+names — that is phase D; and the four bridge edges stay dotted until
+phase E records what each bridge did.
 
 ---
 

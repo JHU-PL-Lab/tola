@@ -1637,14 +1637,15 @@ let overview_cmd =
       Printf.sprintf "%04d-%02d-%02d %02d:%02d" (tm.tm_year + 1900)
         (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
     in
-    let overview =
-      Canary_matrix.agreement_overview
-        (Canary_matrix.matrix_of Canary_registry.all_projects)
-        ~generated_at:now
-    in
+    let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+    let overview = Canary_matrix.agreement_overview m ~generated_at:now in
     Canary_overview_page.write Canary_registry.all_specs ~overview
       ~generated_at:now;
-    Fmt.pr "wrote %s@." Canary_overview_page.docs_path
+    Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
+    (* §2.1's recorded worlds, beside the page and never inside it
+       (status.md §2.7 phase C) — the tracked copy only when this machine
+       is rendering itself *)
+    Fmt.pr "wrote %s@." (Canary_overview_runs.write m ~generated_at:now)
   in
   Cmd.v
     (Cmd.info "overview"
@@ -1655,7 +1656,9 @@ let overview_cmd =
           every claim sits and which relations carry none, and the \
           cooperation topologies. General mechanism, except the agreement \
           overview's decided/blame columns, which are counted from \
-          recorded runs. Pure read.")
+          recorded runs. Also writes this machine's recorded worlds \
+          (docs/canary/overview_runs.js, _mac on macOS), which the page's \
+          §2.1 draws over the same layout. Pure read.")
     Term.(const run $ const ())
 
 let tiny_scenarios_list_cmd =

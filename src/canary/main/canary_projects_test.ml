@@ -899,6 +899,209 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                not (List.mem ids "depends" ~equal:String.equal)))
   }
 
+(* A RECORDED RUN IS AN OVERLAY ON THE TEMPLATE (2026-09-23, status.md
+   §2.7 phase C). The overview draws a recorded world by applying words —
+   a state per edge, an outcome per badge, a sublabel per node — computed
+   here and shipped in a per-machine file beside the page. This pins the
+   seam the plan names ("every edge id the overlay names exists in the
+   template") and everything the script trusts:
+
+   - the file is the script's shape: the push prefix, then JSON;
+   - every view names EVERY template edge and nothing else, each with a
+     known word, and only template nodes; a badge only where the graph
+     places a claim; an unplaced step only if the world has it;
+   - each hand-drawn case with a counterpart resolves to a view of that
+     project in that language;
+   - the drawn facts are the ones the cases are about — the conf world's
+     consumer is the package-linked one, torch's world has no system
+     side, the built world builds its library and still resolves the
+     bridge, and sqlite's PYTHON view is not painted by its OCaml fetch;
+   - the page carries the template (a [data-edge] per edge and a
+     [data-node] per node inside §2.1), a button per counterpart, and a
+     script tag per machine's file — and no run state of its own;
+   - a [--platform] render writes outside [docs/]. *)
+let overview_overlay_pin : Canary_project_test.pure_test =
+  { name = "overview.recorded_runs_are_an_overlay";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module T = Canary_topology in
+        let module R = Canary_overview_runs in
+        (* the JSON readers [Record_fixture] also has — that module is
+           defined further down this file, after the record pins *)
+        let module F = struct
+          let field j k =
+            match j with
+            | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
+            | _ -> None
+
+          let str j k =
+            match field j k with Some (`String s) -> Some s | _ -> None
+
+          let items j k = match field j k with Some (`List xs) -> xs | _ -> []
+        end in
+        let m = M.matrix_of Canary_registry.all_projects in
+        let text = R.payload m ~generated_at:"pin" in
+        let words =
+          [ "ran"; "warm"; "xfail"; "fail"; "blocked"; "unrecorded"; "absent";
+            "not_ours"; "claim" ]
+        in
+        let edge_ids = List.map T.edges ~f:(fun e -> e.T.eg_id) in
+        let assoc_keys j k =
+          match F.field j k with Some (`Assoc kv) -> List.map kv ~f:fst | _ -> []
+        in
+        let file_ok, views, cases =
+          if
+            not
+              (String.is_prefix text ~prefix:R.prefix
+              && String.is_suffix text ~suffix:R.suffix)
+          then (false, [], [])
+          else
+            match
+              Yojson.Basic.from_string
+                (String.sub text ~pos:(String.length R.prefix)
+                   ~len:
+                     (String.length text - String.length R.prefix
+                    - String.length R.suffix))
+            with
+            | exception _ -> (false, [], [])
+            | j ->
+                ( true,
+                  F.items j "views",
+                  match F.field j "cases" with
+                  | Some (`Assoc kv) ->
+                      List.filter_map kv ~f:(fun (k, v) ->
+                          match v with `String s -> Some (k, s) | _ -> None)
+                  | _ -> [] )
+        in
+        let view_by_id id =
+          List.find views ~f:(fun v -> Poly.equal (F.str v "id") (Some id))
+        in
+        let ids = List.filter_map views ~f:(fun v -> F.str v "id") in
+        let views_ok =
+          (not (List.is_empty views))
+          && List.length (List.dedup_and_sort ids ~compare:String.compare)
+             = List.length ids
+          && List.for_all views ~f:(fun v ->
+                 let edges =
+                   match F.field v "edges" with Some (`Assoc kv) -> kv | _ -> []
+                 in
+                 let row =
+                   List.find m.M.rows ~f:(fun (r : M.row) ->
+                       Poly.equal (F.str v "project") (Some r.M.project)
+                       && Poly.equal (F.str v "scenario") (Some r.M.scenario))
+                 in
+                 List.equal String.equal (List.map edges ~f:fst) edge_ids
+                 && List.for_all edges ~f:(fun (_, w) ->
+                        match w with
+                        | `String s -> List.mem words s ~equal:String.equal
+                        | _ -> false)
+                 && List.for_all (assoc_keys v "nodes") ~f:(fun n ->
+                        Option.is_some (T.node_by_id n))
+                 && List.for_all (assoc_keys v "badges") ~f:(fun e ->
+                        not (List.is_empty (T.claim_sites_on e)))
+                 &&
+                 match row with
+                 | None -> false
+                 | Some r ->
+                     List.for_all (assoc_keys v "unplaced") ~f:(fun t ->
+                         List.exists r.M.steps ~f:(fun w ->
+                             String.equal w.M.ws_tag t)))
+        in
+        (* each counterpart resolves, to its project, in its language *)
+        let cases_ok =
+          List.for_all R.counterparts ~f:(fun (k, (project, _, lang)) ->
+              match List.Assoc.find cases k ~equal:String.equal with
+              | None -> false
+              | Some id -> (
+                  match view_by_id id with
+                  | None -> false
+                  | Some v ->
+                      Poly.equal (F.str v "project") (Some project)
+                      && Poly.equal (F.str v "lang")
+                           (Some (Canary_lang.string_of_lang lang))))
+        in
+        let edge_word case e =
+          Option.bind (List.Assoc.find cases case ~equal:String.equal)
+            ~f:(fun id ->
+              Option.bind (view_by_id id) ~f:(fun v ->
+                  match F.field v "edges" with
+                  | Some edges -> F.str edges e
+                  | None -> None))
+        in
+        let is case e w = Poly.equal (edge_word case e) (Some w) in
+        let drawn case e =
+          match edge_word case e with
+          | Some w -> not (List.mem [ "absent"; "not_ours"; "claim" ] w ~equal:String.equal)
+          | None -> false
+        in
+        let facts_ok =
+          drawn "conf" "run_packaged" && is "conf" "run" "absent"
+          && List.for_all T.edges ~f:(fun e ->
+                 match e.T.eg_annotation with
+                 | T.Info _ -> is "conf" e.T.eg_id "not_ours"
+                 | T.Agreement _ -> is "conf" e.T.eg_id "claim"
+                 | T.Action _ -> true)
+          && is "unified" "resolve_sys" "absent" && drawn "unified" "run_packaged"
+          && drawn "built" "build_lib" && is "built" "resolve_sys" "absent"
+          && drawn "built" "depends"
+          && is "none" "resolve_lang" "absent" && drawn "none" "run_packaged"
+        in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:""
+            ~generated_at:"pin"
+        in
+        let section =
+          match String.substr_index page ~pattern:{|id="recwrap"|} with
+          | None -> ""
+          | Some i -> String.drop_prefix page i
+        in
+        let page_ok =
+          (not (String.is_empty section))
+          && List.for_all edge_ids ~f:(fun id ->
+                 String.is_substring section
+                   ~substring:(Printf.sprintf {|data-edge="%s"|} id))
+          && List.for_all T.nodes ~f:(fun n ->
+                 String.is_substring section
+                   ~substring:(Printf.sprintf {|data-node="%s"|} n.T.nd_id))
+          && List.for_all R.counterparts ~f:(fun (k, _) ->
+                 String.is_substring page
+                   ~substring:(Printf.sprintf {|data-rec-case="%s"|} k))
+          && List.for_all R.all_file_names ~f:(fun f ->
+                 String.is_substring page
+                   ~substring:(Printf.sprintf {|<script src="%s">|} f))
+          (* no run state in the page: the views live only in the file *)
+          && not (String.is_substring page ~substring:"CANARY_RUNS.push")
+        in
+        file_ok && views_ok && cases_ok && facts_ok && page_ok
+        && String.is_prefix (R.target ~hypothetical:true) ~prefix:"_out/"
+        && String.is_prefix (R.target ~hypothetical:false) ~prefix:"docs/canary/")
+  }
+
+(* THE WORDS ARE WORST-FIRST (2026-09-23, phase C). When several steps
+   realize one edge, the edge shows the worst; a badge is green only when
+   every claim on its edge holds. Pinned as values, because a reordering
+   would quietly repaint the overlay. *)
+let overlay_words_pin : Canary_project_test.pure_test =
+  { name = "overview.overlay_words_rank_worst_first";
+    check =
+      (fun () ->
+        let module R = Canary_overview_runs in
+        let module S = Canary_status in
+        let order = [ "ran"; "warm"; "unrecorded"; "xfail"; "blocked"; "fail" ] in
+        List.for_all2_exn (List.drop_last_exn order) (List.tl_exn order)
+          ~f:(fun a b -> R.step_rank a < R.step_rank b)
+        && String.equal (R.step_word (S.Warm S.Pass)) "warm"
+        && String.equal (R.step_word (S.Ran (S.Xfail []))) "xfail"
+        && String.equal (R.badge_word [ "holds"; "holds" ]) "holds"
+        && String.equal (R.badge_word [ "holds"; "undecided" ]) "partial"
+        && String.equal (R.badge_word [ "holds"; "violated" ]) "violated"
+        && String.equal (R.badge_word [ "undecided"; "unevaluated" ]) "undecided"
+        && String.equal (R.badge_word [ "unevaluated" ]) "unevaluated"
+        && String.equal (R.outcome_word (Some "error")) "violated"
+        && String.equal (R.outcome_word None) "unevaluated")
+  }
+
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
    template numbers its sections by hand, and moving the agreement table
    in produced two sections called "3." — found by reading the page, not
@@ -6103,6 +6306,8 @@ let base_tests : Canary_project_test.pure_test list =
       record_steps_pin;
       record_join_pin;
       every_step_placed_pin;
+      overview_overlay_pin;
+      overlay_words_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

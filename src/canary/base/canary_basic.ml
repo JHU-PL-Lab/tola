@@ -160,8 +160,10 @@ let detect_distro () = Canary_store.platform ()
     gitignored and already per-machine, so it stays unsuffixed and the run
     cache is unaffected. Deleting this function is what landing the
     aggregator will look like. *)
-let platform_suffix () : string =
-  match detect_distro () with MacOS_local -> "_mac" | Wsl -> ""
+let platform_suffix_of (d : Canary_store.distro) : string =
+  match d with MacOS_local -> "_mac" | Wsl -> ""
+
+let platform_suffix () : string = platform_suffix_of (detect_distro ())
 
 (* ── THE DYNAMIC LOADER, PER PLATFORM (2026-08-26) ──────────────────
 
@@ -433,6 +435,20 @@ let string_of_action = function
   | Probe_lib -> "probe_lib"
   | Probe_binding lang -> [%string "probe_binding_%{Canary_lang.string_of_lang lang}"]
   | Probe_app a -> [%string "probe_app_%{string_of_app_info a}"]
+
+(** The binding language an action speaks for; [None] for the lib-side
+    and source actions, which serve every language (2026-09-23). *)
+let lang_of_action : action -> Canary_lang.lang option = function
+  | Build_binding l | Probe_binding l
+  | Fetch (Binding l | Binding_source l)
+  | Publish (Binding l | Binding_source l) ->
+      Some l
+  | Build_app a | Probe_app a -> Some a.lang
+  | Configure | Scan_sources | Build_headers | Build_lib | Install_lib
+  | Fetch (Source | Headers | Lib | App)
+  | Publish (Source | Headers | Lib | App)
+  | Probe_lib ->
+      None
 
 (* ── THE CANONICAL ACTION ORDER ────────────────────────────────────
 
