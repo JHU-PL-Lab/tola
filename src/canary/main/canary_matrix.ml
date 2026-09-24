@@ -96,6 +96,21 @@ type world_step = {
   ws_detail : string option;
 }
 
+(** A WORLD'S CHAIN, per binding language (2026-09-23, status.md §2.7;
+    user: "the whole chain needs two rows (two pm) from the PM-solo table,
+    and one binding table"): the binding mechanism, where each side comes
+    from, and the cooperation that joins them — the overview's §5.4 row
+    for this world, carried in the record so a reader of the run need not
+    re-derive it. *)
+type chain = {
+  ch_lang : Canary_lang.lang;
+  ch_mechanism : Canary_mechanism.mechanism;
+  ch_lang_side : string;  (** a package manager, or built / staged / vendored *)
+  ch_native_side : string;
+  ch_coop : Canary_topology.coop;
+  ch_character : string;  (** the cooperation's name for this instance *)
+}
+
 (** One SETTING cell (2026-08-19, user: "move all the provider ahead, so
     we have source ref, fetched lib and ocaml ones … more clear to
     readers on which is the setting for this row"): the placement of ONE
@@ -182,6 +197,8 @@ type row = {
       (** per claim the overview places on an edge ([Canary_topology]'s
           claim sites) that has a check column in this row: each column
           and its outcome ([None] = no run evaluated it) *)
+  chains : chain list;
+      (** per binding language, the chain this world realizes *)
 }
 
 (** A COLUMN IS AN ACTION OR A CHECK SLOT (2026-09-14, user).
@@ -1484,6 +1501,16 @@ let matrix_of ?(root = "_out")
               steps = row_steps;
               edges = row_edges;
               claims = row_claims;
+              chains =
+                (let an = Canary_pipeline.analysed_of pr in
+                 List.map (Canary_topology.binding_langs pr) ~f:(fun lang ->
+                     let t = Canary_topology.topology_of_world ~pr ~world:a lang in
+                     { ch_lang = lang;
+                       ch_mechanism = Canary_project_analysis.mechanism_for an lang;
+                       ch_lang_side = Canary_topology.string_of_supplier t.Canary_topology.tp_lang;
+                       ch_native_side = Canary_topology.string_of_supplier t.Canary_topology.tp_sys;
+                       ch_coop = Canary_topology.coop_of t;
+                       ch_character = Canary_topology.character t }));
               (* the SETTING block: this world's placement per artifact.
                  A source artifact carries its own repo link — so a
                  project with a lib source AND an off-tree binding source
@@ -2078,7 +2105,18 @@ let to_json (m : t) : Yojson.Basic.t =
                                          ( "outcome",
                                            match o with
                                            | Some s -> `String s
-                                           | None -> `Null ) ])) ))) )
+                                           | None -> `Null ) ])) ))) );
+                   ( "chains",
+                     `List
+                       (List.map r.chains ~f:(fun c ->
+                            `Assoc
+                              [ ("lang", `String (Canary_lang.string_of_lang c.ch_lang));
+                                ( "mechanism",
+                                  `String (Canary_mechanism.string_of_mechanism c.ch_mechanism) );
+                                ("lang_side", `String c.ch_lang_side);
+                                ("native_side", `String c.ch_native_side);
+                                ("cooperation", `String (Canary_topology.code_of_coop c.ch_coop));
+                                ("character", `String c.ch_character) ])) )
                  ])) ) ]
 
 (** THE RECORD AS PRINTED — what [canary result --json] writes to stdout,

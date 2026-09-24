@@ -54,6 +54,9 @@ type view = {
       (** edge id → what a package manager did there, inside one of our
           actions, that this run does NOT record: (reason code, sentence)
           per placeholder step — [not_yet] or [out_of_reach] *)
+  vw_chain : Canary_matrix.chain option;
+      (** this world's chain for this language, from the record: its
+          mechanism, its two sides and the cooperation joining them *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -653,7 +656,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
       List.filter_map T.nodes ~f:(fun n ->
           if List.mem live n.T.nd_id ~equal:String.equal then None else Some n.T.nd_id);
     vw_observed = observed;
-    vw_placeholders = placeholders }
+    vw_placeholders = placeholders;
+    vw_chain = List.find r.M.chains ~f:(fun c -> Poly.equal c.M.ch_lang lang) }
 
 (** Every recorded world, once per binding language it speaks. *)
 let views ?root (m : M.t) : view list =
@@ -739,6 +743,16 @@ let json_of_view (v : view) : Yojson.Basic.t =
                  (n, `Assoc [ ("label", `String label); ("from", `String from) ]))) );
         ("dim", `List (List.map v.vw_dim ~f:(fun n -> `String n)));
         ("observed", pairs v.vw_observed);
+        ( "chain",
+          match v.vw_chain with
+          | None -> `Null
+          | Some c ->
+              `Assoc
+                [ ("mechanism", `String (Canary_mechanism.string_of_mechanism c.M.ch_mechanism));
+                  ("lang_side", `String c.M.ch_lang_side);
+                  ("native_side", `String c.M.ch_native_side);
+                  ("cooperation", `String (T.code_of_coop c.M.ch_coop));
+                  ("character", `String c.M.ch_character) ] );
         ( "placeholders",
           `Assoc
             (List.map v.vw_placeholders ~f:(fun (e, xs) ->

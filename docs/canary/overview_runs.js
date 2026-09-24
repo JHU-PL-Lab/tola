@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-23 23:14",
+  "generated": "2026-09-23 23:18",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -9,7 +9,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:34.430", "2026-09-23 23:14:40.280" ],
+      "span": [ "2026-09-23 23:17:51.731", "2026-09-23 23:17:57.800" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -77,6 +77,13 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "built",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -114,7 +121,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:34.430", "2026-09-23 23:14:40.303" ],
+      "span": [ "2026-09-23 23:17:51.731", "2026-09-23 23:17:57.824" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -181,6 +188,13 @@
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "built",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -189,7 +203,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:42.209", "2026-09-23 23:14:48.284" ],
+      "span": [ "2026-09-23 23:17:59.739", "2026-09-23 23:18:05.809" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -257,6 +271,13 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "built",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -294,7 +315,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:42.209", "2026-09-23 23:14:48.308" ],
+      "span": [ "2026-09-23 23:17:59.739", "2026-09-23 23:18:05.832" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -361,6 +382,13 @@
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "built",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -369,7 +397,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:41.208", "2026-09-23 23:14:42.105" ],
+      "span": [ "2026-09-23 23:17:58.736", "2026-09-23 23:17:59.635" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -438,6 +466,13 @@
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "staged",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -475,7 +510,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:41.208", "2026-09-23 23:14:42.128" ],
+      "span": [ "2026-09-23 23:17:58.736", "2026-09-23 23:17:59.658" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -545,6 +580,13 @@
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "staged",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -553,7 +595,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:49.242", "2026-09-23 23:14:50.165" ],
+      "span": [ "2026-09-23 23:18:06.754", "2026-09-23 23:18:07.681" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -622,6 +664,13 @@
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "staged",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -659,7 +708,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:49.242", "2026-09-23 23:14:50.190" ],
+      "span": [ "2026-09-23 23:18:06.754", "2026-09-23 23:18:07.706" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -729,6 +778,13 @@
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "staged",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -737,7 +793,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:16.830", "2026-09-23 23:14:23.010" ],
+      "span": [ "2026-09-23 23:17:33.999", "2026-09-23 23:17:40.342" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -805,6 +861,13 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "built",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -842,7 +905,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:16.830", "2026-09-23 23:14:23.035" ],
+      "span": [ "2026-09-23 23:17:33.999", "2026-09-23 23:17:40.370" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -909,6 +972,13 @@
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "built",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -917,7 +987,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:25.334", "2026-09-23 23:14:31.723" ],
+      "span": [ "2026-09-23 23:17:42.633", "2026-09-23 23:17:48.913" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -985,6 +1055,13 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "built",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -1022,7 +1099,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:25.334", "2026-09-23 23:14:31.747" ],
+      "span": [ "2026-09-23 23:17:42.633", "2026-09-23 23:17:48.937" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1089,6 +1166,13 @@
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "built",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -1097,7 +1181,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:23.125", "2026-09-23 23:14:24.177" ],
+      "span": [ "2026-09-23 23:17:40.454", "2026-09-23 23:17:41.478" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1166,6 +1250,13 @@
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "staged",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -1203,7 +1294,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:23.125", "2026-09-23 23:14:24.204" ],
+      "span": [ "2026-09-23 23:17:40.454", "2026-09-23 23:17:41.504" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1273,6 +1364,13 @@
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "staged",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -1281,7 +1379,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:31.830", "2026-09-23 23:14:32.773" ],
+      "span": [ "2026-09-23 23:17:49.025", "2026-09-23 23:17:49.952" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1350,6 +1448,13 @@
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "staged",
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
+      },
       "placeholders": {
         "discover": [
           {
@@ -1387,7 +1492,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:31.830", "2026-09-23 23:14:32.796" ],
+      "span": [ "2026-09-23 23:17:49.025", "2026-09-23 23:17:49.976" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1457,6 +1562,13 @@
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "staged",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {}
     },
     {
@@ -1465,7 +1577,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:40.383", "2026-09-23 23:14:41.109" ],
+      "span": [ "2026-09-23 23:17:57.902", "2026-09-23 23:17:58.636" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1523,6 +1635,13 @@
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -1566,7 +1685,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:40.383", "2026-09-23 23:14:41.132" ],
+      "span": [ "2026-09-23 23:17:57.902", "2026-09-23 23:17:58.659" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1623,6 +1742,13 @@
         "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "apt",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -1638,7 +1764,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:48.388", "2026-09-23 23:14:49.139" ],
+      "span": [ "2026-09-23 23:18:05.911", "2026-09-23 23:18:06.650" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1696,6 +1822,13 @@
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -1739,7 +1872,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:14:48.388", "2026-09-23 23:14:49.162" ],
+      "span": [ "2026-09-23 23:18:05.911", "2026-09-23 23:18:06.674" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1796,6 +1929,13 @@
         "stub_lang", "surf_lang", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "pip",
+        "native_side": "apt",
+        "cooperation": "no_pm",
+        "character": "no package manager stands between these two artifacts"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -1868,6 +2008,13 @@
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -1976,6 +2123,13 @@
         "surf_lang", "consumer_package"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "built",
+        "native_side": "built",
+        "cooperation": "local",
+        "character": "no provider ecosystem — the native side is local"
+      },
       "placeholders": {}
     },
     {
@@ -2054,6 +2208,13 @@
         "surf_lang", "consumer_package"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "built",
+        "native_side": "built",
+        "cooperation": "local",
+        "character": "no provider ecosystem — the native side is local"
+      },
       "placeholders": {}
     },
     {
@@ -2120,6 +2281,13 @@
         "pkg_lang", "surf_lang", "consumer_package"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "vendored",
+        "native_side": "vendored",
+        "cooperation": "local",
+        "character": "no provider ecosystem — the native side is local"
+      },
       "placeholders": {}
     },
     {
@@ -2188,6 +2356,13 @@
         "pkg_lang", "surf_lang", "consumer_package"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cext",
+        "lang_side": "vendored",
+        "native_side": "vendored",
+        "cooperation": "local",
+        "character": "no provider ecosystem — the native side is local"
+      },
       "placeholders": {}
     },
     {
@@ -2258,6 +2433,13 @@
         "consumer_package"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "built",
+        "native_side": "apt",
+        "cooperation": "artifacts",
+        "character": "artifact-centric, no bridge"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -2341,6 +2523,13 @@
         "resolve_sys": "installed here: libgmp-dev 2:6.3.0+dfsg-2ubuntu6.1",
         "realize_cap": "libgmp-dev ships /usr/lib/x86_64-linux-gnu/pkgconfig/gmp.pc",
         "discover": "pkg-config gmp → 6.3.0 in /usr/lib/x86_64-linux-gnu"
+      },
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
       },
       "placeholders": {
         "resolve_sys": [
@@ -2447,6 +2636,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "vendored",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -2551,6 +2747,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -2659,6 +2862,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "vendored",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -2766,6 +2976,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -2868,6 +3085,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "vendored",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -2968,6 +3192,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -3069,6 +3300,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "vendored",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -3169,6 +3407,13 @@
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "undeclared",
+        "character": "⚠ undeclared — cannot be classified"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -3271,6 +3516,13 @@
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -3373,6 +3625,13 @@
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "apt",
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
+      },
       "placeholders": {
         "resolve_sys": [
           {
@@ -3481,6 +3740,13 @@
         "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "opam",
+        "cooperation": "unified",
+        "character": "unified package universe"
+      },
       "placeholders": {
         "discover": [
           {
@@ -3583,6 +3849,13 @@
         "consumer_artifact"
       ],
       "observed": {},
+      "chain": {
+        "mechanism": "cstubs",
+        "lang_side": "opam",
+        "native_side": "opam",
+        "cooperation": "unified",
+        "character": "unified package universe"
+      },
       "placeholders": {
         "discover": [
           {

@@ -132,6 +132,7 @@ section.case>p{color:var(--mut);font-size:.92rem;margin:.4rem 0 0}
 margin:.2rem 0 1.4rem;padding:.45rem .6rem;border:1px dashed var(--line);
 border-radius:6px;background:var(--card)}
 .edet.lit{border-style:solid;border-color:var(--acc);color:var(--fg)}
+#rechead{white-space:pre-line}
 svg .edge{cursor:default}
 svg .edge:hover line,svg .edge:hover path{stroke-width:3;opacity:1}
 tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
@@ -1220,7 +1221,7 @@ that builds its binding does not go through the package gate its project
 declares, so a chain is a fact about the world, not the project.</p>
 <div class="widetable"><table class="cov"><thead><tr><th>project</th><th>language</th><th>binding (§5.2)</th><th>language side (§5.1)</th><th>native side (§5.1)</th><th>cooperation (§5.3)</th></tr></thead><tbody><tr><td>cairo</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>⚠ undeclared — cannot be classified</td></tr><tr><td>cairo</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ undeclared — cannot be classified</td></tr><tr><td>libffi</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>⚠ undeclared — cannot be classified</td></tr><tr><td>libffi</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ undeclared — cannot be classified</td></tr><tr><td>llvm</td><td>ocaml</td><td>cstubs</td><td>built</td><td>built</td><td>no provider ecosystem — the native side is local</td></tr><tr><td>llvm</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td>llvm</td><td>python</td><td>ctypes</td><td>pip</td><td>pip</td><td>bundled: llvmlite wheel's bundled libLLVM</td></tr><tr><td>sqlite</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td>sqlite</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>built</td><td>⚠ bridge still gates, against a system this world does not use</td></tr><tr><td>sqlite</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>staged</td><td>⚠ bridge still gates, against a system this world does not use</td></tr><tr><td>sqlite</td><td>python</td><td>cext</td><td>pip</td><td>apt</td><td>no package manager stands between these two artifacts</td></tr><tr><td>sqlite</td><td>python</td><td>cext</td><td>pip</td><td>built</td><td>no package manager stands between these two artifacts</td></tr><tr><td>sqlite</td><td>python</td><td>cext</td><td>pip</td><td>staged</td><td>no package manager stands between these two artifacts</td></tr><tr><td>ssl</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td>tiny-full</td><td>ocaml</td><td>cstubs</td><td>vendored</td><td>vendored</td><td>no provider ecosystem — the native side is local</td></tr><tr><td>tiny-full</td><td>python</td><td>cext</td><td>vendored</td><td>vendored</td><td>no provider ecosystem — the native side is local</td></tr><tr><td>torch</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>opam</td><td>unified package universe</td></tr><tr><td>z3</td><td>ocaml</td><td>cstubs</td><td>built</td><td>apt</td><td>artifact-centric, no bridge</td></tr><tr><td>z3</td><td>ocaml</td><td>cstubs</td><td>built</td><td>built</td><td>no provider ecosystem — the native side is local</td></tr><tr><td>z3</td><td>ocaml</td><td>cstubs</td><td>built</td><td>staged</td><td>no provider ecosystem — the native side is local</td></tr><tr><td>z3</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>opam</td><td>the consumer package builds the native lib</td></tr><tr><td>z3</td><td>python</td><td>ctypes</td><td>pip</td><td>pip</td><td>bundled: z3-solver wheel's bundled libz3</td></tr><tr><td>zarith</td><td>ocaml</td><td>cstubs</td><td>built</td><td>apt</td><td>artifact-centric, no bridge</td></tr><tr><td>zarith</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td>zlib</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>⚠ undeclared — cannot be classified</td></tr><tr><td>zlib</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ undeclared — cannot be classified</td></tr><tr><td>zstd</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>⚠ undeclared — cannot be classified</td></tr><tr><td>zstd</td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ undeclared — cannot be classified</td></tr></tbody></table></div>
 
-<div class="foot">Generated 2026-09-23 23:14. <strong>What is derived and what is not</strong>,
+<div class="foot">Generated 2026-09-23 23:18. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
 the tables of §5 are computed from canary's code — the package managers'
 drivers, the mechanism catalogue, the bridge model, the cooperation kinds
@@ -1383,7 +1384,11 @@ function show(key){
   }
   head.textContent=v.project+' — '+v.lang+' — '+v.scenario+' — recorded on '
     +(v.recorded_on.length?v.recorded_on.join(', '):'(no platform logged)')
-    +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet');
+    +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet')
+    // the world's chain (§5.4): its mechanism, its two sides, and the
+    // cooperation that joins them
+    +(v.chain?'\nchain: '+v.chain.mechanism+' · '+v.chain.lang_side+' ↔ '
+      +v.chain.native_side+' · '+v.chain.character:'');
   var cl=Object.keys(v.claims);
   document.getElementById('recclaims').innerHTML=cl.length
     ?'<p class="mechnote"><strong>Claims the graph places, in this world:</strong> '

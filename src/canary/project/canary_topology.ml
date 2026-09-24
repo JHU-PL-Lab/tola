@@ -407,6 +407,21 @@ let coop_catalogue : coop_info list =
 let info_of_coop (k : coop) : coop_info =
   List.find_exn coop_catalogue ~f:(fun i -> Poly.equal i.co_kind k)
 
+(** The stable word a run record carries for a kind; [co_name] is the
+    sentence. *)
+let code_of_coop : coop -> string = function
+  | Co_conf -> "conf"
+  | Co_gated_local -> "gated_local"
+  | Co_unified -> "unified"
+  | Co_absorbed -> "absorbed"
+  | Co_no_pm -> "no_pm"
+  | Co_undeclared -> "undeclared"
+  | Co_depext -> "depext"
+  | Co_capability -> "capability"
+  | Co_artifacts -> "artifacts"
+  | Co_local -> "local"
+  | Co_incomplete -> "incomplete"
+
 (** The doc's "topology character" — derived, never declared, so it
     cannot drift from the shape it names. It is the cooperation kind's
     name, except where the instance says WHY in its own words (an absorbed

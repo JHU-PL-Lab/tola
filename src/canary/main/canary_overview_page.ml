@@ -424,6 +424,7 @@ section.case>p{color:var(--mut);font-size:.92rem;margin:.4rem 0 0}
 margin:.2rem 0 1.4rem;padding:.45rem .6rem;border:1px dashed var(--line);
 border-radius:6px;background:var(--card)}
 .edet.lit{border-style:solid;border-color:var(--acc);color:var(--fg)}
+#rechead{white-space:pre-line}
 svg .edge{cursor:default}
 svg .edge:hover line,svg .edge:hover path{stroke-width:3;opacity:1}
 tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
@@ -1057,7 +1058,11 @@ function show(key){
   }
   head.textContent=v.project+' — '+v.lang+' — '+v.scenario+' — recorded on '
     +(v.recorded_on.length?v.recorded_on.join(', '):'(no platform logged)')
-    +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet');
+    +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet')
+    // the world's chain (§5.4): its mechanism, its two sides, and the
+    // cooperation that joins them
+    +(v.chain?'\nchain: '+v.chain.mechanism+' · '+v.chain.lang_side+' ↔ '
+      +v.chain.native_side+' · '+v.chain.character:'');
   var cl=Object.keys(v.claims);
   document.getElementById('recclaims').innerHTML=cl.length
     ?'<p class="mechnote"><strong>Claims the graph places, in this world:</strong> '

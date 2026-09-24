@@ -1790,6 +1790,79 @@ let coverage_tables_pin : Canary_project_test.pure_test =
         pm_solo_ok && coop_ok && per_world_ok && page_ok)
   }
 
+(* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):
+   per binding language, the mechanism, both sides and the cooperation —
+   so a reader of the run need not re-derive them. Held over the real
+   registry:
+
+   - one chain per binding language of the row's project, in order;
+   - each is the WORLD's (its cooperation is [coop_of_world] for that
+     row's assignment) with pass 2's mechanism;
+   - exported as such;
+   - exercised both ways: zarith's rows carry a bridged chain and an
+     artifact-centric one. *)
+let record_chains_pin : Canary_project_test.pure_test =
+  { name = "matrix.record_carries_each_worlds_chain";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module T = Canary_topology in
+        let m = M.matrix_of Canary_registry.all_projects in
+        let typed =
+          List.for_all m.M.rows ~f:(fun (r : M.row) ->
+              match Canary_overview_runs.assignment_of_row r with
+              | None -> false
+              | Some (pr, a) ->
+                  let an = Canary_pipeline.analysed_of pr in
+                  let langs = T.binding_langs pr in
+                  List.length r.M.chains = List.length langs
+                  && List.for_all2_exn r.M.chains langs ~f:(fun c lang ->
+                         Poly.equal c.M.ch_lang lang
+                         && Poly.equal c.M.ch_coop (T.coop_of_world ~pr ~world:a lang)
+                         && Poly.equal c.M.ch_mechanism
+                              (Canary_project_analysis.mechanism_for an lang)))
+        in
+        let exported =
+          match Yojson.Basic.from_string (M.json_export m) with
+          | exception _ -> false
+          | j ->
+              let items j k =
+                match j with
+                | `Assoc kv -> (
+                    match List.Assoc.find kv k ~equal:String.equal with
+                    | Some (`List xs) -> xs
+                    | _ -> [])
+                | _ -> []
+              in
+              let str j k =
+                match j with
+                | `Assoc kv -> (
+                    match List.Assoc.find kv k ~equal:String.equal with
+                    | Some (`String s) -> Some s
+                    | _ -> None)
+                | _ -> None
+              in
+              let jrows = items j "rows" in
+              List.length jrows = List.length m.M.rows
+              && List.for_all2_exn m.M.rows jrows ~f:(fun (r : M.row) jr ->
+                     let js = items jr "chains" in
+                     List.length js = List.length r.M.chains
+                     && List.for_all2_exn r.M.chains js ~f:(fun c jc ->
+                            Poly.equal (str jc "cooperation") (Some (T.code_of_coop c.M.ch_coop))
+                            && Poly.equal (str jc "mechanism")
+                                 (Some (Canary_mechanism.string_of_mechanism c.M.ch_mechanism))))
+        in
+        let zarith_kinds =
+          List.concat_map m.M.rows ~f:(fun (r : M.row) ->
+              if String.equal r.M.project "zarith" then
+                List.map r.M.chains ~f:(fun c -> c.M.ch_coop)
+              else [])
+        in
+        typed && exported
+        && List.mem zarith_kinds T.Co_conf ~equal:Poly.equal
+        && List.mem zarith_kinds T.Co_artifacts ~equal:Poly.equal)
+  }
+
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
    template numbers its sections by hand, and moving the agreement table
    in produced two sections called "3." — found by reading the page, not
@@ -7017,6 +7090,7 @@ let base_tests : Canary_project_test.pure_test list =
       bridge_record_pin;
       placeholder_badges_pin;
       coverage_tables_pin;
+      record_chains_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;
