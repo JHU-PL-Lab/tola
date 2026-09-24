@@ -1476,6 +1476,47 @@ blank.
     agreement, and it shows as a placeholder on ELF chains too. It stays
     that way until the proposal record carries the formats it applies
     to, as a registry row does (`ag_formats`).
+- **A source sits beside its package's column — landed the same day**
+  (user: "the source is not in the package which usually contains the
+  library or module, so it's acturally above the edge … move the naitve
+  source … to the left … The same for binding source, which we move it
+  to the right. Both source are still in the same height"). A package's
+  column now holds only what the package ships: headers, library and
+  staged copy under the native package, stub, module and surface under
+  the binding package. The package's edges run straight down that
+  column. Each source sits outside its column on the source row, the
+  native one to the left and the binding one to the right, in a
+  narrower box (the names under a source are short). The two columns
+  moved inward to make room, and the artifact rows moved 16px lower so
+  the native source's two build edges have space for their labels. The
+  headers stayed in the column, because the native package ships them
+  (`realize_hdr`); in a built chain the build edge reaches them from the
+  source beside the column.
+
+  Moving the sources exposed marks that had been hidden all along. An
+  edge's label and badges can now sit anywhere along the edge
+  (`label_at`) instead of only at its midpoint:
+  - `build_lib`'s label and badges had been behind the headers box.
+  - The two package-probe labels were cut by the stub box and by the
+    staged copy.
+  - `install_lang` and `pack` join the same two nodes, so their marks
+    had shared one spot.
+
+  The band labels are centred and drawn over the edges, with a halo.
+  Before, the PM band's label was hidden behind the system PM box, and a
+  `fetch_lib` label ran through the artifact band's.
+
+  Pinned by `overview.chain_choices_draw_one_chain`, which now checks
+  each box at its own width and that each source is off its column's
+  line. The new `overview.edge_marks_clear_the_boxes` checks three
+  things. No edge runs under a source unless the source is one of its
+  ends. No label or badge lies under a box, under another edge's label
+  or badge, or under a band label. Measured against the old layout,
+  those checks fail 24 times. Falsified three ways: the binding source
+  put back in its column, `build_lib`'s placement removed, and
+  `install_lang`'s placement removed. Checked by rendering the default
+  drawing and sqlite's staged world in headless Chromium, which is not a
+  pin.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

@@ -32,12 +32,37 @@ let box_h = 46
 
 type pos = { px : int; py : int }
 
-(* column centres, then per-node y. The artifact band stacks four nodes
-   per side; everything else is one node per band per side. *)
+(* THE SOURCES SIT BESIDE THEIR PACKAGE'S COLUMN, NOT IN IT (user,
+   2026-09-24: "the source is not in the package which usually contains
+   the library or module … move the naitve source … to the left … The
+   same for binding source, which we move it to the right. Both source are
+   still in the same height"). A package's column is what it ships — the
+   native package its headers and library, the binding package its module
+   and surface — and the edges from a package to its content run straight
+   down it. Drawn in that column, a source sat on those edges and read as
+   package content. It sits outside now, on the source row, and feeds only
+   its build edges. Its box is narrower so the column's edges pass clear
+   of it; the names drawn under a source are short (a repository, a ref).
+
+   The headers stay in the column: the native package ships them
+   ([realize_hdr]), and in a built chain the build edge reaches them from
+   the source beside it. *)
+let side_nodes = [ "src_sys"; "src_lang" ]
+let side_box_w = 150
+
+let box_w_of (id : string) : int =
+  if List.mem side_nodes id ~equal:String.equal then side_box_w else box_w
+
+(* column centres, then per-node y. The artifact band stacks three nodes
+   per column under each package, with the source beside the column on
+   the row above; everything else is one node per band per side. The two
+   columns sit in from the canvas edges to leave the sources their room,
+   and the artifact rows sit 16px lower than they did, so the two build
+   edges that fan out of the native source have space for their labels. *)
 let layout : (string * pos) list =
-  [ ("pm_sys", { px = 150; py = 62 });
-    ("pm_lang", { px = 1070; py = 62 });
-    ("pkg_sys", { px = 150; py = 200 });
+  [ ("pm_sys", { px = 230; py = 62 });
+    ("pm_lang", { px = 990; py = 62 });
+    ("pkg_sys", { px = 230; py = 200 });
     (* THE TWO IN-BETWEEN NODES SIT WITH THEIR OWNERS (user, 2026-09-22).
        Both were centred, which drew them as neutral machinery between
        the ecosystems. They are not neutral and they are not co-owned: a
@@ -61,22 +86,23 @@ let layout : (string * pos) list =
        edges to both packages run level and long enough to keep their
        labels and badges in view (on 2026-09-23 a 22px [depends] edge hid
        the bridge's placeholder claims under the two boxes). *)
-    ("cap", { px = 390; py = 275 });
-    ("bridge", { px = 720; py = 200 });
-    ("pkg_lang", { px = 1070; py = 200 });
-    ("src_sys", { px = 150; py = 392 });
-    ("hdr_sys", { px = 150; py = 466 });
-    ("lib_sys", { px = 150; py = 550 });
-    ("staged_sys", { px = 150; py = 624 });
-    ("src_lang", { px = 1070; py = 392 });
-    ("stub_lang", { px = 1070; py = 466 });
-    ("mod_lang", { px = 1070; py = 550 });
-    ("surf_lang", { px = 1070; py = 624 });
+    ("cap", { px = 470; py = 275 });
+    ("bridge", { px = 620; py = 200 });
+    ("pkg_lang", { px = 990; py = 200 });
+    ("src_sys", { px = 91; py = 392 });
+    ("hdr_sys", { px = 230; py = 482 });
+    ("lib_sys", { px = 230; py = 566 });
+    ("staged_sys", { px = 230; py = 640 });
+    ("src_lang", { px = 1129; py = 392 });
+    ("stub_lang", { px = 990; py = 482 });
+    ("mod_lang", { px = 990; py = 566 });
+    ("surf_lang", { px = 990; py = 640 });
     (* the two consumers sit under the side whose resolution they use:
        the artifact-linked one names paths, the package-linked one names
-       a package *)
-    ("consumer_artifact", { px = 390; py = 762 });
-    ("consumer_package", { px = 840; py = 762 }) ]
+       a package — far enough left that the edge from the binding package
+       clears the column under it *)
+    ("consumer_artifact", { px = 410; py = 762 });
+    ("consumer_package", { px = 750; py = 762 }) ]
 
 let pos_of id =
   match List.Assoc.find layout id ~equal:String.equal with
@@ -92,6 +118,25 @@ let pos_of id =
    "conf predicate". *)
 let label_starts_at_midpoint = [ "realize_cap"; "discover" ]
 
+(* WHERE AN EDGE'S LABEL AND BADGES SIT, as a percentage of the way from
+   its tail to its head — the midpoint unless listed (2026-09-24). At the
+   midpoint [build_lib]'s label and badges fell behind the headers box, as
+   its edge fans out of the source beside the column; the package-linked
+   probe's label was cut by the stub box and the artifact-linked probe's by
+   the staged copy. Three edges run down the binding package's column on
+   one line — [install_lang] and [pack] join the same two nodes in
+   opposite directions, so their midpoints coincide — and their marks are
+   spaced along it. Pinned by overview.edge_marks_clear_the_boxes. *)
+let label_at =
+  [ ("build_lib", 80); ("run", 60); ("run_packaged", 75); ("install_lang", 20);
+    ("install_surf", 30) ]
+
+let anchor_of (e : T.edge) ~(src : pos) ~(dst : pos) : int * int =
+  let pct =
+    Option.value (List.Assoc.find label_at e.T.eg_id ~equal:String.equal) ~default:50
+  in
+  (src.px + ((dst.px - src.px) * pct / 100), src.py + ((dst.py - src.py) * pct / 100))
+
 (* ── svg primitives ──────────────────────────────────────────────── *)
 
 let esc (s : string) : string =
@@ -102,11 +147,27 @@ let esc (s : string) : string =
     | '"' -> "&quot;"
     | c -> String.of_char c)
 
-let band ~y ~h ~label ~cls =
-  Printf.sprintf
-    {|<rect class="band %s" x="8" y="%d" width="%d" height="%d" rx="10"/>
-<text class="bandlabel" x="20" y="%d">%s</text>|}
-    cls y (canvas_w - 16) h (y + 20) (esc label)
+(* THE FOUR BANDS: top, height, label, class. *)
+let bands_def : (int * int * string * string) list =
+  [ (30, 70, "PM LAYER — who resolves and installs", "pm");
+    (140, 170, "PACKAGE LAYER — symbolic claims, and the bridge between them", "package");
+    (350, 320, "ARTIFACT LAYER — what is actually on disk", "artifact");
+    (710, 74, "PROGRAM — the only band where anything runs", "program") ]
+
+let band_rect ~y ~h ~cls =
+  Printf.sprintf {|<rect class="band %s" x="8" y="%d" width="%d" height="%d" rx="10"/>|}
+    cls y (canvas_w - 16) h
+
+(* A BAND'S LABEL IS CENTRED, AND DRAWN OVER THE EDGES (2026-09-24). At
+   the top-left it sat where the native column starts: the PM band's was
+   hidden behind the system PM, the artifact band's under the native
+   source once that moved to the corner, and a [fetch_lib] label ran
+   through it. The middle of each band's top is clear of every node; an
+   edge may still cross it, so the label is drawn after the edges, with a
+   halo, and before the nodes. *)
+let band_label ~y ~label =
+  Printf.sprintf {|<text class="bandlabel" x="%d" y="%d">%s</text>|} (canvas_w / 2) (y + 20)
+    (esc label)
 
 (** Nodes are drawn AFTER edges so the boxes mask the lines that run
     under them — which is what lets every edge be a straight centre-to-
@@ -114,7 +175,8 @@ let band ~y ~h ~label ~cls =
 let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
     ~(sub : string option) (n : T.node) =
   let p = pos_of n.T.nd_id in
-  let x = p.px - (box_w / 2) and y = p.py - (box_h / 2) in
+  let w = box_w_of n.T.nd_id in
+  let x = p.px - (w / 2) and y = p.py - (box_h / 2) in
   let decl = T.declaration_at n.T.nd_id in
   let cls =
     Printf.sprintf "node %s%s%s%s"
@@ -135,7 +197,7 @@ let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
           {|<g class="declmark"><title>DECLARED by the experiment: %s</title>
 <circle cx="%d" cy="%d" r="8"/><text x="%d" y="%d">◇</text></g>|}
           (esc what)
-          (x + box_w - 10) (y + 10) (x + box_w - 10) (y + 14)
+          (x + w - 10) (y + 10) (x + w - 10) (y + 14)
   in
   (* [data-node] is the handle a recorded run's overlay finds the node by.
      A CASE SLOT (the §1 join) is an empty second line a concrete chain
@@ -146,7 +208,7 @@ let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
       {|<g class="%s" data-node="%s"><title>%s</title>
 <rect x="%d" y="%d" width="%d" height="%d" rx="7"/>
 <text class="nlabel" x="%d" y="%d"%s>%s</text>%s|}
-      cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y box_w box_h p.px
+      cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y w box_h p.px
       (if Option.is_some sub then p.py - 2 else p.py + 5)
       (if case_slot then
          Printf.sprintf {| data-y0="%d" data-y1="%d" data-y2="%d"|} (p.py + 5) (p.py - 2)
@@ -232,7 +294,7 @@ let edge_svg ?(extra = "") ~(live : bool) ~(counts : int * int) ?(ph_slot = fals
              (esc (e.T.eg_says))
              (src.px - 46) (src.py - 10)
          else
-           let mx = (src.px + dst.px) / 2 and my = (src.py + dst.py) / 2 in
+           let mx, my = anchor_of e ~src ~dst in
            let badge =
              if not placed then ""
              else
@@ -290,16 +352,10 @@ let diagram ?(rename = fun (_ : string) -> None)
         (checked, List.length ps - checked)) () : string =
   let extra id = String.concat (List.map (classes id) ~f:(fun c -> " " ^ c)) in
   let bands =
-    String.concat
-      [ band ~y:30 ~h:70 ~label:"PM LAYER — who resolves and installs"
-          ~cls:"pm";
-        band ~y:140 ~h:170
-          ~label:"PACKAGE LAYER — symbolic claims, and the bridge between them"
-          ~cls:"package";
-        band ~y:350 ~h:320
-          ~label:"ARTIFACT LAYER — what is actually on disk" ~cls:"artifact";
-        band ~y:710 ~h:74 ~label:"PROGRAM — the only band where anything runs"
-          ~cls:"program" ]
+    String.concat (List.map bands_def ~f:(fun (y, h, _, cls) -> band_rect ~y ~h ~cls))
+  in
+  let band_labels =
+    String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
   in
   (* AN EDGE GOES WHEN EITHER END GOES. Hiding only the node left the
      concrete cases drawing every edge to a fallback coordinate — the
@@ -336,8 +392,8 @@ let diagram ?(rename = fun (_ : string) -> None)
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
  markerHeight="7" orient="auto-start-reverse">
 <path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
-%s%s%s</svg>|}
-    canvas_w canvas_h bands es ns
+%s%s%s%s</svg>|}
+    canvas_w canvas_h bands es band_labels ns
 
 (* ── the page ─────────────────────────────────────────────────────── *)
 
@@ -377,7 +433,8 @@ border:1px solid var(--line);border-radius:10px}
 .band{fill:var(--card);stroke:var(--line);stroke-width:1}
 .band.pm{fill:var(--pm)}.band.package{fill:var(--pkg)}
 .band.artifact{fill:var(--art)}.band.program{fill:var(--prog)}
-.bandlabel{font:600 12px ui-monospace,monospace;fill:var(--mut)}
+.bandlabel{font:600 12px ui-monospace,monospace;fill:var(--mut);text-anchor:middle;
+paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
 .node rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
 .node.oracle rect{stroke-dasharray:5 3;stroke:var(--acc)}
 .node .nlabel{font:600 13px ui-sans-serif,system-ui,sans-serif;
@@ -1398,7 +1455,9 @@ if(jbox&&J){
         s.classList.toggle('term', !!term);
         s.setAttribute('y', place?s.dataset.y2:s.dataset.y1); }
       if(pe) pe.textContent=place;
-      fit(s, 196); fit(pe, 196);
+      // squeezed to the node's own box, which is narrower for a source
+      var box=g.querySelector('rect'), bw=(box?+box.getAttribute('width'):208)-12;
+      fit(s, bw); fit(pe, bw);
       if(l&&l.dataset.y0) l.setAttribute('y', place?l.dataset.y2:(line?l.dataset.y1:l.dataset.y0));
       var lab=l?l.textContent:id;
       if(line) prov.push([lab, n?'name':'term', line, srcOf(id,n)]);

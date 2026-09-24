@@ -1734,6 +1734,101 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
                | None -> false))
   }
 
+(* NO EDGE MARK HIDES UNDER A BOX, AND NO EDGE RUNS UNDER A SOURCE
+   (2026-09-24, user: "the source is not in the package which usually
+   contains the library or module, so it's acturally above the edge").
+   Nodes are drawn after edges, so a box masks whatever runs under it. For
+   a line that is by design — a straight segment may pass behind a node
+   on its way — but a label or a badge under a box is lost, and a
+   package's edge running under a SOURCE drew the source as package
+   content. Held over the template, where every edge is drawn:
+
+   - no edge segment passes under a source's box unless the source is one
+     of its ends;
+   - no label (its extent estimated from its characters) and no badge
+     slot that some mechanism can show lies under any box, under another
+     edge's label or badge, or under a band's label.
+
+   Measured against the layout before the sources moved, the line and
+   mark clauses failed twenty-four times: six edges under a source (five
+   of them between a package and its own content), the rest labels and
+   badges behind the headers, the stub, the staged copy or a source, or on
+   each other — [install_lang] and [pack] join the same two nodes, so
+   their marks shared one midpoint. *)
+let edge_marks_pin : Canary_project_test.pure_test =
+  { name = "overview.edge_marks_clear_the_boxes";
+    check =
+      (fun () ->
+        let module P = Canary_overview_page in
+        let module T = Canary_topology in
+        let module J = Canary_overview_join in
+        let rect_of n =
+          let p = P.pos_of n and w = P.box_w_of n in
+          (p.P.px - (w / 2), p.P.py - (P.box_h / 2), p.P.px + (w / 2), p.P.py + (P.box_h / 2))
+        in
+        let hit (a0, a1, a2, a3) (b0, b1, b2, b3) = a0 < b2 && b0 < a2 && a1 < b3 && b1 < a3 in
+        let node_ids = List.map T.nodes ~f:(fun n -> n.T.nd_id) in
+        (* characters, not bytes: a band label carries an em dash *)
+        let chars s = String.count s ~f:(fun c -> Char.to_int c land 0xC0 <> 0x80) in
+        (* the badge slots some mechanism can show on an edge: 1 = the
+           first place, 2 = the hollow badge beside a filled one *)
+        let slots e =
+          List.concat_map (J.variants ()) ~f:(fun v ->
+              match List.Assoc.find (J.mechanism_claims v) e ~equal:String.equal with
+              | None -> []
+              | Some xs ->
+                  let c = List.count xs ~f:(fun (_, st) -> Poly.equal st T.Checked) in
+                  let p = List.length xs - c in
+                  (if c > 0 then [ 1 ] else []) @ if p > 0 then [ (if c > 0 then 2 else 1) ] else [])
+          |> List.dedup_and_sort ~compare:Int.compare
+        in
+        let segments =
+          List.concat_map T.edges ~f:(fun e ->
+              List.filter_map e.T.eg_from ~f:(fun f ->
+                  if String.equal f e.T.eg_to then None else Some (e, f)))
+        in
+        (* every mark, with the segment it belongs to *)
+        let marks =
+          List.concat_map segments ~f:(fun (e, f) ->
+              let src = P.pos_of f and dst = P.pos_of e.T.eg_to in
+              let mx, my = P.anchor_of e ~src ~dst in
+              let w = chars (P.annotation_label e.T.eg_annotation) * 66 / 10 in
+              let label =
+                if List.mem P.label_starts_at_midpoint e.T.eg_id ~equal:String.equal then
+                  (mx, my - 14, mx + w, my - 6)
+                else (mx - (w / 2), my - 14, mx + (w / 2), my - 6)
+              in
+              List.map
+                (label
+                :: List.map (slots e.T.eg_id) ~f:(fun k ->
+                       let bx = if k = 1 then mx + 46 else mx + 67 in
+                       (bx - 9, my - 9, bx + 9, my + 9)))
+                ~f:(fun m -> ((e.T.eg_id, f), m)))
+        in
+        let band_labels =
+          List.map P.bands_def ~f:(fun (y, _, label, _) ->
+              let w = chars label * 72 / 10 in
+              ((P.canvas_w / 2) - (w / 2), y + 11, (P.canvas_w / 2) + (w / 2), y + 22))
+        in
+        let under_a_box m = List.exists node_ids ~f:(fun n -> hit m (rect_of n)) in
+        List.for_all marks ~f:(fun (_, m) -> not (under_a_box m))
+        && List.for_all marks ~f:(fun (s, m) ->
+               List.for_all marks ~f:(fun (s', m') -> Poly.equal s s' || not (hit m m')))
+        && List.for_all marks ~f:(fun (_, m) -> not (List.exists band_labels ~f:(hit m)))
+        && List.for_all band_labels ~f:(fun b -> not (under_a_box b))
+        && List.for_all segments ~f:(fun (e, f) ->
+               let src = P.pos_of f and dst = P.pos_of e.T.eg_to in
+               List.for_all P.side_nodes ~f:(fun n ->
+                   String.equal n f || String.equal n e.T.eg_to
+                   ||
+                   let b0, b1, b2, b3 = rect_of n in
+                   not
+                     (List.exists (List.range 1 100) ~f:(fun t ->
+                          let px = src.P.px + ((dst.P.px - src.P.px) * t / 100)
+                          and py = src.P.py + ((dst.P.py - src.P.py) * t / 100) in
+                          b0 < px && px < b2 && b1 < py && py < b3)))))
+  }
+
 (* WHAT A BADGE COUNTS IS WHAT APPLIES, AND A RECORDED COLOUR COMES FROM
    EXACTLY THAT (2026-09-24, user, on the numbers on the edges: one
    number counted every agreement on the edge for every mechanism, and a
@@ -2352,13 +2447,24 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && x "pkg_sys" < x "bridge" && x "bridge" < x "pkg_lang"
           && x "bridge" > Canary_overview_page.canvas_w / 2
           && x "cap" > x "pkg_sys" && y "cap" > y "pkg_sys"
+          (* A SOURCE IS BESIDE ITS PACKAGE'S COLUMN, NOT IN IT (user,
+             2026-09-24): the column holds what the package ships, straight
+             under it; the native source sits left of it and the binding
+             source right, clear of the column's line, on one row *)
+          && List.for_all [ "hdr_sys"; "lib_sys"; "staged_sys" ] ~f:(fun n -> x n = x "pkg_sys")
+          && List.for_all [ "stub_lang"; "mod_lang"; "surf_lang" ] ~f:(fun n ->
+                 x n = x "pkg_lang")
+          && (2 * x "src_sys") + Canary_overview_page.box_w_of "src_sys" < 2 * x "pkg_sys"
+          && (2 * x "src_lang") - Canary_overview_page.box_w_of "src_lang" > 2 * x "pkg_lang"
+          (* no two boxes overlap, each at its own width *)
           && List.for_all T.nodes ~f:(fun a ->
                  List.for_all T.nodes ~f:(fun b ->
                      String.equal a.T.nd_id b.T.nd_id
                      ||
                      let pa = at a.T.nd_id and pb = at b.T.nd_id in
-                     abs (pa.Canary_overview_page.px - pb.Canary_overview_page.px)
-                     >= Canary_overview_page.box_w
+                     2 * abs (pa.Canary_overview_page.px - pb.Canary_overview_page.px)
+                     >= Canary_overview_page.box_w_of a.T.nd_id
+                        + Canary_overview_page.box_w_of b.T.nd_id
                      || abs (pa.Canary_overview_page.py - pb.Canary_overview_page.py)
                         >= Canary_overview_page.box_h))
         in
@@ -7990,6 +8096,7 @@ let base_tests : Canary_project_test.pure_test list =
       chain_absence_pin;
       drawn_line_sources_pin;
       badge_counts_pin;
+      edge_marks_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

@@ -116,7 +116,7 @@ where it holds, gives the value a source the page shows, as §2 did.
 | what | from | believed source | to check |
 | --- | --- | --- | --- |
 | node ids, labels, layers | `Canary_topology.nodes` | code, hand-written | |
-| positions | the layout table in `Canary_overview_page` | code, hand-written | already pinned: one row per layer, no overlap |
+| positions, and where each edge's label and badges sit | the layout table and `label_at` in `Canary_overview_page` | code, hand-written | already pinned: one row per layer, no box overlaps another, each source beside its package's column, and no label or badge hidden (`overview.edge_marks_clear_the_boxes`) |
 | edges: ends, annotation, description | `Canary_topology.edges` | code, hand-written | `topology.graph_matches_the_registry` holds the ends and the action coverage |
 | agreement badges and where they sit | `Canary_topology.claim_sites` (where, hand-written); the registry (whether checked) | code | Settled on 2026-09-24. The hand-written `cs_implemented` flag was wrong for three agreements and has been removed. `implemented` and `claim_state` now ask the registry, and the badges are counted per drawing ([`status.md`](../status.md) §2.7) |
 | placeholder slots | one per edge | code | |
