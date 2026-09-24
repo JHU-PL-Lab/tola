@@ -33,6 +33,10 @@ type row = {
   ps_ships : string;
       (** what it puts beside the artifacts for others to read — the
           capability files a claim can be held to *)
+  ps_capability : string;
+      (** the TERM for its capability file — what the overview writes under
+          the "capability file" node while this manager is the one whose
+          package ships it (user, 2026-09-24) *)
 }
 
 let table : row list =
@@ -46,7 +50,8 @@ let table : row list =
          version, the soname, or the symbol versions";
       ps_ships =
         "headers, the shared library, a .pc file, sometimes a CMake config \
-         — the capability files a conf package's check reads" };
+         — the capability files a conf package's check reads";
+      ps_capability = ".pc file" };
     { ps_pm = Canary_store.Brew;
       ps_package =
         "a formula, installed as a prebuilt bottle into its own keg under \
@@ -54,7 +59,8 @@ let table : row list =
       ps_versions =
         "the formula version and revision — not the Mach-O install name \
          or compatibility version";
-      ps_ships = "headers, the dylib, a .pc file, in the keg" };
+      ps_ships = "headers, the dylib, a .pc file, in the keg";
+      ps_capability = ".pc file" };
     { ps_pm = Canary_store.Opam;
       ps_package =
         "a recipe built from source when installed — the binding and its \
@@ -67,7 +73,8 @@ let table : row list =
       ps_ships =
         "a META file (what findlib resolves), the compiled modules, the \
          stub archive, the installed .mli — read by the package-linked \
-         consumer" };
+         consumer";
+      ps_capability = "META file" };
     { ps_pm = Canary_store.Pip;
       ps_package =
         "a distribution: a wheel, prebuilt and possibly carrying the \
@@ -77,10 +84,16 @@ let table : row list =
          library it bundles";
       ps_ships =
         "dist-info metadata; a wheel's bundled libraries sit inside the \
-         package" } ]
+         package";
+      ps_capability = "dist-info metadata" } ]
 
 let row_of (pm : Canary_store.package_manager) : row option =
   List.find table ~f:(fun r -> Poly.equal r.ps_pm pm)
+
+(** The capability-file term of a package manager, if canary has a row
+    for it. *)
+let capability_of (pm : Canary_store.package_manager) : string option =
+  Option.map (row_of pm) ~f:(fun r -> r.ps_capability)
 
 (** Scope and store, as the driver declares them. *)
 let scope_of (pm : Canary_store.package_manager) : string =

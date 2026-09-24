@@ -1578,13 +1578,25 @@ let inter_all : string list list -> string list = function
     ([None] = any): a node is absent when none of them has it, an edge
     greyed when every one greys it. [None] when no chain canary runs
     matches — the page says so rather than drawing a band nothing has. *)
+(** The chains of a kind with the chosen package managers. *)
+let instances_over ?native ?lang (is : band_instance list) (k : coop) :
+    band_instance list =
+  List.filter is ~f:(fun i ->
+      Poly.equal (coop_of i.bi_topology) k
+      && Option.for_all native ~f:(fun p -> Poly.equal (native_pm_of i.bi_topology) (Some p))
+      && Option.for_all lang ~f:(fun p -> Poly.equal (lang_pm_of i.bi_topology) (Some p)))
+
+(** The bridge kinds some of these chains join through, as terms
+    ([Canary_bridge.kind_term]), once each. *)
+let bridge_terms (is : band_instance list) : string list =
+  List.concat_map is ~f:(fun i ->
+      List.map (bridges_of_join i.bi_topology.tp_join) ~f:(fun g ->
+          Canary_bridge.kind_term g.gb_bridge))
+  |> List.fold ~init:[] ~f:(fun acc t ->
+         if List.mem acc t ~equal:String.equal then acc else acc @ [ t ])
+
 let band_over ?native ?lang (is : band_instance list) (k : coop) : coop_band option =
-  let matches i =
-    Poly.equal (coop_of i.bi_topology) k
-    && Option.for_all native ~f:(fun p -> Poly.equal (native_pm_of i.bi_topology) (Some p))
-    && Option.for_all lang ~f:(fun p -> Poly.equal (lang_pm_of i.bi_topology) (Some p))
-  in
-  match List.filter is ~f:matches with
+  match instances_over ?native ?lang is k with
   | [] -> None
   | xs ->
       Some

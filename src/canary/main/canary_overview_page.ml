@@ -37,25 +37,30 @@ type pos = { px : int; py : int }
 let layout : (string * pos) list =
   [ ("pm_sys", { px = 150; py = 62 });
     ("pm_lang", { px = 1070; py = 62 });
-    ("pkg_sys", { px = 150; py = 212 });
-    (* THE TWO BRIDGES SIT WITH THEIR OWNERS (user, 2026-09-22). Both
-       were centred, which drew them as neutral machinery between the
-       ecosystems. They are not neutral and they are not co-owned: a
+    ("pkg_sys", { px = 150; py = 200 });
+    (* THE TWO IN-BETWEEN NODES SIT WITH THEIR OWNERS (user, 2026-09-22).
+       Both were centred, which drew them as neutral machinery between
+       the ecosystems. They are not neutral and they are not co-owned: a
        capability file ships INSIDE the native package and is written by
-       whoever packaged it, while a bridge package belongs to the
-       language ecosystem and is written by one of its maintainers.
-       Different authors, different release cycles — which is the whole
-       reason the symbolic path and the artifact path can disagree. A
-       layout that hid the ownership hid the motive.
+       whoever packaged it, while a bridge package belongs to the language
+       ecosystem and is written by one of its maintainers. Different
+       authors, different release cycles — which is the whole reason the
+       symbolic path and the artifact path can disagree. A layout that hid
+       the ownership hid the motive.
 
-       The bridge moved left from 840 on 2026-09-23: there, its [depends]
-       edge to the binding package was 22px long, and the edge's label and
-       badge sat under the two boxes — which hid the bridge's placeholder
-       claims the day they were added. It stays right of centre, with the
-       language ecosystem that writes it. *)
-    ("cap", { px = 390; py = 252 });
-    ("bridge", { px = 720; py = 190 });
-    ("pkg_lang", { px = 1070; py = 212 });
+       AND THE DIAGRAM IS LAYERED (user, 2026-09-24: "if they are on the
+       same abstraction layers, they can stay on the same horizontal
+       line"). Every other pair across the two sides shares a row; these
+       two did not — the bridge sat level with the packages and the
+       capability file below them. They share the package layer's lower
+       row now, the capability file at the native package's lower-right
+       and the bridge at the binding package's lower-left, each far
+       enough off its package that the edge between them keeps its label
+       and badge in view (on 2026-09-23 a 22px [depends] edge hid the
+       bridge's placeholder claims under the two boxes). *)
+    ("cap", { px = 390; py = 275 });
+    ("bridge", { px = 830; py = 275 });
+    ("pkg_lang", { px = 1070; py = 200 });
     ("src_sys", { px = 150; py = 392 });
     ("hdr_sys", { px = 150; py = 466 });
     ("lib_sys", { px = 150; py = 550 });
@@ -451,6 +456,7 @@ align-self:center;min-width:12.5em;text-transform:uppercase;letter-spacing:.04em
 .join .node .ncase{font:italic 11.5px ui-monospace,SFMono-Regular,Menlo,monospace;
 fill:var(--acc);text-anchor:middle}
 .join .node .ncase.rec-name{font-style:normal}
+.join .node .ncase.term{fill:var(--mut)}
 .join .node .nplace{font:10px ui-monospace,SFMono-Regular,Menlo,monospace;
 fill:var(--mut);text-anchor:middle}
 .join .node.related rect{stroke:var(--acc);stroke-width:3}
@@ -599,6 +605,8 @@ let pm_solo_table projects =
         esc r.Canary_pm_solo.ps_package;
         esc r.Canary_pm_solo.ps_versions;
         esc r.Canary_pm_solo.ps_ships;
+        (* the terms §1 writes under "capability file" and "bridge package" *)
+        Printf.sprintf "<b>%s</b>" (esc r.Canary_pm_solo.ps_capability);
         dash (List.map (Canary_bridge.kinds_of_pm pm) ~f:esc);
         dash unseen;
         (match pm_users projects pm with [] -> "—" | us -> esc (String.concat ~sep:", " us)) ]
@@ -607,8 +615,8 @@ let pm_solo_table projects =
     (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
        (heads
           [ "package manager"; "store"; "what a package is"; "its versions";
-            "what it ships for others to read"; "bridges it defines";
-            "inside an install, unseen"; "used by" ])
+            "what it ships for others to read"; "its capability file";
+            "bridges it defines"; "inside an install, unseen"; "used by" ])
        (String.concat (List.map Canary_pm_solo.table ~f:row)))
 
 (** Which projects bind through [m], per pass 2 — the mechanism each
@@ -694,10 +702,21 @@ let coop_table projects =
           i.T.in_project ^ bridge ^ side)
       |> List.dedup_and_sort ~compare:String.compare
     in
+    (* the kinds of bridge its chains join through — the term §1 writes
+       under "bridge package" for this cooperation *)
+    let bridge_kinds =
+      List.concat_map xs ~f:(fun ((t : T.t), _) ->
+          List.map (T.bridges_of_join t.T.tp_join) ~f:(fun g ->
+              Canary_bridge.kind_term g.T.gb_bridge))
+      |> List.dedup_and_sort ~compare:String.compare
+    in
     cells
       [ Printf.sprintf "<b>%s</b><br><span class=\"from\">draft: %s</span>"
           (esc info.T.co_name) (esc info.T.co_draft);
         esc (String.concat ~sep:", " pairs);
+        (match bridge_kinds with
+         | [] -> "—"
+         | ks -> Printf.sprintf "<b>%s</b>" (esc (String.concat ~sep:" · " ks)));
         esc info.T.co_package_join;
         esc info.T.co_artifact_join;
         esc info.T.co_versions;
@@ -712,7 +731,7 @@ let coop_table projects =
   wide
     (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
        (heads
-          [ "cooperation"; "the two sides"; "how the packages are joined";
+          [ "cooperation"; "the two sides"; "its bridge"; "how the packages are joined";
             "what meets the artifacts"; "how a version constraint travels";
             "what canary records"; "instances" ])
        (String.concat (List.map groups ~f:row)))
@@ -1223,6 +1242,12 @@ if(jbox&&J){
       (BYCASE[w['case']]=BYCASE[w['case']]||[]).push(w); }); });
   var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','inside','not_ours','observed','claim'],
       OUTS=['violated','holds','partial','undecided','unevaluated'];
+  // a line longer than its box is squeezed to fit rather than cut: every
+  // character stays readable on hover-zoom, and none spills onto an edge
+  var fit=function(t, w){ if(!t) return;
+    t.removeAttribute('textLength'); t.removeAttribute('lengthAdjust');
+    try{ if(t.textContent&&t.getComputedTextLength()>w){
+      t.setAttribute('textLength', w); t.setAttribute('lengthAdjust','spacingAndGlyphs'); } }catch(e){} };
   var list=function(id, head, items){ var el=document.getElementById(id); if(!el) return;
     el.innerHTML=items.length?'<p class="mechnote"><strong>'+head+'</strong></p><ul class="unpl">'
       +items.join('')+'</ul>':''; };
@@ -1252,6 +1277,16 @@ if(jbox&&J){
     var named=function(id){
       if(v&&v.names&&v.names[id]) return v.names[id];
       return names[id]?{label:names[id], from:'declared'}:null; };
+    // THE PACKAGE MANAGERS' TERMS for the package layer's two in-between
+    // nodes, wherever no name is known: the capability file the native
+    // side's package manager ships (§4.1), and the kinds of bridge the
+    // chains join through (§4.3) — or, where no chain has the choice,
+    // those the language side's package manager defines
+    var terms={}, pt=J.pm_terms[(c?c.ps:S.ps)||J.sys_pm],
+        br=c?(c.bridge||[]):((near&&near.band&&near.band.bridge)||[]);
+    if(pt&&pt.cap) terms.cap=pt.cap;
+    if(!br.length&&!c&&S.pl&&J.pm_terms[S.pl]) br=J.pm_terms[S.pl].bridges||[];
+    if(br.length) terms.bridge=br.join(' · ');
     jbox.classList.toggle('rec', !!v);
     jbox.querySelectorAll('[data-edge]').forEach(function(g){
       var e=g.getAttribute('data-edge'), t=g.querySelector('title'), mk=g.querySelector('.phm');
@@ -1274,16 +1309,19 @@ if(jbox&&J){
     jbox.querySelectorAll('[data-node]').forEach(function(g){
       var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'),
           s=g.querySelector('.ncase'), pe=g.querySelector('.nplace'), n=named(id),
+          term=n?'':(terms[id]||''), line=n?n.label:term,
           place=v&&v.nodes?(v.nodes[id]||''):'';
       g.classList.toggle('gone', gone.indexOf(id)>=0);
       g.classList.toggle('dim', !!v && (v.dim||[]).indexOf(id)>=0);
       // the package nodes the last clicked button is about
       g.classList.toggle('related', related.indexOf(id)>=0);
-      if(s){ s.textContent=n?n.label:'';
+      if(s){ s.textContent=line;
         s.classList.toggle('rec-name', !!n && n.from==='recorded');
+        s.classList.toggle('term', !!term);
         s.setAttribute('y', place?s.dataset.y2:s.dataset.y1); }
       if(pe) pe.textContent=place;
-      if(l&&l.dataset.y0) l.setAttribute('y', place?l.dataset.y2:(n?l.dataset.y1:l.dataset.y0)); });
+      fit(s, 196); fit(pe, 196);
+      if(l&&l.dataset.y0) l.setAttribute('y', place?l.dataset.y2:(line?l.dataset.y1:l.dataset.y0)); });
     var ids=J.runs[S.m+'|'+key()]||[];
     jbox.querySelectorAll('button[data-g]').forEach(function(b){
       var g=b.dataset.g, val=b.dataset.v;

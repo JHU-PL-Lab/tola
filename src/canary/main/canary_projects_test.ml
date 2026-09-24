@@ -2144,8 +2144,55 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all Canary_overview_page.hand_cases ~f:(fun (c : Canary_overview_page.case) ->
                  has (Canary_overview_page.esc c.Canary_overview_page.ca_title))
         in
+        (* THE THIRD ROUND (2026-09-24, user): the package layer's two
+           in-between nodes say the package managers' TERMS — the
+           capability file a manager ships (§4.1's new column), the kinds
+           of bridge a cooperation's chains join through (§4.3's) — and
+           every bridge's term is one its manager defines *)
+        let bridges_of key = List.Assoc.find j.J.jn_bridges key ~equal:String.equal in
+        let terms_ok =
+          Poly.equal (bridges_of "conf|*|*") (Some [ "conf-* package" ])
+          && Poly.equal (bridges_of "unified|*|*") (Some [ "depext field" ])
+          && List.for_all j.J.jn_instances ~f:(fun i ->
+                 List.for_all (T.bridges_of_join i.T.bi_topology.T.tp_join) ~f:(fun g ->
+                     let b = g.T.gb_bridge in
+                     List.mem
+                       (List.map (Canary_bridge.kinds_defined (Canary_bridge.pm_of b)) ~f:fst)
+                       (Canary_bridge.kind_term b) ~equal:String.equal))
+          && Poly.equal (Canary_pm_solo.capability_of sys_pm) (Some ".pc file")
+          && List.for_all [ "<b>.pc file</b>"; "<b>conf-* package</b>"; "<b>depext field</b>" ]
+               ~f:(fun s -> String.is_substring page ~substring:s)
+        in
+        (* THE DIAGRAM IS LAYERED: a native-side node and the language-side
+           node of the same abstraction layer share a row; the capability
+           file sits off the native package's lower-right, the bridge off
+           the binding package's lower-left, on one row; no two boxes
+           overlap *)
+        let at = Canary_overview_page.pos_of in
+        let same_row a b = (at a).Canary_overview_page.py = (at b).Canary_overview_page.py in
+        let layered =
+          List.for_all
+            [ ("pm_sys", "pm_lang"); ("pkg_sys", "pkg_lang"); ("cap", "bridge");
+              ("src_sys", "src_lang"); ("hdr_sys", "stub_lang"); ("lib_sys", "mod_lang");
+              ("staged_sys", "surf_lang"); ("consumer_artifact", "consumer_package") ]
+            ~f:(fun (a, b) -> same_row a b)
+          && (at "cap").Canary_overview_page.px > (at "pkg_sys").Canary_overview_page.px
+          && (at "cap").Canary_overview_page.py > (at "pkg_sys").Canary_overview_page.py
+          && (at "bridge").Canary_overview_page.px < (at "pkg_lang").Canary_overview_page.px
+          && (at "bridge").Canary_overview_page.py > (at "pkg_lang").Canary_overview_page.py
+          && List.for_all T.nodes ~f:(fun a ->
+                 List.for_all T.nodes ~f:(fun b ->
+                     String.equal a.T.nd_id b.T.nd_id
+                     ||
+                     let pa = at a.T.nd_id and pb = at b.T.nd_id in
+                     abs (pa.Canary_overview_page.px - pb.Canary_overview_page.px)
+                     >= Canary_overview_page.box_w
+                     || abs (pa.Canary_overview_page.py - pb.Canary_overview_page.py)
+                        >= Canary_overview_page.box_h))
+        in
         cases_are_rows && cases_are_their_worlds && names_ok && depends_ok && narrows
-        && runs_ok && page_ok && grouped && labelled && related_ok && merged)
+        && runs_ok && page_ok && grouped && labelled && related_ok && merged && terms_ok
+        && layered)
   }
 
 (* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):

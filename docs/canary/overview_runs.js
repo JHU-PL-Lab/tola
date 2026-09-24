@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-24 02:50",
+  "generated": "2026-09-24 03:00",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,7 +10,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:58.846", "2026-09-24 02:50:04.966" ],
+      "span": [ "2026-09-24 03:00:22.893", "2026-09-24 03:00:28.723" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -136,7 +136,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:58.846", "2026-09-24 02:50:04.991" ],
+      "span": [ "2026-09-24 03:00:22.893", "2026-09-24 03:00:28.747" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -232,7 +232,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:07.023", "2026-09-24 02:50:13.183" ],
+      "span": [ "2026-09-24 03:00:30.716", "2026-09-24 03:00:36.492" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -358,7 +358,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:07.023", "2026-09-24 02:50:13.206" ],
+      "span": [ "2026-09-24 03:00:30.716", "2026-09-24 03:00:36.514" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -454,7 +454,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:05.949", "2026-09-24 02:50:06.904" ],
+      "span": [ "2026-09-24 03:00:29.653", "2026-09-24 03:00:30.609" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -581,7 +581,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:05.949", "2026-09-24 02:50:06.930" ],
+      "span": [ "2026-09-24 03:00:29.653", "2026-09-24 03:00:30.634" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -680,7 +680,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:14.141", "2026-09-24 02:50:15.103" ],
+      "span": [ "2026-09-24 03:00:37.413", "2026-09-24 03:00:38.270" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -807,7 +807,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:14.141", "2026-09-24 02:50:15.132" ],
+      "span": [ "2026-09-24 03:00:37.413", "2026-09-24 03:00:38.294" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -906,7 +906,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:40.251", "2026-09-24 02:49:47.199" ],
+      "span": [ "2026-09-24 03:00:05.386", "2026-09-24 03:00:11.835" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1032,7 +1032,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:40.251", "2026-09-24 02:49:47.227" ],
+      "span": [ "2026-09-24 03:00:05.386", "2026-09-24 03:00:11.859" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1128,7 +1128,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:49.675", "2026-09-24 02:49:55.948" ],
+      "span": [ "2026-09-24 03:00:14.065", "2026-09-24 03:00:20.193" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1254,7 +1254,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:49.675", "2026-09-24 02:49:55.973" ],
+      "span": [ "2026-09-24 03:00:14.065", "2026-09-24 03:00:20.216" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1350,7 +1350,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:47.469", "2026-09-24 02:49:48.486" ],
+      "span": [ "2026-09-24 03:00:11.952", "2026-09-24 03:00:12.930" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1477,7 +1477,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:47.469", "2026-09-24 02:49:48.513" ],
+      "span": [ "2026-09-24 03:00:11.952", "2026-09-24 03:00:12.956" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1576,7 +1576,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:56.056", "2026-09-24 02:49:57.050" ],
+      "span": [ "2026-09-24 03:00:20.301", "2026-09-24 03:00:21.210" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1703,7 +1703,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:49:56.056", "2026-09-24 02:49:57.074" ],
+      "span": [ "2026-09-24 03:00:20.301", "2026-09-24 03:00:21.233" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1802,7 +1802,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:05.075", "2026-09-24 02:50:05.839" ],
+      "span": [ "2026-09-24 03:00:28.830", "2026-09-24 03:00:29.551" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1922,7 +1922,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:05.075", "2026-09-24 02:50:05.865" ],
+      "span": [ "2026-09-24 03:00:28.830", "2026-09-24 03:00:29.574" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2014,7 +2014,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:13.286", "2026-09-24 02:50:14.038" ],
+      "span": [ "2026-09-24 03:00:36.593", "2026-09-24 03:00:37.311" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2134,7 +2134,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 02:50:13.286", "2026-09-24 02:50:14.060" ],
+      "span": [ "2026-09-24 03:00:36.593", "2026-09-24 03:00:37.334" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",

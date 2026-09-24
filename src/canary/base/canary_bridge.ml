@@ -50,15 +50,27 @@ type t = Opam of opam [@@deriving show, eq]
 let pm_of : t -> Canary_store.package_manager = function
   | Opam _ -> Canary_store.Opam
 
-(** The bridge KINDS a package manager defines, by name — what the PM-solo
-    table shows. One line per constructor of that manager's variant; a
-    manager that defines none (apt, brew, pip) has an empty list. *)
-let kinds_of_pm : Canary_store.package_manager -> string list = function
+(** The bridge KINDS a package manager defines: per constructor of that
+    manager's variant, its TERM — the short name the overview writes under
+    its "bridge package" node (user, 2026-09-24: "show the terms in that
+    pm in the next line") — and what it is. A manager that defines none
+    (apt, brew, pip) has an empty list. *)
+let kinds_defined : Canary_store.package_manager -> (string * string) list = function
   | Canary_store.Opam ->
-      [ "conf package (conf-*): a check plus a depext mapping";
-        "depext field: the binding package names the system package itself" ]
+      [ ("conf-* package", "a check plus a depext mapping");
+        ("depext field", "the binding package names the system package itself") ]
   | Canary_store.Apt | Canary_store.Brew | Canary_store.Pip | Canary_store.Unsupported ->
       []
+
+(** The kinds, as the PM-solo table shows them. *)
+let kinds_of_pm (pm : Canary_store.package_manager) : string list =
+  List.map (kinds_defined pm) ~f:(fun (term, what) -> term ^ ": " ^ what)
+
+(** The TERM for one bridge's kind — one of [kinds_defined]'s, which
+    [overview.chain_choices_draw_one_chain] holds it to. *)
+let kind_term : t -> string = function
+  | Opam (Conf_package _) -> "conf-* package"
+  | Opam (Depext_field _) -> "depext field"
 
 (** The package that IS the bridge, or that carries it. *)
 let package_of : t -> string = function

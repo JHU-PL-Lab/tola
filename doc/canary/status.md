@@ -1340,6 +1340,25 @@ blank.
   it — falsified by the catalogue order, by dropping the merged notes and
   by opam losing its bridge. `overview.recorded_runs_are_an_overlay` now
   also holds every recorded view to a package in §1.
+- **The package layer says the package managers' terms, and is layered
+  — landed the same day** (user: "we shall show the terms in that pm in
+  the next line for `capability file` or `bridge package`, whether they
+  can be `.pc` or `conf-pkg` or `depext`", and "if they are on the same
+  abstraction layers, they can stay on the same horizontal line"). Where
+  no name is known, the capability file shows the term for what the
+  native side's package manager ships (".pc file" for apt and brew — a
+  new typed column in the PM-solo table, §4.1), and the bridge package
+  shows the kinds of bridge the chosen chains join through ("conf-*
+  package", "depext field" — `Canary_bridge.kind_term`, and a new column
+  in the cooperation table, §4.3). A term is drawn muted, so it does not
+  read as a name. The two nodes now share the package layer's lower row,
+  the capability file off the native package's lower-right and the
+  bridge off the binding package's lower-left, so every pair across the
+  two sides shares a row. A second line too long for its box is squeezed
+  to fit (torch's depext bound). Pinned in the same pin: the terms match
+  their tables, every bridge's term is one its manager defines, the
+  diagram is layered and no two boxes overlap — falsified by the old
+  bridge position and by a term opam does not define.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

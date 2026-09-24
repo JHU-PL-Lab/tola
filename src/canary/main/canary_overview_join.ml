@@ -63,6 +63,9 @@ type case = {
   cs_mechanism : Canary_mechanism.mechanism;
   cs_topology : T.t;
   cs_band : T.coop_band;  (** its own band, over its own worlds *)
+  cs_bridges : string list;
+      (** the kinds of bridge it joins through, as terms — what its
+          "bridge package" node says when no name is declared *)
   cs_names : (string * string) list;
       (** node id → what its project DECLARES the node is, in the chain's
           first world — the name drawn under the generic label *)
@@ -100,6 +103,7 @@ let cases_of (is : T.band_instance list) : case list =
                    cs_mechanism = first.T.bi_mechanism;
                    cs_topology = first.T.bi_topology;
                    cs_band = band;
+                   cs_bridges = T.bridge_terms mine;
                    cs_names =
                      Canary_overview_runs.declared_names first.T.bi_pr first.T.bi_world
                        first.T.bi_lang ~publishes:first.T.bi_publishes }))
@@ -148,6 +152,9 @@ type t = {
           band over ALL its chains — the cooperation bar *)
   jn_bands : (string * T.coop_band) list;
       (** every choice of package managers some chain has, per kind *)
+  jn_bridges : (string * string list) list;
+      (** per such choice, the kinds of bridge its chains join through, as
+          terms — what the "bridge package" node says under it *)
   jn_runs : (string * string list) list;  (** runs key → case ids *)
 }
 
@@ -165,14 +172,17 @@ let of_projects (projects : (string * Canary_project_run.project_run) list) : t 
        |> List.dedup_and_sort ~compare:Poly.compare
        |> List.map ~f:Option.some)
   in
-  let bands =
+  let bands_with_bridges =
     List.concat_map kinds ~f:(fun b ->
         let k = b.T.cb_kind in
         List.concat_map (opt_pms T.native_pm_of k) ~f:(fun native ->
             List.filter_map (opt_pms T.lang_pm_of k) ~f:(fun lang ->
                 Option.map (T.band_over ?native ?lang is k) ~f:(fun band ->
-                    (band_key k native lang, band)))))
+                    ( band_key k native lang,
+                      band,
+                      T.bridge_terms (T.instances_over ?native ?lang is k) )))))
   in
+  let bands = List.map bands_with_bridges ~f:(fun (key, band, _) -> (key, band)) in
   let runs =
     List.concat_map cs ~f:(fun c ->
         let native, lang = case_pms c in
@@ -186,6 +196,7 @@ let of_projects (projects : (string * Canary_project_run.project_run) list) : t 
     jn_cases = cs;
     jn_kinds = kinds;
     jn_bands = bands;
+    jn_bridges = List.map bands_with_bridges ~f:(fun (key, _, terms) -> (key, terms));
     jn_runs =
       List.map run_keys ~f:(fun key ->
           (key, List.filter_map runs ~f:(fun (k, id) -> if String.equal k key then Some id else None)))
@@ -319,7 +330,31 @@ let json (j : t) : Yojson.Basic.t =
                  `Assoc
                    [ ("gone", strs (T.with_edges b.T.cb_hidden));
                      ("dead", strs b.T.cb_dead);
-                     ("n", `Int b.T.cb_worlds) ] ))) );
+                     ("n", `Int b.T.cb_worlds);
+                     ( "bridge",
+                       strs
+                         (Option.value ~default:[]
+                            (List.Assoc.find j.jn_bridges key ~equal:String.equal)) ) ] )))
+      );
+      (* THE PACKAGE MANAGERS' TERMS for the package layer's two
+         in-between nodes (user, 2026-09-24): the capability file a
+         manager's package ships, from the PM-solo table, and the bridge
+         kinds it defines, from [Canary_bridge] *)
+      ( "pm_terms",
+        `Assoc
+          (List.map Canary_pm_solo.table ~f:(fun r ->
+               let pm = r.Canary_pm_solo.ps_pm in
+               ( Canary_store.string_of_pm pm,
+                 `Assoc
+                   [ ("cap", `String r.Canary_pm_solo.ps_capability);
+                     ("bridges", strs (List.map (Canary_bridge.kinds_defined pm) ~f:fst)) ] )))
+      );
+      (* whose capability file the native side shows while no system
+         package manager is chosen: this platform's *)
+      ( "sys_pm",
+        `String
+          (Canary_store.string_of_pm
+             (Canary_store.system_pm_of_platform (Canary_store.platform ()))) );
       ( "cases",
         `List
           (List.map j.jn_cases ~f:(fun c ->
@@ -334,6 +369,7 @@ let json (j : t) : Yojson.Basic.t =
                    ("pl", pm_json lang);
                    ("gone", strs (T.with_edges c.cs_band.T.cb_hidden));
                    ("dead", strs c.cs_band.T.cb_dead);
+                   ("bridge", strs c.cs_bridges);
                    ( "names",
                      `Assoc (List.map c.cs_names ~f:(fun (n, l) -> (n, `String l))) ) ])) );
       ("runs", `Assoc (List.map j.jn_runs ~f:(fun (key, ids) -> (key, strs ids))));
