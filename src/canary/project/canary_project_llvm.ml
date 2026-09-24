@@ -697,6 +697,7 @@ let llvm_run _distro : Canary_project_run.project_run =
        (official latest + fork; the heaviest of all — the batch default
        runs llvm THIN, stable fetch chain only). *)
     pr_binding_decls = llvm_binding_decls;
+    pr_pm_gates = [];
     (* the OCaml binding builds via the project's own target — raw, respected
        as-is (the mechanism template would say Dune); the Python binding
        is Dlopen (no template to override). *)

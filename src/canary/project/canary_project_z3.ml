@@ -1152,6 +1152,7 @@ let z3_run _distro : Canary_project_run.project_run =
        (official latest + fork, ~15-40 min cold EACH) — the batch default
        runs z3 THIN (stable fetch chain only). *)
     pr_binding_decls = z3_binding_decls;
+    pr_pm_gates = [];
     (* the OCaml binding builds via the project's own target — raw, respected
        as-is (the mechanism template would say Dune); the Python binding
        is Dlopen (no template to override). *)

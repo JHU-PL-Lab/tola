@@ -509,5 +509,6 @@ let torch_run : Canary_project_run.project_run =
     pr_wrapper_pkgs = [];
     pr_api_source = Some torch_api_source;
     pr_binding_decls = torch_binding_decls;
+    pr_pm_gates = [];
     pr_raw_build_overrides = [];
     pr_tier = Canary_project_run.Light }

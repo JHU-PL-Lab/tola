@@ -687,5 +687,6 @@ let sqlite_run : Canary_project_run.project_run =
     pr_wrapper_pkgs = [];
     pr_api_source = None;
     pr_binding_decls = sqlite_binding_decls;
+    pr_pm_gates = [];
     pr_raw_build_overrides = [];
     pr_tier = Canary_project_run.Light }

@@ -1363,6 +1363,33 @@ blank.
   their tables, every bridge's term is one its manager defines, nodes of
   one layer share a row and no two boxes overlap — falsified by the
   one-row position and by a term opam does not define.
+- **Every package in canary carries a cooperation, known before any run
+  — landed the same day** (user: "Does any `package in canary` must
+  carry a cooperation mode? … can we statically detect this … when we
+  click any button for package_in_canary, it shall also show one
+  cooperation button in clicked"). A package's cooperation is DERIVED,
+  not recorded as a declaration: from its world's two placements and its
+  binding package's declared gate (`Canary_topology.topology_of_world` →
+  `coop_of`). It needs a world, so it is computed beside firing rather
+  than in pass 2, but it needs no run — nothing in it is created while
+  running. Where it is carried: the run record (`canary result --json`,
+  `rows[].chains[].cooperation`), §1's package data (`cases[].k`) and
+  §4.3's instances. Choosing a package already lit its cooperation — for
+  20 of the 28. The other 8 (cairo, libffi, zlib, zstd) classified as
+  "undeclared": the opam-binding template kept their gate on its own
+  record, which nothing read. The template now routes the gate alone
+  (`pr_pm_gates`; the mechanism stays unrouted, project/issues.md §2),
+  so their apt worlds are "conf package" and their vendored worlds
+  "bridge still gates, against a system this world does not use" — the
+  conf check probes apt's library while the world links the conda-forge
+  prebuilt. That cooperation's button label became "gated, local
+  library", since its library is now built, staged or vendored. Pinned:
+  every package's cooperation has a button and the page lights it, and
+  where a project states its gate twice the two agree; the joins pin
+  moved these four to bridged deliberately (it was written to fail
+  here), and an un-routed copy of cairo keeps the undeclared and
+  no-bridge branches exercised. Falsified by the template not routing
+  its gate.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

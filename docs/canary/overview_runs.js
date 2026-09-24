@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-24 12:23",
+  "generated": "2026-09-24 12:37",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,7 +10,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:19.010", "2026-09-24 12:23:24.953" ],
+      "span": [ "2026-09-24 12:36:37.789", "2026-09-24 12:36:43.757" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -136,7 +136,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:19.010", "2026-09-24 12:23:24.977" ],
+      "span": [ "2026-09-24 12:36:37.789", "2026-09-24 12:36:43.780" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -232,7 +232,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:26.917", "2026-09-24 12:23:33.403" ],
+      "span": [ "2026-09-24 12:36:45.786", "2026-09-24 12:36:51.659" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -358,7 +358,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:26.917", "2026-09-24 12:23:33.429" ],
+      "span": [ "2026-09-24 12:36:45.786", "2026-09-24 12:36:51.681" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -454,7 +454,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:25.905", "2026-09-24 12:23:26.809" ],
+      "span": [ "2026-09-24 12:36:44.678", "2026-09-24 12:36:45.662" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -581,7 +581,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:25.905", "2026-09-24 12:23:26.833" ],
+      "span": [ "2026-09-24 12:36:44.678", "2026-09-24 12:36:45.689" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -680,7 +680,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:34.435", "2026-09-24 12:23:35.338" ],
+      "span": [ "2026-09-24 12:36:52.641", "2026-09-24 12:36:53.514" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -807,7 +807,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:34.435", "2026-09-24 12:23:35.361" ],
+      "span": [ "2026-09-24 12:36:52.641", "2026-09-24 12:36:53.536" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -906,7 +906,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:00.659", "2026-09-24 12:23:07.565" ],
+      "span": [ "2026-09-24 12:36:20.010", "2026-09-24 12:36:26.057" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1032,7 +1032,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:00.659", "2026-09-24 12:23:07.593" ],
+      "span": [ "2026-09-24 12:36:20.010", "2026-09-24 12:36:26.086" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1128,7 +1128,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:09.996", "2026-09-24 12:23:16.242" ],
+      "span": [ "2026-09-24 12:36:28.350", "2026-09-24 12:36:34.507" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1254,7 +1254,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:09.996", "2026-09-24 12:23:16.269" ],
+      "span": [ "2026-09-24 12:36:28.350", "2026-09-24 12:36:34.531" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1350,7 +1350,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:07.719", "2026-09-24 12:23:08.799" ],
+      "span": [ "2026-09-24 12:36:26.174", "2026-09-24 12:36:27.190" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1477,7 +1477,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:07.719", "2026-09-24 12:23:08.824" ],
+      "span": [ "2026-09-24 12:36:26.174", "2026-09-24 12:36:27.216" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1576,7 +1576,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:16.353", "2026-09-24 12:23:17.315" ],
+      "span": [ "2026-09-24 12:36:34.615", "2026-09-24 12:36:35.523" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1703,7 +1703,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:16.353", "2026-09-24 12:23:17.338" ],
+      "span": [ "2026-09-24 12:36:34.615", "2026-09-24 12:36:35.547" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1802,7 +1802,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:25.060", "2026-09-24 12:23:25.802" ],
+      "span": [ "2026-09-24 12:36:43.861", "2026-09-24 12:36:44.578" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1922,7 +1922,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:25.060", "2026-09-24 12:23:25.825" ],
+      "span": [ "2026-09-24 12:36:43.861", "2026-09-24 12:36:44.600" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2014,7 +2014,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:33.520", "2026-09-24 12:23:34.315" ],
+      "span": [ "2026-09-24 12:36:51.762", "2026-09-24 12:36:52.526" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2134,7 +2134,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:23:33.520", "2026-09-24 12:23:34.347" ],
+      "span": [ "2026-09-24 12:36:51.762", "2026-09-24 12:36:52.552" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2943,7 +2943,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "warm",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
@@ -2988,12 +2988,11 @@
           "from": "declared"
         },
         "src_sys": { "label": "cairo.git", "from": "declared" },
+        "bridge": { "label": "conf-cairo", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "cairo2", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3011,8 +3010,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "vendored",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
       },
       "placeholders": {
         "resolve_sys": [
@@ -3068,7 +3067,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "warm",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
@@ -3112,12 +3111,11 @@
           "from": "declared"
         },
         "src_sys": { "label": "cairo.git", "from": "declared" },
+        "bridge": { "label": "conf-cairo", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "cairo2", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3134,8 +3132,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "apt",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
       },
       "placeholders": {
         "resolve_sys": [
@@ -3191,7 +3189,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "warm",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
@@ -3239,12 +3237,11 @@
         "pkg_sys": { "label": "libffi-dev", "from": "declared" },
         "hdr_sys": { "label": "ffi.h, ffitarget.h", "from": "declared" },
         "src_sys": { "label": "libffi.git", "from": "declared" },
+        "bridge": { "label": "conf-libffi", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3262,8 +3259,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "vendored",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
       },
       "placeholders": {
         "resolve_sys": [
@@ -3319,7 +3316,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "warm",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
@@ -3366,12 +3363,11 @@
         "pkg_sys": { "label": "libffi-dev", "from": "declared" },
         "hdr_sys": { "label": "ffi.h, ffitarget.h", "from": "declared" },
         "src_sys": { "label": "libffi.git", "from": "declared" },
+        "bridge": { "label": "conf-libffi", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3388,8 +3384,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "apt",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
       },
       "placeholders": {
         "resolve_sys": [
@@ -3445,7 +3441,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "warm",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
@@ -3487,12 +3483,11 @@
         "lib_sys": { "label": "libz.so.1", "from": "declared" },
         "hdr_sys": { "label": "zlib.h, zconf.h", "from": "declared" },
         "src_sys": { "label": "zlib.git", "from": "declared" },
+        "bridge": { "label": "conf-zlib", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "camlzip", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3510,8 +3505,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "vendored",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
       },
       "placeholders": {
         "resolve_sys": [
@@ -3567,7 +3562,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "warm",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
@@ -3607,12 +3602,11 @@
         "pkg_sys": { "label": "zlib1g-dev", "from": "declared" },
         "hdr_sys": { "label": "zlib.h, zconf.h", "from": "declared" },
         "src_sys": { "label": "zlib.git", "from": "declared" },
+        "bridge": { "label": "conf-zlib", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "camlzip", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3629,8 +3623,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "apt",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
       },
       "placeholders": {
         "resolve_sys": [
@@ -3686,7 +3680,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "ran",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
@@ -3727,12 +3721,11 @@
         "lib_sys": { "label": "libzstd.so.1", "from": "declared" },
         "hdr_sys": { "label": "zstd.h, zstd_errors.h", "from": "declared" },
         "src_sys": { "label": "zstd.git", "from": "declared" },
+        "bridge": { "label": "conf-zstd", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "zstd", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3750,8 +3743,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "vendored",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "gated_local",
+        "character": "⚠ bridge still gates, against a system this world does not use"
       },
       "placeholders": {
         "resolve_sys": [
@@ -3807,7 +3800,7 @@
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
-        "depends": "absent",
+        "depends": "ran",
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
@@ -3847,12 +3840,11 @@
         "pkg_sys": { "label": "libzstd-dev", "from": "declared" },
         "hdr_sys": { "label": "zstd.h, zstd_errors.h", "from": "declared" },
         "src_sys": { "label": "zstd.git", "from": "declared" },
+        "bridge": { "label": "conf-zstd", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "zstd", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
-      ],
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
@@ -3869,8 +3861,8 @@
         "mechanism": "cstubs",
         "lang_side": "opam",
         "native_side": "apt",
-        "cooperation": "undeclared",
-        "character": "⚠ undeclared — cannot be classified"
+        "cooperation": "conf",
+        "character": "symbolic package bridge + artifact validation"
       },
       "placeholders": {
         "resolve_sys": [

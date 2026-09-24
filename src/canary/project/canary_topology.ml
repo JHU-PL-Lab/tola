@@ -76,17 +76,19 @@
     row orthogonal to the project roster, as a row of this table should
     be.
 
-    {b (3) Four projects' gates are declared where this cannot read
-    them.} [Canary_opam_binding] sets [pr_binding_decls = []] and keeps
+    {b (3) Four projects' gates were declared where this could not read
+    them.} [Canary_opam_binding] sets [pr_binding_decls = []] and kept
     its gate on the template's own record, so cairo, libffi, zlib and
-    zstd declare a [pm_gate] that no consumer reaches. That is
+    zstd declared a [pm_gate] that no consumer reached. That is
     [project/issues.md] §2 — a mechanism declared in two places, one of
-    them read — arriving at its SECOND consumer. It is deliberately NOT
-    worked around here: {!gate_of} returns [None] for those projects and
-    the table shows the gap, because a silently short table is worse than
-    a visibly incomplete one. Routing the gate alone would be safe
-    (nothing reads it), but routing the DECLARATION means routing its
-    mechanism too, and that flips four green libffi cells — a
+    them read — arriving at its SECOND consumer. For a while it was not
+    worked around: {!gate_of} returned [None] and the table showed the
+    gap as "undeclared", because a silently short table is worse than a
+    visibly incomplete one. CLOSED 2026-09-24 (user: every package canary
+    runs carries a cooperation, and it can be known before any run): the
+    GATE alone is routed, through [pr_pm_gates], because nothing else
+    reads it. The DECLARATION is still not routed — that would route its
+    mechanism too, which flips four green libffi cells, a
     mechanism-catalogue question, not this module's. *)
 
 open Base
@@ -225,8 +227,8 @@ let normalize (t : t) : t =
 type coop =
   | Co_conf  (** a conf package between the binding package and the system's *)
   | Co_gated_local
-      (** the native side is built here, and the binding package's gate
-          still checks the system *)
+      (** the native side is local — built, staged or vendored here — and
+          the binding package's gate still checks the system *)
   | Co_unified  (** one package manager supplies both sides *)
   | Co_absorbed  (** the consumer package builds or bundles the library *)
   | Co_no_pm  (** no package manager stands between the two artifacts *)
@@ -300,20 +302,26 @@ let coop_catalogue : coop_info list =
         "the bridge step runs the check in every world and records the \
          mapping, the capability file and pkg-config's answer (zarith so \
          far); opam's own run of the check is a placeholder" };
+    (* the native side is built, staged or VENDORED here: sqlite's built
+       worlds, and since the template's gates were routed (2026-09-24) the
+       vendored worlds of cairo, libffi, zlib and zstd — a conda-forge
+       prebuilt, while their opam packages' conf gate checks apt's copy *)
     { co_kind = Co_gated_local;
-      co_label = "gated, built here";
+      co_label = "gated, local library";
       co_name = "⚠ bridge still gates, against a system this world does not use";
       co_draft =
         "a package-specific rewrite — replace(external_provider, \
-         internal_build) — that left the gate in place";
+         internal_build or a prebuilt) — that left the gate in place";
       co_package_join = "the binding package's conf dependency is still resolved";
       co_artifact_join =
         "the conf check asks the SYSTEM, while the binding links the \
-         library this world built";
+         library this world built or was handed";
       co_versions =
         "none that reaches the library in use: the gate validates one the \
          world does not use";
-      co_recorded = "the library's build; the gate itself is not recorded here" };
+      co_recorded =
+        "the library's build or its prebuilt; the gate itself is not \
+         recorded here" };
     { co_kind = Co_unified;
       co_label = "one package manager";
       co_name = "unified package universe";
@@ -533,12 +541,23 @@ let no_capability_file_declared
     ⚠ as four broken ones. *)
 let gate_of (pr : Canary_project_run.project_run) (lang : Canary_lang.lang) :
     BD.pm_dep_gate option option =
-  List.find_map pr.Canary_project_run.pr_binding_decls ~f:(fun d ->
-      let d_lang =
-        (Canary_mechanism.info_of_mechanism d.BD.mechanism)
-          .Canary_mechanism.mi_lang
-      in
-      if Poly.equal d_lang lang then Some d.BD.pm_gate else None)
+  let from_decl =
+    List.find_map pr.Canary_project_run.pr_binding_decls ~f:(fun d ->
+        let d_lang =
+          (Canary_mechanism.info_of_mechanism d.BD.mechanism)
+            .Canary_mechanism.mi_lang
+        in
+        if Poly.equal d_lang lang then Some d.BD.pm_gate else None)
+  in
+  (* a binding with no declaration yet may still route its PACKAGE GATE
+     alone ([pr_pm_gates], 2026-09-24): the opam-binding template's four
+     projects, whose gate reached nothing before *)
+  match from_decl with
+  | Some g -> Some g
+  | None ->
+      Option.map
+        (List.Assoc.find pr.Canary_project_run.pr_pm_gates lang ~equal:Poly.equal)
+        ~f:Option.some
 
 (** The join, from whatever the project managed to declare. The one
     place the five constructors are chosen, so a caller cannot invent a

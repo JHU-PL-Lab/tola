@@ -550,6 +550,15 @@ Two consequences, both visible in `canary emit libffi --stage analyse`:
    the registry-wide `[OCaml; Python]`, so libffi reports one thing its
    *Python* binding cannot carry — and it has no Python binding.
 
+**The GATE half is closed (2026-09-24).** The template's projects also
+declared their package gate (`conf-cairo`, `conf-libffi`, …) where
+nothing read it, so the overview could not give their packages a
+cooperation. The template now routes the gate alone through
+`pr_pm_gates`, which `Canary_topology.gate_of` reads where no
+`binding_decl` exists: the four are classified — "conf package" in their
+apt worlds, "bridge still gates" in their vendored ones. The mechanism
+is still not routed, and the two consequences above stand.
+
 ### tiny-full: two mechanisms for one language, and one step for both
 
 **tiny-full** (found 2026-09-17, tracing how an agreement's short code

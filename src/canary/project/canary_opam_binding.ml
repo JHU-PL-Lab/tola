@@ -804,5 +804,11 @@ let run (d : t) : Canary_project_run.project_run =
       | None -> []);
     pr_api_source = None;
     pr_binding_decls = [];
+    (* THE GATE REACHES THE PIPELINE (2026-09-24): the template's binding
+       is OCaml's, and its package gate is what the project measured from
+       the package's depends. Only the gate — routing the whole binding
+       declaration would route its mechanism too, which is the open
+       question of project/issues.md §2 *)
+    pr_pm_gates = [ (Canary_lang.OCaml, d.pm_gate) ];
     pr_raw_build_overrides = [];
     pr_tier = Canary_project_run.Light }

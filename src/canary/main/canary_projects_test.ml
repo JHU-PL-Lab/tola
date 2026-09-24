@@ -682,14 +682,25 @@ let topology_joins_pin : Canary_project_test.pure_test =
         && is_no_pm (join "sqlite" Canary_lang.Python)
         (* ...while sqlite's OCaml side does declare a conf package *)
         && is_bridged (join "sqlite" Canary_lang.OCaml)
-        (* ⚠ project/issues.md §2, held as a KNOWN gap rather than
-           tolerated silently: these four declare a gate on the template's
-           record and leave pr_binding_decls empty. When the routing is
-           fixed this pin fails, which is the point — the fix must move
-           them into a bridged row deliberately, not by accident *)
+        (* ⚠ project/issues.md §2's GATE half, closed DELIBERATELY on
+           2026-09-24 (user: every package canary runs carries a
+           cooperation, knowable before any run). These four declare their
+           gate on the template's record and leave pr_binding_decls empty;
+           the template now routes the gate alone ([pr_pm_gates]), so they
+           are bridged — conf-cairo, conf-libffi, conf-zlib, conf-zstd. A
+           project that routes nothing is still Undeclared, which keeps
+           that constructor honest now no registry project exhibits it *)
         && List.for_all
              [ "cairo"; "libffi"; "zlib"; "zstd" ]
-             ~f:(fun p -> is_undeclared (join p Canary_lang.OCaml))
+             ~f:(fun p -> is_bridged (join p Canary_lang.OCaml))
+        && (match List.Assoc.find Canary_registry.all_specs "cairo" ~equal:String.equal with
+            | Some pr ->
+                is_undeclared
+                  (Some
+                     (T.join_of
+                        { pr with Canary_project_run.pr_pm_gates = [] }
+                        Canary_lang.OCaml))
+            | None -> false)
         (* and an absorbed join collapses the native side onto the
            language side, so one topology is not counted once per
            irrelevant native provision *)
@@ -819,8 +830,19 @@ let every_step_placed_pin : Canary_project_test.pure_test =
       (fun () ->
         let module T = Canary_topology in
         let module SM = Canary_step_model in
+        (* THE WITHHELD [depends] NEEDS A PROJECT WITH NO KNOWN GATE, and
+           since 2026-09-24 no active project is one — the template routes
+           its four projects' gates. An un-routed copy of cairo keeps that
+           branch exercised; its gaps are cairo's, so the listed set does
+           not move *)
+        let ungated =
+          List.filter_map Canary_registry.all_projects ~f:(fun (name, pr) ->
+              if String.equal name "cairo" then
+                Some (name ^ "-ungated", { pr with Canary_project_run.pr_pm_gates = [] })
+              else None)
+        in
         let placed =
-          List.concat_map Canary_registry.all_projects ~f:(fun (_, pr) ->
+          List.concat_map (Canary_registry.all_projects @ ungated) ~f:(fun (_, pr) ->
               List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
                   let steps =
                     Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
@@ -2191,9 +2213,36 @@ let chain_choices_pin : Canary_project_test.pure_test =
                      || abs (pa.Canary_overview_page.py - pb.Canary_overview_page.py)
                         >= Canary_overview_page.box_h))
         in
+        (* EVERY PACKAGE IN CANARY CARRIES A COOPERATION, KNOWN BEFORE ANY
+           RUN (2026-09-24, user: "when we click any button for
+           package_in_canary, it shall also show one cooperation button in
+           clicked"). Each package's cooperation is derived from
+           declarations alone — its world's two placements and its
+           binding package's declared gate — so this holds on a checkout
+           that has never run: every package's kind has a cooperation
+           button, and the page lights it. Where a project states its gate
+           twice (zarith: its binding declaration, and the template's
+           routed gate), the two agree *)
+        let every_package_cooperates =
+          List.for_all j.J.jn_cases ~f:(fun c ->
+              let k = T.coop_of c.J.cs_topology in
+              T.has_band k
+              && List.exists j.J.jn_kinds ~f:(fun b -> Poly.equal b.T.cb_kind k)
+              && button "k" (T.code_of_coop k))
+        in
+        let gates_agree =
+          List.for_all projects ~f:(fun (_, pr) ->
+              List.for_all pr.Canary_project_run.pr_pm_gates ~f:(fun (lang, g) ->
+                  List.for_all pr.Canary_project_run.pr_binding_decls ~f:(fun d ->
+                      (not
+                         (Poly.equal
+                            (Canary_mechanism.info_of_mechanism d.Canary_binding_decl.mechanism)
+                              .Canary_mechanism.mi_lang lang))
+                      || Poly.equal d.Canary_binding_decl.pm_gate (Some g))))
+        in
         cases_are_rows && cases_are_their_worlds && names_ok && depends_ok && narrows
         && runs_ok && page_ok && grouped && labelled && related_ok && merged && terms_ok
-        && layered)
+        && layered && every_package_cooperates && gates_agree)
   }
 
 (* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):
@@ -3016,6 +3065,7 @@ let tiny1_bridge : Canary_project_test.pure_test =
           pr_wrapper_pkgs = [];
           pr_api_source = None;
           pr_binding_decls = [];
+          pr_pm_gates = [];
     pr_raw_build_overrides = []; pr_tier = Canary_project_run.Light }
       in
       let asgs = Canary_project_run.scenarios_of pr in
@@ -3488,6 +3538,7 @@ let local_fork_pin : Canary_project_test.pure_test =
             pr_wrapper_pkgs = [];
             pr_api_source = None;
             pr_binding_decls = [];
+            pr_pm_gates = [];
     pr_raw_build_overrides = []; pr_tier = Canary_project_run.Light }
         in
         let r = Canary_spec_check.check pr in
@@ -3552,7 +3603,7 @@ let pair_counts_points_pin : Canary_project_test.pure_test =
             pr_runner_spec =
               (fun _a ~workspace:_ () -> Canary_step_builder.empty_runner_spec);
             pr_mismatch_probes = []; pr_wrapper_pkgs = []; pr_api_source = None;
-            pr_binding_decls = []; pr_raw_build_overrides = [];
+            pr_binding_decls = []; pr_pm_gates = []; pr_raw_build_overrides = [];
             pr_tier = Canary_project_run.Light }
         in
         let sev pr id =

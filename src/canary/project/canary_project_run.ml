@@ -110,6 +110,15 @@ type project_run = {
       declared regardless of how the project builds. [] = not declared
       yet (external projects fill in as they land). *)
   pr_binding_decls : Canary_binding_decl.binding_decl list;
+  (** THE PACKAGE GATE per binding language, for a binding that has no
+      [binding_decl] yet (2026-09-24): how the binding's PACKAGE declares
+      its dependency on the native library — a conf package, a depext
+      bound, building or bundling it. Where a [binding_decl] exists, its
+      own [pm_gate] is the answer and this is not read. The opam-binding
+      template fills it from the gate its projects declare, which reached
+      nothing before — so cairo, libffi, zlib and zstd could not be given a
+      cooperation, and every package canary runs must carry one (user). *)
+  pr_pm_gates : (Canary_lang.lang * Canary_binding_decl.pm_dep_gate) list;
   (** The bindings whose build_binding the project does NOT derive from
       the mechanism template (M2 step 5, 2026-08-17) — it builds raw,
       its original command respected as-is. The spec audit warns on
