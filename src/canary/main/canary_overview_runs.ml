@@ -66,7 +66,12 @@ type view = {
       (** each claim the graph places that this view evaluates, with its
           outcome word *)
   vw_badges : (string * string) list;
-      (** per edge carrying such claims: the word its badge takes *)
+      (** per edge with a CHECKED agreement: the word its filled badge
+          takes, from the outcomes of exactly those agreements *)
+  vw_edge_claims : (string * (string * T.claim_state) list) list;
+      (** per drawn edge: the agreements on it that apply to this chain's
+          mechanism, and how each stands — what the edge's two badges
+          count ({!Canary_topology.edge_claims}, 2026-09-24) *)
   vw_nodes : (string * string) list;  (** node id → sublabel *)
   vw_unplaced : (string * string) list;  (** step tag → why it has no edge *)
   vw_names : (string * (string * string)) list;
@@ -674,16 +679,46 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
                   (List.fold os ~init:o ~f:(fun acc x ->
                        if rank x > rank acc then x else acc)) ))
   in
-  let badges =
+  (* WHAT EACH EDGE'S BADGES COUNT in this chain (2026-09-24): the
+     agreements on the edge that apply to its mechanism — the list §1
+     counts for that mechanism — and the filled badge's word from the
+     outcomes of exactly the checked ones. A checked agreement this world
+     recorded no outcome for reads [unevaluated] instead of dropping out,
+     so a number never counts more than its colour was computed from *)
+  let mechanism =
+    match chain with
+    | Some c -> c.M.ch_mechanism
+    | None -> Canary_mechanism.mechanism_of_lang_exn lang
+  in
+  (* …and only on an edge this world REALIZES. An action edge no step
+     realizes here ([absent]) carries none: the library's agreements sit
+     on both of its producers, and a built world's red badge was drawn on
+     the system package's edge too, which that world never fetched *)
+  let edge_claims =
     List.filter_map T.edges ~f:(fun e ->
-        if List.mem gone e.T.eg_id ~equal:String.equal then None
+        if
+          List.mem gone e.T.eg_id ~equal:String.equal
+          || Poly.equal (List.Assoc.find edges e.T.eg_id ~equal:String.equal) (Some "absent")
+        then None
         else
-          match
-            List.filter_map (T.claim_sites_on e.T.eg_id) ~f:(fun cs ->
-                List.Assoc.find claims cs.T.cs_claim ~equal:String.equal)
-          with
+          match T.edge_claims ~mechanism ~lang e.T.eg_id with
           | [] -> None
-          | words -> Some (e.T.eg_id, badge_word words))
+          | xs -> Some (e.T.eg_id, List.map xs ~f:(fun (cs, st) -> (cs.T.cs_claim, st))))
+  in
+  let badges =
+    List.filter_map edge_claims ~f:(fun (e, xs) ->
+        match
+          List.filter_map xs ~f:(fun (slug, st) ->
+              match st with
+              | T.Checked ->
+                  Some
+                    (Option.value
+                       (List.Assoc.find claims slug ~equal:String.equal)
+                       ~default:"unevaluated")
+              | T.Placeholder -> None)
+        with
+        | [] -> None
+        | words -> Some (e, badge_word words))
   in
   (* the world's placements, under the node each artifact is — the setting
      columns are labelled by artifact kind, so the kind finds its column *)
@@ -786,6 +821,7 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_edges = edges;
     vw_claims = claims;
     vw_badges = badges;
+    vw_edge_claims = edge_claims;
     vw_nodes = nodes;
     vw_unplaced = unplaced;
     vw_names = names;
@@ -806,7 +842,7 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_gone = gone;
     vw_candidates =
       List.filter_map T.claim_sites ~f:(fun cs ->
-          if (not cs.T.cs_implemented) && applies cs.T.cs_claim then Some cs.T.cs_claim
+          if (not (T.implemented cs)) && applies cs.T.cs_claim then Some cs.T.cs_claim
           else None)
       |> List.fold ~init:[] ~f:(fun acc c ->
              if List.mem acc c ~equal:String.equal then acc else acc @ [ c ]) }
@@ -882,6 +918,18 @@ let case_views (vs : view list) : (string * string) list =
 
 (* ── THE FILE ──────────────────────────────────────────────────────── *)
 
+(** Each edge's agreements as the page reads them, [[slug, state], …] —
+    one encoder for a recorded view and for §1's mechanisms, so the two
+    are counted alike. *)
+let json_of_edge_claims (xs : (string * (string * T.claim_state) list) list) :
+    Yojson.Basic.t =
+  `Assoc
+    (List.map xs ~f:(fun (e, cl) ->
+         ( e,
+           `List
+             (List.map cl ~f:(fun (slug, st) ->
+                  `List [ `String slug; `String (T.string_of_claim_state st) ])) )))
+
 let json_of_view (v : view) : Yojson.Basic.t =
   let pairs kvs = `Assoc (List.map kvs ~f:(fun (k, s) -> (k, `String s))) in
   `Assoc
@@ -897,6 +945,8 @@ let json_of_view (v : view) : Yojson.Basic.t =
     @ [ ("edges", pairs v.vw_edges);
         ("claims", pairs v.vw_claims);
         ("badges", pairs v.vw_badges);
+        (* what each drawn edge's two badges count here *)
+        ("edge_claims", json_of_edge_claims v.vw_edge_claims);
         ("nodes", pairs v.vw_nodes);
         ("unplaced", pairs v.vw_unplaced);
         ( "names",

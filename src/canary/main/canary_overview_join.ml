@@ -52,6 +52,22 @@ let by_language (lang_of : 'a -> Canary_lang.lang) (xs : 'a list) : 'a list =
 let variants () : T.artifact_variant list =
   by_language (fun (v : T.artifact_variant) -> v.T.av_lang) (T.artifact_variants ())
 
+(** WHAT AN EDGE'S BADGES COUNT under one mechanism (2026-09-24): per
+    edge the mechanism draws, the agreements on it that can apply, each
+    checked or a placeholder ({!Canary_topology.edge_claims}). A chosen
+    package counts the same, since its chain's mechanism is one of these,
+    and its recorded run counts the same list and colours the checked
+    ones by their outcomes. *)
+let mechanism_claims (v : T.artifact_variant) :
+    (string * (string * T.claim_state) list) list =
+  let hidden = T.with_edges v.T.av_hidden in
+  List.filter_map T.edges ~f:(fun e ->
+      if List.mem hidden e.T.eg_id ~equal:String.equal then None
+      else
+        match T.edge_claims ~mechanism:v.T.av_mechanism ~lang:v.T.av_lang e.T.eg_id with
+        | [] -> None
+        | xs -> Some (e.T.eg_id, List.map xs ~f:(fun (cs, st) -> (cs.T.cs_claim, st))))
+
 (* ── the concrete chains ────────────────────────────────────────────── *)
 
 (** One concrete chain: the worlds of one project that bind one language
@@ -317,7 +333,21 @@ let json (j : t) : Yojson.Basic.t =
                      ( "pms",
                        strs
                          (List.map (dependent_pms j.jn_cases v.T.av_mechanism)
-                            ~f:Canary_store.string_of_pm) ) ] ))) );
+                            ~f:Canary_store.string_of_pm) );
+                     (* what each drawn edge's badges count for it *)
+                     ( "claims",
+                       Canary_overview_runs.json_of_edge_claims (mechanism_claims v) ) ] )))
+      );
+      (* EVERY PLACED AGREEMENT, for an edge's hover: its code, and every
+         edge it sits on — an agreement on several edges is counted on
+         each, and says so *)
+      ( "agreements",
+        `Assoc
+          (List.map T.claim_sites ~f:(fun cs ->
+               ( cs.T.cs_claim,
+                 `Assoc
+                   [ ("code", `String (Canary_agreement_common.short_code_of_slug cs.T.cs_claim));
+                     ("edges", strs cs.T.cs_edges) ] ))) );
       ( "kinds",
         `Assoc
           (List.map T.coop_catalogue ~f:(fun i ->

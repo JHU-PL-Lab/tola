@@ -192,23 +192,33 @@ let annotation_title = function
   | T.Info s -> s ^ " (we run nothing here)"
 
 (* A PLACEHOLDER IS DRAWN AS ONE (2026-09-23, user: "we can use special
-   node to show not-implemented yet"). An edge whose claims are ALL
-   candidates — named, with no evaluator — gets a hollow, dashed badge,
-   so a claim that is known and not implemented no longer looks like one
-   that runs. *)
-(* A PLACEHOLDER SLOT (2026-09-23): on the recorded template only, every
+   node to show not-implemented yet"): an agreement that is named and has
+   no evaluator is counted by a hollow, dashed badge, so it no longer
+   looks like one that runs.
+
+   TWO BADGES, NOT ONE NUMBER (2026-09-24, user, on the numbers on the
+   edges). One number counted every agreement placed on the edge — for
+   every mechanism, checked or only named — and a recorded run coloured it
+   from fewer. Now a filled badge counts the agreements canary CHECKS on
+   this relation for the chain drawn, a hollow one those only NAMED, and
+   the script recounts both per drawing from [Canary_topology.edge_claims]
+   lists. An edge with no agreement placed on it has no slots: it is bare
+   whatever is chosen.
+
+   A PLACEHOLDER SLOT (2026-09-23): on the recorded template only, every
    edge carries a hidden marker the overlay shows where a placeholder step
    stands — a package manager did something there, inside one of our
    actions, that the run does not record. Left of the midpoint, so it
-   never sits on the claim badge. *)
-let edge_svg ?(extra = "") ~(live : bool) ~(claims : int) ?(candidate_only = false)
-    ?(ph_slot = false) (e : T.edge) =
+   never sits on the badges. *)
+let edge_svg ?(extra = "") ~(live : bool) ~(counts : int * int) ?(ph_slot = false)
+    (e : T.edge) =
   let dst = pos_of e.eg_to in
+  let placed = not (List.is_empty (T.claim_sites_on e.T.eg_id)) in
   let cls =
     Printf.sprintf "edge%s%s%s%s"
       (if e.T.eg_diagonal then " diag" else "")
       (if live then "" else " dim")
-      (if claims = 0 then " bare" else "")
+      (if placed then "" else " bare")
       extra
   in
   String.concat
@@ -224,12 +234,18 @@ let edge_svg ?(extra = "") ~(live : bool) ~(claims : int) ?(candidate_only = fal
          else
            let mx = (src.px + dst.px) / 2 and my = (src.py + dst.py) / 2 in
            let badge =
-             if claims = 0 then ""
+             if not placed then ""
              else
-               let cand = if candidate_only then " cand" else "" in
+               (* the hollow badge sits beside the filled one, or in its
+                  place when nothing here is checked *)
+               let checked, named = counts in
+               let none n = if n = 0 then " none" else "" in
+               let x1 = mx + 46 and x2 = mx + 67 in
+               let hx = if checked > 0 then x2 else x1 in
                Printf.sprintf
-                 {|<circle class="cbadge%s" cx="%d" cy="%d" r="9"/><text class="cnum%s" x="%d" y="%d">%d</text>|}
-                 cand (mx + 46) my cand (mx + 46) (my + 4) claims
+                 {|<circle class="cbadge chk%s" cx="%d" cy="%d" r="9"/><text class="cnum chk%s" x="%d" y="%d">%d</text><circle class="cbadge cand%s" cx="%d" cy="%d" r="9" data-x1="%d" data-x2="%d"/><text class="cnum cand%s" x="%d" y="%d" data-x1="%d" data-x2="%d">%d</text>|}
+                 (none checked) x1 my (none checked) x1 (my + 4) checked (none named) hx my x1
+                 x2 (none named) hx (my + 4) x1 x2 named
            in
            (* an inline style, because the stylesheet's text-anchor would
               beat a presentation attribute *)
@@ -266,7 +282,12 @@ let edge_svg ?(extra = "") ~(live : bool) ~(claims : int) ?(candidate_only = fal
 let diagram ?(rename = fun (_ : string) -> None)
     ?(sublabel = fun (_ : string) -> None) ?(dead = fun (_ : string) -> false)
     ?(hide = fun (_ : string) -> false) ?(ph_slots = false) ?(case_slots = false)
-    ?(classes = fun (_ : string) -> ([] : string list)) () : string =
+    ?(classes = fun (_ : string) -> ([] : string list))
+    ?(counts =
+      fun id ->
+        let ps = T.claim_sites_on id in
+        let checked = List.count ps ~f:T.implemented in
+        (checked, List.length ps - checked)) () : string =
   let extra id = String.concat (List.map (classes id) ~f:(fun c -> " " ^ c)) in
   let bands =
     String.concat
@@ -294,13 +315,8 @@ let diagram ?(rename = fun (_ : string) -> None)
              || List.exists e.T.eg_from ~f:gone
            then ""
            else
-             let sites = T.claim_sites_on e.T.eg_id in
              edge_svg ~extra:(extra e.T.eg_id) ~live:(not (dead e.T.eg_id))
-               ~claims:(List.length sites)
-               ~candidate_only:
-                 ((not (List.is_empty sites))
-                 && List.for_all sites ~f:(fun p -> not p.T.cs_implemented))
-               ~ph_slot:ph_slots e))
+               ~counts:(counts e.T.eg_id) ~ph_slot:ph_slots e))
   in
   let ns =
     String.concat
@@ -400,10 +416,12 @@ stroke-dasharray:1 4;opacity:.9}
 .phm text{font:700 11px ui-monospace,monospace;fill:var(--mut);text-anchor:middle}
 .phm.not_yet rect{stroke:var(--acc)}.phm.not_yet text{fill:var(--acc)}
 .rec .edge.st-claim line{stroke:var(--acc);stroke-width:1.6;stroke-dasharray:4 4}
-.rec .edge.cl-violated .cbadge{fill:var(--bad)}
-.rec .edge.cl-holds .cbadge{fill:var(--ok)}
-.rec .edge.cl-partial .cbadge{fill:var(--xf)}
-.rec .edge.cl-undecided .cbadge,.rec .edge.cl-unevaluated .cbadge{fill:var(--mut)}
+.rec .edge.cl-violated .cbadge.chk{fill:var(--bad)}
+.rec .edge.cl-holds .cbadge.chk{fill:var(--ok)}
+.rec .edge.cl-partial .cbadge.chk{fill:var(--xf)}
+.rec .edge.cl-undecided .cbadge.chk,.rec .edge.cl-unevaluated .cbadge.chk{fill:var(--mut)}
+.cbadge.none,.cnum.none{display:none}
+.join .edge.jdead .cbadge,.join .edge.jdead .cnum{display:none}
 .rec .node .nsub{fill:var(--fg)}
 .rec .gone{display:none}
 .rec .node.named-decl .nlabel{font-style:italic}
@@ -479,7 +497,7 @@ border-radius:4px;white-space:nowrap}
 .selbar button.hint{border:2px dashed var(--acc)}
 section.case>p{color:var(--mut);font-size:.92rem;margin:.4rem 0 0}
 .mechnote{color:var(--mut);font-size:.9rem;margin:.3rem 0 0}
-.edet{font:12px ui-monospace,monospace;color:var(--mut);min-height:2.4em;
+.edet{font:12px ui-monospace,monospace;color:var(--mut);min-height:2.4em;white-space:pre-line;
 margin:.2rem 0 1.4rem;padding:.45rem .6rem;border:1px dashed var(--line);
 border-radius:6px;background:var(--card)}
 .edet.lit{border-style:solid;border-color:var(--acc);color:var(--fg)}
@@ -493,7 +511,7 @@ table{font-size:.8rem}}|}
 let claim_sites_table () =
   let row (e : T.edge) =
     let ps = T.claim_sites_on e.T.eg_id in
-    let impl = List.count ps ~f:(fun p -> p.T.cs_implemented) in
+    let impl = List.count ps ~f:T.implemented in
     let cand = List.length ps - impl in
     let names =
       if List.is_empty ps then
@@ -502,7 +520,7 @@ let claim_sites_table () =
         String.concat ~sep:", "
           (List.map ps ~f:(fun p ->
                Printf.sprintf "<code>%s</code>%s" (esc p.T.cs_claim)
-                 (if p.T.cs_implemented then "" else "<sup>?</sup>")))
+                 (if T.implemented p then "" else "<sup>?</sup>")))
     in
     let annotation =
       match e.T.eg_annotation with
@@ -1229,7 +1247,19 @@ a placeholder — not recorded yet (grey: out of reach)</span>
     (row "binding mechanism" m_buttons)
     (row "cooperation" k_buttons)
     (row "package in canary" c_buttons)
-    (diagram ~classes ~case_slots:true ~ph_slots:true ())
+    (diagram ~classes ~case_slots:true ~ph_slots:true
+       ~counts:(fun id ->
+         (* the default drawing's badges, as the script would count them *)
+         let claims =
+           Option.value ~default:[]
+             (Option.bind
+                (List.find (J.variants ()) ~f:(fun v ->
+                     String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m0))
+                ~f:(fun v -> List.Assoc.find (J.mechanism_claims v) id ~equal:String.equal))
+         in
+         let checked = List.count claims ~f:(fun (_, st) -> Poly.equal st T.Checked) in
+         (checked, List.length claims - checked))
+       ())
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with
      | [] -> ""
@@ -1330,8 +1360,24 @@ if(jbox&&J){
       var obs=v&&(v.observed||{})[e], ph=v&&(v.placeholders||{})[e];
       if(v){ g.classList.add('st-'+(v.edges[e]||'absent'));
         if(v.badges[e]) g.classList.add('cl-'+v.badges[e]); }
-      // the edge's own description, plus what this run recorded there
-      if(t) t.textContent=g.dataset.gtitle+(obs?' — recorded here: '+obs:'');
+      // THE BADGES (2026-09-24): the agreements on this edge that apply to
+      // the chain drawn — a recorded run's own list, else its mechanism's —
+      // filled for the checked ones, hollow for the placeholders
+      var cl=((v?v.edge_claims:(J.mechanisms[S.m]||{}).claims)||{})[e]||[],
+          nc=cl.filter(function(x){ return x[1]==='checked'; }).length, np=cl.length-nc,
+          bc=g.querySelector('.cbadge.chk'), tc=g.querySelector('.cnum.chk'),
+          bp=g.querySelector('.cbadge.cand'), tp=g.querySelector('.cnum.cand');
+      if(bc&&tc&&bp&&tp){
+        bc.classList.toggle('none',!nc); tc.classList.toggle('none',!nc); tc.textContent=nc;
+        bp.classList.toggle('none',!np); tp.classList.toggle('none',!np); tp.textContent=np;
+        var hx=nc?bp.dataset.x2:bp.dataset.x1; bp.setAttribute('cx',hx); tp.setAttribute('x',hx); }
+      // the edge's own description, what this run recorded there, and the
+      // agreements its badges count — one on several edges says so
+      var listed=cl.map(function(x){ var a=J.agreements[x[0]]||{},
+          also=(a.edges||[]).filter(function(y){ return y!==e; });
+        return (a.code?a.code+' ':'')+x[0]+' — '+x[1]+(also.length?' (also on '+also.join(', ')+')':''); });
+      if(t) t.textContent=g.dataset.gtitle+(obs?' — recorded here: '+obs:'')
+        +(listed.length?'\nagreements here:\n'+listed.join('\n'):'');
       // the placeholder marker: where a package manager did something
       // inside our action that this run does not record
       if(mk){ mk.classList.toggle('on', !!ph);
@@ -1550,8 +1596,14 @@ that realizes the relation. Where we run nothing, an edge carries
 while a package's recorded run is drawn, what that run recorded about it.
 One edge carries a
 <strong class="clm">claim</strong>, by its code, because a claim of ours
-is the only thing relating its two ends. The badge on an edge counts the
-claims that sit there. Hover an edge for what it establishes.</p>
+is the only thing relating its two ends. A claim is an agreement: a row of
+§2, or a candidate one not yet in the registry. An edge's badges count the
+agreements placed on it that apply to the chain drawn — filled for those
+canary checks, hollow for those only named so far — so they change with
+the mechanism, and in a recorded run the filled one takes the colour of
+those agreements' outcomes. An agreement placed on several edges is
+counted on each. Hover an edge for what it establishes and which
+agreements its badges count.</p>
 <p class="mechnote"><strong>Not yet every step.</strong> %s</p>
 <div class="key">
 <span><code>fetch_lib</code> our action · <em>pkg-config</em> someone
@@ -1560,9 +1612,11 @@ else's · <b class="clm">prs</b> a claim</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
 <span>◇ the experiment declares something here</span>
-<span>? = candidate, no evaluator</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge chk" cx="10" cy="10" r="7"/></svg>
+agreements canary checks here, for the chain drawn</span>
 <span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge cand" cx="10" cy="10" r="7"/></svg>
-every claim here is a placeholder — named, not implemented</span>
+agreements only named — no evaluator yet</span>
+<span>? in §3's table = no evaluator</span>
 </div>
 
 <div class="note"><strong>The artifact band is one binding mechanism.</strong>
@@ -1755,8 +1809,9 @@ outcomes, and the edges around a bridge from what a bridge step recorded
     (* §3 the census — the total is COUNTED: it was a literal
        "Twenty-five" and went stale the day a candidate was added *)
     (List.length T.claim_sites)
-    (List.count T.claim_sites ~f:(fun p -> p.T.cs_implemented))
-    (List.count T.claim_sites ~f:(fun p -> not p.T.cs_implemented))
+    (* implemented = the registry's answer, not a flag (2026-09-24) *)
+    (List.count T.claim_sites ~f:T.implemented)
+    (List.count T.claim_sites ~f:(fun p -> not (T.implemented p)))
     (* counted, like the total above: a literal "Three" was written here
        in the same edit that removed the stale "Twenty-five", and it was
        wrong on arrival — five sites span several edges *)

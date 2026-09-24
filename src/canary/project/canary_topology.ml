@@ -1781,10 +1781,16 @@ let gone_for_action (gones : (Canary_lang.lang * string list) list)
    checksum. That is why the end-to-end invariants are the ones we do
    not have. *)
 
+(* A claim site names an AGREEMENT — a registry row, or a candidate from
+   [Canary_agreement.proposed_agreements] — and the edges it sits on.
+   Whether the agreement is checked is NOT stated here: it is the
+   registry's to say ({!implemented}). It was a hand-written flag until
+   2026-09-24, and three sites said "implemented" for agreements whose
+   every method is planned, so the page drew their edges' badges as
+   checked while nothing checked them. *)
 type claim_site = {
   cs_claim : string;
   cs_edges : string list;  (** edge ids — a SET, see above *)
-  cs_implemented : bool;
 }
 
 let claim_sites : claim_site list =
@@ -1801,57 +1807,34 @@ let claim_sites : claim_site list =
 
        This is also the multi-edge structure paying for itself on its
        first day rather than hypothetically. *)
-    { cs_claim = "declared_symbols_exported";
-      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = true };
-    { cs_claim = "soname_matches_declaration";
-      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = true };
-    { cs_claim = "declared_versions_exported";
-      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = true };
-    { cs_claim = "exports_accounted_for";
-      cs_edges = [ "build_lib"; "realize_sys" ]; cs_implemented = false };
+    { cs_claim = "declared_symbols_exported"; cs_edges = [ "build_lib"; "realize_sys" ] };
+    { cs_claim = "soname_matches_declaration"; cs_edges = [ "build_lib"; "realize_sys" ] };
+    { cs_claim = "declared_versions_exported"; cs_edges = [ "build_lib"; "realize_sys" ] };
+    { cs_claim = "exports_accounted_for"; cs_edges = [ "build_lib"; "realize_sys" ] };
     (* --- the binding against the library --- *)
-    { cs_claim = "required_symbols_exported"; cs_edges = [ "link_mod" ];
-      cs_implemented = true };
-    { cs_claim = "soname_matches_requirement"; cs_edges = [ "link_mod" ];
-      cs_implemented = true };
-    { cs_claim = "required_versions_exported"; cs_edges = [ "link_mod" ];
-      cs_implemented = true };
-    { cs_claim = "dependencies_provided"; cs_edges = [ "link_mod" ];
-      cs_implemented = true };
-    { cs_claim = "signatures_agree"; cs_edges = [ "build_stub" ];
-      cs_implemented = true };
-    { cs_claim = "signatures_match_debug_info"; cs_edges = [ "build_stub" ];
-      cs_implemented = false };
+    { cs_claim = "required_symbols_exported"; cs_edges = [ "link_mod" ] };
+    { cs_claim = "soname_matches_requirement"; cs_edges = [ "link_mod" ] };
+    { cs_claim = "required_versions_exported"; cs_edges = [ "link_mod" ] };
+    { cs_claim = "dependencies_provided"; cs_edges = [ "link_mod" ] };
+    { cs_claim = "signatures_agree"; cs_edges = [ "build_stub" ] };
+    { cs_claim = "signatures_match_debug_info"; cs_edges = [ "build_stub" ] };
     (* --- the package against its own artifacts --- *)
-    { cs_claim = "api_names_present"; cs_edges = [ "install_surf" ];
-      cs_implemented = true };
-    { cs_claim = "package_contains_declared_files";
-      cs_edges = [ "install_lang" ]; cs_implemented = false };
-    { cs_claim = "repack_preserves_api"; cs_edges = [ "pack" ];
-      cs_implemented = true };
-    { cs_claim = "repack_complete"; cs_edges = [ "pack" ];
-      cs_implemented = true };
+    { cs_claim = "api_names_present"; cs_edges = [ "install_surf" ] };
+    { cs_claim = "package_contains_declared_files"; cs_edges = [ "install_lang" ] };
+    { cs_claim = "repack_preserves_api"; cs_edges = [ "pack" ] };
+    { cs_claim = "repack_complete"; cs_edges = [ "pack" ] };
     (* --- staging --- *)
-    { cs_claim = "staged_interface_preserved"; cs_edges = [ "stage" ];
-      cs_implemented = true };
-    { cs_claim = "no_build_paths_in_installed_library"; cs_edges = [ "stage" ];
-      cs_implemented = false };
+    { cs_claim = "staged_interface_preserved"; cs_edges = [ "stage" ] };
+    { cs_claim = "no_build_paths_in_installed_library"; cs_edges = [ "stage" ] };
     (* --- source --- *)
-    { cs_claim = "source_is_declared_ref"; cs_edges = [ "build_lib" ];
-      cs_implemented = false };
-    { cs_claim = "build_tree_configured_for_source"; cs_edges = [ "build_lib" ];
-      cs_implemented = false };
+    { cs_claim = "source_is_declared_ref"; cs_edges = [ "build_lib" ] };
+    { cs_claim = "build_tree_configured_for_source"; cs_edges = [ "build_lib" ] };
     (* --- runtime: the only claims with a loader under them --- *)
-    { cs_claim = "behavior_matches"; cs_edges = [ "run" ];
-      cs_implemented = true };
-    { cs_claim = "correspondence_holds_across_the_binding";
-      cs_edges = [ "run" ]; cs_implemented = false };
-    { cs_claim = "no_duplicate_implementation"; cs_edges = [ "run" ];
-      cs_implemented = false };
-    { cs_claim = "interposition_binds_build_target"; cs_edges = [ "run" ];
-      cs_implemented = false };
-    { cs_claim = "denotation_stable_across_worlds"; cs_edges = [ "run" ];
-      cs_implemented = false };
+    { cs_claim = "behavior_matches"; cs_edges = [ "run" ] };
+    { cs_claim = "correspondence_holds_across_the_binding"; cs_edges = [ "run" ] };
+    { cs_claim = "no_duplicate_implementation"; cs_edges = [ "run" ] };
+    { cs_claim = "interposition_binds_build_target"; cs_edges = [ "run" ] };
+    { cs_claim = "denotation_stable_across_worlds"; cs_edges = [ "run" ] };
     (* ⚠ THE FIRST END-TO-END CLAIM. Every claim site above sits on one
        edge — a per-layer invariant, in the network analogy. This one
        spans three: the PM resolved, the package realized what it
@@ -1859,31 +1842,82 @@ let claim_sites : claim_site list =
        the hand-resolved one did. It is the kind the asymmetry between
        apt and opam makes hard and the kind we had none of. *)
     { cs_claim = "package_resolution_suffices";
-      cs_edges = [ "resolve_lang"; "run_packaged"; "same_program" ];
-      cs_implemented = false };
-    { cs_claim = "compatibility_version_satisfied"; cs_edges = [ "link_mod" ];
-      cs_implemented = false };
+      cs_edges = [ "resolve_lang"; "run_packaged"; "same_program" ] };
+    { cs_claim = "compatibility_version_satisfied"; cs_edges = [ "link_mod" ] };
     (* --- the diagonal: the first candidate on a cooperation edge --- *)
-    { cs_claim = "discovery_matches_link"; cs_edges = [ "discover" ];
-      cs_implemented = false };
+    { cs_claim = "discovery_matches_link"; cs_edges = [ "discover" ] };
     (* --- THE BRIDGE'S CLAIMS (2026-09-23, status.md §2.7 E): placeholders
        for what a bridge states, on the edges where it states it. Each has
        its evidence recorded for zarith and no comparator yet, so each is a
        candidate badge — the bridge edges stop reading as bare because the
        CLAIM is known, not because anything decides it. --- *)
-    { cs_claim = "gate_admits_the_world"; cs_edges = [ "conf_probe" ];
-      cs_implemented = false };
-    { cs_claim = "declared_gate_matches_package"; cs_edges = [ "depends" ];
-      cs_implemented = false };
-    { cs_claim = "gate_bounds_the_library"; cs_edges = [ "depends"; "conf_probe" ];
-      cs_implemented = false };
-    { cs_claim = "depext_names_the_provided_package"; cs_edges = [ "depext" ];
-      cs_implemented = false } ]
+    { cs_claim = "gate_admits_the_world"; cs_edges = [ "conf_probe" ] };
+    { cs_claim = "declared_gate_matches_package"; cs_edges = [ "depends" ] };
+    { cs_claim = "gate_bounds_the_library"; cs_edges = [ "depends"; "conf_probe" ] };
+    { cs_claim = "depext_names_the_provided_package"; cs_edges = [ "depext" ] } ]
+
+(** IS A PLACED AGREEMENT CHECKED ANYWHERE? The registry's answer: a row
+    whose methods include one with an evaluator. A candidate (not a
+    registry row) is not, and neither is a row whose every method is
+    planned — [behavior_matches], [repack_preserves_api] and
+    [repack_complete] today, which the retired flag called implemented. *)
+let implemented (cs : claim_site) : bool =
+  match Canary_agreement.agreement_named cs.cs_claim with
+  | None -> false
+  | Some r -> (
+      match Canary_agreement.status_of_row r with
+      | Canary_agreement.Evaluated | Canary_agreement.Partly -> true
+      | Canary_agreement.Planned_only | Canary_agreement.Off_in_registry
+      | Canary_agreement.Proposed ->
+          false)
+
+(** HOW A PLACED AGREEMENT STANDS FOR ONE BINDING MECHANISM (2026-09-24,
+    user, on the badges' numbers). [Checked]: canary evaluates it for
+    this mechanism — the same answer pass 2 gives a project
+    ([Canary_project_analysis.carried_slugs]: a method with an evaluator
+    that suits the mechanism and language). [Placeholder]: named, and
+    nothing evaluates it here — a candidate, or a registry row with no
+    evaluator that suits. [None]: the registry says it cannot apply to
+    this mechanism at all (every method is inapplicable), e.g. a stub's
+    signatures for a mechanism that compiles no stub. A candidate states
+    no applicability, so it counts wherever its edge is drawn.
+
+    The applicability predicates read the mechanism and the language
+    only, never the declaration, so asking with [~declared:None] gives
+    every project binding through this mechanism the same answer. *)
+type claim_state = Checked | Placeholder
+
+let string_of_claim_state = function Checked -> "checked" | Placeholder -> "placeholder"
+
+let claim_state ~(mechanism : Canary_mechanism.mechanism) ~(lang : Canary_lang.lang)
+    (cs : claim_site) : claim_state option =
+  match Canary_agreement.agreement_named cs.cs_claim with
+  | None -> Some Placeholder
+  | Some r ->
+      if
+        List.mem
+          (Canary_project_analysis.carried_slugs ~mechanism ~lang ~declared:None)
+          cs.cs_claim ~equal:String.equal
+      then Some Checked
+      else if
+        List.exists r.Canary_agreement.ag.Canary_agreement_common.ag_methods ~f:(fun m ->
+            Canary_agreement.suits_here ~mechanism ~lang ~declared:None m)
+      then Some Placeholder
+      else None
 
 (** The claims sitting on one edge. *)
 let claim_sites_on (edge_id : string) : claim_site list =
   List.filter claim_sites ~f:(fun p ->
       List.mem p.cs_edges edge_id ~equal:String.equal)
+
+(** WHAT AN EDGE'S BADGES COUNT, for one binding mechanism (2026-09-24):
+    the agreements on the edge that can apply to it, each with how it
+    stands — a filled badge counts the [Checked], a hollow one the
+    [Placeholder]. An agreement placed on several edges is on each. *)
+let edge_claims ~(mechanism : Canary_mechanism.mechanism) ~(lang : Canary_lang.lang)
+    (edge_id : string) : (claim_site * claim_state) list =
+  List.filter_map (claim_sites_on edge_id) ~f:(fun cs ->
+      Option.map (claim_state ~mechanism ~lang cs) ~f:(fun st -> (cs, st)))
 
 (** CLAIM APPLICABILITY, PER CHAIN (2026-09-23, status.md §2.7; user: a
     bridge's claim applies only where there is a bridge). A claim applies

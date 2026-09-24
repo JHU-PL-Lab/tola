@@ -1657,7 +1657,16 @@ let bridge_record_pin : Canary_project_test.pure_test =
    and an edge whose claims are ALL placeholders gets a hollow badge, while
    an edge with an implemented claim keeps the filled one. Held over every
    edge of the page, so a claim that lands flips its badge and this says
-   so. *)
+   so.
+
+   TWO BADGES SINCE 2026-09-24 (user, on the numbers on the edges): a
+   filled one for the agreements canary checks on the relation for the
+   chain drawn, a hollow one for those only named. Held over every edge of
+   the default drawing against the REGISTRY, read here directly rather
+   than through [Canary_topology.implemented]: a filled badge only where
+   an agreement on the edge has an evaluator — the hand-written flag this
+   replaced drew [pack] and [run] filled with none — and a hollow one only
+   where an agreement on it has none. *)
 let placeholder_badges_pin : Canary_project_test.pure_test =
   { name = "overview.placeholders_are_drawn_as_such";
     check =
@@ -1683,24 +1692,164 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
               let rest = String.drop_prefix template i in
               Option.map (String.substr_index rest ~pattern:"</g>") ~f:(String.prefix rest)
         in
-        let candidate_only id =
-          let sites = T.claim_sites_on id in
-          (not (List.is_empty sites))
-          && List.for_all sites ~f:(fun p -> not p.T.cs_implemented)
+        (* the registry's own answer, not the topology's *)
+        let evaluated slug =
+          match Canary_agreement.agreement_named slug with
+          | None -> false
+          | Some r ->
+              List.exists r.Canary_agreement.ag.Canary_agreement_common.ag_methods
+                ~f:(fun m -> Option.is_some m.Canary_agreement_common.m_eval)
         in
         let bridge_edges = [ "depends"; "conf_probe"; "depext"; "discover" ] in
-        List.for_all bridge_edges ~f:candidate_only
-        && List.for_all bridge_edges ~f:(fun id ->
-               List.for_all (T.claim_sites_on id) ~f:(fun p ->
-                   List.exists Canary_agreement.proposed_agreements ~f:(fun c ->
-                       String.equal c.Canary_agreement.prop_slug p.T.cs_claim)))
+        let shown g cls = String.is_substring g ~substring:(Printf.sprintf {|class="cbadge %s"|} cls) in
+        List.for_all bridge_edges ~f:(fun id ->
+            (not (List.is_empty (T.claim_sites_on id)))
+            && List.for_all (T.claim_sites_on id) ~f:(fun p ->
+                   (not (evaluated p.T.cs_claim))
+                   && List.exists Canary_agreement.proposed_agreements ~f:(fun c ->
+                          String.equal c.Canary_agreement.prop_slug p.T.cs_claim)))
         && List.for_all T.edges ~f:(fun e ->
+               let sites = T.claim_sites_on e.T.eg_id in
                match group_of e.T.eg_id with
                | None -> false
                | Some g ->
-                   Bool.equal
-                     (String.is_substring g ~substring:{|class="cbadge cand"|})
-                     (candidate_only e.T.eg_id)))
+                   (* an edge nothing is placed on has no badge at all *)
+                   (if List.is_empty sites then
+                      not (String.is_substring g ~substring:"cbadge")
+                    else
+                      String.is_substring g ~substring:"cbadge chk"
+                      && String.is_substring g ~substring:"cbadge cand")
+                   && ((not (shown g "chk"))
+                      || List.exists sites ~f:(fun p -> evaluated p.T.cs_claim))
+                   && ((not (shown g "cand"))
+                      || List.exists sites ~f:(fun p -> not (evaluated p.T.cs_claim))))
+        (* the census and the table's [?] marks read [implemented]: it is
+           the registry's answer, whatever route computes it *)
+        && List.for_all T.claim_sites ~f:(fun cs ->
+               Bool.equal (T.implemented cs) (evaluated cs.T.cs_claim))
+        (* the two the retired flag got wrong, by name *)
+        && List.for_all [ "pack"; "run" ] ~f:(fun id ->
+               match group_of id with
+               | Some g -> (not (shown g "chk")) && shown g "cand"
+               | None -> false))
+  }
+
+(* WHAT A BADGE COUNTS IS WHAT APPLIES, AND A RECORDED COLOUR COMES FROM
+   EXACTLY THAT (2026-09-24, user, on the numbers on the edges: one
+   number counted every agreement on the edge for every mechanism, and a
+   recorded run coloured it from fewer). Pinned:
+
+   - §1's filled count per mechanism is pass 2's answer, asked
+     independently: the agreements on the edge that
+     [Canary_project_analysis.carried_slugs] lists for that mechanism;
+   - a recorded view counts the same list as §1 does for its chain's
+     mechanism — two computations, one answer;
+   - a view colours an edge exactly where it counts a checked agreement,
+     and every agreement it names on an edge is placed there;
+   - the page names each counted agreement from [agreements], which lists
+     every claim site with every edge it sits on;
+   - the script recounts from those lists. *)
+let badge_counts_pin : Canary_project_test.pure_test =
+  { name = "overview.badges_count_what_applies";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module J = Canary_overview_join in
+        let module R = Canary_overview_runs in
+        let variant_of m =
+          List.find (J.variants ()) ~f:(fun v -> Poly.equal v.T.av_mechanism m)
+        in
+        let per_mechanism_ok =
+          List.for_all (J.variants ()) ~f:(fun v ->
+              let carried =
+                Canary_project_analysis.carried_slugs ~mechanism:v.T.av_mechanism
+                  ~lang:v.T.av_lang ~declared:None
+              in
+              let counted = J.mechanism_claims v in
+              List.for_all T.edges ~f:(fun e ->
+                  let listed =
+                    Option.value ~default:[]
+                      (List.Assoc.find counted e.T.eg_id ~equal:String.equal)
+                  in
+                  let checked =
+                    List.filter_map listed ~f:(fun (s, st) ->
+                        if Poly.equal st T.Checked then Some s else None)
+                  in
+                  let hidden = List.mem (T.with_edges v.T.av_hidden) e.T.eg_id ~equal:String.equal in
+                  if hidden then List.is_empty listed
+                  else
+                    List.equal String.equal
+                      (List.sort checked ~compare:String.compare)
+                      (List.sort ~compare:String.compare
+                         (List.filter_map (T.claim_sites_on e.T.eg_id) ~f:(fun cs ->
+                              if List.mem carried cs.T.cs_claim ~equal:String.equal then
+                                Some cs.T.cs_claim
+                              else None)))
+                    && List.for_all listed ~f:(fun (s, _) ->
+                           List.exists (T.claim_sites_on e.T.eg_id) ~f:(fun cs ->
+                               String.equal cs.T.cs_claim s))))
+        in
+        let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+        let views = R.views m in
+        let views_ok =
+          (not (List.is_empty views))
+          && List.for_all views ~f:(fun (v : R.view) ->
+                 match v.R.vw_chain with
+                 | None -> false
+                 | Some c -> (
+                     match variant_of c.Canary_matrix.ch_mechanism with
+                     | None -> false
+                     | Some var ->
+                         let from_join = J.mechanism_claims var in
+                         let absent e =
+                           Poly.equal (List.Assoc.find v.R.vw_edges e ~equal:String.equal)
+                             (Some "absent")
+                         in
+                         List.for_all v.R.vw_edge_claims ~f:(fun (e, xs) ->
+                             Poly.equal (List.Assoc.find from_join e ~equal:String.equal) (Some xs))
+                         (* the same list exactly, less the edges this chain
+                            lacks and the ones this world does not realize —
+                            a badge on an unrealized edge was a built
+                            world's red badge on the fetched package's edge *)
+                         && List.for_all from_join ~f:(fun (e, _) ->
+                                Bool.equal
+                                  (List.Assoc.mem v.R.vw_edge_claims e ~equal:String.equal)
+                                  (not (List.mem v.R.vw_gone e ~equal:String.equal || absent e)))
+                         && List.for_all v.R.vw_edge_claims ~f:(fun (e, xs) ->
+                                Bool.equal
+                                  (List.Assoc.mem v.R.vw_badges e ~equal:String.equal)
+                                  (List.exists xs ~f:(fun (_, st) -> Poly.equal st T.Checked)))
+                         && List.for_all v.R.vw_badges ~f:(fun (e, _) ->
+                                List.Assoc.mem v.R.vw_edge_claims e ~equal:String.equal)))
+        in
+        let j = J.of_projects Canary_registry.all_specs in
+        let agreements_ok =
+          match J.json j with
+          | `Assoc kv -> (
+              match List.Assoc.find kv "agreements" ~equal:String.equal with
+              | Some (`Assoc ags) ->
+                  List.for_all T.claim_sites ~f:(fun cs ->
+                      match List.Assoc.find ags cs.T.cs_claim ~equal:String.equal with
+                      | Some (`Assoc f) -> (
+                          match List.Assoc.find f "edges" ~equal:String.equal with
+                          | Some (`List es) ->
+                              List.equal Poly.equal es
+                                (List.map cs.T.cs_edges ~f:(fun e -> `String e))
+                          | _ -> false)
+                      | _ -> false)
+              | _ -> false)
+          | _ -> false
+        in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+        in
+        let page_ok =
+          List.for_all
+            [ "v.edge_claims"; ".claims)||{})[e]"; "J.agreements[x[0]]"; "'.cbadge.chk'";
+              "'.cbadge.cand'"; ".cbadge.none"; ".join .edge.jdead .cbadge" ]
+            ~f:(fun s -> String.is_substring page ~substring:s)
+        in
+        per_mechanism_ok && views_ok && agreements_ok && page_ok)
   }
 
 (* THE THREE TABLES LIST WHAT CANARY COVERS, AND A CHAIN IS TWO PACKAGE
@@ -7840,6 +7989,7 @@ let base_tests : Canary_project_test.pure_test list =
       record_chains_pin;
       chain_absence_pin;
       drawn_line_sources_pin;
+      badge_counts_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

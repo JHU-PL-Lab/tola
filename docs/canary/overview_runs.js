@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-24 13:09",
+  "generated": "2026-09-24 13:47",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,7 +10,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:37.789", "2026-09-24 12:36:43.757" ],
+      "span": [ "2026-09-24 13:09:51.140", "2026-09-24 13:09:57.596" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -46,11 +46,44 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -154,10 +187,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -210,7 +243,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:37.789", "2026-09-24 12:36:43.780" ],
+      "span": [ "2026-09-24 13:09:51.140", "2026-09-24 13:09:57.619" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -244,10 +277,18 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": {
-        "build_lib": "violated",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "violated" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -351,8 +392,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -375,7 +417,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:45.786", "2026-09-24 12:36:51.659" ],
+      "span": [ "2026-09-24 13:09:59.540", "2026-09-24 13:10:05.638" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -411,11 +453,44 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -519,10 +594,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -575,7 +650,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:45.786", "2026-09-24 12:36:51.681" ],
+      "span": [ "2026-09-24 13:09:59.540", "2026-09-24 13:10:05.666" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -609,10 +684,18 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": {
-        "build_lib": "violated",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "violated" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -716,8 +799,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -740,7 +824,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:44.678", "2026-09-24 12:36:45.662" ],
+      "span": [ "2026-09-24 13:09:58.550", "2026-09-24 13:09:59.434" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -777,12 +861,49 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "stage": "holds",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -885,10 +1006,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -941,7 +1062,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:44.678", "2026-09-24 12:36:45.689" ],
+      "span": [ "2026-09-24 13:09:58.550", "2026-09-24 13:09:59.456" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -976,11 +1097,22 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": {
-        "build_lib": "violated",
-        "stage": "holds",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "violated", "stage": "holds" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -1085,8 +1217,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -1109,7 +1242,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:52.641", "2026-09-24 12:36:53.514" ],
+      "span": [ "2026-09-24 13:10:06.609", "2026-09-24 13:10:07.497" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1146,12 +1279,49 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "stage": "holds",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -1254,10 +1424,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -1310,7 +1480,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:52.641", "2026-09-24 12:36:53.536" ],
+      "span": [ "2026-09-24 13:10:06.609", "2026-09-24 13:10:07.521" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1345,11 +1515,22 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": {
-        "build_lib": "violated",
-        "stage": "holds",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "violated", "stage": "holds" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -1454,8 +1635,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -1478,7 +1660,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:20.010", "2026-09-24 12:36:26.057" ],
+      "span": [ "2026-09-24 13:09:32.528", "2026-09-24 13:09:39.208" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1514,11 +1696,44 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -1622,10 +1837,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -1678,7 +1893,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:20.010", "2026-09-24 12:36:26.086" ],
+      "span": [ "2026-09-24 13:09:32.528", "2026-09-24 13:09:39.235" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1712,10 +1927,18 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": {
-        "build_lib": "partial",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "partial" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -1819,8 +2042,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -1843,7 +2067,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:28.350", "2026-09-24 12:36:34.507" ],
+      "span": [ "2026-09-24 13:09:41.549", "2026-09-24 13:09:48.481" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1879,11 +2103,44 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -1987,10 +2244,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -2043,7 +2300,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:28.350", "2026-09-24 12:36:34.531" ],
+      "span": [ "2026-09-24 13:09:41.549", "2026-09-24 13:09:48.503" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2077,10 +2334,18 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": {
-        "build_lib": "partial",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "partial" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -2184,8 +2449,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -2208,7 +2474,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:26.174", "2026-09-24 12:36:27.190" ],
+      "span": [ "2026-09-24 13:09:39.361", "2026-09-24 13:09:40.308" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2245,12 +2511,49 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "stage": "holds",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -2353,10 +2656,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -2409,7 +2712,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:26.174", "2026-09-24 12:36:27.216" ],
+      "span": [ "2026-09-24 13:09:39.361", "2026-09-24 13:09:40.334" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2444,11 +2747,22 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": {
-        "build_lib": "partial",
-        "stage": "holds",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "partial", "stage": "holds" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -2553,8 +2867,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -2577,7 +2892,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:34.615", "2026-09-24 12:36:35.523" ],
+      "span": [ "2026-09-24 13:09:48.589", "2026-09-24 13:09:49.496" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2614,12 +2929,49 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "stage": "holds",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -2722,10 +3074,10 @@
       "gone": [],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
-        "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "no_build_paths_in_installed_library",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link",
@@ -2778,7 +3130,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:34.615", "2026-09-24 12:36:35.547" ],
+      "span": [ "2026-09-24 13:09:48.589", "2026-09-24 13:09:49.518" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2813,11 +3165,22 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": {
-        "build_lib": "partial",
-        "stage": "holds",
-        "install_surf": "holds",
-        "link_mod": "undecided"
+      "badges": { "build_lib": "partial", "stage": "holds" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -2922,8 +3285,9 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -2946,7 +3310,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:43.861", "2026-09-24 12:36:44.578" ],
+      "span": [ "2026-09-24 13:09:57.700", "2026-09-24 13:09:58.447" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2979,9 +3343,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -3080,7 +3477,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -3140,7 +3538,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:43.861", "2026-09-24 12:36:44.600" ],
+      "span": [ "2026-09-24 13:09:57.700", "2026-09-24 13:09:58.470" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3171,7 +3569,17 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "install_surf": "holds", "link_mod": "undecided" },
+      "badges": { "realize_sys": "unevaluated" },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt sqlite3.3.45.1",
@@ -3272,6 +3680,7 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -3301,7 +3710,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:51.762", "2026-09-24 12:36:52.526" ],
+      "span": [ "2026-09-24 13:10:05.750", "2026-09-24 13:10:06.501" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3334,9 +3743,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -3435,7 +3877,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -3495,7 +3938,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 12:36:51.762", "2026-09-24 12:36:52.552" ],
+      "span": [ "2026-09-24 13:10:05.750", "2026-09-24 13:10:06.526" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3526,7 +3969,17 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "install_surf": "holds", "link_mod": "undecided" },
+      "badges": { "realize_sys": "unevaluated" },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt sqlite3.3.45.1",
@@ -3627,6 +4080,7 @@
       ],
       "candidates": [
         "exports_accounted_for", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -3689,9 +4143,42 @@
         "api_names_present": "unevaluated"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 19",
@@ -3784,7 +4271,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -3884,6 +4372,38 @@
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
       },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run": [
+          [ "behavior_matches", "placeholder" ],
+          [ "correspondence_holds_across_the_binding", "placeholder" ],
+          [ "no_duplicate_implementation", "placeholder" ],
+          [ "interposition_binds_build_target", "placeholder" ],
+          [ "denotation_stable_across_worlds", "placeholder" ]
+        ]
+      },
       "nodes": { "src_sys": "F latest", "lib_sys": "B:d", "mod_lang": "B:d" },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
@@ -3974,7 +4494,7 @@
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
@@ -4036,6 +4556,38 @@
         "stage": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "stage": [
+          [ "staged_interface_preserved", "checked" ],
+          [ "no_build_paths_in_installed_library", "placeholder" ]
+        ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run": [
+          [ "behavior_matches", "placeholder" ],
+          [ "correspondence_holds_across_the_binding", "placeholder" ],
+          [ "no_duplicate_implementation", "placeholder" ],
+          [ "interposition_binds_build_target", "placeholder" ],
+          [ "denotation_stable_across_worlds", "placeholder" ]
+        ]
       },
       "nodes": {
         "src_sys": "F arbipher",
@@ -4131,7 +4683,7 @@
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
         "no_build_paths_in_installed_library", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
@@ -4191,6 +4743,34 @@
         "build_lib": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
+      },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run": [
+          [ "behavior_matches", "placeholder" ],
+          [ "correspondence_holds_across_the_binding", "placeholder" ],
+          [ "no_duplicate_implementation", "placeholder" ],
+          [ "interposition_binds_build_target", "placeholder" ],
+          [ "denotation_stable_across_worlds", "placeholder" ]
+        ]
       },
       "nodes": { "src_sys": "V:s", "lib_sys": "V:s", "mod_lang": "V:s" },
       "unplaced": {
@@ -4256,7 +4836,7 @@
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
         "source_is_declared_ref", "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
@@ -4311,6 +4891,31 @@
         "dependencies_provided": "unevaluated"
       },
       "badges": { "build_lib": "unevaluated", "link_mod": "unevaluated" },
+      "edge_claims": {
+        "build_lib": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ],
+          [ "source_is_declared_ref", "placeholder" ],
+          [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "build_stub": [ [ "signatures_match_debug_info", "placeholder" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run": [
+          [ "behavior_matches", "placeholder" ],
+          [ "correspondence_holds_across_the_binding", "placeholder" ],
+          [ "no_duplicate_implementation", "placeholder" ],
+          [ "interposition_binds_build_target", "placeholder" ],
+          [ "denotation_stable_across_worlds", "placeholder" ]
+        ]
+      },
       "nodes": { "src_sys": "V:s", "lib_sys": "V:s", "mod_lang": "V:s" },
       "unplaced": {
         "configure": "no edge for this action on the page",
@@ -4384,7 +4989,7 @@
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
         "source_is_declared_ref", "build_tree_configured_for_source",
-        "correspondence_holds_across_the_binding",
+        "behavior_matches", "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
@@ -4438,9 +5043,41 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "install_surf": "holds",
+        "realize_sys": "unevaluated",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "pack": [
+          [ "repack_preserves_api", "placeholder" ],
+          [ "repack_complete", "placeholder" ]
+        ],
+        "run": [
+          [ "behavior_matches", "placeholder" ],
+          [ "correspondence_holds_across_the_binding", "placeholder" ],
+          [ "no_duplicate_implementation", "placeholder" ],
+          [ "interposition_binds_build_target", "placeholder" ],
+          [ "denotation_stable_across_worlds", "placeholder" ]
+        ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "lib_sys": "apt libgmp-dev.2:6.3.0+dfsg",
@@ -4541,7 +5178,8 @@
       ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -4604,9 +5242,46 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "conf_probe": [
+          [ "gate_admits_the_world", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "lib_sys": "apt libgmp-dev.2:6.3.0+dfsg",
@@ -4729,7 +5404,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -4829,9 +5505,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "violated"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 1.18.0",
@@ -4923,8 +5632,9 @@
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "source_is_declared_ref",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -5017,9 +5727,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "violated"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 1.18.0",
@@ -5115,7 +5858,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -5208,9 +5952,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "holds"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 3.8.0",
@@ -5305,8 +6082,9 @@
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "source_is_declared_ref",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -5399,9 +6177,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "holds"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 3.8.0",
@@ -5500,7 +6311,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -5593,9 +6405,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 1.3.1",
@@ -5684,8 +6529,9 @@
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "source_is_declared_ref",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -5778,9 +6624,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 1.3.1",
@@ -5867,7 +6746,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -5960,9 +6840,42 @@
         "api_names_present": "unevaluated"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 1.5.7",
@@ -6045,8 +6958,9 @@
       "gone": [ "staged_sys", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files", "source_is_declared_ref",
-        "build_tree_configured_for_source",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "source_is_declared_ref",
+        "build_tree_configured_for_source", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -6139,9 +7053,42 @@
         "api_names_present": "unevaluated"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F 1.5.7",
@@ -6228,7 +7175,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -6321,9 +7269,42 @@
         "api_names_present": "violated"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "violated",
         "build_stub": "undecided",
         "link_mod": "violated"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -6418,7 +7399,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -6511,9 +7493,42 @@
         "api_names_present": "holds"
       },
       "badges": {
+        "realize_sys": "unevaluated",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "violated"
+      },
+      "edge_claims": {
+        "realize_sys": [
+          [ "declared_symbols_exported", "checked" ],
+          [ "soname_matches_declaration", "checked" ],
+          [ "declared_versions_exported", "checked" ],
+          [ "exports_accounted_for", "placeholder" ]
+        ],
+        "depext": [ [ "depext_names_the_provided_package", "placeholder" ] ],
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "discover": [ [ "discovery_matches_link", "placeholder" ] ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "src_sys": "F",
@@ -6608,7 +7623,8 @@
       "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
       "candidates": [
         "exports_accounted_for", "signatures_match_debug_info",
-        "package_contains_declared_files",
+        "package_contains_declared_files", "repack_preserves_api",
+        "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -6705,6 +7721,30 @@
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
       },
+      "edge_claims": {
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
+      },
       "nodes": {
         "lib_sys": "opam libtorch.2.1.2",
         "src_lang": "F",
@@ -6798,6 +7838,7 @@
       ],
       "candidates": [
         "signatures_match_debug_info", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",
@@ -6880,6 +7921,30 @@
         "install_surf": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
+      },
+      "edge_claims": {
+        "depends": [
+          [ "declared_gate_matches_package", "placeholder" ],
+          [ "gate_bounds_the_library", "placeholder" ]
+        ],
+        "resolve_lang": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "build_stub": [
+          [ "signatures_agree", "checked" ],
+          [ "signatures_match_debug_info", "placeholder" ]
+        ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
+        "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
+        "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
       "nodes": {
         "lib_sys": "opam libtorch.2.1.2",
@@ -6974,6 +8039,7 @@
       ],
       "candidates": [
         "signatures_match_debug_info", "package_contains_declared_files",
+        "repack_preserves_api", "repack_complete", "behavior_matches",
         "correspondence_holds_across_the_binding",
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "package_resolution_suffices",

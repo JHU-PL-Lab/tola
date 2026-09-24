@@ -1409,6 +1409,73 @@ blank.
   restating the condition. Falsified three ways. Everything else §1
   draws is inventoried, with the procedure, for the session that audits
   it: [`design/overview_provenance.md`](design/overview_provenance.md).
+- **The badges on the edges count what applies — landed the same day**
+  (user asked what the edges and their numbers are, then: "the claims
+  are just agreements … you should fix them if feasible, otherwise leave
+  some notes in the status.md"). An edge's label names who makes the
+  relation true: an action of ours, someone else's rule, or, once, a
+  claim. Its number counted the agreements placed on it. Four things
+  were wrong with that number:
+  - **Two edges said "checked" where nothing checks.** `pack` and `run`
+    drew filled badges because `claim_sites` carried a hand-written
+    `cs_implemented` flag that said yes for `behavior_matches`,
+    `repack_preserves_api` and `repack_complete`. The registry lists all
+    three as planned. The flag is gone: `Canary_topology.implemented`
+    asks the registry. The census moved from 13 implemented / 17
+    candidates to 10 / 20.
+  - **One number mixed checked agreements with placeholders**, and
+    nothing said which were which. Now each edge has two badges, filled
+    for the agreements canary checks and hollow for those only named.
+    Hovering lists each agreement by name.
+  - **The number never followed the drawing.** It counted every
+    mechanism's agreements, while a recorded run coloured the badge from
+    fewer. Now both badges count `Canary_topology.edge_claims` for the
+    mechanism drawn. Whether an agreement is checked there is pass 2's
+    answer (`carried_slugs`). A recorded world counts the same list, and
+    its filled badge is coloured from exactly those agreements. A checked
+    agreement with no recorded outcome reads `unevaluated` instead of
+    dropping out.
+  - **A badge sat on an edge the world never realizes.** A built-library
+    sqlite world drew the library agreements' red badge on the system
+    package's edge too, because those agreements sit on both of the
+    library's producers. A recorded world now badges only the edges it
+    realizes, and a generic drawing hides the badges of the edges it
+    greys.
+
+  Pinned by `overview.placeholders_are_drawn_as_such`, which now reads
+  the registry directly and names `pack` and `run`, and by the new
+  `overview.badges_count_what_applies`: §1's count per mechanism equals
+  pass 2's `carried_slugs`; a recorded view counts §1's list less its
+  missing and unrealized edges; and its colour comes from exactly its
+  checked agreements. Falsified three ways: counting every registry row
+  as checked, dropping the unrealized-edge rule, and giving the view the
+  wrong mechanism. Checked in headless Chromium for the default drawing,
+  ctypes, zarith and sqlite's built world, which is not a pin.
+
+  **Left open, because each needs more than the page:**
+  - *An agreement placed on several edges is counted on each.* That is
+    `package_resolution_suffices` (three edges), and the four library
+    agreements on both producer edges. Hovering now shows "also on …".
+    A recorded world realizes one producer, so it no longer shows the
+    verdict twice. But a generic drawing that keeps both producer edges
+    counts the agreement on each, and an end-to-end agreement has no
+    single edge to sit on. Deciding whether such an agreement gets one
+    badge over its whole span is a question about what a badge is.
+  - *The registry's "inapplicable" means two things.* `signatures_agree`
+    for a Python C extension says "no signature extractor for this
+    language's stub surface yet — a gap in canary, not in the mechanism".
+    That is recorded as `Inapplicable`, exactly like a mechanism that
+    compiles no stub. The badges follow pass 2, so on a cext chain this
+    agreement drops out of the count instead of showing hollow. Telling
+    the two apart needs a typed cause on inapplicability, the way
+    `Unavailable` got one on 2026-09-15. That is a change to the
+    agreement layer, and pass 2, the result table and the check index
+    all read it.
+  - *A candidate states no applicability*, so it is counted wherever its
+    edge is drawn. `compatibility_version_satisfied` is a Mach-O
+    agreement, and it shows as a placeholder on ELF chains too. It stays
+    that way until the proposal record carries the formats it applies
+    to, as a registry row does (`ag_formats`).
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

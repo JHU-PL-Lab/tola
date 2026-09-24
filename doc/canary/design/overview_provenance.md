@@ -10,8 +10,8 @@ This is for the session that audits the rest. It states the rule, shows
 the one workflow that has been traced end to end, lists everything else
 §1 of the overview page draws together with what reading the code says
 about its source, and gives the procedure the traced workflow followed.
-Nothing in §3 has been confirmed yet. It is a map for the audit, not its
-result.
+Apart from the agreement badges, which were settled on 2026-09-24, nothing
+in §3 has been confirmed yet. It is a map for the audit, not its result.
 
 ## 1. The rule
 
@@ -118,7 +118,7 @@ where it holds, gives the value a source the page shows, as §2 did.
 | node ids, labels, layers | `Canary_topology.nodes` | code, hand-written | |
 | positions | the layout table in `Canary_overview_page` | code, hand-written | already pinned: one row per layer, no overlap |
 | edges: ends, annotation, description | `Canary_topology.edges` | code, hand-written | `topology.graph_matches_the_registry` holds the ends and the action coverage |
-| claim badges and where they sit | `Canary_topology.claim_sites` | code, hand-written | `cs_implemented` is a hand-written flag that drives the candidate list and the page's census. Nothing holds it to the registry. Is it exactly "a registry row with an evaluator"? |
+| agreement badges and where they sit | `Canary_topology.claim_sites` (where, hand-written); the registry (whether checked) | code | Settled on 2026-09-24. The hand-written `cs_implemented` flag was wrong for three agreements and has been removed. `implemented` and `claim_state` now ask the registry, and the badges are counted per drawing ([`status.md`](../status.md) §2.7) |
 | placeholder slots | one per edge | code | |
 
 ### 3.2 A choice's drawing: `#joindata`, computed by `Canary_overview_join`
@@ -148,8 +148,8 @@ not runs.
 | an edge's state | the steps `Canary_topology.place_step` puts on the edge, each in the state `actions.log` and its markers give, worst first | code × run: the placement is code and the state is run. The source to show is the log path and the step tags |
 | `inside` | a placeholder step standing for an action edge that no step realized | code only. Placeholder steps are derived for every non-dummy fetch, whether or not it ran |
 | `observed` | the bridge record's reading of the edges around the bridge | run |
-| the badges | the row's claim outcomes, which are the log's agreement outcomes, per claim site | run, placed by code |
-| the candidate claims | claim sites without an evaluator that apply to the chain | code, and inherits the `cs_implemented` question |
+| the badges | per realized edge, the agreements that apply to the chain's mechanism (`Canary_topology.edge_claims`); the filled badge's colour comes from the log's outcomes for exactly the checked ones | code × run |
+| the candidate claims | claim sites the registry gives no evaluator that apply to the chain | code |
 | the dimmed nodes | the nodes no live edge touches and no recorded name names | derived from the edge states and the names. An edge whose step was never logged (`unrecorded`) counts as live, so dimming does not tell a step that ran from one that never did |
 | what is not drawn (`gone`) | `Canary_topology.world_gone` | code |
 | the chain line | the record's chain (`topology_of_world`) | code |
