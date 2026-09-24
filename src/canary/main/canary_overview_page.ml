@@ -465,6 +465,14 @@ fill:var(--mut);text-anchor:middle}
 .join .node.related rect{stroke:var(--acc);stroke-width:3}
 .nm-rec{font:12px ui-monospace,monospace;color:var(--acc)}
 .nm-decl{font:italic 12px ui-monospace,monospace;color:var(--acc)}
+details.jprov{margin:.7rem 0 0;font-size:.88rem}
+details.jprov summary{cursor:pointer;color:var(--mut)}
+details.jprov table{font-size:.82rem;margin:.4rem 0 .2rem}
+details.jprov td{vertical-align:top}
+.src{font:600 10.5px ui-monospace,monospace;padding:0 .3rem;border:1px solid var(--line);
+border-radius:4px;white-space:nowrap}
+.src.code{color:var(--acc)}.src.run{color:var(--ok)}
+.src.render{color:var(--bad);border-color:var(--bad)}
 .cgroup{display:inline-flex;flex-wrap:wrap;gap:.3rem;align-items:center;margin-right:.55rem}
 .cproj{font:600 12px ui-sans-serif,system-ui,sans-serif;color:var(--mut)}
 .cgroup button{font-size:12px;padding:.24rem .55rem}
@@ -1183,6 +1191,18 @@ this machine — <code>canary overview</code> writes what each machine ran to
 %s%s%s%s%s
 <p class="mechnote" id="jruns">%s</p>
 <p class="mechnote" id="jmiss" hidden></p>%s
+<details class="jprov" id="jprov"><summary id="jprovsum">Where the lines under the node labels come from</summary>
+<table class="cmp"><thead><tr><th>node</th><th>line</th><th>shown</th><th>source — and the code that read it</th></tr></thead>
+<tbody id="jprovbody"></tbody></table>
+<p class="mechnote">Every line written under a node label, with where it was read:
+<span class="src code">code</span> a declaration or a rule in canary's source;
+<span class="src run">run</span> a file a recorded run wrote;
+<span class="src render">render</span> asked of the machine rendering this page —
+neither, and flagged wherever it appears. Each is computed with its value in
+<code>Canary_overview_runs</code> and <code>Canary_overview_join</code>; the
+page only looks it up. Only these lines are traced so far: what decides which
+nodes and edges are drawn, a recorded run's edge states and badges, and the
+lists below are inventoried in <code>doc/canary/design/overview_provenance.md</code>.</p></details>
 <div id="jrec" hidden>
 <div class="key reckey">
 <span><i class="sw ok"></i> ran</span>
@@ -1286,10 +1306,19 @@ if(jbox&&J){
     // chains join through (§4.3) — or, where no chain has the choice,
     // those the language side's package manager defines
     var terms={}, pt=J.pm_terms[(c?c.ps:S.ps)||J.sys_pm],
-        br=c?(c.bridge||[]):((near&&near.band&&near.band.bridge)||[]);
+        br=c?(c.bridge||[]):((near&&near.band&&near.band.bridge)||[]), brPm=false;
     if(pt&&pt.cap) terms.cap=pt.cap;
-    if(!br.length&&!c&&S.pl&&J.pm_terms[S.pl]) br=J.pm_terms[S.pl].bridges||[];
+    if(!br.length&&!c&&S.pl&&J.pm_terms[S.pl]){ br=J.pm_terms[S.pl].bridges||[]; brPm=true; }
     if(br.length) terms.bridge=br.join(' · ');
+    // WHERE EACH LINE CAME FROM (2026-09-24): the source computed with the
+    // value, looked up by the same route the value was — a recorded run's
+    // name, a package's declaration, the choice itself, or a term
+    var srcOf=function(id, n){
+      if(n) return (v&&v.names&&v.names[id]) ? (v.name_sources||{})[id]
+        : c ? (c.names_src||{})[id] : J.sources.pm_choice;
+      return id==='cap' ? J.sources.cap_term
+        : id==='bridge' ? (brPm?J.sources.bridge_term_pm:J.sources.bridge_term) : null; };
+    var prov=[];
     jbox.classList.toggle('rec', !!v);
     jbox.querySelectorAll('[data-edge]').forEach(function(g){
       var e=g.getAttribute('data-edge'), t=g.querySelector('title'), mk=g.querySelector('.phm');
@@ -1324,7 +1353,22 @@ if(jbox&&J){
         s.setAttribute('y', place?s.dataset.y2:s.dataset.y1); }
       if(pe) pe.textContent=place;
       fit(s, 196); fit(pe, 196);
-      if(l&&l.dataset.y0) l.setAttribute('y', place?l.dataset.y2:(line?l.dataset.y1:l.dataset.y0)); });
+      if(l&&l.dataset.y0) l.setAttribute('y', place?l.dataset.y2:(line?l.dataset.y1:l.dataset.y0));
+      var lab=l?l.textContent:id;
+      if(line) prov.push([lab, n?'name':'term', line, srcOf(id,n)]);
+      if(place) prov.push([lab, 'placement', place, (v.place_sources||{})[id]]); });
+    // the list under the diagram: every line above, with its source
+    var pb=document.getElementById('jprovbody'), psum=document.getElementById('jprovsum');
+    if(pb){ var cnt={};
+      pb.innerHTML=prov.map(function(p){ var s=p[3], k=s?s.kind:'none'; cnt[k]=(cnt[k]||0)+1;
+        return '<tr><td>'+jesc(p[0])+'</td><td>'+p[1]+'</td><td><code>'+jesc(p[2])+'</code></td><td>'
+          +(s?'<span class="src '+k+'">'+k+'</span> '+(k==='run'?'<code>'+jesc(s.what)+'</code>':jesc(s.what))
+            +' — <code>'+jesc(s.at)+'</code>':'<span class="src render">no source</span>')+'</td></tr>'; }).join('');
+      if(psum) psum.innerHTML=prov.length
+        ?'Where the '+prov.length+' line'+(prov.length===1?'':'s')+' under the node labels come from: '
+          +['code','run','render','none'].filter(function(k){ return cnt[k]; }).map(function(k){
+            return cnt[k]+' <span class="src '+(k==='none'?'render':k)+'">'+(k==='none'?'no source':k)+'</span>'; }).join(' · ')
+        :'No line is written under a node label in this drawing.'; }
     var ids=J.runs[S.m+'|'+key()]||[];
     jbox.querySelectorAll('button[data-g]').forEach(function(b){
       var g=b.dataset.g, val=b.dataset.v;

@@ -69,6 +69,9 @@ type case = {
   cs_names : (string * string) list;
       (** node id → what its project DECLARES the node is, in the chain's
           first world — the name drawn under the generic label *)
+  cs_name_sources : (string * Canary_overview_runs.source) list;
+      (** node id → the declaration each name was read from, and the code
+          that read it ([Canary_overview_runs.declared_names]) *)
 }
 
 (** The key §5.4 sorts by, so the table and the buttons share one order. *)
@@ -97,6 +100,10 @@ let cases_of (is : T.band_instance list) : case list =
              Option.map
                (T.band_over mine (T.coop_of first.T.bi_topology))
                ~f:(fun band ->
+                 let declared =
+                   Canary_overview_runs.declared_names first.T.bi_pr first.T.bi_world
+                     first.T.bi_lang ~publishes:first.T.bi_publishes
+                 in
                  { cs_id = id;
                    cs_project = first.T.bi_project;
                    cs_lang = first.T.bi_lang;
@@ -104,9 +111,8 @@ let cases_of (is : T.band_instance list) : case list =
                    cs_topology = first.T.bi_topology;
                    cs_band = band;
                    cs_bridges = T.bridge_terms mine;
-                   cs_names =
-                     Canary_overview_runs.declared_names first.T.bi_pr first.T.bi_world
-                       first.T.bi_lang ~publishes:first.T.bi_publishes }))
+                   cs_names = List.map declared ~f:(fun (n, (l, _)) -> (n, l));
+                   cs_name_sources = List.map declared ~f:(fun (n, (_, s)) -> (n, s)) }))
   |> List.sort ~compare:(fun a b -> Poly.compare (sort_key a) (sort_key b))
 
 (** The package managers a concrete chain lights: its system PM, if one
@@ -371,6 +377,29 @@ let json (j : t) : Yojson.Basic.t =
                    ("dead", strs c.cs_band.T.cb_dead);
                    ("bridge", strs c.cs_bridges);
                    ( "names",
-                     `Assoc (List.map c.cs_names ~f:(fun (n, l) -> (n, `String l))) ) ])) );
+                     `Assoc (List.map c.cs_names ~f:(fun (n, l) -> (n, `String l))) );
+                   ( "names_src",
+                     `Assoc
+                       (List.map c.cs_name_sources ~f:(fun (n, s) ->
+                            (n, Canary_overview_runs.json_of_source s))) ) ])) );
+      (* WHERE THE GENERIC CHOICES' LINES COME FROM (2026-09-24) — every
+         value the script writes under a node while no package is chosen.
+         A chosen package's names carry their own ([names_src]), and a
+         recorded run's theirs ([name_sources], [place_sources]) *)
+      ( "sources",
+        let src what at = Canary_overview_runs.(json_of_source (from_code what at)) in
+        `Assoc
+          [ ( "pm_choice",
+              src "the package manager chosen, by a click or by the page's default: one of those canary has a driver for, on the side its scope puts it"
+                "Canary_overview_join.pms; the default, default_choice" );
+            ( "cap_term",
+              src "what the native side's package manager calls its capability file (this platform's, while none is chosen)"
+                "Canary_pm_solo.table (ps_capability)" );
+            ( "bridge_term",
+              src "the kinds of bridge the gates of the chains drawn name"
+                "Canary_topology.bridge_terms → Canary_bridge.kind_term" );
+            ( "bridge_term_pm",
+              src "the kinds of bridge the language side's package manager defines"
+                "Canary_bridge.kinds_defined" ) ] );
       ("runs", `Assoc (List.map j.jn_runs ~f:(fun (key, ids) -> (key, strs ids))));
       ("related", `Assoc (List.map (related j) ~f:(fun (key, ns) -> (key, strs ns)))) ]

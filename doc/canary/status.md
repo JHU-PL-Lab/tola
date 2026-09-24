@@ -1390,6 +1390,25 @@ blank.
   here), and an un-routed copy of cairo keeps the undeclared and
   no-bridge branches exercised. Falsified by the template not routing
   its gate.
+- **Every line under a node label says where it came from — landed the
+  same day** (user: "Can I confirm all the data in diagrams, for both
+  generic and the real-packages, are coming from either code or logs? …
+  you can show the relavent code path in some place in the page. you can
+  demonstrate one and we can ask another session to finish or audit the
+  rest workflows"). The workflow demonstrated is the lines §1 writes
+  under its node labels: a package's declared names, a recorded world's
+  names and placements, and the package managers' terms. Each value
+  carries a source (`Canary_overview_runs.source`: code, run or render,
+  what was read, and the function that read it), produced by the same
+  list as the value. Under the diagram, the page lists every line with
+  its source. It found one render read: the installed version of a
+  system package fetched with no pinned version, in 12 placements across
+  7 projects. That is finding 2 above, visible on the page now. Pinned
+  by `overview.every_drawn_line_has_a_source`, whose render clause
+  replaces the rendering machine's answers with a sentinel instead of
+  restating the condition. Falsified three ways. Everything else §1
+  draws is inventoried, with the procedure, for the session that audits
+  it: [`design/overview_provenance.md`](design/overview_provenance.md).
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

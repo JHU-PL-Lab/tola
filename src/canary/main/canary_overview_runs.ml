@@ -21,6 +21,34 @@ module T = Canary_topology
 module S = Canary_status
 module SC = Canary_store_config
 
+(* THE THREE SOURCES a value on the overview can have (2026-09-24, user:
+   "all the data in diagrams … are coming from either code or logs?"):
+   [Code] — a declaration or a rule in canary's own source; [Run] — a file
+   a recorded run wrote; [Render] — asked of the machine rendering the
+   page, which is neither, and is flagged wherever it appears. The page
+   lists each value it draws under a node with its source, and says the
+   kind first. *)
+type source_kind = Code | Run | Render
+
+type source = {
+  src_kind : source_kind;
+  src_what : string;
+      (** what was read: a declaration, or the path of a file a run wrote *)
+  src_at : string;  (** the function that read it *)
+}
+
+let from_code what at = { src_kind = Code; src_what = what; src_at = at }
+let from_run path at = { src_kind = Run; src_what = path; src_at = at }
+let from_render what at = { src_kind = Render; src_what = what; src_at = at }
+
+let string_of_source_kind = function Code -> "code" | Run -> "run" | Render -> "render"
+
+let json_of_source (s : source) : Yojson.Basic.t =
+  `Assoc
+    [ ("kind", `String (string_of_source_kind s.src_kind));
+      ("what", `String s.src_what);
+      ("at", `String s.src_at) ]
+
 (** One recorded world seen through one binding language. A world with
     two bindings is two chains on this layout, which is why the "no
     package manager between them" case is sqlite's PYTHON side. *)
@@ -68,6 +96,13 @@ type view = {
       (** the package in canary this world realizes — the chain id the
           overview's §1 buttons carry ({!Canary_topology.chain_id}), which
           is how choosing a package finds its recorded worlds *)
+  vw_name_sources : (string * source) list;
+      (** node id → where its NAME came from: a declaration and the
+          function that read it, or the inspection the run wrote — the page
+          lists them under the diagram (2026-09-24) *)
+  vw_place_sources : (string * source) list;
+      (** node id → where its PLACEMENT line came from — the enumeration,
+          a run's record, or the rendering machine *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -127,13 +162,16 @@ let badge_word (words : string list) : string =
 
    A node neither names keeps its generic label. *)
 
+(** Where a step's inspection lives — the path a name read from it CITES
+    (2026-09-24, user: show where each value on the diagram comes from). *)
+let inspection_path ~root ~project ~scenario ~tag ~base : string =
+  Printf.sprintf "%s/canary/projects/%s/%s/%s" root project
+    (Canary_basic.step_dir_of_tag tag)
+    (Canary_basic.filename ~variant_key:scenario ~base ~ext:"json")
+
 let read_inspection ~root ~project ~scenario ~tag ~base : Yojson.Basic.t option =
-  let path =
-    Printf.sprintf "%s/canary/projects/%s/%s/%s" root project
-      (Canary_basic.step_dir_of_tag tag)
-      (Canary_basic.filename ~variant_key:scenario ~base ~ext:"json")
-  in
-  try Some (Yojson.Basic.from_file path) with _ -> None
+  try Some (Yojson.Basic.from_file (inspection_path ~root ~project ~scenario ~tag ~base))
+  with _ -> None
 
 let jfield j k =
   match j with `Assoc kv -> List.Assoc.find kv k ~equal:String.equal | _ -> None
@@ -304,7 +342,7 @@ let first_per_node (pairs : (string * 'a) list) : (string * 'a) list =
    stdlib binding has no install step, and its inspection attaches to the
    dummy that holds its place. *)
 let recorded_names ~root (r : M.row) (steps : M.world_step list) :
-    (string * string) list =
+    (string * (string * source)) list =
   List.concat_map steps ~f:(fun w ->
       match w.M.ws_place with
       | T.Evidence_for _ | T.Placeholder_for _
@@ -312,22 +350,38 @@ let recorded_names ~root (r : M.row) (steps : M.world_step list) :
           []
       | T.On _ | T.Unplaced _ ->
           List.concat_map [ "inspect"; "inspect_stub" ] ~f:(fun base ->
+              let path =
+                inspection_path ~root ~project:r.M.project ~scenario:r.M.scenario
+                  ~tag:w.M.ws_tag ~base
+              in
               Option.value_map
                 (read_inspection ~root ~project:r.M.project ~scenario:r.M.scenario
                    ~tag:w.M.ws_tag ~base)
-                ~default:[] ~f:named_by_inspection))
+                ~default:[] ~f:(fun j ->
+                  (* each name with the file it was read from *)
+                  List.map (named_by_inspection j) ~f:(fun (node, label) ->
+                      ( node,
+                        ( label,
+                          from_run path "Canary_overview_runs.named_by_inspection" ) )))))
   |> first_per_node
 
 (* the bridge records this view's steps wrote: one per step that drives a
-   bridge, read from that step's own directory *)
+   bridge, read from that step's own directory — with its path, which the
+   names and lines read from it cite *)
 let bridge_records ~root (r : M.row) (steps : M.world_step list) :
-    Yojson.Basic.t list =
+    (string * Yojson.Basic.t) list =
   List.filter_map steps ~f:(fun w ->
       match w.M.ws_bridge with
       | None -> None
       | Some _ ->
-          read_inspection ~root ~project:r.M.project ~scenario:r.M.scenario
-            ~tag:w.M.ws_tag ~base:Canary_bridge_driver.record_base)
+          let base = Canary_bridge_driver.record_base in
+          Option.map
+            (read_inspection ~root ~project:r.M.project ~scenario:r.M.scenario
+               ~tag:w.M.ws_tag ~base)
+            ~f:(fun j ->
+              ( inspection_path ~root ~project:r.M.project ~scenario:r.M.scenario
+                  ~tag:w.M.ws_tag ~base,
+                j )))
 
 (* a file a user reads, named the way they would: its basename, unless
    that is a Python package's [__init__.py], which says nothing without
@@ -376,7 +430,7 @@ let strip_gloss pkg =
     builds and publishes one ([publishes]), and nothing otherwise. *)
 let declared_names (pr : Canary_project_run.project_run)
     (a : Canary_artifact.assignment) (lang : Canary_lang.lang) ~(publishes : bool) :
-    (string * string) list =
+    (string * (string * source)) list =
   let platform_pm = Canary_store.system_pm_of_platform (Canary_store.platform ()) in
   let id_of k =
     Option.map
@@ -425,49 +479,74 @@ let declared_names (pr : Canary_project_run.project_run)
     | _ -> None
   in
   let non_empty = function "" -> None | s -> Some s in
-  List.filter_map ~f:(fun (node, v) -> Option.map v ~f:(fun l -> (node, l)))
-    [ ("pm_sys", Option.map sys_pkg ~f:(fun _ -> Canary_store.string_of_pm platform_pm));
+  (* EACH NAME WITH THE DECLARATION IT WAS READ FROM (2026-09-24): where
+     there are two places a name can come from, the one that answered *)
+  let code what = from_code what "Canary_overview_runs.declared_names" in
+  let with_src what v = Option.map v ~f:(fun l -> (l, code what)) in
+  List.filter_map ~f:(fun (node, v) -> Option.map v ~f:(fun x -> (node, x)))
+    [ ( "pm_sys",
+        with_src "the library row's provider is a system package: this platform's"
+          (Option.map sys_pkg ~f:(fun _ -> Canary_store.string_of_pm platform_pm)) );
       ( "pkg_sys",
-        Option.map sys_pkg ~f:(fun spec -> Canary_store.system_pkg_for_pm spec platform_pm) );
+        with_src "the library row's provider (Sys_pkg), named for this platform"
+          (Option.map sys_pkg ~f:(fun spec -> Canary_store.system_pkg_for_pm spec platform_pm))
+      );
       ( "lib_sys",
         Option.first_some
-          (Option.bind decl ~f:(fun d -> non_empty d.Canary_binding_decl.native.soname))
-          (Option.bind native ~f:(fun n -> n.Canary_artifact.soname)) );
+          (with_src "the binding declaration's native.soname"
+             (Option.bind decl ~f:(fun d -> non_empty d.Canary_binding_decl.native.soname)))
+          (with_src "the declared C API's soname"
+             (Option.bind native ~f:(fun n -> n.Canary_artifact.soname))) );
       ( "hdr_sys",
-        Option.bind
-          (Option.first_some
-             (Option.map decl ~f:(fun d -> d.Canary_binding_decl.native.headers.files))
+        let files l =
+          non_empty (String.concat ~sep:", " (List.map l ~f:Stdlib.Filename.basename))
+        in
+        Option.first_some
+          (with_src "the binding declaration's native.headers"
+             (Option.bind decl ~f:(fun d -> files d.Canary_binding_decl.native.headers.files)))
+          (with_src "the declared C API's headers"
              (Option.bind native ~f:(fun n ->
-                  Option.map n.Canary_artifact.headers ~f:(fun h -> h.Canary_artifact.files))))
-          ~f:(fun files ->
-            non_empty (String.concat ~sep:", " (List.map files ~f:Stdlib.Filename.basename))) );
-      ("src_sys", repo Canary_basic.Source);
+                  Option.bind n.Canary_artifact.headers ~f:(fun h -> files h.Canary_artifact.files))))
+      );
+      ("src_sys", with_src "the library source's repo record" (repo Canary_basic.Source));
       ( "bridge",
         if not binding_fetched then None
         else
           Option.first_some
-            (Option.bind decl ~f:(fun d ->
-                 Option.bind d.Canary_binding_decl.pm_gate ~f:bridge_of_gate))
-            (List.find_map (T.bridges_of_join (T.join_of pr lang)) ~f:(fun g ->
-                 match g.T.gb_bridge with
-                 | Canary_bridge.Opam (Canary_bridge.Conf_package pkg) -> Some pkg
-                 | Canary_bridge.Opam (Canary_bridge.Depext_field d) ->
-                     Some ("depext: " ^ d))) );
-      ("pm_lang", Option.map lang_pkg ~f:(fun (pm, _) -> Canary_store.string_of_pm pm));
+            (with_src "the binding declaration's pm_gate"
+               (Option.bind decl ~f:(fun d ->
+                    Option.bind d.Canary_binding_decl.pm_gate ~f:bridge_of_gate)))
+            (with_src "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)"
+               (List.find_map (T.bridges_of_join (T.join_of pr lang)) ~f:(fun g ->
+                    match g.T.gb_bridge with
+                    | Canary_bridge.Opam (Canary_bridge.Conf_package pkg) -> Some pkg
+                    | Canary_bridge.Opam (Canary_bridge.Depext_field d) ->
+                        Some ("depext: " ^ d)))) );
+      ( "pm_lang",
+        with_src "the binding row's provider (Lang_pkg): its package manager"
+          (Option.map lang_pkg ~f:(fun (pm, _) -> Canary_store.string_of_pm pm)) );
       ( "pkg_lang",
-        if binding_fetched then Option.map lang_pkg ~f:(fun (_, p) -> strip_gloss p)
+        if binding_fetched then
+          with_src "the binding row's provider (Lang_pkg): its package"
+            (Option.map lang_pkg ~f:(fun (_, p) -> strip_gloss p))
         else if publishes then
-          List.Assoc.find pr.Canary_project_run.pr_wrapper_pkgs lang ~equal:Poly.equal
+          with_src "the wrapper package this world publishes (pr_wrapper_pkgs)"
+            (List.Assoc.find pr.Canary_project_run.pr_wrapper_pkgs lang ~equal:Poly.equal)
         else None );
-      ("src_lang", repo (Canary_basic.Binding_source lang));
+      ( "src_lang",
+        with_src "the binding source's repo record" (repo (Canary_basic.Binding_source lang)) );
       ( "stub_lang",
-        Option.map decl ~f:(fun d ->
-            match d.Canary_binding_decl.coupling with
-            | Canary_binding_decl.Stub_archive { archive; _ } -> Stdlib.Filename.basename archive
-            | Canary_binding_decl.Compiled_ext { product; _ } -> Stdlib.Filename.basename product
-            | Canary_binding_decl.Dlopen { name } -> name) );
+        with_src "the binding declaration's coupling"
+          (Option.map decl ~f:(fun d ->
+               match d.Canary_binding_decl.coupling with
+               | Canary_binding_decl.Stub_archive { archive; _ } ->
+                   Stdlib.Filename.basename archive
+               | Canary_binding_decl.Compiled_ext { product; _ } ->
+                   Stdlib.Filename.basename product
+               | Canary_binding_decl.Dlopen { name } -> name)) );
       ( "surf_lang",
-        Option.map decl ~f:(fun d -> surface_label d.Canary_binding_decl.surface_path) ) ]
+        with_src "the binding declaration's surface_path"
+          (Option.map decl ~f:(fun d -> surface_label d.Canary_binding_decl.surface_path)) ) ]
 
 (* the world a row is, as an assignment — the registry's own enumeration,
    matched by scenario name *)
@@ -507,7 +586,9 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
   in
   (* what the world's bridge steps recorded (phase E) *)
   let records = bridge_records ~root r steps in
-  let observed = first_per_node (List.concat_map records ~f:bridge_observations) in
+  let observed =
+    first_per_node (List.concat_map records ~f:(fun (_, j) -> bridge_observations j))
+  in
   (* what a package manager did here and nobody recorded: each placeholder
      step, on each edge it stands for *)
   let placeholders =
@@ -612,14 +693,46 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
           Option.map s ~f:(fun (s : M.setting) -> s.M.text)
         else None)
   in
-  let nodes =
+  (* WHERE EACH PLACEMENT CAME FROM (2026-09-24): the world's own
+     placement, from the enumeration — except the installed VERSION of a
+     system package fetched with no pinned version, which the matrix asks
+     of the machine rendering the page. That one is neither code nor a
+     run's record, and says so *)
+  let place_source kind =
+    let unpinned_fetched_sys =
+      match assignment_of_row r with
+      | None -> false
+      | Some (pr, a) ->
+          List.exists a ~f:(fun (id, (pl : Canary_artifact.placement)) ->
+              Poly.equal (Canary_artifact.kind_of id) kind
+              && Poly.equal pl.Canary_artifact.provision Canary_artifact.Fetched
+              &&
+              match Canary_project_run.provenance_of pr id with
+              | Some (SC.Sys_pkg spec) -> Option.is_none spec.Canary_store.version_tag
+              | _ -> false)
+    in
+    if unpinned_fetched_sys then
+      from_render
+        "the package is declared, but its installed VERSION is asked of the machine \
+         rendering this page — the run never recorded it (status.md §2.7 finding 2)"
+        "Canary_matrix.fetched_note → sys_pkg_version"
+    else
+      from_code "the world's placement of this artifact: its provision and version, from the enumeration"
+        "Canary_matrix.provision_choice"
+  in
+  let placed =
     List.filter_map
       [ ("src_sys", Canary_basic.Source); ("lib_sys", Canary_basic.Lib);
         ("src_lang", Canary_basic.Binding_source lang);
         ("mod_lang", Canary_basic.Binding lang) ]
-      ~f:(fun (node, kind) -> Option.map (setting kind) ~f:(fun t -> (node, t)))
-    @ first_per_node (List.concat_map records ~f:bridge_sublabels)
+      ~f:(fun (node, kind) ->
+        Option.map (setting kind) ~f:(fun t -> (node, (t, place_source kind))))
+    @ first_per_node
+        (List.concat_map records ~f:(fun (path, j) ->
+             List.map (bridge_sublabels j) ~f:(fun (n, t) ->
+                 (n, (t, from_run path "Canary_overview_runs.bridge_sublabels")))))
   in
+  let nodes = List.map placed ~f:(fun (n, (t, _)) -> (n, t)) in
   let unplaced =
     List.filter_map steps ~f:(fun w ->
         match w.M.ws_place with
@@ -630,8 +743,9 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     List.filter_map steps ~f:(fun w -> w.M.ws_at)
     |> List.sort ~compare:String.compare
   in
-  (* what the run recorded wins over what the project declared *)
-  let names =
+  (* what the run recorded wins over what the project declared — and each
+     name keeps the source that answered *)
+  let sourced_names =
     let declared =
       (* does this world publish its own binding package? ONE answer,
          the package band's — the wrapper declaration, which
@@ -642,9 +756,11 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
       | None -> []
     in
     first_per_node
-      (List.map (recorded_names ~root r steps) ~f:(fun (n, l) -> (n, (l, "recorded")))
-      @ List.map declared ~f:(fun (n, l) -> (n, (l, "declared"))))
+      (List.map (recorded_names ~root r steps) ~f:(fun (n, (l, src)) ->
+           (n, ((l, "recorded"), src)))
+      @ List.map declared ~f:(fun (n, (l, src)) -> (n, ((l, "declared"), src))))
   in
+  let names = List.map sourced_names ~f:(fun (n, (x, _)) -> (n, x)) in
   (* A NODE IS IN THIS WORLD when a realized edge touches it or the run
      recorded something about it — the hand-drawn cases hide the rest;
      here they dim, so the layout never moves *)
@@ -679,6 +795,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_observed = observed;
     vw_placeholders = placeholders;
     vw_chain = chain;
+    vw_name_sources = List.map sourced_names ~f:(fun (n, (_, s)) -> (n, s));
+    vw_place_sources = List.map placed ~f:(fun (n, (_, s)) -> (n, s));
     vw_case =
       (match chain with
        | Some c ->
@@ -786,6 +904,11 @@ let json_of_view (v : view) : Yojson.Basic.t =
             (List.map v.vw_names ~f:(fun (n, (label, from)) ->
                  (n, `Assoc [ ("label", `String label); ("from", `String from) ]))) );
         ("dim", `List (List.map v.vw_dim ~f:(fun n -> `String n)));
+        (* where each name and each placement line came from *)
+        ( "name_sources",
+          `Assoc (List.map v.vw_name_sources ~f:(fun (n, s) -> (n, json_of_source s))) );
+        ( "place_sources",
+          `Assoc (List.map v.vw_place_sources ~f:(fun (n, s) -> (n, json_of_source s))) );
         ("gone", `List (List.map v.vw_gone ~f:(fun n -> `String n)));
         ("candidates", `List (List.map v.vw_candidates ~f:(fun c -> `String c)));
         ("observed", pairs v.vw_observed);

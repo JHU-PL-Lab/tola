@@ -126,6 +126,7 @@ All six stages now have a standalone doc.
 | [artifact_cache.md](design/artifact_cache.md) | … a step's cache key includes the identity of its INPUT artifacts, not only its own cmd/expectation fingerprint |
 | [step_identity.md](design/step_identity.md) | … a step tag is (action × location KIND) alone — `tag_of_probe_lib_location` called unconditionally, and no tag anywhere containing a PM name |
 | [testing_plan.md](design/testing_plan.md) | … `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table |
+| [overview_provenance.md](design/overview_provenance.md) | … every value the overview's §1 draws is listed on the page with its source (code or run), and no render-time read is left unflagged. Traced so far: the lines under the node labels (2026-09-24); §3 is the inventory for the audit of the rest |
 | [agreement/README.md](design/agreement/README.md) | Short companion to the Agreement overview: interpreting claims and results, where evaluations come from, and making a row decide. |
 | [agreement/theory.md](design/agreement/theory.md) | **Where agreements come from** — an action embodies a relation over its inputs and running it is the only witness; the tuple is discarded and a projection survives, so an agreement is a necessary condition decidable from what survived. §5 gives, per action in the catalogue, the full-information agreement the real tool established and what post-fact checking recovers; §6 is a procedure for finding the next one. Paper material. |
 

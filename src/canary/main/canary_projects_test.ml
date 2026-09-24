@@ -2504,6 +2504,108 @@ let chain_absence_pin : Canary_project_test.pure_test =
         && List.exists views ~f:(fun v -> not (List.is_empty v.R.vw_gone)))
   }
 
+(* EVERY LINE UNDER A NODE LABEL SAYS WHERE IT CAME FROM (2026-09-24,
+   user: "Can I confirm all the data in diagrams, for both generic and the
+   real-packages, are coming from either code or logs? … you can show the
+   relavent code path in some place in the page. you can demonstrate
+   one"). The workflow demonstrated is the lines §1 writes under its node
+   labels — a package's declared names, a recorded run's names and
+   placements, the package managers' terms. Each carries a source computed
+   with the value, and the page lists them under the diagram. Pinned:
+
+   - a recorded view's names and placements have one source each; a name
+     the run RECORDED cites a file the run wrote, and the file exists; a
+     DECLARED one cites code;
+   - THE RENDER FLAG IS OBSERVED, NOT RE-DERIVED: the answers the
+     rendering machine gave are replaced by a sentinel and everything is
+     recomputed; a placement is flagged [render] exactly where the
+     sentinel shows up in its text. The memo is cleared after, so no
+     later pin sees the sentinel;
+   - a §1 package's names are all declarations, one source each;
+   - the generic lines' sources are all code, and the page has the list
+     and looks each source up by the route its value took.
+
+   The rest of what the diagram draws — which nodes and edges, a recorded
+   run's states and badges, the lists — is inventoried for audit in
+   doc/canary/design/overview_provenance.md. *)
+let drawn_line_sources_pin : Canary_project_test.pure_test =
+  { name = "overview.every_drawn_line_has_a_source";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module R = Canary_overview_runs in
+        let module J = Canary_overview_join in
+        let keys l = List.sort (List.map l ~f:fst) ~compare:String.compare in
+        let is_kind k (s : R.source) = Poly.equal s.R.src_kind k in
+        let view_ok (v : R.view) =
+          List.equal String.equal (keys v.R.vw_names) (keys v.R.vw_name_sources)
+          && List.equal String.equal (keys v.R.vw_nodes) (keys v.R.vw_place_sources)
+          && List.for_all v.R.vw_names ~f:(fun (n, (_, from)) ->
+                 match List.Assoc.find v.R.vw_name_sources n ~equal:String.equal with
+                 | None -> false
+                 | Some s -> (
+                     match from with
+                     | "recorded" -> is_kind R.Run s && Stdlib.Sys.file_exists s.R.src_what
+                     | "declared" -> is_kind R.Code s
+                     | _ -> false))
+          && List.for_all v.R.vw_place_sources ~f:(fun (_, s) ->
+                 (not (is_kind R.Run s)) || Stdlib.Sys.file_exists s.R.src_what)
+        in
+        Hashtbl.clear M.sys_pkg_versions;
+        let views = R.views (M.matrix_of Canary_registry.all_projects) in
+        let asked = Hashtbl.keys M.sys_pkg_versions in
+        (* the rendering machine answers something else, everywhere *)
+        let sentinel = "9.9.9sentinel" in
+        List.iter asked ~f:(fun k -> Hashtbl.set M.sys_pkg_versions ~key:k ~data:sentinel);
+        let views' = R.views (M.matrix_of Canary_registry.all_projects) in
+        Hashtbl.clear M.sys_pkg_versions;
+        let flagged_where_it_shows (v : R.view) =
+          List.for_all v.R.vw_nodes ~f:(fun (n, text) ->
+              match List.Assoc.find v.R.vw_place_sources n ~equal:String.equal with
+              | None -> false
+              | Some s ->
+                  Bool.equal (String.is_substring text ~substring:sentinel) (is_kind R.Render s))
+        in
+        let rendered =
+          List.exists views' ~f:(fun v ->
+              List.exists v.R.vw_place_sources ~f:(fun (_, s) -> is_kind R.Render s))
+        in
+        let j = J.of_projects Canary_registry.all_specs in
+        let cases_ok =
+          (not (List.is_empty j.J.jn_cases))
+          && List.for_all j.J.jn_cases ~f:(fun c ->
+                 List.equal String.equal (keys c.J.cs_names) (keys c.J.cs_name_sources)
+                 && List.for_all c.J.cs_name_sources ~f:(fun (_, s) -> is_kind R.Code s))
+        in
+        let field k = function
+          | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
+          | _ -> None
+        in
+        let sources_ok =
+          match field "sources" (J.json j) with
+          | Some (`Assoc ss) ->
+              List.equal String.equal (keys ss)
+                [ "bridge_term"; "bridge_term_pm"; "cap_term"; "pm_choice" ]
+              && List.for_all ss ~f:(fun (_, s) ->
+                     Poly.equal (field "kind" s) (Some (`String "code")))
+          | _ -> false
+        in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+        in
+        let page_ok =
+          List.for_all
+            [ {|id="jprov"|}; {|id="jprovbody"|}; {|id="jprovsum"|}; "v.name_sources";
+              "v.place_sources"; "c.names_src"; "J.sources.pm_choice"; "J.sources.cap_term";
+              "J.sources.bridge_term_pm"; "J.sources.bridge_term" ]
+            ~f:(fun s -> String.is_substring page ~substring:s)
+        in
+        (not (List.is_empty views)) && List.for_all views ~f:view_ok
+        && (not (List.is_empty asked)) && rendered
+        && List.for_all views' ~f:flagged_where_it_shows
+        && cases_ok && sources_ok && page_ok)
+  }
+
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
    template numbers its sections by hand, and moving the agreement table
    in produced two sections called "3." — found by reading the page, not
@@ -7737,6 +7839,7 @@ let base_tests : Canary_project_test.pure_test list =
       chain_choices_pin;
       record_chains_pin;
       chain_absence_pin;
+      drawn_line_sources_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;
