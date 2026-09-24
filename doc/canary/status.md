@@ -596,6 +596,57 @@ to record what each package-manager BRIDGE actually did.
   DRIVE a bridge, e.g. run a conf check against the library a world
   built rather than the system's, which is the built case's point.
 
+  *The model, as decided* (user, 2026-09-23, after reviewing the layered
+  PM model in their uncommitted draft `doc/audit/multi_pm.md`):
+
+  1. **A bridge is a thing, and each package manager defines its own
+     kinds of it** — opam's conf package and depext field, a Cargo
+     `*-sys` crate. It exists for cooperation BETWEEN package managers,
+     so it is modeled apart from what every PM has (install, query a
+     version) rather than inside one PM's driver. It follows that four of
+     `pm_gate`'s six cases describe the `depends` edge TO a bridge — the
+     constraint — with the bridge the thing at the other end; the other
+     two, `Package_builds_lib` and `Bundled`, are rewrites in the sense
+     of decision 3.
+  2. **A capability file belongs to the package that ships it, and is a
+     source of claims rather than a bridge.** `gmp.pc` is `libgmp-dev`'s;
+     an OCaml `META` is the binding package's. Both face the artifacts:
+     they record what building against them takes (flags, required
+     libraries), which is what a claim can hold them to. The page already
+     draws the node in the package layer, but `Canary_topology` still
+     treats the file as a bridge in three places — the `Capability_file`
+     constructor, `join_of` appending it to the bridge list, and
+     `character`, which says "+ artifact validation" only when a `.pc` is
+     declared, although conf-gmp's own predicate (`pkg-config --exists
+     gmp || cc -c test.c`) IS that validation.
+  3. **A composition is a template built from the tools, then
+     instantiated per project.** The page has both halves already — the
+     generic diagram and the recorded worlds. The template should be
+     assembled from each package manager's part plus the bridge that
+     joins them, and a project instantiates it with its own details,
+     including what the draft calls package-specific rewrites: a bundled
+     library, a package that builds its own library, a pinned depext, no
+     package manager between.
+  4. **An edge is an action when the package manager dispatches a
+     separate, observable action.** opam builds a conf package as a
+     package of its own, so `conf_probe` is an action edge; zarith's
+     configure finding GMP runs inside zarith's build and stays
+     information. The catch: opam runs the predicate only when it
+     installs the conf package, so a switch that already holds conf-gmp
+     dispatches nothing in this world. To observe it per world, canary
+     has to dispatch it — the tool model's first job.
+
+  Left for later, since neither blocks conf-gmp: *version transport* —
+  which version domain a bridge carries across. Today that is one bool
+  (`tracks_lib` on the gate, `reaches_lib` on the bridge) and conf-gmp
+  carries none; the first bridge that carries one is llvm's
+  `conf-llvm-shared {= 19}`. *Topology names* — the draft names a
+  composition and `character` names an instance, which is why zarith
+  reads "unvalidated against artifacts" where the draft says "+ artifact
+  validation". Under decision 3 the template carries the name and the
+  instance carries its rewrites and its missing evidence; this needs
+  settling when a second template exists.
+
 **Order:** A → B → C gives a working overlay for everything canary
 already runs; E then adds bridges one at a time; D can go alongside.
 Stop for the user after each phase. The record carries the platform from
