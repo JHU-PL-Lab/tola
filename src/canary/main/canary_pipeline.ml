@@ -262,7 +262,39 @@ let with_declared_facts (pr : project_run)
   let binding_store_pkg =
     spec.Canary_step_builder.binding_store_pkg @ declared_pkgs
   in
-  { spec with Canary_step_builder.api_source; binding_store_pkg }
+  (* AND WHAT EACH PACKAGE MANAGER DOES INSIDE ITS FETCH, UNSEEN
+     (2026-09-23, status.md §2.7 E): the placeholder steps, from the same
+     providers. A system package is fetched by the platform's system
+     package manager, a language package by its own; [Canary_pm_action]
+     says, per package manager, what goes unrecorded inside. Derived for
+     every project at once — it is knowledge about the package manager,
+     not about a project. *)
+  let placeholders =
+    List.filter_map
+      (fun d ->
+        let open Canary_store_config in
+        match (d.Canary_project_spec.ar_artifact, Canary_project_spec.provider_of_row d) with
+        | Canary_artifact.A_lib _, Some (Sys_pkg _) ->
+            Some
+              ( Canary_basic.Fetch Canary_basic.Lib,
+                Canary_pm_action.inside_install
+                  (Canary_store.system_pm_of_platform (Canary_store.platform ()))
+                  ~of_binding:false )
+        | Canary_artifact.A_lib _, Some (Lang_pkg { pm; _ }) ->
+            Some
+              ( Canary_basic.Fetch Canary_basic.Lib,
+                Canary_pm_action.inside_install pm ~of_binding:false )
+        | Canary_artifact.A_binding (lang, _), Some (Lang_pkg { pm; _ }) ->
+            Some
+              ( Canary_basic.Fetch (Canary_basic.Binding lang),
+                Canary_pm_action.inside_install pm ~of_binding:true )
+        | _ -> None)
+      pr.pr_artifacts
+  in
+  { spec with
+    Canary_step_builder.api_source;
+    binding_store_pkg;
+    placeholders = spec.Canary_step_builder.placeholders @ placeholders }
 
 let steps_of ?warn ~(root : string) (pr : project_run) ~(ctx : scenario_ctx)
     (a : Canary_artifact.assignment) : Canary_step_model.step list =

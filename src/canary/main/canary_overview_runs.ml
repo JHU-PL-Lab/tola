@@ -50,6 +50,10 @@ type view = {
       (** edge id → what this run RECORDED about the relation (phase E):
           the bridge record's reading of the edges around the bridge,
           including those someone else's rule establishes *)
+  vw_placeholders : (string * (string * string) list) list;
+      (** edge id → what a package manager did there, inside one of our
+          actions, that this run does NOT record: (reason code, sentence)
+          per placeholder step — [not_yet] or [out_of_reach] *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -289,7 +293,7 @@ let recorded_names ~root (r : M.row) (steps : M.world_step list) :
     (string * string) list =
   List.concat_map steps ~f:(fun w ->
       match w.M.ws_place with
-      | T.Evidence_for _
+      | T.Evidence_for _ | T.Placeholder_for _
       | T.Unplaced (T.Observes_staged_copy | T.Observes_unused_system_copy) ->
           []
       | T.On _ | T.Unplaced _ ->
@@ -490,11 +494,33 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
   (* what the world's bridge steps recorded (phase E) *)
   let records = bridge_records ~root r steps in
   let observed = first_per_node (List.concat_map records ~f:bridge_observations) in
+  (* what a package manager did here and nobody recorded: each placeholder
+     step, on each edge it stands for *)
+  let placeholders =
+    let pairs =
+      List.concat_map steps ~f:(fun w ->
+          match (w.M.ws_place, w.M.ws_placeholder) with
+          | T.Placeholder_for ids, Some ph ->
+              List.map ids ~f:(fun id ->
+                  ( id,
+                    ( Canary_pm_action.code_of_unseen ph.Canary_pm_action.ph_unseen,
+                      Canary_pm_action.describe ph ) ))
+          | _ -> [])
+    in
+    List.filter_map T.edges ~f:(fun e ->
+        match
+          List.filter_map pairs ~f:(fun (id, x) ->
+              if String.equal id e.T.eg_id then Some x else None)
+        with
+        | [] -> None
+        | xs -> Some (e.T.eg_id, xs))
+  in
   (* EVERY edge gets a word, so the template has nothing left over: a
-     realized edge its worst step's, an action edge this world does not
-     realize [absent], someone else's rule [not_ours] — or [observed]
-     where this run recorded what that rule said here — and a claim edge
-     [claim] *)
+     realized edge its worst step's; an action edge this world does not
+     realize [absent] — or [inside], where a package manager established
+     the relation inside one of our actions and a placeholder says so;
+     someone else's rule [not_ours] — or [observed] where this run
+     recorded what that rule said here — and a claim edge [claim] *)
   let edges =
     List.map T.edges ~f:(fun e ->
         ( e.T.eg_id,
@@ -510,7 +536,10 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
                   ~default:[]
               in
               match List.filter_map tags ~f:word_of_tag with
-              | [] -> "absent"
+              | [] ->
+                  if List.Assoc.mem placeholders e.T.eg_id ~equal:String.equal then
+                    "inside"
+                  else "absent"
               | w :: ws ->
                   List.fold ws ~init:w ~f:(fun acc x ->
                       if step_rank x > step_rank acc then x else acc)) ))
@@ -568,7 +597,7 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     List.filter_map steps ~f:(fun w ->
         match w.M.ws_place with
         | T.Unplaced u -> Some (w.M.ws_tag, T.string_of_unplaced u)
-        | T.On _ | T.Evidence_for _ -> None)
+        | T.On _ | T.Evidence_for _ | T.Placeholder_for _ -> None)
   in
   let stamps =
     List.filter_map steps ~f:(fun w -> w.M.ws_at)
@@ -598,7 +627,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
   let live =
     List.concat_map T.edges ~f:(fun e ->
         match List.Assoc.find edges e.T.eg_id ~equal:String.equal with
-        | Some w when step_rank w >= 0 || String.equal w "observed" ->
+        | Some w
+          when step_rank w >= 0 || String.equal w "observed" || String.equal w "inside" ->
             e.T.eg_to :: e.T.eg_from
         | _ -> [])
     @ List.filter_map names ~f:(fun (n, (_, from)) ->
@@ -622,7 +652,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_dim =
       List.filter_map T.nodes ~f:(fun n ->
           if List.mem live n.T.nd_id ~equal:String.equal then None else Some n.T.nd_id);
-    vw_observed = observed }
+    vw_observed = observed;
+    vw_placeholders = placeholders }
 
 (** Every recorded world, once per binding language it speaks. *)
 let views ?root (m : M.t) : view list =
@@ -707,7 +738,15 @@ let json_of_view (v : view) : Yojson.Basic.t =
             (List.map v.vw_names ~f:(fun (n, (label, from)) ->
                  (n, `Assoc [ ("label", `String label); ("from", `String from) ]))) );
         ("dim", `List (List.map v.vw_dim ~f:(fun n -> `String n)));
-        ("observed", pairs v.vw_observed) ])
+        ("observed", pairs v.vw_observed);
+        ( "placeholders",
+          `Assoc
+            (List.map v.vw_placeholders ~f:(fun (e, xs) ->
+                 ( e,
+                   `List
+                     (List.map xs ~f:(fun (code, text) ->
+                          `Assoc [ ("unseen", `String code); ("text", `String text) ]))
+                 ))) ) ])
 
 (* the page collects every file it loads, one machine each *)
 let prefix = "(window.CANARY_RUNS = window.CANARY_RUNS || []).push(\n"

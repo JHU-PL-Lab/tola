@@ -485,6 +485,18 @@ let run_step logger ~root:_ ~project:_ (step : step) : step_status =
     (match step.dummy with
      | Some why -> log ~event:"dummy" ~detail:(Some why)
      | None -> ());
+    (* A PLACEHOLDER says what it stands for (2026-09-23): a piece of a
+       package manager's action that this run does not record, and why —
+       the log's own line for "not implemented yet" or "out of reach",
+       which a reader of actions.log alone should be able to see *)
+    (match step.placeholder with
+     | Some ph ->
+         log ~event:"placeholder"
+           ~detail:
+             (Some
+                (Canary_pm_action.code_of_unseen ph.Canary_pm_action.ph_unseen
+                ^ ": " ^ Canary_pm_action.describe ph))
+     | None -> ());
     (* THE PRECONDITION IS SPELLED HERE, over data the step carries
        (2026-09-21). It used to be [step.check_pre ()], a closure the
        step builder captured; the step now carries the resolved

@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-23 21:56",
+  "generated": "2026-09-23 22:14",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -9,7 +9,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:27.804", "2026-09-23 21:55:33.808" ],
+      "span": [ "2026-09-23 22:13:30.916", "2026-09-23 22:13:36.998" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -25,8 +25,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -74,10 +74,39 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
-        "consumer_artifact"
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "be0605-python",
@@ -85,7 +114,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:27.804", "2026-09-23 21:55:33.835" ],
+      "span": [ "2026-09-23 22:13:30.916", "2026-09-23 22:13:37.023" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -151,7 +180,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "df925e-ocaml",
@@ -159,7 +189,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:35.758", "2026-09-23 21:55:41.731" ],
+      "span": [ "2026-09-23 22:13:38.990", "2026-09-23 22:13:45.134" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -175,8 +205,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -224,10 +254,39 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
-        "consumer_artifact"
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "df925e-python",
@@ -235,7 +294,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:35.758", "2026-09-23 21:55:41.753" ],
+      "span": [ "2026-09-23 22:13:38.990", "2026-09-23 22:13:45.162" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -301,7 +360,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "bf7656-ocaml",
@@ -309,7 +369,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:34.762", "2026-09-23 21:55:35.662" ],
+      "span": [ "2026-09-23 22:13:37.975", "2026-09-23 22:13:38.883" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -325,8 +385,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -376,11 +436,38 @@
         "pkg_lang": { "label": "sqlite3", "from": "declared" },
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
-      "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
-        "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "bf7656-python",
@@ -388,7 +475,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:34.762", "2026-09-23 21:55:35.686" ],
+      "span": [ "2026-09-23 22:13:37.975", "2026-09-23 22:13:38.906" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -457,7 +544,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "e35b2b-ocaml",
@@ -465,7 +553,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:42.665", "2026-09-23 21:55:43.603" ],
+      "span": [ "2026-09-23 22:13:46.204", "2026-09-23 22:13:47.101" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -481,8 +569,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -532,11 +620,38 @@
         "pkg_lang": { "label": "sqlite3", "from": "declared" },
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
-      "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
-        "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "e35b2b-python",
@@ -544,7 +659,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:42.665", "2026-09-23 21:55:43.630" ],
+      "span": [ "2026-09-23 22:13:46.204", "2026-09-23 22:13:47.125" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -613,7 +728,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "08b7dd-ocaml",
@@ -621,7 +737,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:09.225", "2026-09-23 21:55:16.110" ],
+      "span": [ "2026-09-23 22:13:13.520", "2026-09-23 22:13:19.672" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -637,8 +753,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -686,10 +802,39 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
-        "consumer_artifact"
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "08b7dd-python",
@@ -697,7 +842,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:09.225", "2026-09-23 21:55:16.138" ],
+      "span": [ "2026-09-23 22:13:13.520", "2026-09-23 22:13:19.699" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -763,7 +908,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "b8e9cb-ocaml",
@@ -771,7 +917,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:18.440", "2026-09-23 21:55:24.901" ],
+      "span": [ "2026-09-23 22:13:21.964", "2026-09-23 22:13:28.112" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -787,8 +933,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -836,10 +982,39 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
-        "consumer_artifact"
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "b8e9cb-python",
@@ -847,7 +1022,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:18.440", "2026-09-23 21:55:24.926" ],
+      "span": [ "2026-09-23 22:13:21.964", "2026-09-23 22:13:28.135" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -913,7 +1088,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "740478-ocaml",
@@ -921,7 +1097,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:16.342", "2026-09-23 21:55:17.343" ],
+      "span": [ "2026-09-23 22:13:19.778", "2026-09-23 22:13:20.748" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -937,8 +1113,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -988,11 +1164,38 @@
         "pkg_lang": { "label": "sqlite3", "from": "declared" },
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
-      "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
-        "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "740478-python",
@@ -1000,7 +1203,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:16.342", "2026-09-23 21:55:17.367" ],
+      "span": [ "2026-09-23 22:13:19.778", "2026-09-23 22:13:20.772" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1069,7 +1272,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "170e8d-ocaml",
@@ -1077,7 +1281,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:25.006", "2026-09-23 21:55:26.067" ],
+      "span": [ "2026-09-23 22:13:28.214", "2026-09-23 22:13:29.162" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1093,8 +1297,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -1144,11 +1348,38 @@
         "pkg_lang": { "label": "sqlite3", "from": "declared" },
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
-      "dim": [
-        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
-        "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "170e8d-python",
@@ -1156,7 +1387,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:25.006", "2026-09-23 21:55:26.092" ],
+      "span": [ "2026-09-23 22:13:28.214", "2026-09-23 22:13:29.186" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1225,7 +1456,8 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "c2ff32-ocaml",
@@ -1233,7 +1465,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:33.911", "2026-09-23 21:55:34.660" ],
+      "span": [ "2026-09-23 22:13:37.104", "2026-09-23 22:13:37.871" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1249,8 +1481,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -1289,10 +1521,44 @@
         "pkg_lang": { "label": "sqlite3", "from": "declared" },
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "c2ff32-python",
@@ -1300,7 +1566,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:33.911", "2026-09-23 21:55:34.684" ],
+      "span": [ "2026-09-23 22:13:37.104", "2026-09-23 22:13:37.895" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1356,7 +1622,15 @@
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ]
+      }
     },
     {
       "id": "4af838-ocaml",
@@ -1364,7 +1638,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:41.827", "2026-09-23 21:55:42.568" ],
+      "span": [ "2026-09-23 22:13:45.262", "2026-09-23 22:13:46.093" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1380,8 +1654,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -1420,10 +1694,44 @@
         "pkg_lang": { "label": "sqlite3", "from": "declared" },
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "4af838-python",
@@ -1431,7 +1739,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 21:55:41.827", "2026-09-23 21:55:42.592" ],
+      "span": [ "2026-09-23 22:13:45.262", "2026-09-23 22:13:46.119" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1487,7 +1795,15 @@
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "stub_lang", "surf_lang", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ]
+      }
     },
     {
       "id": "d26e75-ocaml",
@@ -1511,8 +1827,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -1550,11 +1866,44 @@
         "stub_lang": { "label": "libllvm.a", "from": "declared" },
         "surf_lang": { "label": "llvm.mli", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "src_lang", "stub_lang",
-        "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "c8fae6-ocaml",
@@ -1626,7 +1975,8 @@
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "9f4072-ocaml",
@@ -1703,7 +2053,8 @@
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "28a379-ocaml",
@@ -1768,7 +2119,8 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "28a379-python",
@@ -1835,7 +2187,8 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {}
     },
     {
       "id": "614dda-ocaml",
@@ -1843,7 +2196,7 @@
       "scenario": "lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 20:35:47.831", "2026-09-23 20:35:58.039" ],
+      "span": [ "2026-09-23 22:11:45.000", "2026-09-23 22:11:55.546" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1904,7 +2257,15 @@
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "surf_lang",
         "consumer_package"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ]
+      }
     },
     {
       "id": "4ea4a4-ocaml",
@@ -1912,7 +2273,7 @@
       "scenario": "lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 20:35:38.648", "2026-09-23 20:35:47.799" ],
+      "span": [ "2026-09-23 22:11:37.804", "2026-09-23 22:11:44.945" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1923,13 +2284,13 @@
         "stage": "absent",
         "depext": "observed",
         "depends": "warm",
-        "conf_probe": "ran",
+        "conf_probe": "warm",
         "discover": "observed",
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -1972,7 +2333,7 @@
         "src_lang": { "label": "Zarith.git", "from": "declared" },
         "surf_lang": { "label": "zarith.mli", "from": "declared" }
       },
-      "dim": [ "src_sys", "staged_sys", "src_lang", "consumer_artifact" ],
+      "dim": [ "src_sys", "staged_sys", "consumer_artifact" ],
       "observed": {
         "depends": "zarith's depends names conf-gmp",
         "conf_probe": "conf-gmp's check: pkg-config --print-errors --exists gmp — holds",
@@ -1980,6 +2341,42 @@
         "resolve_sys": "installed here: libgmp-dev 2:6.3.0+dfsg-2ubuntu6.1",
         "realize_cap": "libgmp-dev ships /usr/lib/x86_64-linux-gnu/pkgconfig/gmp.pc",
         "discover": "pkg-config gmp → 6.3.0 in /usr/lib/x86_64-linux-gnu"
+      },
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
       }
     },
     {
@@ -2004,8 +2401,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -2047,10 +2444,45 @@
         "pkg_lang": { "label": "cairo2", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "7ac7f1-ocaml",
@@ -2074,8 +2506,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -2116,10 +2548,45 @@
         "pkg_lang": { "label": "cairo2", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "1406f0-ocaml",
@@ -2143,8 +2610,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -2189,10 +2656,45 @@
         "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "0a184a-ocaml",
@@ -2216,8 +2718,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -2261,10 +2763,45 @@
         "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "657774-ocaml",
@@ -2288,8 +2825,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -2328,10 +2865,45 @@
         "pkg_lang": { "label": "camlzip", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "d668a4-ocaml",
@@ -2355,8 +2927,8 @@
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -2393,10 +2965,45 @@
         "pkg_lang": { "label": "camlzip", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "ff020b-ocaml",
@@ -2420,8 +3027,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -2459,10 +3066,45 @@
         "pkg_lang": { "label": "zstd", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "ff7b9d-ocaml",
@@ -2486,8 +3128,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -2524,10 +3166,45 @@
         "pkg_lang": { "label": "zstd", "from": "declared" }
       },
       "dim": [
-        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
-        "consumer_artifact"
+        "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "7b508c-ocaml",
@@ -2551,8 +3228,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -2592,10 +3269,44 @@
         "pkg_lang": { "label": "ssl", "from": "declared" },
         "surf_lang": { "label": "ssl.mli", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "8f247d-ocaml",
@@ -2619,8 +3330,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -2660,10 +3371,44 @@
         "pkg_lang": { "label": "ssl", "from": "declared" },
         "surf_lang": { "label": "ssl.mli", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ],
-      "observed": {}
+      "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "observed": {},
+      "placeholders": {
+        "resolve_sys": [
+          {
+            "unseen": "not_yet",
+            "text": "apt resolve: the version apt chose, and the pins and priorities that chose it; not recorded yet — `apt-cache policy <package>` answers both, in the world the run is in"
+          }
+        ],
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "0dc978-ocaml",
@@ -2687,8 +3432,8 @@
         "resolve_lang": "xfail",
         "install_lang": "xfail",
         "install_surf": "xfail",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -2714,7 +3459,9 @@
         "mod_lang": "opam torch.v0.17.0"
       },
       "unplaced": {
-        "fetch_lib": "the library comes from a language package manager: no edge from there"
+        "fetch_lib": "the library comes from a language package manager: no edge from there",
+        "fetch_lib_opam_plan": "the library comes from a language package manager: no edge from there",
+        "fetch_lib_opam_solver": "the library comes from a language package manager: no edge from there"
       },
       "names": {
         "lib_sys": { "label": "libtorch_cpu.so", "from": "recorded" },
@@ -2730,10 +3477,40 @@
         "surf_lang": { "label": "torch.mli", "from": "declared" }
       },
       "dim": [
-        "pm_sys", "pkg_sys", "src_sys", "hdr_sys", "staged_sys", "cap",
-        "src_lang", "stub_lang", "consumer_artifact"
+        "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap",
+        "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     },
     {
       "id": "e1d373-ocaml",
@@ -2757,8 +3534,8 @@
         "resolve_lang": "ran",
         "install_lang": "ran",
         "install_surf": "ran",
-        "build_stub": "absent",
-        "link_mod": "absent",
+        "build_stub": "inside",
+        "link_mod": "inside",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -2784,7 +3561,9 @@
         "mod_lang": "opam torch.v0.17.0-canary1"
       },
       "unplaced": {
-        "fetch_lib": "the library comes from a language package manager: no edge from there"
+        "fetch_lib": "the library comes from a language package manager: no edge from there",
+        "fetch_lib_opam_plan": "the library comes from a language package manager: no edge from there",
+        "fetch_lib_opam_solver": "the library comes from a language package manager: no edge from there"
       },
       "names": {
         "lib_sys": { "label": "libtorch_cpu.so", "from": "recorded" },
@@ -2800,10 +3579,40 @@
         "surf_lang": { "label": "torch.mli", "from": "declared" }
       },
       "dim": [
-        "pm_sys", "pkg_sys", "src_sys", "hdr_sys", "staged_sys", "cap",
-        "src_lang", "stub_lang", "consumer_artifact"
+        "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap",
+        "consumer_artifact"
       ],
-      "observed": {}
+      "observed": {},
+      "placeholders": {
+        "discover": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "resolve_lang": [
+          {
+            "unseen": "not_yet",
+            "text": "opam resolve: the plan opam carried out: each package it installed, rebuilt or removed — a bridge package among them, whose build is when the bridge's check runs; not recorded yet — the install prints one line per package (`∗ installed conf-gmp.5`), or that the package is already installed and nothing was done"
+          },
+          {
+            "unseen": "out_of_reach",
+            "text": "opam resolve: why opam's solver chose these versions; out of reach — opam reports the solution it reached, not the search that reached it"
+          }
+        ],
+        "build_stub": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ],
+        "link_mod": [
+          {
+            "unseen": "not_yet",
+            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
+          }
+        ]
+      }
     }
   ],
   "cases": {

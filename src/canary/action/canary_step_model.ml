@@ -182,6 +182,13 @@ type step = {
      to the system, not the install's, and only this field says so.
      [None] for every other step. *)
   bridge : Canary_bridge.t option;
+  (* A PLACEHOLDER STEP (2026-09-23, status.md §2.7 E): it stands for a
+     piece of a package manager's action that canary does not record —
+     not yet, or out of reach — carries the parent action, does no work,
+     and says why ([Canary_pm_action]). Not a dummy: a dummy says there is
+     nothing to do; a placeholder says something IS done, by somebody
+     else, unseen. [None] for every other step. *)
+  placeholder : Canary_pm_action.placeholder option;
 }
 
 type logger = {

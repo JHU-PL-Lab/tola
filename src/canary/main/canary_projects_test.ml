@@ -831,7 +831,8 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                         ( s,
                           T.place_step ~pr ~world:a ~action:s.SM.action
                             ~location:s.SM.location ~inspects:s.SM.inspects
-                            ~dummy:s.SM.dummy ~bridge:s.SM.bridge )) )))
+                            ~dummy:s.SM.dummy ~bridge:s.SM.bridge
+                            ~placeholder:s.SM.placeholder )) )))
         in
         let all = List.concat_map placed ~f:snd in
         let edge_exists id =
@@ -845,6 +846,12 @@ let every_step_placed_pin : Canary_project_test.pure_test =
               List.for_all places ~f:(fun ((s : SM.step), p) ->
                   match p with
                   | T.On ids -> (not (List.is_empty ids)) && List.for_all ids ~f:edge_exists
+                  (* a placeholder marks edges that exist, and only a step
+                     that IS a placeholder is placed this way *)
+                  | T.Placeholder_for ids ->
+                      Option.is_some s.SM.placeholder
+                      && (not (List.is_empty ids))
+                      && List.for_all ids ~f:edge_exists
                   | T.Evidence_for parent ->
                       List.exists steps ~f:(fun (q : SM.step) ->
                           String.equal q.SM.tag parent
@@ -859,7 +866,7 @@ let every_step_placed_pin : Canary_project_test.pure_test =
           List.filter_map all ~f:(fun (s, p) ->
               match p with
               | T.Unplaced u -> Some (family s ^ " " ^ T.code_of_unplaced u)
-              | T.On _ | T.Evidence_for _ -> None)
+              | T.On _ | T.Evidence_for _ | T.Placeholder_for _ -> None)
           |> List.dedup_and_sort ~compare:String.compare
         in
         let listed =
@@ -872,7 +879,9 @@ let every_step_placed_pin : Canary_project_test.pure_test =
         (* every ACTION edge is realized somewhere *)
         let realized =
           List.concat_map all ~f:(fun (_, p) ->
-              match p with T.On ids -> ids | T.Evidence_for _ | T.Unplaced _ -> [])
+              match p with
+              | T.On ids -> ids
+              | T.Evidence_for _ | T.Placeholder_for _ | T.Unplaced _ -> [])
         in
         let action_edges_realized =
           List.for_all T.edges ~f:(fun e ->
@@ -993,6 +1002,114 @@ let bridge_step_pin : Canary_project_test.pure_test =
         && List.equal String.equal rollout [ "zarith conf-gmp" ])
   }
 
+(* A PLACEHOLDER STEP STANDS FOR WHAT A PACKAGE MANAGER DOES, UNSEEN
+   (2026-09-23, status.md §2.7 E; user: "I like the placeholder steps").
+   Derived for every project from the providers it declares, so this holds
+   the derivation over every world of every active project:
+
+   - each stands for an entry of its package manager's catalogue
+     ([Canary_pm_action.inside_install]) — not a free-floating string;
+   - it sits beside a real fetch of the same action in the same world, not
+     a dummy one (a dummy installs nothing, so nothing is done unseen),
+     depends on it, is named <fetch>_<pm>_<key>, and selects no agreements;
+   - a dummy fetch has none beside it (sqlite's CPython stdlib binding);
+   - both reasons are exercised, and zarith's fetched world carries the
+     three opam pieces and the system package manager's one;
+   - its command writes the marker and says what it stands for. *)
+let placeholder_steps_pin : Canary_project_test.pure_test =
+  { name = "steps.placeholders_stand_for_what_pms_do";
+    check =
+      (fun () ->
+        let module SM = Canary_step_model in
+        let module PA = Canary_pm_action in
+        let worlds =
+          List.concat_map Canary_registry.all_projects ~f:(fun (name, pr) ->
+              List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  ( name,
+                    Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
+                      ~ctx:(Canary_pipeline.ctx_of pr a) a )))
+        in
+        let well_formed =
+          List.for_all worlds ~f:(fun (_, steps) ->
+              List.for_all steps ~f:(fun (s : SM.step) ->
+                  match s.SM.placeholder with
+                  | None -> true
+                  | Some ph -> (
+                      match (s.SM.action, s.SM.deps) with
+                      | (Canary_basic.Fetch k as act), [ fetch ] ->
+                          let of_binding =
+                            match k with Canary_basic.Binding _ -> true | _ -> false
+                          in
+                          List.mem
+                            (PA.inside_install ph.PA.ph_pm ~of_binding)
+                            ph ~equal:Poly.equal
+                          && String.equal s.SM.tag
+                               (String.concat ~sep:"_"
+                                  [ fetch; Canary_store.string_of_pm ph.PA.ph_pm;
+                                    ph.PA.ph_key ])
+                          && List.exists steps ~f:(fun (q : SM.step) ->
+                                 String.equal q.SM.tag fetch
+                                 && Poly.equal q.SM.action act
+                                 && Option.is_none q.SM.dummy
+                                 && Option.is_none q.SM.placeholder)
+                          && Option.is_none s.SM.agreement_ctx
+                          && Option.is_none s.SM.inspects
+                          && Option.is_none s.SM.bridge
+                      | _ -> false)))
+        in
+        let all = List.concat_map worlds ~f:snd in
+        let phs = List.filter_map all ~f:(fun (s : SM.step) -> s.SM.placeholder) in
+        let both_reasons =
+          List.exists phs ~f:(fun p ->
+              match p.PA.ph_unseen with PA.Not_yet _ -> true | _ -> false)
+          && List.exists phs ~f:(fun p ->
+                 match p.PA.ph_unseen with PA.Out_of_reach _ -> true | _ -> false)
+        in
+        let no_placeholder_beside_a_dummy =
+          List.for_all worlds ~f:(fun (_, steps) ->
+              List.for_all steps ~f:(fun (d : SM.step) ->
+                  Option.is_none d.SM.dummy
+                  || not
+                       (List.exists steps ~f:(fun (s : SM.step) ->
+                            Option.is_some s.SM.placeholder
+                            && List.mem s.SM.deps d.SM.tag ~equal:String.equal))))
+          (* and exercised: some world has a dummy fetch *)
+          && List.exists all ~f:(fun (s : SM.step) -> Option.is_some s.SM.dummy)
+        in
+        let sys = Canary_store.string_of_pm (Canary_store.detect_pm ()) in
+        let zarith_fetched =
+          List.exists worlds ~f:(fun (name, steps) ->
+              String.equal name "zarith"
+              && List.for_all
+                   [ "fetch_binding_ocaml_opam_plan"; "fetch_binding_ocaml_opam_solver";
+                     "fetch_binding_ocaml_opam_build"; "fetch_lib_" ^ sys ^ "_policy" ]
+                   ~f:(fun t ->
+                     List.exists steps ~f:(fun (s : SM.step) -> String.equal s.SM.tag t)))
+        in
+        (* the command a placeholder resolves to writes its marker and says
+           what it stands for *)
+        let command_ok =
+          match
+            List.find all ~f:(fun (s : SM.step) -> Option.is_some s.SM.placeholder)
+          with
+          | None -> false
+          | Some s ->
+              let out = "_out/canary/test/placeholder-fixture" in
+              ignore (Stdlib.Sys.command (Printf.sprintf "rm -rf %s" out) : int);
+              let sh = s.SM.cmd ~output_dir:out ~variant_key:"" in
+              Stdlib.Sys.command (sh ^ " >/dev/null 2>&1") = 0
+              && Stdlib.Sys.file_exists (out ^ "/placeholder.ok")
+              && String.is_substring sh
+                   ~substring:
+                     (PA.string_of_unseen
+                        (Option.value_exn s.SM.placeholder).PA.ph_unseen
+                     |> String.split ~on:'\''
+                     |> List.hd_exn)
+        in
+        well_formed && both_reasons && no_placeholder_beside_a_dummy && zarith_fetched
+        && command_ok)
+  }
+
 (* A RECORDED RUN IS AN OVERLAY ON THE TEMPLATE (2026-09-23, status.md
    §2.7 phase C). The overview draws a recorded world by applying words —
    a state per edge, an outcome per badge, a sublabel per node — computed
@@ -1038,7 +1155,7 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         let text = R.payload m ~generated_at:"pin" in
         let words =
           [ "ran"; "warm"; "xfail"; "fail"; "blocked"; "unrecorded"; "absent";
-            "not_ours"; "observed"; "claim" ]
+            "inside"; "not_ours"; "observed"; "claim" ]
         in
         let edge_ids = List.map T.edges ~f:(fun e -> e.T.eg_id) in
         let assoc_keys j k =
@@ -1109,7 +1226,34 @@ let overview_overlay_pin : Canary_project_test.pure_test =
                                    match e.T.eg_annotation with
                                    | T.Info _ -> true
                                    | T.Action _ | T.Agreement _ -> false)
+                        (* [inside] only on an action edge a placeholder
+                           stands for: a package manager established it,
+                           unseen (2026-09-23) *)
+                        | `String "inside" ->
+                            List.mem (assoc_keys v "placeholders") id ~equal:String.equal
+                            && List.exists T.edges ~f:(fun e ->
+                                   String.equal e.T.eg_id id
+                                   &&
+                                   match e.T.eg_annotation with
+                                   | T.Action _ -> true
+                                   | T.Info _ | T.Agreement _ -> false)
                         | _ -> true)
+                 (* every placeholder is on a template edge, with a known
+                    reason *)
+                 && List.for_all (assoc_keys v "placeholders") ~f:(fun e ->
+                        List.mem edge_ids e ~equal:String.equal)
+                 && (match F.field v "placeholders" with
+                    | Some (`Assoc kv) ->
+                        List.for_all kv ~f:(fun (_, xs) ->
+                            match xs with
+                            | `List items ->
+                                (not (List.is_empty items))
+                                && List.for_all items ~f:(fun it ->
+                                       List.mem [ "not_yet"; "out_of_reach" ]
+                                         (Option.value (F.str it "unseen") ~default:"")
+                                         ~equal:String.equal)
+                            | _ -> false)
+                    | _ -> false)
                  &&
                  match row with
                  | None -> false
@@ -1150,6 +1294,10 @@ let overview_overlay_pin : Canary_project_test.pure_test =
           (* the conf world drives its bridge, so its check is DRAWN — a
              step realizes it whether or not that step has run yet *)
           && drawn "conf" "conf_probe"
+          (* and the conf world FETCHES its binding, so opam compiled the
+             stub and linked the module inside its install: those relations
+             happened, unseen — placeholders, not absences *)
+          && is "conf" "build_stub" "inside" && is "conf" "link_mod" "inside"
           && List.for_all T.edges ~f:(fun e ->
                  match e.T.eg_annotation with
                  | T.Info _ ->
@@ -1186,6 +1334,12 @@ let overview_overlay_pin : Canary_project_test.pure_test =
                    ~substring:(Printf.sprintf {|<script src="%s">|} f))
           (* no run state in the page: the views live only in the file *)
           && not (String.is_substring page ~substring:"CANARY_RUNS.push")
+          (* a placeholder slot on the template, hidden by CLASS — SVG does
+             not honour the [hidden] attribute, and the first cut drew a
+             marker on every edge *)
+          && String.is_substring section ~substring:{|class="phm"|}
+          && String.is_substring page ~substring:".phm{display:none}"
+          && not (String.is_substring section ~substring:{|class="phm" hidden|})
         in
         file_ok && views_ok && cases_ok && facts_ok && page_ok
         && String.is_prefix (R.target ~hypothetical:true) ~prefix:"_out/"
@@ -2685,7 +2839,8 @@ let canary_switch_pin : Canary_project_test.pure_test =
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
               disabled_agreements = []; agreement_ctx = None; dummy = None;
-              location = None; inspects = None; bridge = None }
+              location = None; inspects = None; bridge = None;
+              placeholder = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -2787,7 +2942,8 @@ let platform_single_source_pin : Canary_project_test.pure_test =
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
               disabled_agreements = []; agreement_ctx = None; dummy = None;
-              location = None; inspects = None; bridge = None }
+              location = None; inspects = None; bridge = None;
+              placeholder = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -2881,7 +3037,8 @@ let strict_mode_pin : Canary_project_test.pure_test =
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = Canary_step_model.Expect_success; symbol_check = None;
             disabled_agreements = []; agreement_ctx = None; dummy = None;
-              location = None; inspects = None; bridge = None }
+              location = None; inspects = None; bridge = None;
+              placeholder = None }
         in
         let fingerprint_under b =
           Canary_agreement_common.set_strict b;
@@ -3403,7 +3560,8 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = exp; symbol_check = None; disabled_agreements = [];
             agreement_ctx = None; dummy = None;
-              location = None; inspects = None; bridge = None }
+              location = None; inspects = None; bridge = None;
+              placeholder = None }
         in
         let rendered exp =
           String.concat ~sep:"\n"
@@ -6719,6 +6877,7 @@ let base_tests : Canary_project_test.pure_test list =
       record_join_pin;
       every_step_placed_pin;
       bridge_step_pin;
+      placeholder_steps_pin;
       overview_overlay_pin;
       recorded_names_pin;
       overlay_words_pin;

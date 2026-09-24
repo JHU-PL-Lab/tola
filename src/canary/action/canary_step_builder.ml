@@ -321,6 +321,13 @@ type runner_spec = {
       the bridge is and did ([Canary_bridge_driver]). A binding built
       here, or a dummy fetch, installs no bridge, so it gets no step. *)
   bridges : (Canary_lang.lang * Canary_bridge.t) list;
+  (** WHAT A PACKAGE MANAGER DOES INSIDE A FETCH AND CANARY DOES NOT
+      RECORD (2026-09-23, status.md §2.7 E), per fetch action — filled by
+      [Canary_pipeline.with_declared_facts] from the providers the
+      artifact table names. [derive_steps] adds one placeholder step per
+      entry beside the fetch, unless the fetch is a dummy: nothing is
+      installed there, so nothing is done unseen. *)
+  placeholders : (Canary_basic.action * Canary_pm_action.placeholder list) list;
 }
 
 let empty_runner_spec = {
@@ -352,6 +359,7 @@ let empty_runner_spec = {
   asserts = [];
   template_summaries = [];
   bridges = [];
+  placeholders = [];
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -685,7 +693,8 @@ let out_of ~root ~project ~tag =
 
 let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None)
-    ?(disabled_agreements = []) ?location ?inspects ?bridge ~check_post () =
+    ?(disabled_agreements = []) ?location ?inspects ?bridge ?placeholder
+    ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
   let output_dir = output_dir_for ~root ~project ~tag:output_tag in
   let project_dir = project_dir_of ~root ~project in
@@ -708,6 +717,7 @@ let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
     location;
     inspects;
     bridge;
+    placeholder;
     (* The tag-based default; [derive_steps] re-resolves it against the
        actual sibling output_dirs once the whole list exists. *)
     dep_dirs =
@@ -1352,6 +1362,38 @@ let derive_steps ~root ~project
               ~expectation:Expect_success ~symbol_check:None
               ~disabled_agreements:spec.disabled_agreements ~bridge:b ()))
   in
+  (* THE PLACEHOLDERS (2026-09-23, status.md §2.7 E): one step per piece
+     of the package manager's action that canary does not record, beside
+     the fetch that performs it. It does no work beyond writing its marker
+     and saying what it stands for; the runner logs it as a placeholder.
+     Tagged <fetch>_<pm>_<key>, so two package managers' pieces cannot
+     collide. *)
+  let placeholder_steps ~fetch_tag action =
+    match List.Assoc.find spec.placeholders ~equal:Poly.equal action with
+    | None -> []
+    | Some phs ->
+        List.map phs ~f:(fun (ph : Canary_pm_action.placeholder) ->
+            let tag =
+              String.concat ~sep:"_"
+                [ fetch_tag; Canary_store.string_of_pm ph.Canary_pm_action.ph_pm;
+                  ph.Canary_pm_action.ph_key ]
+            in
+            let marker = "placeholder.ok" in
+            let check_post ~output_dir ~variant_key =
+              has_file ~output_dir (Canary_basic.variant_file ~variant_key marker)
+            in
+            let cmd ~output_dir ~variant_key =
+              Printf.sprintf "mkdir -p %s && echo %s && : > %s"
+                (Stdlib.Filename.quote output_dir)
+                (Stdlib.Filename.quote
+                   ("PLACEHOLDER — " ^ Canary_pm_action.describe ph))
+                (Stdlib.Filename.quote
+                   (output_dir ^ "/" ^ Canary_basic.variant_file ~variant_key marker))
+            in
+            mk_step ~root ~project ~tag ~action ~deps:[ fetch_tag ] ~cmd
+              ~check_post ~expectation:Expect_success ~symbol_check:None
+              ~disabled_agreements:spec.disabled_agreements ~placeholder:ph ())
+  in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
   let mk_scan_source ~fetch_tag scan_cmd =
@@ -1449,6 +1491,11 @@ let derive_steps ~root ~project
                       steps @ bridge_steps ~fetch_tag:tag lang
                   | _ -> steps
                 in
+                let steps =
+                  if Option.is_none (dummy_reason_of_action spec action) then
+                    steps @ placeholder_steps ~fetch_tag:tag action
+                  else steps
+                in
                 (* Emit scan_source after fetch_source when wired *)
                 (match action, spec.scan_source with
                  | Fetch Source, Some scan_cmd
@@ -1487,7 +1534,7 @@ let derive_steps ~root ~project
            claims: the agreements that fire at an install are about the
            binding package, and a bridge step is about the bridge *)
         agreement_ctx =
-          (if Option.is_some s.bridge then None
+          (if Option.is_some s.bridge || Option.is_some s.placeholder then None
            else
              agreement_ctx_of_action ~world ~mechanism_of
                ~declared:spec.api_source ~langs s.action);

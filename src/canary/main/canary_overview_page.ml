@@ -171,7 +171,13 @@ let annotation_title = function
    candidates — named, with no evaluator — gets a hollow, dashed badge,
    so a claim that is known and not implemented no longer looks like one
    that runs. *)
-let edge_svg ~(live : bool) ~(claims : int) ?(candidate_only = false) (e : T.edge) =
+(* A PLACEHOLDER SLOT (2026-09-23): on the recorded template only, every
+   edge carries a hidden marker the overlay shows where a placeholder step
+   stands — a package manager did something there, inside one of our
+   actions, that the run does not record. Left of the midpoint, so it
+   never sits on the claim badge. *)
+let edge_svg ~(live : bool) ~(claims : int) ?(candidate_only = false)
+    ?(ph_slot = false) (e : T.edge) =
   let dst = pos_of e.eg_to in
   let cls =
     Printf.sprintf "edge%s%s%s"
@@ -206,22 +212,32 @@ let edge_svg ~(live : bool) ~(claims : int) ?(candidate_only = false) (e : T.edg
              then {| style="text-anchor:start"|}
              else ""
            in
+           let slot =
+             if not ph_slot then ""
+             else
+               (* hidden by CLASS, not by the [hidden] attribute: SVG does
+                  not honour [hidden], and the first cut drew a marker on
+                  every edge *)
+               Printf.sprintf
+                 {|<g class="phm"><title></title><rect x="%d" y="%d" width="22" height="16" rx="3"/><text x="%d" y="%d">…</text></g>|}
+                 (mx - 57) (my - 8) (mx - 46) (my + 4)
+           in
            Printf.sprintf
              {|<g class="%s" data-edge="%s"><title>%s — %s</title>
 <line x1="%d" y1="%d" x2="%d" y2="%d" marker-end="url(#a)"/>
-<text class="%s" x="%d" y="%d"%s>%s</text>%s</g>|}
+<text class="%s" x="%d" y="%d"%s>%s</text>%s%s</g>|}
              cls (esc e.T.eg_id)
              (esc (annotation_title e.T.eg_annotation))
              (esc e.T.eg_says) src.px src.py dst.px dst.py
              (annotation_class e.T.eg_annotation) mx (my - 7) anchor
              (esc (annotation_label e.T.eg_annotation))
-             badge))
+             badge slot))
 
 (** THE one layout. [rename] substitutes a concrete label for a node,
     [dead] greys an edge that this case does not have. *)
 let diagram ?(rename = fun (_ : string) -> None)
     ?(sublabel = fun (_ : string) -> None) ?(dead = fun (_ : string) -> false)
-    ?(hide = fun (_ : string) -> false) () : string =
+    ?(hide = fun (_ : string) -> false) ?(ph_slots = false) () : string =
   let bands =
     String.concat
       [ band ~y:30 ~h:70 ~label:"PM LAYER — who resolves and installs"
@@ -253,7 +269,7 @@ let diagram ?(rename = fun (_ : string) -> None)
                ~candidate_only:
                  ((not (List.is_empty sites))
                  && List.for_all sites ~f:(fun p -> not p.T.cs_implemented))
-               e))
+               ~ph_slot:ph_slots e))
   in
   let ns =
     String.concat
@@ -345,6 +361,12 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.st-not_ours{opacity:.5}
 .rec .edge.st-not_ours line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 5}
 .rec .edge.st-observed line{stroke:var(--acc);stroke-width:2;stroke-dasharray:2 3;opacity:1}
+.rec .edge.st-inside line,.rec .edge.st-inside path{stroke:var(--mut);stroke-width:1.8;
+stroke-dasharray:1 4;opacity:.9}
+.phm{display:none}.phm.on{display:inline}
+.phm rect{fill:var(--card);stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 2}
+.phm text{font:700 11px ui-monospace,monospace;fill:var(--mut);text-anchor:middle}
+.phm.not_yet rect{stroke:var(--acc)}.phm.not_yet text{fill:var(--acc)}
 .rec .edge.st-claim line{stroke:var(--acc);stroke-width:1.6;stroke-dasharray:4 4}
 .rec .edge.cl-violated .cbadge{fill:var(--bad)}
 .rec .edge.cl-holds .cbadge{fill:var(--ok)}
@@ -706,14 +728,18 @@ page</p>
 <span><i class="sw ab"></i> not in this world</span>
 <span><i class="sw no"></i> someone else's rule — nothing recorded</span>
 <span><i class="sw ob"></i> someone else's rule — recorded by this run</span>
+<span><i class="sw un"></i> happened inside a package manager's action — unseen</span>
+<span><svg width="26" height="18" viewBox="0 0 26 18"><g class="phm on not_yet"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg>
+a placeholder — not recorded yet (grey: out of reach)</span>
 <span><b>name</b> recorded by the run · <i>name</i> declared by the project</span>
 </div>
 <div id="recobserved"></div>
+<div id="recph"></div>
 <div id="reccmp"></div>
 <div id="recclaims"></div>
 <div id="recunplaced"></div></div>|}
     hand buttons
-    (diagram ~sublabel:(fun _ -> Some "") ())
+    (diagram ~sublabel:(fun _ -> Some "") ~ph_slots:true ())
 
 let script =
   {|<script>
@@ -784,7 +810,7 @@ views.forEach(function(v){
   var o=document.createElement('option'); o.value=v.key;
   o.textContent=v.project+' · '+v.lang+' · '+v.scenario+' ('+v.machine+')';
   sel.appendChild(o); });
-var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','not_ours','observed','claim'],
+var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','inside','not_ours','observed','claim'],
     OUTS=['violated','holds','partial','undecided','unevaluated'];
 function esc(s){ var d=document.createElement('span'); d.textContent=s; return d.innerHTML; }
 function show(key){
@@ -801,7 +827,28 @@ function show(key){
     var t=g.querySelector('title');
     if(t){ if(g.dataset.gtitle===undefined) g.dataset.gtitle=t.textContent;
       t.textContent=g.dataset.gtitle+(obs[e]?' — recorded here: '+obs[e]:''); }
+    // the placeholder marker: shown where a package manager did something
+    // here that this run does not record; accent while it could be
+    var ph=(v.placeholders||{})[e], mk=g.querySelector('.phm');
+    if(mk){
+      mk.classList.toggle('on', !!ph);
+      mk.classList.toggle('not_yet', !!ph && ph.some(function(x){ return x.unseen==='not_yet'; }));
+      var mt=mk.querySelector('title');
+      if(mt) mt.textContent=ph?ph.map(function(x){ return x.text; }).join('\n'):'';
+    }
   });
+  // one line per placeholder, with every edge it stands for
+  var phs=v.placeholders||{}, byText={}, order=[];
+  Object.keys(phs).forEach(function(e){ phs[e].forEach(function(x){
+    if(!byText[x.text]){ byText[x.text]={unseen:x.unseen, edges:[]}; order.push(x.text); }
+    byText[x.text].edges.push(e); }); });
+  document.getElementById('recph').innerHTML=order.length
+    ?'<p class="mechnote"><strong>What the package managers did here that this run does not record:</strong></p><ul class="unpl">'
+      +order.map(function(t){ var p=byText[t];
+          return '<li><b>'+(p.unseen==='not_yet'?'not recorded yet':'out of reach')+'</b> — '
+            +esc(t)+' <span class="from">('+p.edges.map(function(e){ return '<code>'+esc(e)+'</code>'; }).join(', ')
+            +')</span></li>'; }).join('')+'</ul>'
+    :'';
   var ob=Object.keys(obs);
   document.getElementById('recobserved').innerHTML=ob.length
     ?'<p class="mechnote"><strong>What this run recorded around the bridge:</strong></p><ul class="unpl">'

@@ -85,6 +85,9 @@ type world_step = {
   ws_bridge : Canary_bridge.t option;
       (** the bridge a step drives ([Canary_step_model.step.bridge]) —
           status.md §2.7 E *)
+  ws_placeholder : Canary_pm_action.placeholder option;
+      (** what a placeholder step stands for, and why it is not recorded
+          ([Canary_step_model.step.placeholder]) *)
   ws_place : Canary_topology.place;
       (** WHERE IT SITS on the overview's graph (phase B2): the edges it
           realizes, the step it is evidence for, or why it has no edge *)
@@ -1418,13 +1421,15 @@ let matrix_of ?(root = "_out")
                     ws_inspects = s.Canary_step_model.inspects;
                     ws_dummy = s.Canary_step_model.dummy;
                     ws_bridge = s.Canary_step_model.bridge;
+                    ws_placeholder = s.Canary_step_model.placeholder;
                     ws_place =
                       Canary_topology.place_step ~pr ~world:a
                         ~action:s.Canary_step_model.action
                         ~location:s.Canary_step_model.location
                         ~inspects:s.Canary_step_model.inspects
                         ~dummy:s.Canary_step_model.dummy
-                        ~bridge:s.Canary_step_model.bridge;
+                        ~bridge:s.Canary_step_model.bridge
+                        ~placeholder:s.Canary_step_model.placeholder;
                     ws_state = state;
                     ws_at = at;
                     ws_detail = detail })
@@ -1997,6 +2002,8 @@ let json_of_cell (c : cell) : Yojson.Basic.t =
 let json_of_place : Canary_topology.place -> Yojson.Basic.t = function
   | Canary_topology.On ids -> `Assoc [ ("on", `List (List.map ids ~f:(fun i -> `String i))) ]
   | Canary_topology.Evidence_for p -> `Assoc [ ("evidence_for", `String p) ]
+  | Canary_topology.Placeholder_for ids ->
+      `Assoc [ ("placeholder_for", `List (List.map ids ~f:(fun i -> `String i))) ]
   | Canary_topology.Unplaced u ->
       `Assoc
         [ ("unplaced", `String (Canary_topology.code_of_unplaced u));
@@ -2011,6 +2018,19 @@ let json_of_world_step (s : world_step) : Yojson.Basic.t =
     @ opt "inspects" s.ws_inspects
     @ opt "dummy" s.ws_dummy
     @ opt "bridge" (Option.map s.ws_bridge ~f:Canary_bridge.to_string)
+    @ (match s.ws_placeholder with
+       | None -> []
+       | Some ph ->
+           [ ( "placeholder",
+               `Assoc
+                 [ ("pm", `String (Canary_store.string_of_pm ph.Canary_pm_action.ph_pm));
+                   ("does", `String (Canary_pm_action.string_of_does ph.Canary_pm_action.ph_does));
+                   ("what", `String ph.Canary_pm_action.ph_what);
+                   ( "unseen",
+                     `String (Canary_pm_action.code_of_unseen ph.Canary_pm_action.ph_unseen) );
+                   ( "why",
+                     `String (Canary_pm_action.string_of_unseen ph.Canary_pm_action.ph_unseen) )
+                 ] ) ])
     @ [ ("place", json_of_place s.ws_place) ]
     @ state_fields s.ws_state
     @ opt "at" s.ws_at @ opt "detail" s.ws_detail)

@@ -44,7 +44,8 @@ let mk_step ~(dir : string) ~(rc : int) : SM.step =
     dummy = None;
     location = None;
     inspects = None;
-    bridge = None }
+    bridge = None;
+    placeholder = None }
 
 (* How many times the step's command actually ran (one "x" line per run). *)
 let run_count ~dir : int =

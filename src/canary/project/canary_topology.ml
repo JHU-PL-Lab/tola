@@ -949,6 +949,11 @@ type place =
       (** an inspection: it records evidence about the step named and
           realizes no relation of its own — its outcomes belong to claim
           badges, not to an edge's colour *)
+  | Placeholder_for of string list
+      (** a placeholder step (2026-09-23): the edges whose relation a
+          package manager established INSIDE the parent action, unseen by
+          canary. It realizes nothing either — it marks, on those edges,
+          what is not recorded and why *)
   | Unplaced of unplaced
 
 (** The world's artifact of one kind: its provision there, and the
@@ -970,15 +975,38 @@ let origin_of ~(pr : Canary_project_run.project_run)
 let fetched_from ~pr ~world k : SC.provider option =
   Option.bind (origin_of ~pr ~world k) ~f:snd
 
-(** THE RULE. [location], [inspects], [dummy] and [bridge] are the
-    step's own fields ([Canary_step_model.step]); the world and the
-    project answer what the step alone cannot — where the library came
-    from, and whether a bridge sits between the binding package and the
-    system. *)
+(** WHERE A PLACEHOLDER SITS: on the edges whose relation the package
+    manager established inside the fetch. Resolving a system package is
+    [resolve_sys]; resolving a binding's package is [resolve_lang]; and
+    building a binding's package from source inside the package manager
+    is where the stub was compiled against the headers, the module linked
+    against the library, and pkg-config asked by the package's configure
+    — the edges a world that FETCHES its binding otherwise has nothing
+    on, although every one of those relations was established. *)
+let placeholder_place ~pr ~world ~(action : Canary_basic.action)
+    (ph : Canary_pm_action.placeholder) : place =
+  match (action, ph.Canary_pm_action.ph_does) with
+  | Canary_basic.Fetch Canary_basic.Lib, Canary_pm_action.Resolve -> (
+      match fetched_from ~pr ~world Canary_basic.Lib with
+      | Some (SC.Sys_pkg _) -> Placeholder_for [ "resolve_sys" ]
+      | Some (SC.Lang_pkg _) -> Unplaced Lib_from_language_pm
+      | _ -> Unplaced (Unexpected "a library fetch from no package"))
+  | Canary_basic.Fetch (Canary_basic.Binding _), Canary_pm_action.Resolve ->
+      Placeholder_for [ "resolve_lang" ]
+  | Canary_basic.Fetch (Canary_basic.Binding _), Canary_pm_action.Build_package ->
+      Placeholder_for [ "build_stub"; "link_mod"; "discover" ]
+  | _ -> Unplaced (Unexpected "a placeholder for an action the graph does not place")
+
+(** THE RULE. [location], [inspects], [dummy], [bridge] and
+    [placeholder] are the step's own fields ([Canary_step_model.step]);
+    the world and the project answer what the step alone cannot — where
+    the library came from, and whether a bridge sits between the binding
+    package and the system. *)
 let place_step ~(pr : Canary_project_run.project_run)
     ~(world : Canary_artifact.assignment) ~(action : Canary_basic.action)
     ~(location : Canary_store.location option) ~(inspects : string option)
-    ~(dummy : string option) ~(bridge : Canary_bridge.t option) : place =
+    ~(dummy : string option) ~(bridge : Canary_bridge.t option)
+    ~(placeholder : Canary_pm_action.placeholder option) : place =
   let fam = Canary_action_family.of_action action in
   let candidates =
     List.filter_map edges ~f:(fun e ->
@@ -989,10 +1017,11 @@ let place_step ~(pr : Canary_project_run.project_run)
   let keep ids =
     List.filter candidates ~f:(fun c -> List.mem ids c ~equal:String.equal)
   in
-  match (inspects, dummy) with
-  | Some parent, _ -> Evidence_for parent
-  | None, Some _ -> Unplaced Does_no_work
-  | None, None -> (
+  match (inspects, dummy, placeholder) with
+  | Some parent, _, _ -> Evidence_for parent
+  | None, Some _, _ -> Unplaced Does_no_work
+  | None, None, Some ph -> placeholder_place ~pr ~world ~action ph
+  | None, None, None -> (
       if List.is_empty candidates then Unplaced No_edge_for_family
       else
         match (bridge, action) with

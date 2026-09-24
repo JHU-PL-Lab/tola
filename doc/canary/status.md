@@ -1147,9 +1147,27 @@ blank.
   moved left, so its `depends` edge, which was 22px long with the badge
   under the boxes, can be read. Pinned by
   `overview.placeholders_are_drawn_as_such`.
-- **Placeholder ACTIONS — proposed, waiting on the user's pick.** The
-  inventory of what a package manager does inside an install and canary
-  does not record:
+- **Placeholder ACTIONS — landed the same day** (user: "I like the
+  placeholder steps"). `Canary_pm_action` in `base/` says, per package
+  manager, what goes unrecorded inside an install. The pipeline derives
+  it for every project from the providers the artifact table names — it
+  is knowledge about the package manager, not about a project — and
+  `derive_steps` adds one placeholder step per piece beside each
+  non-dummy fetch (`fetch_lib_apt_policy`,
+  `fetch_binding_ocaml_opam_{plan,solver,build}`). A placeholder does
+  no work, writes its marker, and logs a `placeholder` event saying what
+  it stands for and why — `not_yet` (and how it could be recorded) or
+  `out_of_reach` (and why not). The run record carries it, and it sits
+  on the edges it stands for. On the overview it shows as a marker:
+  accent while it could be recorded, grey when it is out of reach. An
+  action edge nothing of canary's performs, but a package manager did
+  inside one of our actions, reads `inside` rather than `absent`. That
+  is new information: in a world that fetches its binding, opam compiled
+  the stub and linked the module, and the diagram used to say those
+  relations did not exist. Not a dummy — a dummy says there is nothing
+  to do. Pinned by `steps.placeholders_stand_for_what_pms_do` (red with
+  the not-beside-a-dummy guard removed) and the overlay pin. The
+  inventory it was built from, as the user saw it before the pick:
 
   | edge | what the package manager does | can canary record it? |
   | --- | --- | --- |
@@ -1161,14 +1179,31 @@ blank.
   | `discover` | pkg-config inside the package's own build | no, as things stand: it happens inside opam's build, whose log opam deletes on success |
   | `install_lang` | the binding's compile inside the install | same as `discover` |
 
-  The shape proposed: a placeholder STEP beside the step whose action
-  the package manager performs, like a dummy step but with one of two
-  reasons — "not recorded yet, and how it could be" or "cannot be
-  retrieved, and why". It is logged per world, carried in the run
-  record, placed on its edge, drawn as a special node, and it becomes a
-  real step when implemented. The alternative is markers on the
-  diagram's model only, with no log entry. Easy rows would become real
-  records rather than placeholders.
+  The `depext` row got no placeholder — the mapping is recorded where a
+  bridge is, and opam never installs a depext here. The easy rows are the
+  next increments: each becomes a real record, and its placeholder leaves
+  the catalogue in the same change.
+- **PM-solo and PM-cooperation kinds, recorded the way binding
+  mechanisms are — a question the user raised, answered in a proposal,
+  not built.** The binding mechanism has a catalogue in `base/`
+  (`Canary_mechanism`), a per-binding declaration, a pass-2 derivation
+  (`mechanism_for`), claim applicability that reads it, a `mech` column,
+  and an artifact band drawn per mechanism. The package-manager side has
+  the pieces of that without the whole. `Canary_pm_action` is the seed
+  of a PM-SOLO catalogue: what one package manager's action consists of
+  inside. `Canary_topology.join_of` / `character` already derive a
+  COOPERATION per project, but as a classifier over declarations rather
+  than a catalogue entry, not per world, not in the run record, and read
+  by no applicability rule. The proposal mirrors the mechanism exactly: a
+  PM-solo catalogue (per package manager: builds from source or not, its
+  bridge kinds, what goes unrecorded), a cooperation catalogue (the
+  draft's Table 3 rows as data — composition, join, bridges, which
+  layered edges exist), each world's cooperation derived in pass 2 from
+  its providers and gate, carried in the run record beside `mech`, read
+  by claim applicability (a bridge claim applies only where a bridge
+  is), and a PM band drawn per cooperation the way the artifact band is
+  per mechanism — so a chain is one mechanism row joined with one
+  cooperation row, as the topology module already says.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

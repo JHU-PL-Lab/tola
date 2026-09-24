@@ -226,6 +226,7 @@ let load_run_state ~dir =
       location = None;
       inspects = None;
       bridge = None;
+      placeholder = None;
     } in
     (step, status_str)
   in
