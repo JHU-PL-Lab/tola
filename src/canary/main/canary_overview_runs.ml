@@ -271,10 +271,11 @@ let declared_names (pr : Canary_project_run.project_run)
         Option.first_some
           (Option.bind decl ~f:(fun d ->
                Option.bind d.Canary_binding_decl.pm_gate ~f:bridge_of_gate))
-          (List.find_map (T.bridges_of_join (T.join_of pr lang)) ~f:(function
-            | T.Conf_package { pkg; _ } -> Some pkg
-            | T.Depext_field d -> Some ("depext: " ^ d)
-            | T.Capability_file _ -> None)) );
+          (List.find_map (T.bridges_of_join (T.join_of pr lang)) ~f:(fun g ->
+               match g.T.gb_bridge with
+               | Canary_bridge.Opam (Canary_bridge.Conf_package pkg) -> Some pkg
+               | Canary_bridge.Opam (Canary_bridge.Depext_field d) ->
+                   Some ("depext: " ^ d))) );
       ("pm_lang", Option.map lang_pkg ~f:(fun (pm, _) -> Canary_store.string_of_pm pm));
       ("pkg_lang", Option.map lang_pkg ~f:(fun (_, p) -> strip_gloss p));
       ("src_lang", repo (Canary_basic.Binding_source lang));

@@ -20,7 +20,8 @@
     things follow from that definition and all three matter:
 
     - it is a THING, not a relation — [conf-gmp] is an opam package
-      somebody wrote, [gmp.pc] is a file inside [libgmp-dev];
+      somebody wrote. The type is {!Canary_bridge.t}, in base, a variant
+      per package manager (user, 2026-09-23);
     - it lives in neither the pure native side nor the pure language
       side, which is exactly why the binding-level view cannot see it;
     - it is OPTIONAL. Two ecosystems may cooperate through a bridge, or
@@ -28,8 +29,10 @@
       that links whatever native library is installed globally has no
       bridge and is not thereby broken.
 
-    ⚠ THERE ARE USUALLY TWO BRIDGES, NOT ONE, and conflating them was the
-    error this module exists to stop. In the opam/apt topology:
+    ⚠ A CAPABILITY FILE IS NOT A BRIDGE (user, 2026-09-23). It was one
+    here — a third constructor beside the conf package and the depext
+    field — on the reasoning that the opam/apt topology has two things
+    between the ecosystems:
 
     {v
       conf-gmp   a separate opam package   carries package IDENTITY
@@ -38,23 +41,31 @@
                                            (name, version, cflags, libs)
     v}
 
-    They can disagree, and that disagreement is the check. Cargo's
-    [*-sys] topology has only the second, which is what makes it
-    artifact-centric rather than bridgeless.
+    Both are real and they can disagree, but they are not the same kind
+    of thing. [gmp.pc] belongs to the package that ships it, like a
+    META file belongs to its OCaml package; it records how the artifacts
+    beside it are built against, and it is a source of claims. conf-gmp's
+    own check reads it ([pkg-config --exists gmp]), so what validates the
+    symbolic path against artifacts is the BRIDGE's check, not the file.
+    The file stays on the topology as {!t.tp_capability}, beside the
+    join, and a Cargo [*-sys] topology — no bridge, a capability file —
+    is what makes one artifact-centric rather than bridgeless.
 
     {1 Three findings this derivation surfaced}
 
-    {b (1) The capability bridge has a name and no instances.}
+    {b (1) The capability file has a name and no instances.}
     [Canary_artifact.Pc_file] is a declared [api_component] and NO
     project declares one — the fourth "declared with no reader" of the
     month, and the most pointed, because its own doc comment says it
     "isn't itself a surface canary checks". That was the right call under
     the surface theory, which is about the BINDING relation: a [.pc] file
     is not binding material. It is cooperation material, and the frame
-    that would check it did not exist. So {!capability_bridges} returns
+    that would check it did not exist. So {!capability_files} returns
     what is declared, which is [] everywhere today, and the rendering
     says "undeclared" rather than "none" — an empty list that means
-    nobody looked must not read as an answer.
+    nobody looked must not read as an answer. (A run now RECORDS the
+    [.pc] a conf package's check reads — status.md §2.7 E — which is
+    evidence, not a declaration.)
 
     {b (2) A topology is per PROVISION, not per project.} z3 is the
     specimen: its dev worlds build libz3 from source (no system PM in the
@@ -101,30 +112,23 @@ let string_of_supplier = function
   | Vendored -> "vendored"
   | Unsupplied -> "absent"
 
-(** A concrete, separate piece of package content that exists for
-    cooperation. See the module header for why this is a thing rather
-    than a relation, and why there are usually two. *)
-type bridge =
-  | Conf_package of { pkg : string; reaches_lib : bool }
-      (** opam's [conf-*] indirection. [reaches_lib] is the ONE question
-          worth asking of it: does a version bound on this package bound
-          the C LIBRARY, or only the packaging of the check? Measured
-          across the repository at 13 of 370 (surveys/conf_packages.md
-          §G1a), and carried per project as [pm_gate]'s [tracks_lib]. *)
-  | Depext_field of string
-      (** the language package names the system package directly, with no
-          conf hop — a bridge that is metadata inside the consumer rather
-          than a package of its own. *)
-  | Capability_file of string
-      (** a [.pc] file, a CMake package config, a [*-config] script:
-          content shipped INSIDE the provider whose purpose is to be read
-          from outside. The artifact-facing bridge. See finding (1). *)
+(** One bridge as a join carries it: the THING ({!Canary_bridge.t}) and
+    whether the binding's constraint on it reaches the C LIBRARY, or only
+    the packaging of the check. That second fact is about the [depends]
+    edge, not the bridge — [conf-libffi {>= "2.0.0"}] bounds conf-libffi's
+    own revision — which is why it rides beside the bridge rather than
+    inside it. Measured across the repository at 13 of 370
+    (surveys/conf_packages.md §G1a), and carried per project as
+    [pm_gate]'s [tracks_lib]. Which version domain a bound reaches is
+    the open question status.md §2.7 E defers. *)
+type gated = { gb_bridge : Canary_bridge.t; gb_reaches_lib : bool }
 
-let string_of_bridge = function
-  | Conf_package { pkg; reaches_lib } ->
-      pkg ^ if reaches_lib then " (bounds the lib)" else " (presence only)"
-  | Depext_field d -> "depext:" ^ d
-  | Capability_file f -> f
+let string_of_gated (g : gated) : string =
+  match g.gb_bridge with
+  | Canary_bridge.Opam (Canary_bridge.Conf_package pkg) ->
+      pkg ^ if g.gb_reaches_lib then " (bounds the lib)" else " (presence only)"
+  | Canary_bridge.Opam (Canary_bridge.Depext_field _) ->
+      Canary_bridge.to_string g.gb_bridge
 
 (** HOW the two sides are joined. Five constructors because the first
     cut of this module had one — an empty [bridge list] — and that one
@@ -141,7 +145,7 @@ let string_of_bridge = function
     the type being written, which says the shape is easy to fall into
     rather than that it was careless. *)
 type joining =
-  | Bridged of bridge list  (** non-empty, by construction *)
+  | Bridged of gated list  (** non-empty, by construction *)
   | Artifacts_only
       (** declared, and there is no bridge: the language side consumes
           whatever the system installed. A real topology, not a gap. *)
@@ -158,17 +162,21 @@ type joining =
       (** ⚠ we could not read the declaration — finding (3). Never
           rendered as any of the four above. *)
 
-(** One cooperation's shape: the two stacks and what joins them. *)
+(** One cooperation's shape: the two stacks, what joins them, and the
+    capability files the native side declares — beside the join rather
+    than in it, because a capability file is not a bridge (module
+    header). *)
 type t = {
   tp_sys : supplier;
   tp_join : joining;
   tp_lang : supplier;
+  tp_capability : string list;
 }
 
 let bridges_of_join = function Bridged bs -> bs | _ -> []
 
 let string_of_join = function
-  | Bridged bs -> String.concat ~sep:" + " (List.map bs ~f:string_of_bridge)
+  | Bridged bs -> String.concat ~sep:" + " (List.map bs ~f:string_of_gated)
   | Artifacts_only -> "(none — artifacts only)"
   | Bridge_absorbed why -> "(absorbed: " ^ why ^ ")"
   | No_pm_between why -> "(no PM between: " ^ why ^ ")"
@@ -178,7 +186,7 @@ let string_of_join = function
     the row's own detail — a column that silently truncates its own key
     is how two different topologies come to look like one. *)
 let short_of_join = function
-  | Bridged bs -> String.concat ~sep:" + " (List.map bs ~f:string_of_bridge)
+  | Bridged bs -> String.concat ~sep:" + " (List.map bs ~f:string_of_gated)
   | Artifacts_only -> "— artifacts only —"
   | Bridge_absorbed _ -> "— absorbed by the consumer —"
   | No_pm_between _ -> "— no PM between —"
@@ -201,13 +209,23 @@ let normalize (t : t) : t =
   | _ -> t
 
 (** The doc's "topology character" — derived, never declared, so it
-    cannot drift from the shape it names. *)
+    cannot drift from the shape it names.
+
+    ⚠ "+ ARTIFACT VALIDATION" COMES FROM THE BRIDGE'S CHECK, not from a
+    declared capability file (2026-09-23, the capability file stopped
+    being a bridge). The first cut said a conf bridge was "unvalidated
+    against artifacts" unless a [.pc] was declared beside it, and no
+    project declares one — so every conf row read "unvalidated", while
+    every conf package's own predicate is exactly the check that meets
+    the artifacts: conf-gmp's is [pkg-config --exists gmp || cc -c
+    test.c]. Whether a given RUN saw that check hold is the overview's
+    recorded worlds, not this word. *)
 let character (t : t) : string =
   let bs = bridges_of_join t.tp_join in
-  let has f = List.exists bs ~f in
-  let has_conf = has (function Conf_package _ -> true | _ -> false) in
-  let has_cap = has (function Capability_file _ -> true | _ -> false) in
-  let has_depext = has (function Depext_field _ -> true | _ -> false) in
+  let has f = List.exists bs ~f:(fun g -> f g.gb_bridge) in
+  let has_check = has Canary_bridge.has_check in
+  let has_depext = has (fun b -> not (Canary_bridge.has_check b)) in
+  let has_cap = not (List.is_empty t.tp_capability) in
   (* ⚠ THE BRIDGE IS NOT SILENCED BY A LOCAL BUILD, and the first cut of
      this function assumed it was — it matched the supplier before the
      join and so reported llvm's built-lib world as having no bridge
@@ -226,11 +244,10 @@ let character (t : t) : string =
   | _, _, Bridge_absorbed why -> why
   | Unsupplied, _, _ | _, Unsupplied, _ -> "incomplete — one side is absent"
   | By_pm a, By_pm b, _ when Poly.equal a b -> "unified package universe"
-  | _ when built_side && has_conf ->
+  | _ when built_side && has_check ->
       "⚠ bridge still gates, against a system this world does not use"
   | _ when built_side -> "no provider ecosystem — the native side is local"
-  | _ when has_conf && has_cap -> "symbolic package bridge + artifact validation"
-  | _ when has_conf -> "symbolic package bridge, unvalidated against artifacts"
+  | _ when has_check -> "symbolic package bridge + artifact validation"
   | _ when has_depext -> "direct depext — package identity, no conf hop"
   | _ when has_cap -> "artifact-centric, capability-mediated"
   | _ -> "artifact-centric, no bridge"
@@ -257,26 +274,31 @@ let supplier_of_provision (p : SC.provision_spec) : supplier =
 
 (* ── deriving bridges from a declared gate ───────────────────────── *)
 
-(** The SYMBOLIC bridge a gate names, if it names one. The two
-    structural cases return [] and that is the right answer, not a gap:
-    [Package_builds_lib] and [Bundled] do not weaken a bridge, they
-    delete the provider ecosystem, which {!character} reports from the
-    supplier instead. *)
-let symbolic_bridges_of_gate (g : BD.pm_dep_gate) : bridge list =
-  match g with
-  | BD.Free_with_conf pkg -> [ Conf_package { pkg; reaches_lib = false } ]
-  | BD.Bounded_with_conf { conf; tracks_lib; _ } ->
-      [ Conf_package { pkg = conf; reaches_lib = tracks_lib } ]
-  | BD.Fixed_with_conf { conf; _ } ->
-      (* an exact pin always reaches the library: opam refuses every other
-         generation, which is what makes it the hard case *)
-      [ Conf_package { pkg = conf; reaches_lib = true } ]
-  | BD.Pinned_depext { depext; _ } -> [ Depext_field depext ]
-  | BD.Package_builds_lib | BD.Bundled _ -> []
+(** The bridge a gate names, with whether its constraint reaches the
+    library. The two structural cases return [] and that is the right
+    answer, not a gap: [Package_builds_lib] and [Bundled] do not weaken a
+    bridge, they delete the provider ecosystem, which {!character}
+    reports from the supplier instead. *)
+let gated_of_gate (g : BD.pm_dep_gate) : gated list =
+  match Canary_bridge.of_gate g with
+  | None -> []
+  | Some b ->
+      let reaches_lib =
+        match g with
+        | BD.Free_with_conf _ -> false
+        | BD.Bounded_with_conf { tracks_lib; _ } -> tracks_lib
+        (* an exact pin always reaches the library: opam refuses every
+           other generation, which is what makes it the hard case — and a
+           depext bound names the system package's own version *)
+        | BD.Fixed_with_conf _ | BD.Pinned_depext _ -> true
+        | BD.Package_builds_lib | BD.Bundled _ -> false
+      in
+      [ { gb_bridge = b; gb_reaches_lib = reaches_lib } ]
 
-(** The ARTIFACT-FACING bridges a project declares: the [Pc_file]
-    components of the C API it declares, read through pass 2
-    ({!Canary_project_analysis.declared_api_of}).
+(** The CAPABILITY FILES a project declares: the [Pc_file] components of
+    the C API it declares, read through pass 2
+    ({!Canary_project_analysis.declared_api_of}). A source of claims,
+    beside the join — not a bridge (module header).
 
     ⚠ THIS WAS WRITTEN AND NEVER CALLED until 2026-09-23 — it and its
     companion were the "declared with no reader" pattern the overview
@@ -287,13 +309,13 @@ let symbolic_bridges_of_gate (g : BD.pm_dep_gate) : bridge list =
 
     Empty everywhere today: projects declare [Headers], [Runtime_lib],
     [Link_lib], and no project declares a [Pc_file]. *)
-let capability_bridges (pr : Canary_project_run.project_run) : bridge list =
+let capability_files (pr : Canary_project_run.project_run) : string list =
   match Canary_project_analysis.declared_api_of pr with
   | None -> []
   | Some api ->
       List.filter_map api.Canary_artifact.native_api.Canary_artifact.components
         ~f:(function
-        | Canary_artifact.Pc_file -> Some (Capability_file "pkg-config (.pc)")
+        | Canary_artifact.Pc_file -> Some "pkg-config (.pc)"
         | Canary_artifact.Headers | Canary_artifact.Runtime_lib
         | Canary_artifact.Link_lib ->
             None)
@@ -303,9 +325,9 @@ let capability_bridges (pr : Canary_project_run.project_run) : bridge list =
     demonstrably in use — conf packages' build predicates run it, and our
     own [Pm_lib] locator does — so an empty answer records that nobody
     declared one, not that nothing is there. *)
-let no_capability_bridge_declared
+let no_capability_file_declared
     (projects : (string * Canary_project_run.project_run) list) : bool =
-  List.for_all projects ~f:(fun (_, pr) -> List.is_empty (capability_bridges pr))
+  List.for_all projects ~f:(fun (_, pr) -> List.is_empty (capability_files pr))
 
 (* ── the project-level derivation ─────────────────────────────────── *)
 
@@ -334,30 +356,24 @@ let gate_of (pr : Canary_project_run.project_run) (lang : Canary_lang.lang) :
     sixth meaning for an empty list. *)
 let join_of (pr : Canary_project_run.project_run) (lang : Canary_lang.lang) :
     joining =
-  (* the capability bridge joins whatever the gate says, because it is
-     the OTHER bridge — shipped inside the provider rather than written
-     by the language ecosystem. Absorbed and no-PM joins do not take it:
-     with no second ecosystem there is nothing for it to bridge to *)
-  let cap = capability_bridges pr in
+  (* a declared capability file is NOT part of the join any more: it is
+     not a bridge, and it rides on the topology beside the join
+     ({!t.tp_capability}) *)
   match gate_of pr lang with
   | None -> Undeclared_join
   | Some None ->
       No_pm_between "no package manager stands between these two artifacts"
   | Some (Some g) -> (
-      match (symbolic_bridges_of_gate g, cap) with
-      | [], [] -> (
+      match gated_of_gate g with
+      | [] -> (
           match g with
           | BD.Package_builds_lib ->
               Bridge_absorbed "the consumer package builds the native lib"
           | BD.Bundled what -> Bridge_absorbed ("bundled: " ^ what)
-          | _ -> Artifacts_only)
-      | [], _ -> (
-          match g with
-          | BD.Package_builds_lib ->
-              Bridge_absorbed "the consumer package builds the native lib"
-          | BD.Bundled what -> Bridge_absorbed ("bundled: " ^ what)
-          | _ -> Bridged cap)
-      | bs, _ -> Bridged (bs @ cap))
+          | BD.Free_with_conf _ | BD.Bounded_with_conf _ | BD.Fixed_with_conf _
+          | BD.Pinned_depext _ ->
+              Artifacts_only)
+      | bs -> Bridged bs)
 
 (** One instance: the (project, language, world-class) that realizes a
     topology. A project appears several times — once per declared native
@@ -424,7 +440,8 @@ let topologies_of_project ((name, pr) : string * Canary_project_run.project_run)
                   ( normalize
                       { tp_sys = supplier_of_provision lib_spec;
                         tp_join = join;
-                        tp_lang = lang_supplier pr lang },
+                        tp_lang = lang_supplier pr lang;
+                        tp_capability = capability_files pr },
                     { in_project = name;
                       in_lang = lang;
                       in_sys_provision =
@@ -442,10 +459,14 @@ let topologies (projects : (string * Canary_project_run.project_run) list) :
   let all = List.concat_map projects ~f:topologies_of_project in
   let keyed =
     List.map all ~f:(fun (t, i) ->
+        (* the capability files are part of the shape: they used to ride
+           inside the join's string, and a key without them would merge a
+           capability-mediated row into a bare one *)
         let key =
-          Printf.sprintf "%s|%s|%s" (string_of_supplier t.tp_sys)
+          Printf.sprintf "%s|%s|%s|%s" (string_of_supplier t.tp_sys)
             (string_of_join t.tp_join)
             (string_of_supplier t.tp_lang)
+            (String.concat ~sep:"," t.tp_capability)
         in
         (key, t, i))
   in
@@ -585,12 +606,15 @@ let nodes : node list =
       nd_gloss =
         "the install-prefix face of the same library — a second copy, \
          which is why a claim can compare them" };
+    (* NOT A BRIDGE (user, 2026-09-23): the package that ships it owns
+       it, so it sits on the native side *)
     { nd_id = "cap"; nd_label = "capability file"; nd_layer = L_package;
-      nd_side = S_bridge;
+      nd_side = S_sys;
       nd_gloss =
         "a .pc file, a CMake config, a *-config script: content inside \
-         the provider whose purpose is to be read from outside. THE \
-         ARTIFACT-FACING BRIDGE" };
+         the provider, owned by the package that ships it, recording how \
+         the artifacts beside it are built against. Not a bridge — a \
+         source of claims, and what a conf package's check reads" };
     { nd_id = "bridge"; nd_label = "bridge package"; nd_layer = L_package;
       nd_side = S_bridge;
       nd_gloss =
@@ -989,12 +1013,10 @@ let place_step ~(pr : Canary_project_run.project_run)
             match fetched_from ~pr ~world (Canary_basic.Binding lang) with
             | Some (SC.Lang_pkg _) ->
                 (* the constraint on a bridge is resolved only where a
-                   SYMBOLIC bridge is declared: a conf package, or a
-                   depext bound inside the package *)
+                   bridge is declared: a conf package, or a depext bound
+                   inside the package *)
                 let symbolic =
-                  List.exists (bridges_of_join (join_of pr lang)) ~f:(function
-                    | Conf_package _ | Depext_field _ -> true
-                    | Capability_file _ -> false)
+                  not (List.is_empty (bridges_of_join (join_of pr lang)))
                 in
                 On
                   (keep

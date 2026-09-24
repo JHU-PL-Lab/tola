@@ -494,7 +494,7 @@ let topology_table (projects : (string * Canary_project_run.project_run) list) =
 
 (** The two things the deleted `checks --topology` said that the table
     does not (2026-09-23): which rows are wrong for a known reason, and
-    why no capability bridge appears. Both computed — the second was a
+    why no capability file appears. Both computed — the second was a
     hand-written sentence in the terminal view, and is now a question
     asked of every project's declared C API. *)
 let topology_notes (projects : (string * Canary_project_run.project_run) list) =
@@ -520,14 +520,16 @@ let topology_notes (projects : (string * Canary_project_run.project_run) list) =
         (esc (String.concat ~sep:", " unreachable))
   in
   let cap =
-    if T.no_capability_bridge_declared projects then
-      "<div class=\"note warn\"><strong>No capability bridge appears in any \
-       row, because no project declares one.</strong> The projects declare \
-       <code>Headers</code>, <code>Runtime_lib</code> and \
+    if T.no_capability_file_declared projects then
+      "<div class=\"note warn\"><strong>No row is capability-mediated, \
+       because no project declares a capability file.</strong> The \
+       projects declare <code>Headers</code>, <code>Runtime_lib</code> and \
        <code>Link_lib</code> as their C API's components and none declares \
        a <code>Pc_file</code>. That is an absence of DECLARATION, not of \
-       the bridge: pkg-config is demonstrably in use — the conf packages' \
-       build predicates run it, and canary's own library locator does.</div>"
+       the file: pkg-config is demonstrably in use — the conf packages' \
+       checks read it, and canary's own library locator does. A capability \
+       file is not a bridge; where a row says <em>artifact validation</em>, \
+       that is the bridge's own check.</div>"
     else ""
   in
   gates ^ cap
@@ -976,13 +978,17 @@ cooperate through a bridge, or through nothing but the artifacts, and a
 language package that links whatever the system installed is not thereby
 broken.</div>
 
-<div class="note"><strong>There are usually two bridges, not one.</strong>
+<div class="note"><strong>A capability file is not a bridge.</strong>
 A <code>conf-*</code> package carries package <em>identity</em> plus the
-depext mapping. A <code>.pc</code> file carries <em>capability</em> — a
-name, a version, cflags, libs. They are written by different people, and
-they can disagree. Cargo's <code>*-sys</code> topology has only the
-second, which is what makes it artifact-centric rather than
-bridgeless.</div>
+depext mapping, and a check. A <code>.pc</code> file carries
+<em>capability</em> — a name, a version, cflags, libs — and belongs to the
+package that ships it, as a META file belongs to its OCaml package. They
+are written by different people and they can disagree, which is why the
+file is a source of claims; but what validates the symbolic path against
+the artifacts is the bridge's own check, which reads the file. Each
+package manager defines its own kinds of bridge. Cargo's
+<code>*-sys</code> topology has no bridge and a capability file, which is
+what makes it artifact-centric rather than bridgeless.</div>
 
 <h2>1. The generic chain</h2>
 <p>Nodes are what exists. An edge points from components to a component
