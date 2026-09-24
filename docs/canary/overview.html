@@ -74,6 +74,11 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.cl-partial .cbadge{fill:var(--xf)}
 .rec .edge.cl-undecided .cbadge,.rec .edge.cl-unevaluated .cbadge{fill:var(--mut)}
 .rec .node .nsub{fill:var(--fg)}
+.rec .node.named-decl .nlabel{font-style:italic}
+table.cmp{font-size:.85rem;max-width:780px}
+table.cmp tr.agree td{color:var(--mut)}
+table.cmp tr.differ td{background:color-mix(in srgb,var(--xf) 14%,transparent)}
+table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.ok{border-top:3px solid var(--ok)}.sw.okw{border-top:3px dashed var(--ok)}
 .sw.xf{border-top:3px solid var(--xf)}.sw.bad{border-top:3px solid var(--bad)}
 .sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
@@ -1010,10 +1015,14 @@ table in §5.</p>
 draws a <em>recorded</em> world with that case's shape on the same layout,
 so the two can be compared by switching. An edge is coloured by what the
 steps realizing it did in the last recorded run, a claim badge by the
-outcomes of the claims placed there, and the world's placements sit under
-the node names. An edge this world realizes no step of is faint; an edge
-someone else's rule establishes is dotted, because nothing is recorded
-there yet. The wheel case has no counterpart while z3 is muted.</p>
+outcomes of the claims placed there. A node is named by what the run
+recorded about it, or — in italics — by what the project declares, and a
+node nothing in this world touches is dimmed. An edge this world realizes
+no step of is faint; an edge someone else's rule establishes is dotted,
+because nothing is recorded there yet. Under the diagram, the case's
+hand-drawn names are set beside the recorded ones. The wheel case has no
+counterpart while z3 is muted.</p>
+<script type="application/json" id="rechand">{"conf":{"names":{"pm_sys":"apt","pkg_sys":"libgmp-dev","bridge":"conf-gmp","cap":"gmp.pc","pm_lang":"opam","pkg_lang":"zarith","lib_sys":"libgmp.so.10","hdr_sys":"gmp.h","src_lang":"Zarith.git","stub_lang":"zarith_stubs.a","mod_lang":"zarith.cmxa","surf_lang":"zarith.mli","consumer_artifact":"zarith_example (paths)","consumer_package":"zarith_example (-package zarith)"},"hidden":["src_sys","staged_sys"],"dead":[]},"wheel":{"names":{"pm_lang":"pip","pkg_lang":"z3-solver (wheel)","lib_sys":"libz3.so — INSIDE the wheel","mod_lang":"z3/*.py + native ext","surf_lang":"z3.__all__","consumer_package":"python -c 'import z3'"},"hidden":["pm_sys","pkg_sys","bridge","cap","src_sys","staged_sys","hdr_sys","src_lang","stub_lang"],"dead":[]},"built":{"names":{"src_sys":"llvm-project @ ref","lib_sys":"libLLVM.so (built)","staged_sys":"install prefix","pm_sys":"apt — not used here","pkg_sys":"llvm-19-dev — not used here","bridge":"conf-llvm-shared {= 19}","cap":"llvm-config","pm_lang":"opam","pkg_lang":"llvm.19-shared","mod_lang":"llvm.cmxa","consumer_artifact":"llvm_example (build tree)","consumer_package":"llvm_example (-package llvm)"},"hidden":[],"dead":["resolve_sys","realize_sys","realize_hdr","realize_cap"]},"unified":{"names":{"pm_lang":"opam","pkg_lang":"torch","bridge":"depext: libtorch >=2.1.0 <2.2.0","lib_sys":"libtorch.so (opam binary)","hdr_sys":"torch/*.h","src_lang":"ocaml-torch.git","stub_lang":"libtorch_core_stubs.a","mod_lang":"torch.cmxa","surf_lang":"torch.mli","consumer_artifact":"torch_example (paths)","consumer_package":"torch_example (-package torch)"},"hidden":["pm_sys","pkg_sys","cap","src_sys","staged_sys"],"dead":[]},"none":{"names":{"pm_sys":"apt","pkg_sys":"libsqlite3-0","lib_sys":"libsqlite3.so.0","hdr_sys":"sqlite3.h","pm_lang":"(the interpreter build)","pkg_lang":"CPython stdlib","stub_lang":"_sqlite3.cpython-*.so","mod_lang":"sqlite3/__init__.py","surf_lang":"dir(sqlite3)","consumer_package":"python -c 'import sqlite3'"},"hidden":["bridge","cap","src_sys","staged_sys","src_lang"],"dead":[]}}</script>
 <div class="selbar recbar"><button data-rec-case="conf">conf-* over a system library</button><button data-rec-case="built">built here — and the bridge still gates</button><button data-rec-case="unified">one package universe</button><button data-rec-case="none">no package manager between them</button></div>
 <p><label>any recorded world: <select id="recsel"></select></label></p>
 <p id="rechead" class="edet">no recorded runs loaded — <code>canary
@@ -1116,7 +1125,9 @@ page</p>
 <span><i class="sw un"></i> in the chain, never logged</span>
 <span><i class="sw ab"></i> not in this world</span>
 <span><i class="sw no"></i> someone else's rule — nothing recorded</span>
+<span><b>name</b> recorded by the run · <i>name</i> declared by the project</span>
 </div>
+<div id="reccmp"></div>
 <div id="recclaims"></div>
 <div id="recunplaced"></div></div>
 
@@ -1164,7 +1175,7 @@ about us and not part of the row.</p>
 <table><thead><tr><th>language side</th><th>bridge</th><th>native side</th><th>character</th><th>case</th></tr></thead><tbody><tr><td class="mono">opam</td><td class="mono">conf-gmp (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">zarith</td></tr><tr><td class="mono">opam</td><td class="mono">conf-libssl (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">ssl</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">apt</td><td>symbolic package bridge, unvalidated against artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">staged</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">depext:libtorch</td><td class="mono">opam</td><td>unified package universe</td><td class="n">torch</td></tr><tr><td class="mono">opam</td><td class="mono">— absorbed by the consumer —</td><td class="mono">opam</td><td>the consumer package builds the native lib</td><td class="n">z3</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">apt</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">vendored</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: llvmlite wheel's bundled libLLVM</td><td class="n">llvm</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: z3-solver wheel's bundled libz3</td><td class="n">z3</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">apt</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">built</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">staged</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">vendored</td><td class="mono">— no PM between —</td><td class="mono">vendored</td><td>no package manager stands between these two artifacts</td><td class="n">tiny-full</td></tr></tbody></table>
 <div class="note warn"><strong>4 bindings sit in a wrong row, for a known reason</strong> (cairo/ocaml, libffi/ocaml, zlib/ocaml, zstd/ocaml). Each declares a conf package, but on the opam-binding template's own record: the template leaves <code>pr_binding_decls</code> empty, so the gate never reaches this derivation and the row reads <code>⚠ UNDECLARED</code>. That is <code>project/issues.md</code> §2 — a mechanism declared in two places, one of them read — at its second consumer.</div><div class="note warn"><strong>No capability bridge appears in any row, because no project declares one.</strong> The projects declare <code>Headers</code>, <code>Runtime_lib</code> and <code>Link_lib</code> as their C API's components and none declares a <code>Pc_file</code>. That is an absence of DECLARATION, not of the bridge: pkg-config is demonstrably in use — the conf packages' build predicates run it, and canary's own library locator does.</div>
 
-<div class="foot">Generated 2026-09-23 18:42. <strong>What is derived and what is not</strong>,
+<div class="foot">Generated 2026-09-23 18:59. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
 the cooperation topologies are derived from each project's declared
 provisions, gates and C-API components; the mechanism variants from the mechanism
@@ -1220,7 +1231,8 @@ if(strip){
 <script src="overview_runs_mac.js"></script>
 <script>
 (function(){
-var runs=window.CANARY_RUNS||[], views=[], byId={}, cases={};
+var runs=window.CANARY_RUNS||[], views=[], byId={}, cases={}, HAND={};
+try{ HAND=JSON.parse(document.getElementById('rechand').textContent); }catch(e){}
 runs.forEach(function(r){
   (r.views||[]).forEach(function(v){
     v.key=v.id+'@'+r.machine; v.machine=r.machine; views.push(v); byId[v.key]=v; });
@@ -1252,8 +1264,40 @@ function show(key){
     if(v.badges[e]) g.classList.add('cl-'+v.badges[e]);
   });
   rec.querySelectorAll('[data-node]').forEach(function(g){
-    var t=g.querySelector('.nsub'); if(t) t.textContent=v.nodes[g.getAttribute('data-node')]||'';
+    var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'), n=(v.names||{})[id];
+    if(l && g.dataset.generic===undefined) g.dataset.generic=l.textContent;
+    if(l) l.textContent=n?n.label:g.dataset.generic;
+    g.classList.toggle('named-decl', !!(n&&n.from==='declared'));
+    g.classList.toggle('dim', (v.dim||[]).indexOf(id)>=0);
+    var t=g.querySelector('.nsub'); if(t) t.textContent=v.nodes[id]||'';
   });
+  // the case this world stands for, set beside it node by node
+  var ck=Object.keys(cases).filter(function(k){ return cases[k]===key; })[0],
+      h=ck&&HAND[ck], cmp=document.getElementById('reccmp');
+  if(cmp){
+    if(!h){ cmp.innerHTML=''; }
+    else {
+      var rows=[], both=0, agree=0;
+      rec.querySelectorAll('[data-node]').forEach(function(g){
+        var id=g.getAttribute('data-node'), hn=h.names[id], n=(v.names||{})[id];
+        if(!hn&&!n) return;
+        var cls=hn&&n?(hn===n.label?'agree':'differ'):'one';
+        if(hn&&n){ both++; if(hn===n.label) agree++; }
+        rows.push('<tr class="'+cls+'"><td>'+esc(g.dataset.generic)+'</td><td>'
+          +(hn?esc(hn):'—')+'</td><td>'+(n?esc(n.label)+' <span class="from">'
+          +n.from+'</span>':'—')+'</td></tr>');
+      });
+      var shown=h.hidden.filter(function(id){ return (v.dim||[]).indexOf(id)<0; }),
+          fired=h.dead.filter(function(e){ var s=v.edges[e];
+            return s&&['absent','not_ours','claim'].indexOf(s)<0; });
+      cmp.innerHTML='<p class="mechnote"><strong>Drawn by hand, and as recorded:</strong> '
+        +agree+' of the '+both+' nodes both name agree.'
+        +(shown.length?' The case hides '+shown.map(esc).join(', ')+', which this world has.':'')
+        +(fired.length?' The case greys '+fired.map(esc).join(', ')+', which this world realizes.':'')
+        +'</p><table class="cmp"><thead><tr><th>node</th><th>drawn by hand (§2)</th>'
+        +'<th>recorded world</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+    }
+  }
   head.textContent=v.project+' — '+v.lang+' — '+v.scenario+' — recorded on '
     +(v.recorded_on.length?v.recorded_on.join(', '):'(no platform logged)')
     +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet');

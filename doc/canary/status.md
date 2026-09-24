@@ -492,7 +492,7 @@ the check until the derivation agrees with it:
 6. **Recorded run results on the case diagrams** — brought forward by
    the user on 2026-09-23 and planned as §2.7.
 
-### 2.7 Run results on the overview diagrams — A, B and C landed; D next
+### 2.7 Run results on the overview diagrams — A to D landed; E next
 
 *(2026-09-23, user: "the cases in section 2 are generated from
 hardcoded code, not from the running result. I wish a feature to
@@ -888,6 +888,55 @@ What C does not do yet: node labels are the result table's placement
 strings (`B:d`, `apt libgmp-dev.2:6.3.0+dfsg`), not the case diagrams'
 names — that is phase D; and the four bridge edges stay dotted until
 phase E records what each bridge did.
+
+**Phase D landed 2026-09-23: a recorded world is named, and set beside
+its case.** The plan said D would *replace* the hand-written case
+labels; the user asked to keep the hand-drawn cases until they have
+compared, so D names the RECORDED views instead and leaves §2 as it was
+— its five panels are byte-identical to before.
+
+Each view now names its nodes from two sources, and says which: what the
+run RECORDED — the inspections its own steps wrote, so the library by
+its soname, the stub by its archive, the binding by its modules — and,
+failing that, what the project DECLARES — the platform's system PM, the
+providers' package names, the package gate (with its constraint:
+`conf-llvm-shared {= 19}`, `depext: libtorch >= 2.1.0 & < 2.2.0`), the
+binding declaration's soname, headers, archive and surface file, and the
+source repositories. Declared names are drawn in italics. A node no
+realized edge touches and no evidence names is dimmed — and every node a
+hand-drawn case hides is dimmed in its recorded counterpart. Under the
+diagram, a table sets the case's hand-drawn names beside the recorded
+ones, node by node. The case records became data (`ca_names`,
+`ca_hidden`, …) rather than closures, so a comparison could read them.
+
+**What the comparison says**, one line per kind of difference — for the
+user to judge, not for canary to fix:
+
+- *A drawing looks out of date.* zarith's stub is drawn
+  `zarith_stubs.a`; the declaration and the recorded inspection both say
+  `libzarith.a`. torch's binding source is drawn `ocaml-torch.git`; the
+  repository is `torch.git` now.
+- *A declaration looks worth reviewing.* sqlite declares its system
+  package as `sqlite3` — on Debian the command-line tool — where the
+  drawing says `libsqlite3-0`; and its stdlib binding is declared through
+  a pip provider (glossed "stdlib, pip no-op") where the drawing says
+  "the interpreter build". The drawing and the declaration also disagree
+  on which Python node is the file and which is `dir(sqlite3)`.
+- *Only the format differs.* The depext bound; `zarith.cmxa` against
+  `zarith (4 modules)`; torch's library drawn as `libtorch.so`, recorded
+  as its soname `libtorch_cpu.so`.
+- *The built case is another project* (llvm drawn, sqlite recorded), so
+  it agrees on one node.
+
+Guard: `overview.recorded_views_are_named` — every name is on a template
+node and says its source; what a case hides its counterpart dims, what a
+case greys its counterpart does not realize; and the agreements are a
+RATCHET — the 14 (case, node) pairs where the derived name equals the
+drawn one today (17 on Linux, with the system package names), which may
+grow when a drawing or a derivation is corrected and must not quietly
+shrink. Red under a garbled bridge label and under disabled dimming.
+Still generic: the consumer programs and the capability file, which
+nothing declares by name.
 
 ---
 

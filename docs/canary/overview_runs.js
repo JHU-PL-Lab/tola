@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-23 18:42",
+  "generated": "2026-09-23 18:59",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -9,7 +9,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:14.673", "2026-09-23 17:42:21.059" ],
+      "span": [ "2026-09-23 18:43:31.047", "2026-09-23 18:43:36.833" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -59,7 +59,24 @@
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "be0605-python",
@@ -67,7 +84,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:14.673", "2026-09-23 17:42:21.083" ],
+      "span": [ "2026-09-23 18:43:31.047", "2026-09-23 18:43:36.856" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -116,7 +133,23 @@
         "fetch_source": "no edge for this action on the page",
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
+        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "df925e-ocaml",
@@ -124,7 +157,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:23.004", "2026-09-23 17:42:28.943" ],
+      "span": [ "2026-09-23 18:43:38.705", "2026-09-23 18:43:44.498" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -174,7 +207,24 @@
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "df925e-python",
@@ -182,7 +232,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:23.004", "2026-09-23 17:42:28.966" ],
+      "span": [ "2026-09-23 18:43:38.705", "2026-09-23 18:43:44.520" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -231,7 +281,23 @@
         "fetch_source": "no edge for this action on the page",
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
+        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "bf7656-ocaml",
@@ -239,7 +305,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:21.992", "2026-09-23 17:42:22.912" ],
+      "span": [ "2026-09-23 18:43:37.742", "2026-09-23 18:43:38.609" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -292,7 +358,24 @@
         "fetch_source": "no edge for this action on the page",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "bf7656-python",
@@ -300,7 +383,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:21.992", "2026-09-23 17:42:22.935" ],
+      "span": [ "2026-09-23 18:43:37.742", "2026-09-23 18:43:38.632" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -352,7 +435,23 @@
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
+        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "e35b2b-ocaml",
@@ -360,7 +459,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:29.854", "2026-09-23 17:42:30.748" ],
+      "span": [ "2026-09-23 18:43:45.574", "2026-09-23 18:43:46.445" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -413,7 +512,24 @@
         "fetch_source": "no edge for this action on the page",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "e35b2b-python",
@@ -421,7 +537,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:29.854", "2026-09-23 17:42:30.771" ],
+      "span": [ "2026-09-23 18:43:45.574", "2026-09-23 18:43:46.467" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -473,7 +589,23 @@
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
+        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "08b7dd-ocaml",
@@ -481,7 +613,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:41:57.250", "2026-09-23 17:42:03.252" ],
+      "span": [ "2026-09-23 18:43:14.689", "2026-09-23 18:43:20.495" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -531,7 +663,24 @@
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "08b7dd-python",
@@ -539,7 +688,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:41:57.250", "2026-09-23 17:42:03.282" ],
+      "span": [ "2026-09-23 18:43:14.689", "2026-09-23 18:43:20.519" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -588,7 +737,23 @@
         "fetch_source": "no edge for this action on the page",
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
+        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "b8e9cb-ocaml",
@@ -596,7 +761,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:05.479", "2026-09-23 17:42:11.965" ],
+      "span": [ "2026-09-23 18:43:22.613", "2026-09-23 18:43:28.465" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -646,7 +811,24 @@
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "b8e9cb-python",
@@ -654,7 +836,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:05.479", "2026-09-23 17:42:11.990" ],
+      "span": [ "2026-09-23 18:43:22.613", "2026-09-23 18:43:28.488" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -703,7 +885,23 @@
         "fetch_source": "no edge for this action on the page",
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
+        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "740478-ocaml",
@@ -711,7 +909,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:03.371", "2026-09-23 17:42:04.316" ],
+      "span": [ "2026-09-23 18:43:20.607", "2026-09-23 18:43:21.484" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -764,7 +962,24 @@
         "fetch_source": "no edge for this action on the page",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "740478-python",
@@ -772,7 +987,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:03.371", "2026-09-23 17:42:04.340" ],
+      "span": [ "2026-09-23 18:43:20.607", "2026-09-23 18:43:21.508" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -824,7 +1039,23 @@
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
+        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "170e8d-ocaml",
@@ -832,7 +1063,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:12.069", "2026-09-23 17:42:13.003" ],
+      "span": [ "2026-09-23 18:43:28.561", "2026-09-23 18:43:29.434" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -885,7 +1116,24 @@
         "fetch_source": "no edge for this action on the page",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "170e8d-python",
@@ -893,7 +1141,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:12.069", "2026-09-23 17:42:13.030" ],
+      "span": [ "2026-09-23 18:43:28.561", "2026-09-23 18:43:29.457" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -945,7 +1193,23 @@
         "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
+        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "c2ff32-ocaml",
@@ -953,7 +1217,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:21.155", "2026-09-23 17:42:21.898" ],
+      "span": [ "2026-09-23 18:43:36.928", "2026-09-23 18:43:37.649" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -995,7 +1259,23 @@
         "lib_sys": "apt sqlite3.3.45.1",
         "mod_lang": "opam sqlite3.5.1.0"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "c2ff32-python",
@@ -1003,7 +1283,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:21.155", "2026-09-23 17:42:21.922" ],
+      "span": [ "2026-09-23 18:43:36.928", "2026-09-23 18:43:37.672" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1042,7 +1322,23 @@
       },
       "unplaced": {
         "fetch_binding_python": "a dummy step: it performs nothing"
-      }
+      },
+      "names": {
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
+        "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "4af838-ocaml",
@@ -1050,7 +1346,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:29.036", "2026-09-23 17:42:29.760" ],
+      "span": [ "2026-09-23 18:43:44.592", "2026-09-23 18:43:45.465" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1092,7 +1388,23 @@
         "lib_sys": "apt sqlite3.3.45.1",
         "mod_lang": "opam sqlite3.5.4.1"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "bridge": { "label": "conf-sqlite3", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "4af838-python",
@@ -1100,7 +1412,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 17:42:29.036", "2026-09-23 17:42:29.784" ],
+      "span": [ "2026-09-23 18:43:44.592", "2026-09-23 18:43:45.490" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1139,7 +1451,23 @@
       },
       "unplaced": {
         "fetch_binding_python": "a dummy step: it performs nothing"
-      }
+      },
+      "names": {
+        "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "sqlite3", "from": "declared" },
+        "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
+        "src_sys": { "label": "sqlite.git", "from": "declared" },
+        "pm_lang": { "label": "pip", "from": "declared" },
+        "pkg_lang": { "label": "sqlite3", "from": "declared" },
+        "stub_lang": { "label": "_sqlite3*.so", "from": "declared" },
+        "surf_lang": { "label": "sqlite3/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
+        "stub_lang", "surf_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "d26e75-ocaml",
@@ -1189,7 +1517,23 @@
         "lib_sys": "apt llvm-19-dev.19",
         "mod_lang": "opam llvm.19-shared"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "llvm-19-dev", "from": "declared" },
+        "lib_sys": { "label": "libLLVM.so", "from": "declared" },
+        "hdr_sys": { "label": "Core.h", "from": "declared" },
+        "src_sys": { "label": "llvm-project.git", "from": "declared" },
+        "bridge": { "label": "conf-llvm-shared {= 19}", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "llvm", "from": "declared" },
+        "stub_lang": { "label": "libllvm.a", "from": "declared" },
+        "surf_lang": { "label": "llvm.mli", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "src_lang", "stub_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "c8fae6-ocaml",
@@ -1246,7 +1590,23 @@
         "scan_source": "no edge for this action on the page",
         "configure": "no edge for this action on the page",
         "probe_lib_staged": "observes the staged copy, which has no observation edge"
-      }
+      },
+      "names": {
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "llvm-19-dev", "from": "declared" },
+        "lib_sys": { "label": "libLLVM.so", "from": "declared" },
+        "hdr_sys": { "label": "Core.h", "from": "declared" },
+        "src_sys": { "label": "llvm-project.git", "from": "declared" },
+        "bridge": { "label": "conf-llvm-shared {= 19}", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "llvm", "from": "declared" },
+        "stub_lang": { "label": "libllvm.a", "from": "declared" },
+        "surf_lang": { "label": "llvm.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
+        "surf_lang", "consumer_package"
+      ]
     },
     {
       "id": "9f4072-ocaml",
@@ -1308,7 +1668,23 @@
         "scan_source": "no edge for this action on the page",
         "configure": "no edge for this action on the page",
         "probe_lib_staged": "observes the staged copy, which has no observation edge"
-      }
+      },
+      "names": {
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "llvm-19-dev", "from": "declared" },
+        "lib_sys": { "label": "libLLVM.so", "from": "declared" },
+        "hdr_sys": { "label": "Core.h", "from": "declared" },
+        "src_sys": { "label": "llvm-project.git", "from": "declared" },
+        "bridge": { "label": "conf-llvm-shared {= 19}", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "llvm", "from": "declared" },
+        "stub_lang": { "label": "libllvm.a", "from": "declared" },
+        "surf_lang": { "label": "llvm.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
+        "surf_lang", "consumer_package"
+      ]
     },
     {
       "id": "28a379-ocaml",
@@ -1362,7 +1738,17 @@
       "unplaced": {
         "configure": "no edge for this action on the page",
         "scan_sources": "no edge for this action on the page"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libtiny.so.1", "from": "recorded" },
+        "stub_lang": { "label": "libtiny_stubs.a", "from": "recorded" },
+        "hdr_sys": { "label": "tiny.h", "from": "declared" },
+        "surf_lang": { "label": "tiny.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
+        "pkg_lang", "surf_lang", "consumer_package"
+      ]
     },
     {
       "id": "28a379-python",
@@ -1414,7 +1800,21 @@
       "unplaced": {
         "configure": "no edge for this action on the page",
         "scan_sources": "no edge for this action on the page"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libtiny.so.1", "from": "recorded" },
+        "stub_lang": {
+          "label": "_native.cpython-314-x86_64-linux-gnu.so",
+          "from": "recorded"
+        },
+        "mod_lang": { "label": "tiny_cext (3 names)", "from": "recorded" },
+        "hdr_sys": { "label": "tiny.h", "from": "declared" },
+        "surf_lang": { "label": "tiny_cext/__init__.py", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
+        "pkg_lang", "surf_lang", "consumer_package"
+      ]
     },
     {
       "id": "614dda-ocaml",
@@ -1466,7 +1866,24 @@
       },
       "unplaced": {
         "fetch_binding_source_ocaml": "no edge for this action on the page"
-      }
+      },
+      "names": {
+        "mod_lang": { "label": "zarith (4 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libzarith.a", "from": "recorded" },
+        "lib_sys": { "label": "libgmp.so.10", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libgmp-dev", "from": "declared" },
+        "hdr_sys": { "label": "gmp.h", "from": "declared" },
+        "bridge": { "label": "conf-gmp", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "zarith", "from": "declared" },
+        "src_lang": { "label": "Zarith.git", "from": "declared" },
+        "surf_lang": { "label": "zarith.mli", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "surf_lang",
+        "consumer_package"
+      ]
     },
     {
       "id": "4ea4a4-ocaml",
@@ -1516,7 +1933,23 @@
         "src_lang": "F 1.14",
         "mod_lang": "opam zarith"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "mod_lang": { "label": "zarith (4 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libzarith.a", "from": "recorded" },
+        "lib_sys": { "label": "libgmp.so.10", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libgmp-dev", "from": "declared" },
+        "hdr_sys": { "label": "gmp.h", "from": "declared" },
+        "bridge": { "label": "conf-gmp", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "zarith", "from": "declared" },
+        "src_lang": { "label": "Zarith.git", "from": "declared" },
+        "surf_lang": { "label": "zarith.mli", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "7a10f8-ocaml",
@@ -1568,7 +2001,24 @@
       },
       "unplaced": {
         "probe_lib": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "mod_lang": { "label": "cairo2 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libcairo_stubs.a", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libcairo2-dev", "from": "declared" },
+        "hdr_sys": {
+          "label": "cairo.h, cairo-ft.h, cairo-pdf.h, cairo-ps.h, cairo-svg.h",
+          "from": "declared"
+        },
+        "src_sys": { "label": "cairo.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "cairo2", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "7ac7f1-ocaml",
@@ -1618,7 +2068,25 @@
         "lib_sys": "apt libcairo2-dev.1.18.0",
         "mod_lang": "opam cairo2"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "mod_lang": { "label": "cairo2 (1 modules)", "from": "recorded" },
+        "stub_lang": { "label": "libcairo_stubs.a", "from": "recorded" },
+        "lib_sys": { "label": "libcairo.so.2", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libcairo2-dev", "from": "declared" },
+        "hdr_sys": {
+          "label": "cairo.h, cairo-ft.h, cairo-pdf.h, cairo-ps.h, cairo-svg.h",
+          "from": "declared"
+        },
+        "src_sys": { "label": "cairo.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "cairo2", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "1406f0-ocaml",
@@ -1670,7 +2138,27 @@
       },
       "unplaced": {
         "probe_lib": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "mod_lang": {
+          "label": "ctypes-foreign (9 modules)",
+          "from": "recorded"
+        },
+        "stub_lang": {
+          "label": "libctypes_foreign_stubs.a",
+          "from": "recorded"
+        },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libffi-dev", "from": "declared" },
+        "hdr_sys": { "label": "ffi.h, ffitarget.h", "from": "declared" },
+        "src_sys": { "label": "libffi.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "0a184a-ocaml",
@@ -1720,7 +2208,28 @@
         "lib_sys": "apt libffi-dev.3.4.6",
         "mod_lang": "opam ctypes-foreign"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "mod_lang": {
+          "label": "ctypes-foreign (9 modules)",
+          "from": "recorded"
+        },
+        "stub_lang": {
+          "label": "libctypes_foreign_stubs.a",
+          "from": "recorded"
+        },
+        "lib_sys": { "label": "libffi.so.8", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libffi-dev", "from": "declared" },
+        "hdr_sys": { "label": "ffi.h, ffitarget.h", "from": "declared" },
+        "src_sys": { "label": "libffi.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "657774-ocaml",
@@ -1772,7 +2281,21 @@
       },
       "unplaced": {
         "probe_lib": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "mod_lang": { "label": "zip (3 modules)", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "zlib1g-dev", "from": "declared" },
+        "lib_sys": { "label": "libz.so.1", "from": "declared" },
+        "hdr_sys": { "label": "zlib.h, zconf.h", "from": "declared" },
+        "src_sys": { "label": "zlib.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "camlzip", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "d668a4-ocaml",
@@ -1822,7 +2345,21 @@
         "lib_sys": "apt zlib1g-dev.1:1.3.dfsg",
         "mod_lang": "opam camlzip"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "mod_lang": { "label": "zip (3 modules)", "from": "recorded" },
+        "lib_sys": { "label": "libz.so.1", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "zlib1g-dev", "from": "declared" },
+        "hdr_sys": { "label": "zlib.h, zconf.h", "from": "declared" },
+        "src_sys": { "label": "zlib.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "camlzip", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "ff020b-ocaml",
@@ -1874,7 +2411,20 @@
       },
       "unplaced": {
         "probe_lib": "observes the system package's library, which this world does not use"
-      }
+      },
+      "names": {
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libzstd-dev", "from": "declared" },
+        "lib_sys": { "label": "libzstd.so.1", "from": "declared" },
+        "hdr_sys": { "label": "zstd.h, zstd_errors.h", "from": "declared" },
+        "src_sys": { "label": "zstd.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "zstd", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "ff7b9d-ocaml",
@@ -1924,7 +2474,21 @@
         "lib_sys": "apt libzstd-dev.1.5.5+dfsg2",
         "mod_lang": "opam zstd"
       },
-      "unplaced": {}
+      "unplaced": {},
+      "names": {
+        "mod_lang": { "label": "zstd (1 modules)", "from": "recorded" },
+        "lib_sys": { "label": "libzstd.so.1", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libzstd-dev", "from": "declared" },
+        "hdr_sys": { "label": "zstd.h, zstd_errors.h", "from": "declared" },
+        "src_sys": { "label": "zstd.git", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "zstd", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
+        "consumer_artifact"
+      ]
     },
     {
       "id": "7b508c-ocaml",
@@ -1976,7 +2540,22 @@
       },
       "unplaced": {
         "probe_app_ocaml": "no edge for this action on the page"
-      }
+      },
+      "names": {
+        "stub_lang": { "label": "libssl_stubs.a", "from": "recorded" },
+        "lib_sys": { "label": "libssl.so.3", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libssl-dev", "from": "declared" },
+        "hdr_sys": { "label": "ssl.h", "from": "declared" },
+        "src_sys": { "label": "openssl.git", "from": "declared" },
+        "bridge": { "label": "conf-libssl", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "ssl", "from": "declared" },
+        "surf_lang": { "label": "ssl.mli", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "8f247d-ocaml",
@@ -2028,7 +2607,22 @@
       },
       "unplaced": {
         "probe_app_ocaml": "no edge for this action on the page"
-      }
+      },
+      "names": {
+        "stub_lang": { "label": "libssl_stubs.a", "from": "recorded" },
+        "lib_sys": { "label": "libssl.so.3", "from": "recorded" },
+        "pm_sys": { "label": "apt", "from": "declared" },
+        "pkg_sys": { "label": "libssl-dev", "from": "declared" },
+        "hdr_sys": { "label": "ssl.h", "from": "declared" },
+        "src_sys": { "label": "openssl.git", "from": "declared" },
+        "bridge": { "label": "conf-libssl", "from": "declared" },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "ssl", "from": "declared" },
+        "surf_lang": { "label": "ssl.mli", "from": "declared" }
+      },
+      "dim": [
+        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "0dc978-ocaml",
@@ -2080,7 +2674,24 @@
       },
       "unplaced": {
         "fetch_lib": "the library comes from a language package manager: no edge from there"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libtorch_cpu.so", "from": "recorded" },
+        "hdr_sys": { "label": "torch.h", "from": "declared" },
+        "bridge": {
+          "label": "depext: libtorch >= 2.1.0 & < 2.2.0",
+          "from": "declared"
+        },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "torch", "from": "declared" },
+        "src_lang": { "label": "torch.git", "from": "declared" },
+        "stub_lang": { "label": "libtorch_core_stubs.a", "from": "declared" },
+        "surf_lang": { "label": "torch.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "src_sys", "hdr_sys", "staged_sys", "cap",
+        "src_lang", "stub_lang", "consumer_artifact"
+      ]
     },
     {
       "id": "e1d373-ocaml",
@@ -2132,7 +2743,24 @@
       },
       "unplaced": {
         "fetch_lib": "the library comes from a language package manager: no edge from there"
-      }
+      },
+      "names": {
+        "lib_sys": { "label": "libtorch_cpu.so", "from": "recorded" },
+        "hdr_sys": { "label": "torch.h", "from": "declared" },
+        "bridge": {
+          "label": "depext: libtorch >= 2.1.0 & < 2.2.0",
+          "from": "declared"
+        },
+        "pm_lang": { "label": "opam", "from": "declared" },
+        "pkg_lang": { "label": "torch", "from": "declared" },
+        "src_lang": { "label": "torch.git", "from": "declared" },
+        "stub_lang": { "label": "libtorch_core_stubs.a", "from": "declared" },
+        "surf_lang": { "label": "torch.mli", "from": "declared" }
+      },
+      "dim": [
+        "pm_sys", "pkg_sys", "src_sys", "hdr_sys", "staged_sys", "cap",
+        "src_lang", "stub_lang", "consumer_artifact"
+      ]
     }
   ],
   "cases": {

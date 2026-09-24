@@ -1078,6 +1078,115 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         && String.is_prefix (R.target ~hypothetical:false) ~prefix:"docs/canary/")
   }
 
+(* A RECORDED WORLD IS NAMED, AND SET BESIDE ITS CASE (2026-09-23,
+   status.md §2.7 phase D). Each view names the nodes of its world — from
+   what the run recorded, else from what the project declares — and the
+   page sets those names beside the hand-drawn case's. The plan's method
+   is to keep the hand-written version as the check until the derivation
+   agrees with it, so this pins:
+
+   - every name is on a template node, non-empty, and says where it came
+     from; every dimmed node is a template node;
+   - what a case HIDES, its recorded counterpart dims, and what a case
+     GREYS, its counterpart does not realize — the shape agrees;
+   - THE AGREEMENTS, as a ratchet: the (case, node) pairs where the
+     derived name equals the hand-drawn one today. Each is a place the
+     derivation reproduces the drawing; a pair may be added when a
+     drawing is corrected or a derivation improves, and must not quietly
+     fall out. The system package names are the Linux ones in the
+     drawings, so those two pairs are held only on Linux.
+
+   Every pinned value reads the same on a checkout that has never run:
+   where a name is recorded, its declared fallback is the same string. *)
+let recorded_names_pin : Canary_project_test.pure_test =
+  { name = "overview.recorded_views_are_named";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module T = Canary_topology in
+        let module R = Canary_overview_runs in
+        let m = M.matrix_of Canary_registry.all_projects in
+        let views = R.views m in
+        let view_of key =
+          Option.bind (List.Assoc.find (R.case_views views) key ~equal:String.equal)
+            ~f:(fun id -> List.find views ~f:(fun v -> String.equal v.R.vw_id id))
+        in
+        let node_ids = List.map T.nodes ~f:(fun n -> n.T.nd_id) in
+        let well_formed =
+          List.for_all views ~f:(fun v ->
+              List.for_all v.R.vw_names ~f:(fun (n, (label, from)) ->
+                  List.mem node_ids n ~equal:String.equal
+                  && (not (String.is_empty label))
+                  && List.mem [ "recorded"; "declared" ] from ~equal:String.equal)
+              && List.for_all v.R.vw_dim ~f:(List.mem node_ids ~equal:String.equal))
+        in
+        (* the hand-drawn cases, as the page embeds them *)
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:""
+            ~generated_at:"pin"
+        in
+        let hand =
+          let open_tag = {|<script type="application/json" id="rechand">|} in
+          match String.substr_index page ~pattern:open_tag with
+          | None -> None
+          | Some i -> (
+              let rest = String.drop_prefix page (i + String.length open_tag) in
+              match String.substr_index rest ~pattern:"</script>" with
+              | None -> None
+              | Some j -> (
+                  try Some (Yojson.Basic.from_string (String.prefix rest j))
+                  with _ -> None))
+        in
+        let field j k =
+          match j with
+          | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
+          | _ -> None
+        in
+        let strings j =
+          match j with
+          | Some (`List xs) -> List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+          | _ -> []
+        in
+        let hand_case key = Option.bind hand ~f:(fun h -> field h key) in
+        let shape_agrees =
+          List.for_all R.counterparts ~f:(fun (key, _) ->
+              match (hand_case key, view_of key) with
+              | Some c, Some v ->
+                  List.for_all (strings (field c "hidden")) ~f:(fun n ->
+                      List.mem v.R.vw_dim n ~equal:String.equal)
+                  && List.for_all (strings (field c "dead")) ~f:(fun e ->
+                         match List.Assoc.find v.R.vw_edges e ~equal:String.equal with
+                         | Some w ->
+                             List.mem [ "absent"; "not_ours"; "claim" ] w ~equal:String.equal
+                         | None -> false)
+              | _ -> false)
+        in
+        let agrees key node =
+          match (hand_case key, view_of key) with
+          | Some c, Some v -> (
+              match
+                ( Option.bind (field c "names") ~f:(fun names -> field names node),
+                  List.Assoc.find v.R.vw_names node ~equal:String.equal )
+              with
+              | Some (`String h), Some (label, _) -> String.equal h label
+              | _ -> false)
+          | _ -> false
+        in
+        let on_linux = Poly.equal (Canary_store.platform ()) Canary_store.Wsl in
+        let ratchet =
+          [ ("conf", [ "bridge"; "hdr_sys"; "lib_sys"; "pm_lang"; "pkg_lang";
+                       "src_lang"; "surf_lang" ]);
+            ("unified", [ "pm_lang"; "pkg_lang"; "stub_lang"; "surf_lang" ]);
+            ("none", [ "hdr_sys"; "lib_sys" ]);
+            ("built", [ "pm_lang" ]) ]
+          @ (if on_linux then [ ("conf", [ "pm_sys"; "pkg_sys" ]); ("none", [ "pm_sys" ]) ]
+             else [])
+        in
+        well_formed && Option.is_some hand && shape_agrees
+        && List.for_all ratchet ~f:(fun (key, nodes) ->
+               List.for_all nodes ~f:(agrees key)))
+  }
+
 (* THE WORDS ARE WORST-FIRST (2026-09-23, phase C). When several steps
    realize one edge, the edge shows the worst; a badge is green only when
    every claim on its edge holds. Pinned as values, because a reordering
@@ -6307,6 +6416,7 @@ let base_tests : Canary_project_test.pure_test list =
       record_join_pin;
       every_step_placed_pin;
       overview_overlay_pin;
+      recorded_names_pin;
       overlay_words_pin;
       platform_single_source_pin;
       strict_mode_pin;

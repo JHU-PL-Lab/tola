@@ -335,6 +335,11 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.cl-partial .cbadge{fill:var(--xf)}
 .rec .edge.cl-undecided .cbadge,.rec .edge.cl-unevaluated .cbadge{fill:var(--mut)}
 .rec .node .nsub{fill:var(--fg)}
+.rec .node.named-decl .nlabel{font-style:italic}
+table.cmp{font-size:.85rem;max-width:780px}
+table.cmp tr.agree td{color:var(--mut)}
+table.cmp tr.differ td{background:color-mix(in srgb,var(--xf) 14%,transparent)}
+table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.ok{border-top:3px solid var(--ok)}.sw.okw{border-top:3px dashed var(--ok)}
 .sw.xf{border-top:3px solid var(--xf)}.sw.bad{border-top:3px solid var(--bad)}
 .sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
@@ -580,11 +585,21 @@ type case = {
   ca_key : string;
   ca_title : string;
   ca_blurb : string;
-  ca_rename : string -> string option;
-  ca_sub : string -> string option;
-  ca_hide : string -> bool;
-  ca_dead : string -> bool;
+  ca_names : (string * string) list;  (** node id → what the case calls it *)
+  ca_subs : (string * string) list;  (** node id → a line under the name *)
+  ca_hidden : string list;  (** nodes that do not exist in the case *)
+  ca_dead : string list;  (** edges that exist and do not fire *)
 }
+(* DATA, NOT CLOSURES (2026-09-23, status.md §2.7 phase D): the cases'
+   labels used to be [assoc] and [hides] functions, which the diagram
+   could call and nothing could read. §2.1 now sets each recorded world
+   beside its case and says where they agree, so the case has to be
+   something a comparison can iterate over. *)
+
+let assoc_of (l : (string * string) list) (id : string) : string option =
+  List.Assoc.find l id ~equal:String.equal
+
+let member (l : string list) (id : string) : bool = List.mem l id ~equal:String.equal
 
 let case_panels (cases : case list) =
   let buttons =
@@ -598,8 +613,8 @@ let case_panels (cases : case list) =
       (List.map cases ~f:(fun c ->
            Printf.sprintf {|<section class="case" id="case-%s"><p>%s</p>%s</section>|}
              (esc c.ca_key) c.ca_blurb
-             (diagram ~rename:c.ca_rename ~sublabel:c.ca_sub ~hide:c.ca_hide
-                ~dead:c.ca_dead ())))
+             (diagram ~rename:(assoc_of c.ca_names) ~sublabel:(assoc_of c.ca_subs)
+                ~hide:(member c.ca_hidden) ~dead:(member c.ca_dead) ())))
   in
   Printf.sprintf {|<div class="selbar" data-group="case">%s</div>%s|} buttons
     panels
@@ -624,16 +639,34 @@ let recorded_section (cases : case list) =
                   (esc c.ca_key) (esc c.ca_title))
            else None))
   in
+  (* the hand-drawn cases as DATA, for the comparison under the diagram —
+     part of the page, like the cases themselves; the recorded half comes
+     from the per-machine file *)
+  let hand =
+    Yojson.Basic.to_string
+      (`Assoc
+        (List.map cases ~f:(fun c ->
+             ( c.ca_key,
+               `Assoc
+                 [ ( "names",
+                     `Assoc (List.map c.ca_names ~f:(fun (n, l) -> (n, `String l))) );
+                   ("hidden", `List (List.map c.ca_hidden ~f:(fun n -> `String n)));
+                   ("dead", `List (List.map c.ca_dead ~f:(fun e -> `String e))) ] ))))
+  in
   Printf.sprintf
     {|<div id="recwrap"><h3 id="recorded">2.1 The same cases, as recorded</h3>
 <p>The cases above are drawn by hand: what we expect. Each button below
 draws a <em>recorded</em> world with that case's shape on the same layout,
 so the two can be compared by switching. An edge is coloured by what the
 steps realizing it did in the last recorded run, a claim badge by the
-outcomes of the claims placed there, and the world's placements sit under
-the node names. An edge this world realizes no step of is faint; an edge
-someone else's rule establishes is dotted, because nothing is recorded
-there yet. The wheel case has no counterpart while z3 is muted.</p>
+outcomes of the claims placed there. A node is named by what the run
+recorded about it, or — in italics — by what the project declares, and a
+node nothing in this world touches is dimmed. An edge this world realizes
+no step of is faint; an edge someone else's rule establishes is dotted,
+because nothing is recorded there yet. Under the diagram, the case's
+hand-drawn names are set beside the recorded ones. The wheel case has no
+counterpart while z3 is muted.</p>
+<script type="application/json" id="rechand">%s</script>
 <div class="selbar recbar">%s</div>
 <p><label>any recorded world: <select id="recsel"></select></label></p>
 <p id="rechead" class="edet">no recorded runs loaded — <code>canary
@@ -648,10 +681,12 @@ page</p>
 <span><i class="sw un"></i> in the chain, never logged</span>
 <span><i class="sw ab"></i> not in this world</span>
 <span><i class="sw no"></i> someone else's rule — nothing recorded</span>
+<span><b>name</b> recorded by the run · <i>name</i> declared by the project</span>
 </div>
+<div id="reccmp"></div>
 <div id="recclaims"></div>
 <div id="recunplaced"></div></div>|}
-    buttons
+    hand buttons
     (diagram ~sublabel:(fun _ -> Some "") ())
 
 let script =
@@ -704,7 +739,8 @@ let runs_script () =
 |} f))
   ^ {|<script>
 (function(){
-var runs=window.CANARY_RUNS||[], views=[], byId={}, cases={};
+var runs=window.CANARY_RUNS||[], views=[], byId={}, cases={}, HAND={};
+try{ HAND=JSON.parse(document.getElementById('rechand').textContent); }catch(e){}
 runs.forEach(function(r){
   (r.views||[]).forEach(function(v){
     v.key=v.id+'@'+r.machine; v.machine=r.machine; views.push(v); byId[v.key]=v; });
@@ -736,8 +772,40 @@ function show(key){
     if(v.badges[e]) g.classList.add('cl-'+v.badges[e]);
   });
   rec.querySelectorAll('[data-node]').forEach(function(g){
-    var t=g.querySelector('.nsub'); if(t) t.textContent=v.nodes[g.getAttribute('data-node')]||'';
+    var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'), n=(v.names||{})[id];
+    if(l && g.dataset.generic===undefined) g.dataset.generic=l.textContent;
+    if(l) l.textContent=n?n.label:g.dataset.generic;
+    g.classList.toggle('named-decl', !!(n&&n.from==='declared'));
+    g.classList.toggle('dim', (v.dim||[]).indexOf(id)>=0);
+    var t=g.querySelector('.nsub'); if(t) t.textContent=v.nodes[id]||'';
   });
+  // the case this world stands for, set beside it node by node
+  var ck=Object.keys(cases).filter(function(k){ return cases[k]===key; })[0],
+      h=ck&&HAND[ck], cmp=document.getElementById('reccmp');
+  if(cmp){
+    if(!h){ cmp.innerHTML=''; }
+    else {
+      var rows=[], both=0, agree=0;
+      rec.querySelectorAll('[data-node]').forEach(function(g){
+        var id=g.getAttribute('data-node'), hn=h.names[id], n=(v.names||{})[id];
+        if(!hn&&!n) return;
+        var cls=hn&&n?(hn===n.label?'agree':'differ'):'one';
+        if(hn&&n){ both++; if(hn===n.label) agree++; }
+        rows.push('<tr class="'+cls+'"><td>'+esc(g.dataset.generic)+'</td><td>'
+          +(hn?esc(hn):'—')+'</td><td>'+(n?esc(n.label)+' <span class="from">'
+          +n.from+'</span>':'—')+'</td></tr>');
+      });
+      var shown=h.hidden.filter(function(id){ return (v.dim||[]).indexOf(id)<0; }),
+          fired=h.dead.filter(function(e){ var s=v.edges[e];
+            return s&&['absent','not_ours','claim'].indexOf(s)<0; });
+      cmp.innerHTML='<p class="mechnote"><strong>Drawn by hand, and as recorded:</strong> '
+        +agree+' of the '+both+' nodes both name agree.'
+        +(shown.length?' The case hides '+shown.map(esc).join(', ')+', which this world has.':'')
+        +(fired.length?' The case greys '+fired.map(esc).join(', ')+', which this world realizes.':'')
+        +'</p><table class="cmp"><thead><tr><th>node</th><th>drawn by hand (§2)</th>'
+        +'<th>recorded world</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+    }
+  }
   head.textContent=v.project+' — '+v.lang+' — '+v.scenario+' — recorded on '
     +(v.recorded_on.length?v.recorded_on.join(', '):'(no platform logged)')
     +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet');
@@ -770,8 +838,6 @@ if(want&&byId[want]){ var h=document.getElementById('recorded'); if(h) h.scrollI
 let render (projects : (string * Canary_project_run.project_run) list)
     ~(overview : string) ~(generated_at : string) : string =
   let bare = T.bare_edges () in
-  let assoc l = fun id -> List.Assoc.find l id ~equal:String.equal in
-  let hides ids id = List.mem ids id ~equal:String.equal in
   let cases =
     [ { ca_key = "conf"; ca_title = "conf-* over a system library";
         ca_blurb =
@@ -780,8 +846,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
            package</code>; the ARTIFACT path runs <code>conf predicate → \
            capability query → the library on disk</code>. They can land \
            on different libraries, and nothing today compares them.";
-        ca_rename =
-          assoc
+        ca_names =
             [ ("pm_sys", "apt"); ("pkg_sys", "libgmp-dev");
               ("bridge", "conf-gmp"); ("cap", "gmp.pc"); ("pm_lang", "opam");
               ("pkg_lang", "zarith"); ("lib_sys", "libgmp.so.10");
@@ -790,11 +855,10 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("surf_lang", "zarith.mli");
               ("consumer_artifact", "zarith_example (paths)");
               ("consumer_package", "zarith_example (-package zarith)") ];
-        ca_sub =
-          assoc
+        ca_subs =
             [ ("bridge", "an opam package — written by an opam maintainer");
               ("cap", "inside libgmp-dev — written by the Debian packager") ];
-        ca_hide = hides [ "src_sys"; "staged_sys" ]; ca_dead = (fun _ -> false)
+        ca_hidden = [ "src_sys"; "staged_sys" ]; ca_dead = []
       };
       { ca_key = "wheel"; ca_title = "the library inside the wheel";
         ca_blurb =
@@ -803,22 +867,19 @@ let render (projects : (string * Canary_project_run.project_run) list)
            there is no cooperation left, which is a different statement \
            from having no bridge. Every claim that compared two \
            ecosystems has nothing to compare.";
-        ca_rename =
-          assoc
+        ca_names =
             [ ("pm_lang", "pip"); ("pkg_lang", "z3-solver (wheel)");
               ("lib_sys", "libz3.so — INSIDE the wheel");
               ("mod_lang", "z3/*.py + native ext");
               ("surf_lang", "z3.__all__");
               ("consumer_package", "python -c 'import z3'") ];
-        ca_sub =
-          assoc
+        ca_subs =
             [ ("lib_sys", "no system package, no bridge, no discovery");
               ("pkg_lang", "one package supplies both sides") ];
-        ca_hide =
-          hides
+        ca_hidden =
             [ "pm_sys"; "pkg_sys"; "bridge"; "cap"; "src_sys"; "staged_sys";
               "hdr_sys"; "src_lang"; "stub_lang" ];
-        ca_dead = (fun _ -> false) };
+        ca_dead = [] };
       { ca_key = "built"; ca_title = "built here — and the bridge still gates";
         ca_blurb =
           "The native side is built here, so the system package is not \
@@ -827,8 +888,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
            still evaluates it — against the system, which this world is \
            not using. The gate passes or fails on evidence unrelated to \
            the artifacts under test.";
-        ca_rename =
-          assoc
+        ca_names =
             [ ("src_sys", "llvm-project @ ref");
               ("lib_sys", "libLLVM.so (built)");
               ("staged_sys", "install prefix");
@@ -839,13 +899,11 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("mod_lang", "llvm.cmxa");
               ("consumer_artifact", "llvm_example (build tree)");
               ("consumer_package", "llvm_example (-package llvm)") ];
-        ca_sub =
-          assoc
+        ca_subs =
             [ ("bridge", "still runs — against the SYSTEM, not this build");
               ("pkg_sys", "the gate validates this, the world uses that") ];
-        ca_hide = (fun _ -> false);
-        ca_dead =
-          hides [ "resolve_sys"; "realize_sys"; "realize_hdr"; "realize_cap" ]
+        ca_hidden = [];
+        ca_dead = [ "resolve_sys"; "realize_sys"; "realize_hdr"; "realize_cap" ]
       };
       { ca_key = "unified"; ca_title = "one package universe";
         ca_blurb =
@@ -854,8 +912,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
            ordinary dependency in one namespace. This is torch: the \
            library arrives through opam as an upstream binary, named \
            directly by a depext bound rather than through a conf hop.";
-        ca_rename =
-          assoc
+        ca_names =
             [ ("pm_lang", "opam"); ("pkg_lang", "torch");
               ("bridge", "depext: libtorch >=2.1.0 <2.2.0");
               ("lib_sys", "libtorch.so (opam binary)");
@@ -864,13 +921,12 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("mod_lang", "torch.cmxa"); ("surf_lang", "torch.mli");
               ("consumer_artifact", "torch_example (paths)");
               ("consumer_package", "torch_example (-package torch)") ];
-        ca_sub =
-          assoc
+        ca_subs =
             [ ("bridge",
                "metadata inside the consumer — not a package of its own");
               ("pkg_lang", "same PM on both sides") ];
-        ca_hide = hides [ "pm_sys"; "pkg_sys"; "cap"; "src_sys"; "staged_sys" ];
-        ca_dead = (fun _ -> false) };
+        ca_hidden = [ "pm_sys"; "pkg_sys"; "cap"; "src_sys"; "staged_sys" ];
+        ca_dead = [] };
       { ca_key = "none"; ca_title = "no package manager between them";
         ca_blurb =
           "The binding and the library were joined by whoever built the \
@@ -880,8 +936,7 @@ let render (projects : (string * Canary_project_run.project_run) list)
            libsqlite3 and the loader resolves it — but there is no \
            declaration anywhere to check it against. <em>No gate</em> and \
            <em>no gate mechanism</em> are different situations.";
-        ca_rename =
-          assoc
+        ca_names =
             [ ("pm_sys", "apt"); ("pkg_sys", "libsqlite3-0");
               ("lib_sys", "libsqlite3.so.0"); ("hdr_sys", "sqlite3.h");
               ("pm_lang", "(the interpreter build)");
@@ -890,13 +945,11 @@ let render (projects : (string * Canary_project_run.project_run) list)
               ("mod_lang", "sqlite3/__init__.py");
               ("surf_lang", "dir(sqlite3)");
               ("consumer_package", "python -c 'import sqlite3'") ];
-        ca_sub =
-          assoc
+        ca_subs =
             [ ("pkg_lang", "chosen at interpreter build time, not here");
               ("lib_sys", "the loader picks it; nothing declared which") ];
-        ca_hide =
-          hides [ "bridge"; "cap"; "src_sys"; "staged_sys"; "src_lang" ];
-        ca_dead = (fun _ -> false) } ]
+        ca_hidden = [ "bridge"; "cap"; "src_sys"; "staged_sys"; "src_lang" ];
+        ca_dead = [] } ]
   in
   Printf.sprintf
     {|<!DOCTYPE html>
