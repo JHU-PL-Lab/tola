@@ -1734,6 +1734,224 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
                | None -> false))
   }
 
+(* THE VISUAL VOCABULARY IS ONE LIST (2026-09-24, user: "shall we keep all
+   our visual hints in a place, so we can always check for them all and
+   you won't be forget the old ones, and we can detect if there are
+   conflicts"). [Canary_overview_page.visual_hints] is that place; this
+   holds it to the stylesheet and to the page:
+
+   - every §1 rule of the stylesheet belongs to exactly one hint or to the
+     base look, and every rule a hint names exists — a new style cannot
+     land without saying what it means, and an old one cannot linger;
+   - every hint's classes are applied by the page, in its markup or its
+     script (a state class as the script's prefix plus one of its words);
+   - every hint is explained — a key entry with a sample and words, words
+     the drawing says itself, or a stated reason it needs none — both keys
+     are on the page, no two entries share a sample, and every sample the
+     stylesheet styles belongs to an entry;
+   - NO TWO HINTS LOOK ALIKE where both can show on one kind of element.
+     Colour, dash, width, opacity, slant, weight and display are compared
+     the way a reader sees them: a 1.8px and a 2px line are one width, a
+     dash of 1 and one of 2 are both dots. Only a hint's own rules count,
+     so a look it would inherit is not seen — which is why the muted
+     term's rule states its italics.
+
+   Its first run failed on the recorded run's "never logged" and "inside a
+   package manager's action", drawn in the same grey dots. *)
+let visual_vocabulary_pin : Canary_project_test.pure_test =
+  { name = "overview.visual_vocabulary_is_one_list";
+    check =
+      (fun () ->
+        let module P = Canary_overview_page in
+        let words s =
+          List.filter (String.split_on_chars s ~on:[ ' '; '\n'; '\t' ]) ~f:(fun w ->
+              not (String.is_empty w))
+        in
+        let norm s = String.concat ~sep:" " (words s) in
+        (* the stylesheet's innermost blocks: selector → declarations *)
+        let rules =
+          let s = P.css in
+          let n = String.length s in
+          let rec go i start acc =
+            if i >= n then List.rev acc
+            else
+              match s.[i] with
+              | '{' -> (
+                  match String.index_from s (i + 1) '}' with
+                  | None -> List.rev acc
+                  | Some j ->
+                      let body = String.sub s ~pos:(i + 1) ~len:(j - i - 1) in
+                      if String.mem body '{' then go (i + 1) (i + 1) acc
+                      else
+                        go (j + 1) (j + 1)
+                          ((norm (String.sub s ~pos:start ~len:(i - start)), body) :: acc))
+              | '}' -> go (i + 1) (i + 1) acc
+              | _ -> go (i + 1) start acc
+          in
+          go 0 0 []
+        in
+        let ident c = Char.is_alphanum c || Char.equal c '-' || Char.equal c '_' in
+        (* does a selector name the class [c]? *)
+        let has_class sel c =
+          let pat = "." ^ c in
+          List.exists (String.substr_index_all sel ~may_overlap:false ~pattern:pat) ~f:(fun i ->
+              let k = i + String.length pat in
+              k >= String.length sel || not (ident sel.[k]))
+        in
+        let scope =
+          [ "band"; "bandlabel"; "sidecap"; "node"; "ncase"; "nplace"; "edge"; "elabel";
+            "cbadge"; "cnum"; "phm"; "declmark"; "gone" ]
+        in
+        let in_scope sel =
+          List.exists scope ~f:(has_class sel) || String.is_prefix sel ~prefix:".selbar button"
+        in
+        let scoped = List.filter_map rules ~f:(fun (sel, _) -> Option.some_if (in_scope sel) sel) in
+        let hints = P.visual_hints in
+        let claimed_once =
+          List.for_all scoped ~f:(fun sel ->
+              List.count hints ~f:(fun h -> List.mem h.P.vh_rules sel ~equal:String.equal)
+              + (if List.mem P.vocabulary_base sel ~equal:String.equal then 1 else 0)
+              = 1)
+        in
+        let rules_exist =
+          List.for_all hints ~f:(fun h ->
+              List.for_all h.P.vh_rules ~f:(List.mem scoped ~equal:String.equal))
+          && List.for_all P.vocabulary_base ~f:(List.mem scoped ~equal:String.equal)
+        in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+        in
+        (* every class token the page's markup uses *)
+        let markup_classes =
+          List.concat_map
+            (String.substr_index_all page ~may_overlap:false ~pattern:{|class="|})
+            ~f:(fun i ->
+              let from = i + String.length {|class="|} in
+              match String.index_from page from '"' with
+              | None -> []
+              | Some j -> words (String.sub page ~pos:from ~len:(j - from)))
+        in
+        let applied c =
+          List.mem markup_classes c ~equal:String.equal
+          || String.is_substring page ~substring:(Printf.sprintf "'%s'" c)
+          || List.exists [ "st-"; "cl-" ] ~f:(fun prefix ->
+                 String.is_prefix c ~prefix
+                 && String.is_substring page ~substring:(Printf.sprintf "'%s'+" prefix)
+                 && String.is_substring page
+                      ~substring:(Printf.sprintf "'%s'" (String.chop_prefix_exn c ~prefix)))
+        in
+        let all_applied =
+          List.for_all hints ~f:(fun h -> List.for_all h.P.vh_classes ~f:applied)
+        in
+        let keyed h = match h.P.vh_key with P.Chain_key | P.Run_key -> true | _ -> false in
+        let explained =
+          List.for_all hints ~f:(fun h ->
+              match h.P.vh_key with
+              | P.Chain_key | P.Run_key ->
+                  (not (String.is_empty h.P.vh_sample)) && not (String.is_empty h.P.vh_says)
+              | P.Drawn texts ->
+                  (not (List.is_empty texts))
+                  && List.for_all texts ~f:(fun t -> String.is_substring page ~substring:t)
+              | P.No_key why -> not (String.is_empty why))
+          && String.is_substring page ~substring:(P.key_html P.Chain_key)
+          && String.is_substring page ~substring:(P.key_html P.Run_key)
+        in
+        let samples = List.filter_map hints ~f:(fun h -> Option.some_if (keyed h) h.P.vh_sample) in
+        let samples_unique =
+          List.length (List.dedup_and_sort samples ~compare:String.compare) = List.length samples
+        in
+        (* every sample the stylesheet styles belongs to an entry *)
+        let sample_classes =
+          List.filter_map rules ~f:(fun (sel, _) ->
+              if List.exists [ ".sw"; ".swl"; ".nm-"; ".kbtn"; ".clm" ] ~f:(fun p ->
+                     String.is_prefix sel ~prefix:p)
+              then
+                List.last
+                  (List.filter (String.split_on_chars sel ~on:[ '.'; ' ' ]) ~f:(fun w ->
+                       not (String.is_empty w)))
+              else None)
+        in
+        let samples_used =
+          List.for_all sample_classes ~f:(fun c ->
+              List.exists samples ~f:(fun s ->
+                  List.exists (String.substr_index_all s ~may_overlap:false ~pattern:{|class="|})
+                    ~f:(fun i ->
+                      let from = i + String.length {|class="|} in
+                      match String.index_from s from '"' with
+                      | None -> false
+                      | Some j ->
+                          List.mem (words (String.sub s ~pos:from ~len:(j - from))) c
+                            ~equal:String.equal)))
+        in
+        (* THE LOOK, bucketed the way a reader sees it *)
+        let number s =
+          Float.of_string_opt (String.strip (String.chop_suffix_if_exists s ~suffix:"px"))
+        in
+        let bucket (prop, value) : (string * string) list =
+          let v = String.strip value in
+          let colours =
+            List.filter_map (words v) ~f:(fun w ->
+                Option.some_if (String.is_prefix w ~prefix:"var(" || String.is_prefix w ~prefix:"#") w)
+          in
+          match prop with
+          | "stroke" | "fill" | "color" | "border-color" | "background" ->
+              [ ("colour", v) ]
+          | "stroke-dasharray" -> (
+              match List.filter_map (words v) ~f:number with
+              | [] -> [ ("dash", "solid") ]
+              | [ a; _ ] when Float.(a <= 2.) -> [ ("dash", "dots") ]
+              | [ _; _ ] -> [ ("dash", "dashes") ]
+              | _ -> [ ("dash", "dash-dot") ])
+          | "stroke-width" -> (
+              match number v with
+              | Some w ->
+                  [ ("width", if Float.(w < 1.5) then "thin" else if Float.(w < 2.5) then "medium" else "thick") ]
+              | None -> [])
+          | "opacity" -> (
+              match number v with
+              | Some o ->
+                  [ ("opacity", if Float.(o < 0.3) then "faint" else if Float.(o < 0.75) then "half" else "full") ]
+              | None -> [])
+          | "font-style" -> [ ("slant", v) ]
+          | "font-weight" -> [ ("weight", v) ]
+          | "display" -> [ ("display", v) ]
+          | "font" -> if String.is_substring v ~substring:"italic" then [ ("slant", "italic") ] else []
+          | "border" | "border-top" ->
+              List.map colours ~f:(fun c -> ("colour", c))
+              @ List.filter_map [ ("dashed", "dashes"); ("dotted", "dots"); ("solid", "solid") ]
+                  ~f:(fun (w, d) -> Option.some_if (String.is_substring v ~substring:w) ("dash", d))
+          | _ -> []
+        in
+        let look (h : P.visual_hint) =
+          List.concat_map h.P.vh_rules ~f:(fun sel ->
+              match List.Assoc.find rules sel ~equal:String.equal with
+              | None -> []
+              | Some body ->
+                  List.concat_map (String.split body ~on:';') ~f:(fun decl ->
+                      match String.lsplit2 decl ~on:':' with
+                      | None -> []
+                      | Some (p, v) -> bucket (String.strip p, v)))
+          |> List.dedup_and_sort ~compare:Poly.compare
+        in
+        let overlap a b =
+          match (a, b) with
+          | P.Always, _ | _, P.Always -> true
+          | P.Generic, P.Generic | P.Recorded, P.Recorded -> true
+          | P.Generic, P.Recorded | P.Recorded, P.Generic -> false
+        in
+        let distinct_looks =
+          List.for_all hints ~f:(fun a ->
+              List.for_all hints ~f:(fun b ->
+                  String.equal a.P.vh_id b.P.vh_id
+                  || (not (Poly.equal a.P.vh_element b.P.vh_element))
+                  || (not (overlap a.P.vh_mode b.P.vh_mode))
+                  || List.is_empty (look a)
+                  || not (Poly.equal (look a) (look b))))
+        in
+        (not (List.is_empty scoped)) && claimed_once && rules_exist && all_applied && explained
+        && samples_unique && samples_used && distinct_looks)
+  }
+
 (* NO EDGE MARK HIDES UNDER A BOX, AND NO EDGE RUNS UNDER A SOURCE
    (2026-09-24, user: "the source is not in the package which usually
    contains the library or module, so it's acturally above the edge").
@@ -2445,7 +2663,9 @@ let chain_choices_pin : Canary_project_test.pure_test =
               ("staged_sys", "surf_lang"); ("consumer_artifact", "consumer_package") ]
             ~f:(fun (a, b) -> same_row a b)
           && x "pkg_sys" < x "bridge" && x "bridge" < x "pkg_lang"
-          && x "bridge" > Canary_overview_page.canvas_w / 2
+          (* the bridge is the language side's: nearer its binding package
+             than the native one (user, 2026-09-24) *)
+          && x "pkg_lang" - x "bridge" < x "bridge" - x "pkg_sys"
           && x "cap" > x "pkg_sys" && y "cap" > y "pkg_sys"
           (* A SOURCE IS BESIDE ITS PACKAGE'S COLUMN, NOT IN IT (user,
              2026-09-24): the column holds what the package ships, straight
@@ -8097,6 +8317,7 @@ let base_tests : Canary_project_test.pure_test list =
       drawn_line_sources_pin;
       badge_counts_pin;
       edge_marks_pin;
+      visual_vocabulary_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

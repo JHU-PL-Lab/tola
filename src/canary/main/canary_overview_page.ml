@@ -87,7 +87,11 @@ let layout : (string * pos) list =
        labels and badges in view (on 2026-09-23 a 22px [depends] edge hid
        the bridge's placeholder claims under the two boxes). *)
     ("cap", { px = 470; py = 275 });
-    ("bridge", { px = 620; py = 200 });
+    (* the bridge sits near the binding package, on the language side
+       (user, 2026-09-24: "the bridge package should be near to the
+       binding_package, since it belongs to the language PM's side") — as
+       near as its [depends] edge still has room for its label and badge *)
+    ("bridge", { px = 670; py = 200 });
     ("pkg_lang", { px = 990; py = 200 });
     ("src_sys", { px = 91; py = 392 });
     ("hdr_sys", { px = 230; py = 482 });
@@ -172,16 +176,14 @@ let band_label ~y ~label =
 (** Nodes are drawn AFTER edges so the boxes mask the lines that run
     under them — which is what lets every edge be a straight centre-to-
     centre segment instead of a routed path. *)
-let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
-    ~(sub : string option) (n : T.node) =
+let node_svg ?(extra = "") ?(case_slot = false) (n : T.node) =
   let p = pos_of n.T.nd_id in
   let w = box_w_of n.T.nd_id in
   let x = p.px - (w / 2) and y = p.py - (box_h / 2) in
   let decl = T.declaration_at n.T.nd_id in
   let cls =
-    Printf.sprintf "node %s%s%s%s"
+    Printf.sprintf "node %s%s%s"
       (T.string_of_layer n.T.nd_layer)
-      (if live then "" else " dim")
       (if Option.is_some decl then " declared" else "")
       extra
   in
@@ -208,20 +210,12 @@ let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
       {|<g class="%s" data-node="%s"><title>%s</title>
 <rect x="%d" y="%d" width="%d" height="%d" rx="7"/>
 <text class="nlabel" x="%d" y="%d"%s>%s</text>%s|}
-      cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y w box_h p.px
-      (if Option.is_some sub then p.py - 2 else p.py + 5)
+      cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y w box_h p.px (p.py + 5)
       (if case_slot then
          Printf.sprintf {| data-y0="%d" data-y1="%d" data-y2="%d"|} (p.py + 5) (p.py - 2)
            (p.py - 7)
        else "")
-      (esc label) badge
-  in
-  let subline =
-    match sub with
-    | None -> ""
-    | Some s ->
-        Printf.sprintf {|<text class="nsub" x="%d" y="%d">%s</text>|} p.px
-          (p.py + 14) (esc s)
+      (esc n.T.nd_label) badge
   in
   (* the name, and under it — while a recorded run is drawn — where the run
      placed the artifact: a third line, so the label and the name move up *)
@@ -232,7 +226,7 @@ let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
         p.px (p.py + 14) (p.py + 14) (p.py + 7) p.px (p.py + 19)
     else ""
   in
-  main ^ subline ^ slot ^ "</g>"
+  main ^ slot ^ "</g>"
 
 (* WHAT AN EDGE SAYS, per kind of annotation (2026-09-23): an action by
    its family's name; a claim by its code, the way every table on this
@@ -272,14 +266,12 @@ let annotation_title = function
    stands — a package manager did something there, inside one of our
    actions, that the run does not record. Left of the midpoint, so it
    never sits on the badges. *)
-let edge_svg ?(extra = "") ~(live : bool) ~(counts : int * int) ?(ph_slot = false)
-    (e : T.edge) =
+let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) (e : T.edge) =
   let dst = pos_of e.eg_to in
   let placed = not (List.is_empty (T.claim_sites_on e.T.eg_id)) in
   let cls =
-    Printf.sprintf "edge%s%s%s%s"
+    Printf.sprintf "edge%s%s%s"
       (if e.T.eg_diagonal then " diag" else "")
-      (if live then "" else " dim")
       (if placed then "" else " bare")
       extra
   in
@@ -337,13 +329,16 @@ let edge_svg ?(extra = "") ~(live : bool) ~(counts : int * int) ?(ph_slot = fals
              (esc (annotation_label e.T.eg_annotation))
              badge slot))
 
-(** THE one layout. [rename] substitutes a concrete label for a node,
-    [dead] greys an edge that this case does not have, and [classes] adds
-    classes to an element by id — the join's handle, which draws every
-    element once and lets the stylesheet hide it. *)
-let diagram ?(rename = fun (_ : string) -> None)
-    ?(sublabel = fun (_ : string) -> None) ?(dead = fun (_ : string) -> false)
-    ?(hide = fun (_ : string) -> false) ?(ph_slots = false) ?(case_slots = false)
+(** THE one layout: every node and edge drawn once. [classes] adds
+    classes to an element by id — the join's handle, which lets the
+    stylesheet hide, grey or outline it per choice; [counts] is what an
+    edge's two badges count before the script recounts them.
+
+    The parameters that renamed, sub-labelled, greyed or hid elements for
+    the hand-drawn cases went with those drawings (2026-09-24): nothing
+    passed them, and the styles they switched on were the vocabulary's
+    dead entries. *)
+let diagram ?(ph_slots = false) ?(case_slots = false)
     ?(classes = fun (_ : string) -> ([] : string list))
     ?(counts =
       fun id ->
@@ -357,43 +352,35 @@ let diagram ?(rename = fun (_ : string) -> None)
   let band_labels =
     String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
   in
-  (* AN EDGE GOES WHEN EITHER END GOES. Hiding only the node left the
-     concrete cases drawing every edge to a fallback coordinate — the
-     wheel case hid nine nodes and still drew twenty-two segments, most
-     of them converging on a point where nothing was. A hidden endpoint
-     is not a styling choice; the relation does not exist in that case. *)
-  let gone id = hide id in
+  (* THE TWO SIDES (user, 2026-09-24: "some visual hints so that we can see
+     the left part and right part for the system and language division").
+     A caption over each column, in the margin above the bands: the side
+     a column belongs to is the side of the package manager at its top.
+     A dividing line was tried on paper and not drawn: every edge that
+     crosses it is a cooperation between the two sides, and the bridge's
+     own check to the capability file would carry its label on it. *)
+  let captions =
+    Printf.sprintf
+      {|<text class="sidecap" x="%d" y="20">SYSTEM SIDE</text><text class="sidecap" x="%d" y="20">LANGUAGE SIDE</text>|}
+      (pos_of "pkg_sys").px (pos_of "pkg_lang").px
+  in
   let es =
     String.concat
       (List.map T.edges ~f:(fun e ->
-           if
-             hide e.T.eg_id || gone e.T.eg_to
-             || List.exists e.T.eg_from ~f:gone
-           then ""
-           else
-             edge_svg ~extra:(extra e.T.eg_id) ~live:(not (dead e.T.eg_id))
-               ~counts:(counts e.T.eg_id) ~ph_slot:ph_slots e))
+           edge_svg ~extra:(extra e.T.eg_id) ~counts:(counts e.T.eg_id) ~ph_slot:ph_slots e))
   in
   let ns =
     String.concat
       (List.map T.nodes ~f:(fun n ->
-           if hide n.T.nd_id then ""
-           else
-             let label =
-               match rename n.T.nd_id with
-               | Some l -> l
-               | None -> n.T.nd_label
-             in
-             node_svg ~extra:(extra n.T.nd_id) ~case_slot:case_slots ~live:true ~label
-               ~sub:(sublabel n.T.nd_id) n))
+           node_svg ~extra:(extra n.T.nd_id) ~case_slot:case_slots n))
   in
   Printf.sprintf
     {|<svg viewBox="0 0 %d %d" class="diagram" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
  markerHeight="7" orient="auto-start-reverse">
 <path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
-%s%s%s%s</svg>|}
-    canvas_w canvas_h bands es band_labels ns
+%s%s%s%s%s</svg>|}
+    canvas_w canvas_h bands captions es band_labels ns
 
 (* ── the page ─────────────────────────────────────────────────────── *)
 
@@ -435,12 +422,11 @@ border:1px solid var(--line);border-radius:10px}
 .band.artifact{fill:var(--art)}.band.program{fill:var(--prog)}
 .bandlabel{font:600 12px ui-monospace,monospace;fill:var(--mut);text-anchor:middle;
 paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
+.sidecap{font:600 11px ui-sans-serif,system-ui,sans-serif;fill:var(--mut);
+letter-spacing:.14em;text-anchor:middle}
 .node rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
-.node.oracle rect{stroke-dasharray:5 3;stroke:var(--acc)}
 .node .nlabel{font:600 13px ui-sans-serif,system-ui,sans-serif;
 fill:var(--fg);text-anchor:middle}
-.node .nsub{font:11px ui-monospace,monospace;fill:var(--mut);
-text-anchor:middle}
 .node.dim{opacity:.32}
 .edge line{stroke:var(--fg);stroke-width:1.4;opacity:.72}
 .edge.diag line{stroke-dasharray:6 4;stroke:var(--acc);stroke-width:1.6}
@@ -467,7 +453,7 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.st-not_ours line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 5}
 .rec .edge.st-observed line{stroke:var(--acc);stroke-width:2;stroke-dasharray:2 3;opacity:1}
 .rec .edge.st-inside line,.rec .edge.st-inside path{stroke:var(--mut);stroke-width:1.8;
-stroke-dasharray:1 4;opacity:.9}
+stroke-dasharray:8 3 2 3;opacity:.9}
 .phm{display:none}.phm.on{display:inline}
 .phm rect{fill:var(--card);stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 2}
 .phm text{font:700 11px ui-monospace,monospace;fill:var(--mut);text-anchor:middle}
@@ -479,9 +465,7 @@ stroke-dasharray:1 4;opacity:.9}
 .rec .edge.cl-undecided .cbadge.chk,.rec .edge.cl-unevaluated .cbadge.chk{fill:var(--mut)}
 .cbadge.none,.cnum.none{display:none}
 .join .edge.jdead .cbadge,.join .edge.jdead .cnum{display:none}
-.rec .node .nsub{fill:var(--fg)}
 .rec .gone{display:none}
-.rec .node.named-decl .nlabel{font-style:italic}
 table.cmp{font-size:.85rem;max-width:780px}
 .widetable{overflow-x:auto;max-width:100%}
 table.cov{font-size:.82rem;min-width:900px}
@@ -494,6 +478,13 @@ table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
 .sw.no{border-top:2px dashed var(--mut);opacity:.6}
 .sw.ob{border-top:2px dotted var(--acc)}
+.sw.bl{border-top:3px dashed var(--bad)}.sw.cl{border-top:2px dashed var(--acc)}
+.sw.gr{border-top:2px solid var(--fg);opacity:.18}
+.swl.in{stroke:var(--mut);stroke-width:2;stroke-dasharray:8 3 2 3}
+.kbtn{font:600 11px ui-sans-serif,system-ui,sans-serif;padding:0 .45rem;
+border:1px solid var(--line);border-radius:999px;color:var(--fg)}
+.kbtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.kbtn.hint{border:2px dashed var(--acc)}
 .o-violated{color:var(--bad);font-weight:700}.o-holds{color:var(--ok)}
 .o-undecided,.o-unevaluated{color:var(--mut)}
 select{font:13px ui-sans-serif,system-ui,sans-serif;max-width:100%;
@@ -501,9 +492,7 @@ padding:.3rem .4rem;border:1px solid var(--line);border-radius:6px;
 background:var(--card);color:var(--fg)}
 .selbar button:disabled{opacity:.45;cursor:not-allowed}
 ul.unpl{margin:.2rem 0 0;padding-left:1.2rem;font-size:.88rem;color:var(--mut)}
-.edge.dim{opacity:.18}
 .cbadge{fill:var(--acc);opacity:.9}
-.node.declared rect{stroke-dasharray:none}
 .declmark circle{fill:var(--card);stroke:var(--acc);stroke-width:1.4}
 .declmark text{font:11px ui-sans-serif,sans-serif;fill:var(--acc);
 text-anchor:middle}
@@ -534,12 +523,14 @@ align-self:center;min-width:12.5em;text-transform:uppercase;letter-spacing:.04em
 .join .node .ncase{font:italic 11.5px ui-monospace,SFMono-Regular,Menlo,monospace;
 fill:var(--acc);text-anchor:middle}
 .join .node .ncase.rec-name{font-style:normal}
-.join .node .ncase.term{fill:var(--mut)}
+.join .node .ncase.term{fill:var(--mut);font-style:italic}
 .join .node .nplace{font:10px ui-monospace,SFMono-Regular,Menlo,monospace;
 fill:var(--mut);text-anchor:middle}
 .join .node.related rect{stroke:var(--acc);stroke-width:3}
 .nm-rec{font:12px ui-monospace,monospace;color:var(--acc)}
 .nm-decl{font:italic 12px ui-monospace,monospace;color:var(--acc)}
+.nm-term{font:italic 12px ui-monospace,monospace;color:var(--mut)}
+.nm-place{font:10.5px ui-monospace,monospace;color:var(--mut)}
 details.jprov{margin:.7rem 0 0;font-size:.88rem}
 details.jprov summary{cursor:pointer;color:var(--mut)}
 details.jprov table{font-size:.82rem;margin:.4rem 0 .2rem}
@@ -564,6 +555,207 @@ svg .edge:hover line,svg .edge:hover path{stroke-width:3;opacity:1}
 tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}|}
+
+(* ── THE VISUAL VOCABULARY (2026-09-24) ─────────────────────────────────
+
+   EVERY VISUAL HINT §1 USES, IN ONE LIST (user, 2026-09-24: "shall we
+   keep all our visual hints in a place, so we can always check for them
+   all and you won't be forget the old ones, and we can detect if there
+   are conflicts"). A hint is a look the stylesheet gives one kind of
+   element, in the drawings where it can show, and what that look tells
+   the reader. Each names the stylesheet rules that give it its look, the
+   sample and the words a key shows for it, and which key shows them.
+
+   Both keys — the chain's, above the diagram, and a recorded run's,
+   under it — are rendered from this list, so a hint is explained there,
+   on the drawing itself, or (for the few that only switch something off)
+   with a reason here. overview.visual_vocabulary_is_one_list holds the
+   rest: every §1 rule of the stylesheet belongs to exactly one hint or
+   to the base look; every hint's rules exist and its classes are applied
+   by the page; no key sample stands for two meanings; and no two hints
+   that can show on one kind of element at once look alike.
+
+   Its first run found what the eye had missed: a recorded run drew "in
+   the chain, never logged" and "happened inside a package manager's
+   action" in the same grey dots, under the same key sample, and the key
+   gave "failed" and "blocked" one sample. It also found six rules nothing
+   applied any more — leftovers of the hand-drawn cases — which went. *)
+
+type vh_element =
+  | Frame  (** the bands and the side captions *)
+  | Node  (** a node's box *)
+  | Name  (** a line under a node's label *)
+  | Edge  (** an edge's line *)
+  | Edge_label
+  | Badge
+  | Marker  (** a mark on an edge or a node: placeholder, declaration *)
+  | Button  (** a button of the panel *)
+
+(** Where a hint can show: in every drawing, only while no recorded run is
+    drawn, or only while one is. *)
+type vh_mode = Always | Generic | Recorded
+
+type vh_key =
+  | Chain_key  (** the key above the diagram *)
+  | Run_key  (** the recorded run's key *)
+  | Drawn of string list  (** the drawing says it itself, in these words *)
+  | No_key of string  (** it only switches something off; why that needs no key *)
+
+type visual_hint = {
+  vh_id : string;
+  vh_element : vh_element;
+  vh_classes : string list;  (** the classes that carry it *)
+  vh_rules : string list;  (** its stylesheet rules, selectors as written *)
+  vh_mode : vh_mode;
+  vh_group : string option;
+      (** hints of one group never share an element: an edge has one state *)
+  vh_sample : string;  (** the key's sample, as markup *)
+  vh_says : string;  (** the key's words *)
+  vh_key : vh_key;
+}
+
+(** The rules that are the base look every hint modifies — not hints. *)
+let vocabulary_base : string list =
+  [ ".band"; ".node rect"; ".node .nlabel";
+    (* a recorded run's state takes the line: the generic dashes go *)
+    ".rec .edge line,.rec .edge path"; ".phm"; ".selbar button";
+    ".selbar button:disabled"; ".selbar button:hover"; "svg .edge" ]
+
+let visual_hints : visual_hint list =
+  let hint ?group ?(sample = "") ?(says = "") id element classes rules mode key =
+    { vh_id = id; vh_element = element; vh_classes = classes; vh_rules = rules;
+      vh_mode = mode; vh_group = group; vh_sample = sample; vh_says = says; vh_key = key }
+  in
+  let sw c = Printf.sprintf {|<i class="sw%s"></i>|} (if String.is_empty c then "" else " " ^ c) in
+  let badge_svg inner =
+    Printf.sprintf {|<svg width="20" height="20" viewBox="0 0 20 20">%s</svg>|} inner
+  in
+  let phm_svg cls =
+    Printf.sprintf
+      {|<svg width="26" height="18" viewBox="0 0 26 18"><g class="phm %s"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg>|}
+      cls
+  in
+  let outcome cls =
+    badge_svg (Printf.sprintf {|<g class="edge %s"><circle class="cbadge chk" cx="10" cy="10" r="7"/></g>|} cls)
+  in
+  let state ?(rules = []) cls sample says =
+    hint ~group:"state" ~sample ~says ("state." ^ cls) Edge [ "st-" ^ cls ]
+      (if List.is_empty rules then
+         [ Printf.sprintf ".rec .edge.st-%s line,.rec .edge.st-%s path" cls cls ]
+       else rules)
+      Recorded Run_key
+  in
+  [ (* ── the frame ── *)
+    hint "bands" Frame [ "pm"; "package"; "artifact"; "program" ]
+      [ ".band.pm"; ".band.package"; ".band.artifact"; ".band.program"; ".bandlabel" ]
+      Always
+      (Drawn (List.map bands_def ~f:(fun (_, _, title, _) -> title)));
+    hint "sides" Frame [ "sidecap" ] [ ".sidecap" ] Always
+      (Drawn [ "SYSTEM SIDE"; "LANGUAGE SIDE" ]);
+    (* ── the panel ── *)
+    hint "button.chosen" Button [ "on" ] [ ".selbar button.on" ] Always Chain_key
+      ~sample:{|<span class="kbtn on">opam</span>|} ~says:"a choice made";
+    hint "button.picked" Button [ "hint" ] [ ".selbar button.hint" ] Generic Chain_key
+      ~sample:{|<span class="kbtn hint">zarith</span>|}
+      ~says:"a package in canary the current choice picks out";
+    (* ── edges, in every drawing ── *)
+    hint "label.action" Edge_label [ "elabel" ] [ ".edge .elabel" ] Always Chain_key
+      ~sample:"<code>fetch_lib</code>" ~says:"our action";
+    hint "label.info" Edge_label [ "info" ] [ ".edge .elabel.info" ] Always Chain_key
+      ~sample:"<em>pkg-config</em>" ~says:"someone else's rule — we run nothing there";
+    hint "label.claim" Edge_label [ "claim" ] [ ".edge .elabel.claim" ] Always Chain_key
+      ~sample:{|<b class="clm">prs</b>|} ~says:"a claim of ours is all that relates the two ends";
+    hint "edge.plain" Edge [ "edge" ] [ ".edge line"; ".edge path" ] Always Chain_key
+      ~sample:(sw "") ~says:"within a layer, or down one";
+    hint "edge.diagonal" Edge [ "diag" ] [ ".edge.diag line" ] Generic Chain_key
+      ~sample:(sw "d") ~says:"diagonal — crosses layers (discovery)";
+    hint "edge.bare" Edge [ "bare" ] [ ".edge.bare line"; ".edge.bare .elabel" ] Generic Chain_key
+      ~sample:(sw "b") ~says:"no claim recovers this relation";
+    hint "edge.greyed" Edge [ "jdead" ]
+      [ ".join .edge.jdead"; ".join .edge.jdead .cbadge,.join .edge.jdead .cnum" ]
+      Generic Chain_key ~sample:(sw "gr")
+      ~says:"greyed — in these chains the relation exists and does not fire";
+    hint "hover" Edge [] [ "svg .edge:hover line,svg .edge:hover path" ] Always
+      (No_key
+         "the edge under the pointer thickens and its description shows under the \
+          diagram; the prose above the key says so");
+    (* ── badges ── *)
+    hint "badge.checked" Badge [ "chk" ] [ ".cbadge"; ".cnum" ] Always Chain_key
+      ~sample:(badge_svg {|<circle class="cbadge chk" cx="10" cy="10" r="7"/>|})
+      ~says:"agreements canary checks here, for the chain drawn";
+    hint "badge.named" Badge [ "cand" ] [ ".cbadge.cand"; ".cnum.cand" ] Always Chain_key
+      ~sample:(badge_svg {|<circle class="cbadge cand" cx="10" cy="10" r="7"/>|})
+      ~says:"agreements only named — no evaluator yet";
+    hint "badge.empty" Badge [ "none" ] [ ".cbadge.none,.cnum.none" ] Always
+      (No_key "a badge with nothing to count is not drawn");
+    (* ── nodes and the lines under them ── *)
+    hint "node.declared" Marker [ "declmark" ] [ ".declmark circle"; ".declmark text" ] Always
+      Chain_key ~sample:"◇" ~says:"the experiment declares something here";
+    hint "node.related" Node [ "related" ] [ ".join .node.related rect" ] Generic Chain_key
+      ~sample:
+        {|<svg width="26" height="16" viewBox="0 0 26 16"><g class="node related"><rect x="2" y="2" width="22" height="12" rx="3"/></g></svg>|}
+      ~says:"outlined — a package node the last button clicked is about";
+    hint "node.gone" Node [ "gone" ] [ ".join .gone"; ".rec .gone" ] Always
+      (No_key
+         "not drawn at all: a node or edge the chain does not have is absent, which the \
+          prose says is the statement");
+    hint "name.declared" Name [ "ncase" ] [ ".join .node .ncase" ] Always Chain_key ~group:"name"
+      ~sample:{|<span class="nm-decl">name</span>|} ~says:"a name the project declares";
+    hint "name.term" Name [ "term" ] [ ".join .node .ncase.term" ] Always Chain_key ~group:"name"
+      ~sample:{|<span class="nm-term">.pc file</span>|}
+      ~says:"a package manager's term, where no name is known";
+    (* ── a recorded run ── *)
+    hint "name.recorded" Name [ "rec-name" ] [ ".join .node .ncase.rec-name" ] Recorded Run_key
+      ~group:"name" ~sample:{|<span class="nm-rec">name</span>|} ~says:"a name the run recorded";
+    hint "name.placed" Name [ "nplace" ] [ ".join .node .nplace" ] Recorded Run_key
+      ~sample:{|<span class="nm-place">F 1.14</span>|}
+      ~says:"the third line: where the run placed the artifact";
+    hint "node.untouched" Node [ "dim" ] [ ".node.dim" ] Recorded Run_key
+      ~sample:
+        {|<svg width="26" height="16" viewBox="0 0 26 16"><g class="node dim"><rect x="2" y="2" width="22" height="12" rx="3"/></g></svg>|}
+      ~says:"dimmed — in the chain, and nothing in this run touched it";
+    state "ran" (sw "ok") "ran";
+    state "warm" (sw "okw") "warm — an earlier run's verdict";
+    state "xfail" (sw "xf") "expected failure confirmed";
+    state "fail" (sw "bad") "failed";
+    state "blocked" (sw "bl") "blocked — something it needs failed first";
+    state "unrecorded" (sw "un") "in the chain, never logged";
+    state "absent" ~rules:[ ".rec .edge.st-absent" ] (sw "ab") "not realized in this world";
+    state "not_ours" ~rules:[ ".rec .edge.st-not_ours"; ".rec .edge.st-not_ours line" ] (sw "no")
+      "someone else's rule — nothing recorded";
+    state "observed" ~rules:[ ".rec .edge.st-observed line" ] (sw "ob")
+      "someone else's rule — recorded by this run";
+    state "inside"
+      {|<svg width="26" height="6" viewBox="0 0 26 6"><line class="swl in" x1="0" y1="3" x2="26" y2="3"/></svg>|}
+      "happened inside a package manager's action — unseen";
+    state "claim" ~rules:[ ".rec .edge.st-claim line" ] (sw "cl")
+      "a claim of ours — only the claim relates the two ends";
+    hint "outcome.violated" Badge [ "cl-violated" ] [ ".rec .edge.cl-violated .cbadge.chk" ]
+      Recorded Run_key ~group:"outcome" ~sample:(outcome "cl-violated")
+      ~says:"an agreement here is violated";
+    hint "outcome.holds" Badge [ "cl-holds" ] [ ".rec .edge.cl-holds .cbadge.chk" ] Recorded
+      Run_key ~group:"outcome" ~sample:(outcome "cl-holds") ~says:"every agreement here holds";
+    hint "outcome.partial" Badge [ "cl-partial" ] [ ".rec .edge.cl-partial .cbadge.chk" ]
+      Recorded Run_key ~group:"outcome" ~sample:(outcome "cl-partial")
+      ~says:"some hold, the rest have no verdict";
+    hint "outcome.none" Badge [ "cl-undecided"; "cl-unevaluated" ]
+      [ ".rec .edge.cl-undecided .cbadge.chk,.rec .edge.cl-unevaluated .cbadge.chk" ] Recorded
+      Run_key ~group:"outcome" ~sample:(outcome "cl-undecided") ~says:"no verdict yet";
+    hint "placeholder.out_of_reach" Marker [ "on" ] [ ".phm.on"; ".phm rect"; ".phm text" ]
+      Recorded Run_key ~sample:(phm_svg "on")
+      ~says:"a package manager did something here that this run cannot record";
+    hint "placeholder.not_yet" Marker [ "not_yet" ] [ ".phm.not_yet rect"; ".phm.not_yet text" ]
+      Recorded Run_key ~sample:(phm_svg "on not_yet")
+      ~says:"a package manager did something here that this run does not record yet" ]
+
+(** One key, rendered from the vocabulary: a sample and its words per
+    hint, in the list's order. *)
+let key_html (k : vh_key) : string =
+  String.concat ~sep:"\n"
+    (List.filter_map visual_hints ~f:(fun h ->
+         if Poly.equal h.vh_key k then
+           Some (Printf.sprintf "<span>%s %s</span>" h.vh_sample (esc h.vh_says))
+         else None))
 
 let claim_sites_table () =
   let row (e : T.edge) =
@@ -595,7 +787,7 @@ let claim_sites_table () =
   in
   Printf.sprintf
     "<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule \
-     runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody>%s</tbody></table>"
+     runs</th><th>impl / cand</th><th>claims (<sup>?</sup> = no evaluator)</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map T.edges ~f:row))
 
 (* THE STEPS THE PAGE CANNOT PLACE, from the catalogue (2026-09-23,
@@ -1280,19 +1472,7 @@ nodes and edges are drawn, a recorded run's edge states and badges, and the
 lists below are inventoried in <code>doc/canary/design/overview_provenance.md</code>.</p></details>
 <div id="jrec" hidden>
 <div class="key reckey">
-<span><i class="sw ok"></i> ran</span>
-<span><i class="sw okw"></i> warm — an earlier run's verdict</span>
-<span><i class="sw xf"></i> expected failure confirmed</span>
-<span><i class="sw bad"></i> failed (dashed: blocked)</span>
-<span><i class="sw un"></i> in the chain, never logged</span>
-<span><i class="sw ab"></i> not realized in this world</span>
-<span><i class="sw no"></i> someone else's rule — nothing recorded</span>
-<span><i class="sw ob"></i> someone else's rule — recorded by this run</span>
-<span><i class="sw un"></i> happened inside a package manager's action — unseen</span>
-<span><svg width="26" height="18" viewBox="0 0 26 18"><g class="phm on not_yet"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg>
-a placeholder — not recorded yet (grey: out of reach)</span>
-<span><span class="nm-rec">name</span> recorded by the run · <span class="nm-decl">name</span> declared by the project</span>
-<span>a dimmed node: in the chain, and nothing in this run touched it</span>
+%s
 </div>
 <div id="jrecobserved"></div>
 <div id="jrecph"></div>
@@ -1324,6 +1504,8 @@ a placeholder — not recorded yet (grey: out of reach)</span>
          Printf.sprintf
            {|<p class="mechnote">No cooperation button: %s. Their packages are among the concrete ones, drawn with what canary cannot read left in (§4.3).</p>|}
            (esc (String.concat ~sep:"; " us)))
+    (* the recorded run's key, from the vocabulary *)
+    (key_html Run_key)
     data
 
 let script =
@@ -1665,17 +1847,7 @@ counted on each. Hover an edge for what it establishes and which
 agreements its badges count.</p>
 <p class="mechnote"><strong>Not yet every step.</strong> %s</p>
 <div class="key">
-<span><code>fetch_lib</code> our action · <em>pkg-config</em> someone
-else's · <b class="clm">prs</b> a claim</span>
-<span><i class="sw"></i> within a layer, or down one</span>
-<span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
-<span><i class="sw b"></i> no claim recovers this relation</span>
-<span>◇ the experiment declares something here</span>
-<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge chk" cx="10" cy="10" r="7"/></svg>
-agreements canary checks here, for the chain drawn</span>
-<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge cand" cx="10" cy="10" r="7"/></svg>
-agreements only named — no evaluator yet</span>
-<span>? in §3's table = no evaluator</span>
+%s
 </div>
 
 <div class="note"><strong>The artifact band is one binding mechanism.</strong>
@@ -1860,7 +2032,7 @@ outcomes, and the edges around a bridge from what a bridge step recorded
     css Canary_matrix.overview_css
     (* §1 the chain — the missing steps COUNTED from the catalogue, the
        chain chosen from its parts — and §1.1 its legend *)
-    (missing_steps_note ()) (join_panel join) (node_legend ())
+    (missing_steps_note ()) (key_html Chain_key) (join_panel join) (node_legend ())
     (* §2 the agreement overview. The hand-drawn cases that were §2 and
        their recorded copies that were §2.1 went on 2026-09-24 — §1 draws
        every chain and its recorded run; their notes are §1's (user) *)

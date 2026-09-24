@@ -1517,6 +1517,55 @@ blank.
   `install_lang`'s placement removed. Checked by rendering the default
   drawing and sqlite's staged world in headless Chromium, which is not a
   pin.
+- **The bridge sits with the language side, the sides are captioned, and
+  every visual hint is in one list — landed the same day** (user: "The
+  bridge package should be near to the binding_package, since it belongs
+  to the language PM's side"; "shall we use some virtual hints so that we
+  can see the left part and right part for the system and language
+  division?"; "shall we keep all our visual hints in a place, so we can
+  always check for them all and you won't be forget the old ones, and we
+  can detect if there are conflicts").
+  - *The bridge* moved from x=620 to 670, as close to the binding
+    package as its `depends` edge allows: one step further and that
+    edge's badge slides under the binding package. The layout pin now
+    requires the bridge to be nearer its binding package than the
+    native package.
+  - *The sides* are captioned "SYSTEM SIDE" and "LANGUAGE SIDE" over
+    their columns, in the margin above the bands. A dividing line was
+    considered and not drawn: every edge that would cross it is a
+    cooperation between the sides, and the bridge's check on the
+    capability file would have carried its label on the line.
+  - *The visual vocabulary* is `Canary_overview_page.visual_hints`: 40
+    hints, each naming the stylesheet rules that give it its look, the
+    drawings it can show in (always, generic or recorded), its exclusive
+    group (an edge has one state), and its key sample and words. Both
+    keys are rendered from the list. The new pin
+    `overview.visual_vocabulary_is_one_list` checks four things:
+    - every §1 rule of the stylesheet belongs to exactly one hint, or to
+      the nine base rules;
+    - every hint's classes are applied by the page;
+    - every hint is explained, and no two key entries share a sample;
+    - no two hints that can show on one kind of element at once look
+      alike, comparing colour, dash, width, opacity, slant, weight and
+      display the way a reader sees them.
+
+    Its first run found two conflicts. In a recorded run, "in the chain,
+    never logged" and "happened inside a package manager's action" drew
+    the same grey dots under the same key sample; "inside" is dash-dot
+    now. And the key gave "failed" and "blocked" one sample. It also
+    found six rules nothing applied any more, left over from the
+    hand-drawn cases, which went together with the drawing parameters
+    that could still have emitted them. The keys also gained entries
+    they had lacked: the greyed edge, the outlined node, the muted term,
+    the placement line, the claim edge, the badge outcomes and the two
+    button states. The `?` mark is explained in §3's own table header,
+    since it is not part of the drawing.
+
+    Falsified four ways: the two states given one look again, an
+    unregistered style added, "blocked" given "failed"'s sample again,
+    and a hint whose class nothing applies. The comparison sees only a
+    hint's own rules, not a look it inherits, so the muted term's rule
+    now states its italics.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

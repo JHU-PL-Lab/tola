@@ -120,6 +120,7 @@ where it holds, gives the value a source the page shows, as §2 did.
 | edges: ends, annotation, description | `Canary_topology.edges` | code, hand-written | `topology.graph_matches_the_registry` holds the ends and the action coverage |
 | agreement badges and where they sit | `Canary_topology.claim_sites` (where, hand-written); the registry (whether checked) | code | Settled on 2026-09-24. The hand-written `cs_implemented` flag was wrong for three agreements and has been removed. `implemented` and `claim_state` now ask the registry, and the badges are counted per drawing ([`status.md`](../status.md) §2.7) |
 | placeholder slots | one per edge | code | |
+| every look, and the keys that explain them | `Canary_overview_page.visual_hints` (the stylesheet rules each look is made of, and its key entry) | code, hand-written | Settled on 2026-09-24. Both keys are rendered from the list, and `overview.visual_vocabulary_is_one_list` holds it to the stylesheet |
 
 ### 3.2 A choice's drawing: `#joindata`, computed by `Canary_overview_join`
 

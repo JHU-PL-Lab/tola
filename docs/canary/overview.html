@@ -39,12 +39,11 @@ border:1px solid var(--line);border-radius:10px}
 .band.artifact{fill:var(--art)}.band.program{fill:var(--prog)}
 .bandlabel{font:600 12px ui-monospace,monospace;fill:var(--mut);text-anchor:middle;
 paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
+.sidecap{font:600 11px ui-sans-serif,system-ui,sans-serif;fill:var(--mut);
+letter-spacing:.14em;text-anchor:middle}
 .node rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
-.node.oracle rect{stroke-dasharray:5 3;stroke:var(--acc)}
 .node .nlabel{font:600 13px ui-sans-serif,system-ui,sans-serif;
 fill:var(--fg);text-anchor:middle}
-.node .nsub{font:11px ui-monospace,monospace;fill:var(--mut);
-text-anchor:middle}
 .node.dim{opacity:.32}
 .edge line{stroke:var(--fg);stroke-width:1.4;opacity:.72}
 .edge.diag line{stroke-dasharray:6 4;stroke:var(--acc);stroke-width:1.6}
@@ -71,7 +70,7 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.st-not_ours line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 5}
 .rec .edge.st-observed line{stroke:var(--acc);stroke-width:2;stroke-dasharray:2 3;opacity:1}
 .rec .edge.st-inside line,.rec .edge.st-inside path{stroke:var(--mut);stroke-width:1.8;
-stroke-dasharray:1 4;opacity:.9}
+stroke-dasharray:8 3 2 3;opacity:.9}
 .phm{display:none}.phm.on{display:inline}
 .phm rect{fill:var(--card);stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 2}
 .phm text{font:700 11px ui-monospace,monospace;fill:var(--mut);text-anchor:middle}
@@ -83,9 +82,7 @@ stroke-dasharray:1 4;opacity:.9}
 .rec .edge.cl-undecided .cbadge.chk,.rec .edge.cl-unevaluated .cbadge.chk{fill:var(--mut)}
 .cbadge.none,.cnum.none{display:none}
 .join .edge.jdead .cbadge,.join .edge.jdead .cnum{display:none}
-.rec .node .nsub{fill:var(--fg)}
 .rec .gone{display:none}
-.rec .node.named-decl .nlabel{font-style:italic}
 table.cmp{font-size:.85rem;max-width:780px}
 .widetable{overflow-x:auto;max-width:100%}
 table.cov{font-size:.82rem;min-width:900px}
@@ -98,6 +95,13 @@ table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
 .sw.no{border-top:2px dashed var(--mut);opacity:.6}
 .sw.ob{border-top:2px dotted var(--acc)}
+.sw.bl{border-top:3px dashed var(--bad)}.sw.cl{border-top:2px dashed var(--acc)}
+.sw.gr{border-top:2px solid var(--fg);opacity:.18}
+.swl.in{stroke:var(--mut);stroke-width:2;stroke-dasharray:8 3 2 3}
+.kbtn{font:600 11px ui-sans-serif,system-ui,sans-serif;padding:0 .45rem;
+border:1px solid var(--line);border-radius:999px;color:var(--fg)}
+.kbtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.kbtn.hint{border:2px dashed var(--acc)}
 .o-violated{color:var(--bad);font-weight:700}.o-holds{color:var(--ok)}
 .o-undecided,.o-unevaluated{color:var(--mut)}
 select{font:13px ui-sans-serif,system-ui,sans-serif;max-width:100%;
@@ -105,9 +109,7 @@ padding:.3rem .4rem;border:1px solid var(--line);border-radius:6px;
 background:var(--card);color:var(--fg)}
 .selbar button:disabled{opacity:.45;cursor:not-allowed}
 ul.unpl{margin:.2rem 0 0;padding-left:1.2rem;font-size:.88rem;color:var(--mut)}
-.edge.dim{opacity:.18}
 .cbadge{fill:var(--acc);opacity:.9}
-.node.declared rect{stroke-dasharray:none}
 .declmark circle{fill:var(--card);stroke:var(--acc);stroke-width:1.4}
 .declmark text{font:11px ui-sans-serif,sans-serif;fill:var(--acc);
 text-anchor:middle}
@@ -138,12 +140,14 @@ align-self:center;min-width:12.5em;text-transform:uppercase;letter-spacing:.04em
 .join .node .ncase{font:italic 11.5px ui-monospace,SFMono-Regular,Menlo,monospace;
 fill:var(--acc);text-anchor:middle}
 .join .node .ncase.rec-name{font-style:normal}
-.join .node .ncase.term{fill:var(--mut)}
+.join .node .ncase.term{fill:var(--mut);font-style:italic}
 .join .node .nplace{font:10px ui-monospace,SFMono-Regular,Menlo,monospace;
 fill:var(--mut);text-anchor:middle}
 .join .node.related rect{stroke:var(--acc);stroke-width:3}
 .nm-rec{font:12px ui-monospace,monospace;color:var(--acc)}
 .nm-decl{font:italic 12px ui-monospace,monospace;color:var(--acc)}
+.nm-term{font:italic 12px ui-monospace,monospace;color:var(--mut)}
+.nm-place{font:10.5px ui-monospace,monospace;color:var(--mut)}
 details.jprov{margin:.7rem 0 0;font-size:.88rem}
 details.jprov summary{cursor:pointer;color:var(--mut)}
 details.jprov table{font-size:.82rem;margin:.4rem 0 .2rem}
@@ -258,17 +262,21 @@ counted on each. Hover an edge for what it establishes and which
 agreements its badges count.</p>
 <p class="mechnote"><strong>Not yet every step.</strong> 10 of the catalogue's 19 action families have no edge here: <code>fetch_source</code>, <code>configure</code>, <code>scan_sources</code>, <code>fetch_headers</code>, <code>fetch_binding_source</code>, <code>build_app</code>, <code>probe_app</code>, <code>fetch_app</code>, <code>pack_lib</code>, <code>pack_app</code> — computed from the action catalogue, not listed by hand. The source fetches leave both source nodes with no producer, and adding them is a decision rather than a drawing fix: canary treats a repository as a provider beside the system and language packages, which would put it in the package layer.</p>
 <div class="key">
-<span><code>fetch_lib</code> our action · <em>pkg-config</em> someone
-else's · <b class="clm">prs</b> a claim</span>
+<span><span class="kbtn on">opam</span> a choice made</span>
+<span><span class="kbtn hint">zarith</span> a package in canary the current choice picks out</span>
+<span><code>fetch_lib</code> our action</span>
+<span><em>pkg-config</em> someone else's rule — we run nothing there</span>
+<span><b class="clm">prs</b> a claim of ours is all that relates the two ends</span>
 <span><i class="sw"></i> within a layer, or down one</span>
 <span><i class="sw d"></i> diagonal — crosses layers (discovery)</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
+<span><i class="sw gr"></i> greyed — in these chains the relation exists and does not fire</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge chk" cx="10" cy="10" r="7"/></svg> agreements canary checks here, for the chain drawn</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge cand" cx="10" cy="10" r="7"/></svg> agreements only named — no evaluator yet</span>
 <span>◇ the experiment declares something here</span>
-<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge chk" cx="10" cy="10" r="7"/></svg>
-agreements canary checks here, for the chain drawn</span>
-<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge cand" cx="10" cy="10" r="7"/></svg>
-agreements only named — no evaluator yet</span>
-<span>? in §3's table = no evaluator</span>
+<span><svg width="26" height="16" viewBox="0 0 26 16"><g class="node related"><rect x="2" y="2" width="22" height="12" rx="3"/></g></svg> outlined — a package node the last button clicked is about</span>
+<span><span class="nm-decl">name</span> a name the project declares</span>
+<span><span class="nm-term">.pc file</span> a package manager's term, where no name is known</span>
 </div>
 
 <div class="note"><strong>The artifact band is one binding mechanism.</strong>
@@ -319,7 +327,7 @@ this machine — <code>canary overview</code> writes what each machine ran to
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
  markerHeight="7" orient="auto-start-reverse">
 <path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
-<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/><g class="edge bare" data-edge="resolve_sys"><title>our action fetch_lib — a package of this name and version is installable here</title>
+<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/><text class="sidecap" x="230" y="20">SYSTEM SIDE</text><text class="sidecap" x="990" y="20">LANGUAGE SIDE</text><g class="edge bare" data-edge="resolve_sys"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="230" y1="62" x2="230" y2="200" marker-end="url(#a)"/>
 <text class="elabel" x="230" y="124">fetch_lib</text><g class="phm"><title></title><rect x="173" y="123" width="22" height="16" rx="3"/><text x="184" y="135">…</text></g></g><g class="edge" data-edge="realize_sys"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="230" y1="200" x2="230" y2="566" marker-end="url(#a)"/>
@@ -334,12 +342,12 @@ this machine — <code>canary overview</code> writes what each machine ran to
 <text class="elabel" x="160" y="430">build_headers</text><g class="phm"><title></title><rect x="103" y="429" width="22" height="16" rx="3"/><text x="114" y="441">…</text></g></g><g class="edge gone" data-edge="stage"><title>our action install_lib — what survived being copied out of the build tree</title>
 <line x1="230" y1="566" x2="230" y2="640" marker-end="url(#a)"/>
 <text class="elabel" x="230" y="596">install_lib</text><circle class="cbadge chk" cx="276" cy="603" r="9"/><text class="cnum chk" x="276" y="607">1</text><circle class="cbadge cand" cx="297" cy="603" r="9" data-x1="276" data-x2="297"/><text class="cnum cand" x="297" y="607" data-x1="276" data-x2="297">1</text><g class="phm"><title></title><rect x="173" y="595" width="22" height="16" rx="3"/><text x="184" y="607">…</text></g></g><g class="edge" data-edge="depext"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
-<line x1="620" y1="200" x2="230" y2="200" marker-end="url(#a)"/>
-<text class="elabel info" x="425" y="193">depext table</text><circle class="cbadge chk none" cx="471" cy="200" r="9"/><text class="cnum chk none" x="471" y="204">0</text><circle class="cbadge cand" cx="471" cy="200" r="9" data-x1="471" data-x2="492"/><text class="cnum cand" x="471" y="204" data-x1="471" data-x2="492">1</text><g class="phm"><title></title><rect x="368" y="192" width="22" height="16" rx="3"/><text x="379" y="204">…</text></g></g><g class="edge" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
-<line x1="990" y1="200" x2="620" y2="200" marker-end="url(#a)"/>
-<text class="elabel" x="805" y="193">fetch_binding</text><circle class="cbadge chk none" cx="851" cy="200" r="9"/><text class="cnum chk none" x="851" y="204">0</text><circle class="cbadge cand" cx="851" cy="200" r="9" data-x1="851" data-x2="872"/><text class="cnum cand" x="851" y="204" data-x1="851" data-x2="872">2</text><g class="phm"><title></title><rect x="748" y="192" width="22" height="16" rx="3"/><text x="759" y="204">…</text></g></g><g class="edge diag" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
-<line x1="620" y1="200" x2="470" y2="275" marker-end="url(#a)"/>
-<text class="elabel" x="545" y="230">fetch_binding</text><circle class="cbadge chk none" cx="591" cy="237" r="9"/><text class="cnum chk none" x="591" y="241">0</text><circle class="cbadge cand" cx="591" cy="237" r="9" data-x1="591" data-x2="612"/><text class="cnum cand" x="591" y="241" data-x1="591" data-x2="612">2</text><g class="phm"><title></title><rect x="488" y="229" width="22" height="16" rx="3"/><text x="499" y="241">…</text></g></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<line x1="670" y1="200" x2="230" y2="200" marker-end="url(#a)"/>
+<text class="elabel info" x="450" y="193">depext table</text><circle class="cbadge chk none" cx="496" cy="200" r="9"/><text class="cnum chk none" x="496" y="204">0</text><circle class="cbadge cand" cx="496" cy="200" r="9" data-x1="496" data-x2="517"/><text class="cnum cand" x="496" y="204" data-x1="496" data-x2="517">1</text><g class="phm"><title></title><rect x="393" y="192" width="22" height="16" rx="3"/><text x="404" y="204">…</text></g></g><g class="edge" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<line x1="990" y1="200" x2="670" y2="200" marker-end="url(#a)"/>
+<text class="elabel" x="830" y="193">fetch_binding</text><circle class="cbadge chk none" cx="876" cy="200" r="9"/><text class="cnum chk none" x="876" y="204">0</text><circle class="cbadge cand" cx="876" cy="200" r="9" data-x1="876" data-x2="897"/><text class="cnum cand" x="876" y="204" data-x1="876" data-x2="897">2</text><g class="phm"><title></title><rect x="773" y="192" width="22" height="16" rx="3"/><text x="784" y="204">…</text></g></g><g class="edge diag" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<line x1="670" y1="200" x2="470" y2="275" marker-end="url(#a)"/>
+<text class="elabel" x="570" y="230">fetch_binding</text><circle class="cbadge chk none" cx="616" cy="237" r="9"/><text class="cnum chk none" x="616" y="241">0</text><circle class="cbadge cand" cx="616" cy="237" r="9" data-x1="616" data-x2="637"/><text class="cnum cand" x="616" y="241" data-x1="616" data-x2="637">2</text><g class="phm"><title></title><rect x="513" y="229" width="22" height="16" rx="3"/><text x="524" y="241">…</text></g></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="470" y1="275" x2="230" y2="566" marker-end="url(#a)"/>
 <text class="elabel info" x="350" y="413" style="text-anchor:start">pkg-config</text><circle class="cbadge chk none" cx="396" cy="420" r="9"/><text class="cnum chk none" x="396" y="424">0</text><circle class="cbadge cand" cx="396" cy="420" r="9" data-x1="396" data-x2="417"/><text class="cnum cand" x="396" y="424" data-x1="396" data-x2="417">1</text><g class="phm"><title></title><rect x="293" y="412" width="22" height="16" rx="3"/><text x="304" y="424">…</text></g></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="990" y1="62" x2="990" y2="200" marker-end="url(#a)"/>
@@ -381,8 +389,8 @@ this machine — <code>canary overview</code> writes what each machine ran to
 <text class="nlabel" x="230" y="645" data-y0="645" data-y1="638" data-y2="633">staged copy</text><text class="ncase" x="230" y="654" data-y1="654" data-y2="647"></text><text class="nplace" x="230" y="659"></text></g><g class="node package" data-node="cap"><title>a .pc file, a CMake config, a *-config script: content inside the provider, owned by the package that ships it, recording how the artifacts beside it are built against. Not a bridge — a source of claims, and what a conf package's check reads</title>
 <rect x="366" y="252" width="208" height="46" rx="7"/>
 <text class="nlabel" x="470" y="280" data-y0="280" data-y1="273" data-y2="268">capability file</text><text class="ncase" x="470" y="289" data-y1="289" data-y2="282"></text><text class="nplace" x="470" y="294"></text></g><g class="node package" data-node="bridge"><title>a separate package existing only for cooperation (opam's conf-*). Carries package IDENTITY and the depext mapping. THE SYMBOLIC BRIDGE</title>
-<rect x="516" y="177" width="208" height="46" rx="7"/>
-<text class="nlabel" x="620" y="205" data-y0="205" data-y1="198" data-y2="193">bridge package</text><text class="ncase" x="620" y="214" data-y1="214" data-y2="207"></text><text class="nplace" x="620" y="219"></text></g><g class="node pm" data-node="pm_lang"><title>opam, pip, cargo — solves constraints and installs</title>
+<rect x="566" y="177" width="208" height="46" rx="7"/>
+<text class="nlabel" x="670" y="205" data-y0="205" data-y1="198" data-y2="193">bridge package</text><text class="ncase" x="670" y="214" data-y1="214" data-y2="207"></text><text class="nplace" x="670" y="219"></text></g><g class="node pm" data-node="pm_lang"><title>opam, pip, cargo — solves constraints and installs</title>
 <rect x="886" y="39" width="208" height="46" rx="7"/>
 <text class="nlabel" x="990" y="67" data-y0="67" data-y1="60" data-y2="55">language PM</text><text class="ncase" x="990" y="76" data-y1="76" data-y2="69"></text><text class="nplace" x="990" y="81"></text></g><g class="node package" data-node="pkg_lang"><title>the unit the language PM ships, with its declared depends</title>
 <rect x="886" y="177" width="208" height="46" rx="7"/>
@@ -416,19 +424,26 @@ nodes and edges are drawn, a recorded run's edge states and badges, and the
 lists below are inventoried in <code>doc/canary/design/overview_provenance.md</code>.</p></details>
 <div id="jrec" hidden>
 <div class="key reckey">
+<span><span class="nm-rec">name</span> a name the run recorded</span>
+<span><span class="nm-place">F 1.14</span> the third line: where the run placed the artifact</span>
+<span><svg width="26" height="16" viewBox="0 0 26 16"><g class="node dim"><rect x="2" y="2" width="22" height="12" rx="3"/></g></svg> dimmed — in the chain, and nothing in this run touched it</span>
 <span><i class="sw ok"></i> ran</span>
 <span><i class="sw okw"></i> warm — an earlier run's verdict</span>
 <span><i class="sw xf"></i> expected failure confirmed</span>
-<span><i class="sw bad"></i> failed (dashed: blocked)</span>
+<span><i class="sw bad"></i> failed</span>
+<span><i class="sw bl"></i> blocked — something it needs failed first</span>
 <span><i class="sw un"></i> in the chain, never logged</span>
 <span><i class="sw ab"></i> not realized in this world</span>
 <span><i class="sw no"></i> someone else's rule — nothing recorded</span>
 <span><i class="sw ob"></i> someone else's rule — recorded by this run</span>
-<span><i class="sw un"></i> happened inside a package manager's action — unseen</span>
-<span><svg width="26" height="18" viewBox="0 0 26 18"><g class="phm on not_yet"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg>
-a placeholder — not recorded yet (grey: out of reach)</span>
-<span><span class="nm-rec">name</span> recorded by the run · <span class="nm-decl">name</span> declared by the project</span>
-<span>a dimmed node: in the chain, and nothing in this run touched it</span>
+<span><svg width="26" height="6" viewBox="0 0 26 6"><line class="swl in" x1="0" y1="3" x2="26" y2="3"/></svg> happened inside a package manager's action — unseen</span>
+<span><i class="sw cl"></i> a claim of ours — only the claim relates the two ends</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><g class="edge cl-violated"><circle class="cbadge chk" cx="10" cy="10" r="7"/></g></svg> an agreement here is violated</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><g class="edge cl-holds"><circle class="cbadge chk" cx="10" cy="10" r="7"/></g></svg> every agreement here holds</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><g class="edge cl-partial"><circle class="cbadge chk" cx="10" cy="10" r="7"/></g></svg> some hold, the rest have no verdict</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><g class="edge cl-undecided"><circle class="cbadge chk" cx="10" cy="10" r="7"/></g></svg> no verdict yet</span>
+<span><svg width="26" height="18" viewBox="0 0 26 18"><g class="phm on"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg> a package manager did something here that this run cannot record</span>
+<span><svg width="26" height="18" viewBox="0 0 26 18"><g class="phm on not_yet"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg> a package manager did something here that this run does not record yet</span>
 </div>
 <div id="jrecobserved"></div>
 <div id="jrecph"></div>
@@ -504,7 +519,7 @@ A <em>claim site</em> is a set of edges rather than one, and 6 already
 span several: the library's declaration-facing claims sit on both edges
 that can produce a library, and <code>package_resolution_suffices</code>
 runs end to end from the language PM to the package-linked program.</p>
-<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody><tr class="bare"><td><code>resolve_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>realize_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">3 / 1</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup></td></tr><tr class="bare"><td><code>realize_hdr</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>realize_cap</code></td><td class="n"><em>packager</em> — we run nothing</td><td>the packager</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>build_lib</code></td><td class="n"><code>build_lib</code></td><td>the C compiler and linker</td><td class="n">3 / 3</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup>, <code>source_is_declared_ref</code><sup>?</sup>, <code>build_tree_configured_for_source</code><sup>?</sup></td></tr><tr class="bare"><td><code>build_hdr</code></td><td class="n"><code>build_headers</code></td><td>the build system</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>stage</code></td><td class="n"><code>install_lib</code></td><td>the install tool</td><td class="n">1 / 1</td><td><code>staged_interface_preserved</code>, <code>no_build_paths_in_installed_library</code><sup>?</sup></td></tr><tr><td><code>depext</code></td><td class="n"><em>depext table</em> — we run nothing</td><td>the bridge package's depext table</td><td class="n">0 / 1</td><td><code>depext_names_the_provided_package</code><sup>?</sup></td></tr><tr><td><code>depends</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 2</td><td><code>declared_gate_matches_package</code><sup>?</sup>, <code>gate_bounds_the_library</code><sup>?</sup></td></tr><tr><td><code>conf_probe</code></td><td class="n"><code>fetch_binding</code></td><td>the bridge package's check — dispatched by the language PM when it installs the bridge, and by canary in every world</td><td class="n">0 / 2</td><td><code>gate_admits_the_world</code><sup>?</sup>, <code>gate_bounds_the_library</code><sup>?</sup></td></tr><tr><td><code>discover</code></td><td class="n"><em>pkg-config</em> — we run nothing</td><td>pkg-config, CMake, a *-config script</td><td class="n">0 / 1</td><td><code>discovery_matches_link</code><sup>?</sup></td></tr><tr><td><code>resolve_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>install_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">0 / 1</td><td><code>package_contains_declared_files</code><sup>?</sup></td></tr><tr><td><code>install_surf</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">1 / 0</td><td><code>api_names_present</code></td></tr><tr><td><code>build_stub</code></td><td class="n"><code>build_binding</code></td><td>the C compiler</td><td class="n">1 / 1</td><td><code>signatures_agree</code>, <code>signatures_match_debug_info</code><sup>?</sup></td></tr><tr><td><code>link_mod</code></td><td class="n"><code>build_binding</code></td><td>the linker</td><td class="n">4 / 1</td><td><code>required_symbols_exported</code>, <code>soname_matches_requirement</code>, <code>required_versions_exported</code>, <code>dependencies_provided</code>, <code>compatibility_version_satisfied</code><sup>?</sup></td></tr><tr><td><code>pack</code></td><td class="n"><code>pack_binding</code></td><td>the packaging tool</td><td class="n">0 / 2</td><td><code>repack_preserves_api</code><sup>?</sup>, <code>repack_complete</code><sup>?</sup></td></tr><tr class="bare"><td><code>probe_lib</code></td><td class="n"><code>probe_lib</code></td><td>nm, and nothing else</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>run</code></td><td class="n"><code>probe_binding</code></td><td>the linker and the dynamic loader</td><td class="n">0 / 5</td><td><code>behavior_matches</code><sup>?</sup>, <code>correspondence_holds_across_the_binding</code><sup>?</sup>, <code>no_duplicate_implementation</code><sup>?</sup>, <code>interposition_binds_build_target</code><sup>?</sup>, <code>denotation_stable_across_worlds</code><sup>?</sup></td></tr><tr><td><code>run_packaged</code></td><td class="n"><code>probe_binding</code></td><td>the language PM's RESOLUTION — ocamlfind and META, pip's metadata — and then the loader</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>same_program</code></td><td class="n">claim <code>package_resolution_suffices</code></td><td>nobody — this is ours to check</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr></tbody></table>
+<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule runs</th><th>impl / cand</th><th>claims (<sup>?</sup> = no evaluator)</th></tr></thead><tbody><tr class="bare"><td><code>resolve_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>realize_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">3 / 1</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup></td></tr><tr class="bare"><td><code>realize_hdr</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>realize_cap</code></td><td class="n"><em>packager</em> — we run nothing</td><td>the packager</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>build_lib</code></td><td class="n"><code>build_lib</code></td><td>the C compiler and linker</td><td class="n">3 / 3</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup>, <code>source_is_declared_ref</code><sup>?</sup>, <code>build_tree_configured_for_source</code><sup>?</sup></td></tr><tr class="bare"><td><code>build_hdr</code></td><td class="n"><code>build_headers</code></td><td>the build system</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>stage</code></td><td class="n"><code>install_lib</code></td><td>the install tool</td><td class="n">1 / 1</td><td><code>staged_interface_preserved</code>, <code>no_build_paths_in_installed_library</code><sup>?</sup></td></tr><tr><td><code>depext</code></td><td class="n"><em>depext table</em> — we run nothing</td><td>the bridge package's depext table</td><td class="n">0 / 1</td><td><code>depext_names_the_provided_package</code><sup>?</sup></td></tr><tr><td><code>depends</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 2</td><td><code>declared_gate_matches_package</code><sup>?</sup>, <code>gate_bounds_the_library</code><sup>?</sup></td></tr><tr><td><code>conf_probe</code></td><td class="n"><code>fetch_binding</code></td><td>the bridge package's check — dispatched by the language PM when it installs the bridge, and by canary in every world</td><td class="n">0 / 2</td><td><code>gate_admits_the_world</code><sup>?</sup>, <code>gate_bounds_the_library</code><sup>?</sup></td></tr><tr><td><code>discover</code></td><td class="n"><em>pkg-config</em> — we run nothing</td><td>pkg-config, CMake, a *-config script</td><td class="n">0 / 1</td><td><code>discovery_matches_link</code><sup>?</sup></td></tr><tr><td><code>resolve_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>install_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">0 / 1</td><td><code>package_contains_declared_files</code><sup>?</sup></td></tr><tr><td><code>install_surf</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">1 / 0</td><td><code>api_names_present</code></td></tr><tr><td><code>build_stub</code></td><td class="n"><code>build_binding</code></td><td>the C compiler</td><td class="n">1 / 1</td><td><code>signatures_agree</code>, <code>signatures_match_debug_info</code><sup>?</sup></td></tr><tr><td><code>link_mod</code></td><td class="n"><code>build_binding</code></td><td>the linker</td><td class="n">4 / 1</td><td><code>required_symbols_exported</code>, <code>soname_matches_requirement</code>, <code>required_versions_exported</code>, <code>dependencies_provided</code>, <code>compatibility_version_satisfied</code><sup>?</sup></td></tr><tr><td><code>pack</code></td><td class="n"><code>pack_binding</code></td><td>the packaging tool</td><td class="n">0 / 2</td><td><code>repack_preserves_api</code><sup>?</sup>, <code>repack_complete</code><sup>?</sup></td></tr><tr class="bare"><td><code>probe_lib</code></td><td class="n"><code>probe_lib</code></td><td>nm, and nothing else</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>run</code></td><td class="n"><code>probe_binding</code></td><td>the linker and the dynamic loader</td><td class="n">0 / 5</td><td><code>behavior_matches</code><sup>?</sup>, <code>correspondence_holds_across_the_binding</code><sup>?</sup>, <code>no_duplicate_implementation</code><sup>?</sup>, <code>interposition_binds_build_target</code><sup>?</sup>, <code>denotation_stable_across_worlds</code><sup>?</sup></td></tr><tr><td><code>run_packaged</code></td><td class="n"><code>probe_binding</code></td><td>the language PM's RESOLUTION — ocamlfind and META, pip's metadata — and then the loader</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>same_program</code></td><td class="n">claim <code>package_resolution_suffices</code></td><td>nobody — this is ours to check</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr></tbody></table>
 
 <div class="note warn"><strong>4 edges carry no claim at all</strong>
 (resolve_sys, realize_hdr, realize_cap, build_hdr). Every one is a relation a real tool establishes and from which we
@@ -548,7 +563,7 @@ are §1's packages in canary, and each project links to its chain drawn
 there.</p>
 <div class="widetable"><table class="cov"><thead><tr><th>project</th><th>language</th><th>binding (§5.2)</th><th>language side (§5.1)</th><th>native side (§5.1)</th><th>cooperation (§5.3)</th></tr></thead><tbody><tr><td><a href="#chain=cairo-ocaml-opam-apt">cairo</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=cairo-ocaml-opam-vendored">cairo</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ bridge still gates, against a system this world does not use</td></tr><tr><td><a href="#chain=libffi-ocaml-opam-apt">libffi</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=libffi-ocaml-opam-vendored">libffi</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ bridge still gates, against a system this world does not use</td></tr><tr><td><a href="#chain=llvm-ocaml-built-built">llvm</a></td><td>ocaml</td><td>cstubs</td><td>built</td><td>built</td><td>no provider ecosystem — the native side is local</td></tr><tr><td><a href="#chain=llvm-ocaml-opam-apt">llvm</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=llvm-python-pip-pip">llvm</a></td><td>python</td><td>ctypes</td><td>pip</td><td>pip</td><td>bundled: llvmlite wheel's bundled libLLVM</td></tr><tr><td><a href="#chain=sqlite-ocaml-opam-apt">sqlite</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=sqlite-ocaml-opam-built">sqlite</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>built</td><td>⚠ bridge still gates, against a system this world does not use</td></tr><tr><td><a href="#chain=sqlite-ocaml-opam-staged">sqlite</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>staged</td><td>⚠ bridge still gates, against a system this world does not use</td></tr><tr><td><a href="#chain=sqlite-python-pip-apt">sqlite</a></td><td>python</td><td>cext</td><td>pip</td><td>apt</td><td>no package manager stands between these two artifacts</td></tr><tr><td><a href="#chain=sqlite-python-pip-built">sqlite</a></td><td>python</td><td>cext</td><td>pip</td><td>built</td><td>no package manager stands between these two artifacts</td></tr><tr><td><a href="#chain=sqlite-python-pip-staged">sqlite</a></td><td>python</td><td>cext</td><td>pip</td><td>staged</td><td>no package manager stands between these two artifacts</td></tr><tr><td><a href="#chain=ssl-ocaml-opam-apt">ssl</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=tiny-full-ocaml-vendored-vendored">tiny-full</a></td><td>ocaml</td><td>cstubs</td><td>vendored</td><td>vendored</td><td>no provider ecosystem — the native side is local</td></tr><tr><td><a href="#chain=tiny-full-python-vendored-vendored">tiny-full</a></td><td>python</td><td>cext</td><td>vendored</td><td>vendored</td><td>no provider ecosystem — the native side is local</td></tr><tr><td><a href="#chain=torch-ocaml-opam-opam">torch</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>opam</td><td>unified package universe</td></tr><tr><td><a href="#chain=z3-ocaml-built-apt">z3</a></td><td>ocaml</td><td>cstubs</td><td>built</td><td>apt</td><td>artifact-centric, no bridge</td></tr><tr><td><a href="#chain=z3-ocaml-built-built">z3</a></td><td>ocaml</td><td>cstubs</td><td>built</td><td>built</td><td>no provider ecosystem — the native side is local</td></tr><tr><td><a href="#chain=z3-ocaml-built-staged">z3</a></td><td>ocaml</td><td>cstubs</td><td>built</td><td>staged</td><td>no provider ecosystem — the native side is local</td></tr><tr><td><a href="#chain=z3-ocaml-opam-opam">z3</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>opam</td><td>the consumer package builds the native lib</td></tr><tr><td><a href="#chain=z3-python-pip-pip">z3</a></td><td>python</td><td>ctypes</td><td>pip</td><td>pip</td><td>bundled: z3-solver wheel's bundled libz3</td></tr><tr><td><a href="#chain=zarith-ocaml-built-apt">zarith</a></td><td>ocaml</td><td>cstubs</td><td>built</td><td>apt</td><td>artifact-centric, no bridge</td></tr><tr><td><a href="#chain=zarith-ocaml-opam-apt">zarith</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=zlib-ocaml-opam-apt">zlib</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=zlib-ocaml-opam-vendored">zlib</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ bridge still gates, against a system this world does not use</td></tr><tr><td><a href="#chain=zstd-ocaml-opam-apt">zstd</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>apt</td><td>symbolic package bridge + artifact validation</td></tr><tr><td><a href="#chain=zstd-ocaml-opam-vendored">zstd</a></td><td>ocaml</td><td>cstubs</td><td>opam</td><td>vendored</td><td>⚠ bridge still gates, against a system this world does not use</td></tr></tbody></table></div>
 
-<div class="foot">Generated 2026-09-24 14:12. <strong>What is derived and what is not</strong>,
+<div class="foot">Generated 2026-09-24 17:40. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
 the tables of §4 are computed from canary's code — the package managers'
 drivers, the mechanism catalogue, the bridge model, the cooperation kinds
