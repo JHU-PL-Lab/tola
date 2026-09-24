@@ -220,37 +220,204 @@ let normalize (t : t) : t =
     the artifacts: conf-gmp's is [pkg-config --exists gmp || cc -c
     test.c]. Whether a given RUN saw that check hold is the overview's
     recorded worlds, not this word. *)
-let character (t : t) : string =
+(* ── THE COOPERATION TABLE (2026-09-23, user: "we can have pm-solo table,
+   pm-coop table which canary covers") ─────────────────────────────────
+
+   A KIND of cooperation is a row of canary's PM-cooperation table; a
+   topology [t] is one instance of it. A chain is one binding mechanism
+   between two package managers (two rows of the PM-solo table,
+   [Canary_pm_solo]) joined by one of these.
+
+   Canary's own table, not the layered-model draft's Table 3: its rows
+   are the kinds this derivation can tell apart, and only those some
+   project instantiates are drawn — the rest are listed as classified and
+   not yet covered. The draft's names are carried beside canary's where
+   one exists. *)
+
+type coop =
+  | Co_conf  (** a conf package between the binding package and the system's *)
+  | Co_gated_local
+      (** the native side is built here, and the binding package's gate
+          still checks the system *)
+  | Co_unified  (** one package manager supplies both sides *)
+  | Co_absorbed  (** the consumer package builds or bundles the library *)
+  | Co_no_pm  (** no package manager stands between the two artifacts *)
+  | Co_undeclared  (** the gate is declared where this cannot read it *)
+  | Co_depext  (** the binding package names the system package directly *)
+  | Co_capability  (** no bridge; a declared capability file is the join *)
+  | Co_artifacts  (** no bridge and no capability file: artifacts only *)
+  | Co_local  (** the native side is built here and nothing gates it *)
+  | Co_incomplete  (** one side is declared absent *)
+
+(** The kind of one topology. THE decision order — [character] reads it,
+    so the table's rows and the instance names cannot disagree.
+
+    ⚠ THE BRIDGE IS NOT SILENCED BY A LOCAL BUILD, and the first cut
+    assumed it was — it matched the supplier before the join and so
+    reported llvm's built-lib world as having no bridge while
+    `conf-llvm-shared {= "19"}` was still in the package's depends. opam
+    runs that predicate against the SYSTEM whatever this world built, so
+    the bridge fires and validates something the world is not using —
+    exactly the situation `gate_admits_the_world` names. *)
+let coop_of (t : t) : coop =
   let bs = bridges_of_join t.tp_join in
   let has f = List.exists bs ~f:(fun g -> f g.gb_bridge) in
   let has_check = has Canary_bridge.has_check in
   let has_depext = has (fun b -> not (Canary_bridge.has_check b)) in
   let has_cap = not (List.is_empty t.tp_capability) in
-  (* ⚠ THE BRIDGE IS NOT SILENCED BY A LOCAL BUILD, and the first cut of
-     this function assumed it was — it matched the supplier before the
-     join and so reported llvm's built-lib world as having no bridge
-     while `conf-llvm-shared {= "19"}` was still in the package's
-     depends. opam runs that predicate against the SYSTEM whatever this
-     world built, so the bridge fires and validates something the world
-     is not using. That is not a wording problem; it is exactly the
-     situation `gate_admits_the_world` names, and the character has to
-     say it rather than hide it behind the supplier. *)
   let built_side =
     match t.tp_sys with Built_here | Staged | Vendored -> true | _ -> false
   in
   match (t.tp_sys, t.tp_lang, t.tp_join) with
-  | _, _, Undeclared_join -> "⚠ undeclared — cannot be classified"
-  | _, _, No_pm_between why -> why
-  | _, _, Bridge_absorbed why -> why
-  | Unsupplied, _, _ | _, Unsupplied, _ -> "incomplete — one side is absent"
-  | By_pm a, By_pm b, _ when Poly.equal a b -> "unified package universe"
-  | _ when built_side && has_check ->
-      "⚠ bridge still gates, against a system this world does not use"
-  | _ when built_side -> "no provider ecosystem — the native side is local"
-  | _ when has_check -> "symbolic package bridge + artifact validation"
-  | _ when has_depext -> "direct depext — package identity, no conf hop"
-  | _ when has_cap -> "artifact-centric, capability-mediated"
-  | _ -> "artifact-centric, no bridge"
+  | _, _, Undeclared_join -> Co_undeclared
+  | _, _, No_pm_between _ -> Co_no_pm
+  | _, _, Bridge_absorbed _ -> Co_absorbed
+  | Unsupplied, _, _ | _, Unsupplied, _ -> Co_incomplete
+  | By_pm a, By_pm b, _ when Poly.equal a b -> Co_unified
+  | _ when built_side && has_check -> Co_gated_local
+  | _ when built_side -> Co_local
+  | _ when has_check -> Co_conf
+  | _ when has_depext -> Co_depext
+  | _ when has_cap -> Co_capability
+  | _ -> Co_artifacts
+
+(** One row of the cooperation table. *)
+type coop_info = {
+  co_kind : coop;
+  co_name : string;  (** canary's name for it — the "character" *)
+  co_draft : string;  (** the layered-model draft's name, where it has one *)
+  co_package_join : string;  (** how the two package layers are joined *)
+  co_artifact_join : string;  (** what, if anything, meets the artifacts *)
+  co_versions : string;  (** how a version constraint travels, if at all *)
+  co_recorded : string;  (** what canary records of it *)
+}
+
+let coop_catalogue : coop_info list =
+  [ { co_kind = Co_conf;
+      co_name = "symbolic package bridge + artifact validation";
+      co_draft = "the same name (opam conf/depext with apt or Homebrew)";
+      co_package_join =
+        "binding package → conf-* → depext → system package: identity \
+         travels by NAME, through a package somebody wrote";
+      co_artifact_join =
+        "the conf package's check asks the system — pkg-config, or a \
+         compile test — whether the capability is there";
+      co_versions =
+        "a bound on the conf package bounds the library only where its \
+         check enforces a version (13 of 370 conf packages do); elsewhere \
+         it bounds the check's packaging";
+      co_recorded =
+        "the bridge step runs the check in every world and records the \
+         mapping, the capability file and pkg-config's answer (zarith so \
+         far); opam's own run of the check is a placeholder" };
+    { co_kind = Co_gated_local;
+      co_name = "⚠ bridge still gates, against a system this world does not use";
+      co_draft =
+        "a package-specific rewrite — replace(external_provider, \
+         internal_build) — that left the gate in place";
+      co_package_join = "the binding package's conf dependency is still resolved";
+      co_artifact_join =
+        "the conf check asks the SYSTEM, while the binding links the \
+         library this world built";
+      co_versions =
+        "none that reaches the library in use: the gate validates one the \
+         world does not use";
+      co_recorded = "the library's build; the gate itself is not recorded here" };
+    { co_kind = Co_unified;
+      co_name = "unified package universe";
+      co_draft = "the same name (Conda)";
+      co_package_join =
+        "one package manager supplies both sides; the binding package \
+         names the library's package in its own namespace";
+      co_artifact_join = "the linker and the loader, over files one store holds";
+      co_versions = "one solver: a bound on the library's package bounds the library";
+      co_recorded = "both fetches, through the one package manager" };
+    { co_kind = Co_absorbed;
+      co_name = "absorbed by the consumer package";
+      co_draft =
+        "a package-specific rewrite — bundle(native_artifact) or \
+         replace(external_provider, internal_build)";
+      co_package_join =
+        "none: the consumer package builds or ships the library, so there \
+         is no second ecosystem";
+      co_artifact_join = "inside the package: its own build, or the wheel";
+      co_versions = "no pairing: the library's version is the package's";
+      co_recorded = "the package's fetch; what it builds inside is a placeholder" };
+    { co_kind = Co_no_pm;
+      co_name = "no package manager between";
+      co_draft = "not in the draft's tables";
+      co_package_join =
+        "none: whoever built the interpreter joined the extension to the \
+         library";
+      co_artifact_join = "the loader resolves the extension's recorded dependency";
+      co_versions = "none is declared anywhere";
+      co_recorded = "a dummy step holds the binding's place" };
+    { co_kind = Co_undeclared;
+      co_name = "⚠ undeclared — cannot be classified";
+      co_draft = "not a cooperation — a gap in canary's declarations";
+      co_package_join =
+        "unknown: the gate is declared on the opam-binding template's \
+         record, which this derivation cannot read (project/issues.md §2)";
+      co_artifact_join = "unknown";
+      co_versions = "unknown";
+      co_recorded = "the fetches, as for any project" };
+    { co_kind = Co_depext;
+      co_name = "direct depext — package identity, no conf hop";
+      co_draft = "a package-specific bridge — add(custom_bridge)";
+      co_package_join = "the binding package names the system package itself";
+      co_artifact_join = "none of the bridge's own";
+      co_versions = "the depext's bound names the system package's version";
+      co_recorded = "the fetches" };
+    { co_kind = Co_capability;
+      co_name = "artifact-centric, capability-mediated";
+      co_draft = "declarative capability-mediated (Cabal with apt)";
+      co_package_join = "none";
+      co_artifact_join = "a declared capability file";
+      co_versions = "the capability's own version, if it states one";
+      co_recorded = "the fetches" };
+    { co_kind = Co_artifacts;
+      co_name = "artifact-centric, no bridge";
+      co_draft = "artifact-centric (Cargo *-sys with apt; pip sdists)";
+      co_package_join = "none";
+      co_artifact_join = "the package's own discovery, inside its build";
+      co_versions = "whatever the package's build logic enforces";
+      co_recorded = "the fetches" };
+    { co_kind = Co_local;
+      co_name = "no provider ecosystem — the native side is local";
+      co_draft = "a package-specific rewrite — vendor(native_source)";
+      co_package_join = "none on the native side";
+      co_artifact_join = "the build here";
+      co_versions = "the source ref canary builds";
+      co_recorded = "the library's build" };
+    { co_kind = Co_incomplete;
+      co_name = "incomplete — one side is absent";
+      co_draft = "—";
+      co_package_join = "—";
+      co_artifact_join = "—";
+      co_versions = "—";
+      co_recorded = "—" } ]
+
+let info_of_coop (k : coop) : coop_info =
+  List.find_exn coop_catalogue ~f:(fun i -> Poly.equal i.co_kind k)
+
+(** The doc's "topology character" — derived, never declared, so it
+    cannot drift from the shape it names. It is the cooperation kind's
+    name, except where the instance says WHY in its own words (an absorbed
+    library, or no package manager at all).
+
+    ⚠ "+ ARTIFACT VALIDATION" COMES FROM THE BRIDGE'S CHECK, not from a
+    declared capability file (2026-09-23, the capability file stopped
+    being a bridge). The first cut said a conf bridge was "unvalidated
+    against artifacts" unless a [.pc] was declared beside it, and no
+    project declares one — so every conf row read "unvalidated", while
+    every conf package's own predicate is exactly the check that meets
+    the artifacts: conf-gmp's is [pkg-config --exists gmp || cc -c
+    test.c]. Whether a given RUN saw that check hold is the overview's
+    recorded worlds, not this word. *)
+let character (t : t) : string =
+  match t.tp_join with
+  | No_pm_between why | Bridge_absorbed why -> why
+  | Bridged _ | Artifacts_only | Undeclared_join -> (info_of_coop (coop_of t)).co_name
 
 (* ── deriving a supplier from a declared provision ────────────────── *)
 

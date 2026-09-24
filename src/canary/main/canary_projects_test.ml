@@ -1657,6 +1657,124 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
                      (candidate_only e.T.eg_id)))
   }
 
+(* THE THREE TABLES LIST WHAT CANARY COVERS, AND A CHAIN IS TWO PACKAGE
+   MANAGERS, ONE MECHANISM AND ONE COOPERATION (2026-09-23, user: "the
+   whole chain needs two rows (two pm) from the PM-solo table, and one
+   binding table … a pm-solo table, pm-coop table which canary covers").
+
+   - the PM-solo table has a row for exactly the package managers canary
+     has a driver for, every one a project's provider uses, and each row's
+     scope and store are READ from that driver;
+   - the binding table is the mechanism catalogue, row for row;
+   - every topology of every catalogued project is a cooperation kind the
+     catalogue describes — [info_of_coop] is total over them — and the
+     instance's name agrees with its kind's, except where the instance
+     says why in its own words;
+   - the page draws a cooperation row only for a kind something
+     instantiates, lists the others as not yet covered, and draws one chain
+     per instance, each naming a catalogued mechanism. *)
+let coverage_tables_pin : Canary_project_test.pure_test =
+  { name = "overview.tables_list_what_canary_covers";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let projects = Canary_registry.all_specs in
+        let pms = Canary_store.[ Apt; Brew; Opam; Pip; Unsupported ] in
+        let with_driver =
+          List.filter pms ~f:(fun pm -> Option.is_some (Canary_pm.properties pm))
+        in
+        let rows = List.map Canary_pm_solo.table ~f:(fun r -> r.Canary_pm_solo.ps_pm) in
+        let used =
+          List.concat_map projects ~f:(fun (_, pr) ->
+              List.concat_map pr.Canary_project_run.pr_artifacts ~f:(fun row ->
+                  match Canary_project_spec.provider_of_row row with
+                  | Some (Canary_store_config.Sys_pkg _) -> Canary_store.[ Apt; Brew ]
+                  | Some (Canary_store_config.Lang_pkg { pm; _ }) -> [ pm ]
+                  | _ -> []))
+        in
+        let pm_solo_ok =
+          List.equal Poly.equal
+            (List.sort rows ~compare:Poly.compare)
+            (List.sort with_driver ~compare:Poly.compare)
+          && List.for_all used ~f:(List.mem rows ~equal:Poly.equal)
+          && List.for_all rows ~f:(fun pm ->
+                 (not (String.equal (Canary_pm_solo.scope_of pm) "—"))
+                 && not (String.equal (Canary_pm_solo.store_of pm) "—"))
+          (* opam defines the bridges; the others define none *)
+          && (not (List.is_empty (Canary_bridge.kinds_of_pm Canary_store.Opam)))
+          && List.for_all Canary_store.[ Apt; Brew; Pip ] ~f:(fun pm ->
+                 List.is_empty (Canary_bridge.kinds_of_pm pm))
+        in
+        let topos = List.concat_map projects ~f:T.topologies_of_project in
+        let coop_ok =
+          List.for_all topos ~f:(fun ((t : T.t), _) ->
+              match Option.try_with (fun () -> T.info_of_coop (T.coop_of t)) with
+              | None -> false
+              | Some info -> (
+                  match t.T.tp_join with
+                  | T.No_pm_between _ | T.Bridge_absorbed _ -> true
+                  | T.Bridged _ | T.Artifacts_only | T.Undeclared_join ->
+                      String.equal (T.character t) info.T.co_name))
+          && List.length
+               (List.dedup_and_sort
+                  (List.map T.coop_catalogue ~f:(fun i -> i.T.co_kind))
+                  ~compare:Poly.compare)
+             = List.length T.coop_catalogue
+        in
+        let page =
+          Canary_overview_page.render projects ~overview:"" ~generated_at:"pin"
+        in
+        let section =
+          match String.substr_index page ~pattern:{|<h2 id="tables">|} with
+          | None -> ""
+          | Some i -> (
+              let rest = String.drop_prefix page i in
+              match String.substr_index rest ~pattern:{|<div class="foot">|} with
+              | None -> rest
+              | Some j -> String.prefix rest j)
+        in
+        let instantiated =
+          List.map topos ~f:(fun (t, _) -> T.coop_of t)
+          |> List.dedup_and_sort ~compare:Poly.compare
+        in
+        let page_ok =
+          (not (String.is_empty section))
+          && List.for_all
+               [ "5.1 Each package manager on its own"; "5.2 Binding mechanisms";
+                 "5.3 How two package managers cooperate"; "5.4 The chains canary runs" ]
+               ~f:(fun h -> String.is_substring section ~substring:h)
+          (* a binding row per catalogued mechanism *)
+          && List.for_all Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+                 String.is_substring section
+                   ~substring:
+                     ("<b>"
+                     ^ Canary_mechanism.string_of_mechanism i.Canary_mechanism.mi_mechanism
+                     ^ "</b>"))
+          (* a cooperation row exactly for what is instantiated; the rest
+             named as not yet covered *)
+          && List.for_all T.coop_catalogue ~f:(fun i ->
+                 let as_row =
+                   String.is_substring section
+                     ~substring:("<b>" ^ Canary_overview_page.esc i.T.co_name ^ "</b>")
+                 in
+                 Bool.equal as_row (List.mem instantiated i.T.co_kind ~equal:Poly.equal))
+          (* one chain per distinct instance, with its mechanism named *)
+          && List.for_all projects ~f:(fun ((name, pr) as p) ->
+                 let an = Canary_pipeline.analysed_of pr in
+                 List.for_all (T.topologies_of_project p) ~f:(fun ((t : T.t), (i : T.instance)) ->
+                     String.is_substring section
+                       ~substring:
+                         (String.concat
+                            [ "<td>"; name; "</td><td>";
+                              Canary_lang.string_of_lang i.T.in_lang; "</td><td>";
+                              Canary_mechanism.string_of_mechanism
+                                (Canary_project_analysis.mechanism_for an i.T.in_lang);
+                              "</td><td>"; T.string_of_supplier t.T.tp_lang ]))
+               )
+        in
+        pm_solo_ok && coop_ok && page_ok)
+  }
+
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
    template numbers its sections by hand, and moving the agreement table
    in produced two sections called "3." — found by reading the page, not
@@ -6883,6 +7001,7 @@ let base_tests : Canary_project_test.pure_test list =
       overlay_words_pin;
       bridge_record_pin;
       placeholder_badges_pin;
+      coverage_tables_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

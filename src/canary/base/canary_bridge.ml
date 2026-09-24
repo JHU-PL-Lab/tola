@@ -50,6 +50,16 @@ type t = Opam of opam [@@deriving show, eq]
 let pm_of : t -> Canary_store.package_manager = function
   | Opam _ -> Canary_store.Opam
 
+(** The bridge KINDS a package manager defines, by name — what the PM-solo
+    table shows. One line per constructor of that manager's variant; a
+    manager that defines none (apt, brew, pip) has an empty list. *)
+let kinds_of_pm : Canary_store.package_manager -> string list = function
+  | Canary_store.Opam ->
+      [ "conf package (conf-*): a check plus a depext mapping";
+        "depext field: the binding package names the system package itself" ]
+  | Canary_store.Apt | Canary_store.Brew | Canary_store.Pip | Canary_store.Unsupported ->
+      []
+
 (** The package that IS the bridge, or that carries it. *)
 let package_of : t -> string = function
   | Opam (Conf_package p) | Opam (Depext_field p) -> p

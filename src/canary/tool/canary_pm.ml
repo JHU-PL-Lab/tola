@@ -25,6 +25,18 @@ let install_cmd pm ~pkg =
   | Pip -> Canary_pm_pip.install_cmd ~pkg
   | Unsupported -> [%string "echo 'no package manager for %{pkg}' && false"]
 
+(** What each driver declares about its package manager — scope, store,
+    how a store is switched (2026-09-23). The four [properties] records sat
+    in the drivers with no reader; the PM-solo table
+    ([Canary_pm_solo]) is the first. *)
+let properties (pm : package_manager) : pm_properties option =
+  match pm with
+  | Apt -> Some Canary_pm_apt.properties
+  | Brew -> Some Canary_pm_brew.properties
+  | Opam -> Some Canary_pm_opam.properties
+  | Pip -> Some Canary_pm_pip.properties
+  | Unsupported -> None
+
 (** Install the OS-appropriate package from a {!system_package_spec}. *)
 let system_install_cmd pm (spec : system_package_spec) =
   install_cmd pm ~pkg:(system_pkg_for_pm spec pm)

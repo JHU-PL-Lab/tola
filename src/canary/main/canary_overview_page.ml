@@ -375,6 +375,9 @@ stroke-dasharray:1 4;opacity:.9}
 .rec .node .nsub{fill:var(--fg)}
 .rec .node.named-decl .nlabel{font-style:italic}
 table.cmp{font-size:.85rem;max-width:780px}
+.widetable{overflow-x:auto;max-width:100%}
+table.cov{font-size:.82rem;min-width:900px}
+table.cov td{vertical-align:top}
 table.cmp tr.agree td{color:var(--mut)}
 table.cmp tr.differ td{background:color-mix(in srgb,var(--xf) 14%,transparent)}
 table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
@@ -492,46 +495,202 @@ let missing_steps_note () =
     The language PM is what a reader arrives with — they are holding an
     opam package and asking what it rests on — and sorting by the native
     side scattered the opam rows through the table. *)
-let topology_table (projects : (string * Canary_project_run.project_run) list) =
-  let rows =
-    T.topologies projects
-    |> List.sort ~compare:(fun ((a : T.t), _) ((b : T.t), _) ->
-           match
-             String.compare
-               (T.string_of_supplier a.T.tp_lang)
-               (T.string_of_supplier b.T.tp_lang)
-           with
-           | 0 -> (
-               match
-                 String.compare
-                   (T.short_of_join a.T.tp_join)
-                   (T.short_of_join b.T.tp_join)
-               with
-               | 0 ->
-                   String.compare
-                     (T.string_of_supplier a.T.tp_sys)
-                     (T.string_of_supplier b.T.tp_sys)
-               | c -> c)
-           | c -> c)
+(* ── §5: WHAT CANARY COVERS — THREE TABLES, AND THE CHAINS THEY COMPOSE
+   (2026-09-23, user: "the whole chain needs two rows (two pm) from the
+   PM-solo table, and one binding table … derive a table in the overview
+   page is also interesting and more illustrative").
+
+   Every cell below is computed from canary's own code: the package
+   managers' drivers and [Canary_pm_solo], the mechanism catalogue, the
+   bridge model, [Canary_topology]'s cooperation kinds, and the projects'
+   declarations. The layered-model draft's tables were the reference the
+   prose columns were written against; unlike them, these list only what
+   canary covers. It replaced the per-shape topology table, whose rows
+   are now the chains of §5.4. *)
+
+(* a table that may be wider than the page scrolls on its own *)
+let wide (html : string) = {|<div class="widetable">|} ^ html ^ "</div>"
+
+let cells (xs : string list) =
+  "<tr>" ^ String.concat (List.map xs ~f:(fun x -> "<td>" ^ x ^ "</td>")) ^ "</tr>"
+
+let heads (xs : string list) =
+  "<thead><tr>"
+  ^ String.concat (List.map xs ~f:(fun x -> "<th>" ^ x ^ "</th>"))
+  ^ "</tr></thead>"
+
+(** Which projects fetch through [pm], read from the providers their
+    artifact tables name. A system package names both platforms' packages,
+    so it counts for apt and for brew. *)
+let pm_users (projects : (string * Canary_project_run.project_run) list)
+    (pm : Canary_store.package_manager) : string list =
+  List.filter_map projects ~f:(fun (name, pr) ->
+      let uses =
+        List.exists pr.Canary_project_run.pr_artifacts ~f:(fun row ->
+            match Canary_project_spec.provider_of_row row with
+            | Some (Canary_store_config.Sys_pkg _) ->
+                List.mem [ Canary_store.Apt; Canary_store.Brew ] pm ~equal:Poly.equal
+            | Some (Canary_store_config.Lang_pkg { pm = p; _ }) -> Poly.equal p pm
+            | _ -> false)
+      in
+      if uses then Some name else None)
+
+let pm_solo_table projects =
+  let row (r : Canary_pm_solo.row) =
+    let pm = r.Canary_pm_solo.ps_pm in
+    let unseen =
+      Canary_pm_action.inside_install pm ~of_binding:true
+      |> List.map ~f:(fun p ->
+             Printf.sprintf "%s <span class=\"from\">%s</span>"
+               (esc p.Canary_pm_action.ph_key)
+               (match p.Canary_pm_action.ph_unseen with
+                | Canary_pm_action.Not_yet _ -> "not yet"
+                | Canary_pm_action.Out_of_reach _ -> "out of reach"))
+    in
+    let dash = function [] -> "—" | xs -> String.concat ~sep:"<br>" xs in
+    cells
+      [ Printf.sprintf "<b>%s</b><br><span class=\"from\">%s</span>"
+          (esc (Canary_store.string_of_pm pm))
+          (esc (Canary_pm_solo.scope_of pm));
+        esc (Canary_pm_solo.store_of pm);
+        esc r.Canary_pm_solo.ps_package;
+        esc r.Canary_pm_solo.ps_versions;
+        esc r.Canary_pm_solo.ps_ships;
+        dash (List.map (Canary_bridge.kinds_of_pm pm) ~f:esc);
+        dash unseen;
+        (match pm_users projects pm with [] -> "—" | us -> esc (String.concat ~sep:", " us)) ]
   in
-  let row ((t : T.t), (insts : T.instance list)) =
-    let cases =
-      List.map insts ~f:(fun i -> i.T.in_project)
+  wide
+    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
+       (heads
+          [ "package manager"; "store"; "what a package is"; "its versions";
+            "what it ships for others to read"; "bridges it defines";
+            "inside an install, unseen"; "used by" ])
+       (String.concat (List.map Canary_pm_solo.table ~f:row)))
+
+(** Which projects bind through [m], per pass 2 — the mechanism each
+    declared binding language resolves to. *)
+let mechanism_users (projects : (string * Canary_project_run.project_run) list)
+    (m : Canary_mechanism.mechanism) : string list =
+  List.filter_map projects ~f:(fun (name, pr) ->
+      let an = Canary_pipeline.analysed_of pr in
+      if
+        List.exists (T.binding_langs pr) ~f:(fun lang ->
+            Poly.equal (Canary_project_analysis.mechanism_for an lang) m)
+      then Some name
+      else None)
+
+let binding_table projects =
+  let yes b = if b then "yes" else "no" in
+  let row (i : Canary_mechanism.mechanism_info) =
+    let m = i.Canary_mechanism.mi_mechanism in
+    cells
+      [ Printf.sprintf "<b>%s</b>" (esc (Canary_mechanism.string_of_mechanism m));
+        esc (Canary_lang.string_of_lang i.Canary_mechanism.mi_lang);
+        esc
+          (match i.Canary_mechanism.mi_discipline with
+           | Canary_mechanism.Static_c_abi -> "static C ABI"
+           | Canary_mechanism.Dynamic_ffi -> "dynamic FFI");
+        esc i.Canary_mechanism.mi_lib_coupling;
+        yes i.Canary_mechanism.mi_compiles_a_stub;
+        yes i.Canary_mechanism.mi_consumer_records_needed;
+        yes i.Canary_mechanism.mi_exposes_typed_stub;
+        (match mechanism_users projects m with
+         | [] -> "— <span class=\"from\">not wired</span>"
+         | us -> esc (String.concat ~sep:", " us)) ]
+  in
+  wide
+    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
+       (heads
+          [ "mechanism"; "language"; "discipline"; "how the library is bound";
+            "a compiled stub?"; "does the consumer record its NEEDED?";
+            "a typed boundary?"; "used by" ])
+       (String.concat (List.map Canary_mechanism.mechanism_catalogue ~f:row)))
+
+(* the instances of one cooperation kind, and the two package managers
+   (or local suppliers) each joins *)
+let coop_groups projects =
+  let insts =
+    List.concat_map projects ~f:(fun p -> T.topologies_of_project p)
+  in
+  List.filter_map T.coop_catalogue ~f:(fun info ->
+      match
+        List.filter insts ~f:(fun ((t : T.t), _) ->
+            Poly.equal (T.coop_of t) info.T.co_kind)
+      with
+      | [] -> None
+      | xs -> Some (info, xs))
+
+let coop_table projects =
+  let groups = coop_groups projects in
+  let row ((info : T.coop_info), (xs : (T.t * T.instance) list)) =
+    let pairs =
+      List.map xs ~f:(fun ((t : T.t), _) ->
+          T.string_of_supplier t.T.tp_lang ^ " ↔ " ^ T.string_of_supplier t.T.tp_sys)
       |> List.dedup_and_sort ~compare:String.compare
     in
-    Printf.sprintf
-      "<tr><td class=\"mono\">%s</td><td class=\"mono\">%s</td><td \
-       class=\"mono\">%s</td><td>%s</td><td class=\"n\">%s</td></tr>"
-      (esc (T.string_of_supplier t.T.tp_lang))
-      (esc (T.short_of_join t.T.tp_join))
-      (esc (T.string_of_supplier t.T.tp_sys))
-      (esc (T.character t))
-      (esc (String.concat ~sep:", " cases))
+    let who =
+      List.map xs ~f:(fun ((t : T.t), (i : T.instance)) ->
+          let bridge =
+            match T.bridges_of_join t.T.tp_join with
+            | [] -> ""
+            | bs -> " (" ^ String.concat ~sep:" + " (List.map bs ~f:T.string_of_gated) ^ ")"
+          in
+          i.T.in_project ^ bridge)
+      |> List.dedup_and_sort ~compare:String.compare
+    in
+    cells
+      [ Printf.sprintf "<b>%s</b><br><span class=\"from\">draft: %s</span>"
+          (esc info.T.co_name) (esc info.T.co_draft);
+        esc (String.concat ~sep:", " pairs);
+        esc info.T.co_package_join;
+        esc info.T.co_artifact_join;
+        esc info.T.co_versions;
+        esc info.T.co_recorded;
+        esc (String.concat ~sep:", " who) ]
   in
-  Printf.sprintf
-    "<table><thead><tr><th>language side</th><th>bridge</th><th>native \
-     side</th><th>character</th><th>case</th></tr></thead><tbody>%s</tbody></table>"
-    (String.concat (List.map rows ~f:row))
+  let covered = List.map groups ~f:(fun (i, _) -> i.T.co_kind) in
+  let uncovered =
+    List.filter T.coop_catalogue ~f:(fun i ->
+        not (List.mem covered i.T.co_kind ~equal:Poly.equal))
+  in
+  wide
+    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
+       (heads
+          [ "cooperation"; "the two sides"; "how the packages are joined";
+            "what meets the artifacts"; "how a version constraint travels";
+            "what canary records"; "instances" ])
+       (String.concat (List.map groups ~f:row)))
+  ^ Printf.sprintf
+      "<p class=\"mechnote\">Classified but instantiated by no project yet: %s.</p>"
+      (esc
+         (String.concat ~sep:"; "
+            (List.map uncovered ~f:(fun i -> i.T.co_name))))
+
+(** The chains: one per (project, binding language, native provision) —
+    a binding mechanism between two sides, joined by a cooperation. *)
+let chains_table projects =
+  let rows =
+    List.concat_map projects ~f:(fun ((name, pr) as p) ->
+        let an = Canary_pipeline.analysed_of pr in
+        List.map (T.topologies_of_project p) ~f:(fun ((t : T.t), (i : T.instance)) ->
+            ( name,
+              Canary_lang.string_of_lang i.T.in_lang,
+              Canary_mechanism.string_of_mechanism
+                (Canary_project_analysis.mechanism_for an i.T.in_lang),
+              T.string_of_supplier t.T.tp_lang,
+              T.string_of_supplier t.T.tp_sys,
+              T.character t )))
+    |> List.dedup_and_sort ~compare:Poly.compare
+  in
+  wide
+    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
+       (heads
+          [ "project"; "language"; "binding (§5.2)"; "language side (§5.1)";
+            "native side (§5.1)"; "cooperation (§5.3)" ])
+       (String.concat
+          (List.map rows ~f:(fun (p, l, m, ls, ns, c) ->
+               cells [ esc p; esc l; esc m; esc ls; esc ns; esc c ]))))
 
 (** The two things the deleted `checks --topology` said that the table
     does not (2026-09-23): which rows are wrong for a known reason, and
@@ -1157,8 +1316,8 @@ inside its package-rewrite cases, never in the base picture.</div>
 named. A node that is absent does not exist in that case; a greyed edge
 exists and does not fire. Switch between them rather than scrolling —
 chains laid end to end are compared by memory, which is the one thing
-that makes them hard to compare. Each case is a row of the topology
-table in §5.</p>
+that makes them hard to compare. Each case is a row of the cooperation
+table in §5.3, and a chain of §5.4.</p>
 %s
 
 <h2 id="overview">3. The agreement overview</h2>
@@ -1198,18 +1357,39 @@ while dropping version, which in network terms is a layer that forwards
 the address and silently discards the checksum. That asymmetry is why the
 end-to-end invariants are the ones we do not have.</div>
 
-<h2 id="topologies">5. Cooperation topologies</h2>
-<p>One row per distinct shape, derived from what each project declares —
-never from a table anyone maintains by hand. The last column is a fact
-about us and not part of the row.</p>
+<h2 id="tables">5. What canary covers: three tables, and the chains they compose</h2>
+<p>A chain is one binding mechanism (§5.2) between two package managers
+(two rows of §5.1), joined by their cooperation (§5.3); §5.4 lists the
+chains canary runs. Every cell is computed from canary's own code — the
+package managers' drivers, the mechanism catalogue, the bridge model, the
+cooperation kinds and the projects' declarations — so a table lists only
+what canary covers. The layered-model draft's tables were the reference
+for the columns; they also cover ecosystems canary does not reach yet
+(RPM, Cargo, Cabal, RubyGems, Conda, Nix).</p>
+<h3>5.1 Each package manager on its own</h3>
 %s
+<h3>5.2 Binding mechanisms</h3>
+%s
+<h3>5.3 How two package managers cooperate</h3>
+%s
+%s
+<h3>5.4 The chains canary runs</h3>
+<p>One row per project, binding language and way the library is
+provided. A project appears more than once when its library is provided
+more than one way — a chain is a fact about the pair, not the
+project.</p>
 %s
 
 <div class="foot">Generated %s. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
-the cooperation topologies are derived from each project's declared
-provisions, gates and C-API components; the mechanism variants from the mechanism
-catalogue; the agreement overview from the registry and recorded runs.
+the tables of §5 are computed from canary's code — the package managers'
+drivers, the mechanism catalogue, the bridge model, the cooperation kinds
+and each project's declared provisions, gates and C-API components —
+though their prose columns (what a package is, how a join travels) are
+written in <code>canary_pm_solo.ml</code> and
+<code>canary_topology.ml</code>; the mechanism variants come from the
+mechanism catalogue; the agreement overview from the registry and
+recorded runs.
 The nodes, the edges, which edge each claim sits on, and the labels of
 the concrete cases are <em>hand-written lists</em> in
 <code>canary_topology.ml</code> and here — placeholders, checked by pins
@@ -1249,7 +1429,8 @@ bridge so far: conf-gmp, on zarith).
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
     (* §5 the topologies *)
-    (topology_table projects) (topology_notes projects)
+    (pm_solo_table projects) (binding_table projects) (coop_table projects)
+    (topology_notes projects) (chains_table projects)
     (esc generated_at) (script ^ runs_script ())
 
 let docs_path = "docs/canary/overview.html"

@@ -1183,27 +1183,37 @@ blank.
   bridge is, and opam never installs a depext here. The easy rows are the
   next increments: each becomes a real record, and its placeholder leaves
   the catalogue in the same change.
-- **PM-solo and PM-cooperation kinds, recorded the way binding
-  mechanisms are — a question the user raised, answered in a proposal,
-  not built.** The binding mechanism has a catalogue in `base/`
-  (`Canary_mechanism`), a per-binding declaration, a pass-2 derivation
-  (`mechanism_for`), claim applicability that reads it, a `mech` column,
-  and an artifact band drawn per mechanism. The package-manager side has
-  the pieces of that without the whole. `Canary_pm_action` is the seed
-  of a PM-SOLO catalogue: what one package manager's action consists of
-  inside. `Canary_topology.join_of` / `character` already derive a
-  COOPERATION per project, but as a classifier over declarations rather
-  than a catalogue entry, not per world, not in the run record, and read
-  by no applicability rule. The proposal mirrors the mechanism exactly: a
-  PM-solo catalogue (per package manager: builds from source or not, its
-  bridge kinds, what goes unrecorded), a cooperation catalogue (the
-  draft's Table 3 rows as data — composition, join, bridges, which
-  layered edges exist), each world's cooperation derived in pass 2 from
-  its providers and gate, carried in the run record beside `mech`, read
-  by claim applicability (a bridge claim applies only where a bridge
-  is), and a PM band drawn per cooperation the way the artifact band is
-  per mechanism — so a chain is one mechanism row joined with one
-  cooperation row, as the topology module already says.
+- **Canary's own three tables, drawn on the overview — landed the same
+  day** (user: "the whole chain needs two rows (two pm) from the PM-solo
+  table, and one binding table … a pm-solo table, pm-coop table which
+  canary covers … you can refer the doc, and make our own tables").
+  §5 of the overview is now four derived tables. **5.1 PM solo**
+  (`Canary_pm_solo`, `tool/`): one row per package manager canary has a
+  driver for. Scope and store are read from the drivers' `properties`,
+  which had no reader before; bridge kinds come from
+  `Canary_bridge.kinds_of_pm` and the unseen pieces from
+  `Canary_pm_action`, with three prose columns written against the
+  draft's Table 1. **5.2 Binding mechanisms**: the mechanism catalogue,
+  row for row, with the projects that bind through each by pass 2.
+  **5.3 Cooperation**: `Canary_topology.coop` is a typed kind with a
+  catalogue whose columns follow the draft's Table 3, and `character`
+  now reads it, so the names and the rows cannot disagree. Only
+  instantiated kinds are drawn; the other five are listed as classified
+  and not yet covered. **5.4 The chains canary runs**: one row per
+  project, language and native provision, naming the one mechanism, the
+  two sides and the cooperation — the user's composition, made visible.
+  It replaced the per-shape topology table. Pinned by
+  `overview.tables_list_what_canary_covers`, red with the pip row
+  relabelled. Two findings the tables make visible rather than hide:
+  libffi reads `cstubs` because its declared `Ctypes` is not routed
+  (`project/issues.md` §2), and sqlite's CPython stdlib binding reads
+  "pip ↔ apt" because its provider is declared as pip.
+  NOT done yet, from the same proposal: deriving each WORLD's
+  cooperation in pass 2 rather than per project (zarith's built world
+  would read "bypassed"), carrying it in the run record beside `mech`,
+  letting claim applicability read it (a bridge claim only where a
+  bridge is), and drawing the PM band per cooperation the way the
+  artifact band is drawn per mechanism.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;
