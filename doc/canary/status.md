@@ -583,6 +583,19 @@ to record what each package-manager BRIDGE actually did.
   phase E is the groundwork for `gate_admits_the_world` and
   `discovery_matches_link`.
 
+  *More than recording* (user, 2026-09-23, to consider later): the
+  bridges should also be MODELED in the tool layer, not only recorded.
+  `tool/` has a driver per package manager — installed, version,
+  depexts — and nothing that answers a question about a bridge: the conf
+  package's check is never asked, and pkg-config appears only inline in
+  commands. A bridge is its own kind of thing (package content that
+  exists for cooperation), declared twice already — the binding's
+  `pm_gate` and `Canary_topology.bridge` — and queried nowhere. When E
+  starts, the recording should be the first consumer of that model, not
+  shell written into steps; and a model is also what would let canary
+  DRIVE a bridge, e.g. run a conf check against the library a world
+  built rather than the system's, which is the built case's point.
+
 **Order:** A → B → C gives a working overlay for everything canary
 already runs; E then adds bridges one at a time; D can go alongside.
 Stop for the user after each phase. The record carries the platform from
