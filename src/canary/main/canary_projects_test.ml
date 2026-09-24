@@ -1366,6 +1366,19 @@ let overview_overlay_pin : Canary_project_test.pure_test =
 
    Every pinned value reads the same on a checkout that has never run:
    where a name is recorded, its declared fallback is the same string. *)
+
+(* the hand-drawn cases, as the page embeds them for §2.1's comparison *)
+let hand_cases_of_page (page : string) : Yojson.Basic.t option =
+  let open_tag = {|<script type="application/json" id="rechand">|} in
+  match String.substr_index page ~pattern:open_tag with
+  | None -> None
+  | Some i -> (
+      let rest = String.drop_prefix page (i + String.length open_tag) in
+      match String.substr_index rest ~pattern:"</script>" with
+      | None -> None
+      | Some j -> (
+          try Some (Yojson.Basic.from_string (String.prefix rest j)) with _ -> None))
+
 let recorded_names_pin : Canary_project_test.pure_test =
   { name = "overview.recorded_views_are_named";
     check =
@@ -1393,18 +1406,7 @@ let recorded_names_pin : Canary_project_test.pure_test =
           Canary_overview_page.render Canary_registry.all_specs ~overview:""
             ~generated_at:"pin"
         in
-        let hand =
-          let open_tag = {|<script type="application/json" id="rechand">|} in
-          match String.substr_index page ~pattern:open_tag with
-          | None -> None
-          | Some i -> (
-              let rest = String.drop_prefix page (i + String.length open_tag) in
-              match String.substr_index rest ~pattern:"</script>" with
-              | None -> None
-              | Some j -> (
-                  try Some (Yojson.Basic.from_string (String.prefix rest j))
-                  with _ -> None))
-        in
+        let hand = hand_cases_of_page page in
         let field j k =
           match j with
           | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
@@ -1790,6 +1792,163 @@ let coverage_tables_pin : Canary_project_test.pure_test =
         pm_solo_ok && coop_ok && per_world_ok && page_ok)
   }
 
+(* THE PACKAGE BAND IS ONE COOPERATION (2026-09-23, status.md §2.7; user:
+   draw the package-manager part per cooperation, the way the artifact
+   part is drawn per mechanism). The band's rules are ONE function of a
+   topology ([Canary_topology.band_hidden]), and a kind's band is what
+   none of its worlds has. Held three ways:
+
+   - THE RULES REPRODUCE THE DRAWINGS: for every hand-drawn case, the
+     band of the world standing for it hides exactly the band nodes the
+     drawing hides, and greys no edge the drawing does not grey. The
+     wheel's world is read from the catalogue, since z3 is muted. This is
+     what caught the first draft, which dropped the binding source of
+     every fetched binding — opam compiles that source inside its install,
+     and the conf case draws it;
+   - the kinds' bands say what the kinds mean: conf keeps its bridge and
+     its capability file, unified and absorbed have no system side, no
+     package manager between has neither bridge nor capability file,
+     gated-local greys the system payload, local has no bridge;
+   - the page draws ONE diagram, a button per mechanism and per drawable
+     covered kind (and none for a kind that is not a cooperation), a
+     stylesheet rule for every class the diagram uses, and a line per pair
+     naming the projects where canary runs it. *)
+let package_band_pin : Canary_project_test.pure_test =
+  { name = "overview.package_band_is_one_cooperation";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module R = Canary_overview_runs in
+        let projects = Canary_registry.all_specs in
+        let page = Canary_overview_page.render projects ~overview:"" ~generated_at:"pin" in
+        let hand = hand_cases_of_page page in
+        let field j k =
+          match j with
+          | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
+          | _ -> None
+        in
+        let strings j =
+          match j with
+          | Some (`List xs) -> List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+          | _ -> []
+        in
+        let band_only l =
+          List.filter l ~f:(List.mem T.band_nodes ~equal:String.equal)
+          |> List.sort ~compare:String.compare
+        in
+        let python_fetched a =
+          Poly.equal
+            (R.provision_of_kind a (Canary_basic.Binding Canary_lang.Python))
+            (Some Canary_artifact.Fetched)
+        in
+        let cases = R.counterparts @ [ ("wheel", ("z3", python_fetched, Canary_lang.Python)) ] in
+        let reproduces =
+          List.for_all cases ~f:(fun (key, (project, pred, lang)) ->
+              match
+                ( Option.bind hand ~f:(fun h -> field h key),
+                  List.Assoc.find projects project ~equal:String.equal )
+              with
+              | Some c, Some pr -> (
+                  match List.find (Canary_project_run.scenarios_of pr) ~f:pred with
+                  | None -> false
+                  | Some world ->
+                      let t = T.topology_of_world ~pr ~world lang in
+                      let hidden =
+                        T.band_hidden ~publishes:(T.publishes_of_world ~pr ~world lang) t
+                      in
+                      List.equal String.equal (band_only hidden)
+                        (band_only (strings (field c "hidden")))
+                      && List.for_all (T.band_dead t)
+                           ~f:(List.mem (strings (field c "dead")) ~equal:String.equal))
+              | _ -> false)
+          && List.length cases = 5
+        in
+        let bands = T.coop_bands projects in
+        let band k = List.find bands ~f:(fun b -> Poly.equal b.T.cb_kind k) in
+        let hides k n =
+          Option.exists (band k) ~f:(fun b -> List.mem b.T.cb_hidden n ~equal:String.equal)
+        in
+        let keeps k n =
+          Option.exists (band k) ~f:(fun b -> not (List.mem b.T.cb_hidden n ~equal:String.equal))
+        in
+        let greys k e =
+          Option.exists (band k) ~f:(fun b -> List.mem b.T.cb_dead e ~equal:String.equal)
+        in
+        let facts =
+          keeps T.Co_conf "bridge" && keeps T.Co_conf "cap" && hides T.Co_conf "src_sys"
+          && keeps T.Co_conf "src_lang"
+          && hides T.Co_unified "pm_sys" && hides T.Co_unified "pkg_sys"
+          && hides T.Co_absorbed "pm_sys" && hides T.Co_absorbed "bridge"
+          && hides T.Co_no_pm "bridge" && hides T.Co_no_pm "cap"
+          && greys T.Co_gated_local "realize_sys" && hides T.Co_local "bridge"
+          && List.for_all bands ~f:(fun b ->
+                 T.has_band b.T.cb_kind
+                 && List.for_all b.T.cb_hidden ~f:(List.mem T.band_nodes ~equal:String.equal))
+        in
+        let join =
+          match String.substr_index page ~pattern:{|<div class="join"|} with
+          | None -> ""
+          | Some i -> (
+              let rest = String.drop_prefix page i in
+              match String.substr_index rest ~pattern:{|<p id="edet"|} with
+              | None -> ""
+              | Some j -> String.prefix rest j)
+        in
+        let covered =
+          List.concat_map projects ~f:T.topologies_of_worlds
+          |> List.map ~f:(fun ((t : T.t), _) -> T.coop_of t)
+          |> List.dedup_and_sort ~compare:Poly.compare
+        in
+        let used prefix =
+          List.map (String.substr_index_all join ~may_overlap:false ~pattern:(" " ^ prefix))
+            ~f:(fun i ->
+              let rest = String.drop_prefix join (i + 1) in
+              let n =
+                Option.value ~default:(String.length rest)
+                  (String.lfindi rest ~f:(fun _ c ->
+                       not (Char.is_alphanum c || Char.equal c '_' || Char.equal c '-')))
+              in
+              String.prefix rest n)
+          |> List.dedup_and_sort ~compare:String.compare
+        in
+        let ruled cls = String.is_substring page ~substring:("." ^ cls ^ "{") in
+        let m_codes =
+          List.map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+              Canary_mechanism.string_of_mechanism i.Canary_mechanism.mi_mechanism)
+        in
+        let page_ok =
+          (not (String.is_empty join))
+          && List.length (String.substr_index_all join ~may_overlap:false ~pattern:"<svg") = 1
+          && List.for_all m_codes ~f:(fun m ->
+                 String.is_substring join ~substring:(Printf.sprintf {|<button data-v="%s">|} m))
+          && List.for_all T.coop_catalogue ~f:(fun i ->
+                 Bool.equal
+                   (String.is_substring join
+                      ~substring:
+                        (Printf.sprintf {|<button data-v="%s" title=|} (T.code_of_coop i.T.co_kind)))
+                   (List.mem covered i.T.co_kind ~equal:Poly.equal && T.has_band i.T.co_kind))
+          && List.for_all [ "jm-"; "jk-"; "jd-" ] ~f:(fun p ->
+                 (not (List.is_empty (used p))) && List.for_all (used p) ~f:ruled)
+          && List.for_all m_codes ~f:(fun m ->
+                 List.for_all bands ~f:(fun b ->
+                     String.is_substring join
+                       ~substring:
+                         (Printf.sprintf {|data-jp="%s %s"|} m (T.code_of_coop b.T.cb_kind))))
+          && (match
+                String.substr_index join ~pattern:{|data-jp="cstubs conf">|}
+              with
+              | None -> false
+              | Some i ->
+                  let rest = String.drop_prefix join i in
+                  let line =
+                    String.prefix rest
+                      (Option.value (String.substr_index rest ~pattern:"</p>") ~default:0)
+                  in
+                  String.is_substring line ~substring:"zarith (ocaml)")
+        in
+        Option.is_some hand && reproduces && facts && page_ok)
+  }
+
 (* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):
    per binding language, the mechanism, both sides and the cooperation —
    so a reader of the run need not re-derive them. Held over the real
@@ -1858,9 +2017,32 @@ let record_chains_pin : Canary_project_test.pure_test =
                 List.map r.M.chains ~f:(fun c -> c.M.ch_coop)
               else [])
         in
+        (* THE WRAPPER DECLARATION SAYS WHAT THE STEPS DO: a world publishes
+           its binding exactly where a pack step exists. The package band
+           reads the declaration (it is drawn without deriving steps); this
+           is what keeps it the same answer. Exercised: zarith's built
+           world publishes, its fetched world does not. *)
+        let publishing =
+          List.concat_map m.M.rows ~f:(fun (r : M.row) ->
+              match Canary_overview_runs.assignment_of_row r with
+              | None -> [ None ]
+              | Some (pr, a) ->
+                  List.map (T.binding_langs pr) ~f:(fun lang ->
+                      let declared = T.publishes_of_world ~pr ~world:a lang in
+                      let stepped =
+                        List.exists r.M.steps ~f:(fun w ->
+                            Poly.equal w.M.ws_action
+                              (Canary_basic.Publish (Canary_basic.Binding lang))
+                            && Option.is_none w.M.ws_inspects)
+                      in
+                      if Bool.equal declared stepped then Some declared else None))
+        in
         typed && exported
         && List.mem zarith_kinds T.Co_conf ~equal:Poly.equal
-        && List.mem zarith_kinds T.Co_artifacts ~equal:Poly.equal)
+        && List.mem zarith_kinds T.Co_artifacts ~equal:Poly.equal
+        && List.for_all publishing ~f:Option.is_some
+        && List.mem publishing (Some true) ~equal:(Option.equal Bool.equal)
+        && List.mem publishing (Some false) ~equal:(Option.equal Bool.equal))
   }
 
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
@@ -7090,6 +7272,7 @@ let base_tests : Canary_project_test.pure_test list =
       bridge_record_pin;
       placeholder_badges_pin;
       coverage_tables_pin;
+      package_band_pin;
       record_chains_pin;
       platform_single_source_pin;
       strict_mode_pin;

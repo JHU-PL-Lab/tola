@@ -208,18 +208,6 @@ let normalize (t : t) : t =
   | Bridge_absorbed _ -> { t with tp_sys = t.tp_lang }
   | _ -> t
 
-(** The doc's "topology character" — derived, never declared, so it
-    cannot drift from the shape it names.
-
-    ⚠ "+ ARTIFACT VALIDATION" COMES FROM THE BRIDGE'S CHECK, not from a
-    declared capability file (2026-09-23, the capability file stopped
-    being a bridge). The first cut said a conf bridge was "unvalidated
-    against artifacts" unless a [.pc] was declared beside it, and no
-    project declares one — so every conf row read "unvalidated", while
-    every conf package's own predicate is exactly the check that meets
-    the artifacts: conf-gmp's is [pkg-config --exists gmp || cc -c
-    test.c]. Whether a given RUN saw that check hold is the overview's
-    recorded worlds, not this word. *)
 (* ── THE COOPERATION TABLE (2026-09-23, user: "we can have pm-solo table,
    pm-coop table which canary covers") ─────────────────────────────────
 
@@ -284,6 +272,7 @@ let coop_of (t : t) : coop =
 (** One row of the cooperation table. *)
 type coop_info = {
   co_kind : coop;
+  co_label : string;  (** a button's worth of [co_name] *)
   co_name : string;  (** canary's name for it — the "character" *)
   co_draft : string;  (** the layered-model draft's name, where it has one *)
   co_package_join : string;  (** how the two package layers are joined *)
@@ -294,6 +283,7 @@ type coop_info = {
 
 let coop_catalogue : coop_info list =
   [ { co_kind = Co_conf;
+      co_label = "conf package";
       co_name = "symbolic package bridge + artifact validation";
       co_draft = "the same name (opam conf/depext with apt or Homebrew)";
       co_package_join =
@@ -311,6 +301,7 @@ let coop_catalogue : coop_info list =
          mapping, the capability file and pkg-config's answer (zarith so \
          far); opam's own run of the check is a placeholder" };
     { co_kind = Co_gated_local;
+      co_label = "gated, built here";
       co_name = "⚠ bridge still gates, against a system this world does not use";
       co_draft =
         "a package-specific rewrite — replace(external_provider, \
@@ -324,6 +315,7 @@ let coop_catalogue : coop_info list =
          world does not use";
       co_recorded = "the library's build; the gate itself is not recorded here" };
     { co_kind = Co_unified;
+      co_label = "one package manager";
       co_name = "unified package universe";
       co_draft = "the same name (Conda)";
       co_package_join =
@@ -333,6 +325,7 @@ let coop_catalogue : coop_info list =
       co_versions = "one solver: a bound on the library's package bounds the library";
       co_recorded = "both fetches, through the one package manager" };
     { co_kind = Co_absorbed;
+      co_label = "absorbed";
       co_name = "absorbed by the consumer package";
       co_draft =
         "a package-specific rewrite — bundle(native_artifact) or \
@@ -344,6 +337,7 @@ let coop_catalogue : coop_info list =
       co_versions = "no pairing: the library's version is the package's";
       co_recorded = "the package's fetch; what it builds inside is a placeholder" };
     { co_kind = Co_no_pm;
+      co_label = "no PM between";
       co_name = "no package manager between";
       co_draft = "not in the draft's tables";
       co_package_join =
@@ -353,6 +347,7 @@ let coop_catalogue : coop_info list =
       co_versions = "none is declared anywhere";
       co_recorded = "a dummy step holds the binding's place" };
     { co_kind = Co_undeclared;
+      co_label = "undeclared";
       co_name = "⚠ undeclared — cannot be classified";
       co_draft = "not a cooperation — a gap in canary's declarations";
       co_package_join =
@@ -362,6 +357,7 @@ let coop_catalogue : coop_info list =
       co_versions = "unknown";
       co_recorded = "the fetches, as for any project" };
     { co_kind = Co_depext;
+      co_label = "direct depext";
       co_name = "direct depext — package identity, no conf hop";
       co_draft = "a package-specific bridge — add(custom_bridge)";
       co_package_join = "the binding package names the system package itself";
@@ -369,6 +365,7 @@ let coop_catalogue : coop_info list =
       co_versions = "the depext's bound names the system package's version";
       co_recorded = "the fetches" };
     { co_kind = Co_capability;
+      co_label = "capability file";
       co_name = "artifact-centric, capability-mediated";
       co_draft = "declarative capability-mediated (Cabal with apt)";
       co_package_join = "none";
@@ -376,6 +373,7 @@ let coop_catalogue : coop_info list =
       co_versions = "the capability's own version, if it states one";
       co_recorded = "the fetches" };
     { co_kind = Co_artifacts;
+      co_label = "artifacts only";
       co_name = "artifact-centric, no bridge";
       co_draft =
         "artifact-centric (Cargo *-sys with apt; pip sdists) — here, \
@@ -390,6 +388,7 @@ let coop_catalogue : coop_info list =
       co_versions = "whatever the binding's build logic enforces";
       co_recorded = "the binding's build, which is canary's own step" };
     { co_kind = Co_local;
+      co_label = "local";
       co_name = "no provider ecosystem — the native side is local";
       co_draft = "a package-specific rewrite — vendor(native_source)";
       co_package_join = "none: neither side is installed by a package manager";
@@ -397,6 +396,7 @@ let coop_catalogue : coop_info list =
       co_versions = "the source refs canary builds";
       co_recorded = "the builds, which are canary's own steps" };
     { co_kind = Co_incomplete;
+      co_label = "incomplete";
       co_name = "incomplete — one side is absent";
       co_draft = "—";
       co_package_join = "—";
@@ -1340,6 +1340,167 @@ let topologies_of_worlds ((name, pr) : string * Canary_project_run.project_run) 
            (j.in_lang, string_of_supplier b.tp_lang, string_of_supplier b.tp_sys,
             string_of_join b.tp_join))
 
+(* ── THE PACKAGE BAND IS ONE COOPERATION (2026-09-23, status.md §2.7;
+   user: draw "the package-manager part of the diagram per cooperation,
+   the way the artifact part is drawn per mechanism") ─────────────────
+
+   The artifact band is drawn per binding mechanism below
+   ([artifact_variant_of]: a ctypes binding has no stub node). This does
+   the same for the band above it: which package-manager, package and
+   source nodes EXIST in a topology. It is a function of the topology and
+   not only of its kind, because the native side's provision decides the
+   source nodes whatever the join is — a no-PM chain over a library built
+   here has a source tree, one over apt's has not.
+
+   The rules, one per node, and each is a statement about the chain:
+   - the system PM and its package exist when a system package manager
+     supplies the library, OR when a conf gate checks the system even
+     though this world built its own (the gate's target is real, its
+     payload unused — [band_dead]);
+   - the capability file exists when that package does AND something
+     reads it: a conf check, or a binding BUILD — ours, or the one a
+     source-based package manager runs inside its install, whose
+     configure asks pkg-config. CPython's stdlib extension reads nothing:
+     it was linked when the interpreter was built;
+   - the bridge exists when the join has one — and where the join could
+     not be read at all, it is not hidden: unknown is not absent;
+   - the language PM, the binding package and the program that names
+     only that package exist when a language package manager supplies
+     the binding, or when the world PUBLISHES the binding it built
+     (zarith's zarith-no-conf);
+   - the native source exists when the library is built or staged here,
+     the staged copy when it is staged, and the binding's source when
+     the binding is built — here, or by opam inside its install.
+
+   ⚠ THE LAST RULE WAS WRONG IN THE FIRST DRAFT, and the hand-drawn
+   cases caught it: it said the binding's source exists only where WE
+   build the binding. The conf case draws Zarith.git, and it is right to —
+   opam fetched that source and compiled it inside the install, which is
+   where the build placeholder stands. A pip wheel has no such source. *)
+
+(** The node ids the package band decides — the only ones
+    {!band_hidden} can name. *)
+let band_nodes : string list =
+  [ "pm_sys"; "pkg_sys"; "cap"; "bridge"; "pm_lang"; "pkg_lang";
+    "consumer_package"; "src_sys"; "staged_sys"; "src_lang" ]
+
+(** A SYSTEM package manager, as its driver says ([Canary_pm.properties]'
+    scope) rather than as a list here would. *)
+let is_system_pm (pm : Canary_store.package_manager) : bool =
+  match Canary_pm.properties pm with
+  | Some p -> Poly.equal p.Canary_store.scope Canary_store.System
+  | None -> false
+
+(** Does installing a binding's package BUILD it on this machine? opam
+    does — the stub is compiled and the module linked inside its install;
+    a pip wheel arrives built. Read from the one list the placeholder steps are
+    made from ([Canary_pm_action.inside_install]). *)
+let builds_from_source (pm : Canary_store.package_manager) : bool =
+  List.exists (Canary_pm_action.inside_install pm ~of_binding:true) ~f:(fun p ->
+      Poly.equal p.Canary_pm_action.ph_does Canary_pm_action.Build_package)
+
+(** Does this world PUBLISH the binding it did not fetch — pack it into a
+    package of its own (zarith's zarith-no-conf, z3's z3.dev)? The
+    project's wrapper declaration says so ([pr_wrapper_pkgs]), and
+    [matrix.record_carries_each_worlds_chain] holds that answer to the
+    world's steps: a pack step exists exactly where this says. *)
+let publishes_of_world ~(pr : Canary_project_run.project_run)
+    ~(world : Canary_artifact.assignment) (lang : Canary_lang.lang) : bool =
+  List.Assoc.mem pr.Canary_project_run.pr_wrapper_pkgs lang ~equal:Poly.equal
+  && not
+       (Poly.equal
+          (Option.map (origin_of ~pr ~world (Canary_basic.Binding lang)) ~f:fst)
+          (Some Canary_store.Fetched))
+
+let band_hidden ?(publishes = false) (t : t) : string list =
+  let system_pm = match t.tp_sys with By_pm pm -> is_system_pm pm | _ -> false in
+  let unknown = match t.tp_join with Undeclared_join -> true | _ -> false in
+  let gated =
+    List.exists (bridges_of_join t.tp_join) ~f:(fun g -> Canary_bridge.has_check g.gb_bridge)
+  in
+  let sys_package = system_pm || gated in
+  let binding_built = match t.tp_lang with Built_here -> true | _ -> false in
+  let pm_builds = match t.tp_lang with By_pm pm -> builds_from_source pm | _ -> false in
+  let lang_package = publishes || match t.tp_lang with By_pm _ -> true | _ -> false in
+  List.filter_map
+    ~f:(fun (node, present) -> if present then None else Some node)
+    [ ("pm_sys", sys_package);
+      ("pkg_sys", sys_package);
+      ("cap", sys_package && (gated || unknown || binding_built || pm_builds));
+      ("bridge", unknown || not (List.is_empty (bridges_of_join t.tp_join)));
+      ("pm_lang", lang_package);
+      ("pkg_lang", lang_package);
+      ("consumer_package", lang_package);
+      ("src_sys", (match t.tp_sys with Built_here | Staged -> true | _ -> false));
+      ("staged_sys", (match t.tp_sys with Staged -> true | _ -> false));
+      ("src_lang", binding_built || pm_builds) ]
+
+(** Edges that EXIST and do not fire: where a conf gate checks a system
+    package this world does not use, that package's payload is not what
+    the chain links or compiles against. *)
+let band_dead (t : t) : string list =
+  let system_pm = match t.tp_sys with By_pm pm -> is_system_pm pm | _ -> false in
+  let gated =
+    List.exists (bridges_of_join t.tp_join) ~f:(fun g -> Canary_bridge.has_check g.gb_bridge)
+  in
+  if gated && not system_pm then [ "realize_sys"; "realize_hdr" ] else []
+
+(** Why a kind has no band to draw, when it has none: it is not a
+    cooperation — a join canary could not read, or a chain with one side
+    absent. *)
+let no_band_because : coop -> string option = function
+  | Co_undeclared ->
+      Some
+        "its gate is declared where canary cannot read it, so which package \
+         band it has is unknown"
+  | Co_incomplete -> Some "one side is absent, so there is no chain to draw"
+  | _ -> None
+
+let has_band (k : coop) : bool = Option.is_none (no_band_because k)
+
+(** ONE COOPERATION KIND'S PACKAGE BAND, from the worlds that realize it:
+    a node is absent from the kind when NO world of it has the node, and
+    an edge greyed when EVERY world greys it — so a kind never hides what
+    one of its worlds has. DERIVED from the worlds rather than written per
+    kind: no-PM-between says nothing about where the library comes from,
+    and sqlite's Python worlds take it from apt, from a build and from a
+    staged copy. *)
+type coop_band = {
+  cb_kind : coop;
+  cb_hidden : string list;  (** node ids *)
+  cb_dead : string list;  (** edge ids *)
+  cb_worlds : int;  (** how many (world, binding language) pairs realize it *)
+}
+
+let coop_bands (projects : (string * Canary_project_run.project_run) list) :
+    coop_band list =
+  let instances =
+    List.concat_map projects ~f:(fun (_, pr) ->
+        List.concat_map (Canary_project_run.scenarios_of pr) ~f:(fun world ->
+            List.map (binding_langs pr) ~f:(fun lang ->
+                let t = topology_of_world ~pr ~world lang in
+                ( coop_of t,
+                  band_hidden ~publishes:(publishes_of_world ~pr ~world lang) t,
+                  band_dead t ))))
+  in
+  let inter = function
+    | [] -> []
+    | x :: xs ->
+        List.fold xs ~init:x ~f:(fun acc l ->
+            List.filter acc ~f:(List.mem l ~equal:String.equal))
+  in
+  List.filter_map coop_catalogue ~f:(fun info ->
+      let k = info.co_kind in
+      match List.filter instances ~f:(fun (k', _, _) -> Poly.equal k k') with
+      | [] -> None
+      | _ when not (has_band k) -> None
+      | xs ->
+          Some
+            { cb_kind = k;
+              cb_hidden = inter (List.map xs ~f:(fun (_, h, _) -> h));
+              cb_dead = inter (List.map xs ~f:(fun (_, _, d) -> d));
+              cb_worlds = List.length xs })
+
 (* ── THE ARTIFACT BAND IS ONE BINDING MECHANISM ───────────────────────
 
    (user, 2026-09-22: "for the artifact layer, this is actually one
@@ -1412,6 +1573,30 @@ let artifact_variants () : artifact_variant list =
   List.map Canary_mechanism.mechanism_catalogue
     ~f:(fun (i : Canary_mechanism.mechanism_info) ->
       artifact_variant_of i.Canary_mechanism.mi_mechanism)
+
+(* ── WHAT ONE CHAIN LACKS (2026-09-23, status.md §2.7) ────────────────
+
+   A chain is one mechanism's artifact band joined with one cooperation's
+   package band, and what it does NOT have is the union of what each
+   lacks — closed over edges, because an edge goes when either end goes
+   (the page's own drawing rule). This is structural absence: the relation
+   does not exist in the chain. It is not the recorded view's dimming,
+   which marks what exists and nothing in the run touched — and
+   [overview.chain_absence_is_never_recorded] holds the two apart: nothing
+   a chain lacks is ever realized, observed or placeheld by its run. *)
+
+(** Node and edge ids, closed: every edge named, or with an end named. *)
+let with_edges (ids : string list) : string list =
+  let named id = List.mem ids id ~equal:String.equal in
+  List.filter_map nodes ~f:(fun n -> if named n.nd_id then Some n.nd_id else None)
+  @ List.filter_map edges ~f:(fun e ->
+        if named e.eg_id || named e.eg_to || List.exists e.eg_from ~f:named then
+          Some e.eg_id
+        else None)
+
+let chain_gone ~(mechanism : Canary_mechanism.mechanism) ?publishes (t : t) :
+    string list =
+  with_edges ((artifact_variant_of mechanism).av_hidden @ band_hidden ?publishes t)
 
 (* ── WHERE EVERY CLAIM SITS ───────────────────────────────────────────
 
@@ -1543,6 +1728,29 @@ let claim_sites_on (edge_id : string) : claim_site list =
   List.filter claim_sites ~f:(fun p ->
       List.mem p.cs_edges edge_id ~equal:String.equal)
 
+(** CLAIM APPLICABILITY, PER CHAIN (2026-09-23, status.md §2.7; user: a
+    bridge's claim applies only where there is a bridge). A claim applies
+    to a chain when one of its edges exists there. ONE, not all: the
+    library's declaration claims sit on both edges that can produce a
+    library, as alternatives, and a fetched library has only one of them.
+    The end-to-end sites span edges that come and go together — every
+    edge of [package_resolution_suffices] needs the binding package — so
+    today "one" and "all" agree on them.
+
+    WORLD-LEVEL by pass 2's membership rule: pass 2 answers which claims
+    a MECHANISM can carry ([Canary_project_analysis.carries]); which a
+    CHAIN can carry needs the world's cooperation, so it is computed beside
+    firing, from {!chain_gone}. *)
+let claim_applies ~(gone : string list) (cs : claim_site) : bool =
+  List.exists cs.cs_edges ~f:(fun e -> not (List.mem gone e ~equal:String.equal))
+
+(** The claims one chain can carry, in [claim_sites] order, once each. *)
+let claims_of_chain ~(gone : string list) : string list =
+  List.filter_map claim_sites ~f:(fun cs ->
+      if claim_applies ~gone cs then Some cs.cs_claim else None)
+  |> List.fold ~init:[] ~f:(fun acc c ->
+         if List.mem acc c ~equal:String.equal then acc else acc @ [ c ])
+
 (** ⚠ THE CENSUS, and it is the reason this model was worth drawing.
     RELATIONS with no claim on them — each is something a real tool
     established and from which we recover nothing.
@@ -1575,4 +1783,4 @@ let dangling_claim_sites () : string list =
    the unreachable gates and the undeclared capability bridge — were the
    only things it said that the page did not, and both moved to the
    page's topology section, the second now computed by
-   {!no_capability_bridge_declared} rather than written as a sentence. *)
+   {!no_capability_file_declared} rather than written as a sentence. *)

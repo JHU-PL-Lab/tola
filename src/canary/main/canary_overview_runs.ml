@@ -609,15 +609,12 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
   (* what the run recorded wins over what the project declared *)
   let names =
     let declared =
-      (* does this world publish its own binding package? — the step
-         list says, not the declaration *)
-      let publishes =
-        List.exists steps ~f:(fun w ->
-            Poly.equal w.M.ws_action (Canary_basic.Publish (Canary_basic.Binding lang))
-            && Option.is_none w.M.ws_inspects)
-      in
+      (* does this world publish its own binding package? ONE answer,
+         the package band's — the wrapper declaration, which
+         [matrix.record_carries_each_worlds_chain] holds to the steps *)
       match assignment_of_row r with
-      | Some (pr, a) -> declared_names pr a lang ~publishes
+      | Some (pr, a) ->
+          declared_names pr a lang ~publishes:(T.publishes_of_world ~pr ~world:a lang)
       | None -> []
     in
     first_per_node
@@ -676,7 +673,10 @@ let views ?root (m : M.t) : view list =
    draws; the first world the predicate admits is the counterpart. The
    wheel case has none — its project, z3, is muted — and the built case's
    is sqlite, not the llvm its text describes: no llvm world builds the
-   library under a fetched, gated binding. *)
+   library under a fetched, gated binding. It is sqlite's INSTALLED world
+   (2026-09-23): built here and staged, as the drawing has both — the
+   built-only world has no staged copy, which the package band now says
+   ([Canary_topology.band_hidden]) and the drawing does not. *)
 
 let provision_of_kind (a : Canary_artifact.assignment)
     (k : Canary_basic.artifact_kind) : Canary_store.provision option =
@@ -694,7 +694,7 @@ let counterparts :
     ( "built",
       ( "sqlite",
         (fun a ->
-          is Canary_basic.Lib Canary_artifact.Built a
+          is Canary_basic.Lib Canary_artifact.Installed a
           && is ocaml_binding Canary_artifact.Fetched a),
         Canary_lang.OCaml ) );
     ("unified", ("torch", (fun _ -> true), Canary_lang.OCaml));
