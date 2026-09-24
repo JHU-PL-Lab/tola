@@ -476,6 +476,32 @@ ported as a whole (brew's `pkg-config`, `otool`, `.dylib`) or not at all.
 
 ## 2. Declaration gaps
 
+### Open — sqlite names its library's system package twice, differently
+
+**sqlite** (found 2026-09-24, when the overview's §1 began writing each
+node's declared name under its label).
+
+Two records answer "which system package supplies the library", and
+they disagree on both platforms:
+
+| where | Linux (apt) | macOS (brew) |
+| --- | --- | --- |
+| `mk_prebuilt_info ~system_package_linux ~system_package_macos` (top of `canary_project_sqlite.ml`) — the store's provider | `sqlite3` | `sqlite` |
+| the action-variant table's `Fetch_lib` row (`sqlite_table_rows`) | `libsqlite3-dev` | `sqlite3` |
+
+On Ubuntu, `sqlite3` is the command-line tool, not the library:
+`libsqlite3-0` ships `libsqlite3.so.0` and `libsqlite3-dev` its headers.
+The provider is what the overview's names read, so sqlite's native
+package shows as `sqlite3`; the hand-drawn "no package manager between"
+case says `libsqlite3-0`. On Homebrew the formula is `sqlite`, with
+`sqlite3` an alias.
+
+Not investigated: which of the two each consumer reads —
+`fetch_lib`'s install, the apt probe's locator, `spec-check`. Decide
+which record is the declaration, derive the other from it, and let
+`spec-check` refuse a disagreement — the same class as zlib's, below: two
+declared answers to one question, and nothing comparing them.
+
 ### Open — zlib declares a symbol its own inspection cannot see
 
 **zlib** (found 2026-09-17, the moment the declaration claims began
