@@ -1302,6 +1302,44 @@ blank.
   and by dependent package managers that ignore the language. The click
   behaviour itself was checked with a scripted sequence in headless
   Chromium, which is not a pin.
+- **§1 absorbs §2 and §2.1 — landed the same day** (user: "Given the
+  section 1 includes both the generic chain and the concrete examples,
+  shall we remove the diagrams in ss2 and ss 2.1. Some legends and notes
+  for diagrams in ss 2 and 2.1 are nice, so please merged them into the
+  ss 1's diagram rather than just deleting them"; with four smaller asks
+  in the same message). The page now has ONE diagram. The hand-drawn
+  cases of §2 are no longer drawn: each one's prose, and what it said
+  about single nodes, is the note on the cooperation it illustrates
+  (`ca_coop`, which a pin holds to its counterpart world's cooperation).
+  Their names, hidden nodes and greyed edges stay in the page module as
+  the ORACLE the pins still hold the derivations to. §2.1's recorded
+  comparison became part of choosing a package: §1 draws that package's
+  recorded run, with a selector where it has several recorded worlds,
+  and brings §2.1's key and its lists (what the run recorded around the
+  bridge, what the package managers did unseen, the claims, the steps
+  with no edge) under the diagram. A name under a node is upright where
+  the run recorded it and italic where only the project declares it, and
+  a third line gives where the run placed the artifact. Each recorded
+  view now carries the id of the package it realizes (`vw_case`, spelled
+  by `Canary_topology.chain_id`), which is how a package finds its
+  worlds. `#rec=<view>` still links a world. The hand-versus-recorded
+  table went — the user had compared. The sections are renumbered:
+  agreement overview §2, census §3, the tables §4.
+
+  The four smaller asks: the mechanisms are grouped by language, so
+  cstubs and dynlink sit together (in §4.2 too); each cooperation button
+  names its package managers ("opam ↔ apt", "opam · pip", "no PM"); the
+  concrete row is "package in canary"; and clicking any button but a
+  package's outlines the package nodes it is about — a native-side PM its
+  native package, a language-side PM its binding package (and, for opam,
+  the bridge package, since a conf package is an opam package), a
+  mechanism the binding package, a cooperation the package nodes its band
+  keeps (`Canary_overview_join.related`).
+
+  Pinned by `overview.chain_choices_draw_one_chain`, extended for all of
+  it — falsified by the catalogue order, by dropping the merged notes and
+  by opam losing its bridge. `overview.recorded_runs_are_an_overlay` now
+  also holds every recorded view to a package in §1.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

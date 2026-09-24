@@ -64,6 +64,10 @@ type view = {
   vw_candidates : string list;
       (** the placeholder claims — named, no evaluator — that apply to
           this chain *)
+  vw_case : string;
+      (** the package in canary this world realizes — the chain id the
+          overview's §1 buttons carry ({!Canary_topology.chain_id}), which
+          is how choosing a package finds its recorded worlds *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -675,6 +679,12 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_observed = observed;
     vw_placeholders = placeholders;
     vw_chain = chain;
+    vw_case =
+      (match chain with
+       | Some c ->
+           T.chain_id ~project:r.M.project ~lang ~lang_side:c.M.ch_lang_side
+             ~native_side:c.M.ch_native_side
+       | None -> "");
     vw_gone = gone;
     vw_candidates =
       List.filter_map T.claim_sites ~f:(fun cs ->
@@ -703,7 +713,13 @@ let views ?root (m : M.t) : view list =
    library under a fetched, gated binding. It is sqlite's INSTALLED world
    (2026-09-23): built here and staged, as the drawing has both — the
    built-only world has no staged copy, which the package band now says
-   ([Canary_topology.band_hidden]) and the drawing does not. *)
+   ([Canary_topology.band_hidden]) and the drawing does not.
+
+   THE COMPARISON LEFT THE PAGE on 2026-09-24 (user: §1 draws the generic
+   chain and the concrete ones, so §2's drawings and §2.1's recorded
+   copies of them went, their notes merged into §1). The hand-drawn cases
+   stay as DATA — the oracle the pins hold the derivations to — and this
+   mapping is how those pins find the world each case stands for. *)
 
 let provision_of_kind (a : Canary_artifact.assignment)
     (k : Canary_basic.artifact_kind) : Canary_store.provision option =
@@ -752,6 +768,7 @@ let json_of_view (v : view) : Yojson.Basic.t =
   let pairs kvs = `Assoc (List.map kvs ~f:(fun (k, s) -> (k, `String s))) in
   `Assoc
     ([ ("id", `String v.vw_id);
+       ("case", `String v.vw_case);
        ("project", `String v.vw_project);
        ("scenario", `String v.vw_scenario);
        ("lang", `String (Canary_lang.string_of_lang v.vw_lang));
@@ -802,9 +819,7 @@ let payload (m : M.t) ~(generated_at : string) : string =
       (`Assoc
         [ ("machine", `String (Canary_store.string_of_platform (Canary_store.platform ())));
           ("generated", `String generated_at);
-          ("views", `List (List.map vs ~f:json_of_view));
-          ( "cases",
-            `Assoc (List.map (case_views vs) ~f:(fun (k, id) -> (k, `String id))) ) ])
+          ("views", `List (List.map vs ~f:json_of_view)) ])
   ^ suffix
 
 let file_name_of (d : Canary_store.distro) : string =

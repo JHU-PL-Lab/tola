@@ -140,7 +140,9 @@ let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
 <text class="nlabel" x="%d" y="%d"%s>%s</text>%s|}
       cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y box_w box_h p.px
       (if Option.is_some sub then p.py - 2 else p.py + 5)
-      (if case_slot then Printf.sprintf {| data-y0="%d" data-y1="%d"|} (p.py + 5) (p.py - 2)
+      (if case_slot then
+         Printf.sprintf {| data-y0="%d" data-y1="%d" data-y2="%d"|} (p.py + 5) (p.py - 2)
+           (p.py - 7)
        else "")
       (esc label) badge
   in
@@ -151,9 +153,13 @@ let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
         Printf.sprintf {|<text class="nsub" x="%d" y="%d">%s</text>|} p.px
           (p.py + 14) (esc s)
   in
+  (* the name, and under it — while a recorded run is drawn — where the run
+     placed the artifact: a third line, so the label and the name move up *)
   let slot =
     if case_slot then
-      Printf.sprintf {|<text class="ncase" x="%d" y="%d"></text>|} p.px (p.py + 14)
+      Printf.sprintf
+        {|<text class="ncase" x="%d" y="%d" data-y1="%d" data-y2="%d"></text><text class="nplace" x="%d" y="%d"></text>|}
+        p.px (p.py + 14) (p.py + 14) (p.py + 7) p.px (p.py + 19)
     else ""
   in
   main ^ subline ^ slot ^ "</g>"
@@ -444,10 +450,16 @@ align-self:center;min-width:12.5em;text-transform:uppercase;letter-spacing:.04em
 .join .edge.jdead{opacity:.18}
 .join .node .ncase{font:italic 11.5px ui-monospace,SFMono-Regular,Menlo,monospace;
 fill:var(--acc);text-anchor:middle}
+.join .node .ncase.rec-name{font-style:normal}
+.join .node .nplace{font:10px ui-monospace,SFMono-Regular,Menlo,monospace;
+fill:var(--mut);text-anchor:middle}
+.join .node.related rect{stroke:var(--acc);stroke-width:3}
+.nm-rec{font:12px ui-monospace,monospace;color:var(--acc)}
+.nm-decl{font:italic 12px ui-monospace,monospace;color:var(--acc)}
 .cgroup{display:inline-flex;flex-wrap:wrap;gap:.3rem;align-items:center;margin-right:.55rem}
 .cproj{font:600 12px ui-sans-serif,system-ui,sans-serif;color:var(--mut)}
 .cgroup button{font-size:12px;padding:.24rem .55rem}
-.selbar button.hint{border-color:var(--acc);border-style:dashed}
+.selbar button.hint{border:2px dashed var(--acc)}
 section.case>p{color:var(--mut);font-size:.92rem;margin:.4rem 0 0}
 .mechnote{color:var(--mut);font-size:.9rem;margin:.3rem 0 0}
 .edet{font:12px ui-monospace,monospace;color:var(--mut);min-height:2.4em;
@@ -636,7 +648,12 @@ let binding_table projects =
           [ "mechanism"; "language"; "discipline"; "how the library is bound";
             "a compiled stub?"; "does the consumer record its NEEDED?";
             "a typed boundary?"; "used by" ])
-       (String.concat (List.map Canary_mechanism.mechanism_catalogue ~f:row)))
+       (String.concat
+          (List.map ~f:row
+             (* grouped by language, as §1's buttons are (user, 2026-09-24) *)
+             (Canary_overview_join.by_language
+                (fun (i : Canary_mechanism.mechanism_info) -> i.Canary_mechanism.mi_lang)
+                Canary_mechanism.mechanism_catalogue))))
 
 (* the instances of one cooperation kind, and the two package managers
    (or local suppliers) each joins *)
@@ -787,6 +804,146 @@ let node_legend () =
      is</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map T.nodes ~f:row))
 
+(* ── THE HAND-DRAWN CASES: notes and an oracle, no longer drawings ─────
+
+   Five cooperations were drawn by hand as §2 (2026-09-22), and §2.1 drew
+   each one's recorded counterpart beside it (2026-09-23), so what the
+   derivations drew could be compared with what was expected. §1 now draws
+   every chain canary runs, named from declarations and overlaid with its
+   recorded run, so the drawings went (user, 2026-09-24: "shall we remove
+   the diagrams in ss2 and ss 2.1 … please merged them into the ss 1's
+   diagram rather than just deleting them"). What stays:
+   - each case's prose, shown in §1 with the cooperation it illustrates;
+   - its names, the nodes it leaves out and the edges it greys — the
+     ORACLE the pins still hold the derivations to
+     ([overview.package_band_is_one_cooperation],
+     [overview.recorded_views_are_named]). *)
+
+(** One hand-drawn case. *)
+type case = {
+  ca_key : string;
+  ca_coop : T.coop;
+      (** the cooperation it illustrates — held to its counterpart
+          world's by [overview.package_band_is_one_cooperation] *)
+  ca_title : string;
+  ca_blurb : string;
+  ca_names : (string * string) list;  (** node id → what the case calls it *)
+  ca_subs : (string * string) list;  (** node id → what the case says about it *)
+  ca_hidden : string list;  (** nodes that do not exist in the case *)
+  ca_dead : string list;  (** edges that exist and do not fire *)
+}
+
+let hand_cases : case list =
+  [ { ca_key = "conf"; ca_coop = T.Co_conf; ca_title = "conf-* over a system library";
+      ca_blurb =
+        "Both bridges present, and each sits with its author. The \
+         SYMBOLIC path runs <code>binding → conf → depext → system \
+         package</code>; the ARTIFACT path runs <code>conf predicate → \
+         capability query → the library on disk</code>. They can land \
+         on different libraries, and nothing today compares them.";
+      ca_names =
+        [ ("pm_sys", "apt"); ("pkg_sys", "libgmp-dev");
+          ("bridge", "conf-gmp"); ("cap", "gmp.pc"); ("pm_lang", "opam");
+          ("pkg_lang", "zarith"); ("lib_sys", "libgmp.so.10");
+          ("hdr_sys", "gmp.h"); ("src_lang", "Zarith.git");
+          ("stub_lang", "zarith_stubs.a"); ("mod_lang", "zarith.cmxa");
+          ("surf_lang", "zarith.mli");
+          ("consumer_artifact", "zarith_example (paths)");
+          ("consumer_package", "zarith_example (-package zarith)") ];
+      ca_subs =
+        [ ("bridge", "an opam package — written by an opam maintainer");
+          ("cap", "inside libgmp-dev — written by the Debian packager") ];
+      ca_hidden = [ "src_sys"; "staged_sys" ]; ca_dead = [] };
+    { ca_key = "wheel"; ca_coop = T.Co_absorbed; ca_title = "the library inside the wheel";
+      ca_blurb =
+        "The consumer package carries the native artifact. The system \
+         PM, the system package and <em>both</em> bridges disappear — \
+         there is no cooperation left, which is a different statement \
+         from having no bridge. Every claim that compared two \
+         ecosystems has nothing to compare.";
+      ca_names =
+        [ ("pm_lang", "pip"); ("pkg_lang", "z3-solver (wheel)");
+          ("lib_sys", "libz3.so — INSIDE the wheel");
+          ("mod_lang", "z3/*.py + native ext");
+          ("surf_lang", "z3.__all__");
+          ("consumer_package", "python -c 'import z3'") ];
+      ca_subs =
+        [ ("lib_sys", "no system package, no bridge, no discovery");
+          ("pkg_lang", "one package supplies both sides") ];
+      ca_hidden =
+        [ "pm_sys"; "pkg_sys"; "bridge"; "cap"; "src_sys"; "staged_sys";
+          "hdr_sys"; "src_lang"; "stub_lang" ];
+      ca_dead = [] };
+    { ca_key = "built"; ca_coop = T.Co_gated_local;
+      ca_title = "built here — and the bridge still gates";
+      ca_blurb =
+        "The native side is built here, so the system package is not \
+         used. The binding package's <code>conf-llvm-shared {= \
+         \"19\"}</code> constraint is still in its depends and opam \
+         still evaluates it — against the system, which this world is \
+         not using. The gate passes or fails on evidence unrelated to \
+         the artifacts under test.";
+      ca_names =
+        [ ("src_sys", "llvm-project @ ref");
+          ("lib_sys", "libLLVM.so (built)");
+          ("staged_sys", "install prefix");
+          ("pm_sys", "apt — not used here");
+          ("pkg_sys", "llvm-19-dev — not used here");
+          ("bridge", "conf-llvm-shared {= 19}"); ("cap", "llvm-config");
+          ("pm_lang", "opam"); ("pkg_lang", "llvm.19-shared");
+          ("mod_lang", "llvm.cmxa");
+          ("consumer_artifact", "llvm_example (build tree)");
+          ("consumer_package", "llvm_example (-package llvm)") ];
+      ca_subs =
+        [ ("bridge", "still runs — against the SYSTEM, not this build");
+          ("pkg_sys", "the gate validates this, the world uses that") ];
+      ca_hidden = [];
+      ca_dead = [ "resolve_sys"; "realize_sys"; "realize_hdr"; "realize_cap" ] };
+    { ca_key = "unified"; ca_coop = T.Co_unified; ca_title = "one package universe";
+      ca_blurb =
+        "Both sides come from the same package manager, so there is no \
+         second ecosystem to bridge to — the constraint travels as an \
+         ordinary dependency in one namespace. This is torch: the \
+         library arrives through opam as an upstream binary, named \
+         directly by a depext bound rather than through a conf hop.";
+      ca_names =
+        [ ("pm_lang", "opam"); ("pkg_lang", "torch");
+          ("bridge", "depext: libtorch >=2.1.0 <2.2.0");
+          ("lib_sys", "libtorch.so (opam binary)");
+          ("hdr_sys", "torch/*.h"); ("src_lang", "ocaml-torch.git");
+          ("stub_lang", "libtorch_core_stubs.a");
+          ("mod_lang", "torch.cmxa"); ("surf_lang", "torch.mli");
+          ("consumer_artifact", "torch_example (paths)");
+          ("consumer_package", "torch_example (-package torch)") ];
+      ca_subs =
+        [ ("bridge", "metadata inside the consumer — not a package of its own");
+          ("pkg_lang", "same PM on both sides") ];
+      ca_hidden = [ "pm_sys"; "pkg_sys"; "cap"; "src_sys"; "staged_sys" ];
+      ca_dead = [] };
+    { ca_key = "none"; ca_coop = T.Co_no_pm; ca_title = "no package manager between them";
+      ca_blurb =
+        "The binding and the library were joined by whoever built the \
+         interpreter, outside any package manager we can observe. \
+         CPython's stdlib <code>sqlite3</code> is the case. The \
+         coupling is entirely real — the extension records a NEEDED on \
+         libsqlite3 and the loader resolves it — but there is no \
+         declaration anywhere to check it against. <em>No gate</em> and \
+         <em>no gate mechanism</em> are different situations.";
+      ca_names =
+        [ ("pm_sys", "apt"); ("pkg_sys", "libsqlite3-0");
+          ("lib_sys", "libsqlite3.so.0"); ("hdr_sys", "sqlite3.h");
+          ("pm_lang", "(the interpreter build)");
+          ("pkg_lang", "CPython stdlib");
+          ("stub_lang", "_sqlite3.cpython-*.so");
+          ("mod_lang", "sqlite3/__init__.py");
+          ("surf_lang", "dir(sqlite3)");
+          ("consumer_package", "python -c 'import sqlite3'") ];
+      ca_subs =
+        [ ("pkg_lang", "chosen at interpreter build time, not here");
+          ("lib_sys", "the loader picks it; nothing declared which") ];
+      ca_hidden = [ "bridge"; "cap"; "src_sys"; "staged_sys"; "src_lang" ];
+      ca_dead = [] } ]
+
 (* ── THE CHAIN, CHOSEN (2026-09-23, status.md §2.7; user: draw the
    package-manager part per cooperation, the way the artifact part is
    drawn per mechanism — and, 2026-09-24, "can we also make the pm itself
@@ -851,7 +1008,7 @@ let join_panel (j : Canary_overview_join.t) =
   in
   let m_buttons =
     String.concat
-      (List.map (T.artifact_variants ()) ~f:(fun v ->
+      (List.map (J.variants ()) ~f:(fun v ->
            let m = Canary_mechanism.string_of_mechanism v.T.av_mechanism in
            button ~g:"m" ~v:m ~lit:(String.equal m m0)
              (Printf.sprintf {|%s <span class="bl">%s</span>|} (esc m)
@@ -863,9 +1020,10 @@ let join_panel (j : Canary_overview_join.t) =
            let info = T.info_of_coop b.T.cb_kind in
            let k = T.code_of_coop b.T.cb_kind in
            button ~g:"k" ~v:k ~title:info.T.co_name ~lit:(String.equal k k0)
-             (esc info.T.co_label)))
+             (Printf.sprintf {|%s <span class="bl">%s</span>|} (esc info.T.co_label)
+                (esc (J.pm_label j b.T.cb_kind)))))
   in
-  (* the concrete chains, grouped by project in §5.4's order *)
+  (* the concrete chains, grouped by project in §4.4's order *)
   let projects_in_order =
     List.fold j.J.jn_cases ~init:[] ~f:(fun acc c ->
         if List.mem acc c.J.cs_project ~equal:String.equal then acc
@@ -900,7 +1058,7 @@ let join_panel (j : Canary_overview_join.t) =
   in
   let m_notes =
     String.concat
-      (List.map (T.artifact_variants ()) ~f:(fun v ->
+      (List.map (J.variants ()) ~f:(fun v ->
            let m = Canary_mechanism.string_of_mechanism v.T.av_mechanism in
            Printf.sprintf {|<p class="mechnote jnote" data-jm="%s"%s><b>%s</b> — %s%s</p>|}
              (esc m) (hidden_unless (String.equal m m0)) (esc m)
@@ -908,15 +1066,33 @@ let join_panel (j : Canary_overview_join.t) =
               else "<b>Not wired — no live project binds through it.</b> ")
              (esc v.T.av_note)))
   in
+  (* THE HAND-DRAWN CASE A COOPERATION WAS ILLUSTRATED BY — its prose, and
+     what it said about single nodes, merged here from the retired §2 *)
+  let hand_note k =
+    match List.find hand_cases ~f:(fun c -> Poly.equal c.ca_coop k) with
+    | None -> ""
+    | Some c ->
+        Printf.sprintf {|<br><b>%s.</b> %s%s|} (esc c.ca_title) c.ca_blurb
+          (String.concat
+             (List.map c.ca_subs ~f:(fun (n, s) ->
+                  Printf.sprintf " <i>%s</i>: %s."
+                    (esc
+                       (Option.value_map (T.node_by_id n) ~default:n ~f:(fun nd ->
+                            nd.T.nd_label)))
+                    (esc s))))
+  in
+  (* a cooperation's note says what it is whether or not a concrete
+     package is chosen; its band's note only while none is *)
   let k_notes =
     String.concat
       (List.map j.J.jn_kinds ~f:(fun b ->
            let info = T.info_of_coop b.T.cb_kind in
            let k = T.code_of_coop b.T.cb_kind in
            Printf.sprintf
-             {|<p class="mechnote jnote" data-jk="%s"%s><b>%s</b> — %s. The two sides: %s. Drawn from <span class="jcount">%d</span> of its chains (one per world and binding language) — those with the chosen package managers: a node is left out only when none of them has it.</p>|}
+             {|<p class="mechnote jnote" data-jk="%s"%s><b>%s</b> — %s.%s</p><p class="mechnote jnote" data-jkb="%s"%s>Its two sides: %s. Drawn from <span class="jcount">%d</span> of its chains (one per world and binding language) — those with the chosen package managers: a node is left out only when none of them has it.</p>|}
              (esc k) (hidden_unless (String.equal k k0)) (esc info.T.co_name)
-             (esc info.T.co_package_join)
+             (esc info.T.co_package_join) (hand_note b.T.cb_kind) (esc k)
+             (hidden_unless (String.equal k k0))
              (esc (String.concat ~sep:", " (sides b.T.cb_kind)))
              b.T.cb_worlds))
   in
@@ -932,7 +1108,7 @@ let join_panel (j : Canary_overview_join.t) =
     String.concat
       (List.map j.J.jn_cases ~f:(fun c ->
            Printf.sprintf
-             {|<p class="mechnote jnote" data-jc="%s" hidden><b>%s</b> (%s) — %s ↔ %s: %s. Each name under a node is what %s declares it is; the chain is drawn from its %d world%s.</p>|}
+             {|<p class="mechnote jnote" data-jc="%s" hidden><b>%s</b> (%s) — %s ↔ %s: %s. Under each generic label, what %s declares the node is, in italics — or, upright, what a recorded run of it found; the chain is drawn from its %d world%s.</p>|}
              (esc c.J.cs_id) (esc c.J.cs_project)
              (esc (Canary_lang.string_of_lang c.J.cs_lang))
              (esc (T.string_of_supplier c.J.cs_topology.T.tp_lang))
@@ -949,7 +1125,7 @@ let join_panel (j : Canary_overview_join.t) =
     with
     | None | Some [] -> "No chain canary runs has this choice."
     | Some ids ->
-        "<strong>Canary runs this chain:</strong> " ^ esc (runs_label j ids) ^ " (§5.4)."
+        "<strong>Canary runs this chain:</strong> " ^ esc (runs_label j ids) ^ " (§4.4)."
   in
   (* the covered kinds with no band of their own, said rather than
      dropped — their chains are among the concrete ones *)
@@ -977,183 +1153,79 @@ let join_panel (j : Canary_overview_join.t) =
   Printf.sprintf
     {|<div class="join" id="join">
 %s%s%s%s%s
+<div id="jrecbar" hidden><p class="mechnote"><label>recorded world:
+<select id="jworld"></select></label></p><p id="jrechead" class="edet"></p></div>
+<p class="mechnote" id="jnorec" hidden>No run of this package is recorded on
+this machine — <code>canary overview</code> writes what each machine ran to
+<code>overview_runs.js</code> beside this page.</p>
 %s%s%s%s%s
 <p class="mechnote" id="jruns">%s</p>
 <p class="mechnote" id="jmiss" hidden></p>%s
-<script type="application/json" id="joindata">%s</script></div>|}
-    (row "native-side PM" (pm_buttons J.Native "ps"))
-    (row "language-side PM" (pm_buttons J.Language "pl"))
-    (row "binding mechanism" m_buttons)
-    (row "cooperation" k_buttons)
-    (row "a chain canary runs" c_buttons)
-    (diagram ~classes ~case_slots:true ())
-    m_notes k_notes pm_notes c_notes runs0
-    (match unbanded with
-     | [] -> ""
-     | us ->
-         Printf.sprintf
-           {|<p class="mechnote">No cooperation button: %s. Their chains are among the concrete ones, drawn with what canary cannot read left in (§5.3).</p>|}
-           (esc (String.concat ~sep:"; " us)))
-    data
-
-(** A concrete case: the same graph, named, with what it does not have
-    removed. Selected rather than stacked, for the same reason the
-    mechanisms are — three diagrams down a page are compared by
-    scrolling, which is the one thing that makes them hard to compare. *)
-type case = {
-  ca_key : string;
-  ca_title : string;
-  ca_blurb : string;
-  ca_names : (string * string) list;  (** node id → what the case calls it *)
-  ca_subs : (string * string) list;  (** node id → a line under the name *)
-  ca_hidden : string list;  (** nodes that do not exist in the case *)
-  ca_dead : string list;  (** edges that exist and do not fire *)
-}
-(* DATA, NOT CLOSURES (2026-09-23, status.md §2.7 phase D): the cases'
-   labels used to be [assoc] and [hides] functions, which the diagram
-   could call and nothing could read. §2.1 now sets each recorded world
-   beside its case and says where they agree, so the case has to be
-   something a comparison can iterate over. *)
-
-let assoc_of (l : (string * string) list) (id : string) : string option =
-  List.Assoc.find l id ~equal:String.equal
-
-let member (l : string list) (id : string) : bool = List.mem l id ~equal:String.equal
-
-let case_panels (cases : case list) =
-  let buttons =
-    String.concat
-      (List.map cases ~f:(fun c ->
-           Printf.sprintf {|<button data-m="%s">%s</button>|} (esc c.ca_key)
-             (esc c.ca_title)))
-  in
-  let panels =
-    String.concat
-      (List.map cases ~f:(fun c ->
-           Printf.sprintf {|<section class="case" id="case-%s"><p>%s</p>%s</section>|}
-             (esc c.ca_key) c.ca_blurb
-             (diagram ~rename:(assoc_of c.ca_names) ~sublabel:(assoc_of c.ca_subs)
-                ~hide:(member c.ca_hidden) ~dead:(member c.ca_dead) ())))
-  in
-  Printf.sprintf {|<div class="selbar" data-group="case">%s</div>%s|} buttons
-    panels
-
-(** THE SAME CASES, AS RECORDED (2026-09-23, status.md §2.7 phase C; user:
-    keep the hand-drawn cases, and give separate buttons to show the
-    running ones, so the two can be compared). A recorded world is drawn
-    on ONE template — the generic diagram, every node given an empty
-    sublabel to fill — by the script below, from the per-machine file
-    [Canary_overview_runs] writes. This page holds no run state: a button
-    exists for each case that has a counterpart, and whether the counterpart
-    has been recorded is the file's to say. *)
-let recorded_section (cases : case list) =
-  let buttons =
-    String.concat
-      (List.filter_map cases ~f:(fun c ->
-           if List.Assoc.mem Canary_overview_runs.counterparts c.ca_key
-                ~equal:String.equal
-           then
-             Some
-               (Printf.sprintf {|<button data-rec-case="%s">%s</button>|}
-                  (esc c.ca_key) (esc c.ca_title))
-           else None))
-  in
-  (* the hand-drawn cases as DATA, for the comparison under the diagram —
-     part of the page, like the cases themselves; the recorded half comes
-     from the per-machine file *)
-  let hand =
-    Yojson.Basic.to_string
-      (`Assoc
-        (List.map cases ~f:(fun c ->
-             ( c.ca_key,
-               `Assoc
-                 [ ( "names",
-                     `Assoc (List.map c.ca_names ~f:(fun (n, l) -> (n, `String l))) );
-                   ("hidden", `List (List.map c.ca_hidden ~f:(fun n -> `String n)));
-                   ("dead", `List (List.map c.ca_dead ~f:(fun e -> `String e))) ] ))))
-  in
-  Printf.sprintf
-    {|<div id="recwrap"><h3 id="recorded">2.1 The same cases, as recorded</h3>
-<p>The cases above are drawn by hand: what we expect. Each button below
-draws a <em>recorded</em> world with that case's shape on the same layout,
-so the two can be compared by switching. An edge is coloured by what the
-steps realizing it did in the last recorded run, a claim badge by the
-outcomes of the claims placed there. A node is named by what the run
-recorded about it, or — in italics — by what the project declares, and a
-node nothing in this world touches is dimmed. What the world's chain does
-not have at all — by its binding mechanism or its cooperation, §1's two
-bands — is not drawn, and a claim sitting only there does not apply: a
-bridge's claims apply only where there is a bridge. An edge this world
-realizes no step of is faint. An edge someone else's rule establishes is dotted:
-grey where nothing is recorded, and in the accent colour where the run
-recorded what that rule said here — which is what a bridge step does. It
-runs the bridge's own check in this world and records the mapping, the
-capability file and pkg-config's answer, listed under the diagram. Under
-that, the case's hand-drawn names are set beside the recorded ones. The
-wheel case has no counterpart while z3 is muted.</p>
-<script type="application/json" id="rechand">%s</script>
-<div class="selbar recbar">%s</div>
-<p><label>any recorded world: <select id="recsel"></select></label></p>
-<p id="rechead" class="edet">no recorded runs loaded — <code>canary
-overview</code> writes them to <code>overview_runs.js</code> beside this
-page</p>
-<div id="rec" class="rec">%s</div>
+<div id="jrec" hidden>
 <div class="key reckey">
 <span><i class="sw ok"></i> ran</span>
 <span><i class="sw okw"></i> warm — an earlier run's verdict</span>
 <span><i class="sw xf"></i> expected failure confirmed</span>
 <span><i class="sw bad"></i> failed (dashed: blocked)</span>
 <span><i class="sw un"></i> in the chain, never logged</span>
-<span><i class="sw ab"></i> not in this world</span>
+<span><i class="sw ab"></i> not realized in this world</span>
 <span><i class="sw no"></i> someone else's rule — nothing recorded</span>
 <span><i class="sw ob"></i> someone else's rule — recorded by this run</span>
 <span><i class="sw un"></i> happened inside a package manager's action — unseen</span>
 <span><svg width="26" height="18" viewBox="0 0 26 18"><g class="phm on not_yet"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg>
 a placeholder — not recorded yet (grey: out of reach)</span>
-<span><b>name</b> recorded by the run · <i>name</i> declared by the project</span>
-<span>not drawn: what this world's chain does not have — §1's two bands</span>
+<span><span class="nm-rec">name</span> recorded by the run · <span class="nm-decl">name</span> declared by the project</span>
+<span>a dimmed node: in the chain, and nothing in this run touched it</span>
 </div>
-<div id="recobserved"></div>
-<div id="recph"></div>
-<div id="reccmp"></div>
-<div id="recclaims"></div>
-<div id="recunplaced"></div></div>|}
-    hand buttons
-    (diagram ~sublabel:(fun _ -> Some "") ~ph_slots:true ())
+<div id="jrecobserved"></div>
+<div id="jrecph"></div>
+<div id="jrecclaims"></div>
+<div id="jrecunplaced"></div></div>
+<script type="application/json" id="joindata">%s</script></div>|}
+    (row "native-side PM" (pm_buttons J.Native "ps"))
+    (row "language-side PM" (pm_buttons J.Language "pl"))
+    (row "binding mechanism" m_buttons)
+    (row "cooperation" k_buttons)
+    (row "package in canary" c_buttons)
+    (diagram ~classes ~case_slots:true ~ph_slots:true ())
+    m_notes k_notes pm_notes c_notes runs0
+    (match unbanded with
+     | [] -> ""
+     | us ->
+         Printf.sprintf
+           {|<p class="mechnote">No cooperation button: %s. Their packages are among the concrete ones, drawn with what canary cannot read left in (§4.3).</p>|}
+           (esc (String.concat ~sep:"; " us)))
+    data
 
 let script =
   {|<script>
 (function(){
-// ONE selector for both bars. The mechanism bar swaps the artifact band
-// (a binding-table row); the case bar swaps the whole chain (a concrete
-// instance). Panels are pre-rendered rather than re-laid-out, so nothing
-// shifts underfoot when you switch.
-document.querySelectorAll('[data-group]').forEach(function(bar){
-  var g=bar.dataset.group;
-  var show=function(k){
-    document.querySelectorAll('section.'+g).forEach(function(s){
-      s.hidden = s.id !== g+'-'+k; });
-    bar.querySelectorAll('button').forEach(function(b){
-      b.classList.toggle('on', b.dataset.m===k); });
-  };
-  bar.addEventListener('click',function(e){
-    var b=e.target.closest('button'); if(b) show(b.dataset.m); });
-  var first=bar.querySelector('button');
-  if(first) show(first.dataset.m);
-});
-// THE CHAIN, CHOSEN (§1). Five choices: the two package managers, the
-// mechanism, the cooperation — or a concrete chain, which sets the other
-// four. Every set a choice draws is in #joindata, computed by
-// canary_overview_join.ml; this keeps the state, looks the sets up and
-// applies them.
+// THE CHAIN, CHOSEN (§1). Five choices — the two package managers, the
+// mechanism, the cooperation — or a package in canary, which sets the
+// other four, names the nodes, and draws its recorded run where a machine
+// recorded one. Every set a choice draws is in #joindata
+// (canary_overview_join.ml), every recorded word in the per-machine
+// overview_runs.js (canary_overview_runs.ml); this keeps the state, looks
+// them up and applies them.
 var jbox=document.getElementById('join'), J=null;
 try{ J=JSON.parse(document.getElementById('joindata').textContent); }catch(e){}
 if(jbox&&J){
-  var S={m:J.default.m, k:J.default.k, ps:null, pl:J.default.pl, c:null};
+  var S={m:J.default.m, k:J.default.k, ps:null, pl:J.default.pl, c:null, v:null, hl:null};
   var jesc=function(s){ var d=document.createElement('span'); d.textContent=s; return d.innerHTML; };
   var caseOf=function(id){
     for(var i=0;i<J.cases.length;i++) if(J.cases[i].id===id) return J.cases[i];
     return null; };
+  // every machine's recorded worlds, by the package each realizes
+  var VIEWS={}, BYCASE={};
+  (window.CANARY_RUNS||[]).forEach(function(r){
+    (r.views||[]).forEach(function(w){
+      w.key=w.id+'@'+r.machine; w.machine=r.machine; VIEWS[w.key]=w;
+      (BYCASE[w['case']]=BYCASE[w['case']]||[]).push(w); }); });
+  var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','inside','not_ours','observed','claim'],
+      OUTS=['violated','holds','partial','undecided','unevaluated'];
+  var list=function(id, head, items){ var el=document.getElementById(id); if(!el) return;
+    el.innerHTML=items.length?'<p class="mechnote"><strong>'+head+'</strong></p><ul class="unpl">'
+      +items.join('')+'</ul>':''; };
   var key=function(){ return S.k+'|'+(S.ps||'*')+'|'+(S.pl||'*'); };
   // the band for the choice — or, where no chain has it, the nearest one
   // some chain has: the native side's package manager is let go first,
@@ -1168,33 +1240,62 @@ if(jbox&&J){
     return {band:null, drop:[], kept:[]};
   };
   var draw=function(){
-    var c=S.c&&caseOf(S.c), near=c?null:nearest(),
+    var c=S.c&&caseOf(S.c), v=c&&S.v?VIEWS[S.v]:null, near=c?null:nearest(),
         band=c||(near&&near.band)||{gone:[],dead:[]},
-        gone=((J.mechanisms[S.m]||{}).gone||[]).concat(band.gone||[]), dead=band.dead||[],
-        names={};
-    // a concrete chain names every node it declares; a package manager
-    // chosen alone names its own node
+        gone=v?(v.gone||[]):((J.mechanisms[S.m]||{}).gone||[]).concat(band.gone||[]),
+        dead=v?[]:(band.dead||[]), names={},
+        related=(!c&&S.hl&&J.related[S.hl])||[];
+    // a package names every node its project declares; a package manager
+    // chosen alone names its own node; a recorded run's own names win, and
+    // say they are recorded
     if(c) names=c.names; else { if(S.ps) names.pm_sys=S.ps; if(S.pl) names.pm_lang=S.pl; }
+    var named=function(id){
+      if(v&&v.names&&v.names[id]) return v.names[id];
+      return names[id]?{label:names[id], from:'declared'}:null; };
+    jbox.classList.toggle('rec', !!v);
     jbox.querySelectorAll('[data-edge]').forEach(function(g){
-      var e=g.getAttribute('data-edge');
+      var e=g.getAttribute('data-edge'), t=g.querySelector('title'), mk=g.querySelector('.phm');
       g.classList.toggle('gone', gone.indexOf(e)>=0);
-      g.classList.toggle('jdead', dead.indexOf(e)>=0); });
+      g.classList.toggle('jdead', dead.indexOf(e)>=0);
+      STATES.forEach(function(s){ g.classList.remove('st-'+s); });
+      OUTS.forEach(function(o){ g.classList.remove('cl-'+o); });
+      if(t&&g.dataset.gtitle===undefined) g.dataset.gtitle=t.textContent;
+      var obs=v&&(v.observed||{})[e], ph=v&&(v.placeholders||{})[e];
+      if(v){ g.classList.add('st-'+(v.edges[e]||'absent'));
+        if(v.badges[e]) g.classList.add('cl-'+v.badges[e]); }
+      // the edge's own description, plus what this run recorded there
+      if(t) t.textContent=g.dataset.gtitle+(obs?' — recorded here: '+obs:'');
+      // the placeholder marker: where a package manager did something
+      // inside our action that this run does not record
+      if(mk){ mk.classList.toggle('on', !!ph);
+        mk.classList.toggle('not_yet', !!ph && ph.some(function(x){ return x.unseen==='not_yet'; }));
+        var mt=mk.querySelector('title');
+        if(mt) mt.textContent=ph?ph.map(function(x){ return x.text; }).join('\n'):''; } });
     jbox.querySelectorAll('[data-node]').forEach(function(g){
       var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'),
-          s=g.querySelector('.ncase'), n=names[id]||'';
+          s=g.querySelector('.ncase'), pe=g.querySelector('.nplace'), n=named(id),
+          place=v&&v.nodes?(v.nodes[id]||''):'';
       g.classList.toggle('gone', gone.indexOf(id)>=0);
-      if(s) s.textContent=n;
-      if(l&&l.dataset.y0) l.setAttribute('y', n?l.dataset.y1:l.dataset.y0); });
+      g.classList.toggle('dim', !!v && (v.dim||[]).indexOf(id)>=0);
+      // the package nodes the last clicked button is about
+      g.classList.toggle('related', related.indexOf(id)>=0);
+      if(s){ s.textContent=n?n.label:'';
+        s.classList.toggle('rec-name', !!n && n.from==='recorded');
+        s.setAttribute('y', place?s.dataset.y2:s.dataset.y1); }
+      if(pe) pe.textContent=place;
+      if(l&&l.dataset.y0) l.setAttribute('y', place?l.dataset.y2:(n?l.dataset.y1:l.dataset.y0)); });
     var ids=J.runs[S.m+'|'+key()]||[];
     jbox.querySelectorAll('button[data-g]').forEach(function(b){
-      var g=b.dataset.g, v=b.dataset.v;
-      b.classList.toggle('on', g==='c' ? S.c===v : S[g]===v);
-      // the concrete chains the choice picks out, while none is chosen
-      if(g==='c') b.classList.toggle('hint', !c && ids.indexOf(v)>=0); });
+      var g=b.dataset.g, val=b.dataset.v;
+      b.classList.toggle('on', g==='c' ? S.c===val : S[g]===val);
+      // the packages the choice picks out, while none is chosen
+      if(g==='c') b.classList.toggle('hint', !c && ids.indexOf(val)>=0); });
+    // a cooperation says what it is whether or not a package is chosen;
+    // its band's note only while none is
     jbox.querySelectorAll('.jnote').forEach(function(p){
       var d=p.dataset;
-      p.hidden=!((d.jm&&d.jm===S.m)||(d.jk&&!c&&d.jk===S.k)||(d.jc&&d.jc===S.c)
-                ||(d.jpm&&(d.jpm===S.ps||d.jpm===S.pl))); });
+      p.hidden=!((d.jm&&d.jm===S.m)||(d.jk&&d.jk===S.k)||(d.jkb&&!c&&d.jkb===S.k)
+                ||(d.jc&&d.jc===S.c)||(d.jpm&&(d.jpm===S.ps||d.jpm===S.pl))); });
     // how many chains the cooperation's band was drawn from, as narrowed
     if(!c&&band.n) jbox.querySelectorAll('.jcount').forEach(function(x){ x.textContent=band.n; });
     var runs=document.getElementById('jruns'), miss=document.getElementById('jmiss');
@@ -1202,7 +1303,7 @@ if(jbox&&J){
       var seen={}, who=[];
       ids.forEach(function(id){ var x=caseOf(id), w=x?x.project+' ('+x.lang+')':id;
         if(!seen[w]){ seen[w]=1; who.push(w); } });
-      runs.innerHTML=who.length?'<strong>Canary runs this chain:</strong> '+jesc(who.sort().join(', '))+' (§5.4).'
+      runs.innerHTML=who.length?'<strong>Canary runs this chain:</strong> '+jesc(who.sort().join(', '))+' (§4.4).'
         :'No chain canary runs has this choice.'; }
     if(miss){
       var k=J.kinds[S.k]||{}, why='';
@@ -1212,24 +1313,76 @@ if(jbox&&J){
           +' — the band is drawn from its chains'
           +(near.kept.length?' with '+jesc(near.kept.join(' and ')):'')+'.';
       miss.innerHTML=why; miss.hidden=!why; }
+    // THE RECORDED RUN (merged from the retired §2.1): which world is
+    // drawn, and everything it recorded or could not
+    var worlds=c?(BYCASE[c.id]||[]):[], bar=document.getElementById('jrecbar'),
+        sel=document.getElementById('jworld'), norec=document.getElementById('jnorec'),
+        recd=document.getElementById('jrec');
+    if(bar) bar.hidden=!v;
+    if(recd) recd.hidden=!v;
+    if(norec) norec.hidden=!(c&&!worlds.length);
+    if(sel){ sel.innerHTML='';
+      worlds.forEach(function(w){ var o=document.createElement('option'); o.value=w.key;
+        o.textContent=w.scenario+' ('+w.machine+')'; o.selected=(w.key===S.v); sel.appendChild(o); }); }
+    if(!v) return;
+    var head=document.getElementById('jrechead');
+    if(head) head.textContent=v.project+' — '+v.lang+' — '+v.scenario+' — recorded on '
+      +(v.recorded_on.length?v.recorded_on.join(', '):'(no platform logged)')
+      +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet')
+      +(v.chain?'\nchain: '+v.chain.mechanism+' · '+v.chain.lang_side+' ↔ '
+        +v.chain.native_side+' · '+v.chain.character:'');
+    var ob=v.observed||{};
+    list('jrecobserved','What this run recorded around the bridge:',
+      Object.keys(ob).map(function(e){ return '<li><code>'+jesc(e)+'</code> — '+jesc(ob[e])+'</li>'; }));
+    var phs=v.placeholders||{}, byText={}, order=[];
+    Object.keys(phs).forEach(function(e){ phs[e].forEach(function(x){
+      if(!byText[x.text]){ byText[x.text]={unseen:x.unseen, edges:[]}; order.push(x.text); }
+      byText[x.text].edges.push(e); }); });
+    list('jrecph','What the package managers did here that this run does not record:',
+      order.map(function(tx){ var p=byText[tx];
+        return '<li><b>'+(p.unseen==='not_yet'?'not recorded yet':'out of reach')+'</b> — '
+          +jesc(tx)+' <span class="from">('+p.edges.map(function(e){ return '<code>'+jesc(e)+'</code>'; }).join(', ')
+          +')</span></li>'; }));
+    var cl=Object.keys(v.claims||{}), cand=v.candidates||[], ce=document.getElementById('jrecclaims');
+    if(ce) ce.innerHTML=(cl.length
+      ?'<p class="mechnote"><strong>Claims the graph places, in this world:</strong> '
+        +cl.map(function(x){ return '<code>'+jesc(x)+'</code> <span class="o-'+v.claims[x]+'">'
+          +jesc(v.claims[x])+'</span>'; }).join(' · ')+'</p>':'')
+      // a placeholder claim applies only where its edge exists in this chain
+      +(cand.length?'<p class="mechnote"><strong>Placeholder claims that apply to this chain</strong> — named, no evaluator: '
+        +cand.map(function(x){ return '<code>'+jesc(x)+'</code>'; }).join(' · ')+'</p>':'');
+    var up=Object.keys(v.unplaced||{});
+    list('jrecunplaced','Steps of this world with no edge on the page:',
+      up.map(function(tg){ return '<li><code>'+jesc(tg)+'</code> — '+jesc(v.unplaced[tg])+'</li>'; }));
   };
-  var pick=function(g,v){
-    if(g==='m'){ S.m=v; var d=(J.mechanisms[v]||{}).pms||[]; if(d.length===1) S.pl=d[0]; }
-    else if(g==='ps'){ S.ps=(S.ps===v?null:v); }
-    else if(g==='pl'){ S.pl=(S.pl===v?null:v); }
-    else if(g==='k'){ S.k=v; S.c=null; }
-    else if(g==='c'){ var x=caseOf(v); if(x){ S.c=v; S.m=x.m; S.k=x.k; S.ps=x.ps; S.pl=x.pl; } }
-    // a concrete chain stays chosen only while every choice agrees with it
+  var pick=function(g,val){
+    if(g==='m'){ S.m=val; var d=(J.mechanisms[val]||{}).pms||[]; if(d.length===1) S.pl=d[0]; }
+    else if(g==='ps'){ S.ps=(S.ps===val?null:val); }
+    else if(g==='pl'){ S.pl=(S.pl===val?null:val); }
+    else if(g==='k'){ S.k=val; S.c=null; }
+    else if(g==='c'){ var x=caseOf(val); if(x){ S.c=val; S.m=x.m; S.k=x.k; S.ps=x.ps; S.pl=x.pl;
+      var ws=BYCASE[val]||[]; S.v=ws.length?ws[0].key:null; } }
+    // the package nodes a non-package button is about; a package names
+    // its own nodes instead, and a package manager clicked off lights none
+    S.hl=(g==='c'||(g==='ps'&&!S.ps)||(g==='pl'&&!S.pl))?null:g+'|'+val;
+    // a package stays chosen only while every choice agrees with it
     var c=S.c&&caseOf(S.c);
     if(c&&(c.m!==S.m||c.k!==S.k||c.ps!==S.ps||c.pl!==S.pl)) S.c=null;
+    if(!S.c) S.v=null;
     draw();
   };
   jbox.addEventListener('click',function(e){
     var b=e.target.closest('button[data-g]'); if(b) pick(b.dataset.g,b.dataset.v); });
-  // #chain=<id> — §5.4's rows link here
-  var h=/#chain=([^&]+)/.exec(location.hash), want=h?decodeURIComponent(h[1]):null;
-  var go=function(id){ if(caseOf(id)){ pick('c',id); jbox.scrollIntoView(); } };
-  if(want&&caseOf(want)) go(want); else draw();
+  var wsel=document.getElementById('jworld');
+  if(wsel) wsel.addEventListener('change',function(){ S.v=wsel.value; draw(); });
+  // #chain=<id> — §4.4's rows link here; #rec=<world> — one recorded world
+  var h=/#chain=([^&]+)/.exec(location.hash), r=/#rec=([^&]+)/.exec(location.hash),
+      want=h?decodeURIComponent(h[1]):null, world=r?decodeURIComponent(r[1]):null;
+  var go=function(id,w){ if(caseOf(id)){ pick('c',id); if(w&&VIEWS[w]){ S.v=w; draw(); }
+    jbox.scrollIntoView(); } };
+  if(world&&VIEWS[world]) go(VIEWS[world]['case'],world);
+  else if(want&&caseOf(want)) go(want);
+  else draw();
   document.querySelectorAll('a[href^="#chain="]').forEach(function(a){
     a.addEventListener('click',function(e){ e.preventDefault();
       go(decodeURIComponent(a.getAttribute('href').slice(7))); }); });
@@ -1251,276 +1404,22 @@ if(strip){
 })();
 </script>|}
 
-(** THE OVERLAY'S SCRIPT (2026-09-23). It loads every machine's record —
-    a missing file is a failed script tag and nothing more — and applies a
-    view's words to the template: a state class on each edge, an outcome
-    class on each badge, the placements as node sublabels. It decides
-    nothing; every word it applies was computed in [Canary_overview_runs].
-    [#rec=<view>] in the URL selects a view, so a world can be linked. *)
+(** THE RECORDED RUNS' FILES (2026-09-23): one script tag per machine,
+    loaded BEFORE the page's script, which draws a package's recorded run
+    from them. A missing file is a failed script tag and nothing more. The
+    page holds no run state; every recorded word was computed in
+    [Canary_overview_runs]. *)
 let runs_script () =
   String.concat
     (List.map Canary_overview_runs.all_file_names ~f:(fun f ->
          Printf.sprintf {|<script src="%s"></script>
 |} f))
-  ^ {|<script>
-(function(){
-var runs=window.CANARY_RUNS||[], views=[], byId={}, cases={}, HAND={};
-try{ HAND=JSON.parse(document.getElementById('rechand').textContent); }catch(e){}
-runs.forEach(function(r){
-  (r.views||[]).forEach(function(v){
-    v.key=v.id+'@'+r.machine; v.machine=r.machine; views.push(v); byId[v.key]=v; });
-  Object.keys(r.cases||{}).forEach(function(k){
-    if(!cases[k]) cases[k]=r.cases[k]+'@'+r.machine; });
-});
-var sel=document.getElementById('recsel'), head=document.getElementById('rechead'),
-    rec=document.getElementById('rec');
-if(!sel||!rec) return;
-document.querySelectorAll('.recbar button').forEach(function(b){
-  if(!cases[b.dataset.recCase]){ b.disabled=true; b.title='no recorded world for this case'; }
-});
-if(!views.length) return;
-views.forEach(function(v){
-  var o=document.createElement('option'); o.value=v.key;
-  o.textContent=v.project+' · '+v.lang+' · '+v.scenario+' ('+v.machine+')';
-  sel.appendChild(o); });
-var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','inside','not_ours','observed','claim'],
-    OUTS=['violated','holds','partial','undecided','unevaluated'];
-function esc(s){ var d=document.createElement('span'); d.textContent=s; return d.innerHTML; }
-function show(key){
-  var v=byId[key]; if(!v) return;
-  sel.value=key;
-  var obs=v.observed||{}, gone=v.gone||[];
-  rec.querySelectorAll('[data-edge]').forEach(function(g){
-    var e=g.getAttribute('data-edge');
-    // what this world's chain does not have is not drawn (§1's bands)
-    g.classList.toggle('gone', gone.indexOf(e)>=0);
-    STATES.forEach(function(s){ g.classList.remove('st-'+s); });
-    OUTS.forEach(function(o){ g.classList.remove('cl-'+o); });
-    g.classList.add('st-'+(v.edges[e]||'absent'));
-    if(v.badges[e]) g.classList.add('cl-'+v.badges[e]);
-    // the edge's own description, plus what this run recorded there
-    var t=g.querySelector('title');
-    if(t){ if(g.dataset.gtitle===undefined) g.dataset.gtitle=t.textContent;
-      t.textContent=g.dataset.gtitle+(obs[e]?' — recorded here: '+obs[e]:''); }
-    // the placeholder marker: shown where a package manager did something
-    // here that this run does not record; accent while it could be
-    var ph=(v.placeholders||{})[e], mk=g.querySelector('.phm');
-    if(mk){
-      mk.classList.toggle('on', !!ph);
-      mk.classList.toggle('not_yet', !!ph && ph.some(function(x){ return x.unseen==='not_yet'; }));
-      var mt=mk.querySelector('title');
-      if(mt) mt.textContent=ph?ph.map(function(x){ return x.text; }).join('\n'):'';
-    }
-  });
-  // one line per placeholder, with every edge it stands for
-  var phs=v.placeholders||{}, byText={}, order=[];
-  Object.keys(phs).forEach(function(e){ phs[e].forEach(function(x){
-    if(!byText[x.text]){ byText[x.text]={unseen:x.unseen, edges:[]}; order.push(x.text); }
-    byText[x.text].edges.push(e); }); });
-  document.getElementById('recph').innerHTML=order.length
-    ?'<p class="mechnote"><strong>What the package managers did here that this run does not record:</strong></p><ul class="unpl">'
-      +order.map(function(t){ var p=byText[t];
-          return '<li><b>'+(p.unseen==='not_yet'?'not recorded yet':'out of reach')+'</b> — '
-            +esc(t)+' <span class="from">('+p.edges.map(function(e){ return '<code>'+esc(e)+'</code>'; }).join(', ')
-            +')</span></li>'; }).join('')+'</ul>'
-    :'';
-  var ob=Object.keys(obs);
-  document.getElementById('recobserved').innerHTML=ob.length
-    ?'<p class="mechnote"><strong>What this run recorded around the bridge:</strong></p><ul class="unpl">'
-      +ob.map(function(e){ return '<li><code>'+esc(e)+'</code> — '+esc(obs[e])+'</li>'; }).join('')+'</ul>'
-    :'';
-  rec.querySelectorAll('[data-node]').forEach(function(g){
-    var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'), n=(v.names||{})[id];
-    if(l && g.dataset.generic===undefined) g.dataset.generic=l.textContent;
-    if(l) l.textContent=n?n.label:g.dataset.generic;
-    g.classList.toggle('named-decl', !!(n&&n.from==='declared'));
-    g.classList.toggle('dim', (v.dim||[]).indexOf(id)>=0);
-    g.classList.toggle('gone', gone.indexOf(id)>=0);
-    var t=g.querySelector('.nsub'); if(t) t.textContent=v.nodes[id]||'';
-  });
-  // the case this world stands for, set beside it node by node
-  var ck=Object.keys(cases).filter(function(k){ return cases[k]===key; })[0],
-      h=ck&&HAND[ck], cmp=document.getElementById('reccmp');
-  if(cmp){
-    if(!h){ cmp.innerHTML=''; }
-    else {
-      var rows=[], both=0, agree=0;
-      rec.querySelectorAll('[data-node]').forEach(function(g){
-        var id=g.getAttribute('data-node'), hn=h.names[id], n=(v.names||{})[id];
-        if(!hn&&!n) return;
-        var cls=hn&&n?(hn===n.label?'agree':'differ'):'one';
-        if(hn&&n){ both++; if(hn===n.label) agree++; }
-        rows.push('<tr class="'+cls+'"><td>'+esc(g.dataset.generic)+'</td><td>'
-          +(hn?esc(hn):'—')+'</td><td>'+(n?esc(n.label)+' <span class="from">'
-          +n.from+'</span>':'—')+'</td></tr>');
-      });
-      var shown=h.hidden.filter(function(id){ return (v.dim||[]).indexOf(id)<0; }),
-          fired=h.dead.filter(function(e){ var s=v.edges[e];
-            return s&&['absent','not_ours','claim'].indexOf(s)<0; });
-      cmp.innerHTML='<p class="mechnote"><strong>Drawn by hand, and as recorded:</strong> '
-        +agree+' of the '+both+' nodes both name agree.'
-        +(shown.length?' The case hides '+shown.map(esc).join(', ')+', which this world has.':'')
-        +(fired.length?' The case greys '+fired.map(esc).join(', ')+', which this world realizes.':'')
-        +'</p><table class="cmp"><thead><tr><th>node</th><th>drawn by hand (§2)</th>'
-        +'<th>recorded world</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
-    }
-  }
-  head.textContent=v.project+' — '+v.lang+' — '+v.scenario+' — recorded on '
-    +(v.recorded_on.length?v.recorded_on.join(', '):'(no platform logged)')
-    +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet')
-    // the world's chain (§5.4): its mechanism, its two sides, and the
-    // cooperation that joins them
-    +(v.chain?'\nchain: '+v.chain.mechanism+' · '+v.chain.lang_side+' ↔ '
-      +v.chain.native_side+' · '+v.chain.character:'');
-  var cl=Object.keys(v.claims), cand=v.candidates||[];
-  document.getElementById('recclaims').innerHTML=(cl.length
-    ?'<p class="mechnote"><strong>Claims the graph places, in this world:</strong> '
-      +cl.map(function(c){ return '<code>'+esc(c)+'</code> <span class="o-'+v.claims[c]+'">'
-        +esc(v.claims[c])+'</span>'; }).join(' · ')+'</p>'
-    :'')
-    // a placeholder claim applies only where its edge exists in this chain
-    +(cand.length
-    ?'<p class="mechnote"><strong>Placeholder claims that apply to this chain</strong> — named, no evaluator: '
-      +cand.map(function(c){ return '<code>'+esc(c)+'</code>'; }).join(' · ')+'</p>'
-    :'');
-  var up=Object.keys(v.unplaced);
-  document.getElementById('recunplaced').innerHTML=up.length
-    ?'<p class="mechnote"><strong>Steps of this world with no edge on the page:</strong></p><ul class="unpl">'
-      +up.map(function(t){ return '<li><code>'+esc(t)+'</code> — '+esc(v.unplaced[t])+'</li>'; }).join('')+'</ul>'
-    :'';
-  document.querySelectorAll('.recbar button').forEach(function(b){
-    b.classList.toggle('on', cases[b.dataset.recCase]===key); });
-  try{ history.replaceState(null,'','#rec='+encodeURIComponent(key)); }catch(e){}
-}
-sel.addEventListener('change',function(){ show(sel.value); });
-document.querySelectorAll('.recbar button').forEach(function(b){
-  b.addEventListener('click',function(){ var k=cases[b.dataset.recCase]; if(k) show(k); });
-});
-var m=/#rec=([^&]+)/.exec(location.hash), want=m?decodeURIComponent(m[1]):null;
-show(want&&byId[want]?want:(cases.conf||views[0].key));
-// a link that names a world lands on it
-if(want&&byId[want]){ var h=document.getElementById('recorded'); if(h) h.scrollIntoView(); }
-})();
-</script>|}
 
 let render (projects : (string * Canary_project_run.project_run) list)
     ~(overview : string) ~(generated_at : string) : string =
   let bare = T.bare_edges () in
   (* §1's choices and §5.4's chains: computed once, one list for both *)
   let join = Canary_overview_join.of_projects projects in
-  let cases =
-    [ { ca_key = "conf"; ca_title = "conf-* over a system library";
-        ca_blurb =
-          "Both bridges present, and each sits with its author. The \
-           SYMBOLIC path runs <code>binding → conf → depext → system \
-           package</code>; the ARTIFACT path runs <code>conf predicate → \
-           capability query → the library on disk</code>. They can land \
-           on different libraries, and nothing today compares them.";
-        ca_names =
-            [ ("pm_sys", "apt"); ("pkg_sys", "libgmp-dev");
-              ("bridge", "conf-gmp"); ("cap", "gmp.pc"); ("pm_lang", "opam");
-              ("pkg_lang", "zarith"); ("lib_sys", "libgmp.so.10");
-              ("hdr_sys", "gmp.h"); ("src_lang", "Zarith.git");
-              ("stub_lang", "zarith_stubs.a"); ("mod_lang", "zarith.cmxa");
-              ("surf_lang", "zarith.mli");
-              ("consumer_artifact", "zarith_example (paths)");
-              ("consumer_package", "zarith_example (-package zarith)") ];
-        ca_subs =
-            [ ("bridge", "an opam package — written by an opam maintainer");
-              ("cap", "inside libgmp-dev — written by the Debian packager") ];
-        ca_hidden = [ "src_sys"; "staged_sys" ]; ca_dead = []
-      };
-      { ca_key = "wheel"; ca_title = "the library inside the wheel";
-        ca_blurb =
-          "The consumer package carries the native artifact. The system \
-           PM, the system package and <em>both</em> bridges disappear — \
-           there is no cooperation left, which is a different statement \
-           from having no bridge. Every claim that compared two \
-           ecosystems has nothing to compare.";
-        ca_names =
-            [ ("pm_lang", "pip"); ("pkg_lang", "z3-solver (wheel)");
-              ("lib_sys", "libz3.so — INSIDE the wheel");
-              ("mod_lang", "z3/*.py + native ext");
-              ("surf_lang", "z3.__all__");
-              ("consumer_package", "python -c 'import z3'") ];
-        ca_subs =
-            [ ("lib_sys", "no system package, no bridge, no discovery");
-              ("pkg_lang", "one package supplies both sides") ];
-        ca_hidden =
-            [ "pm_sys"; "pkg_sys"; "bridge"; "cap"; "src_sys"; "staged_sys";
-              "hdr_sys"; "src_lang"; "stub_lang" ];
-        ca_dead = [] };
-      { ca_key = "built"; ca_title = "built here — and the bridge still gates";
-        ca_blurb =
-          "The native side is built here, so the system package is not \
-           used. The binding package's <code>conf-llvm-shared {= \
-           \"19\"}</code> constraint is still in its depends and opam \
-           still evaluates it — against the system, which this world is \
-           not using. The gate passes or fails on evidence unrelated to \
-           the artifacts under test.";
-        ca_names =
-            [ ("src_sys", "llvm-project @ ref");
-              ("lib_sys", "libLLVM.so (built)");
-              ("staged_sys", "install prefix");
-              ("pm_sys", "apt — not used here");
-              ("pkg_sys", "llvm-19-dev — not used here");
-              ("bridge", "conf-llvm-shared {= 19}"); ("cap", "llvm-config");
-              ("pm_lang", "opam"); ("pkg_lang", "llvm.19-shared");
-              ("mod_lang", "llvm.cmxa");
-              ("consumer_artifact", "llvm_example (build tree)");
-              ("consumer_package", "llvm_example (-package llvm)") ];
-        ca_subs =
-            [ ("bridge", "still runs — against the SYSTEM, not this build");
-              ("pkg_sys", "the gate validates this, the world uses that") ];
-        ca_hidden = [];
-        ca_dead = [ "resolve_sys"; "realize_sys"; "realize_hdr"; "realize_cap" ]
-      };
-      { ca_key = "unified"; ca_title = "one package universe";
-        ca_blurb =
-          "Both sides come from the same package manager, so there is no \
-           second ecosystem to bridge to — the constraint travels as an \
-           ordinary dependency in one namespace. This is torch: the \
-           library arrives through opam as an upstream binary, named \
-           directly by a depext bound rather than through a conf hop.";
-        ca_names =
-            [ ("pm_lang", "opam"); ("pkg_lang", "torch");
-              ("bridge", "depext: libtorch >=2.1.0 <2.2.0");
-              ("lib_sys", "libtorch.so (opam binary)");
-              ("hdr_sys", "torch/*.h"); ("src_lang", "ocaml-torch.git");
-              ("stub_lang", "libtorch_core_stubs.a");
-              ("mod_lang", "torch.cmxa"); ("surf_lang", "torch.mli");
-              ("consumer_artifact", "torch_example (paths)");
-              ("consumer_package", "torch_example (-package torch)") ];
-        ca_subs =
-            [ ("bridge",
-               "metadata inside the consumer — not a package of its own");
-              ("pkg_lang", "same PM on both sides") ];
-        ca_hidden = [ "pm_sys"; "pkg_sys"; "cap"; "src_sys"; "staged_sys" ];
-        ca_dead = [] };
-      { ca_key = "none"; ca_title = "no package manager between them";
-        ca_blurb =
-          "The binding and the library were joined by whoever built the \
-           interpreter, outside any package manager we can observe. \
-           CPython's stdlib <code>sqlite3</code> is the case. The \
-           coupling is entirely real — the extension records a NEEDED on \
-           libsqlite3 and the loader resolves it — but there is no \
-           declaration anywhere to check it against. <em>No gate</em> and \
-           <em>no gate mechanism</em> are different situations.";
-        ca_names =
-            [ ("pm_sys", "apt"); ("pkg_sys", "libsqlite3-0");
-              ("lib_sys", "libsqlite3.so.0"); ("hdr_sys", "sqlite3.h");
-              ("pm_lang", "(the interpreter build)");
-              ("pkg_lang", "CPython stdlib");
-              ("stub_lang", "_sqlite3.cpython-*.so");
-              ("mod_lang", "sqlite3/__init__.py");
-              ("surf_lang", "dir(sqlite3)");
-              ("consumer_package", "python -c 'import sqlite3'") ];
-        ca_subs =
-            [ ("pkg_lang", "chosen at interpreter build time, not here");
-              ("lib_sys", "the loader picks it; nothing declared which") ];
-        ca_hidden = [ "bridge"; "cap"; "src_sys"; "staged_sys"; "src_lang" ];
-        ca_dead = [] } ]
-  in
   Printf.sprintf
     {|<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
@@ -1533,9 +1432,9 @@ let render (projects : (string * Canary_project_run.project_run) list)
 <p class="lede">General mechanism — no project, no version, no verdict in
 the page itself. What ran and what it decided is the
 <a href="projects/matrix.html">result matrix</a>; this page is what
-<em>can</em> exist, which is a different question. The one exception is
-§2.1, which draws a recorded run over the same layout for comparison,
-from a separate per-machine file.</p>
+<em>can</em> exist, which is a different question. The one exception is a
+package's recorded run, which §1 draws when you choose that package, from
+a separate per-machine file.</p>
 
 <div class="note"><strong>A bridge is a thing, not a relation.</strong>
 It is concrete, separate package content whose purpose is package-manager
@@ -1563,7 +1462,8 @@ what makes it artifact-centric rather than bridgeless.</div>
 and carries one annotation. Most carry the <strong>action</strong> of ours
 that realizes the relation. Where we run nothing, an edge carries
 <em>information</em> in italics: whatever does establish the relation — and,
-on §2.1's recorded worlds, what a run recorded about it. One edge carries a
+while a package's recorded run is drawn, what that run recorded about it.
+One edge carries a
 <strong class="clm">claim</strong>, by its code, because a claim of ours
 is the only thing relating its two ends. The badge on an edge counts the
 claims that sit there. Hover an edge for what it establishes.</p>
@@ -1586,17 +1486,37 @@ language module. A <code>ctypes</code> binding compiles nothing and has
 no stub node at all; its library is opened by name at import, so two of
 these edges do not merely go quiet, they do not exist. So the whole
 diagram is a <em>join</em>: one artifact-layer row (a binding mechanism,
-§5.2) with one package-and-PM row (a cooperation, §5.3), between two
-package managers (§5.1). No one table draws a chain; together they do.
+§4.2) with one package-and-PM row (a cooperation, §4.3), between two
+package managers (§4.1). No one table draws a chain; together they do.
 Pick below: a package manager for each side, a binding mechanism (the
-artifact band) and a cooperation (the package band) — or one of the
-chains canary runs, which picks all four and writes, under each generic
-label, what its project declares the node is. A mechanism also picks the
-package manager that ships its language's bindings. A cooperation's band
-is drawn from the chains that realize it, narrowed to the chosen package
-managers, so a node is left out only when none of them has it; a greyed
-edge exists and does not fire. The line under the diagram says which
-projects canary runs the choice for (§5.4).</div>
+artifact band) and a cooperation (the package band) — or a package in
+canary, one of the chains canary runs (§4.4), which picks all four and
+writes under each generic label what its project declares the node is.
+A mechanism also picks the package manager that ships its language's
+bindings, and any button but a package's outlines the package nodes it
+is about. A cooperation's band is drawn from the chains that realize it,
+narrowed to the chosen package managers, so a node that is absent does
+not exist in any of them; a greyed edge exists and does not fire. The
+line under the diagram says which projects canary runs the choice for.
+The chains are switched rather than stacked: laid end to end, they are
+compared by memory, which is the one thing that makes them hard to
+compare.</div>
+<div class="note"><strong>A package's recorded run is drawn on the same
+layout.</strong> Choosing a package also draws the last run of it that a
+machine recorded, if one did — the recorded world can be switched where
+the package has several. An edge is then coloured by what the steps
+realizing it did, a claim badge by the outcomes of the claims placed
+there, and a node the run did not touch is dimmed. An edge someone else's
+rule establishes is dotted: grey where nothing is recorded, in the accent
+colour where the run recorded what that rule said — which is what a bridge
+step does: it runs the bridge's own check in its world and records the
+mapping, the capability file and pkg-config's answer. A name under a node
+is upright where the run recorded it and italic where only the project
+declares it, and a third line gives where the run placed the artifact.
+What the world's chain does not have at all is not drawn, and a claim
+sitting only there does not apply: a bridge's claims apply only where
+there is a bridge. The key and what the run recorded are under the
+diagram.</div>
 %s
 <p id="edet" class="edet">hover an edge</p>
 
@@ -1648,16 +1568,7 @@ inside its package-rewrite cases, never in the base picture.</div>
 <h3>1.1 What each node is</h3>
 %s
 
-<h2 id="cases">2. Concrete cases</h2>
-<p>The general shape above, instantiated: the same graph with its nodes
-named. A node that is absent does not exist in that case; a greyed edge
-exists and does not fire. Switch between them rather than scrolling —
-chains laid end to end are compared by memory, which is the one thing
-that makes them hard to compare. Each case is a row of the cooperation
-table in §5.3, and a chain of §5.4.</p>
-%s
-
-<h2 id="overview">3. The agreement overview</h2>
+<h2 id="overview">2. The agreement overview</h2>
 <p>Every agreement, where its rule RAN and where it is CHECKED, over the
 same action columns the result matrix uses — of which it is the
 template, so an empty column there can be looked up here. It lives on
@@ -1670,7 +1581,7 @@ on run state — unlike everything else here. Splitting the table at that
 seam would have shown one row's halves on two pages, which is worse.</div>
 %s
 
-<h2 id="census">4. Where every claim sits, and the edges where none do</h2>
+<h2 id="census">3. Where every claim sits, and the edges where none do</h2>
 <p>%d claims — %d implemented, %d candidates — placed on the edges of §1.
 A <em>claim site</em> is a set of edges rather than one, and %d already
 span several: the library's declaration-facing claims sit on both edges
@@ -1694,35 +1605,35 @@ while dropping version, which in network terms is a layer that forwards
 the address and silently discards the checksum. That asymmetry is why the
 end-to-end invariants are the ones we do not have.</div>
 
-<h2 id="tables">5. What canary covers: three tables, and the chains they compose</h2>
-<p>A chain is one binding mechanism (§5.2) between two package managers
-(two rows of §5.1), joined by their cooperation (§5.3); §5.4 lists the
+<h2 id="tables">4. What canary covers: three tables, and the chains they compose</h2>
+<p>A chain is one binding mechanism (§4.2) between two package managers
+(two rows of §4.1), joined by their cooperation (§4.3); §4.4 lists the
 chains canary runs. Every cell is computed from canary's own code — the
 package managers' drivers, the mechanism catalogue, the bridge model, the
 cooperation kinds and the projects' declarations — so a table lists only
 what canary covers. The layered-model draft's tables were the reference
 for the columns; they also cover ecosystems canary does not reach yet
 (RPM, Cargo, Cabal, RubyGems, Conda, Nix).</p>
-<h3>5.1 Each package manager on its own</h3>
+<h3>4.1 Each package manager on its own</h3>
 %s
-<h3>5.2 Binding mechanisms</h3>
+<h3>4.2 Binding mechanisms</h3>
 %s
-<h3>5.3 How two package managers cooperate</h3>
+<h3>4.3 How two package managers cooperate</h3>
 %s
 %s
-<h3>5.4 The chains canary runs</h3>
+<h3>4.4 The chains canary runs</h3>
 <p>One row per distinct chain among a project's worlds: its binding
 language, where each side comes from, and so which cooperation joins
 them. A project appears more than once when its worlds differ — a world
 that builds its binding does not go through the package gate its project
 declares, so a chain is a fact about the world, not the project. These
-are §1's concrete chains, and each project links to its chain drawn
+are §1's packages in canary, and each project links to its chain drawn
 there.</p>
 %s
 
 <div class="foot">Generated %s. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
-the tables of §5 are computed from canary's code — the package managers'
+the tables of §4 are computed from canary's code — the package managers'
 drivers, the mechanism catalogue, the bridge model, the cooperation kinds
 and each project's declared provisions, gates and C-API components —
 though their prose columns (what a package is, how a join travels) are
@@ -1731,33 +1642,32 @@ written in <code>canary_pm_solo.ml</code> and
 mechanism catalogue, and its package band from the worlds of each
 cooperation kind, by one rule per node in <code>canary_topology.ml</code>;
 the agreement overview from the registry and recorded runs.
-The nodes, the edges, which edge each claim sits on, and the labels of
-the concrete cases are <em>hand-written lists</em> in
-<code>canary_topology.ml</code> and here — placeholders, checked by pins
-against the registry but not yet computed from the action catalogue.
-Each edge's annotation is typed, though: an action family the catalogue
-has, a registered or candidate claim, or information; and which of the
-catalogue's actions have no edge is computed.
-The diagrams are SVG emitted from that data, with one hand-placed
-coordinate per node. The recorded worlds of §2.1 are not in this page:
-they are read from <code>overview_runs.js</code> (one per machine), which
-<code>canary overview</code> computes from the run record — each edge's
-state from the steps placed on it, each badge from its claims' outcomes,
-and the edges around a bridge from what a bridge step recorded (one
-bridge so far: conf-gmp, on zarith).
+The nodes, the edges and which edge each claim sits on are
+<em>hand-written lists</em> in <code>canary_topology.ml</code> —
+placeholders, checked by pins against the registry but not yet computed
+from the action catalogue — and so are the five cases §1's cooperation
+notes quote, which this page used to draw by hand and which the pins
+still hold the derivations to. Each edge's annotation is typed, though:
+an action family the catalogue has, a registered or candidate claim, or
+information; and which of the catalogue's actions have no edge is
+computed. The diagram is SVG emitted from that data, with one
+hand-placed coordinate per node. A package's recorded run is not in this
+page: it is read from <code>overview_runs.js</code> (one per machine),
+which <code>canary overview</code> computes from the run record — each
+edge's state from the steps placed on it, each badge from its claims'
+outcomes, and the edges around a bridge from what a bridge step recorded
+(one bridge so far: conf-gmp, on zarith).
 · <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
     css Canary_matrix.overview_css
     (* §1 the chain — the missing steps COUNTED from the catalogue, the
        chain chosen from its parts — and §1.1 its legend *)
     (missing_steps_note ()) (join_panel join) (node_legend ())
-    (* §2 the cases — moved up so the general shape is followed at once by
-       its instances (user, 2026-09-23) — and §2.1, the same cases as
-       recorded, for comparison *)
-    (case_panels cases ^ recorded_section cases)
-    (* §3 the agreement overview *)
+    (* §2 the agreement overview. The hand-drawn cases that were §2 and
+       their recorded copies that were §2.1 went on 2026-09-24 — §1 draws
+       every chain and its recorded run; their notes are §1's (user) *)
     overview
-    (* §4 the census — the total is COUNTED: it was a literal
+    (* §3 the census — the total is COUNTED: it was a literal
        "Twenty-five" and went stale the day a candidate was added *)
     (List.length T.claim_sites)
     (List.count T.claim_sites ~f:(fun p -> p.T.cs_implemented))
@@ -1769,10 +1679,11 @@ bridge so far: conf-gmp, on zarith).
     (claim_sites_table ()) (List.length bare)
     (esc
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
-    (* §5 the topologies *)
+    (* §4 the tables *)
     (pm_solo_table projects) (binding_table projects) (coop_table projects)
     (topology_notes projects) (chains_table join)
-    (esc generated_at) (script ^ runs_script ())
+    (* the recorded runs' files load BEFORE the script that draws them *)
+    (esc generated_at) (runs_script () ^ script)
 
 let docs_path = "docs/canary/overview.html"
 

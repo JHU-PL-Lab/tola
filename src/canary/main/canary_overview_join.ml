@@ -36,6 +36,22 @@ let pms (s : side) : Canary_store.package_manager list =
       | Native -> if T.is_system_pm pm then Some pm else None
       | Language -> if T.is_system_pm pm then None else Some pm)
 
+(* ── the order the panel lists things in ─────────────────────────────── *)
+
+(** Grouped by LANGUAGE, in order of first appearance, otherwise in the
+    given order (user, 2026-09-24: "sort them first from the language
+    side, then two ocaml ones (cstubs and dynlink) can be together"). *)
+let by_language (lang_of : 'a -> Canary_lang.lang) (xs : 'a list) : 'a list =
+  let langs =
+    List.fold xs ~init:[] ~f:(fun acc x ->
+        if List.mem acc (lang_of x) ~equal:Poly.equal then acc else acc @ [ lang_of x ])
+  in
+  List.concat_map langs ~f:(fun l -> List.filter xs ~f:(fun x -> Poly.equal (lang_of x) l))
+
+(** The artifact bands, one per mechanism, grouped by language. *)
+let variants () : T.artifact_variant list =
+  by_language (fun (v : T.artifact_variant) -> v.T.av_lang) (T.artifact_variants ())
+
 (* ── the concrete chains ────────────────────────────────────────────── *)
 
 (** One concrete chain: the worlds of one project that bind one language
@@ -67,11 +83,7 @@ let sort_key (c : case) =
     key, and the id is spelled from them. *)
 let cases_of (is : T.band_instance list) : case list =
   let key (i : T.band_instance) =
-    String.concat ~sep:"-"
-      [ i.T.bi_project;
-        Canary_lang.string_of_lang i.T.bi_lang;
-        T.string_of_supplier i.T.bi_topology.T.tp_lang;
-        T.string_of_supplier i.T.bi_topology.T.tp_sys ]
+    T.chain_id_of ~project:i.T.bi_project ~lang:i.T.bi_lang i.T.bi_topology
   in
   List.map is ~f:key
   |> List.dedup_and_sort ~compare:String.compare
@@ -179,11 +191,65 @@ let of_projects (projects : (string * Canary_project_run.project_run) list) : t 
           (key, List.filter_map runs ~f:(fun (k, id) -> if String.equal k key then Some id else None)))
   }
 
+(** A COOPERATION'S PACKAGE MANAGERS, as its button's subtitle (user,
+    2026-09-24: "for the cooperation, can you also label the pm?"): the
+    pairs its chains take, [language ↔ native], then any package manager
+    a chain has on one side only and no pair names; ["no PM"] where no
+    chain has one. *)
+let pm_label (j : t) (k : T.coop) : string =
+  let uniq l =
+    List.fold l ~init:[] ~f:(fun acc x -> if List.mem acc x ~equal:Poly.equal then acc else acc @ [ x ])
+  in
+  let pairs =
+    List.filter_map j.jn_instances ~f:(fun i ->
+        if Poly.equal (T.coop_of i.T.bi_topology) k then
+          Some (T.lang_pm_of i.T.bi_topology, T.native_pm_of i.T.bi_topology)
+        else None)
+    |> uniq
+  in
+  let both = List.filter_map pairs ~f:(function Some l, Some n -> Some (l, n) | _ -> None) in
+  let named = List.concat_map both ~f:(fun (l, n) -> [ l; n ]) in
+  let singles =
+    List.filter_map pairs ~f:(function Some p, None | None, Some p -> Some p | _ -> None)
+    |> List.filter ~f:(fun p -> not (List.mem named p ~equal:Poly.equal))
+    |> uniq
+  in
+  let pm = Canary_store.string_of_pm in
+  match List.map both ~f:(fun (l, n) -> pm l ^ " ↔ " ^ pm n) @ List.map singles ~f:pm with
+  | [] -> "no PM"
+  | parts -> String.concat ~sep:" · " parts
+
+(** THE PACKAGE NODES A CHOICE IS ABOUT, highlighted when its button is
+    clicked (user, 2026-09-24: "lightly highlight the related package
+    nodes … to show those packages are related"):
+    - a native-side package manager ships the NATIVE package;
+    - a language-side one ships the BINDING package, and the BRIDGE package
+      too where it defines bridges ([Canary_bridge.kinds_of_pm]: a conf
+      package is an opam package);
+    - a binding mechanism ships in the binding package;
+    - a cooperation joins the package nodes its band keeps.
+    Keyed [group|value], the way the panel's buttons are. *)
+let package_nodes = [ "pkg_sys"; "bridge"; "pkg_lang" ]
+
+let related (j : t) : (string * string list) list =
+  let pm = Canary_store.string_of_pm in
+  List.map (pms Native) ~f:(fun p -> ("ps|" ^ pm p, [ "pkg_sys" ]))
+  @ List.map (pms Language) ~f:(fun p ->
+        ( "pl|" ^ pm p,
+          "pkg_lang"
+          :: (if List.is_empty (Canary_bridge.kinds_of_pm p) then [] else [ "bridge" ]) ))
+  @ List.map (variants ()) ~f:(fun v ->
+        ("m|" ^ Canary_mechanism.string_of_mechanism v.T.av_mechanism, [ "pkg_lang" ]))
+  @ List.map j.jn_kinds ~f:(fun b ->
+        ( "k|" ^ T.code_of_coop b.T.cb_kind,
+          List.filter package_nodes ~f:(fun n ->
+              not (List.mem b.T.cb_hidden n ~equal:String.equal)) ))
+
 (** The state the panel opens in: the first mechanism, with the package
     manager it depends on, and the first cooperation. *)
 let default_choice (j : t) : string * string * string option =
   let m =
-    match T.artifact_variants () with
+    match variants () with
     | v :: _ -> v.T.av_mechanism
     | [] -> Canary_mechanism.Cstubs
   in
@@ -200,7 +266,7 @@ let default_choice (j : t) : string * string * string option =
 let default_drawing (j : t) : string list * string list =
   let m, k, pl = default_choice j in
   let m_gone =
-    List.find_map (T.artifact_variants ()) ~f:(fun v ->
+    List.find_map (variants ()) ~f:(fun v ->
         if String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m then
           Some (T.with_edges v.T.av_hidden)
         else None)
@@ -227,7 +293,7 @@ let json (j : t) : Yojson.Basic.t =
             ("pl", match pl with None -> `Null | Some p -> `String p) ] );
       ( "mechanisms",
         `Assoc
-          (List.map (T.artifact_variants ()) ~f:(fun v ->
+          (List.map (variants ()) ~f:(fun v ->
                ( Canary_mechanism.string_of_mechanism v.T.av_mechanism,
                  `Assoc
                    [ ("gone", strs (T.with_edges v.T.av_hidden));
@@ -270,4 +336,5 @@ let json (j : t) : Yojson.Basic.t =
                    ("dead", strs c.cs_band.T.cb_dead);
                    ( "names",
                      `Assoc (List.map c.cs_names ~f:(fun (n, l) -> (n, `String l))) ) ])) );
-      ("runs", `Assoc (List.map j.jn_runs ~f:(fun (key, ids) -> (key, strs ids)))) ]
+      ("runs", `Assoc (List.map j.jn_runs ~f:(fun (key, ids) -> (key, strs ids))));
+      ("related", `Assoc (List.map (related j) ~f:(fun (key, ns) -> (key, strs ns)))) ]

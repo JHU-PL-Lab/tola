@@ -1,15 +1,16 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-24 00:14",
+  "generated": "2026-09-24 02:50",
   "views": [
     {
       "id": "be0605-ocaml",
+      "case": "sqlite-ocaml-opam-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:41.759", "2026-09-24 00:13:47.880" ],
+      "span": [ "2026-09-24 02:49:58.846", "2026-09-24 02:50:04.966" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -130,11 +131,12 @@
     },
     {
       "id": "be0605-python",
+      "case": "sqlite-python-pip-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:41.759", "2026-09-24 00:13:47.903" ],
+      "span": [ "2026-09-24 02:49:58.846", "2026-09-24 02:50:04.991" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -225,11 +227,12 @@
     },
     {
       "id": "df925e-ocaml",
+      "case": "sqlite-ocaml-opam-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:49.841", "2026-09-24 00:13:55.742" ],
+      "span": [ "2026-09-24 02:50:07.023", "2026-09-24 02:50:13.183" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -350,11 +353,12 @@
     },
     {
       "id": "df925e-python",
+      "case": "sqlite-python-pip-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:49.841", "2026-09-24 00:13:55.766" ],
+      "span": [ "2026-09-24 02:50:07.023", "2026-09-24 02:50:13.206" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -445,11 +449,12 @@
     },
     {
       "id": "bf7656-ocaml",
+      "case": "sqlite-ocaml-opam-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:48.825", "2026-09-24 00:13:49.737" ],
+      "span": [ "2026-09-24 02:50:05.949", "2026-09-24 02:50:06.904" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -571,11 +576,12 @@
     },
     {
       "id": "bf7656-python",
+      "case": "sqlite-python-pip-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:48.825", "2026-09-24 00:13:49.760" ],
+      "span": [ "2026-09-24 02:50:05.949", "2026-09-24 02:50:06.930" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -669,11 +675,12 @@
     },
     {
       "id": "e35b2b-ocaml",
+      "case": "sqlite-ocaml-opam-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:56.686", "2026-09-24 00:13:57.565" ],
+      "span": [ "2026-09-24 02:50:14.141", "2026-09-24 02:50:15.103" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -795,11 +802,12 @@
     },
     {
       "id": "e35b2b-python",
+      "case": "sqlite-python-pip-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:56.686", "2026-09-24 00:13:57.588" ],
+      "span": [ "2026-09-24 02:50:14.141", "2026-09-24 02:50:15.132" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -893,11 +901,12 @@
     },
     {
       "id": "08b7dd-ocaml",
+      "case": "sqlite-ocaml-opam-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:24.570", "2026-09-24 00:13:30.598" ],
+      "span": [ "2026-09-24 02:49:40.251", "2026-09-24 02:49:47.199" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1018,11 +1027,12 @@
     },
     {
       "id": "08b7dd-python",
+      "case": "sqlite-python-pip-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:24.570", "2026-09-24 00:13:30.622" ],
+      "span": [ "2026-09-24 02:49:40.251", "2026-09-24 02:49:47.227" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1113,11 +1123,12 @@
     },
     {
       "id": "b8e9cb-ocaml",
+      "case": "sqlite-ocaml-opam-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:32.873", "2026-09-24 00:13:38.982" ],
+      "span": [ "2026-09-24 02:49:49.675", "2026-09-24 02:49:55.948" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1238,11 +1249,12 @@
     },
     {
       "id": "b8e9cb-python",
+      "case": "sqlite-python-pip-built",
       "project": "sqlite",
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:32.873", "2026-09-24 00:13:39.006" ],
+      "span": [ "2026-09-24 02:49:49.675", "2026-09-24 02:49:55.973" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1333,11 +1345,12 @@
     },
     {
       "id": "740478-ocaml",
+      "case": "sqlite-ocaml-opam-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:30.713", "2026-09-24 00:13:31.689" ],
+      "span": [ "2026-09-24 02:49:47.469", "2026-09-24 02:49:48.486" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1459,11 +1472,12 @@
     },
     {
       "id": "740478-python",
+      "case": "sqlite-python-pip-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:30.713", "2026-09-24 00:13:31.717" ],
+      "span": [ "2026-09-24 02:49:47.469", "2026-09-24 02:49:48.513" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1557,11 +1571,12 @@
     },
     {
       "id": "170e8d-ocaml",
+      "case": "sqlite-ocaml-opam-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:39.092", "2026-09-24 00:13:40.007" ],
+      "span": [ "2026-09-24 02:49:56.056", "2026-09-24 02:49:57.050" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1683,11 +1698,12 @@
     },
     {
       "id": "170e8d-python",
+      "case": "sqlite-python-pip-staged",
       "project": "sqlite",
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:39.092", "2026-09-24 00:13:40.031" ],
+      "span": [ "2026-09-24 02:49:56.056", "2026-09-24 02:49:57.074" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1781,11 +1797,12 @@
     },
     {
       "id": "c2ff32-ocaml",
+      "case": "sqlite-ocaml-opam-apt",
       "project": "sqlite",
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:47.984", "2026-09-24 00:13:48.720" ],
+      "span": [ "2026-09-24 02:50:05.075", "2026-09-24 02:50:05.839" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1900,11 +1917,12 @@
     },
     {
       "id": "c2ff32-python",
+      "case": "sqlite-python-pip-apt",
       "project": "sqlite",
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:47.984", "2026-09-24 00:13:48.743" ],
+      "span": [ "2026-09-24 02:50:05.075", "2026-09-24 02:50:05.865" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1991,11 +2009,12 @@
     },
     {
       "id": "4af838-ocaml",
+      "case": "sqlite-ocaml-opam-apt",
       "project": "sqlite",
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:55.846", "2026-09-24 00:13:56.587" ],
+      "span": [ "2026-09-24 02:50:13.286", "2026-09-24 02:50:14.038" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2110,11 +2129,12 @@
     },
     {
       "id": "4af838-python",
+      "case": "sqlite-python-pip-apt",
       "project": "sqlite",
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-24 00:13:55.846", "2026-09-24 00:13:56.609" ],
+      "span": [ "2026-09-24 02:50:13.286", "2026-09-24 02:50:14.060" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -2201,6 +2221,7 @@
     },
     {
       "id": "d26e75-ocaml",
+      "case": "llvm-ocaml-opam-apt",
       "project": "llvm",
       "scenario": "source-fetched-19_lib-fetched_ocaml_binding-fetched-19-shared_python_binding-fetched",
       "lang": "ocaml",
@@ -2319,6 +2340,7 @@
     },
     {
       "id": "c8fae6-ocaml",
+      "case": "llvm-ocaml-built-built",
       "project": "llvm",
       "scenario": "source-fetched-latest_lib-built-dev_ocaml_binding-built-dev_python_binding-fetched",
       "lang": "ocaml",
@@ -2411,6 +2433,7 @@
     },
     {
       "id": "9f4072-ocaml",
+      "case": "llvm-ocaml-built-built",
       "project": "llvm",
       "scenario": "source-fetched-arbipher_lib-built-dev_ocaml_binding-built-dev_python_binding-fetched",
       "lang": "ocaml",
@@ -2508,6 +2531,7 @@
     },
     {
       "id": "28a379-ocaml",
+      "case": "tiny-full-ocaml-vendored-vendored",
       "project": "tiny-full",
       "scenario": "source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable",
       "lang": "ocaml",
@@ -2592,6 +2616,7 @@
     },
     {
       "id": "28a379-python",
+      "case": "tiny-full-python-vendored-vendored",
       "project": "tiny-full",
       "scenario": "source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable",
       "lang": "python",
@@ -2675,6 +2700,7 @@
     },
     {
       "id": "614dda-ocaml",
+      "case": "zarith-ocaml-built-apt",
       "project": "zarith",
       "scenario": "lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master",
       "lang": "ocaml",
@@ -2771,6 +2797,7 @@
     },
     {
       "id": "4ea4a4-ocaml",
+      "case": "zarith-ocaml-opam-apt",
       "project": "zarith",
       "scenario": "lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14",
       "lang": "ocaml",
@@ -2901,6 +2928,7 @@
     },
     {
       "id": "7a10f8-ocaml",
+      "case": "cairo-ocaml-opam-vendored",
       "project": "cairo",
       "scenario": "source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3025,6 +3053,7 @@
     },
     {
       "id": "7ac7f1-ocaml",
+      "case": "cairo-ocaml-opam-apt",
       "project": "cairo",
       "scenario": "source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3147,6 +3176,7 @@
     },
     {
       "id": "1406f0-ocaml",
+      "case": "libffi-ocaml-opam-vendored",
       "project": "libffi",
       "scenario": "source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3274,6 +3304,7 @@
     },
     {
       "id": "0a184a-ocaml",
+      "case": "libffi-ocaml-opam-apt",
       "project": "libffi",
       "scenario": "source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3399,6 +3430,7 @@
     },
     {
       "id": "657774-ocaml",
+      "case": "zlib-ocaml-opam-vendored",
       "project": "zlib",
       "scenario": "source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3520,6 +3552,7 @@
     },
     {
       "id": "d668a4-ocaml",
+      "case": "zlib-ocaml-opam-apt",
       "project": "zlib",
       "scenario": "source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3638,6 +3671,7 @@
     },
     {
       "id": "ff020b-ocaml",
+      "case": "zstd-ocaml-opam-vendored",
       "project": "zstd",
       "scenario": "source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3758,6 +3792,7 @@
     },
     {
       "id": "ff7b9d-ocaml",
+      "case": "zstd-ocaml-opam-apt",
       "project": "zstd",
       "scenario": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
       "lang": "ocaml",
@@ -3876,6 +3911,7 @@
     },
     {
       "id": "7b508c-ocaml",
+      "case": "ssl-ocaml-opam-apt",
       "project": "ssl",
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable",
       "lang": "ocaml",
@@ -3996,6 +4032,7 @@
     },
     {
       "id": "8f247d-ocaml",
+      "case": "ssl-ocaml-opam-apt",
       "project": "ssl",
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable",
       "lang": "ocaml",
@@ -4116,6 +4153,7 @@
     },
     {
       "id": "0dc978-ocaml",
+      "case": "torch-ocaml-opam-opam",
       "project": "torch",
       "scenario": "lib-fetched-2.1.2_ocaml_binding-fetched-v0.17.0_binding_source_ocaml-fetched",
       "lang": "ocaml",
@@ -4232,6 +4270,7 @@
     },
     {
       "id": "e1d373-ocaml",
+      "case": "torch-ocaml-opam-opam",
       "project": "torch",
       "scenario": "lib-fetched-2.1.2_ocaml_binding-fetched-v0.17.0-canary1_binding_source_ocaml-fetched",
       "lang": "ocaml",
@@ -4346,11 +4385,5 @@
         ]
       }
     }
-  ],
-  "cases": {
-    "conf": "4ea4a4-ocaml",
-    "built": "740478-ocaml",
-    "unified": "0dc978-ocaml",
-    "none": "c2ff32-python"
-  }
+  ]
 });

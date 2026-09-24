@@ -1129,9 +1129,14 @@ let placeholder_steps_pin : Canary_project_test.pure_test =
      consumer is the package-linked one, torch's world has no system
      side, the built world builds its library and still resolves the
      bridge, and sqlite's PYTHON view is not painted by its OCaml fetch;
-   - the page carries the template (a [data-edge] per edge and a
-     [data-node] per node inside §2.1), a button per counterpart, and a
-     script tag per machine's file — and no run state of its own;
+   - EVERY VIEW NAMES THE PACKAGE IT REALIZES — one of §1's packages in
+     canary — which is how choosing a package finds its recorded worlds
+     since §2.1 went into §1 (2026-09-24);
+   - §1's panel carries the template (a [data-edge] per edge and a
+     [data-node] per node), a placeholder slot on every edge, the
+     recorded-world selector and the run's key; the page loads a script
+     tag per machine's file BEFORE the script that draws from it, and
+     holds no run state of its own;
    - a [--platform] render writes outside [docs/]. *)
 let overview_overlay_pin : Canary_project_test.pure_test =
   { name = "overview.recorded_runs_are_an_overlay";
@@ -1163,12 +1168,12 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         let assoc_keys j k =
           match F.field j k with Some (`Assoc kv) -> List.map kv ~f:fst | _ -> []
         in
-        let file_ok, views, cases =
+        let file_ok, views =
           if
             not
               (String.is_prefix text ~prefix:R.prefix
               && String.is_suffix text ~suffix:R.suffix)
-          then (false, [], [])
+          then (false, [])
           else
             match
               Yojson.Basic.from_string
@@ -1177,15 +1182,21 @@ let overview_overlay_pin : Canary_project_test.pure_test =
                      (String.length text - String.length R.prefix
                     - String.length R.suffix))
             with
-            | exception _ -> (false, [], [])
-            | j ->
-                ( true,
-                  F.items j "views",
-                  match F.field j "cases" with
-                  | Some (`Assoc kv) ->
-                      List.filter_map kv ~f:(fun (k, v) ->
-                          match v with `String s -> Some (k, s) | _ -> None)
-                  | _ -> [] )
+            | exception _ -> (false, [])
+            | j -> (true, F.items j "views")
+        in
+        (* each hand-drawn case's recorded world, by view id *)
+        let cases = R.case_views (R.views m) in
+        (* every view names one of §1's packages *)
+        let packages =
+          List.map (Canary_overview_join.of_projects Canary_registry.all_specs).Canary_overview_join.jn_cases
+            ~f:(fun c -> c.Canary_overview_join.cs_id)
+        in
+        let views_name_packages =
+          List.for_all views ~f:(fun v ->
+              match F.str v "case" with
+              | Some id -> List.mem packages id ~equal:String.equal
+              | None -> false)
         in
         let view_by_id id =
           List.find views ~f:(fun v -> Poly.equal (F.str v "id") (Some id))
@@ -1316,9 +1327,18 @@ let overview_overlay_pin : Canary_project_test.pure_test =
             ~generated_at:"pin"
         in
         let section =
-          match String.substr_index page ~pattern:{|id="recwrap"|} with
+          match String.substr_index page ~pattern:{|<div class="join" id="join">|} with
           | None -> ""
-          | Some i -> String.drop_prefix page i
+          | Some i -> (
+              let rest = String.drop_prefix page i in
+              match String.substr_index rest ~pattern:{|<p id="edet"|} with
+              | None -> ""
+              | Some j -> String.prefix rest j)
+        in
+        let before a b =
+          match (String.substr_index page ~pattern:a, String.substr_index page ~pattern:b) with
+          | Some i, Some j -> i < j
+          | _ -> false
         in
         let page_ok =
           (not (String.is_empty section))
@@ -1328,22 +1348,22 @@ let overview_overlay_pin : Canary_project_test.pure_test =
           && List.for_all T.nodes ~f:(fun n ->
                  String.is_substring section
                    ~substring:(Printf.sprintf {|data-node="%s"|} n.T.nd_id))
-          && List.for_all R.counterparts ~f:(fun (k, _) ->
-                 String.is_substring page
-                   ~substring:(Printf.sprintf {|data-rec-case="%s"|} k))
+          (* the recorded run's controls and key live in §1's panel now *)
+          && List.for_all [ {|id="jworld"|}; {|id="jrec"|}; {|id="jnorec"|}; {|class="key reckey"|} ]
+               ~f:(fun s -> String.is_substring section ~substring:s)
           && List.for_all R.all_file_names ~f:(fun f ->
-                 String.is_substring page
-                   ~substring:(Printf.sprintf {|<script src="%s">|} f))
+                 before (Printf.sprintf {|<script src="%s">|} f) "THE CHAIN, CHOSEN")
           (* no run state in the page: the views live only in the file *)
           && not (String.is_substring page ~substring:"CANARY_RUNS.push")
           (* a placeholder slot on the template, hidden by CLASS — SVG does
              not honour the [hidden] attribute, and the first cut drew a
              marker on every edge *)
-          && String.is_substring section ~substring:{|class="phm"|}
+          && List.length (String.substr_index_all section ~may_overlap:false ~pattern:{|class="phm"|})
+             >= List.length edge_ids
           && String.is_substring page ~substring:".phm{display:none}"
           && not (String.is_substring section ~substring:{|class="phm" hidden|})
         in
-        file_ok && views_ok && cases_ok && facts_ok && page_ok
+        file_ok && views_ok && views_name_packages && cases_ok && facts_ok && page_ok
         && String.is_prefix (R.target ~hypothetical:true) ~prefix:"_out/"
         && String.is_prefix (R.target ~hypothetical:false) ~prefix:"docs/canary/")
   }
@@ -1369,17 +1389,21 @@ let overview_overlay_pin : Canary_project_test.pure_test =
    Every pinned value reads the same on a checkout that has never run:
    where a name is recorded, its declared fallback is the same string. *)
 
-(* the hand-drawn cases, as the page embeds them for §2.1's comparison *)
-let hand_cases_of_page (page : string) : Yojson.Basic.t option =
-  let open_tag = {|<script type="application/json" id="rechand">|} in
-  match String.substr_index page ~pattern:open_tag with
-  | None -> None
-  | Some i -> (
-      let rest = String.drop_prefix page (i + String.length open_tag) in
-      match String.substr_index rest ~pattern:"</script>" with
-      | None -> None
-      | Some j -> (
-          try Some (Yojson.Basic.from_string (String.prefix rest j)) with _ -> None))
+(* the hand-drawn cases — no longer drawn on the page (2026-09-24), kept
+   in the page module as the oracle these pins hold the derivations to —
+   in the shape the pins read *)
+let hand_cases_json () : Yojson.Basic.t =
+  let strs l = `List (List.map l ~f:(fun s -> `String s)) in
+  `Assoc
+    (List.map Canary_overview_page.hand_cases ~f:(fun (c : Canary_overview_page.case) ->
+         ( c.Canary_overview_page.ca_key,
+           `Assoc
+             [ ( "names",
+                 `Assoc
+                   (List.map c.Canary_overview_page.ca_names ~f:(fun (n, l) -> (n, `String l)))
+               );
+               ("hidden", strs c.Canary_overview_page.ca_hidden);
+               ("dead", strs c.Canary_overview_page.ca_dead) ] )))
 
 let recorded_names_pin : Canary_project_test.pure_test =
   { name = "overview.recorded_views_are_named";
@@ -1403,12 +1427,8 @@ let recorded_names_pin : Canary_project_test.pure_test =
                   && List.mem [ "recorded"; "declared" ] from ~equal:String.equal)
               && List.for_all v.R.vw_dim ~f:(List.mem node_ids ~equal:String.equal))
         in
-        (* the hand-drawn cases, as the page embeds them *)
-        let page =
-          Canary_overview_page.render Canary_registry.all_specs ~overview:""
-            ~generated_at:"pin"
-        in
-        let hand = hand_cases_of_page page in
+        (* the hand-drawn cases — the oracle, no longer drawn *)
+        let hand = Some (hand_cases_json ()) in
         let field j k =
           match j with
           | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
@@ -1625,10 +1645,10 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
           Canary_overview_page.render Canary_registry.all_specs ~overview:""
             ~generated_at:"pin"
         in
-        (* the recorded template draws every edge, so its group is the one
-           read *)
+        (* §1's diagram draws every edge — a choice hides one by class — so
+           its group is the one read *)
         let template =
-          match String.substr_index page ~pattern:{|id="recwrap"|} with
+          match String.substr_index page ~pattern:{|<div class="join" id="join">|} with
           | None -> ""
           | Some i -> String.drop_prefix page i
         in
@@ -1759,8 +1779,8 @@ let coverage_tables_pin : Canary_project_test.pure_test =
         let page_ok =
           (not (String.is_empty section))
           && List.for_all
-               [ "5.1 Each package manager on its own"; "5.2 Binding mechanisms";
-                 "5.3 How two package managers cooperate"; "5.4 The chains canary runs" ]
+               [ "4.1 Each package manager on its own"; "4.2 Binding mechanisms";
+                 "4.3 How two package managers cooperate"; "4.4 The chains canary runs" ]
                ~f:(fun h -> String.is_substring section ~substring:h)
           (* a binding row per catalogued mechanism *)
           && List.for_all Canary_mechanism.mechanism_catalogue ~f:(fun i ->
@@ -1821,8 +1841,7 @@ let package_band_pin : Canary_project_test.pure_test =
         let module T = Canary_topology in
         let module R = Canary_overview_runs in
         let projects = Canary_registry.all_specs in
-        let page = Canary_overview_page.render projects ~overview:"" ~generated_at:"pin" in
-        let hand = hand_cases_of_page page in
+        let hand = Some (hand_cases_json ()) in
         let field j k =
           match j with
           | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
@@ -1860,7 +1879,13 @@ let package_band_pin : Canary_project_test.pure_test =
                       List.equal String.equal (band_only hidden)
                         (band_only (strings (field c "hidden")))
                       && List.for_all (T.band_dead t)
-                           ~f:(List.mem (strings (field c "dead")) ~equal:String.equal))
+                           ~f:(List.mem (strings (field c "dead")) ~equal:String.equal)
+                      (* and the case illustrates the cooperation its world
+                         has — §1 shows its notes with that cooperation *)
+                      && List.exists Canary_overview_page.hand_cases
+                           ~f:(fun (h : Canary_overview_page.case) ->
+                             String.equal h.Canary_overview_page.ca_key key
+                             && Poly.equal h.Canary_overview_page.ca_coop (T.coop_of t)))
               | _ -> false)
           && List.length cases = 5
         in
@@ -2039,7 +2064,7 @@ let chain_choices_pin : Canary_project_test.pure_test =
         let gone0, _ = J.default_drawing j in
         let page_ok =
           (not (String.is_empty panel))
-          && count "<svg" = 1
+          && count {|class="diagram"|} = 1
           && count {|class="ncase"|} = List.length T.nodes
           && List.for_all (J.pms J.Native) ~f:(fun p -> button "ps" (Canary_store.string_of_pm p))
           && List.for_all (J.pms J.Language) ~f:(fun p -> button "pl" (Canary_store.string_of_pm p))
@@ -2059,8 +2084,68 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all ids ~f:(fun id ->
                  String.is_substring page ~substring:(Printf.sprintf {|href="#chain=%s"|} id))
         in
+        (* THE SECOND ROUND (2026-09-24, user): the mechanisms grouped by
+           language, so the two OCaml ones sit together; each cooperation
+           labelled with its package managers; the concrete row named
+           "package in canary"; and the package nodes each other button is
+           about *)
+        let in_order g =
+          let tag = Printf.sprintf {|data-g="%s" data-v="|} g in
+          List.map (String.substr_index_all panel ~may_overlap:false ~pattern:tag) ~f:(fun i ->
+              let rest = String.drop_prefix panel (i + String.length tag) in
+              String.prefix rest (Option.value (String.index rest '"') ~default:0))
+        in
+        let lang_of m =
+          List.find_map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+              if String.equal (Canary_mechanism.string_of_mechanism i.Canary_mechanism.mi_mechanism) m
+              then Some i.Canary_mechanism.mi_lang
+              else None)
+        in
+        let rec contiguous seen = function
+          | a :: (b :: _ as rest) ->
+              if Poly.equal a b then contiguous seen rest
+              else (not (List.mem seen b ~equal:Poly.equal)) && contiguous (a :: seen) rest
+          | _ -> true
+        in
+        let grouped =
+          let ms = in_order "m" in
+          contiguous [] (List.map ms ~f:lang_of)
+          && (match ms with "cstubs" :: "dynlink" :: _ -> true | _ -> false)
+        in
+        let labelled =
+          List.for_all j.J.jn_kinds ~f:(fun b ->
+              let info = T.info_of_coop b.T.cb_kind in
+              has
+                (Printf.sprintf {|>%s <span class="bl">%s</span></button>|}
+                   (Canary_overview_page.esc info.T.co_label)
+                   (Canary_overview_page.esc (J.pm_label j b.T.cb_kind))))
+          && String.equal (J.pm_label j T.Co_conf) ("opam ↔ " ^ sys)
+          && String.equal (J.pm_label j T.Co_local) "no PM"
+          && has {|>package in canary<|}
+        in
+        let rel key = List.Assoc.find (J.related j) key ~equal:String.equal in
+        let related_ok =
+          Poly.equal (rel ("ps|" ^ sys)) (Some [ "pkg_sys" ])
+          && Poly.equal (rel "pl|opam") (Some [ "pkg_lang"; "bridge" ])
+          && Poly.equal (rel "pl|pip") (Some [ "pkg_lang" ])
+          && Poly.equal (rel "k|conf") (Some [ "pkg_sys"; "bridge"; "pkg_lang" ])
+          && List.for_all (J.related j) ~f:(fun (_, ns) ->
+                 List.for_all ns ~f:(List.mem J.package_nodes ~equal:String.equal))
+          (* every button but a package's has an entry *)
+          && List.for_all [ "ps"; "pl"; "m"; "k" ] ~f:(fun g ->
+                 List.for_all (in_order g) ~f:(fun v -> Option.is_some (rel (g ^ "|" ^ v))))
+        in
+        (* §2 and §2.1 left the page, their notes merged into §1: one
+           diagram, and each hand-drawn case's prose with its cooperation *)
+        let merged =
+          List.length (String.substr_index_all page ~may_overlap:false ~pattern:{|class="diagram"|}) = 1
+          && (not (String.is_substring page ~substring:{|id="recwrap"|}))
+          && (not (String.is_substring page ~substring:{|id="cases"|}))
+          && List.for_all Canary_overview_page.hand_cases ~f:(fun (c : Canary_overview_page.case) ->
+                 has (Canary_overview_page.esc c.Canary_overview_page.ca_title))
+        in
         cases_are_rows && cases_are_their_worlds && names_ok && depends_ok && narrows
-        && runs_ok && page_ok)
+        && runs_ok && page_ok && grouped && labelled && related_ok && merged)
   }
 
 (* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):
@@ -2314,7 +2399,7 @@ let chain_absence_pin : Canary_project_test.pure_test =
           Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
         in
         let page_ok =
-          String.is_substring page ~substring:".rec .gone{display:none}"
+          String.is_substring page ~substring:".join .gone{display:none}"
           && String.is_substring page ~substring:"g.classList.toggle('gone'"
         in
         List.for_all views ~f:sound && List.for_all views ~f:keeps_decided && exercised

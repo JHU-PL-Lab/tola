@@ -1543,6 +1543,20 @@ let band_instances (projects : (string * Canary_project_run.project_run) list) :
                 bi_hidden = band_hidden ~publishes t;
                 bi_dead = band_dead t })))
 
+(** A CHAIN'S ID: project, binding language and the two sides — the two
+    sides decide the topology, since the join is the declared gate only
+    where a package manager supplies the binding. ONE spelling, which the
+    overview's concrete packages and its recorded worlds both use, so a
+    recorded world finds its package by it. URL-safe. *)
+let chain_id ~(project : string) ~(lang : Canary_lang.lang) ~(lang_side : string)
+    ~(native_side : string) : string =
+  String.concat ~sep:"-"
+    [ project; Canary_lang.string_of_lang lang; lang_side; native_side ]
+
+let chain_id_of ~project ~lang (t : t) : string =
+  chain_id ~project ~lang ~lang_side:(string_of_supplier t.tp_lang)
+    ~native_side:(string_of_supplier t.tp_sys)
+
 (** THE TWO PACKAGE-MANAGER NODES of a chain. The native side is drawn
     with a package manager only when a SYSTEM one supplies it; a language
     package manager that supplies the library — torch's libtorch through
