@@ -1351,14 +1351,18 @@ blank.
   shows the kinds of bridge the chosen chains join through ("conf-*
   package", "depext field" — `Canary_bridge.kind_term`, and a new column
   in the cooperation table, §4.3). A term is drawn muted, so it does not
-  read as a name. The two nodes now share the package layer's lower row,
-  the capability file off the native package's lower-right and the
-  bridge off the binding package's lower-left, so every pair across the
-  two sides shares a row. A second line too long for its box is squeezed
+  read as a name. The two nodes are not on the same layer, though both
+  are extra to a package's standard content (user, the same day, after
+  a first cut that set them on one row): a BRIDGE PACKAGE IS A PACKAGE —
+  conf-gmp is an opam package — so it sits on the package row with the
+  two packages it joins, right of centre, since the language ecosystem
+  writes it; a CAPABILITY FILE IS CONTENT inside a package — gmp.pc
+  ships in libgmp-dev — so it sits a level below, off the native
+  package's lower-right. A second line too long for its box is squeezed
   to fit (torch's depext bound). Pinned in the same pin: the terms match
-  their tables, every bridge's term is one its manager defines, the
-  diagram is layered and no two boxes overlap — falsified by the old
-  bridge position and by a term opam does not define.
+  their tables, every bridge's term is one its manager defines, nodes of
+  one layer share a row and no two boxes overlap — falsified by the
+  one-row position and by a term opam does not define.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

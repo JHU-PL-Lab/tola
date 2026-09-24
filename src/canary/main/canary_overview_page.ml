@@ -50,16 +50,19 @@ let layout : (string * pos) list =
 
        AND THE DIAGRAM IS LAYERED (user, 2026-09-24: "if they are on the
        same abstraction layers, they can stay on the same horizontal
-       line"). Every other pair across the two sides shares a row; these
-       two did not — the bridge sat level with the packages and the
-       capability file below them. They share the package layer's lower
-       row now, the capability file at the native package's lower-right
-       and the bridge at the binding package's lower-left, each far
-       enough off its package that the edge between them keeps its label
-       and badge in view (on 2026-09-23 a 22px [depends] edge hid the
-       bridge's placeholder claims under the two boxes). *)
+       line"). The two are NOT on the same layer, though both are extra to
+       a package's standard content (user, the same day): a BRIDGE PACKAGE
+       IS A PACKAGE — conf-gmp is an opam package — so it sits on the
+       package row with the two packages it joins, right of centre, with
+       the language ecosystem that writes it; a CAPABILITY FILE IS CONTENT
+       inside a package — gmp.pc ships in libgmp-dev — so it sits a level
+       below, off the native package's lower-right. Setting the two on one
+       row, tried first, drew a file as a peer of a package. The bridge's
+       edges to both packages run level and long enough to keep their
+       labels and badges in view (on 2026-09-23 a 22px [depends] edge hid
+       the bridge's placeholder claims under the two boxes). *)
     ("cap", { px = 390; py = 275 });
-    ("bridge", { px = 830; py = 275 });
+    ("bridge", { px = 720; py = 200 });
     ("pkg_lang", { px = 1070; py = 200 });
     ("src_sys", { px = 150; py = 392 });
     ("hdr_sys", { px = 150; py = 466 });

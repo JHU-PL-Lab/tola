@@ -2163,23 +2163,24 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all [ "<b>.pc file</b>"; "<b>conf-* package</b>"; "<b>depext field</b>" ]
                ~f:(fun s -> String.is_substring page ~substring:s)
         in
-        (* THE DIAGRAM IS LAYERED: a native-side node and the language-side
-           node of the same abstraction layer share a row; the capability
-           file sits off the native package's lower-right, the bridge off
-           the binding package's lower-left, on one row; no two boxes
-           overlap *)
+        (* THE DIAGRAM IS LAYERED: nodes of one abstraction layer share a
+           row. The bridge package IS A PACKAGE, so it shares the row of the
+           two packages it joins, between them and right of centre; the
+           capability file is CONTENT inside the native package, so it sits
+           below that package, off its lower-right (user, 2026-09-24); no two
+           boxes overlap *)
         let at = Canary_overview_page.pos_of in
         let same_row a b = (at a).Canary_overview_page.py = (at b).Canary_overview_page.py in
+        let x n = (at n).Canary_overview_page.px and y n = (at n).Canary_overview_page.py in
         let layered =
           List.for_all
-            [ ("pm_sys", "pm_lang"); ("pkg_sys", "pkg_lang"); ("cap", "bridge");
+            [ ("pm_sys", "pm_lang"); ("pkg_sys", "pkg_lang"); ("bridge", "pkg_lang");
               ("src_sys", "src_lang"); ("hdr_sys", "stub_lang"); ("lib_sys", "mod_lang");
               ("staged_sys", "surf_lang"); ("consumer_artifact", "consumer_package") ]
             ~f:(fun (a, b) -> same_row a b)
-          && (at "cap").Canary_overview_page.px > (at "pkg_sys").Canary_overview_page.px
-          && (at "cap").Canary_overview_page.py > (at "pkg_sys").Canary_overview_page.py
-          && (at "bridge").Canary_overview_page.px < (at "pkg_lang").Canary_overview_page.px
-          && (at "bridge").Canary_overview_page.py > (at "pkg_lang").Canary_overview_page.py
+          && x "pkg_sys" < x "bridge" && x "bridge" < x "pkg_lang"
+          && x "bridge" > Canary_overview_page.canvas_w / 2
+          && x "cap" > x "pkg_sys" && y "cap" > y "pkg_sys"
           && List.for_all T.nodes ~f:(fun a ->
                  List.for_all T.nodes ~f:(fun b ->
                      String.equal a.T.nd_id b.T.nd_id
