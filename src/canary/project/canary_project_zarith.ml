@@ -254,5 +254,22 @@ let zarith_binding_decls : Canary_binding_decl.binding_decl list =
    runner_spec (C1: TWO scenarios — source@release-1.14 and source@master,
    each over the stable lib + binding, Fetched). *)
 let zarith_run : Canary_project_run.project_run =
-  { (Canary_opam_binding.run decl) with
-    Canary_project_run.pr_binding_decls = zarith_binding_decls }
+  let base = Canary_opam_binding.run decl in
+  { base with
+    Canary_project_run.pr_binding_decls = zarith_binding_decls;
+    (* THE FIRST BRIDGE CANARY DRIVES (2026-09-23, status.md §2.7 E):
+       conf-gmp, derived from the gate declared on [decl] — not restated.
+       The world whose zarith is the released package goes through it,
+       so that world gains a step running conf-gmp's check and recording
+       what the bridge is; the world that builds zarith-no-conf from the
+       worktree bypasses it and gets none. One bridge on one project
+       first: every other declared gate is routed the same way once this
+       one reads right on the overview. *)
+    pr_runner_spec =
+      (fun a ~workspace () ->
+        let spec = base.Canary_project_run.pr_runner_spec a ~workspace () in
+        { spec with
+          Canary_step_builder.bridges =
+            (match Canary_bridge.of_gate decl.Canary_opam_binding.pm_gate with
+             | Some b -> [ (Canary_lang.OCaml, b) ]
+             | None -> []) }) }

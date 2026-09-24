@@ -27,6 +27,14 @@ let installed_version_cmd ~pkg =
 let query_version_cmd ~pkg =
   [%string "dpkg -s %{pkg} 2>/dev/null | grep '^Version:' | cut -d' ' -f2"]
 
+(** WHICH INSTALLED PACKAGE SHIPS A FILE (2026-09-23) — the package's
+    name alone, with the architecture qualifier dpkg adds dropped
+    (`libgmp-dev:amd64: /usr/lib/...` answers `libgmp-dev`). Empty when
+    no package claims the path. Brew's sibling is
+    [Canary_pm_brew.owner_of_file_cmd]. *)
+let owner_of_file_cmd ~path =
+  [%string "dpkg -S %{path} 2>/dev/null | head -1 | cut -d: -f1"]
+
 let check_available_cmd ~pkg =
   [%string "apt-cache show %{pkg} >/dev/null 2>&1"]
 

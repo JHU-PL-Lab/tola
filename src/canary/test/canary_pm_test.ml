@@ -54,6 +54,14 @@ let apt_tests ~pkg =
     { name = "apt.install"; cmd = Canary_pm_apt.install_cmd ~pkg; expected_rc = 0 };
     { name = "apt.verify_installed"; cmd = Canary_pm_apt.verify_installed_cmd ~pkg; expected_rc = 0 };
     { name = "apt.query_version"; cmd = Canary_pm_apt.query_version_cmd ~pkg; expected_rc = 0 };
+    (* the answer, not the status: the command is a pipeline, so its
+       status is the last stage's and says nothing about dpkg (2026-09-23,
+       the bridge recorder's first reader) *)
+    { name = "apt.owner_of_file";
+      cmd =
+        [%string
+          {|test "$(%{Canary_pm_apt.owner_of_file_cmd ~path:"/usr/bin/dpkg"})" = dpkg|}];
+      expected_rc = 0 };
     { name = "apt.check_available(bad)";
       cmd = Canary_pm_apt.check_available_cmd ~pkg:"canary-nonexistent-pkg";
       expected_rc = 100 };
@@ -65,6 +73,12 @@ let brew_tests ~pkg =
     { name = "brew.query_version"; cmd = Canary_pm_brew.query_version_cmd ~pkg; expected_rc = 0 };
     { name = "brew.install"; cmd = Canary_pm_brew.install_cmd ~pkg; expected_rc = 0 };
     { name = "brew.verify_installed"; cmd = Canary_pm_brew.verify_installed_cmd ~pkg; expected_rc = 0 };
+    (* before the remove below: the formula must still own the file *)
+    { name = "brew.owner_of_file";
+      cmd =
+        [%string
+          {|test "$(%{Canary_pm_brew.owner_of_file_cmd ~path:("$(brew --prefix)/bin/" ^ pkg)})" = %{pkg}|}];
+      expected_rc = 0 };
     { name = "brew.remove"; cmd = Canary_pm_brew.remove_cmd ~pkg; expected_rc = 0 };
     { name = "brew.check_available(bad)";
       cmd = Canary_pm_brew.check_available_cmd ~pkg:"canary-nonexistent-pkg";
@@ -91,6 +105,17 @@ let opam_tests ~pkg =
     { name = "opam.query_version"; cmd = Canary_pm_opam.query_version_cmd ~pkg; expected_rc = 0 };
     { name = "opam.verify_installed"; cmd = Canary_pm_opam.verify_installed_cmd ~pkg; expected_rc = 0 };
     { name = "opam.list_depexts"; cmd = Canary_pm_opam.list_depexts_cmd ~pkg; expected_rc = 0 };
+    (* the bridge recorder's two opam questions (2026-09-23): a field of
+       a package, and a variable a filter is evaluated against — each
+       must ANSWER, since an empty answer reads as "nothing declared" *)
+    { name = "opam.show_field";
+      cmd =
+        [%string
+          {|test -n "$(%{Canary_pm_opam.show_field_cmd ~pkg ~field:"depends"})"|}];
+      expected_rc = 0 };
+    { name = "opam.var";
+      cmd = [%string {|test -n "$(%{Canary_pm_opam.var_cmd ~name:"os"})"|}];
+      expected_rc = 0 };
     { name = "opam.check_available(bad)";
       cmd = Canary_pm_opam.check_available_cmd ~pkg:"canary-nonexistent-pkg";
       expected_rc = 5 };

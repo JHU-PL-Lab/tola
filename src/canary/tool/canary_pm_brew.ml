@@ -47,6 +47,15 @@ let check_available_cmd ~pkg =
 let prefix_cmd ~pkg =
   [%string "brew --prefix %{pkg}"]
 
+(** WHICH FORMULA SHIPS A FILE (2026-09-23), apt's [dpkg -S] counterpart.
+    brew has no owner query, but every file it installs lives under
+    [Cellar/<formula>/<version>/] and is linked into the prefix, so the
+    resolved path names the formula. Empty for a path outside the
+    Cellar. *)
+let owner_of_file_cmd ~path =
+  [%string
+    "realpath %{path} 2>/dev/null | sed -n 's|.*/Cellar/\\([^/]*\\)/.*|\\1|p'"]
+
 (* Version switching: link/unlink for keg-only packages *)
 let link_cmd ~pkg = [%string "brew link %{pkg}"]
 

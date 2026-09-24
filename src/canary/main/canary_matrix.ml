@@ -82,6 +82,9 @@ type world_step = {
           performs its action *)
   ws_dummy : string option;
       (** a dummy step's reason for being empty ([Canary_step_model]) *)
+  ws_bridge : Canary_bridge.t option;
+      (** the bridge a step drives ([Canary_step_model.step.bridge]) —
+          status.md §2.7 E *)
   ws_place : Canary_topology.place;
       (** WHERE IT SITS on the overview's graph (phase B2): the edges it
           realizes, the step it is evidence for, or why it has no edge *)
@@ -1414,12 +1417,14 @@ let matrix_of ?(root = "_out")
                     ws_location = s.Canary_step_model.location;
                     ws_inspects = s.Canary_step_model.inspects;
                     ws_dummy = s.Canary_step_model.dummy;
+                    ws_bridge = s.Canary_step_model.bridge;
                     ws_place =
                       Canary_topology.place_step ~pr ~world:a
                         ~action:s.Canary_step_model.action
                         ~location:s.Canary_step_model.location
                         ~inspects:s.Canary_step_model.inspects
-                        ~dummy:s.Canary_step_model.dummy;
+                        ~dummy:s.Canary_step_model.dummy
+                        ~bridge:s.Canary_step_model.bridge;
                     ws_state = state;
                     ws_at = at;
                     ws_detail = detail })
@@ -2005,6 +2010,7 @@ let json_of_world_step (s : world_step) : Yojson.Basic.t =
     @ opt "location" (Option.map s.ws_location ~f:Canary_store.string_of_location)
     @ opt "inspects" s.ws_inspects
     @ opt "dummy" s.ws_dummy
+    @ opt "bridge" (Option.map s.ws_bridge ~f:Canary_bridge.to_string)
     @ [ ("place", json_of_place s.ws_place) ]
     @ state_fields s.ws_state
     @ opt "at" s.ws_at @ opt "detail" s.ws_detail)

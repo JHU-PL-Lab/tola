@@ -1484,6 +1484,112 @@ print('ok')
       expected_rc = 0 };
   ]
 
+(* ── The bridge recorder (2026-09-23, status.md §2.7 E) ──────────────
+   [inspect_bridge.py] dispatches a conf package's check and records what
+   the bridge is. Pinned against FIXTURES, not against whatever the
+   machine has installed: a fixture [.pc] file on an isolated pkg-config
+   search path, fixture predicates in opam's own syntax, and the
+   package-manager questions answered by [echo]. The invocation itself is
+   the driver's ([Canary_bridge_driver.invocation]), so its quoting is the
+   quoting a real step uses.
+
+   What each case holds:
+   - the check HOLDS against the fixture capability, the record has every
+     field a reader relies on ([record_fields]), and the capability file
+     is found, versioned and attributed to its owner;
+   - a check that fails exits 1, and a predicate that is a script exits 3
+     — not dispatchable is never reported as holding;
+   - a filter keeps a Windows-only flag out of the command even when it
+     comes AFTER pkg-config (conf-zlib's shape). *)
+let bridge_shell_tests ~output_dir : Canary_pm_test.test_case list =
+  let d = output_dir ^ "/bridge" in
+  let fixture_pc =
+    "prefix=/opt/canaryfixture\\nlibdir=${prefix}/lib\\nName: canaryfixture\\n\
+     Description: canary bridge fixture\\nVersion: 1.2.3\\n\
+     Libs: -L${libdir} -lcanaryfixture\\n"
+  in
+  let predicate ~module_ =
+    Printf.sprintf
+      {|[
+  "sh"
+  "-c"
+  "pkg-config --print-errors --exists %s || cc -c $CFLAGS test.c"
+] {os != "win32"}
+[
+  "sh"
+  "-exc"
+  "x86_64-w64-mingw32-gcc -c test.c"
+] {os = "win32"}|}
+      module_
+  in
+  let write name text =
+    Printf.sprintf "printf '%%s' %s > %s/%s" (Stdlib.Filename.quote text) d name
+  in
+  let questions pred_file =
+    { Canary_bridge_driver.q_installed = "echo 5";
+      q_depexts = "echo libcanaryfixture-dev";
+      q_predicate = Printf.sprintf "cat %s/%s" d pred_file;
+      q_var = None;
+      q_depends = Some {|echo '"ocaml" "conf-canaryfixture"'|};
+      q_sys_version = Some "echo 1.0";
+      q_owner = Some "echo libcanaryfixture-dev" }
+  in
+  let record ~pred_file ~out =
+    Printf.sprintf "PKG_CONFIG_LIBDIR=%s/pc PKG_CONFIG_PATH= %s > %s/%s" d
+      (Canary_bridge_driver.invocation ~package:"conf-canaryfixture"
+         ~kind:"conf_package" ~pm:"opam" ~sys_pm:"apt"
+         ~binding_pkg:"canaryfixture" ~vars:[ "os=linux" ]
+         (questions pred_file))
+      d out
+  in
+  let fields =
+    String.concat ~sep:","
+      (List.map Canary_bridge_driver.record_fields ~f:(fun f -> "'" ^ f ^ "'"))
+  in
+  [ { name = "bridge.fixture_setup";
+      cmd =
+        Printf.sprintf "mkdir -p %s/pc && printf '%s' > %s/pc/canaryfixture.pc && %s && %s && %s"
+          d fixture_pc d
+          (write "holds.txt" (predicate ~module_:"canaryfixture"))
+          (write "fails.txt" (predicate ~module_:"canarymissing"))
+          (write "script.txt" {|[ "bash" "configure.sh" version "shared" ]|});
+      expected_rc = 0 };
+    { name = "bridge.record(holds)";
+      cmd = record ~pred_file:"holds.txt" ~out:"holds.json";
+      expected_rc = 0 };
+    { name = "bridge.record_schema";
+      cmd =
+        schema_check_cmd ~path:(d ^ "/holds.json") ~kind:"bridge" ~asserts:
+          (Printf.sprintf
+             "for k in (%s):\n\
+              \    assert k in d, 'missing field a reader relies on: ' + k\n\
+              assert d['check']['holds'] is True, d['check']\n\
+              assert d['query']['argv'] == ['pkg-config','--print-errors','--exists','canaryfixture'], d['query']\n\
+              assert 'test.c' in d['query']['fallback'], d['query']\n\
+              c = d['capability'][0]\n\
+              assert c['pcfile'].endswith('/pc/canaryfixture.pc'), c\n\
+              assert c['version'] == '1.2.3' and c['libdir'] == '/opt/canaryfixture/lib', c\n\
+              assert c['owner'] == 'libcanaryfixture-dev', c\n\
+              assert d['depexts'] == ['libcanaryfixture-dev'], d['depexts']\n\
+              assert d['depext_versions'] == {'libcanaryfixture-dev': '1.0'}, d['depext_versions']\n\
+              assert d['installed_version'] == '5' and d['binding_names_bridge'] is True, d"
+             fields);
+      expected_rc = 0 };
+    { name = "bridge.record(does not hold)";
+      cmd = record ~pred_file:"fails.txt" ~out:"fails.json";
+      expected_rc = 1 };
+    { name = "bridge.record(not dispatchable)";
+      cmd = record ~pred_file:"script.txt" ~out:"script.json";
+      expected_rc = Canary_bridge_driver.not_dispatchable };
+    { name = "bridge.parse(filter after pkg-config)";
+      cmd =
+        Printf.sprintf
+          {|printf '%%s' %s | python3 %s --parse-predicate --var os=linux | python3 -c "import json,sys; q=json.load(sys.stdin); assert q['argv']==['pkg-config','zlib'], q; print('ok')"|}
+          (Stdlib.Filename.quote
+             {|["pkgconf" {os = "win32"} "pkg-config" {os != "win32"} "--personality=i686-w64-mingw32" {os = "win32" & host-arch-x86_32:installed} "zlib"]|})
+          Canary_bridge_driver.script;
+      expected_rc = 0 } ]
+
 (* ── Runner ── *)
 
 let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
@@ -1557,7 +1663,14 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
         (Fmt.pr "tiny source missing — skipping mutation apply tests@.";
          [])
     in
-    native @ ocaml_ @ ocaml_stub @ python @ mutation_apply
+    let bridge =
+      if Stdlib.Sys.command "which pkg-config > /dev/null 2>&1" = 0
+         && Stdlib.Sys.command "which python3 > /dev/null 2>&1" = 0
+      then (Fmt.pr "pkg-config found — testing the bridge recorder on fixtures@.";
+            bridge_shell_tests ~output_dir)
+      else (Fmt.pr "pkg-config not found — skipping bridge recorder tests@."; [])
+    in
+    native @ ocaml_ @ ocaml_stub @ python @ mutation_apply @ bridge
   in
   let sh_pass = ref 0 in
   let sh_fail = ref 0 in

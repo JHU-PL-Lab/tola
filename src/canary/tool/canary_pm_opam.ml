@@ -59,6 +59,24 @@ let check_available_cmd ~pkg =
 let list_depexts_cmd ~pkg =
   [%string "eval $(opam env) && opam show %{pkg} --field=depexts 2>/dev/null"]
 
+(* ONE FIELD of a package's metadata, as opam prints it for this platform
+   (2026-09-23): a filtered field like [depexts] comes back already
+   evaluated — `libgmp-dev`, not the per-distro table — while [build]
+   comes back raw, filters and all. A common component: every opam
+   package answers it, and the bridge driver
+   ([Canary_bridge_driver]) is its first reader. --color=never for the
+   reason [version_of_cmd] gives. *)
+let show_field_cmd ~pkg ~field =
+  [%string
+    "eval $(opam env) && opam show %{pkg} --field=%{field} --color=never 2>/dev/null"]
+
+(* The value of an opam VARIABLE here (2026-09-23) — [os], [os-family],
+   [os-distribution], or a package's [<pkg>:installed]: what a filter in
+   a package's metadata is evaluated against, asked of opam rather than
+   guessed. *)
+let var_cmd ~name =
+  [%string "eval $(opam env) && opam var %{name} 2>/dev/null"]
+
 (* Store switching *)
 let current_switch_cmd =
   "opam switch show"

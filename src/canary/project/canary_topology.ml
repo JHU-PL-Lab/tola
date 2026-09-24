@@ -779,9 +779,18 @@ let edges : edge list =
         "the binding package's declared constraint on the bridge is \
          satisfiable";
       eg_diagonal = false; eg_observation = false };
+    (* AN ACTION SINCE 2026-09-23 (user: an edge is an action when the
+       package manager dispatches a separate, observable action). opam
+       builds a conf package as a package of its own, and its build IS
+       the check — part of installing the binding, which is why the
+       family is the install's. A step that drives the bridge realizes
+       it; the install itself does not, because in a switch that already
+       holds the bridge opam dispatches nothing. *)
     { eg_id = "conf_probe"; eg_from = [ "bridge" ]; eg_to = "cap";
-      eg_annotation = Info "conf predicate";
-      eg_tool = "the bridge package's build predicate";
+      eg_annotation = Action Canary_action_family.Fetch_binding;
+      eg_tool =
+        "the bridge package's check — dispatched by the language PM when \
+         it installs the bridge, and by canary in every world";
       eg_says =
         "something on this system answers the capability query — THE \
          DIAGONAL, and the one place the symbolic path touches reality";
@@ -961,14 +970,15 @@ let origin_of ~(pr : Canary_project_run.project_run)
 let fetched_from ~pr ~world k : SC.provider option =
   Option.bind (origin_of ~pr ~world k) ~f:snd
 
-(** THE RULE. [location], [inspects] and [dummy] are the step's own
-    fields ([Canary_step_model.step]); the world and the project answer
-    what the step alone cannot — where the library came from, and whether
-    a symbolic bridge sits between the binding package and the system. *)
+(** THE RULE. [location], [inspects], [dummy] and [bridge] are the
+    step's own fields ([Canary_step_model.step]); the world and the
+    project answer what the step alone cannot — where the library came
+    from, and whether a bridge sits between the binding package and the
+    system. *)
 let place_step ~(pr : Canary_project_run.project_run)
     ~(world : Canary_artifact.assignment) ~(action : Canary_basic.action)
     ~(location : Canary_store.location option) ~(inspects : string option)
-    ~(dummy : string option) : place =
+    ~(dummy : string option) ~(bridge : Canary_bridge.t option) : place =
   let fam = Canary_action_family.of_action action in
   let candidates =
     List.filter_map edges ~f:(fun e ->
@@ -985,6 +995,13 @@ let place_step ~(pr : Canary_project_run.project_run)
   | None, None -> (
       if List.is_empty candidates then Unplaced No_edge_for_family
       else
+        match (bridge, action) with
+        (* a step that drives a bridge realizes the bridge's check and
+           nothing of the install whose action it carries *)
+        | Some b, _ ->
+            if Canary_bridge.has_check b then On (keep [ "conf_probe" ])
+            else Unplaced (Unexpected "a bridge step for a bridge with no check")
+        | None, _ ->
         match action with
         | Canary_basic.Probe_binding _ -> (
             (* THE CONSUMER PROGRAM IS THE LOCATION: named by package, or

@@ -173,6 +173,15 @@ type step = {
      from the step that did it without reading a tag suffix. [None] for
      a step that performs its action. *)
   inspects : string option;
+  (* WHICH BRIDGE A STEP DRIVES (2026-09-23, status.md §2.7 E). The
+     language package manager runs a bridge's check when it installs the
+     bridge, inside the install — so the step carries the INSTALL's
+     action ([Fetch (Binding _)]) and does the part of it the package
+     manager dispatches: the check, run again in this world, recorded
+     ([Canary_bridge_driver]). What it realizes is the bridge's relation
+     to the system, not the install's, and only this field says so.
+     [None] for every other step. *)
+  bridge : Canary_bridge.t option;
 }
 
 type logger = {

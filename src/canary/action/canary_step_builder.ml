@@ -314,6 +314,13 @@ type runner_spec = {
 
       Recording it makes the clash a warning instead of a coin flip. *)
   template_summaries : (Canary_basic.action * string) list;
+  (** THE BRIDGES THIS WORLD'S BINDINGS INSTALL THROUGH (2026-09-23,
+      status.md §2.7 E), per language. For each entry whose binding this
+      world FETCHES from its package manager, [derive_steps] adds a step
+      beside the fetch that runs the bridge's check here and records what
+      the bridge is and did ([Canary_bridge_driver]). A binding built
+      here, or a dummy fetch, installs no bridge, so it gets no step. *)
+  bridges : (Canary_lang.lang * Canary_bridge.t) list;
 }
 
 let empty_runner_spec = {
@@ -344,6 +351,7 @@ let empty_runner_spec = {
   disabled_agreements = [];
   asserts = [];
   template_summaries = [];
+  bridges = [];
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -677,7 +685,7 @@ let out_of ~root ~project ~tag =
 
 let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None)
-    ?(disabled_agreements = []) ?location ?inspects ~check_post () =
+    ?(disabled_agreements = []) ?location ?inspects ?bridge ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
   let output_dir = output_dir_for ~root ~project ~tag:output_tag in
   let project_dir = project_dir_of ~root ~project in
@@ -699,6 +707,7 @@ let mk_step ~root ~project ~tag ?output_tag ~action ~deps ~cmd
     dummy = None;
     location;
     inspects;
+    bridge;
     (* The tag-based default; [derive_steps] re-resolves it against the
        actual sibling output_dirs once the whole list exists. *)
     dep_dirs =
@@ -1301,6 +1310,48 @@ let derive_steps ~root ~project
                mk_inspect ~parent_tag ~action ?loc ~tag_suffix ~base_name
                  ~inspect_cmd ())
   in
+  (* THE BRIDGE'S CHECK, beside the install that dispatches it
+     (2026-09-23, status.md §2.7 E). One step per declared bridge of the
+     language, and only where the binding is really installed — a dummy
+     fetch installs nothing, so it resolves no bridge. It depends on the
+     install (the bridge is in the store) and on the library's fetch (the
+     capability it checks for is on the system), writes its record into
+     its OWN directory, and fails when the check does not hold. A bridge
+     the driver cannot drive — a depext field has no check — gets no
+     step. *)
+  let bridge_steps ~fetch_tag lang =
+    let binding_pkg =
+      List.Assoc.find
+        (spec.binding_user_facing_pkg @ spec.binding_store_pkg
+        @ Canary_store_config.binding_packages spec.stores)
+        ~equal:Poly.equal lang
+    in
+    let lib_dep =
+      if Option.is_some (script_of_action spec (Fetch Lib)) then
+        [ string_of_action (Fetch Lib) ]
+      else []
+    in
+    let sys_pm = Canary_store.system_pm_of_platform (Canary_store.platform ()) in
+    let mine = List.filter spec.bridges ~f:(fun (l, _) -> Poly.equal l lang) in
+    List.filter_map mine ~f:(fun (_, b) ->
+        Option.map (Canary_bridge_driver.record_cmd b ~binding_pkg ~sys_pm)
+          ~f:(fun cmd ->
+            (* one bridge keeps the plain suffix; several are told apart
+               by package, as sibling probes are by location *)
+            let tag =
+              if List.length mine = 1 then fetch_tag ^ "_bridge"
+              else fetch_tag ^ "_bridge_" ^ Canary_bridge.package_of b
+            in
+            let check_post ~output_dir ~variant_key =
+              has_file ~output_dir
+                (Canary_basic.filename ~variant_key
+                   ~base:Canary_bridge_driver.record_base ~ext:"json")
+            in
+            mk_step ~root ~project ~tag ~action:(Fetch (Binding lang))
+              ~deps:(fetch_tag :: lib_dep) ~cmd ~check_post
+              ~expectation:Expect_success ~symbol_check:None
+              ~disabled_agreements:spec.disabled_agreements ~bridge:b ()))
+  in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
   let mk_scan_source ~fetch_tag scan_cmd =
@@ -1391,6 +1442,13 @@ let derive_steps ~root ~project
                 Hashtbl.set seen ~key:tag ~data:true;
                 let base = mk_one ~tag ~action ~deps:(deps_of_action spec action) ~cmd in
                 let steps = attach_inspect ~parent_tag:tag ~action base in
+                let steps =
+                  match action with
+                  | Fetch (Binding lang)
+                    when Option.is_none (dummy_reason_of_action spec action) ->
+                      steps @ bridge_steps ~fetch_tag:tag lang
+                  | _ -> steps
+                in
                 (* Emit scan_source after fetch_source when wired *)
                 (match action, spec.scan_source with
                  | Fetch Source, Some scan_cmd
@@ -1425,9 +1483,14 @@ let derive_steps ~root ~project
       in
       { s with
         dep_dirs;
+        (* a bridge step carries the install's action and none of its
+           claims: the agreements that fire at an install are about the
+           binding package, and a bridge step is about the bridge *)
         agreement_ctx =
-          agreement_ctx_of_action ~world ~mechanism_of
-            ~declared:spec.api_source ~langs s.action;
+          (if Option.is_some s.bridge then None
+           else
+             agreement_ctx_of_action ~world ~mechanism_of
+               ~declared:spec.api_source ~langs s.action);
         (* only the BASE step of a dummy action is a dummy. An
            attached inspector shares the parent's action but does real
            work — it runs the inspector and writes the summary an

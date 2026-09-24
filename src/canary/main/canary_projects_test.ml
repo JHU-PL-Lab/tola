@@ -831,7 +831,7 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                         ( s,
                           T.place_step ~pr ~world:a ~action:s.SM.action
                             ~location:s.SM.location ~inspects:s.SM.inspects
-                            ~dummy:s.SM.dummy )) )))
+                            ~dummy:s.SM.dummy ~bridge:s.SM.bridge )) )))
         in
         let all = List.concat_map placed ~f:snd in
         let edge_exists id =
@@ -884,9 +884,18 @@ let every_step_placed_pin : Canary_project_test.pure_test =
            consumer programs, and [depends] both present and withheld *)
         let fetch_binding_places =
           List.filter_map all ~f:(fun ((s : SM.step), p) ->
-              match (s.SM.action, p) with
-              | Canary_basic.Fetch (Canary_basic.Binding _), T.On ids -> Some ids
+              match (s.SM.action, s.SM.bridge, p) with
+              | Canary_basic.Fetch (Canary_basic.Binding _), None, T.On ids ->
+                  Some ids
               | _ -> None)
+        in
+        (* THE BRIDGE'S CHECK IS ITS OWN STEP'S (status.md §2.7 E): a step
+           driving a bridge sits on [conf_probe] and nothing else, and no
+           install does — opam dispatches the check only when it installs
+           the bridge, so an install's state says nothing about it *)
+        let bridge_places =
+          List.filter_map all ~f:(fun ((s : SM.step), p) ->
+              match (s.SM.bridge, p) with Some _, p -> Some p | None, _ -> None)
         in
         well_formed
         && List.equal String.equal gaps listed
@@ -896,7 +905,92 @@ let every_step_placed_pin : Canary_project_test.pure_test =
         && List.exists fetch_binding_places ~f:(fun ids ->
                List.mem ids "depends" ~equal:String.equal)
         && List.exists fetch_binding_places ~f:(fun ids ->
-               not (List.mem ids "depends" ~equal:String.equal)))
+               not (List.mem ids "depends" ~equal:String.equal))
+        && List.for_all fetch_binding_places ~f:(fun ids ->
+               not (List.mem ids "conf_probe" ~equal:String.equal))
+        && (not (List.is_empty bridge_places))
+        && List.for_all bridge_places ~f:(function
+             | T.On [ "conf_probe" ] -> true
+             | _ -> false))
+  }
+
+(* A BRIDGE STEP DRIVES THE BRIDGE ITS PROJECT DECLARED (2026-09-23,
+   status.md §2.7 E). The step that runs a bridge's check in a world is
+   derived, never hand-listed, so this holds the derivation over every
+   world of every active project:
+
+   - it carries the INSTALL's action, depends on that install in the same
+     world, and selects no agreements (the install's claims are about the
+     binding package, not the bridge);
+   - the bridge it drives is the one the project's package gate names for
+     that language ([Canary_bridge.of_gate]) — not a second statement of
+     it;
+   - it exists only where the binding is FETCHED: a world that builds its
+     binding here does not install through the bridge (zarith's
+     zarith-no-conf world bypasses conf-gmp);
+   - THE ROLLOUT, as a list: which (project, bridge) pairs have a step
+     today. One, by the plan's "one bridge on one project"; generalizing
+     changes this list deliberately. *)
+let bridge_step_pin : Canary_project_test.pure_test =
+  { name = "steps.bridge_step_drives_the_declared_bridge";
+    check =
+      (fun () ->
+        let module SM = Canary_step_model in
+        let per_world =
+          List.concat_map Canary_registry.all_projects ~f:(fun (name, pr) ->
+              List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  ( name,
+                    pr,
+                    a,
+                    Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
+                      ~ctx:(Canary_pipeline.ctx_of pr a) a )))
+        in
+        let found =
+          List.concat_map per_world ~f:(fun (name, pr, a, steps) ->
+              List.filter_map steps ~f:(fun (s : SM.step) ->
+                  Option.map s.SM.bridge ~f:(fun b -> (name, pr, a, steps, s, b))))
+        in
+        let well_formed =
+          List.for_all found ~f:(fun (_, pr, a, steps, (s : SM.step), b) ->
+              match s.SM.action with
+              | Canary_basic.Fetch (Canary_basic.Binding lang) ->
+                  let install = Canary_basic.string_of_action s.SM.action in
+                  List.mem s.SM.deps install ~equal:String.equal
+                  && List.exists steps ~f:(fun (q : SM.step) ->
+                         String.equal q.SM.tag install && Option.is_none q.SM.bridge)
+                  && Option.is_none s.SM.agreement_ctx
+                  && Option.is_none s.SM.inspects
+                  && Poly.equal
+                       (Option.bind
+                          (Option.join (Canary_topology.gate_of pr lang))
+                          ~f:Canary_bridge.of_gate)
+                       (Some b)
+                  && Poly.equal
+                       (Canary_topology.origin_of ~pr ~world:a
+                          (Canary_basic.Binding lang)
+                       |> Option.map ~f:fst)
+                       (Some Canary_store.Fetched)
+              | _ -> false)
+        in
+        let rollout =
+          List.map found ~f:(fun (name, _, _, _, _, b) ->
+              name ^ " " ^ Canary_bridge.to_string b)
+          |> List.dedup_and_sort ~compare:String.compare
+        in
+        (* and the bypass is real: a world of a bridged project that builds
+           its binding has no bridge step *)
+        let bypassed =
+          List.exists per_world ~f:(fun (name, pr, a, steps) ->
+              String.equal name "zarith"
+              && Poly.equal
+                   (Canary_topology.origin_of ~pr ~world:a
+                      (Canary_basic.Binding Canary_lang.OCaml)
+                   |> Option.map ~f:fst)
+                   (Some Canary_store.Built)
+              && List.for_all steps ~f:(fun (s : SM.step) -> Option.is_none s.SM.bridge))
+        in
+        well_formed && bypassed
+        && List.equal String.equal rollout [ "zarith conf-gmp" ])
   }
 
 (* A RECORDED RUN IS AN OVERLAY ON THE TEMPLATE (2026-09-23, status.md
@@ -2393,7 +2487,7 @@ let canary_switch_pin : Canary_project_test.pure_test =
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
               disabled_agreements = []; agreement_ctx = None; dummy = None;
-              location = None; inspects = None }
+              location = None; inspects = None; bridge = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -2495,7 +2589,7 @@ let platform_single_source_pin : Canary_project_test.pure_test =
               check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
               expectation = Canary_step_model.Expect_success; symbol_check = None;
               disabled_agreements = []; agreement_ctx = None; dummy = None;
-              location = None; inspects = None }
+              location = None; inspects = None; bridge = None }
           in
           Canary_local_runner.step_fingerprint step
         in
@@ -2589,7 +2683,7 @@ let strict_mode_pin : Canary_project_test.pure_test =
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = Canary_step_model.Expect_success; symbol_check = None;
             disabled_agreements = []; agreement_ctx = None; dummy = None;
-              location = None; inspects = None }
+              location = None; inspects = None; bridge = None }
         in
         let fingerprint_under b =
           Canary_agreement_common.set_strict b;
@@ -3111,7 +3205,7 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
             check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
             expectation = exp; symbol_check = None; disabled_agreements = [];
             agreement_ctx = None; dummy = None;
-              location = None; inspects = None }
+              location = None; inspects = None; bridge = None }
         in
         let rendered exp =
           String.concat ~sep:"\n"
@@ -5814,7 +5908,8 @@ let record_steps_pin : Canary_project_test.pure_test =
                              String.equal w.M.ws_tag s.SM.tag
                              && Poly.equal w.M.ws_action s.SM.action
                              && Poly.equal w.M.ws_location s.SM.location
-                             && Poly.equal w.M.ws_inspects s.SM.inspects)
+                             && Poly.equal w.M.ws_inspects s.SM.inspects
+                             && Poly.equal w.M.ws_bridge s.SM.bridge)
                          && (not
                                (List.exists ws ~f:(fun w ->
                                     String.equal w.M.ws_tag stale)))
@@ -5856,6 +5951,12 @@ let record_steps_pin : Canary_project_test.pure_test =
                                    (Canary_step_builder.tag_of_probe_location
                                       ~lang loc)
                              | _ -> false)))
+        in
+        (* the bridge field is carried, not vacuously absent: zarith's
+           fetched world drives conf-gmp (status.md §2.7 E) *)
+        let bridge_carried =
+          List.exists m.M.rows ~f:(fun (r : M.row) ->
+              List.exists r.M.steps ~f:(fun w -> Option.is_some w.M.ws_bridge))
         in
         (* the fact the join rests on: one tag, two consumer programs *)
         let consumer_of (a : Canary_artifact.assignment) (r : M.row) =
@@ -5920,6 +6021,9 @@ let record_steps_pin : Canary_project_test.pure_test =
                                  (Option.map w.M.ws_location
                                     ~f:Canary_store.string_of_location)
                             && Poly.equal (F.str js "inspects") w.M.ws_inspects
+                            && Poly.equal (F.str js "bridge")
+                                 (Option.map w.M.ws_bridge
+                                    ~f:Canary_bridge.to_string)
                             && Poly.equal (F.step_state_of_json js)
                                  (Some w.M.ws_state)
                             && Poly.equal (F.str js "at") w.M.ws_at
@@ -5938,7 +6042,8 @@ let record_steps_pin : Canary_project_test.pure_test =
                      && Option.is_none w.M.ws_inspects)
                  > 1)
         in
-        exact_and_typed && linking_typed && states_ok && exported && covers) }
+        exact_and_typed && linking_typed && states_ok && exported && covers
+        && bridge_carried) }
 
 (* THE JOIN'S RESULT IS IN THE RECORD (2026-09-23, status.md §2.7 phase
    B2). Each row carries the edges its world realizes, with the steps that
@@ -6415,6 +6520,7 @@ let base_tests : Canary_project_test.pure_test list =
       record_steps_pin;
       record_join_pin;
       every_step_placed_pin;
+      bridge_step_pin;
       overview_overlay_pin;
       recorded_names_pin;
       overlay_words_pin;
