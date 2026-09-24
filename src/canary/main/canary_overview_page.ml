@@ -610,9 +610,9 @@ let binding_table projects =
 (* the instances of one cooperation kind, and the two package managers
    (or local suppliers) each joins *)
 let coop_groups projects =
-  let insts =
-    List.concat_map projects ~f:(fun p -> T.topologies_of_project p)
-  in
+  (* per WORLD (2026-09-23): a world that builds its binding does not go
+     through the package gate its project declares *)
+  let insts = List.concat_map projects ~f:T.topologies_of_worlds in
   List.filter_map T.coop_catalogue ~f:(fun info ->
       match
         List.filter insts ~f:(fun ((t : T.t), _) ->
@@ -636,7 +636,14 @@ let coop_table projects =
             | [] -> ""
             | bs -> " (" ^ String.concat ~sep:" + " (List.map bs ~f:T.string_of_gated) ^ ")"
           in
-          i.T.in_project ^ bridge)
+          (* a binding the world does not take from a package manager says
+             so: that is why no gate applies to it *)
+          let side =
+            match t.T.tp_lang with
+            | T.By_pm _ -> ""
+            | s -> " (binding " ^ T.string_of_supplier s ^ ")"
+          in
+          i.T.in_project ^ bridge ^ side)
       |> List.dedup_and_sort ~compare:String.compare
     in
     cells
@@ -673,7 +680,7 @@ let chains_table projects =
   let rows =
     List.concat_map projects ~f:(fun ((name, pr) as p) ->
         let an = Canary_pipeline.analysed_of pr in
-        List.map (T.topologies_of_project p) ~f:(fun ((t : T.t), (i : T.instance)) ->
+        List.map (T.topologies_of_worlds p) ~f:(fun ((t : T.t), (i : T.instance)) ->
             ( name,
               Canary_lang.string_of_lang i.T.in_lang,
               Canary_mechanism.string_of_mechanism
@@ -1374,10 +1381,11 @@ for the columns; they also cover ecosystems canary does not reach yet
 %s
 %s
 <h3>5.4 The chains canary runs</h3>
-<p>One row per project, binding language and way the library is
-provided. A project appears more than once when its library is provided
-more than one way — a chain is a fact about the pair, not the
-project.</p>
+<p>One row per distinct chain among a project's worlds: its binding
+language, where each side comes from, and so which cooperation joins
+them. A project appears more than once when its worlds differ — a world
+that builds its binding does not go through the package gate its project
+declares, so a chain is a fact about the world, not the project.</p>
 %s
 
 <div class="foot">Generated %s. <strong>What is derived and what is not</strong>,

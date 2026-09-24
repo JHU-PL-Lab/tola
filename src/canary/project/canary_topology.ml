@@ -377,18 +377,25 @@ let coop_catalogue : coop_info list =
       co_recorded = "the fetches" };
     { co_kind = Co_artifacts;
       co_name = "artifact-centric, no bridge";
-      co_draft = "artifact-centric (Cargo *-sys with apt; pip sdists)";
-      co_package_join = "none";
-      co_artifact_join = "the package's own discovery, inside its build";
-      co_versions = "whatever the package's build logic enforces";
-      co_recorded = "the fetches" };
+      co_draft =
+        "artifact-centric (Cargo *-sys with apt; pip sdists) — here, \
+         canary's own bypass of the conf gate";
+      co_package_join =
+        "none: no package of the binding's is installed — the binding is \
+         built from its source, and what is published from it (zarith's \
+         zarith-no-conf) declares no gate";
+      co_artifact_join =
+        "the binding's own build finds the library — zarith's configure \
+         asks pkg-config";
+      co_versions = "whatever the binding's build logic enforces";
+      co_recorded = "the binding's build, which is canary's own step" };
     { co_kind = Co_local;
       co_name = "no provider ecosystem — the native side is local";
       co_draft = "a package-specific rewrite — vendor(native_source)";
-      co_package_join = "none on the native side";
-      co_artifact_join = "the build here";
-      co_versions = "the source ref canary builds";
-      co_recorded = "the library's build" };
+      co_package_join = "none: neither side is installed by a package manager";
+      co_artifact_join = "the builds here, one against the other";
+      co_versions = "the source refs canary builds";
+      co_recorded = "the builds, which are canary's own steps" };
     { co_kind = Co_incomplete;
       co_name = "incomplete — one side is absent";
       co_draft = "—";
@@ -1237,6 +1244,86 @@ let place_step ~(pr : Canary_project_run.project_run)
                      @ [ "resolve_lang"; "install_lang"; "install_surf" ]))
             | _ -> Unplaced (Unexpected "a binding fetch from no language package"))
         | _ -> On candidates)
+
+(* ── A WORLD'S COOPERATION (2026-09-23, status.md §2.7) ─────────────
+
+   [topologies_of_project] is per declared native provision, and reads
+   the binding side and the join from the PROJECT: the binding row's
+   fetched provision and the declared gate. A world can do otherwise.
+   zarith's built world compiles its binding from source and publishes
+   zarith-no-conf, which drops conf-gmp; llvm's dev worlds build both
+   sides. The project-level answer called both bridged. This is the
+   answer for ONE world: both sides from its own placements, and the
+   declared gate only where the world installs the package that declares
+   it.
+
+   World-level by the pass-2 membership rule: it needs a world, so it is
+   computed beside firing, not in the analysis. The world-free half — the
+   declared gate per language — stays [join_of]. *)
+
+(** Who supplies one side of one world. *)
+let supplier_of_world ~(pr : Canary_project_run.project_run)
+    ~(world : Canary_artifact.assignment) (k : Canary_basic.artifact_kind) :
+    supplier =
+  match origin_of ~pr ~world k with
+  | None -> Unsupplied
+  | Some (prov, provider) -> (
+      match prov with
+      | Canary_store.Absent -> Unsupplied
+      | Canary_store.Built -> Built_here
+      | Canary_store.Installed -> Staged
+      | Canary_store.Vendored -> Vendored
+      | Canary_store.Fetched -> (
+          match provider with
+          | Some (SC.Sys_pkg _) ->
+              By_pm (Canary_store.system_pm_of_platform (Canary_store.platform ()))
+          | Some (SC.Lang_pkg { pm; _ }) -> By_pm pm
+          | Some (SC.Vendored _ | SC.Cached _) -> Vendored
+          | Some (SC.Repo _ | SC.Repo_axes _) -> Built_here
+          | Some SC.Absent | None -> Unsupplied))
+
+(** The topology of one binding language in one world. Where the binding
+    comes from its package manager, the declared gate joins it; where the
+    world builds it, stages it or is handed it, no package of the
+    binding's is installed, so no gate stands between it and the library
+    — its own build meets the library directly ([Artifacts_only]). *)
+let topology_of_world ~(pr : Canary_project_run.project_run)
+    ~(world : Canary_artifact.assignment) (lang : Canary_lang.lang) : t =
+  let tp_lang = supplier_of_world ~pr ~world (Canary_basic.Binding lang) in
+  let tp_join =
+    match tp_lang with
+    | By_pm _ -> join_of pr lang
+    | Built_here | Staged | Vendored | Unsupplied -> Artifacts_only
+  in
+  normalize
+    { tp_sys = supplier_of_world ~pr ~world Canary_basic.Lib;
+      tp_join;
+      tp_lang;
+      tp_capability = capability_files pr }
+
+(** One world's cooperation for one binding language. *)
+let coop_of_world ~pr ~world lang : coop = coop_of (topology_of_world ~pr ~world lang)
+
+(** Every (topology, instance) a project's WORLDS realize, once per
+    distinct shape and language — what the page's cooperation table and
+    chains are drawn from. *)
+let topologies_of_worlds ((name, pr) : string * Canary_project_run.project_run) :
+    (t * instance) list =
+  List.concat_map (Canary_project_run.scenarios_of pr) ~f:(fun world ->
+      List.map (binding_langs pr) ~f:(fun lang ->
+          let t = topology_of_world ~pr ~world lang in
+          ( t,
+            { in_project = name;
+              in_lang = lang;
+              in_sys_provision = string_of_supplier t.tp_sys;
+              in_gate_reachable =
+                (match t.tp_join with Undeclared_join -> false | _ -> true) } )))
+  |> List.dedup_and_sort ~compare:(fun ((a : t), (i : instance)) ((b : t), (j : instance)) ->
+         Poly.compare
+           (i.in_lang, string_of_supplier a.tp_lang, string_of_supplier a.tp_sys,
+            string_of_join a.tp_join)
+           (j.in_lang, string_of_supplier b.tp_lang, string_of_supplier b.tp_sys,
+            string_of_join b.tp_join))
 
 (* ── THE ARTIFACT BAND IS ONE BINDING MECHANISM ───────────────────────
 

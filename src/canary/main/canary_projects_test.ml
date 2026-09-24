@@ -1705,7 +1705,22 @@ let coverage_tables_pin : Canary_project_test.pure_test =
           && List.for_all Canary_store.[ Apt; Brew; Pip ] ~f:(fun pm ->
                  List.is_empty (Canary_bridge.kinds_of_pm pm))
         in
-        let topos = List.concat_map projects ~f:T.topologies_of_project in
+        (* per WORLD (2026-09-23): the cooperation a world realizes, both
+           sides from its own placements *)
+        let topos = List.concat_map projects ~f:T.topologies_of_worlds in
+        (* and the worlds that differ from their project read differently:
+           zarith's built world bypasses conf-gmp, llvm's dev worlds build
+           both sides — while their fetched worlds are still bridged *)
+        let kinds_of name =
+          List.filter_map topos ~f:(fun ((t : T.t), (i : T.instance)) ->
+              if String.equal i.T.in_project name then Some (T.coop_of t) else None)
+        in
+        let per_world_ok =
+          List.mem (kinds_of "zarith") T.Co_conf ~equal:Poly.equal
+          && List.mem (kinds_of "zarith") T.Co_artifacts ~equal:Poly.equal
+          && List.mem (kinds_of "llvm") T.Co_conf ~equal:Poly.equal
+          && List.mem (kinds_of "llvm") T.Co_local ~equal:Poly.equal
+        in
         let coop_ok =
           List.for_all topos ~f:(fun ((t : T.t), _) ->
               match Option.try_with (fun () -> T.info_of_coop (T.coop_of t)) with
@@ -1761,7 +1776,7 @@ let coverage_tables_pin : Canary_project_test.pure_test =
           (* one chain per distinct instance, with its mechanism named *)
           && List.for_all projects ~f:(fun ((name, pr) as p) ->
                  let an = Canary_pipeline.analysed_of pr in
-                 List.for_all (T.topologies_of_project p) ~f:(fun ((t : T.t), (i : T.instance)) ->
+                 List.for_all (T.topologies_of_worlds p) ~f:(fun ((t : T.t), (i : T.instance)) ->
                      String.is_substring section
                        ~substring:
                          (String.concat
@@ -1772,7 +1787,7 @@ let coverage_tables_pin : Canary_project_test.pure_test =
                               "</td><td>"; T.string_of_supplier t.T.tp_lang ]))
                )
         in
-        pm_solo_ok && coop_ok && page_ok)
+        pm_solo_ok && coop_ok && per_world_ok && page_ok)
   }
 
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
