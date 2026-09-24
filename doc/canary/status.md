@@ -94,8 +94,9 @@ code the lowering reads.
 
 Seven items, in the order they are worth doing. §2.6 is the plan for
 merging the overview page into the framework (terminology settled,
-derivations next); §2.7 draws recorded runs on its diagrams, planned for
-a new session. §2.5 is the forward look
+derivations next); §2.7 draws recorded runs on its diagrams — phases A
+to D landed, and E1 drives and records the first bridge (conf-gmp on
+zarith). §2.5 is the forward look
 — what the unlanded claims would take — and is where the manuscript's
 plan material comes from.
 
@@ -492,7 +493,7 @@ the check until the derivation agrees with it:
 6. **Recorded run results on the case diagrams** — brought forward by
    the user on 2026-09-23 and planned as §2.7.
 
-### 2.7 Run results on the overview diagrams — A to D landed; E next
+### 2.7 Run results on the overview diagrams — A to D landed; E1 landed (conf-gmp on zarith)
 
 *(2026-09-23, user: "the cases in section 2 are generated from
 hardcoded code, not from the running result. I wish a feature to
@@ -613,12 +614,13 @@ to record what each package-manager BRIDGE actually did.
      an OCaml `META` is the binding package's. Both face the artifacts:
      they record what building against them takes (flags, required
      libraries), which is what a claim can hold them to. The page already
-     draws the node in the package layer, but `Canary_topology` still
-     treats the file as a bridge in three places — the `Capability_file`
+     drew the node in the package layer, but `Canary_topology` treated
+     the file as a bridge in three places — the `Capability_file`
      constructor, `join_of` appending it to the bridge list, and
-     `character`, which says "+ artifact validation" only when a `.pc` is
-     declared, although conf-gmp's own predicate (`pkg-config --exists
-     gmp || cc -c test.c`) IS that validation.
+     `character`, which said "+ artifact validation" only when a `.pc`
+     was declared, although conf-gmp's own predicate (`pkg-config
+     --exists gmp || cc -c test.c`) IS that validation. Fixed in E1
+     (below).
   3. **A composition is a template built from the tools, then
      instantiated per project.** The page has both halves already — the
      generic diagram and the recorded worlds. The template should be
@@ -1001,6 +1003,96 @@ grow when a drawing or a derivation is corrected and must not quietly
 shrink. Red under a garbled bridge label and under disabled dimming.
 Still generic: the consumer programs and the capability file, which
 nothing declares by name.
+
+**Phase E1 landed 2026-09-23: conf-gmp on zarith — the bridge modeled,
+driven, and recorded.** One bridge on one project, as planned, in three
+commits that each carry their own guards.
+
+*A bridge is a thing in base* (decisions 1 and 2). `Canary_bridge.t` is a
+variant per package manager — opam's conf package and depext field —
+kept apart from the drivers' common components, and `of_gate` derives
+the bridge a package gate names, so nothing restates it. The topology's
+own bridge type is gone: a join carries the bridge plus whether its
+constraint reaches the library (the version-transport question, deferred
+and kept where it was), and a declared capability file rides beside the
+join rather than inside it. The three places the decision note named are
+fixed, and the visible effect is one column: zarith, ssl, llvm and sqlite
+now read "symbolic package bridge + artifact validation", which is the
+name the draft gives this composition, because the validation is the
+bridge's own check.
+
+*The bridge is driven* (decision 4). `Canary_bridge_driver` in `tool/`
+is the model: which questions a conf package answers, and how to
+dispatch its check in this world. It runs the predicate's own pkg-config
+invocation, chosen for this platform by evaluating the predicate's opam
+filters against `opam var` — conf-zlib puts Windows-only `--personality`
+flags after `pkg-config`, and a parse that ignored filters would have run
+them. `canary/scripts/inspect_bridge.py` writes the record and exits with
+the verdict: 0 the check holds, 1 it does not, 3 canary cannot dispatch
+it (conf-llvm-shared's predicate is a script, and is recorded as such,
+never as holding). Every package-manager question is a template from the
+drivers; opam's `show_field_cmd` and `var_cmd` and apt's and brew's
+`owner_of_file_cmd` are new. A step carries the bridge it drives
+(`step.bridge`), and `runner_spec.bridges` asks for one beside the
+install of a fetched binding; it takes the install's action and none of
+its claims. zarith is the one project wired, from the gate it already
+declares: its fetched world gains `fetch_binding_ocaml_bridge`, and its
+zarith-no-conf world, which bypasses the bridge, gains nothing.
+`conf_probe` is an action edge now, realized by that step alone.
+
+*The overview reads the record.* It names the bridge, the system package
+and the capability file from what the run recorded, puts a short line
+under each, and says in one sentence per edge what was seen. The
+relations canary does not perform — the depext table, the packager's
+file, pkg-config's answer — read `observed` where a run recorded them and
+`not_ours` where none did.
+
+What the real run recorded (WSL): conf-gmp 5 is installed and maps to
+libgmp-dev, installed at 2:6.3.0+dfsg-2ubuntu6.1; zarith's depends names
+conf-gmp; `pkg-config --print-errors --exists gmp` holds; `gmp.pc` (gmp
+6.3.0, libdir `/usr/lib/x86_64-linux-gnu`) is shipped by libgmp-dev. The
+conf case's capability file is now named by the run, and the name agrees
+with the drawing. Checked in a headless render.
+
+Guards: `steps.bridge_step_drives_the_declared_bridge` (the derivation,
+the bypass, and the rollout as a list — today `zarith conf-gmp`);
+`topology.every_step_has_a_place` (`conf_probe` is the bridge step's and
+no install's); `matrix.record_carries_every_step` (the `bridge` field);
+`overview.bridge_record_is_read` (the reader, on a fixture with exactly
+the fields the framework test holds the script to write); the overlay pin
+(the new word, only on someone else's relation, always with a sentence);
+six artifact-test cases on fixtures — a fixture `.pc` on an isolated
+pkg-config path, so they do not depend on what a machine has installed;
+three pm-test cases that check answers rather than exit codes. Each new
+pin was turned red by a deliberate break before it was trusted.
+
+Open, found on the way — none of them fixed here:
+
+- *The record is evidence nothing reads yet.* It carries both sides of
+  four claims: the check held in this world (`gate_admits_the_world`);
+  pkg-config's libdir against the library the binding links
+  (`discovery_matches_link`); the depext against the system package the
+  world provisions; the package's declared depends against the gate the
+  project declares (`package_gates.md` §7.2). The first agreement on
+  bridge evidence is the natural E2.
+- *The system package's version comes from the run only on the
+  overview*, and only where a bridge is recorded. The result page still
+  asks the rendering machine (finding 2).
+- *A bypassed bridge is still named.* zarith's built world draws the
+  bridge node dimmed but labelled `conf-gmp` from the declaration, since
+  a declared name does not know about the world; under decision 3 the
+  instance would say it bypasses the bridge.
+- *Driving against the world's own library* — running the check with
+  `PKG_CONFIG_PATH` at a library the world built — is what the built
+  case is about, and it is not done: its counterpart, sqlite, has no
+  bridge wired.
+- *Not run on macOS*: brew's owner query and its pm-test case; the
+  predicate parse was checked with macOS variables fixed by hand only.
+- *Generalizing needs a routing fix first.* cairo, libffi, zlib and zstd
+  still keep their gates on the template's record (`project/issues.md`
+  §2). sqlite and ssl route theirs and use pkg-config predicates.
+  llvm's would exit 3, because its predicate is a script, and torch's
+  depext has no check.
 
 ---
 
