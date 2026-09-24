@@ -826,10 +826,12 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                     Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
                       ~ctx:(Canary_pipeline.ctx_of pr a) a
                   in
+                  let gones = T.world_gone ~pr ~world:a in
                   ( steps,
                     List.map steps ~f:(fun (s : SM.step) ->
                         ( s,
-                          T.place_step ~pr ~world:a ~action:s.SM.action
+                          T.place_step ~gone:(T.gone_for_action gones s.SM.action)
+                            ~pr ~world:a ~action:s.SM.action
                             ~location:s.SM.location ~inspects:s.SM.inspects
                             ~dummy:s.SM.dummy ~bridge:s.SM.bridge
                             ~placeholder:s.SM.placeholder )) )))
@@ -2037,12 +2039,175 @@ let record_chains_pin : Canary_project_test.pure_test =
                       in
                       if Bool.equal declared stepped then Some declared else None))
         in
-        typed && exported
+        (* WHAT EACH CHAIN LACKS, AND WHICH CLAIMS APPLY TO IT: the world's
+           own answer ([world_gone]), and a claim applies where one of its
+           edges survives — exported as such. Exercised: zarith's bridged
+           chain carries the bridge's claims, its artifact-only chain has
+           no bridge and none of them *)
+        let bridge_claims =
+          [ "gate_admits_the_world"; "declared_gate_matches_package";
+            "gate_bounds_the_library"; "depext_names_the_provided_package" ]
+        in
+        let lacks =
+          List.for_all m.M.rows ~f:(fun (r : M.row) ->
+              match Canary_overview_runs.assignment_of_row r with
+              | None -> false
+              | Some (pr, a) ->
+                  let gones = T.world_gone ~pr ~world:a in
+                  List.for_all r.M.chains ~f:(fun c ->
+                      Poly.equal (Some c.M.ch_gone)
+                        (List.Assoc.find gones c.M.ch_lang ~equal:Poly.equal)
+                      && List.equal String.equal c.M.ch_claims
+                           (T.claims_of_chain ~gone:c.M.ch_gone)))
+        in
+        let lacks_exported =
+          match Yojson.Basic.from_string (M.json_export m) with
+          | exception _ -> false
+          | j ->
+              let strs j k =
+                match j with
+                | `Assoc kv -> (
+                    match List.Assoc.find kv k ~equal:String.equal with
+                    | Some (`List xs) ->
+                        List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+                    | _ -> [])
+                | _ -> []
+              in
+              let items j k =
+                match j with
+                | `Assoc kv -> (
+                    match List.Assoc.find kv k ~equal:String.equal with
+                    | Some (`List xs) -> xs
+                    | _ -> [])
+                | _ -> []
+              in
+              List.for_all2_exn m.M.rows (items j "rows") ~f:(fun (r : M.row) jr ->
+                  List.for_all2_exn r.M.chains (items jr "chains") ~f:(fun c jc ->
+                      List.equal String.equal (strs jc "gone") c.M.ch_gone
+                      && List.equal String.equal (strs jc "applicable_claims") c.M.ch_claims))
+        in
+        let zarith_chain k =
+          List.find_map m.M.rows ~f:(fun (r : M.row) ->
+              if String.equal r.M.project "zarith" then
+                List.find r.M.chains ~f:(fun c -> Poly.equal c.M.ch_coop k)
+              else None)
+        in
+        let bridge_where_bridged =
+          match (zarith_chain T.Co_conf, zarith_chain T.Co_artifacts) with
+          | Some bridged, Some bare ->
+              List.for_all bridge_claims ~f:(List.mem bridged.M.ch_claims ~equal:String.equal)
+              && (not (List.mem bridged.M.ch_gone "bridge" ~equal:String.equal))
+              && List.mem bare.M.ch_gone "bridge" ~equal:String.equal
+              && not (List.exists bridge_claims ~f:(List.mem bare.M.ch_claims ~equal:String.equal))
+          | _ -> false
+        in
+        typed && exported && lacks && lacks_exported && bridge_where_bridged
         && List.mem zarith_kinds T.Co_conf ~equal:Poly.equal
         && List.mem zarith_kinds T.Co_artifacts ~equal:Poly.equal
         && List.for_all publishing ~f:Option.is_some
         && List.mem publishing (Some true) ~equal:(Option.equal Bool.equal)
         && List.mem publishing (Some false) ~equal:(Option.equal Bool.equal))
+  }
+
+(* WHAT A CHAIN LACKS IS NEVER RECORDED (2026-09-23, status.md §2.7). The
+   overview stops drawing what a world's chain does not have — its
+   mechanism's artifact band joined with its cooperation's package band —
+   and a claim sitting only there stops applying. That is a STRUCTURAL
+   statement made without reading the run, so the run is what checks it,
+   over every recorded view:
+
+   - a node the chain lacks is never touched: it is dimmed, and no
+     recording names it;
+   - an edge the chain lacks is never realized, observed or placeheld, and
+     carries no badge;
+   - no claim a run DECIDED (holds or violated) is dropped as not applying;
+   - exercised both ways on zarith: its bridged view keeps the bridge and
+     lists the bridge's placeholder claims, its artifact-only view has no
+     bridge and lists none of them; and the page hides by class.
+
+   It caught the rules twice before they landed: llvm's built worlds stage
+   the library the first draft said had no staged copy, and torch's opam
+   build was placed on a discovery edge whose chain has no capability
+   file. *)
+let chain_absence_pin : Canary_project_test.pure_test =
+  { name = "overview.chain_absence_is_never_recorded";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module T = Canary_topology in
+        let module R = Canary_overview_runs in
+        let m = M.matrix_of Canary_registry.all_projects in
+        let views = R.views m in
+        let is_node id = List.exists T.nodes ~f:(fun n -> String.equal n.T.nd_id id) in
+        let sound (v : R.view) =
+          List.for_all v.R.vw_gone ~f:(fun id ->
+              if is_node id then
+                List.mem v.R.vw_dim id ~equal:String.equal
+                && not
+                     (List.exists v.R.vw_names ~f:(fun (n, (_, from)) ->
+                          String.equal n id && String.equal from "recorded"))
+              else
+                (match List.Assoc.find v.R.vw_edges id ~equal:String.equal with
+                 | Some w -> List.mem [ "absent"; "not_ours"; "claim" ] w ~equal:String.equal
+                 | None -> false)
+                && (not (List.Assoc.mem v.R.vw_placeholders id ~equal:String.equal))
+                && (not (List.Assoc.mem v.R.vw_observed id ~equal:String.equal))
+                && not (List.Assoc.mem v.R.vw_badges id ~equal:String.equal))
+        in
+        (* the claims a run decided, per view, read from the row — before
+           the view kept only those that apply *)
+        let col_in_lang lang label =
+          match
+            List.find m.M.typed_columns ~f:(fun c -> String.equal (M.label_of_col c) label)
+          with
+          | Some c -> R.in_lang lang (M.action_of_col c)
+          | None -> false
+        in
+        let keeps_decided (v : R.view) =
+          match
+            List.find m.M.rows ~f:(fun (r : M.row) ->
+                String.equal r.M.project v.R.vw_project
+                && String.equal r.M.scenario v.R.vw_scenario)
+          with
+          | None -> false
+          | Some r ->
+              List.for_all r.M.claims ~f:(fun (slug, cols) ->
+                  let decided =
+                    List.exists cols ~f:(fun (label, o) ->
+                        col_in_lang v.R.vw_lang label
+                        && match o with Some ("holds" | "violated") -> true | _ -> false)
+                  in
+                  (not decided) || List.Assoc.mem v.R.vw_claims slug ~equal:String.equal)
+        in
+        let bridge_claims =
+          [ "gate_admits_the_world"; "declared_gate_matches_package";
+            "gate_bounds_the_library"; "depext_names_the_provided_package" ]
+        in
+        let zarith k =
+          List.find views ~f:(fun v ->
+              String.equal v.R.vw_project "zarith"
+              && Option.exists v.R.vw_chain ~f:(fun c -> Poly.equal c.M.ch_coop k))
+        in
+        let exercised =
+          match (zarith T.Co_conf, zarith T.Co_artifacts) with
+          | Some bridged, Some bare ->
+              (not (List.mem bridged.R.vw_gone "bridge" ~equal:String.equal))
+              && List.for_all bridge_claims ~f:(List.mem bridged.R.vw_candidates ~equal:String.equal)
+              && List.mem bare.R.vw_gone "bridge" ~equal:String.equal
+              && List.mem bare.R.vw_gone "conf_probe" ~equal:String.equal
+              && not (List.exists bridge_claims ~f:(List.mem bare.R.vw_candidates ~equal:String.equal))
+          | _ -> false
+        in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+        in
+        let page_ok =
+          String.is_substring page ~substring:".rec .gone{display:none}"
+          && String.is_substring page ~substring:"g.classList.toggle('gone'"
+        in
+        List.for_all views ~f:sound && List.for_all views ~f:keeps_decided && exercised
+        && page_ok
+        && List.exists views ~f:(fun v -> not (List.is_empty v.R.vw_gone)))
   }
 
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
@@ -7274,6 +7439,7 @@ let base_tests : Canary_project_test.pure_test list =
       coverage_tables_pin;
       package_band_pin;
       record_chains_pin;
+      chain_absence_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

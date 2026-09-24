@@ -381,6 +381,7 @@ stroke-dasharray:1 4;opacity:.9}
 .rec .edge.cl-partial .cbadge{fill:var(--xf)}
 .rec .edge.cl-undecided .cbadge,.rec .edge.cl-unevaluated .cbadge{fill:var(--mut)}
 .rec .node .nsub{fill:var(--fg)}
+.rec .gone{display:none}
 .rec .node.named-decl .nlabel{font-style:italic}
 table.cmp{font-size:.85rem;max-width:780px}
 .widetable{overflow-x:auto;max-width:100%}
@@ -1011,8 +1012,11 @@ so the two can be compared by switching. An edge is coloured by what the
 steps realizing it did in the last recorded run, a claim badge by the
 outcomes of the claims placed there. A node is named by what the run
 recorded about it, or — in italics — by what the project declares, and a
-node nothing in this world touches is dimmed. An edge this world realizes
-no step of is faint. An edge someone else's rule establishes is dotted:
+node nothing in this world touches is dimmed. What the world's chain does
+not have at all — by its binding mechanism or its cooperation, §1's two
+bands — is not drawn, and a claim sitting only there does not apply: a
+bridge's claims apply only where there is a bridge. An edge this world
+realizes no step of is faint. An edge someone else's rule establishes is dotted:
 grey where nothing is recorded, and in the accent colour where the run
 recorded what that rule said here — which is what a bridge step does. It
 runs the bridge's own check in this world and records the mapping, the
@@ -1039,6 +1043,7 @@ page</p>
 <span><svg width="26" height="18" viewBox="0 0 26 18"><g class="phm on not_yet"><rect x="2" y="1" width="22" height="16" rx="3"/><text x="13" y="13">…</text></g></svg>
 a placeholder — not recorded yet (grey: out of reach)</span>
 <span><b>name</b> recorded by the run · <i>name</i> declared by the project</span>
+<span>not drawn: what this world's chain does not have — §1's two bands</span>
 </div>
 <div id="recobserved"></div>
 <div id="recph"></div>
@@ -1137,9 +1142,11 @@ function esc(s){ var d=document.createElement('span'); d.textContent=s; return d
 function show(key){
   var v=byId[key]; if(!v) return;
   sel.value=key;
-  var obs=v.observed||{};
+  var obs=v.observed||{}, gone=v.gone||[];
   rec.querySelectorAll('[data-edge]').forEach(function(g){
     var e=g.getAttribute('data-edge');
+    // what this world's chain does not have is not drawn (§1's bands)
+    g.classList.toggle('gone', gone.indexOf(e)>=0);
     STATES.forEach(function(s){ g.classList.remove('st-'+s); });
     OUTS.forEach(function(o){ g.classList.remove('cl-'+o); });
     g.classList.add('st-'+(v.edges[e]||'absent'));
@@ -1181,6 +1188,7 @@ function show(key){
     if(l) l.textContent=n?n.label:g.dataset.generic;
     g.classList.toggle('named-decl', !!(n&&n.from==='declared'));
     g.classList.toggle('dim', (v.dim||[]).indexOf(id)>=0);
+    g.classList.toggle('gone', gone.indexOf(id)>=0);
     var t=g.querySelector('.nsub'); if(t) t.textContent=v.nodes[id]||'';
   });
   // the case this world stands for, set beside it node by node
@@ -1217,12 +1225,17 @@ function show(key){
     // cooperation that joins them
     +(v.chain?'\nchain: '+v.chain.mechanism+' · '+v.chain.lang_side+' ↔ '
       +v.chain.native_side+' · '+v.chain.character:'');
-  var cl=Object.keys(v.claims);
-  document.getElementById('recclaims').innerHTML=cl.length
+  var cl=Object.keys(v.claims), cand=v.candidates||[];
+  document.getElementById('recclaims').innerHTML=(cl.length
     ?'<p class="mechnote"><strong>Claims the graph places, in this world:</strong> '
       +cl.map(function(c){ return '<code>'+esc(c)+'</code> <span class="o-'+v.claims[c]+'">'
         +esc(v.claims[c])+'</span>'; }).join(' · ')+'</p>'
-    :'';
+    :'')
+    // a placeholder claim applies only where its edge exists in this chain
+    +(cand.length
+    ?'<p class="mechnote"><strong>Placeholder claims that apply to this chain</strong> — named, no evaluator: '
+      +cand.map(function(c){ return '<code>'+esc(c)+'</code>'; }).join(' · ')+'</p>'
+    :'');
   var up=Object.keys(v.unplaced);
   document.getElementById('recunplaced').innerHTML=up.length
     ?'<p class="mechnote"><strong>Steps of this world with no edge on the page:</strong></p><ul class="unpl">'

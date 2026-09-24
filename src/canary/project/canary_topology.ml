@@ -1190,8 +1190,19 @@ let placeholder_place ~pr ~world ~(action : Canary_basic.action)
     [placeholder] are the step's own fields ([Canary_step_model.step]);
     the world and the project answer what the step alone cannot — where
     the library came from, and whether a bridge sits between the binding
-    package and the system. *)
-let place_step ~(pr : Canary_project_run.project_run)
+    package and the system.
+
+    [gone] is what the step's chain does not have ({!chain_gone}, which
+    the caller computes — it is defined below). A PLACEHOLDER stands only
+    on edges the chain has: it is a statement about what a package
+    manager did inside our action, unseen, and a relation the chain does
+    not have was not established there. torch is the case: opam builds
+    its binding inside the install, and that build finds libtorch through
+    opam rather than through a capability file, which the unified chain
+    has none of. A step that RAN is evidence, not a statement, so it is
+    never filtered — [overview.chain_absence_is_never_recorded] holds it
+    against the chain instead. *)
+let place_step ~(gone : string list) ~(pr : Canary_project_run.project_run)
     ~(world : Canary_artifact.assignment) ~(action : Canary_basic.action)
     ~(location : Canary_store.location option) ~(inspects : string option)
     ~(dummy : string option) ~(bridge : Canary_bridge.t option)
@@ -1209,7 +1220,14 @@ let place_step ~(pr : Canary_project_run.project_run)
   match (inspects, dummy, placeholder) with
   | Some parent, _, _ -> Evidence_for parent
   | None, Some _, _ -> Unplaced Does_no_work
-  | None, None, Some ph -> placeholder_place ~pr ~world ~action ph
+  | None, None, Some ph -> (
+      match placeholder_place ~pr ~world ~action ph with
+      | Placeholder_for ids -> (
+          match List.filter ids ~f:(fun id -> not (List.mem gone id ~equal:String.equal)) with
+          | [] ->
+              Unplaced (Unexpected "a placeholder whose edges this chain does not have")
+          | kept -> Placeholder_for kept)
+      | other -> other)
   | None, None, None -> (
       if List.is_empty candidates then Unplaced No_edge_for_family
       else
@@ -1368,15 +1386,27 @@ let topologies_of_worlds ((name, pr) : string * Canary_project_run.project_run) 
      only that package exist when a language package manager supplies
      the binding, or when the world PUBLISHES the binding it built
      (zarith's zarith-no-conf);
-   - the native source exists when the library is built or staged here,
-     the staged copy when it is staged, and the binding's source when
-     the binding is built — here, or by opam inside its install.
+   - the native source and the staged copy exist when the library is
+     built or staged here, and the binding's source when the binding is —
+     here, or by opam inside its install.
 
-   ⚠ THE LAST RULE WAS WRONG IN THE FIRST DRAFT, and the hand-drawn
-   cases caught it: it said the binding's source exists only where WE
-   build the binding. The conf case draws Zarith.git, and it is right to —
-   opam fetched that source and compiled it inside the install, which is
-   where the build placeholder stands. A pip wheel has no such source. *)
+   UNKNOWN IS NOT ABSENT, and three rules say so. A join canary could not
+   read keeps its bridge, its capability file and the system package the
+   gate would name — the four opam-template projects' vendored worlds
+   still fetch that package. A VENDORED side keeps its source: tiny-full
+   builds its vendored tree from source, the conda-forge prebuilts do not,
+   and the declaration cannot tell them apart. A library BUILT here keeps
+   its staged copy: llvm's built worlds stage the build, sqlite's
+   built-only worlds do not — that is the world's steps' business, and a
+   recorded view dims what they did not touch.
+
+   ⚠ TWO RULES WERE WRONG IN THE FIRST DRAFT. The binding's source existed
+   only where WE build the binding — the hand-drawn conf case draws
+   Zarith.git, and is right to: opam fetched that source and compiled it
+   inside the install, where the build placeholder stands (a pip wheel has
+   no such source). And the staged copy existed only where the library is
+   Installed — llvm's recorded worlds stage a Built library, which
+   [overview.chain_absence_is_never_recorded] caught. *)
 
 (** The node ids the package band decides — the only ones
     {!band_hidden} can name. *)
@@ -1418,22 +1448,23 @@ let band_hidden ?(publishes = false) (t : t) : string list =
   let gated =
     List.exists (bridges_of_join t.tp_join) ~f:(fun g -> Canary_bridge.has_check g.gb_bridge)
   in
-  let sys_package = system_pm || gated in
-  let binding_built = match t.tp_lang with Built_here -> true | _ -> false in
+  let sys_package = system_pm || gated || unknown in
+  let built_here = function Built_here | Staged -> true | _ -> false in
+  let local = function Built_here | Staged | Vendored -> true | _ -> false in
   let pm_builds = match t.tp_lang with By_pm pm -> builds_from_source pm | _ -> false in
   let lang_package = publishes || match t.tp_lang with By_pm _ -> true | _ -> false in
   List.filter_map
     ~f:(fun (node, present) -> if present then None else Some node)
     [ ("pm_sys", sys_package);
       ("pkg_sys", sys_package);
-      ("cap", sys_package && (gated || unknown || binding_built || pm_builds));
+      ("cap", sys_package && (gated || unknown || built_here t.tp_lang || pm_builds));
       ("bridge", unknown || not (List.is_empty (bridges_of_join t.tp_join)));
       ("pm_lang", lang_package);
       ("pkg_lang", lang_package);
       ("consumer_package", lang_package);
-      ("src_sys", (match t.tp_sys with Built_here | Staged -> true | _ -> false));
-      ("staged_sys", (match t.tp_sys with Staged -> true | _ -> false));
-      ("src_lang", binding_built || pm_builds) ]
+      ("src_sys", local t.tp_sys);
+      ("staged_sys", built_here t.tp_sys);
+      ("src_lang", local t.tp_lang || pm_builds) ]
 
 (** Edges that EXIST and do not fire: where a conf gate checks a system
     package this world does not use, that package's payload is not what
@@ -1597,6 +1628,34 @@ let with_edges (ids : string list) : string list =
 let chain_gone ~(mechanism : Canary_mechanism.mechanism) ?publishes (t : t) :
     string list =
   with_edges ((artifact_variant_of mechanism).av_hidden @ band_hidden ?publishes t)
+
+(** What each chain of one world lacks, by binding language — pass 2's
+    mechanism for the language, the world's own cooperation. Computed once
+    per world by whoever places its steps and records its chains, so the
+    two read one answer. *)
+let world_gone ~(pr : Canary_project_run.project_run)
+    ~(world : Canary_artifact.assignment) : (Canary_lang.lang * string list) list =
+  let an = Canary_project_analysis.of_project_run pr in
+  List.map (binding_langs pr) ~f:(fun lang ->
+      ( lang,
+        chain_gone
+          ~mechanism:(Canary_project_analysis.mechanism_for an lang)
+          ~publishes:(publishes_of_world ~pr ~world lang)
+          (topology_of_world ~pr ~world lang) ))
+
+(** What a step of [action] cannot stand on: its language's chain's lack
+    — or, for a step that serves every binding (the library's), only what
+    EVERY chain of the world lacks. *)
+let gone_for_action (gones : (Canary_lang.lang * string list) list)
+    (action : Canary_basic.action) : string list =
+  match Canary_basic.lang_of_action action with
+  | Some l -> Option.value (List.Assoc.find gones l ~equal:Poly.equal) ~default:[]
+  | None -> (
+      match gones with
+      | [] -> []
+      | (_, g) :: rest ->
+          List.fold rest ~init:g ~f:(fun acc (_, g') ->
+              List.filter acc ~f:(List.mem g' ~equal:String.equal)))
 
 (* ── WHERE EVERY CLAIM SITS ───────────────────────────────────────────
 

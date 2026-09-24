@@ -57,6 +57,13 @@ type view = {
   vw_chain : Canary_matrix.chain option;
       (** this world's chain for this language, from the record: its
           mechanism, its two sides and the cooperation joining them *)
+  vw_gone : string list;
+      (** the nodes and edges this chain does not have — NOT DRAWN, which
+          is a different statement from dimmed: a dimmed node exists and
+          nothing in the run touched it *)
+  vw_candidates : string list;
+      (** the placeholder claims — named, no evaluator — that apply to
+          this chain *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -554,9 +561,20 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     | Some c -> in_lang lang (M.action_of_col c)
     | None -> false
   in
-  (* one claim, several columns: the matrix's own merge, worst first *)
+  (* the chain this view draws, and what it lacks — which the page does
+     not draw, and no claim of which applies *)
+  let chain = List.find r.M.chains ~f:(fun c -> Poly.equal c.M.ch_lang lang) in
+  let gone = Option.value_map chain ~default:[] ~f:(fun c -> c.M.ch_gone) in
+  let applies slug =
+    match chain with
+    | None -> true
+    | Some c -> List.mem c.M.ch_claims slug ~equal:String.equal
+  in
+  (* one claim, several columns: the matrix's own merge, worst first —
+     for the claims that APPLY to this chain *)
   let claims =
-    List.filter_map r.M.claims ~f:(fun (slug, cols) ->
+    List.filter_map (List.filter r.M.claims ~f:(fun (slug, _) -> applies slug))
+      ~f:(fun (slug, cols) ->
         let outcomes =
           List.filter_map cols ~f:(fun (label, o) ->
               if column_in_lang label then Some o else None)
@@ -573,12 +591,14 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
   in
   let badges =
     List.filter_map T.edges ~f:(fun e ->
-        match
-          List.filter_map (T.claim_sites_on e.T.eg_id) ~f:(fun cs ->
-              List.Assoc.find claims cs.T.cs_claim ~equal:String.equal)
-        with
-        | [] -> None
-        | words -> Some (e.T.eg_id, badge_word words))
+        if List.mem gone e.T.eg_id ~equal:String.equal then None
+        else
+          match
+            List.filter_map (T.claim_sites_on e.T.eg_id) ~f:(fun cs ->
+                List.Assoc.find claims cs.T.cs_claim ~equal:String.equal)
+          with
+          | [] -> None
+          | words -> Some (e.T.eg_id, badge_word words))
   in
   (* the world's placements, under the node each artifact is — the setting
      columns are labelled by artifact kind, so the kind finds its column *)
@@ -654,7 +674,14 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
           if List.mem live n.T.nd_id ~equal:String.equal then None else Some n.T.nd_id);
     vw_observed = observed;
     vw_placeholders = placeholders;
-    vw_chain = List.find r.M.chains ~f:(fun c -> Poly.equal c.M.ch_lang lang) }
+    vw_chain = chain;
+    vw_gone = gone;
+    vw_candidates =
+      List.filter_map T.claim_sites ~f:(fun cs ->
+          if (not cs.T.cs_implemented) && applies cs.T.cs_claim then Some cs.T.cs_claim
+          else None)
+      |> List.fold ~init:[] ~f:(fun acc c ->
+             if List.mem acc c ~equal:String.equal then acc else acc @ [ c ]) }
 
 (** Every recorded world, once per binding language it speaks. *)
 let views ?root (m : M.t) : view list =
@@ -742,6 +769,8 @@ let json_of_view (v : view) : Yojson.Basic.t =
             (List.map v.vw_names ~f:(fun (n, (label, from)) ->
                  (n, `Assoc [ ("label", `String label); ("from", `String from) ]))) );
         ("dim", `List (List.map v.vw_dim ~f:(fun n -> `String n)));
+        ("gone", `List (List.map v.vw_gone ~f:(fun n -> `String n)));
+        ("candidates", `List (List.map v.vw_candidates ~f:(fun c -> `String c)));
         ("observed", pairs v.vw_observed);
         ( "chain",
           match v.vw_chain with

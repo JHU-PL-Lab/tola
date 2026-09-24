@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-23 23:39",
+  "generated": "2026-09-23 23:48",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -9,7 +9,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:43.755", "2026-09-23 23:38:49.757" ],
+      "span": [ "2026-09-23 23:48:22.124", "2026-09-23 23:48:28.053" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -75,6 +75,19 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
+      ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
       ],
       "observed": {},
       "chain": {
@@ -121,7 +134,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:43.755", "2026-09-23 23:38:49.785" ],
+      "span": [ "2026-09-23 23:48:22.124", "2026-09-23 23:48:28.077" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -156,7 +169,6 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "install_surf": "holds",
         "link_mod": "undecided"
@@ -187,6 +199,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -203,7 +229,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:51.799", "2026-09-23 23:38:57.800" ],
+      "span": [ "2026-09-23 23:48:30.015", "2026-09-23 23:48:35.891" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -269,6 +295,19 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
+      ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
       ],
       "observed": {},
       "chain": {
@@ -315,7 +354,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:51.799", "2026-09-23 23:38:57.825" ],
+      "span": [ "2026-09-23 23:48:30.015", "2026-09-23 23:48:35.915" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -350,7 +389,6 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "install_surf": "holds",
         "link_mod": "undecided"
@@ -381,6 +419,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -397,7 +449,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:50.754", "2026-09-23 23:38:51.695" ],
+      "span": [ "2026-09-23 23:48:29.033", "2026-09-23 23:48:29.914" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -465,6 +517,19 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -510,7 +575,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:50.754", "2026-09-23 23:38:51.718" ],
+      "span": [ "2026-09-23 23:48:29.033", "2026-09-23 23:48:29.937" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -546,7 +611,6 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "stage": "holds",
         "install_surf": "holds",
@@ -579,6 +643,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -595,7 +673,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:58.781", "2026-09-23 23:38:59.681" ],
+      "span": [ "2026-09-23 23:48:36.857", "2026-09-23 23:48:37.749" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -663,6 +741,19 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -708,7 +799,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:58.781", "2026-09-23 23:38:59.704" ],
+      "span": [ "2026-09-23 23:48:36.857", "2026-09-23 23:48:37.774" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -744,7 +835,6 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "violated",
         "build_lib": "violated",
         "stage": "holds",
         "install_surf": "holds",
@@ -777,6 +867,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -793,7 +897,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:25.765", "2026-09-23 23:38:31.931" ],
+      "span": [ "2026-09-23 23:48:04.792", "2026-09-23 23:48:10.867" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -859,6 +963,19 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
+      ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
       ],
       "observed": {},
       "chain": {
@@ -905,7 +1022,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:25.765", "2026-09-23 23:38:31.962" ],
+      "span": [ "2026-09-23 23:48:04.792", "2026-09-23 23:48:10.892" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -940,7 +1057,6 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "install_surf": "holds",
         "link_mod": "undecided"
@@ -971,6 +1087,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -987,7 +1117,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:34.359", "2026-09-23 23:38:41.032" ],
+      "span": [ "2026-09-23 23:48:13.088", "2026-09-23 23:48:19.247" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1054,6 +1184,19 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1099,7 +1242,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:34.359", "2026-09-23 23:38:41.055" ],
+      "span": [ "2026-09-23 23:48:13.088", "2026-09-23 23:48:19.271" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1134,7 +1277,6 @@
         "api_names_present": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "install_surf": "holds",
         "link_mod": "undecided"
@@ -1165,6 +1307,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -1181,7 +1337,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:32.055", "2026-09-23 23:38:33.022" ],
+      "span": [ "2026-09-23 23:48:10.975", "2026-09-23 23:48:11.943" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1249,6 +1405,19 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1294,7 +1463,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:32.055", "2026-09-23 23:38:33.045" ],
+      "span": [ "2026-09-23 23:48:10.975", "2026-09-23 23:48:11.969" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1330,7 +1499,6 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "stage": "holds",
         "install_surf": "holds",
@@ -1363,6 +1531,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -1379,7 +1561,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:41.144", "2026-09-23 23:38:42.063" ],
+      "span": [ "2026-09-23 23:48:19.376", "2026-09-23 23:48:20.323" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1447,6 +1629,19 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
+      "gone": [],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1492,7 +1687,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:41.144", "2026-09-23 23:38:42.086" ],
+      "span": [ "2026-09-23 23:48:19.376", "2026-09-23 23:48:20.349" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1528,7 +1723,6 @@
         "staged_interface_preserved": "holds"
       },
       "badges": {
-        "realize_sys": "partial",
         "build_lib": "partial",
         "stage": "holds",
         "install_surf": "holds",
@@ -1561,6 +1755,20 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "src_lang", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "depext", "depends",
+        "conf_probe", "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -1577,7 +1785,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:49.869", "2026-09-23 23:38:50.646" ],
+      "span": [ "2026-09-23 23:48:28.156", "2026-09-23 23:48:28.921" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1634,6 +1842,17 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1685,7 +1904,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:49.869", "2026-09-23 23:38:50.670" ],
+      "span": [ "2026-09-23 23:48:28.156", "2026-09-23 23:48:28.946" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1741,6 +1960,18 @@
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "stub_lang", "surf_lang", "consumer_artifact"
       ],
+      "gone": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "realize_cap",
+        "build_lib", "build_hdr", "stage", "depext", "depends", "conf_probe",
+        "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -1764,7 +1995,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:57.905", "2026-09-23 23:38:58.672" ],
+      "span": [ "2026-09-23 23:48:36.003", "2026-09-23 23:48:36.759" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1821,6 +2052,17 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1872,7 +2114,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 23:38:57.905", "2026-09-23 23:38:58.696" ],
+      "span": [ "2026-09-23 23:48:36.003", "2026-09-23 23:48:36.781" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1927,6 +2169,18 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "stub_lang", "surf_lang", "consumer_artifact"
+      ],
+      "gone": [
+        "src_sys", "staged_sys", "cap", "bridge", "src_lang", "realize_cap",
+        "build_lib", "build_hdr", "stage", "depext", "depends", "conf_probe",
+        "discover", "build_stub"
+      ],
+      "candidates": [
+        "exports_accounted_for", "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied"
       ],
       "observed": {},
       "chain": {
@@ -2007,6 +2261,17 @@
         "surf_lang": { "label": "llvm.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -2090,14 +2355,11 @@
         "required_versions_exported": "unevaluated",
         "dependencies_provided": "unevaluated",
         "signatures_agree": "unevaluated",
-        "api_names_present": "unevaluated",
         "staged_interface_preserved": "unevaluated"
       },
       "badges": {
-        "realize_sys": "unevaluated",
         "build_lib": "unevaluated",
         "stage": "unevaluated",
-        "install_surf": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
       },
@@ -2121,6 +2383,21 @@
       "dim": [
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
+      ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
+        "consumer_package", "resolve_sys", "realize_sys", "realize_hdr",
+        "realize_cap", "depext", "depends", "conf_probe", "discover",
+        "resolve_lang", "install_lang", "install_surf", "pack",
+        "run_packaged", "same_program"
+      ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
       "observed": {},
       "chain": {
@@ -2171,14 +2448,11 @@
         "required_versions_exported": "unevaluated",
         "dependencies_provided": "unevaluated",
         "signatures_agree": "unevaluated",
-        "api_names_present": "unevaluated",
         "staged_interface_preserved": "unevaluated"
       },
       "badges": {
-        "realize_sys": "unevaluated",
         "build_lib": "unevaluated",
         "stage": "unevaluated",
-        "install_surf": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
       },
@@ -2206,6 +2480,21 @@
       "dim": [
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
+      ],
+      "gone": [
+        "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
+        "consumer_package", "resolve_sys", "realize_sys", "realize_hdr",
+        "realize_cap", "depext", "depends", "conf_probe", "discover",
+        "resolve_lang", "install_lang", "install_surf", "pack",
+        "run_packaged", "same_program"
+      ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "no_build_paths_in_installed_library", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
       "observed": {},
       "chain": {
@@ -2255,13 +2544,10 @@
         "soname_matches_requirement": "unevaluated",
         "required_versions_exported": "unevaluated",
         "dependencies_provided": "unevaluated",
-        "signatures_agree": "unevaluated",
-        "api_names_present": "unevaluated"
+        "signatures_agree": "unevaluated"
       },
       "badges": {
-        "realize_sys": "unevaluated",
         "build_lib": "unevaluated",
-        "install_surf": "unevaluated",
         "build_stub": "unevaluated",
         "link_mod": "unevaluated"
       },
@@ -2279,6 +2565,20 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
+      ],
+      "gone": [
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
+        "pkg_lang", "consumer_package", "resolve_sys", "realize_sys",
+        "realize_hdr", "realize_cap", "stage", "depext", "depends",
+        "conf_probe", "discover", "resolve_lang", "install_lang",
+        "install_surf", "pack", "run_packaged", "same_program"
+      ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
       "observed": {},
       "chain": {
@@ -2327,15 +2627,9 @@
         "required_symbols_exported": "unevaluated",
         "soname_matches_requirement": "unevaluated",
         "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
-        "api_names_present": "unevaluated"
+        "dependencies_provided": "unevaluated"
       },
-      "badges": {
-        "realize_sys": "unevaluated",
-        "build_lib": "unevaluated",
-        "install_surf": "unevaluated",
-        "link_mod": "unevaluated"
-      },
+      "badges": { "build_lib": "unevaluated", "link_mod": "unevaluated" },
       "nodes": { "src_sys": "V:s", "lib_sys": "V:s", "mod_lang": "V:s" },
       "unplaced": {
         "configure": "no edge for this action on the page",
@@ -2354,6 +2648,20 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
+      ],
+      "gone": [
+        "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
+        "pkg_lang", "consumer_package", "resolve_sys", "realize_sys",
+        "realize_hdr", "realize_cap", "stage", "depext", "depends",
+        "conf_probe", "discover", "resolve_lang", "install_lang",
+        "install_surf", "pack", "run_packaged", "same_program"
+      ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "source_is_declared_ref", "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
       "observed": {},
       "chain": {
@@ -2431,6 +2739,18 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "surf_lang",
         "consumer_package"
+      ],
+      "gone": [
+        "src_sys", "staged_sys", "bridge", "build_lib", "build_hdr", "stage",
+        "depext", "depends", "conf_probe"
+      ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link"
       ],
       "observed": {},
       "chain": {
@@ -2516,6 +2836,17 @@
         "surf_lang": { "label": "zarith.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "consumer_artifact" ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {
         "depends": "zarith's depends names conf-gmp",
         "conf_probe": "conf-gmp's check: pkg-config --print-errors --exists gmp — holds",
@@ -2635,6 +2966,18 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
+      "gone": [ "staged_sys", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -2745,6 +3088,17 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
+      ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
       ],
       "observed": {},
       "chain": {
@@ -2861,6 +3215,18 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
+      "gone": [ "staged_sys", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -2975,6 +3341,17 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3084,6 +3461,18 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
+      "gone": [ "staged_sys", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3190,6 +3579,17 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
+      ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
       ],
       "observed": {},
       "chain": {
@@ -3299,6 +3699,18 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
       ],
+      "gone": [ "staged_sys", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files", "source_is_declared_ref",
+        "build_tree_configured_for_source",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3405,6 +3817,17 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "consumer_artifact"
+      ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
       ],
       "observed": {},
       "chain": {
@@ -3515,6 +3938,17 @@
         "surf_lang": { "label": "ssl.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3624,6 +4058,17 @@
         "surf_lang": { "label": "ssl.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
+      "gone": [ "src_sys", "staged_sys", "build_lib", "build_hdr", "stage" ],
+      "candidates": [
+        "exports_accounted_for", "signatures_match_debug_info",
+        "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "discovery_matches_link",
+        "gate_admits_the_world", "declared_gate_matches_package",
+        "gate_bounds_the_library", "depext_names_the_provided_package"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3739,6 +4184,19 @@
         "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap",
         "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "build_lib",
+        "build_hdr", "stage", "depext", "conf_probe", "discover"
+      ],
+      "candidates": [
+        "signatures_match_debug_info", "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "declared_gate_matches_package",
+        "gate_bounds_the_library"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3748,12 +4206,6 @@
         "character": "unified package universe"
       },
       "placeholders": {
-        "discover": [
-          {
-            "unseen": "not_yet",
-            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
-          }
-        ],
         "resolve_lang": [
           {
             "unseen": "not_yet",
@@ -3848,6 +4300,19 @@
         "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap",
         "consumer_artifact"
       ],
+      "gone": [
+        "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap", "resolve_sys",
+        "realize_sys", "realize_hdr", "realize_cap", "build_lib",
+        "build_hdr", "stage", "depext", "conf_probe", "discover"
+      ],
+      "candidates": [
+        "signatures_match_debug_info", "package_contains_declared_files",
+        "correspondence_holds_across_the_binding",
+        "no_duplicate_implementation", "interposition_binds_build_target",
+        "denotation_stable_across_worlds", "package_resolution_suffices",
+        "compatibility_version_satisfied", "declared_gate_matches_package",
+        "gate_bounds_the_library"
+      ],
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3857,12 +4322,6 @@
         "character": "unified package universe"
       },
       "placeholders": {
-        "discover": [
-          {
-            "unseen": "not_yet",
-            "text": "opam build_package: the package's own build inside opam: its configure, where it asks pkg-config for the library, then its compile and link; not recorded yet — opam deletes the build directory when the build succeeds; installing with --keep-build-dir keeps the configure output and the compile commands"
-          }
-        ],
         "resolve_lang": [
           {
             "unseen": "not_yet",

@@ -109,6 +109,15 @@ type chain = {
   ch_native_side : string;
   ch_coop : Canary_topology.coop;
   ch_character : string;  (** the cooperation's name for this instance *)
+  ch_gone : string list;
+      (** the overview's nodes and edges this chain does NOT have — its
+          mechanism's artifact band joined with its cooperation's package
+          band ({!Canary_topology.chain_gone}) *)
+  ch_claims : string list;
+      (** the claims the overview places that APPLY to this chain: one of
+          their edges exists here ({!Canary_topology.claim_applies}) —
+          registered and candidate alike, so a bridge's claims apply only
+          where there is a bridge *)
 }
 
 (** One SETTING cell (2026-08-19, user: "move all the provider ahead, so
@@ -1425,6 +1434,9 @@ let matrix_of ?(root = "_out")
             let implicated_kinds =
               List.concat_map check_cells ~f:(fun (_, (_, impl)) -> impl)
             in
+            (* what each chain of this world lacks — read by the steps'
+               placement and by the chains below, one answer for both *)
+            let gones = Canary_topology.world_gone ~pr ~world:a in
             (* every step, each in its own log line's state — the
                siblings and inspections the cells have no column for *)
             let row_steps =
@@ -1440,7 +1452,9 @@ let matrix_of ?(root = "_out")
                     ws_bridge = s.Canary_step_model.bridge;
                     ws_placeholder = s.Canary_step_model.placeholder;
                     ws_place =
-                      Canary_topology.place_step ~pr ~world:a
+                      Canary_topology.place_step
+                        ~gone:(Canary_topology.gone_for_action gones s.Canary_step_model.action)
+                        ~pr ~world:a
                         ~action:s.Canary_step_model.action
                         ~location:s.Canary_step_model.location
                         ~inspects:s.Canary_step_model.inspects
@@ -1505,12 +1519,18 @@ let matrix_of ?(root = "_out")
                 (let an = Canary_pipeline.analysed_of pr in
                  List.map (Canary_topology.binding_langs pr) ~f:(fun lang ->
                      let t = Canary_topology.topology_of_world ~pr ~world:a lang in
+                     let mechanism = Canary_project_analysis.mechanism_for an lang in
+                     let gone =
+                       Option.value (List.Assoc.find gones lang ~equal:Poly.equal) ~default:[]
+                     in
                      { ch_lang = lang;
-                       ch_mechanism = Canary_project_analysis.mechanism_for an lang;
+                       ch_mechanism = mechanism;
                        ch_lang_side = Canary_topology.string_of_supplier t.Canary_topology.tp_lang;
                        ch_native_side = Canary_topology.string_of_supplier t.Canary_topology.tp_sys;
                        ch_coop = Canary_topology.coop_of t;
-                       ch_character = Canary_topology.character t }));
+                       ch_character = Canary_topology.character t;
+                       ch_gone = gone;
+                       ch_claims = Canary_topology.claims_of_chain ~gone }));
               (* the SETTING block: this world's placement per artifact.
                  A source artifact carries its own repo link — so a
                  project with a lib source AND an off-tree binding source
@@ -2116,7 +2136,10 @@ let to_json (m : t) : Yojson.Basic.t =
                                 ("lang_side", `String c.ch_lang_side);
                                 ("native_side", `String c.ch_native_side);
                                 ("cooperation", `String (Canary_topology.code_of_coop c.ch_coop));
-                                ("character", `String c.ch_character) ])) )
+                                ("character", `String c.ch_character);
+                                ("gone", `List (List.map c.ch_gone ~f:(fun id -> `String id)));
+                                ( "applicable_claims",
+                                  `List (List.map c.ch_claims ~f:(fun s -> `String s)) ) ])) )
                  ])) ) ]
 
 (** THE RECORD AS PRINTED — what [canary result --json] writes to stdout,

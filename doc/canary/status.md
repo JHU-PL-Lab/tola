@@ -493,7 +493,7 @@ the check until the derivation agrees with it:
 6. **Recorded run results on the case diagrams** — brought forward by
    the user on 2026-09-23 and planned as §2.7.
 
-### 2.7 Run results on the overview diagrams — A to D landed; E1 landed (conf-gmp on zarith)
+### 2.7 Run results on the overview diagrams — A to D landed; E1 landed (conf-gmp on zarith); chains per world, and §1 as a join
 
 *(2026-09-23, user: "the cases in section 2 are generated from
 hardcoded code, not from the running result. I wish a feature to
@@ -1208,12 +1208,61 @@ blank.
   libffi reads `cstubs` because its declared `Ctypes` is not routed
   (`project/issues.md` §2), and sqlite's CPython stdlib binding reads
   "pip ↔ apt" because its provider is declared as pip.
-  NOT done yet, from the same proposal: deriving each WORLD's
-  cooperation in pass 2 rather than per project (zarith's built world
-  would read "bypassed"), carrying it in the run record beside `mech`,
-  letting claim applicability read it (a bridge claim only where a
-  bridge is), and drawing the PM band per cooperation the way the
-  artifact band is drawn per mechanism.
+- **Cooperation per world, in the record, in applicability, and on the
+  diagram — landed the same day** (user: "yes, please go ahead", to the
+  four items the tables left open). Cooperation is now derived per
+  WORLD, not per project, and beside firing rather than in pass 2,
+  because it needs a world (the membership rule).
+  `Canary_topology.topology_of_world` reads both sides from the world's
+  own placements, and the declared gate only where the world installs
+  the package that declares it — so zarith's built world reads
+  "artifact-centric, no bridge" and llvm's dev worlds read "local". The
+  run record carries it: each row has one chain per binding language
+  (mechanism, both sides, cooperation), plus what that chain does not
+  have (`gone`) and which placed claims apply to it
+  (`applicable_claims`). Claim applicability reads the chain: a claim
+  applies where one of its edges exists (`claim_applies`). So the four
+  bridge claims apply to zarith's fetched world and not to its built
+  one, and the recorded view stops drawing what a chain lacks. That is
+  a different mark from dimming: a dimmed node exists and the run did
+  not touch it, while a node that is not drawn does not exist in that
+  chain. §1 now draws the chain as a JOIN — one diagram, with a
+  mechanism bar for the artifact band and a cooperation bar for the
+  package band, and a line saying which projects canary runs the pair
+  for. It replaces five per-mechanism panels, which could only ever
+  show one band.
+
+  The package band is one rule per node over a topology (`band_hidden`,
+  `band_dead`), and a kind's band is what none of its worlds has
+  (`coop_bands`). Two rules in the first draft were wrong, and a guard
+  caught each one before anyone read the result. The binding's source
+  existed only where canary builds the binding — but the hand-drawn conf
+  case draws Zarith.git, because opam compiles it inside the install.
+  The staged copy existed only where the library is Installed — but
+  llvm's recorded Built worlds stage it. Where the declaration cannot
+  decide, the band does not hide: a join canary cannot read keeps its
+  bridge, and a vendored side keeps its source. A placeholder stands
+  only on edges the chain has — torch's opam build finds libtorch
+  through opam, not through a capability file — while a step that ran
+  is never filtered. `publishes_of_world` (the wrapper declaration) is
+  now the one answer to "does this world publish its binding", and a
+  pin holds it to the pack steps. The "built" case's recorded
+  counterpart is now sqlite's installed world, which has the staged copy
+  the drawing shows.
+
+  Pinned by `overview.package_band_is_one_cooperation` (the rules
+  reproduce all five hand-drawn cases exactly on the band's nodes),
+  `overview.chain_absence_is_never_recorded` (over every recorded view,
+  nothing a chain lacks was realized, observed, placeheld or badged, and
+  no decided claim was dropped) and
+  `matrix.record_carries_each_worlds_chain`. Each was falsified before
+  it was trusted.
+
+  Still open: a kind's band is an intersection over its worlds, and
+  those worlds can differ by package manager. "Absorbed" covers an opam
+  package that builds from source and pip wheels that do not, so the
+  pair (ctypes, absorbed) draws a binding source that no wheel has. The
+  PM-solo rows would be a third selector; not drawn yet.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;
