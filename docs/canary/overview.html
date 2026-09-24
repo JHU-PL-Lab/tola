@@ -68,6 +68,7 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.st-absent{opacity:.14}
 .rec .edge.st-not_ours{opacity:.5}
 .rec .edge.st-not_ours line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 5}
+.rec .edge.st-observed line{stroke:var(--acc);stroke-width:2;stroke-dasharray:2 3;opacity:1}
 .rec .edge.st-claim line{stroke:var(--acc);stroke-width:1.6;stroke-dasharray:4 4}
 .rec .edge.cl-violated .cbadge{fill:var(--bad)}
 .rec .edge.cl-holds .cbadge{fill:var(--ok)}
@@ -83,6 +84,7 @@ table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.xf{border-top:3px solid var(--xf)}.sw.bad{border-top:3px solid var(--bad)}
 .sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
 .sw.no{border-top:2px dashed var(--mut);opacity:.6}
+.sw.ob{border-top:2px dotted var(--acc)}
 .o-violated{color:var(--bad);font-weight:700}.o-holds{color:var(--ok)}
 .o-undecided,.o-unevaluated{color:var(--mut)}
 select{font:13px ui-sans-serif,system-ui,sans-serif;max-width:100%;
@@ -200,8 +202,8 @@ what makes it artifact-centric rather than bridgeless.</div>
 <p>Nodes are what exists. An edge points from components to a component
 and carries one annotation. Most carry the <strong>action</strong> of ours
 that realizes the relation. Where we run nothing, an edge carries
-<em>information</em> in italics: whatever does establish the relation, and
-in time what a run recorded about it. One edge carries a
+<em>information</em> in italics: whatever does establish the relation — and,
+on §2.1's recorded worlds, what a run recorded about it. One edge carries a
 <strong class="clm">claim</strong>, by its code, because a claim of ours
 is the only thing relating its two ends. The badge on an edge counts the
 claims that sit there. Hover an edge for what it establishes.</p>
@@ -250,9 +252,9 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -338,9 +340,9 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -426,9 +428,9 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -504,9 +506,9 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -582,9 +584,9 @@ alone draws a chain; the pair does. Switch the band below.</div>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -712,9 +714,9 @@ table in §5.</p>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -836,9 +838,9 @@ table in §5.</p>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -1022,10 +1024,13 @@ steps realizing it did in the last recorded run, a claim badge by the
 outcomes of the claims placed there. A node is named by what the run
 recorded about it, or — in italics — by what the project declares, and a
 node nothing in this world touches is dimmed. An edge this world realizes
-no step of is faint; an edge someone else's rule establishes is dotted,
-because nothing is recorded there yet. Under the diagram, the case's
-hand-drawn names are set beside the recorded ones. The wheel case has no
-counterpart while z3 is muted.</p>
+no step of is faint. An edge someone else's rule establishes is dotted:
+grey where nothing is recorded, and in the accent colour where the run
+recorded what that rule said here — which is what a bridge step does. It
+runs the bridge's own check in this world and records the mapping, the
+capability file and pkg-config's answer, listed under the diagram. Under
+that, the case's hand-drawn names are set beside the recorded ones. The
+wheel case has no counterpart while z3 is muted.</p>
 <script type="application/json" id="rechand">{"conf":{"names":{"pm_sys":"apt","pkg_sys":"libgmp-dev","bridge":"conf-gmp","cap":"gmp.pc","pm_lang":"opam","pkg_lang":"zarith","lib_sys":"libgmp.so.10","hdr_sys":"gmp.h","src_lang":"Zarith.git","stub_lang":"zarith_stubs.a","mod_lang":"zarith.cmxa","surf_lang":"zarith.mli","consumer_artifact":"zarith_example (paths)","consumer_package":"zarith_example (-package zarith)"},"hidden":["src_sys","staged_sys"],"dead":[]},"wheel":{"names":{"pm_lang":"pip","pkg_lang":"z3-solver (wheel)","lib_sys":"libz3.so — INSIDE the wheel","mod_lang":"z3/*.py + native ext","surf_lang":"z3.__all__","consumer_package":"python -c 'import z3'"},"hidden":["pm_sys","pkg_sys","bridge","cap","src_sys","staged_sys","hdr_sys","src_lang","stub_lang"],"dead":[]},"built":{"names":{"src_sys":"llvm-project @ ref","lib_sys":"libLLVM.so (built)","staged_sys":"install prefix","pm_sys":"apt — not used here","pkg_sys":"llvm-19-dev — not used here","bridge":"conf-llvm-shared {= 19}","cap":"llvm-config","pm_lang":"opam","pkg_lang":"llvm.19-shared","mod_lang":"llvm.cmxa","consumer_artifact":"llvm_example (build tree)","consumer_package":"llvm_example (-package llvm)"},"hidden":[],"dead":["resolve_sys","realize_sys","realize_hdr","realize_cap"]},"unified":{"names":{"pm_lang":"opam","pkg_lang":"torch","bridge":"depext: libtorch >=2.1.0 <2.2.0","lib_sys":"libtorch.so (opam binary)","hdr_sys":"torch/*.h","src_lang":"ocaml-torch.git","stub_lang":"libtorch_core_stubs.a","mod_lang":"torch.cmxa","surf_lang":"torch.mli","consumer_artifact":"torch_example (paths)","consumer_package":"torch_example (-package torch)"},"hidden":["pm_sys","pkg_sys","cap","src_sys","staged_sys"],"dead":[]},"none":{"names":{"pm_sys":"apt","pkg_sys":"libsqlite3-0","lib_sys":"libsqlite3.so.0","hdr_sys":"sqlite3.h","pm_lang":"(the interpreter build)","pkg_lang":"CPython stdlib","stub_lang":"_sqlite3.cpython-*.so","mod_lang":"sqlite3/__init__.py","surf_lang":"dir(sqlite3)","consumer_package":"python -c 'import sqlite3'"},"hidden":["bridge","cap","src_sys","staged_sys","src_lang"],"dead":[]}}</script>
 <div class="selbar recbar"><button data-rec-case="conf">conf-* over a system library</button><button data-rec-case="built">built here — and the bridge still gates</button><button data-rec-case="unified">one package universe</button><button data-rec-case="none">no package manager between them</button></div>
 <p><label>any recorded world: <select id="recsel"></select></label></p>
@@ -1058,9 +1063,9 @@ page</p>
 <line x1="840" y1="190" x2="150" y2="212" marker-end="url(#a)"/>
 <text class="elabel info" x="495" y="194">depext table</text></g><g class="edge bare" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
 <line x1="1070" y1="212" x2="840" y2="190" marker-end="url(#a)"/>
-<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>conf predicate (we run nothing here) — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<text class="elabel" x="955" y="194">fetch_binding</text></g><g class="edge diag bare" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
 <line x1="840" y1="190" x2="390" y2="252" marker-end="url(#a)"/>
-<text class="elabel info" x="615" y="214">conf predicate</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<text class="elabel" x="615" y="214">fetch_binding</text></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
 <line x1="390" y1="252" x2="150" y2="550" marker-end="url(#a)"/>
 <text class="elabel info" x="270" y="394" style="text-anchor:start">pkg-config</text><circle class="cbadge" cx="316" cy="401" r="9"/><text class="cnum" x="316" y="405">1</text></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
 <line x1="1070" y1="62" x2="1070" y2="212" marker-end="url(#a)"/>
@@ -1129,8 +1134,10 @@ page</p>
 <span><i class="sw un"></i> in the chain, never logged</span>
 <span><i class="sw ab"></i> not in this world</span>
 <span><i class="sw no"></i> someone else's rule — nothing recorded</span>
+<span><i class="sw ob"></i> someone else's rule — recorded by this run</span>
 <span><b>name</b> recorded by the run · <i>name</i> declared by the project</span>
 </div>
+<div id="recobserved"></div>
 <div id="reccmp"></div>
 <div id="recclaims"></div>
 <div id="recunplaced"></div></div>
@@ -1154,7 +1161,7 @@ A <em>claim site</em> is a set of edges rather than one, and 5 already
 span several: the library's declaration-facing claims sit on both edges
 that can produce a library, and <code>package_resolution_suffices</code>
 runs end to end from the language PM to the package-linked program.</p>
-<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody><tr class="bare"><td><code>resolve_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>realize_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">3 / 1</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup></td></tr><tr class="bare"><td><code>realize_hdr</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>realize_cap</code></td><td class="n"><em>packager</em> — we run nothing</td><td>the packager</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>build_lib</code></td><td class="n"><code>build_lib</code></td><td>the C compiler and linker</td><td class="n">3 / 3</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup>, <code>source_is_declared_ref</code><sup>?</sup>, <code>build_tree_configured_for_source</code><sup>?</sup></td></tr><tr class="bare"><td><code>build_hdr</code></td><td class="n"><code>build_headers</code></td><td>the build system</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>stage</code></td><td class="n"><code>install_lib</code></td><td>the install tool</td><td class="n">1 / 1</td><td><code>staged_interface_preserved</code>, <code>no_build_paths_in_installed_library</code><sup>?</sup></td></tr><tr class="bare"><td><code>depext</code></td><td class="n"><em>depext table</em> — we run nothing</td><td>the bridge package's depext table</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>depends</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>conf_probe</code></td><td class="n"><em>conf predicate</em> — we run nothing</td><td>the bridge package's build predicate</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>discover</code></td><td class="n"><em>pkg-config</em> — we run nothing</td><td>pkg-config, CMake, a *-config script</td><td class="n">0 / 1</td><td><code>discovery_matches_link</code><sup>?</sup></td></tr><tr><td><code>resolve_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>install_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">0 / 1</td><td><code>package_contains_declared_files</code><sup>?</sup></td></tr><tr><td><code>install_surf</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">1 / 0</td><td><code>api_names_present</code></td></tr><tr><td><code>build_stub</code></td><td class="n"><code>build_binding</code></td><td>the C compiler</td><td class="n">1 / 1</td><td><code>signatures_agree</code>, <code>signatures_match_debug_info</code><sup>?</sup></td></tr><tr><td><code>link_mod</code></td><td class="n"><code>build_binding</code></td><td>the linker</td><td class="n">4 / 1</td><td><code>required_symbols_exported</code>, <code>soname_matches_requirement</code>, <code>required_versions_exported</code>, <code>dependencies_provided</code>, <code>compatibility_version_satisfied</code><sup>?</sup></td></tr><tr><td><code>pack</code></td><td class="n"><code>pack_binding</code></td><td>the packaging tool</td><td class="n">2 / 0</td><td><code>repack_preserves_api</code>, <code>repack_complete</code></td></tr><tr class="bare"><td><code>probe_lib</code></td><td class="n"><code>probe_lib</code></td><td>nm, and nothing else</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>run</code></td><td class="n"><code>probe_binding</code></td><td>the linker and the dynamic loader</td><td class="n">1 / 4</td><td><code>behavior_matches</code>, <code>correspondence_holds_across_the_binding</code><sup>?</sup>, <code>no_duplicate_implementation</code><sup>?</sup>, <code>interposition_binds_build_target</code><sup>?</sup>, <code>denotation_stable_across_worlds</code><sup>?</sup></td></tr><tr><td><code>run_packaged</code></td><td class="n"><code>probe_binding</code></td><td>the language PM's RESOLUTION — ocamlfind and META, pip's metadata — and then the loader</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>same_program</code></td><td class="n">claim <code>package_resolution_suffices</code></td><td>nobody — this is ours to check</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr></tbody></table>
+<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule runs</th><th>impl / cand</th><th>claims</th></tr></thead><tbody><tr class="bare"><td><code>resolve_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>realize_sys</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">3 / 1</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup></td></tr><tr class="bare"><td><code>realize_hdr</code></td><td class="n"><code>fetch_lib</code></td><td>the system PM's unpacker</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>realize_cap</code></td><td class="n"><em>packager</em> — we run nothing</td><td>the packager</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>build_lib</code></td><td class="n"><code>build_lib</code></td><td>the C compiler and linker</td><td class="n">3 / 3</td><td><code>declared_symbols_exported</code>, <code>soname_matches_declaration</code>, <code>declared_versions_exported</code>, <code>exports_accounted_for</code><sup>?</sup>, <code>source_is_declared_ref</code><sup>?</sup>, <code>build_tree_configured_for_source</code><sup>?</sup></td></tr><tr class="bare"><td><code>build_hdr</code></td><td class="n"><code>build_headers</code></td><td>the build system</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>stage</code></td><td class="n"><code>install_lib</code></td><td>the install tool</td><td class="n">1 / 1</td><td><code>staged_interface_preserved</code>, <code>no_build_paths_in_installed_library</code><sup>?</sup></td></tr><tr class="bare"><td><code>depext</code></td><td class="n"><em>depext table</em> — we run nothing</td><td>the bridge package's depext table</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>depends</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr class="bare"><td><code>conf_probe</code></td><td class="n"><code>fetch_binding</code></td><td>the bridge package's check — dispatched by the language PM when it installs the bridge, and by canary in every world</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>discover</code></td><td class="n"><em>pkg-config</em> — we run nothing</td><td>pkg-config, CMake, a *-config script</td><td class="n">0 / 1</td><td><code>discovery_matches_link</code><sup>?</sup></td></tr><tr><td><code>resolve_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's solver</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>install_lang</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">0 / 1</td><td><code>package_contains_declared_files</code><sup>?</sup></td></tr><tr><td><code>install_surf</code></td><td class="n"><code>fetch_binding</code></td><td>the language PM's installer</td><td class="n">1 / 0</td><td><code>api_names_present</code></td></tr><tr><td><code>build_stub</code></td><td class="n"><code>build_binding</code></td><td>the C compiler</td><td class="n">1 / 1</td><td><code>signatures_agree</code>, <code>signatures_match_debug_info</code><sup>?</sup></td></tr><tr><td><code>link_mod</code></td><td class="n"><code>build_binding</code></td><td>the linker</td><td class="n">4 / 1</td><td><code>required_symbols_exported</code>, <code>soname_matches_requirement</code>, <code>required_versions_exported</code>, <code>dependencies_provided</code>, <code>compatibility_version_satisfied</code><sup>?</sup></td></tr><tr><td><code>pack</code></td><td class="n"><code>pack_binding</code></td><td>the packaging tool</td><td class="n">2 / 0</td><td><code>repack_preserves_api</code>, <code>repack_complete</code></td></tr><tr class="bare"><td><code>probe_lib</code></td><td class="n"><code>probe_lib</code></td><td>nm, and nothing else</td><td class="n">0 / 0</td><td><em>nothing — this relation is recovered by no claim</em></td></tr><tr><td><code>run</code></td><td class="n"><code>probe_binding</code></td><td>the linker and the dynamic loader</td><td class="n">1 / 4</td><td><code>behavior_matches</code>, <code>correspondence_holds_across_the_binding</code><sup>?</sup>, <code>no_duplicate_implementation</code><sup>?</sup>, <code>interposition_binds_build_target</code><sup>?</sup>, <code>denotation_stable_across_worlds</code><sup>?</sup></td></tr><tr><td><code>run_packaged</code></td><td class="n"><code>probe_binding</code></td><td>the language PM's RESOLUTION — ocamlfind and META, pip's metadata — and then the loader</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr><tr><td><code>same_program</code></td><td class="n">claim <code>package_resolution_suffices</code></td><td>nobody — this is ours to check</td><td class="n">0 / 1</td><td><code>package_resolution_suffices</code><sup>?</sup></td></tr></tbody></table>
 
 <div class="note warn"><strong>7 edges carry no claim at all</strong>
 (resolve_sys, realize_hdr, realize_cap, build_hdr, depext, depends, conf_probe). Every one is a relation a real tool establishes and from which we
@@ -1179,7 +1186,7 @@ about us and not part of the row.</p>
 <table><thead><tr><th>language side</th><th>bridge</th><th>native side</th><th>character</th><th>case</th></tr></thead><tbody><tr><td class="mono">opam</td><td class="mono">conf-gmp (presence only)</td><td class="mono">apt</td><td>symbolic package bridge + artifact validation</td><td class="n">zarith</td></tr><tr><td class="mono">opam</td><td class="mono">conf-libssl (presence only)</td><td class="mono">apt</td><td>symbolic package bridge + artifact validation</td><td class="n">ssl</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">apt</td><td>symbolic package bridge + artifact validation</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-llvm-shared (bounds the lib)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">llvm</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">apt</td><td>symbolic package bridge + artifact validation</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">built</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">conf-sqlite3 (presence only)</td><td class="mono">staged</td><td>⚠ bridge still gates, against a system this world does not use</td><td class="n">sqlite</td></tr><tr><td class="mono">opam</td><td class="mono">depext:libtorch</td><td class="mono">opam</td><td>unified package universe</td><td class="n">torch</td></tr><tr><td class="mono">opam</td><td class="mono">— absorbed by the consumer —</td><td class="mono">opam</td><td>the consumer package builds the native lib</td><td class="n">z3</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">apt</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">opam</td><td class="mono">⚠ UNDECLARED</td><td class="mono">vendored</td><td>⚠ undeclared — cannot be classified</td><td class="n">cairo, libffi, zlib, zstd</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: llvmlite wheel's bundled libLLVM</td><td class="n">llvm</td></tr><tr><td class="mono">pip</td><td class="mono">— absorbed by the consumer —</td><td class="mono">pip</td><td>bundled: z3-solver wheel's bundled libz3</td><td class="n">z3</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">apt</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">built</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">pip</td><td class="mono">— no PM between —</td><td class="mono">staged</td><td>no package manager stands between these two artifacts</td><td class="n">sqlite</td></tr><tr><td class="mono">vendored</td><td class="mono">— no PM between —</td><td class="mono">vendored</td><td>no package manager stands between these two artifacts</td><td class="n">tiny-full</td></tr></tbody></table>
 <div class="note warn"><strong>4 bindings sit in a wrong row, for a known reason</strong> (cairo/ocaml, libffi/ocaml, zlib/ocaml, zstd/ocaml). Each declares a conf package, but on the opam-binding template's own record: the template leaves <code>pr_binding_decls</code> empty, so the gate never reaches this derivation and the row reads <code>⚠ UNDECLARED</code>. That is <code>project/issues.md</code> §2 — a mechanism declared in two places, one of them read — at its second consumer.</div><div class="note warn"><strong>No row is capability-mediated, because no project declares a capability file.</strong> The projects declare <code>Headers</code>, <code>Runtime_lib</code> and <code>Link_lib</code> as their C API's components and none declares a <code>Pc_file</code>. That is an absence of DECLARATION, not of the file: pkg-config is demonstrably in use — the conf packages' checks read it, and canary's own library locator does. A capability file is not a bridge; where a row says <em>artifact validation</em>, that is the bridge's own check.</div>
 
-<div class="foot">Generated 2026-09-23 20:20. <strong>What is derived and what is not</strong>,
+<div class="foot">Generated 2026-09-23 20:44. <strong>What is derived and what is not</strong>,
 since the page is meant to trade the second for the first over time:
 the cooperation topologies are derived from each project's declared
 provisions, gates and C-API components; the mechanism variants from the mechanism
@@ -1195,7 +1202,9 @@ The diagrams are SVG emitted from that data, with one hand-placed
 coordinate per node. The recorded worlds of §2.1 are not in this page:
 they are read from <code>overview_runs.js</code> (one per machine), which
 <code>canary overview</code> computes from the run record — each edge's
-state from the steps placed on it, each badge from its claims' outcomes.
+state from the steps placed on it, each badge from its claims' outcomes,
+and the edges around a bridge from what a bridge step recorded (one
+bridge so far: conf-gmp, on zarith).
 · <a href="projects/matrix.html">result matrix</a></div>
 <script>
 (function(){
@@ -1254,19 +1263,29 @@ views.forEach(function(v){
   var o=document.createElement('option'); o.value=v.key;
   o.textContent=v.project+' · '+v.lang+' · '+v.scenario+' ('+v.machine+')';
   sel.appendChild(o); });
-var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','not_ours','claim'],
+var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','not_ours','observed','claim'],
     OUTS=['violated','holds','partial','undecided','unevaluated'];
 function esc(s){ var d=document.createElement('span'); d.textContent=s; return d.innerHTML; }
 function show(key){
   var v=byId[key]; if(!v) return;
   sel.value=key;
+  var obs=v.observed||{};
   rec.querySelectorAll('[data-edge]').forEach(function(g){
     var e=g.getAttribute('data-edge');
     STATES.forEach(function(s){ g.classList.remove('st-'+s); });
     OUTS.forEach(function(o){ g.classList.remove('cl-'+o); });
     g.classList.add('st-'+(v.edges[e]||'absent'));
     if(v.badges[e]) g.classList.add('cl-'+v.badges[e]);
+    // the edge's own description, plus what this run recorded there
+    var t=g.querySelector('title');
+    if(t){ if(g.dataset.gtitle===undefined) g.dataset.gtitle=t.textContent;
+      t.textContent=g.dataset.gtitle+(obs[e]?' — recorded here: '+obs[e]:''); }
   });
+  var ob=Object.keys(obs);
+  document.getElementById('recobserved').innerHTML=ob.length
+    ?'<p class="mechnote"><strong>What this run recorded around the bridge:</strong></p><ul class="unpl">'
+      +ob.map(function(e){ return '<li><code>'+esc(e)+'</code> — '+esc(obs[e])+'</li>'; }).join('')+'</ul>'
+    :'';
   rec.querySelectorAll('[data-node]').forEach(function(g){
     var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'), n=(v.names||{})[id];
     if(l && g.dataset.generic===undefined) g.dataset.generic=l.textContent;

@@ -1038,7 +1038,7 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         let text = R.payload m ~generated_at:"pin" in
         let words =
           [ "ran"; "warm"; "xfail"; "fail"; "blocked"; "unrecorded"; "absent";
-            "not_ours"; "claim" ]
+            "not_ours"; "observed"; "claim" ]
         in
         let edge_ids = List.map T.edges ~f:(fun e -> e.T.eg_id) in
         let assoc_keys j k =
@@ -1094,6 +1094,22 @@ let overview_overlay_pin : Canary_project_test.pure_test =
                         Option.is_some (T.node_by_id n))
                  && List.for_all (assoc_keys v "badges") ~f:(fun e ->
                         not (List.is_empty (T.claim_sites_on e)))
+                 (* an OBSERVATION is about a template edge, and an edge
+                    reads [observed] only where it is someone else's rule
+                    AND the view recorded something there (phase E) *)
+                 && List.for_all (assoc_keys v "observed") ~f:(fun e ->
+                        List.mem edge_ids e ~equal:String.equal)
+                 && List.for_all edges ~f:(fun (id, w) ->
+                        match w with
+                        | `String "observed" ->
+                            List.mem (assoc_keys v "observed") id ~equal:String.equal
+                            && List.exists T.edges ~f:(fun e ->
+                                   String.equal e.T.eg_id id
+                                   &&
+                                   match e.T.eg_annotation with
+                                   | T.Info _ -> true
+                                   | T.Action _ | T.Agreement _ -> false)
+                        | _ -> true)
                  &&
                  match row with
                  | None -> false
@@ -1131,9 +1147,13 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         in
         let facts_ok =
           drawn "conf" "run_packaged" && is "conf" "run" "absent"
+          (* the conf world drives its bridge, so its check is DRAWN — a
+             step realizes it whether or not that step has run yet *)
+          && drawn "conf" "conf_probe"
           && List.for_all T.edges ~f:(fun e ->
                  match e.T.eg_annotation with
-                 | T.Info _ -> is "conf" e.T.eg_id "not_ours"
+                 | T.Info _ ->
+                     is "conf" e.T.eg_id "not_ours" || is "conf" e.T.eg_id "observed"
                  | T.Agreement _ -> is "conf" e.T.eg_id "claim"
                  | T.Action _ -> true)
           && is "unified" "resolve_sys" "absent" && drawn "unified" "run_packaged"
@@ -1303,6 +1323,89 @@ let overlay_words_pin : Canary_project_test.pure_test =
         && String.equal (R.badge_word [ "unevaluated" ]) "unevaluated"
         && String.equal (R.outcome_word (Some "error")) "violated"
         && String.equal (R.outcome_word None) "unevaluated")
+  }
+
+(* A BRIDGE RECORD IS READ AS WHAT IT SAYS (2026-09-23, status.md §2.7
+   E). The overview turns a bridge step's record into three node names,
+   their sublabels, and one sentence per edge around the bridge — the
+   only evidence canary has about the relations it does not perform. Pinned
+   on a FIXTURE in the record's own shape: the framework test holds the
+   script to writing every field in [Canary_bridge_driver.record_fields],
+   and this holds the reader on a record with exactly those fields, so the
+   two halves meet at one list rather than at a run.
+
+   - the check's three outcomes read as three different sentences, and
+     "not dispatched" never contains "holds";
+   - a binding package whose depends does NOT name the bridge says so;
+   - every node named is a template node and every edge observed a
+     template edge. *)
+let bridge_record_pin : Canary_project_test.pure_test =
+  { name = "overview.bridge_record_is_read";
+    check =
+      (fun () ->
+        let module R = Canary_overview_runs in
+        let module T = Canary_topology in
+        let fixture ~holds ~dispatched ~names_bridge =
+          Yojson.Basic.from_string
+            (Printf.sprintf
+               {|{ "kind": "bridge", "pm": "opam", "bridge_kind": "conf_package",
+                   "package": "conf-gmp", "installed_version": "5",
+                   "depexts": [ "libgmp-dev" ],
+                   "depext_versions": { "libgmp-dev": "2:6.3.0+dfsg-2ubuntu6.1" },
+                   "sys_pm": "apt", "binding_package": "zarith",
+                   "binding_depends": "\"ocaml\" \"conf-gmp\"",
+                   "binding_names_bridge": %b,
+                   "predicate": "[ \"sh\" \"-c\" \"pkg-config --print-errors --exists gmp\" ]",
+                   "query": { "tool": "pkg-config",
+                              "argv": [ "pkg-config", "--print-errors", "--exists", "gmp" ],
+                              "modules": [ "gmp" ], "fallback": null },
+                   "check": { "dispatched": %b, "holds": %s, "rc": 0, "output": null },
+                   "capability": [ { "module": "gmp", "version": "6.3.0",
+                                     "libdir": "/usr/lib/x86_64-linux-gnu",
+                                     "pcfile": "/usr/lib/x86_64-linux-gnu/pkgconfig/gmp.pc",
+                                     "owner": "libgmp-dev" } ] }|}
+               names_bridge dispatched
+               (if dispatched then Bool.to_string holds else "null"))
+        in
+        let ok = fixture ~holds:true ~dispatched:true ~names_bridge:true in
+        let fields_ok =
+          match ok with
+          | `Assoc kv ->
+              List.for_all Canary_bridge_driver.record_fields ~f:(fun f ->
+                  List.Assoc.mem kv f ~equal:String.equal)
+          | _ -> false
+        in
+        let obs j e = List.Assoc.find (R.bridge_observations j) e ~equal:String.equal in
+        let has_sub s sub = String.is_substring s ~substring:sub in
+        fields_ok
+        && Poly.equal (R.bridge_names ok)
+             [ ("bridge", "conf-gmp"); ("cap", "gmp.pc"); ("pkg_sys", "libgmp-dev") ]
+        && Poly.equal (R.bridge_sublabels ok)
+             [ ("bridge", "installed 5");
+               ("pkg_sys", "2:6.3.0+dfsg-2ubuntu6.1");
+               ("cap", "gmp 6.3.0") ]
+        && Poly.equal (R.bridge_observations ok)
+             [ ("depends", "zarith's depends names conf-gmp");
+               ("conf_probe",
+                "conf-gmp's check: pkg-config --print-errors --exists gmp — holds");
+               ("depext", "conf-gmp maps to libgmp-dev");
+               ("resolve_sys", "installed here: libgmp-dev 2:6.3.0+dfsg-2ubuntu6.1");
+               ("realize_cap",
+                "libgmp-dev ships /usr/lib/x86_64-linux-gnu/pkgconfig/gmp.pc");
+               ("discover", "pkg-config gmp → 6.3.0 in /usr/lib/x86_64-linux-gnu") ]
+        && List.for_all (R.bridge_names ok) ~f:(fun (n, _) ->
+               Option.is_some (T.node_by_id n))
+        && List.for_all (R.bridge_observations ok) ~f:(fun (e, _) ->
+               List.exists T.edges ~f:(fun x -> String.equal x.T.eg_id e))
+        && (match obs (fixture ~holds:false ~dispatched:true ~names_bridge:true) "conf_probe" with
+            | Some s -> has_sub s "does NOT hold"
+            | None -> false)
+        && (match obs (fixture ~holds:false ~dispatched:false ~names_bridge:true) "conf_probe" with
+            | Some s -> has_sub s "not dispatched" && not (has_sub s "holds")
+            | None -> false)
+        && (match obs (fixture ~holds:true ~dispatched:true ~names_bridge:false) "depends" with
+            | Some s -> has_sub s "does NOT name"
+            | None -> false))
   }
 
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
@@ -6524,6 +6627,7 @@ let base_tests : Canary_project_test.pure_test list =
       overview_overlay_pin;
       recorded_names_pin;
       overlay_words_pin;
+      bridge_record_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

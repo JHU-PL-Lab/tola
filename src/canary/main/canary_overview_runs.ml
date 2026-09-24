@@ -46,6 +46,10 @@ type view = {
           from: [recorded] or [declared]) — phase D *)
   vw_dim : string list;
       (** nodes no realized edge touches and no evidence names *)
+  vw_observed : (string * string) list;
+      (** edge id → what this run RECORDED about the relation (phase E):
+          the bridge record's reading of the edges around the bridge,
+          including those someone else's rule establishes *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -123,27 +127,153 @@ let jstr j k =
 
 let jlen j k = match jfield j k with Some (`List xs) -> Some (List.length xs) | _ -> None
 
-(* the node an inspection's KIND describes, and what it calls it *)
-let named_by_inspection (j : Yojson.Basic.t) : (string * string) option =
+let jbool j k = match jfield j k with Some (`Bool b) -> Some b | _ -> None
+
+let jstrs j k =
+  match jfield j k with
+  | Some (`List xs) -> List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+  | _ -> []
+
+(* ── THE BRIDGE RECORD (2026-09-23, status.md §2.7 E) ─────────────────
+
+   What a bridge step recorded ([Canary_bridge_driver]): what the bridge
+   IS in this world and what its check answered. It names three nodes —
+   the bridge, the system package it maps to, the capability file its
+   check reads — and it is the only evidence canary has about the
+   relations it does not perform: the depext table, the packager's file,
+   pkg-config's answer. Those edges read [not_ours] in a world that
+   recorded nothing and [observed] in one that did, with what was seen.
+   Pure over the record, so a fixture pins every sentence. *)
+
+let first_capability (j : Yojson.Basic.t) : Yojson.Basic.t option =
+  match jfield j "capability" with Some (`List (c :: _)) -> Some c | _ -> None
+
+let depext_version (j : Yojson.Basic.t) (pkg : string) : string option =
+  match jfield j "depext_versions" with
+  | Some (`Assoc kv) -> (
+      match List.Assoc.find kv pkg ~equal:String.equal with
+      | Some (`String v) -> Some v
+      | _ -> None)
+  | _ -> None
+
+(** The nodes a bridge record names: the bridge, the capability file,
+    and the system package — the one that ships the file, else the first
+    the bridge maps to. *)
+let bridge_names (j : Yojson.Basic.t) : (string * string) list =
+  let cap = first_capability j in
+  List.filter_opt
+    [ Option.map (jstr j "package") ~f:(fun p -> ("bridge", p));
+      Option.bind cap ~f:(fun c ->
+          Option.map (jstr c "pcfile") ~f:(fun p ->
+              ("cap", Stdlib.Filename.basename p)));
+      Option.map
+        (Option.first_some
+           (Option.bind cap ~f:(fun c -> jstr c "owner"))
+           (List.hd (jstrs j "depexts")))
+        ~f:(fun p -> ("pkg_sys", p)) ]
+
+(** The line under each node it names: the facts the name leaves out,
+    short enough for a node box — the full paths are in the
+    observations. The system package's line is the version installed; the
+    capability file's is what it declares, a name and a version. *)
+let bridge_sublabels (j : Yojson.Basic.t) : (string * string) list =
+  let cap = first_capability j in
+  let pkg_sys =
+    Option.first_some
+      (Option.bind cap ~f:(fun c -> jstr c "owner"))
+      (List.hd (jstrs j "depexts"))
+  in
+  List.filter_opt
+    [ Some
+        ( "bridge",
+          match jstr j "installed_version" with
+          | Some v -> "installed " ^ v
+          | None -> "not installed in this switch" );
+      Option.bind pkg_sys ~f:(fun p ->
+          Option.map (depext_version j p) ~f:(fun v -> ("pkg_sys", v)));
+      Option.bind cap ~f:(fun c ->
+          Option.map (jstr c "module") ~f:(fun m ->
+              ( "cap",
+                Option.value_map (jstr c "version") ~default:m ~f:(fun v ->
+                    m ^ " " ^ v) ))) ]
+
+(** What the run recorded about each relation around the bridge, by edge
+    id. [conf_probe] says whether the check held — or that canary could
+    not dispatch it, which is never reported as holding. *)
+let bridge_observations (j : Yojson.Basic.t) : (string * string) list =
+  let pkg = Option.value (jstr j "package") ~default:"the bridge" in
+  let cap = first_capability j in
+  let depexts = jstrs j "depexts" in
+  let check = jfield j "check" in
+  let argv =
+    Option.value_map (jfield j "query") ~default:"its query" ~f:(fun q ->
+        String.concat ~sep:" " (jstrs q "argv"))
+  in
+  List.filter_opt
+    [ Option.map (jbool j "binding_names_bridge") ~f:(fun names ->
+          let b = Option.value (jstr j "binding_package") ~default:"the binding package" in
+          ( "depends",
+            if names then Printf.sprintf "%s's depends names %s" b pkg
+            else Printf.sprintf "%s's depends does NOT name %s" b pkg ));
+      Option.map check ~f:(fun c ->
+          ( "conf_probe",
+            match (jbool c "dispatched", jbool c "holds") with
+            | Some true, Some true -> Printf.sprintf "%s's check: %s — holds" pkg argv
+            | Some true, _ ->
+                Printf.sprintf "%s's check: %s — does NOT hold" pkg argv
+            | _ ->
+                Printf.sprintf
+                  "%s's check makes no query canary can run — not dispatched" pkg ));
+      (match depexts with
+       | [] -> None
+       | ps -> Some ("depext", Printf.sprintf "%s maps to %s" pkg (String.concat ~sep:", " ps)));
+      (match
+         List.filter_map depexts ~f:(fun p ->
+             Option.map (depext_version j p) ~f:(fun v -> p ^ " " ^ v))
+       with
+       | [] -> None
+       | vs -> Some ("resolve_sys", "installed here: " ^ String.concat ~sep:", " vs));
+      Option.bind cap ~f:(fun c ->
+          match (jstr c "pcfile", jstr c "owner") with
+          | Some f, Some o -> Some ("realize_cap", Printf.sprintf "%s ships %s" o f)
+          | Some f, None -> Some ("realize_cap", Printf.sprintf "no package claims %s" f)
+          | None, _ -> None);
+      Option.bind cap ~f:(fun c ->
+          match (jstr c "module", jstr c "libdir") with
+          | Some m, Some d ->
+              Some
+                ( "discover",
+                  Printf.sprintf "pkg-config %s → %s%s" m
+                    (Option.value_map (jstr c "version") ~default:"" ~f:(fun v ->
+                         v ^ " in "))
+                    d )
+          | _ -> None) ]
+
+(* the nodes an inspection's KIND describes, and what it calls each *)
+let named_by_inspection (j : Yojson.Basic.t) : (string * string) list =
   let base = Stdlib.Filename.basename in
   match jstr j "kind" with
   | Some "native" ->
-      Option.map
-        (Option.first_some
-           (Option.bind (jfield j "elf") ~f:(fun e -> jstr e "soname"))
-           (Option.map (jstr j "path") ~f:base))
-        ~f:(fun n -> ("lib_sys", n))
-  | Some "c_stub" -> Option.map (jstr j "path") ~f:(fun p -> ("stub_lang", base p))
+      Option.to_list
+        (Option.map
+           (Option.first_some
+              (Option.bind (jfield j "elf") ~f:(fun e -> jstr e "soname"))
+              (Option.map (jstr j "path") ~f:base))
+           ~f:(fun n -> ("lib_sys", n)))
+  | Some "c_stub" ->
+      Option.to_list (Option.map (jstr j "path") ~f:(fun p -> ("stub_lang", base p)))
   | Some ("ocaml" | "python") ->
-      Option.map (jstr j "path") ~f:(fun p ->
-          ( "mod_lang",
-            match (jlen j "modules", jlen j "attrs") with
-            | Some n, _ -> Printf.sprintf "%s (%d modules)" p n
-            | None, Some n -> Printf.sprintf "%s (%d names)" p n
-            | None, None -> p ))
+      Option.to_list
+        (Option.map (jstr j "path") ~f:(fun p ->
+             ( "mod_lang",
+               match (jlen j "modules", jlen j "attrs") with
+               | Some n, _ -> Printf.sprintf "%s (%d modules)" p n
+               | None, Some n -> Printf.sprintf "%s (%d names)" p n
+               | None, None -> p )))
+  | Some "bridge" -> bridge_names j
   (* NOT the surface: an mli summary's [path] is the PACKAGE, and the
      declaration names the file a user actually reads *)
-  | _ -> None
+  | _ -> []
 
 let first_per_node (pairs : (string * 'a) list) : (string * 'a) list =
   List.fold pairs ~init:[] ~f:(fun acc (node, x) ->
@@ -163,12 +293,23 @@ let recorded_names ~root (r : M.row) (steps : M.world_step list) :
       | T.Unplaced (T.Observes_staged_copy | T.Observes_unused_system_copy) ->
           []
       | T.On _ | T.Unplaced _ ->
-          List.filter_map [ "inspect"; "inspect_stub" ] ~f:(fun base ->
-              Option.bind
+          List.concat_map [ "inspect"; "inspect_stub" ] ~f:(fun base ->
+              Option.value_map
                 (read_inspection ~root ~project:r.M.project ~scenario:r.M.scenario
                    ~tag:w.M.ws_tag ~base)
-                ~f:named_by_inspection))
+                ~default:[] ~f:named_by_inspection))
   |> first_per_node
+
+(* the bridge records this view's steps wrote: one per step that drives a
+   bridge, read from that step's own directory *)
+let bridge_records ~root (r : M.row) (steps : M.world_step list) :
+    Yojson.Basic.t list =
+  List.filter_map steps ~f:(fun w ->
+      match w.M.ws_bridge with
+      | None -> None
+      | Some _ ->
+          read_inspection ~root ~project:r.M.project ~scenario:r.M.scenario
+            ~tag:w.M.ws_tag ~base:Canary_bridge_driver.record_base)
 
 (* a file a user reads, named the way they would: its basename, unless
    that is a Python package's [__init__.py], which says nothing without
@@ -324,15 +465,21 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
       (List.find steps ~f:(fun w -> String.equal w.M.ws_tag t))
       ~f:(fun w -> step_word w.M.ws_state)
   in
+  (* what the world's bridge steps recorded (phase E) *)
+  let records = bridge_records ~root r steps in
+  let observed = first_per_node (List.concat_map records ~f:bridge_observations) in
   (* EVERY edge gets a word, so the template has nothing left over: a
      realized edge its worst step's, an action edge this world does not
-     realize [absent], someone else's rule [not_ours], a claim edge
+     realize [absent], someone else's rule [not_ours] — or [observed]
+     where this run recorded what that rule said here — and a claim edge
      [claim] *)
   let edges =
     List.map T.edges ~f:(fun e ->
         ( e.T.eg_id,
           match e.T.eg_annotation with
-          | T.Info _ -> "not_ours"
+          | T.Info _ ->
+              if List.Assoc.mem observed e.T.eg_id ~equal:String.equal then "observed"
+              else "not_ours"
           | T.Agreement _ -> "claim"
           | T.Action _ -> (
               let tags =
@@ -393,6 +540,7 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
         ("src_lang", Canary_basic.Binding_source lang);
         ("mod_lang", Canary_basic.Binding lang) ]
       ~f:(fun (node, kind) -> Option.map (setting kind) ~f:(fun t -> (node, t)))
+    @ first_per_node (List.concat_map records ~f:bridge_sublabels)
   in
   let unplaced =
     List.filter_map steps ~f:(fun w ->
@@ -421,7 +569,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
   let live =
     List.concat_map T.edges ~f:(fun e ->
         match List.Assoc.find edges e.T.eg_id ~equal:String.equal with
-        | Some w when step_rank w >= 0 -> e.T.eg_to :: e.T.eg_from
+        | Some w when step_rank w >= 0 || String.equal w "observed" ->
+            e.T.eg_to :: e.T.eg_from
         | _ -> [])
     @ List.filter_map names ~f:(fun (n, (_, from)) ->
           if String.equal from "recorded" then Some n else None)
@@ -443,7 +592,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_names = names;
     vw_dim =
       List.filter_map T.nodes ~f:(fun n ->
-          if List.mem live n.T.nd_id ~equal:String.equal then None else Some n.T.nd_id) }
+          if List.mem live n.T.nd_id ~equal:String.equal then None else Some n.T.nd_id);
+    vw_observed = observed }
 
 (** Every recorded world, once per binding language it speaks. *)
 let views ?root (m : M.t) : view list =
@@ -527,7 +677,8 @@ let json_of_view (v : view) : Yojson.Basic.t =
           `Assoc
             (List.map v.vw_names ~f:(fun (n, (label, from)) ->
                  (n, `Assoc [ ("label", `String label); ("from", `String from) ]))) );
-        ("dim", `List (List.map v.vw_dim ~f:(fun n -> `String n))) ])
+        ("dim", `List (List.map v.vw_dim ~f:(fun n -> `String n)));
+        ("observed", pairs v.vw_observed) ])
 
 (* the page collects every file it loads, one machine each *)
 let prefix = "(window.CANARY_RUNS = window.CANARY_RUNS || []).push(\n"

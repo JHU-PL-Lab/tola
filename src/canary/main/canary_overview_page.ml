@@ -329,6 +329,7 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.st-absent{opacity:.14}
 .rec .edge.st-not_ours{opacity:.5}
 .rec .edge.st-not_ours line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 5}
+.rec .edge.st-observed line{stroke:var(--acc);stroke-width:2;stroke-dasharray:2 3;opacity:1}
 .rec .edge.st-claim line{stroke:var(--acc);stroke-width:1.6;stroke-dasharray:4 4}
 .rec .edge.cl-violated .cbadge{fill:var(--bad)}
 .rec .edge.cl-holds .cbadge{fill:var(--ok)}
@@ -344,6 +345,7 @@ table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.xf{border-top:3px solid var(--xf)}.sw.bad{border-top:3px solid var(--bad)}
 .sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
 .sw.no{border-top:2px dashed var(--mut);opacity:.6}
+.sw.ob{border-top:2px dotted var(--acc)}
 .o-violated{color:var(--bad);font-weight:700}.o-holds{color:var(--ok)}
 .o-undecided,.o-unevaluated{color:var(--mut)}
 select{font:13px ui-sans-serif,system-ui,sans-serif;max-width:100%;
@@ -664,10 +666,13 @@ steps realizing it did in the last recorded run, a claim badge by the
 outcomes of the claims placed there. A node is named by what the run
 recorded about it, or — in italics — by what the project declares, and a
 node nothing in this world touches is dimmed. An edge this world realizes
-no step of is faint; an edge someone else's rule establishes is dotted,
-because nothing is recorded there yet. Under the diagram, the case's
-hand-drawn names are set beside the recorded ones. The wheel case has no
-counterpart while z3 is muted.</p>
+no step of is faint. An edge someone else's rule establishes is dotted:
+grey where nothing is recorded, and in the accent colour where the run
+recorded what that rule said here — which is what a bridge step does. It
+runs the bridge's own check in this world and records the mapping, the
+capability file and pkg-config's answer, listed under the diagram. Under
+that, the case's hand-drawn names are set beside the recorded ones. The
+wheel case has no counterpart while z3 is muted.</p>
 <script type="application/json" id="rechand">%s</script>
 <div class="selbar recbar">%s</div>
 <p><label>any recorded world: <select id="recsel"></select></label></p>
@@ -683,8 +688,10 @@ page</p>
 <span><i class="sw un"></i> in the chain, never logged</span>
 <span><i class="sw ab"></i> not in this world</span>
 <span><i class="sw no"></i> someone else's rule — nothing recorded</span>
+<span><i class="sw ob"></i> someone else's rule — recorded by this run</span>
 <span><b>name</b> recorded by the run · <i>name</i> declared by the project</span>
 </div>
+<div id="recobserved"></div>
 <div id="reccmp"></div>
 <div id="recclaims"></div>
 <div id="recunplaced"></div></div>|}
@@ -760,19 +767,29 @@ views.forEach(function(v){
   var o=document.createElement('option'); o.value=v.key;
   o.textContent=v.project+' · '+v.lang+' · '+v.scenario+' ('+v.machine+')';
   sel.appendChild(o); });
-var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','not_ours','claim'],
+var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','not_ours','observed','claim'],
     OUTS=['violated','holds','partial','undecided','unevaluated'];
 function esc(s){ var d=document.createElement('span'); d.textContent=s; return d.innerHTML; }
 function show(key){
   var v=byId[key]; if(!v) return;
   sel.value=key;
+  var obs=v.observed||{};
   rec.querySelectorAll('[data-edge]').forEach(function(g){
     var e=g.getAttribute('data-edge');
     STATES.forEach(function(s){ g.classList.remove('st-'+s); });
     OUTS.forEach(function(o){ g.classList.remove('cl-'+o); });
     g.classList.add('st-'+(v.edges[e]||'absent'));
     if(v.badges[e]) g.classList.add('cl-'+v.badges[e]);
+    // the edge's own description, plus what this run recorded there
+    var t=g.querySelector('title');
+    if(t){ if(g.dataset.gtitle===undefined) g.dataset.gtitle=t.textContent;
+      t.textContent=g.dataset.gtitle+(obs[e]?' — recorded here: '+obs[e]:''); }
   });
+  var ob=Object.keys(obs);
+  document.getElementById('recobserved').innerHTML=ob.length
+    ?'<p class="mechnote"><strong>What this run recorded around the bridge:</strong></p><ul class="unpl">'
+      +ob.map(function(e){ return '<li><code>'+esc(e)+'</code> — '+esc(obs[e])+'</li>'; }).join('')+'</ul>'
+    :'';
   rec.querySelectorAll('[data-node]').forEach(function(g){
     var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'), n=(v.names||{})[id];
     if(l && g.dataset.generic===undefined) g.dataset.generic=l.textContent;
@@ -994,8 +1011,8 @@ what makes it artifact-centric rather than bridgeless.</div>
 <p>Nodes are what exists. An edge points from components to a component
 and carries one annotation. Most carry the <strong>action</strong> of ours
 that realizes the relation. Where we run nothing, an edge carries
-<em>information</em> in italics: whatever does establish the relation, and
-in time what a run recorded about it. One edge carries a
+<em>information</em> in italics: whatever does establish the relation — and,
+on §2.1's recorded worlds, what a run recorded about it. One edge carries a
 <strong class="clm">claim</strong>, by its code, because a claim of ours
 is the only thing relating its two ends. The badge on an edge counts the
 claims that sit there. Hover an edge for what it establishes.</p>
@@ -1138,7 +1155,9 @@ The diagrams are SVG emitted from that data, with one hand-placed
 coordinate per node. The recorded worlds of §2.1 are not in this page:
 they are read from <code>overview_runs.js</code> (one per machine), which
 <code>canary overview</code> computes from the run record — each edge's
-state from the steps placed on it, each badge from its claims' outcomes.
+state from the steps placed on it, each badge from its claims' outcomes,
+and the edges around a bridge from what a bridge step recorded (one
+bridge so far: conf-gmp, on zarith).
 · <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
     css Canary_matrix.overview_css

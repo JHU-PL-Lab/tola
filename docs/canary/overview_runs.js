@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-23 20:20",
+  "generated": "2026-09-23 20:44",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -9,7 +9,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:17.291", "2026-09-23 19:01:23.194" ],
+      "span": [ "2026-09-23 20:43:56.105", "2026-09-23 20:44:02.274" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -20,7 +20,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -76,7 +76,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "be0605-python",
@@ -84,7 +85,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:17.291", "2026-09-23 19:01:23.217" ],
+      "span": [ "2026-09-23 20:43:56.105", "2026-09-23 20:44:02.297" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -95,7 +96,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -149,7 +150,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "df925e-ocaml",
@@ -157,7 +159,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:25.080", "2026-09-23 19:01:30.939" ],
+      "span": [ "2026-09-23 20:44:04.260", "2026-09-23 20:44:10.635" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -168,7 +170,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -224,7 +226,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "df925e-python",
@@ -232,7 +235,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:25.080", "2026-09-23 19:01:30.961" ],
+      "span": [ "2026-09-23 20:44:04.260", "2026-09-23 20:44:10.659" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -243,7 +246,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -297,7 +300,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "bf7656-ocaml",
@@ -305,7 +309,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:24.123", "2026-09-23 19:01:24.988" ],
+      "span": [ "2026-09-23 20:44:03.238", "2026-09-23 20:44:04.159" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -316,7 +320,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "warm",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -375,7 +379,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "bf7656-python",
@@ -383,7 +388,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:24.123", "2026-09-23 19:01:25.010" ],
+      "span": [ "2026-09-23 20:44:03.238", "2026-09-23 20:44:04.184" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -394,7 +399,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -451,7 +456,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "e35b2b-ocaml",
@@ -459,7 +465,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:31.864", "2026-09-23 19:01:32.738" ],
+      "span": [ "2026-09-23 20:44:11.626", "2026-09-23 20:44:12.618" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -470,7 +476,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "warm",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -529,7 +535,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "e35b2b-python",
@@ -537,7 +544,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:31.864", "2026-09-23 19:01:32.761" ],
+      "span": [ "2026-09-23 20:44:11.626", "2026-09-23 20:44:12.642" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -548,7 +555,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -605,7 +612,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "08b7dd-ocaml",
@@ -613,7 +621,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:00.872", "2026-09-23 19:01:06.752" ],
+      "span": [ "2026-09-23 20:43:38.094", "2026-09-23 20:43:44.517" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -624,7 +632,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -680,7 +688,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "08b7dd-python",
@@ -688,7 +697,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:00.872", "2026-09-23 19:01:06.776" ],
+      "span": [ "2026-09-23 20:43:38.094", "2026-09-23 20:43:44.543" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -699,7 +708,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -753,7 +762,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "b8e9cb-ocaml",
@@ -761,7 +771,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:08.780", "2026-09-23 19:01:14.662" ],
+      "span": [ "2026-09-23 20:43:46.860", "2026-09-23 20:43:53.314" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -772,7 +782,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -828,7 +838,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "b8e9cb-python",
@@ -836,7 +847,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:08.780", "2026-09-23 19:01:14.686" ],
+      "span": [ "2026-09-23 20:43:46.860", "2026-09-23 20:43:53.340" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -847,7 +858,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -901,7 +912,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "740478-ocaml",
@@ -909,7 +921,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:06.850", "2026-09-23 19:01:07.744" ],
+      "span": [ "2026-09-23 20:43:44.622", "2026-09-23 20:43:45.626" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -920,7 +932,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "warm",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -979,7 +991,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "740478-python",
@@ -987,7 +1000,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:06.850", "2026-09-23 19:01:07.767" ],
+      "span": [ "2026-09-23 20:43:44.622", "2026-09-23 20:43:45.653" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -998,7 +1011,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1055,7 +1068,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "170e8d-ocaml",
@@ -1063,7 +1077,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:14.764", "2026-09-23 19:01:15.666" ],
+      "span": [ "2026-09-23 20:43:53.420", "2026-09-23 20:43:54.384" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1074,7 +1088,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "warm",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -1133,7 +1147,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "170e8d-python",
@@ -1141,7 +1156,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:14.764", "2026-09-23 19:01:15.695" ],
+      "span": [ "2026-09-23 20:43:53.420", "2026-09-23 20:43:54.410" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1152,7 +1167,7 @@
         "stage": "warm",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1209,7 +1224,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "c2ff32-ocaml",
@@ -1217,7 +1233,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:23.291", "2026-09-23 19:01:24.029" ],
+      "span": [ "2026-09-23 20:44:02.374", "2026-09-23 20:44:03.142" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1228,7 +1244,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "warm",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -1275,7 +1291,8 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "c2ff32-python",
@@ -1283,7 +1300,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:23.291", "2026-09-23 19:01:24.053" ],
+      "span": [ "2026-09-23 20:44:02.374", "2026-09-23 20:44:03.165" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1294,7 +1311,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1338,7 +1355,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "4af838-ocaml",
@@ -1346,7 +1364,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:31.031", "2026-09-23 19:01:31.771" ],
+      "span": [ "2026-09-23 20:44:10.733", "2026-09-23 20:44:11.528" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1357,7 +1375,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "warm",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -1404,7 +1422,8 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "4af838-python",
@@ -1412,7 +1431,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-23 19:01:31.031", "2026-09-23 19:01:31.794" ],
+      "span": [ "2026-09-23 20:44:10.733", "2026-09-23 20:44:11.552" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1423,7 +1442,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1467,7 +1486,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "stub_lang", "surf_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "d26e75-ocaml",
@@ -1486,7 +1506,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -1533,7 +1553,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "src_lang", "stub_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "c8fae6-ocaml",
@@ -1551,7 +1572,7 @@
         "stage": "unrecorded",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1606,7 +1627,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "9f4072-ocaml",
@@ -1625,7 +1647,7 @@
         "stage": "ran",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1684,7 +1706,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "28a379-ocaml",
@@ -1703,7 +1726,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1748,7 +1771,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "28a379-python",
@@ -1767,7 +1791,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1814,7 +1838,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "614dda-ocaml",
@@ -1822,7 +1847,7 @@
       "scenario": "lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-15 18:47:22.011", "2026-09-15 18:47:33.089" ],
+      "span": [ "2026-09-23 20:35:47.831", "2026-09-23 20:35:58.039" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -1833,7 +1858,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
         "install_lang": "absent",
@@ -1841,8 +1866,8 @@
         "build_stub": "warm",
         "link_mod": "warm",
         "pack": "ran",
-        "probe_lib": "ran",
-        "run": "ran",
+        "probe_lib": "warm",
+        "run": "warm",
         "run_packaged": "absent",
         "same_program": "claim"
       },
@@ -1883,7 +1908,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "surf_lang",
         "consumer_package"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "4ea4a4-ocaml",
@@ -1891,26 +1917,26 @@
       "scenario": "lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-15 18:47:14.482", "2026-09-15 18:47:21.972" ],
+      "span": [ "2026-09-23 20:35:38.648", "2026-09-23 20:35:47.799" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
         "realize_hdr": "warm",
-        "realize_cap": "not_ours",
+        "realize_cap": "observed",
         "build_lib": "absent",
         "build_hdr": "absent",
         "stage": "absent",
-        "depext": "not_ours",
+        "depext": "observed",
         "depends": "warm",
-        "conf_probe": "not_ours",
-        "discover": "not_ours",
+        "conf_probe": "ran",
+        "discover": "observed",
         "resolve_lang": "warm",
         "install_lang": "warm",
         "install_surf": "warm",
         "build_stub": "absent",
         "link_mod": "absent",
         "pack": "absent",
-        "probe_lib": "ran",
+        "probe_lib": "warm",
         "run": "absent",
         "run_packaged": "ran",
         "same_program": "claim"
@@ -1931,25 +1957,35 @@
       "nodes": {
         "lib_sys": "apt libgmp-dev.2:6.3.0+dfsg",
         "src_lang": "F 1.14",
-        "mod_lang": "opam zarith"
+        "mod_lang": "opam zarith",
+        "bridge": "installed 5",
+        "pkg_sys": "2:6.3.0+dfsg-2ubuntu6.1",
+        "cap": "gmp 6.3.0"
       },
       "unplaced": {},
       "names": {
         "mod_lang": { "label": "zarith (4 modules)", "from": "recorded" },
         "stub_lang": { "label": "libzarith.a", "from": "recorded" },
+        "bridge": { "label": "conf-gmp", "from": "recorded" },
+        "cap": { "label": "gmp.pc", "from": "recorded" },
+        "pkg_sys": { "label": "libgmp-dev", "from": "recorded" },
         "lib_sys": { "label": "libgmp.so.10", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
-        "pkg_sys": { "label": "libgmp-dev", "from": "declared" },
         "hdr_sys": { "label": "gmp.h", "from": "declared" },
-        "bridge": { "label": "conf-gmp", "from": "declared" },
         "pm_lang": { "label": "opam", "from": "declared" },
         "pkg_lang": { "label": "zarith", "from": "declared" },
         "src_lang": { "label": "Zarith.git", "from": "declared" },
         "surf_lang": { "label": "zarith.mli", "from": "declared" }
       },
-      "dim": [
-        "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ]
+      "dim": [ "src_sys", "staged_sys", "src_lang", "consumer_artifact" ],
+      "observed": {
+        "depends": "zarith's depends names conf-gmp",
+        "conf_probe": "conf-gmp's check: pkg-config --print-errors --exists gmp — holds",
+        "depext": "conf-gmp maps to libgmp-dev",
+        "resolve_sys": "installed here: libgmp-dev 2:6.3.0+dfsg-2ubuntu6.1",
+        "realize_cap": "libgmp-dev ships /usr/lib/x86_64-linux-gnu/pkgconfig/gmp.pc",
+        "discover": "pkg-config gmp → 6.3.0 in /usr/lib/x86_64-linux-gnu"
+      }
     },
     {
       "id": "7a10f8-ocaml",
@@ -1968,7 +2004,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -2018,7 +2054,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "7ac7f1-ocaml",
@@ -2037,7 +2074,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -2086,7 +2123,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "1406f0-ocaml",
@@ -2105,7 +2143,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -2158,7 +2196,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "0a184a-ocaml",
@@ -2177,7 +2216,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -2229,7 +2268,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "657774-ocaml",
@@ -2248,7 +2288,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -2295,7 +2335,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "d668a4-ocaml",
@@ -2314,7 +2355,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "warm",
         "install_lang": "warm",
@@ -2359,7 +2400,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "ff020b-ocaml",
@@ -2378,7 +2420,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -2424,7 +2466,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "ff7b9d-ocaml",
@@ -2443,7 +2486,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "absent",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -2488,7 +2531,8 @@
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "src_lang", "stub_lang",
         "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "7b508c-ocaml",
@@ -2507,7 +2551,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -2555,7 +2599,8 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "8f247d-ocaml",
@@ -2574,7 +2619,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -2622,7 +2667,8 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "src_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "0dc978-ocaml",
@@ -2641,7 +2687,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "xfail",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "xfail",
         "install_lang": "xfail",
@@ -2691,7 +2737,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "src_sys", "hdr_sys", "staged_sys", "cap",
         "src_lang", "stub_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     },
     {
       "id": "e1d373-ocaml",
@@ -2710,7 +2757,7 @@
         "stage": "absent",
         "depext": "not_ours",
         "depends": "ran",
-        "conf_probe": "not_ours",
+        "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "ran",
         "install_lang": "ran",
@@ -2760,7 +2807,8 @@
       "dim": [
         "pm_sys", "pkg_sys", "src_sys", "hdr_sys", "staged_sys", "cap",
         "src_lang", "stub_lang", "consumer_artifact"
-      ]
+      ],
+      "observed": {}
     }
   ],
   "cases": {
