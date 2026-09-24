@@ -103,8 +103,8 @@ let band ~y ~h ~label ~cls =
 (** Nodes are drawn AFTER edges so the boxes mask the lines that run
     under them — which is what lets every edge be a straight centre-to-
     centre segment instead of a routed path. *)
-let node_svg ?(extra = "") ~(live : bool) ~(label : string) ~(sub : string option)
-    (n : T.node) =
+let node_svg ?(extra = "") ?(case_slot = false) ~(live : bool) ~(label : string)
+    ~(sub : string option) (n : T.node) =
   let p = pos_of n.T.nd_id in
   let x = p.px - (box_w / 2) and y = p.py - (box_h / 2) in
   let decl = T.declaration_at n.T.nd_id in
@@ -129,14 +129,19 @@ let node_svg ?(extra = "") ~(live : bool) ~(label : string) ~(sub : string optio
           (esc what)
           (x + box_w - 10) (y + 10) (x + box_w - 10) (y + 14)
   in
-  (* [data-node] is the handle a recorded run's overlay finds the node by *)
+  (* [data-node] is the handle a recorded run's overlay finds the node by.
+     A CASE SLOT (the §1 join) is an empty second line a concrete chain
+     fills with what its project declares the node is; the label carries
+     both of its heights, so it sits centred while the slot is empty *)
   let main =
     Printf.sprintf
       {|<g class="%s" data-node="%s"><title>%s</title>
 <rect x="%d" y="%d" width="%d" height="%d" rx="7"/>
-<text class="nlabel" x="%d" y="%d">%s</text>%s|}
+<text class="nlabel" x="%d" y="%d"%s>%s</text>%s|}
       cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y box_w box_h p.px
       (if Option.is_some sub then p.py - 2 else p.py + 5)
+      (if case_slot then Printf.sprintf {| data-y0="%d" data-y1="%d"|} (p.py + 5) (p.py - 2)
+       else "")
       (esc label) badge
   in
   let subline =
@@ -146,7 +151,12 @@ let node_svg ?(extra = "") ~(live : bool) ~(label : string) ~(sub : string optio
         Printf.sprintf {|<text class="nsub" x="%d" y="%d">%s</text>|} p.px
           (p.py + 14) (esc s)
   in
-  main ^ subline ^ "</g>"
+  let slot =
+    if case_slot then
+      Printf.sprintf {|<text class="ncase" x="%d" y="%d"></text>|} p.px (p.py + 14)
+    else ""
+  in
+  main ^ subline ^ slot ^ "</g>"
 
 (* WHAT AN EDGE SAYS, per kind of annotation (2026-09-23): an action by
    its family's name; a claim by its code, the way every table on this
@@ -241,7 +251,7 @@ let edge_svg ?(extra = "") ~(live : bool) ~(claims : int) ?(candidate_only = fal
     element once and lets the stylesheet hide it. *)
 let diagram ?(rename = fun (_ : string) -> None)
     ?(sublabel = fun (_ : string) -> None) ?(dead = fun (_ : string) -> false)
-    ?(hide = fun (_ : string) -> false) ?(ph_slots = false)
+    ?(hide = fun (_ : string) -> false) ?(ph_slots = false) ?(case_slots = false)
     ?(classes = fun (_ : string) -> ([] : string list)) () : string =
   let extra id = String.concat (List.map (classes id) ~f:(fun c -> " " ^ c)) in
   let bands =
@@ -288,7 +298,7 @@ let diagram ?(rename = fun (_ : string) -> None)
                | Some l -> l
                | None -> n.T.nd_label
              in
-             node_svg ~extra:(extra n.T.nd_id) ~live:true ~label
+             node_svg ~extra:(extra n.T.nd_id) ~case_slot:case_slots ~live:true ~label
                ~sub:(sublabel n.T.nd_id) n))
   in
   Printf.sprintf
@@ -428,8 +438,16 @@ background:var(--card);color:var(--fg);cursor:pointer}
 .selbar button:hover{border-color:var(--acc)}
 .selbar .bl{opacity:.65;font-weight:400;font-size:.85em}
 .selbar .barlabel{font:600 11px ui-monospace,monospace;color:var(--mut);
-align-self:center;min-width:8.5em;text-transform:uppercase;letter-spacing:.04em}
-.join .selbar{margin:.5rem 0 .2rem}
+align-self:center;min-width:12.5em;text-transform:uppercase;letter-spacing:.04em}
+.join .jrow{margin:.3rem 0;align-items:center}
+.join .gone{display:none}
+.join .edge.jdead{opacity:.18}
+.join .node .ncase{font:italic 11.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+fill:var(--acc);text-anchor:middle}
+.cgroup{display:inline-flex;flex-wrap:wrap;gap:.3rem;align-items:center;margin-right:.55rem}
+.cproj{font:600 12px ui-sans-serif,system-ui,sans-serif;color:var(--mut)}
+.cgroup button{font-size:12px;padding:.24rem .55rem}
+.selbar button.hint{border-color:var(--acc);border-style:dashed}
 section.case>p{color:var(--mut);font-size:.92rem;margin:.4rem 0 0}
 .mechnote{color:var(--mut);font-size:.9rem;margin:.3rem 0 0}
 .edet{font:12px ui-monospace,monospace;color:var(--mut);min-height:2.4em;
@@ -687,30 +705,27 @@ let coop_table projects =
          (String.concat ~sep:"; "
             (List.map uncovered ~f:(fun i -> i.T.co_name))))
 
-(** The chains: one per (project, binding language, native provision) —
-    a binding mechanism between two sides, joined by a cooperation. *)
-let chains_table projects =
-  let rows =
-    List.concat_map projects ~f:(fun ((name, pr) as p) ->
-        let an = Canary_pipeline.analysed_of pr in
-        List.map (T.topologies_of_worlds p) ~f:(fun ((t : T.t), (i : T.instance)) ->
-            ( name,
-              Canary_lang.string_of_lang i.T.in_lang,
-              Canary_mechanism.string_of_mechanism
-                (Canary_project_analysis.mechanism_for an i.T.in_lang),
-              T.string_of_supplier t.T.tp_lang,
-              T.string_of_supplier t.T.tp_sys,
-              T.character t )))
-    |> List.dedup_and_sort ~compare:Poly.compare
-  in
+(** The chains: one per (project, binding language, the two sides) — a
+    binding mechanism between two sides, joined by a cooperation. The SAME
+    list §1's concrete buttons are ([Canary_overview_join.cases_of]), and
+    each row links to its chain drawn there. *)
+let chains_table (j : Canary_overview_join.t) =
+  let module J = Canary_overview_join in
   wide
     (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
        (heads
           [ "project"; "language"; "binding (§5.2)"; "language side (§5.1)";
             "native side (§5.1)"; "cooperation (§5.3)" ])
        (String.concat
-          (List.map rows ~f:(fun (p, l, m, ls, ns, c) ->
-               cells [ esc p; esc l; esc m; esc ls; esc ns; esc c ]))))
+          (List.map j.J.jn_cases ~f:(fun c ->
+               cells
+                 [ Printf.sprintf {|<a href="#chain=%s">%s</a>|} (esc c.J.cs_id)
+                     (esc c.J.cs_project);
+                   esc (Canary_lang.string_of_lang c.J.cs_lang);
+                   esc (Canary_mechanism.string_of_mechanism c.J.cs_mechanism);
+                   esc (T.string_of_supplier c.J.cs_topology.T.tp_lang);
+                   esc (T.string_of_supplier c.J.cs_topology.T.tp_sys);
+                   esc (T.character c.J.cs_topology) ]))))
 
 (** The two things the deleted `checks --topology` said that the table
     does not (2026-09-23): which rows are wrong for a known reason, and
@@ -772,161 +787,214 @@ let node_legend () =
      is</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map T.nodes ~f:row))
 
-(* ── THE CHAIN AS A JOIN (2026-09-23, status.md §2.7; user: draw the
+(* ── THE CHAIN, CHOSEN (2026-09-23, status.md §2.7; user: draw the
    package-manager part per cooperation, the way the artifact part is
-   drawn per mechanism) ──────────────────────────────────────────────────
+   drawn per mechanism — and, 2026-09-24, "can we also make the pm itself
+   as the choice? … all are shown as buttons in one place") ──────────────
 
-   ONE diagram and two bars. The mechanism bar swaps the artifact band (a
-   row of §5.2), the cooperation bar swaps the package band (a row of
-   §5.3), and the pair is a chain (§5.4). It replaces five pre-rendered
-   panels, one per mechanism, which could draw one band per diagram and so
-   never the pair.
+   ONE diagram and one panel of buttons: the native side's package
+   manager, the language side's, the binding mechanism (the artifact
+   band, a row of §5.2), the cooperation (the package band, a row of
+   §5.3) — or a concrete chain canary runs (a row of §5.4), which fixes
+   the other four and names the nodes under their generic labels. A
+   mechanism also chooses the package manager that ships its language's
+   bindings. Every set a choice draws comes from [Canary_overview_join],
+   as the JSON the script reads; the script keeps the state, looks the
+   sets up and applies them. The page opens drawn in the default choice,
+   so it reads right before any script runs.
 
-   Every element is drawn once and carries, as classes, the mechanisms and
-   the cooperations under which it does not exist ([jm-*], [jk-*]) or
-   exists and does not fire ([jd-*]). A stylesheet generated from the same
-   lists hides or greys it when the container's [data-m] / [data-k] names
-   one of them — so nothing is laid out twice, nothing shifts when you
-   switch, and the script only sets two attributes. *)
+   It replaced five pre-rendered panels, one per mechanism, and then two
+   bars driven by a generated stylesheet — which could not narrow a
+   cooperation by package manager, and so drew absorbed with a binding
+   source that no wheel has. *)
 
-(** The mechanisms, the drawable cooperation kinds, and per element the
-    classes naming where it is absent or idle. *)
-let join_data projects =
-  let variants = T.artifact_variants () in
-  let bands = T.coop_bands projects in
-  let m_code (v : T.artifact_variant) =
-    Canary_mechanism.string_of_mechanism v.T.av_mechanism
+(** The chains the ids name, as a reader reads them: project and language,
+    once each. *)
+let runs_label (j : Canary_overview_join.t) (ids : string list) : string =
+  List.filter_map ids ~f:(fun id ->
+      List.find_map j.Canary_overview_join.jn_cases ~f:(fun c ->
+          if String.equal c.Canary_overview_join.cs_id id then
+            Some
+              (c.Canary_overview_join.cs_project ^ " ("
+              ^ Canary_lang.string_of_lang c.Canary_overview_join.cs_lang
+              ^ ")")
+          else None))
+  |> List.dedup_and_sort ~compare:String.compare
+  |> String.concat ~sep:", "
+
+(** The panel and the one diagram it draws. *)
+let join_panel (j : Canary_overview_join.t) =
+  let module J = Canary_overview_join in
+  let m0, k0, pl0 = J.default_choice j in
+  let gone0, dead0 = J.default_drawing j in
+  let classes id =
+    (if List.mem gone0 id ~equal:String.equal then [ "gone" ] else [])
+    @ if List.mem dead0 id ~equal:String.equal then [ "jdead" ] else []
   in
-  let k_code (b : T.coop_band) = T.code_of_coop b.T.cb_kind in
-  let tagged prefix (sets : (string * string list) list) id =
-    List.filter_map sets ~f:(fun (code, ids) ->
-        if List.mem ids id ~equal:String.equal then Some (prefix ^ code) else None)
+  let hidden_unless lit = if lit then "" else " hidden" in
+  let button ~g ~v ?(title = "") ~lit label =
+    Printf.sprintf {|<button data-g="%s" data-v="%s"%s%s>%s</button>|} g (esc v)
+      (if String.is_empty title then "" else Printf.sprintf {| title="%s"|} (esc title))
+      (if lit then {| class="on"|} else "")
+      label
   in
-  let m_gone = List.map variants ~f:(fun v -> (m_code v, T.with_edges v.T.av_hidden)) in
-  let k_gone = List.map bands ~f:(fun b -> (k_code b, T.with_edges b.T.cb_hidden)) in
-  let k_dead = List.map bands ~f:(fun b -> (k_code b, b.T.cb_dead)) in
-  let classes id = tagged "jm-" m_gone id @ tagged "jk-" k_gone id @ tagged "jd-" k_dead id in
-  (variants, bands, m_code, k_code, classes)
-
-(** The stylesheet the join's classes need: one rule per mechanism and per
-    cooperation kind, and one per pair for the line saying whether canary
-    runs that chain. *)
-let join_css projects =
-  let variants, bands, m_code, k_code, _ = join_data projects in
-  let ms = List.map variants ~f:m_code and ks = List.map bands ~f:k_code in
-  String.concat
-    ([ ".join .jnote{display:none}" ]
-    @ List.map ms ~f:(fun m ->
-          Printf.sprintf
-            {|.join[data-m="%s"] .jm-%s{display:none}.join[data-m="%s"] .jnote[data-jm="%s"]{display:block}|}
-            m m m m)
-    @ List.map ks ~f:(fun k ->
-          Printf.sprintf
-            {|.join[data-k="%s"] .jk-%s{display:none}.join[data-k="%s"] .jd-%s{opacity:.18}.join[data-k="%s"] .jnote[data-jk="%s"]{display:block}|}
-            k k k k k k)
-    @ List.concat_map ms ~f:(fun m ->
-          List.map ks ~f:(fun k ->
-              Printf.sprintf
-                {|.join[data-m="%s"][data-k="%s"] .jnote[data-jp="%s %s"]{display:block}|}
-                m k m k)))
-
-(** The chain, picked as a pair. *)
-let join_panel projects =
-  let variants, bands, m_code, k_code, classes = join_data projects in
-  let groups = coop_groups projects in
-  let sides k =
-    match List.find groups ~f:(fun ((i : T.coop_info), _) -> Poly.equal i.T.co_kind k) with
-    | None -> []
-    | Some (_, xs) ->
-        List.map xs ~f:(fun ((t : T.t), _) ->
-            T.string_of_supplier t.T.tp_lang ^ " ↔ " ^ T.string_of_supplier t.T.tp_sys)
-        |> List.dedup_and_sort ~compare:String.compare
+  let row label body =
+    Printf.sprintf {|<div class="selbar jrow"><span class="barlabel">%s</span>%s</div>|}
+      label body
   in
-  (* the chains canary runs, keyed by their pair — §5.4's rows *)
-  let runs =
-    List.concat_map projects ~f:(fun ((name, pr) as p) ->
-        let an = Canary_pipeline.analysed_of pr in
-        List.map (T.topologies_of_worlds p) ~f:(fun ((t : T.t), (i : T.instance)) ->
-            ( Canary_mechanism.string_of_mechanism
-                (Canary_project_analysis.mechanism_for an i.T.in_lang),
-              T.code_of_coop (T.coop_of t),
-              name ^ " (" ^ Canary_lang.string_of_lang i.T.in_lang ^ ")" )))
+  let pm_buttons side g =
+    String.concat
+      (List.map (J.pms side) ~f:(fun pm ->
+           let v = Canary_store.string_of_pm pm in
+           let lit = String.equal g "pl" && Poly.equal pl0 (Some v) in
+           button ~g ~v ~title:(Canary_pm_solo.scope_of pm) ~lit (esc v)))
   in
   let m_buttons =
     String.concat
-      (List.map variants ~f:(fun v ->
-           Printf.sprintf {|<button data-v="%s">%s <span class="bl">%s</span></button>|}
-             (esc (m_code v)) (esc (m_code v))
-             (esc (Canary_lang.string_of_lang v.T.av_lang))))
+      (List.map (T.artifact_variants ()) ~f:(fun v ->
+           let m = Canary_mechanism.string_of_mechanism v.T.av_mechanism in
+           button ~g:"m" ~v:m ~lit:(String.equal m m0)
+             (Printf.sprintf {|%s <span class="bl">%s</span>|} (esc m)
+                (esc (Canary_lang.string_of_lang v.T.av_lang)))))
   in
   let k_buttons =
     String.concat
-      (List.map bands ~f:(fun b ->
+      (List.map j.J.jn_kinds ~f:(fun b ->
            let info = T.info_of_coop b.T.cb_kind in
-           Printf.sprintf {|<button data-v="%s" title="%s">%s</button>|}
-             (esc (k_code b)) (esc info.T.co_name) (esc info.T.co_label)))
+           let k = T.code_of_coop b.T.cb_kind in
+           button ~g:"k" ~v:k ~title:info.T.co_name ~lit:(String.equal k k0)
+             (esc info.T.co_label)))
+  in
+  (* the concrete chains, grouped by project in §5.4's order *)
+  let projects_in_order =
+    List.fold j.J.jn_cases ~init:[] ~f:(fun acc c ->
+        if List.mem acc c.J.cs_project ~equal:String.equal then acc
+        else acc @ [ c.J.cs_project ])
+  in
+  let c_buttons =
+    String.concat
+      (List.map projects_in_order ~f:(fun p ->
+           Printf.sprintf {|<span class="cgroup"><span class="cproj">%s</span>%s</span>|}
+             (esc p)
+             (String.concat
+                (List.filter_map j.J.jn_cases ~f:(fun c ->
+                     if not (String.equal c.J.cs_project p) then None
+                     else
+                       Some
+                         (button ~g:"c" ~v:c.J.cs_id ~title:(T.character c.J.cs_topology)
+                            ~lit:false
+                            (Printf.sprintf {|%s <span class="bl">%s ↔ %s</span>|}
+                               (esc (Canary_lang.string_of_lang c.J.cs_lang))
+                               (esc (T.string_of_supplier c.J.cs_topology.T.tp_lang))
+                               (esc (T.string_of_supplier c.J.cs_topology.T.tp_sys)))))))))
+  in
+  let sides k =
+    List.filter_map j.J.jn_instances ~f:(fun i ->
+        if Poly.equal (T.coop_of i.T.bi_topology) k then
+          Some
+            (T.string_of_supplier i.T.bi_topology.T.tp_lang
+            ^ " ↔ "
+            ^ T.string_of_supplier i.T.bi_topology.T.tp_sys)
+        else None)
+    |> List.dedup_and_sort ~compare:String.compare
   in
   let m_notes =
     String.concat
-      (List.map variants ~f:(fun v ->
-           Printf.sprintf {|<p class="mechnote jnote" data-jm="%s"><b>%s</b> — %s%s</p>|}
-             (esc (m_code v)) (esc (m_code v))
+      (List.map (T.artifact_variants ()) ~f:(fun v ->
+           let m = Canary_mechanism.string_of_mechanism v.T.av_mechanism in
+           Printf.sprintf {|<p class="mechnote jnote" data-jm="%s"%s><b>%s</b> — %s%s</p>|}
+             (esc m) (hidden_unless (String.equal m m0)) (esc m)
              (if v.T.av_wired then ""
               else "<b>Not wired — no live project binds through it.</b> ")
              (esc v.T.av_note)))
   in
   let k_notes =
     String.concat
-      (List.map bands ~f:(fun b ->
+      (List.map j.J.jn_kinds ~f:(fun b ->
            let info = T.info_of_coop b.T.cb_kind in
+           let k = T.code_of_coop b.T.cb_kind in
            Printf.sprintf
-             {|<p class="mechnote jnote" data-jk="%s"><b>%s</b> — %s. The two sides: %s. Drawn from its %d chains, one per world and binding language: a node is left out only when none of them has it.</p>|}
-             (esc (k_code b)) (esc info.T.co_name) (esc info.T.co_package_join)
+             {|<p class="mechnote jnote" data-jk="%s"%s><b>%s</b> — %s. The two sides: %s. Drawn from <span class="jcount">%d</span> of its chains (one per world and binding language) — those with the chosen package managers: a node is left out only when none of them has it.</p>|}
+             (esc k) (hidden_unless (String.equal k k0)) (esc info.T.co_name)
+             (esc info.T.co_package_join)
              (esc (String.concat ~sep:", " (sides b.T.cb_kind)))
              b.T.cb_worlds))
   in
-  let p_notes =
+  let pm_notes =
     String.concat
-      (List.concat_map variants ~f:(fun v ->
-           List.map bands ~f:(fun b ->
-               let m = m_code v and k = k_code b in
-               let who =
-                 List.filter_map runs ~f:(fun (m', k', w) ->
-                     if String.equal m m' && String.equal k k' then Some w else None)
-                 |> List.dedup_and_sort ~compare:String.compare
-               in
-               Printf.sprintf {|<p class="mechnote jnote" data-jp="%s %s">%s</p>|} (esc m)
-                 (esc k)
-                 (match who with
-                  | [] -> "No world canary runs is this chain."
-                  | ws ->
-                      "<strong>Canary runs this chain:</strong> "
-                      ^ esc (String.concat ~sep:", " ws) ^ " (§5.4)."))))
+      (List.map Canary_pm_solo.table ~f:(fun r ->
+           let v = Canary_store.string_of_pm r.Canary_pm_solo.ps_pm in
+           Printf.sprintf {|<p class="mechnote jnote" data-jpm="%s"%s><b>%s</b> — %s.</p>|}
+             (esc v) (hidden_unless (Poly.equal pl0 (Some v))) (esc v)
+             (esc r.Canary_pm_solo.ps_package)))
   in
-  (* the covered kinds with no band to draw, said rather than dropped *)
-  let undrawn =
-    List.filter_map groups ~f:(fun ((i : T.coop_info), xs) ->
-        Option.map (T.no_band_because i.T.co_kind) ~f:(fun why ->
-            Printf.sprintf "%s (%s) — %s" i.T.co_name
-              (String.concat ~sep:", "
-                 (List.dedup_and_sort ~compare:String.compare
-                    (List.map xs ~f:(fun (_, (inst : T.instance)) -> inst.T.in_project))))
-              why))
+  let c_notes =
+    String.concat
+      (List.map j.J.jn_cases ~f:(fun c ->
+           Printf.sprintf
+             {|<p class="mechnote jnote" data-jc="%s" hidden><b>%s</b> (%s) — %s ↔ %s: %s. Each name under a node is what %s declares it is; the chain is drawn from its %d world%s.</p>|}
+             (esc c.J.cs_id) (esc c.J.cs_project)
+             (esc (Canary_lang.string_of_lang c.J.cs_lang))
+             (esc (T.string_of_supplier c.J.cs_topology.T.tp_lang))
+             (esc (T.string_of_supplier c.J.cs_topology.T.tp_sys))
+             (esc (T.character c.J.cs_topology))
+             (esc c.J.cs_project) c.J.cs_band.T.cb_worlds
+             (if c.J.cs_band.T.cb_worlds = 1 then "" else "s")))
   in
-  let first = function [] -> "" | x :: _ -> x in
+  let runs0 =
+    match
+      List.Assoc.find j.J.jn_runs
+        (m0 ^ "|" ^ k0 ^ "|*|" ^ Option.value pl0 ~default:"*")
+        ~equal:String.equal
+    with
+    | None | Some [] -> "No chain canary runs has this choice."
+    | Some ids ->
+        "<strong>Canary runs this chain:</strong> " ^ esc (runs_label j ids) ^ " (§5.4)."
+  in
+  (* the covered kinds with no band of their own, said rather than
+     dropped — their chains are among the concrete ones *)
+  let unbanded =
+    List.filter_map T.coop_catalogue ~f:(fun i ->
+        Option.bind (T.no_band_because i.T.co_kind) ~f:(fun why ->
+            match
+              List.filter_map j.J.jn_cases ~f:(fun c ->
+                  if Poly.equal (T.coop_of c.J.cs_topology) i.T.co_kind then
+                    Some c.J.cs_project
+                  else None)
+              |> List.dedup_and_sort ~compare:String.compare
+            with
+            | [] -> None
+            | ps ->
+                Some
+                  (Printf.sprintf "%s (%s) — %s" i.T.co_name (String.concat ~sep:", " ps)
+                     why)))
+  in
+  let data =
+    String.substr_replace_all
+      (Yojson.Basic.to_string (J.json j))
+      ~pattern:"</" ~with_:"<\\/"
+  in
   Printf.sprintf
-    {|<div class="join" data-m="%s" data-k="%s">
-<div class="selbar" data-join="m"><span class="barlabel">artifact band</span>%s</div>
-<div class="selbar" data-join="k"><span class="barlabel">package band</span>%s</div>
-%s%s%s%s%s</div>|}
-    (esc (first (List.map variants ~f:m_code)))
-    (esc (first (List.map bands ~f:k_code)))
-    m_buttons k_buttons (diagram ~classes ()) m_notes k_notes p_notes
-    (match undrawn with
+    {|<div class="join" id="join">
+%s%s%s%s%s
+%s%s%s%s%s
+<p class="mechnote" id="jruns">%s</p>
+<p class="mechnote" id="jmiss" hidden></p>%s
+<script type="application/json" id="joindata">%s</script></div>|}
+    (row "native-side PM" (pm_buttons J.Native "ps"))
+    (row "language-side PM" (pm_buttons J.Language "pl"))
+    (row "binding mechanism" m_buttons)
+    (row "cooperation" k_buttons)
+    (row "a chain canary runs" c_buttons)
+    (diagram ~classes ~case_slots:true ())
+    m_notes k_notes pm_notes c_notes runs0
+    (match unbanded with
      | [] -> ""
      | us ->
-         Printf.sprintf {|<p class="mechnote">Not drawn: %s (§5.3).</p>|}
+         Printf.sprintf
+           {|<p class="mechnote">No cooperation button: %s. Their chains are among the concrete ones, drawn with what canary cannot read left in (§5.3).</p>|}
            (esc (String.concat ~sep:"; " us)))
+    data
 
 (** A concrete case: the same graph, named, with what it does not have
     removed. Selected rather than stacked, for the same reason the
@@ -1073,20 +1141,99 @@ document.querySelectorAll('[data-group]').forEach(function(bar){
   var first=bar.querySelector('button');
   if(first) show(first.dataset.m);
 });
-// THE JOIN: each bar sets one attribute on its container; the generated
-// stylesheet hides what the pair does not have
-document.querySelectorAll('.selbar[data-join]').forEach(function(bar){
-  var box=bar.closest('.join'), a='data-'+bar.dataset.join;
-  if(!box) return;
-  var show=function(v){
-    box.setAttribute(a, v);
-    bar.querySelectorAll('button').forEach(function(b){
-      b.classList.toggle('on', b.dataset.v===v); });
+// THE CHAIN, CHOSEN (§1). Five choices: the two package managers, the
+// mechanism, the cooperation — or a concrete chain, which sets the other
+// four. Every set a choice draws is in #joindata, computed by
+// canary_overview_join.ml; this keeps the state, looks the sets up and
+// applies them.
+var jbox=document.getElementById('join'), J=null;
+try{ J=JSON.parse(document.getElementById('joindata').textContent); }catch(e){}
+if(jbox&&J){
+  var S={m:J.default.m, k:J.default.k, ps:null, pl:J.default.pl, c:null};
+  var jesc=function(s){ var d=document.createElement('span'); d.textContent=s; return d.innerHTML; };
+  var caseOf=function(id){
+    for(var i=0;i<J.cases.length;i++) if(J.cases[i].id===id) return J.cases[i];
+    return null; };
+  var key=function(){ return S.k+'|'+(S.ps||'*')+'|'+(S.pl||'*'); };
+  // the band for the choice — or, where no chain has it, the nearest one
+  // some chain has: the native side's package manager is let go first,
+  // then the language side's; [drop] names what was let go
+  var nearest=function(){
+    var tries=[[S.ps,S.pl],[null,S.pl],[S.ps,null],[null,null]];
+    for(var i=0;i<tries.length;i++){
+      var ps=tries[i][0], pl=tries[i][1], b=J.bands[S.k+'|'+(ps||'*')+'|'+(pl||'*')];
+      if(b) return {band:b, drop:[S.ps&&!ps?S.ps:null, S.pl&&!pl?S.pl:null].filter(Boolean),
+                    kept:[ps,pl].filter(Boolean)};
+    }
+    return {band:null, drop:[], kept:[]};
   };
-  bar.addEventListener('click',function(e){
-    var b=e.target.closest('button'); if(b) show(b.dataset.v); });
-  var cur=box.getAttribute(a); if(cur) show(cur);
-});
+  var draw=function(){
+    var c=S.c&&caseOf(S.c), near=c?null:nearest(),
+        band=c||(near&&near.band)||{gone:[],dead:[]},
+        gone=((J.mechanisms[S.m]||{}).gone||[]).concat(band.gone||[]), dead=band.dead||[],
+        names={};
+    // a concrete chain names every node it declares; a package manager
+    // chosen alone names its own node
+    if(c) names=c.names; else { if(S.ps) names.pm_sys=S.ps; if(S.pl) names.pm_lang=S.pl; }
+    jbox.querySelectorAll('[data-edge]').forEach(function(g){
+      var e=g.getAttribute('data-edge');
+      g.classList.toggle('gone', gone.indexOf(e)>=0);
+      g.classList.toggle('jdead', dead.indexOf(e)>=0); });
+    jbox.querySelectorAll('[data-node]').forEach(function(g){
+      var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'),
+          s=g.querySelector('.ncase'), n=names[id]||'';
+      g.classList.toggle('gone', gone.indexOf(id)>=0);
+      if(s) s.textContent=n;
+      if(l&&l.dataset.y0) l.setAttribute('y', n?l.dataset.y1:l.dataset.y0); });
+    var ids=J.runs[S.m+'|'+key()]||[];
+    jbox.querySelectorAll('button[data-g]').forEach(function(b){
+      var g=b.dataset.g, v=b.dataset.v;
+      b.classList.toggle('on', g==='c' ? S.c===v : S[g]===v);
+      // the concrete chains the choice picks out, while none is chosen
+      if(g==='c') b.classList.toggle('hint', !c && ids.indexOf(v)>=0); });
+    jbox.querySelectorAll('.jnote').forEach(function(p){
+      var d=p.dataset;
+      p.hidden=!((d.jm&&d.jm===S.m)||(d.jk&&!c&&d.jk===S.k)||(d.jc&&d.jc===S.c)
+                ||(d.jpm&&(d.jpm===S.ps||d.jpm===S.pl))); });
+    // how many chains the cooperation's band was drawn from, as narrowed
+    if(!c&&band.n) jbox.querySelectorAll('.jcount').forEach(function(x){ x.textContent=band.n; });
+    var runs=document.getElementById('jruns'), miss=document.getElementById('jmiss');
+    if(runs){
+      var seen={}, who=[];
+      ids.forEach(function(id){ var x=caseOf(id), w=x?x.project+' ('+x.lang+')':id;
+        if(!seen[w]){ seen[w]=1; who.push(w); } });
+      runs.innerHTML=who.length?'<strong>Canary runs this chain:</strong> '+jesc(who.sort().join(', '))+' (§5.4).'
+        :'No chain canary runs has this choice.'; }
+    if(miss){
+      var k=J.kinds[S.k]||{}, why='';
+      if(!c&&k.unbanded) why='⚠ '+jesc(k.label||S.k)+' has no band of its own: '+jesc(k.unbanded)+'.';
+      else if(!c&&near&&near.drop.length)
+        why='Canary runs no '+jesc(k.label||S.k)+' chain with '+jesc(near.drop.join(' or '))
+          +' — the band is drawn from its chains'
+          +(near.kept.length?' with '+jesc(near.kept.join(' and ')):'')+'.';
+      miss.innerHTML=why; miss.hidden=!why; }
+  };
+  var pick=function(g,v){
+    if(g==='m'){ S.m=v; var d=(J.mechanisms[v]||{}).pms||[]; if(d.length===1) S.pl=d[0]; }
+    else if(g==='ps'){ S.ps=(S.ps===v?null:v); }
+    else if(g==='pl'){ S.pl=(S.pl===v?null:v); }
+    else if(g==='k'){ S.k=v; S.c=null; }
+    else if(g==='c'){ var x=caseOf(v); if(x){ S.c=v; S.m=x.m; S.k=x.k; S.ps=x.ps; S.pl=x.pl; } }
+    // a concrete chain stays chosen only while every choice agrees with it
+    var c=S.c&&caseOf(S.c);
+    if(c&&(c.m!==S.m||c.k!==S.k||c.ps!==S.ps||c.pl!==S.pl)) S.c=null;
+    draw();
+  };
+  jbox.addEventListener('click',function(e){
+    var b=e.target.closest('button[data-g]'); if(b) pick(b.dataset.g,b.dataset.v); });
+  // #chain=<id> — §5.4's rows link here
+  var h=/#chain=([^&]+)/.exec(location.hash), want=h?decodeURIComponent(h[1]):null;
+  var go=function(id){ if(caseOf(id)){ pick('c',id); jbox.scrollIntoView(); } };
+  if(want&&caseOf(want)) go(want); else draw();
+  document.querySelectorAll('a[href^="#chain="]').forEach(function(a){
+    a.addEventListener('click',function(e){ e.preventDefault();
+      go(decodeURIComponent(a.getAttribute('href').slice(7))); }); });
+}
 // hovering an edge fills the detail strip. The SVG <title> is still
 // there for keyboard and for people who hover slowly, but a strip that
 // stays put is readable while comparing two edges.
@@ -1259,6 +1406,8 @@ if(want&&byId[want]){ var h=document.getElementById('recorded'); if(h) h.scrollI
 let render (projects : (string * Canary_project_run.project_run) list)
     ~(overview : string) ~(generated_at : string) : string =
   let bare = T.bare_edges () in
+  (* §1's choices and §5.4's chains: computed once, one list for both *)
+  let join = Canary_overview_join.of_projects projects in
   let cases =
     [ { ca_key = "conf"; ca_title = "conf-* over a system library";
         ca_blurb =
@@ -1378,7 +1527,6 @@ let render (projects : (string * Canary_project_run.project_run) list)
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Canary Overview</title>
 <style>%s
-%s
 %s</style></head><body><main>
 
 <h1>How two package ecosystems are joined</h1>
@@ -1438,12 +1586,17 @@ language module. A <code>ctypes</code> binding compiles nothing and has
 no stub node at all; its library is opened by name at import, so two of
 these edges do not merely go quiet, they do not exist. So the whole
 diagram is a <em>join</em>: one artifact-layer row (a binding mechanism,
-§5.2) with one package-and-PM row (a cooperation, §5.3). Neither table
-alone draws a chain; the pair does. Pick both below — the artifact band
-by mechanism, the package band by cooperation. A cooperation's band is
-drawn from the worlds that realize it, so a node is left out only when
-none of them has it, and a greyed edge exists and does not fire. The last
-line under the diagram says whether canary runs the pair (§5.4).</div>
+§5.2) with one package-and-PM row (a cooperation, §5.3), between two
+package managers (§5.1). No one table draws a chain; together they do.
+Pick below: a package manager for each side, a binding mechanism (the
+artifact band) and a cooperation (the package band) — or one of the
+chains canary runs, which picks all four and writes, under each generic
+label, what its project declares the node is. A mechanism also picks the
+package manager that ships its language's bindings. A cooperation's band
+is drawn from the chains that realize it, narrowed to the chosen package
+managers, so a node is left out only when none of them has it; a greyed
+edge exists and does not fire. The line under the diagram says which
+projects canary runs the choice for (§5.4).</div>
 %s
 <p id="edet" class="edet">hover an edge</p>
 
@@ -1562,7 +1715,9 @@ for the columns; they also cover ecosystems canary does not reach yet
 language, where each side comes from, and so which cooperation joins
 them. A project appears more than once when its worlds differ — a world
 that builds its binding does not go through the package gate its project
-declares, so a chain is a fact about the world, not the project.</p>
+declares, so a chain is a fact about the world, not the project. These
+are §1's concrete chains, and each project links to its chain drawn
+there.</p>
 %s
 
 <div class="foot">Generated %s. <strong>What is derived and what is not</strong>,
@@ -1592,10 +1747,10 @@ and the edges around a bridge from what a bridge step recorded (one
 bridge so far: conf-gmp, on zarith).
 · <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
-    css Canary_matrix.overview_css (join_css projects)
+    css Canary_matrix.overview_css
     (* §1 the chain — the missing steps COUNTED from the catalogue, the
-       join of the two bands — and §1.1 its legend *)
-    (missing_steps_note ()) (join_panel projects) (node_legend ())
+       chain chosen from its parts — and §1.1 its legend *)
+    (missing_steps_note ()) (join_panel join) (node_legend ())
     (* §2 the cases — moved up so the general shape is followed at once by
        its instances (user, 2026-09-23) — and §2.1, the same cases as
        recorded, for comparison *)
@@ -1616,7 +1771,7 @@ bridge so far: conf-gmp, on zarith).
        (String.concat ~sep:", " (List.map bare ~f:(fun e -> e.T.eg_id))))
     (* §5 the topologies *)
     (pm_solo_table projects) (binding_table projects) (coop_table projects)
-    (topology_notes projects) (chains_table projects)
+    (topology_notes projects) (chains_table join)
     (esc generated_at) (script ^ runs_script ())
 
 let docs_path = "docs/canary/overview.html"

@@ -1258,11 +1258,50 @@ blank.
   `matrix.record_carries_each_worlds_chain`. Each was falsified before
   it was trusted.
 
-  Still open: a kind's band is an intersection over its worlds, and
-  those worlds can differ by package manager. "Absorbed" covers an opam
-  package that builds from source and pip wheels that do not, so the
-  pair (ctypes, absorbed) draws a binding source that no wheel has. The
-  PM-solo rows would be a third selector; not drawn yet.
+  Left open that day: a kind's band is an intersection over its worlds,
+  and those worlds can differ by package manager. "Absorbed" covers an
+  opam package that builds from source and pip wheels that do not, so
+  the pair (ctypes, absorbed) drew a binding source that no wheel has.
+  The package managers became a choice the next day (below), which
+  closes it.
+- **The chain chosen from its parts — landed 2026-09-24** (user: "can
+  we also make the pm itself as the choice? … all are shown as buttons
+  in one place. If we click a binding mechanism, the dependent pms are
+  also shown as clicked. if we click a concrete package case, the pms
+  and binding-mechanism it uses are also shown as clicked", with the
+  concrete name under a node "in the next line in a different font").
+  §1 now has one panel of buttons above its one diagram: the native
+  side's package managers (the system ones, by the drivers' own scope),
+  the language side's, the binding mechanisms, the cooperation kinds,
+  and the 28 chains canary runs. Those chains are the rows of §5.4, which
+  is now rendered from the same list and links each row to its chain in
+  §1. A mechanism also chooses the package manager that ships its
+  language's bindings — opam for OCaml, pip for Python, read from the
+  chains rather than written down. A concrete chain chooses its two
+  package managers, its mechanism and its cooperation, and writes under
+  each generic label what its project declares the node is: libgmp-dev,
+  conf-gmp, Zarith.git, libzarith.a. A package manager chosen on its own
+  names only its own node.
+
+  Choosing package managers NARROWS a cooperation's band to the chains
+  that have them (`Canary_topology.band_over`), so absorbed over pip has
+  no binding source and ctypes + absorbed now draws the wheel. A choice
+  that no chain has falls back to the nearest one that some chain has —
+  the native side's package manager is let go first — and the page says
+  what it let go. Everything a choice draws is computed in
+  `Canary_overview_join` and embedded as data; the page's script keeps
+  the state and looks the answers up. The names come from declarations,
+  never from a run: §1 is what can exist and what canary runs, and a
+  recorded world is §2.1's.
+
+  Pinned by `overview.chain_choices_draw_one_chain` (the chains are
+  §5.4's rows and their own worlds; the dependent package managers; the
+  narrowing; every chain picked out by the four choices it lights; the
+  page's buttons, name slots, embedded data and default drawing).
+  Falsified by a band that ignores the language side's package manager
+  and by dependent package managers that ignore the language. The click
+  behaviour itself was checked with a scripted sequence in headless
+  Chromium, which is not a pin.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

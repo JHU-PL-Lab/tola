@@ -1495,7 +1495,14 @@ let has_band (k : coop) : bool = Option.is_none (no_band_because k)
     one of its worlds has. DERIVED from the worlds rather than written per
     kind: no-PM-between says nothing about where the library comes from,
     and sqlite's Python worlds take it from apt, from a build and from a
-    staged copy. *)
+    staged copy.
+
+    NARROWED BY PACKAGE MANAGER (2026-09-24, user: "can we also make the
+    pm itself as the choice?"). A kind's worlds can differ by package
+    manager, and the intersection then draws what only some of them have:
+    absorbed covers an opam package built from source and pip wheels that
+    are not, so its band kept a binding source no wheel has. Choosing the
+    package managers narrows the worlds first ({!band_over}). *)
 type coop_band = {
   cb_kind : coop;
   cb_hidden : string list;  (** node ids *)
@@ -1503,34 +1510,80 @@ type coop_band = {
   cb_worlds : int;  (** how many (world, binding language) pairs realize it *)
 }
 
+(** One world through one binding language, as a band needs it: the
+    world, the mechanism pass 2 gives its language, its topology, and what
+    its package band hides and greys. *)
+type band_instance = {
+  bi_project : string;
+  bi_pr : Canary_project_run.project_run;
+  bi_world : Canary_artifact.assignment;
+  bi_lang : Canary_lang.lang;
+  bi_mechanism : Canary_mechanism.mechanism;
+  bi_topology : t;
+  bi_publishes : bool;
+  bi_hidden : string list;
+  bi_dead : string list;
+}
+
+let band_instances (projects : (string * Canary_project_run.project_run) list) :
+    band_instance list =
+  List.concat_map projects ~f:(fun (name, pr) ->
+      let an = Canary_project_analysis.of_project_run pr in
+      List.concat_map (Canary_project_run.scenarios_of pr) ~f:(fun world ->
+          List.map (binding_langs pr) ~f:(fun lang ->
+              let t = topology_of_world ~pr ~world lang in
+              let publishes = publishes_of_world ~pr ~world lang in
+              { bi_project = name;
+                bi_pr = pr;
+                bi_world = world;
+                bi_lang = lang;
+                bi_mechanism = Canary_project_analysis.mechanism_for an lang;
+                bi_topology = t;
+                bi_publishes = publishes;
+                bi_hidden = band_hidden ~publishes t;
+                bi_dead = band_dead t })))
+
+(** THE TWO PACKAGE-MANAGER NODES of a chain. The native side is drawn
+    with a package manager only when a SYSTEM one supplies it; a language
+    package manager that supplies the library — torch's libtorch through
+    opam, a wheel's bundled library — is the language side's, and the
+    unified and absorbed bands draw no system PM at all. *)
+let native_pm_of (t : t) : Canary_store.package_manager option =
+  match t.tp_sys with By_pm pm when is_system_pm pm -> Some pm | _ -> None
+
+let lang_pm_of (t : t) : Canary_store.package_manager option =
+  match t.tp_lang with By_pm pm -> Some pm | _ -> None
+
+let inter_all : string list list -> string list = function
+  | [] -> []
+  | x :: xs ->
+      List.fold xs ~init:x ~f:(fun acc l ->
+          List.filter acc ~f:(List.mem l ~equal:String.equal))
+
+(** A kind's band over its chains with the chosen package managers
+    ([None] = any): a node is absent when none of them has it, an edge
+    greyed when every one greys it. [None] when no chain canary runs
+    matches — the page says so rather than drawing a band nothing has. *)
+let band_over ?native ?lang (is : band_instance list) (k : coop) : coop_band option =
+  let matches i =
+    Poly.equal (coop_of i.bi_topology) k
+    && Option.for_all native ~f:(fun p -> Poly.equal (native_pm_of i.bi_topology) (Some p))
+    && Option.for_all lang ~f:(fun p -> Poly.equal (lang_pm_of i.bi_topology) (Some p))
+  in
+  match List.filter is ~f:matches with
+  | [] -> None
+  | xs ->
+      Some
+        { cb_kind = k;
+          cb_hidden = inter_all (List.map xs ~f:(fun i -> i.bi_hidden));
+          cb_dead = inter_all (List.map xs ~f:(fun i -> i.bi_dead));
+          cb_worlds = List.length xs }
+
 let coop_bands (projects : (string * Canary_project_run.project_run) list) :
     coop_band list =
-  let instances =
-    List.concat_map projects ~f:(fun (_, pr) ->
-        List.concat_map (Canary_project_run.scenarios_of pr) ~f:(fun world ->
-            List.map (binding_langs pr) ~f:(fun lang ->
-                let t = topology_of_world ~pr ~world lang in
-                ( coop_of t,
-                  band_hidden ~publishes:(publishes_of_world ~pr ~world lang) t,
-                  band_dead t ))))
-  in
-  let inter = function
-    | [] -> []
-    | x :: xs ->
-        List.fold xs ~init:x ~f:(fun acc l ->
-            List.filter acc ~f:(List.mem l ~equal:String.equal))
-  in
+  let is = band_instances projects in
   List.filter_map coop_catalogue ~f:(fun info ->
-      let k = info.co_kind in
-      match List.filter instances ~f:(fun (k', _, _) -> Poly.equal k k') with
-      | [] -> None
-      | _ when not (has_band k) -> None
-      | xs ->
-          Some
-            { cb_kind = k;
-              cb_hidden = inter (List.map xs ~f:(fun (_, h, _) -> h));
-              cb_dead = inter (List.map xs ~f:(fun (_, _, d) -> d));
-              cb_worlds = List.length xs })
+      if has_band info.co_kind then band_over is info.co_kind else None)
 
 (* ── THE ARTIFACT BAND IS ONE BINDING MECHANISM ───────────────────────
 

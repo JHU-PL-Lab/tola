@@ -1784,7 +1784,7 @@ let coverage_tables_pin : Canary_project_test.pure_test =
                      String.is_substring section
                        ~substring:
                          (String.concat
-                            [ "<td>"; name; "</td><td>";
+                            [ name; "</a></td><td>";
                               Canary_lang.string_of_lang i.T.in_lang; "</td><td>";
                               Canary_mechanism.string_of_mechanism
                                 (Canary_project_analysis.mechanism_for an i.T.in_lang);
@@ -1810,11 +1810,10 @@ let coverage_tables_pin : Canary_project_test.pure_test =
    - the kinds' bands say what the kinds mean: conf keeps its bridge and
      its capability file, unified and absorbed have no system side, no
      package manager between has neither bridge nor capability file,
-     gated-local greys the system payload, local has no bridge;
-   - the page draws ONE diagram, a button per mechanism and per drawable
-     covered kind (and none for a kind that is not a cooperation), a
-     stylesheet rule for every class the diagram uses, and a line per pair
-     naming the projects where canary runs it. *)
+     gated-local greys the system payload, local has no bridge.
+
+   How the page lets a reader choose them is
+   [overview.chain_choices_draw_one_chain]. *)
 let package_band_pin : Canary_project_test.pure_test =
   { name = "overview.package_band_is_one_cooperation";
     check =
@@ -1887,68 +1886,181 @@ let package_band_pin : Canary_project_test.pure_test =
                  T.has_band b.T.cb_kind
                  && List.for_all b.T.cb_hidden ~f:(List.mem T.band_nodes ~equal:String.equal))
         in
-        let join =
-          match String.substr_index page ~pattern:{|<div class="join"|} with
+        Option.is_some hand && reproduces && facts)
+  }
+
+(* THE CHAIN IS CHOSEN FROM ITS PARTS (2026-09-24, status.md §2.7; user:
+   "can we also make the pm itself as the choice? … If we click a binding
+   mechanism, the dependent pms are also shown as clicked. if we click a
+   concrete package case, the pms and binding-mechanism it uses are also
+   shown as clicked … if clicking a concrete package, we also show the
+   native package name in the next line"). What each choice draws is data
+   ([Canary_overview_join]); the page's script only looks it up, so the
+   data is what is held:
+
+   - the concrete chains ARE §5.4's rows — one list, each row linking to
+     its chain — and each is its own worlds: pass 2's mechanism, its
+     topology's cooperation, the band over those worlds, and its
+     project's declared names on template nodes. zarith's fetched chain
+     names conf-gmp and lights the platform's system PM and opam; its
+     built chain names no bridge;
+   - a mechanism depends on the package manager that ships its language's
+     bindings: opam for cstubs and dynlink, pip for cext, ctypes and cffi;
+   - NARROWING BY PACKAGE MANAGER IS REAL: absorbed over pip has no
+     binding source and absorbed over every world does — the wheel the
+     question came from — and a choice no chain has is no band at all;
+     the all-worlds band of each kind is the cooperation bar's;
+   - every chain is picked out by the four choices it lights;
+   - the page: ONE diagram with a name slot on every node, a button per
+     package manager on its own side, per mechanism, per drawable
+     cooperation (none for a kind that is not one), per concrete chain;
+     the embedded data is this module's; the page opens drawn in the
+     default choice. *)
+let chain_choices_pin : Canary_project_test.pure_test =
+  { name = "overview.chain_choices_draw_one_chain";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module J = Canary_overview_join in
+        let projects = Canary_registry.all_specs in
+        let j = J.of_projects projects in
+        let node_ids = List.map T.nodes ~f:(fun n -> n.T.nd_id) in
+        let rows =
+          List.concat_map projects ~f:(fun ((name, pr) as p) ->
+              let an = Canary_pipeline.analysed_of pr in
+              List.map (T.topologies_of_worlds p) ~f:(fun ((t : T.t), (i : T.instance)) ->
+                  ( name,
+                    Canary_lang.string_of_lang i.T.in_lang,
+                    Canary_mechanism.string_of_mechanism
+                      (Canary_project_analysis.mechanism_for an i.T.in_lang),
+                    T.string_of_supplier t.T.tp_lang,
+                    T.string_of_supplier t.T.tp_sys,
+                    T.character t )))
+          |> List.dedup_and_sort ~compare:Poly.compare
+        in
+        let ids = List.map j.J.jn_cases ~f:(fun c -> c.J.cs_id) in
+        let cases_are_rows =
+          List.equal Poly.equal rows (List.map j.J.jn_cases ~f:J.sort_key)
+          && List.length (List.dedup_and_sort ~compare:String.compare ids) = List.length ids
+          && List.for_all ids ~f:(String.for_all ~f:(fun ch ->
+                 Char.is_alphanum ch || Char.equal ch '-' || Char.equal ch '_'))
+        in
+        let own (c : J.case) (i : T.band_instance) =
+          String.equal i.T.bi_project c.J.cs_project
+          && Poly.equal i.T.bi_lang c.J.cs_lang
+          && Poly.equal i.T.bi_topology.T.tp_lang c.J.cs_topology.T.tp_lang
+          && Poly.equal i.T.bi_topology.T.tp_sys c.J.cs_topology.T.tp_sys
+        in
+        let cases_are_their_worlds =
+          List.for_all j.J.jn_cases ~f:(fun c ->
+              let mine = List.filter j.J.jn_instances ~f:(own c) in
+              let k = T.coop_of c.J.cs_topology in
+              (not (List.is_empty mine))
+              && List.for_all mine ~f:(fun i ->
+                     Poly.equal i.T.bi_mechanism c.J.cs_mechanism
+                     && Poly.equal (T.coop_of i.T.bi_topology) k)
+              && Poly.equal (Some c.J.cs_band) (T.band_over mine k)
+              && List.for_all c.J.cs_names ~f:(fun (n, l) ->
+                     List.mem node_ids n ~equal:String.equal && not (String.is_empty l)))
+        in
+        let sys_pm = Canary_store.system_pm_of_platform (Canary_store.platform ()) in
+        let sys = Canary_store.string_of_pm sys_pm in
+        let case id = List.find j.J.jn_cases ~f:(fun c -> String.equal c.J.cs_id id) in
+        let names_ok =
+          match (case ("zarith-ocaml-opam-" ^ sys), case ("zarith-ocaml-built-" ^ sys)) with
+          | Some fetched, Some built ->
+              Poly.equal
+                (List.Assoc.find fetched.J.cs_names "bridge" ~equal:String.equal)
+                (Some "conf-gmp")
+              && List.Assoc.mem fetched.J.cs_names "pkg_sys" ~equal:String.equal
+              && Poly.equal (J.case_pms fetched) (Some sys_pm, Some Canary_store.Opam)
+              && not (List.Assoc.mem built.J.cs_names "bridge" ~equal:String.equal)
+          | _ -> false
+        in
+        let deps m = J.dependent_pms j.J.jn_cases m in
+        let depends_ok =
+          List.for_all Canary_mechanism.[ Cstubs; Dynlink ] ~f:(fun m ->
+              Poly.equal (deps m) [ Canary_store.Opam ])
+          && List.for_all Canary_mechanism.[ Cext; Ctypes; Cffi ] ~f:(fun m ->
+                 Poly.equal (deps m) [ Canary_store.Pip ])
+        in
+        let band_at key = List.Assoc.find j.J.jn_bands key ~equal:String.equal in
+        let hides key n =
+          Option.exists (band_at key) ~f:(fun b -> List.mem b.T.cb_hidden n ~equal:String.equal)
+        in
+        let narrows =
+          hides "absorbed|*|pip" "src_lang"
+          && Option.is_some (band_at "absorbed|*|*")
+          && (not (hides "absorbed|*|*" "src_lang"))
+          && Option.is_none (band_at ("unified|" ^ sys ^ "|*"))
+          && List.for_all (T.coop_bands projects) ~f:(fun b ->
+                 Poly.equal (band_at (J.band_key b.T.cb_kind None None)) (Some b))
+          && Poly.equal (List.map j.J.jn_kinds ~f:(fun b -> b.T.cb_kind))
+               (List.map (T.coop_bands projects) ~f:(fun b -> b.T.cb_kind))
+        in
+        let runs_ok =
+          List.for_all j.J.jn_cases ~f:(fun c ->
+              let native, lang = J.case_pms c in
+              let k = T.coop_of c.J.cs_topology in
+              List.for_all [ None; native ] ~f:(fun n ->
+                  List.for_all [ None; lang ] ~f:(fun l ->
+                      match
+                        List.Assoc.find j.J.jn_runs (J.runs_key c.J.cs_mechanism k n l)
+                          ~equal:String.equal
+                      with
+                      | Some ids -> List.mem ids c.J.cs_id ~equal:String.equal
+                      | None -> false)))
+        in
+        let page = Canary_overview_page.render projects ~overview:"" ~generated_at:"pin" in
+        let between a b =
+          match String.substr_index page ~pattern:a with
           | None -> ""
           | Some i -> (
               let rest = String.drop_prefix page i in
-              match String.substr_index rest ~pattern:{|<p id="edet"|} with
+              match String.substr_index rest ~pattern:b with
               | None -> ""
-              | Some j -> String.prefix rest j)
+              | Some k -> String.prefix rest k)
         in
-        let covered =
-          List.concat_map projects ~f:T.topologies_of_worlds
-          |> List.map ~f:(fun ((t : T.t), _) -> T.coop_of t)
-          |> List.dedup_and_sort ~compare:Poly.compare
+        let panel = between {|<div class="join" id="join">|} {|<p id="edet"|} in
+        let has s = String.is_substring panel ~substring:s in
+        let count s = List.length (String.substr_index_all panel ~may_overlap:false ~pattern:s) in
+        let data =
+          let tag = {|<script type="application/json" id="joindata">|} in
+          match String.substr_index panel ~pattern:tag with
+          | None -> None
+          | Some i -> (
+              let rest = String.drop_prefix panel (i + String.length tag) in
+              match String.substr_index rest ~pattern:"</script>" with
+              | None -> None
+              | Some k -> (
+                  try Some (Yojson.Basic.from_string (String.prefix rest k)) with _ -> None))
         in
-        let used prefix =
-          List.map (String.substr_index_all join ~may_overlap:false ~pattern:(" " ^ prefix))
-            ~f:(fun i ->
-              let rest = String.drop_prefix join (i + 1) in
-              let n =
-                Option.value ~default:(String.length rest)
-                  (String.lfindi rest ~f:(fun _ c ->
-                       not (Char.is_alphanum c || Char.equal c '_' || Char.equal c '-')))
-              in
-              String.prefix rest n)
-          |> List.dedup_and_sort ~compare:String.compare
-        in
-        let ruled cls = String.is_substring page ~substring:("." ^ cls ^ "{") in
-        let m_codes =
-          List.map Canary_mechanism.mechanism_catalogue ~f:(fun i ->
-              Canary_mechanism.string_of_mechanism i.Canary_mechanism.mi_mechanism)
-        in
+        let button g v = has (Printf.sprintf {|data-g="%s" data-v="%s"|} g v) in
+        let gone0, _ = J.default_drawing j in
         let page_ok =
-          (not (String.is_empty join))
-          && List.length (String.substr_index_all join ~may_overlap:false ~pattern:"<svg") = 1
-          && List.for_all m_codes ~f:(fun m ->
-                 String.is_substring join ~substring:(Printf.sprintf {|<button data-v="%s">|} m))
+          (not (String.is_empty panel))
+          && count "<svg" = 1
+          && count {|class="ncase"|} = List.length T.nodes
+          && List.for_all (J.pms J.Native) ~f:(fun p -> button "ps" (Canary_store.string_of_pm p))
+          && List.for_all (J.pms J.Language) ~f:(fun p -> button "pl" (Canary_store.string_of_pm p))
+          && List.for_all Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+                 button "m" (Canary_mechanism.string_of_mechanism i.Canary_mechanism.mi_mechanism))
           && List.for_all T.coop_catalogue ~f:(fun i ->
                  Bool.equal
-                   (String.is_substring join
-                      ~substring:
-                        (Printf.sprintf {|<button data-v="%s" title=|} (T.code_of_coop i.T.co_kind)))
-                   (List.mem covered i.T.co_kind ~equal:Poly.equal && T.has_band i.T.co_kind))
-          && List.for_all [ "jm-"; "jk-"; "jd-" ] ~f:(fun p ->
-                 (not (List.is_empty (used p))) && List.for_all (used p) ~f:ruled)
-          && List.for_all m_codes ~f:(fun m ->
-                 List.for_all bands ~f:(fun b ->
-                     String.is_substring join
-                       ~substring:
-                         (Printf.sprintf {|data-jp="%s %s"|} m (T.code_of_coop b.T.cb_kind))))
-          && (match
-                String.substr_index join ~pattern:{|data-jp="cstubs conf">|}
-              with
-              | None -> false
-              | Some i ->
-                  let rest = String.drop_prefix join i in
-                  let line =
-                    String.prefix rest
-                      (Option.value (String.substr_index rest ~pattern:"</p>") ~default:0)
-                  in
-                  String.is_substring line ~substring:"zarith (ocaml)")
+                   (button "k" (T.code_of_coop i.T.co_kind))
+                   (List.exists j.J.jn_kinds ~f:(fun b -> Poly.equal b.T.cb_kind i.T.co_kind)))
+          && List.for_all ids ~f:(button "c")
+          && (not (button "k" "undeclared"))
+          && Poly.equal data (Some (J.json j))
+          && (not (List.is_empty gone0))
+          && List.for_all gone0 ~f:(fun id ->
+                 has (Printf.sprintf {|gone" data-node="%s"|} id)
+                 || has (Printf.sprintf {|gone" data-edge="%s"|} id))
+          && List.for_all ids ~f:(fun id ->
+                 String.is_substring page ~substring:(Printf.sprintf {|href="#chain=%s"|} id))
         in
-        Option.is_some hand && reproduces && facts && page_ok)
+        cases_are_rows && cases_are_their_worlds && names_ok && depends_ok && narrows
+        && runs_ok && page_ok)
   }
 
 (* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):
@@ -7438,6 +7550,7 @@ let base_tests : Canary_project_test.pure_test list =
       placeholder_badges_pin;
       coverage_tables_pin;
       package_band_pin;
+      chain_choices_pin;
       record_chains_pin;
       chain_absence_pin;
       platform_single_source_pin;
