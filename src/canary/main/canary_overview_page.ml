@@ -46,9 +46,15 @@ let layout : (string * pos) list =
        language ecosystem and is written by one of its maintainers.
        Different authors, different release cycles — which is the whole
        reason the symbolic path and the artifact path can disagree. A
-       layout that hid the ownership hid the motive. *)
+       layout that hid the ownership hid the motive.
+
+       The bridge moved left from 840 on 2026-09-23: there, its [depends]
+       edge to the binding package was 22px long, and the edge's label and
+       badge sat under the two boxes — which hid the bridge's placeholder
+       claims the day they were added. It stays right of centre, with the
+       language ecosystem that writes it. *)
     ("cap", { px = 390; py = 252 });
-    ("bridge", { px = 840; py = 190 });
+    ("bridge", { px = 720; py = 190 });
     ("pkg_lang", { px = 1070; py = 212 });
     ("src_sys", { px = 150; py = 392 });
     ("hdr_sys", { px = 150; py = 466 });
@@ -160,7 +166,12 @@ let annotation_title = function
   | T.Agreement slug -> "the claim " ^ slug
   | T.Info s -> s ^ " (we run nothing here)"
 
-let edge_svg ~(live : bool) ~(claims : int) (e : T.edge) =
+(* A PLACEHOLDER IS DRAWN AS ONE (2026-09-23, user: "we can use special
+   node to show not-implemented yet"). An edge whose claims are ALL
+   candidates — named, with no evaluator — gets a hollow, dashed badge,
+   so a claim that is known and not implemented no longer looks like one
+   that runs. *)
+let edge_svg ~(live : bool) ~(claims : int) ?(candidate_only = false) (e : T.edge) =
   let dst = pos_of e.eg_to in
   let cls =
     Printf.sprintf "edge%s%s%s"
@@ -183,9 +194,10 @@ let edge_svg ~(live : bool) ~(claims : int) (e : T.edge) =
            let badge =
              if claims = 0 then ""
              else
+               let cand = if candidate_only then " cand" else "" in
                Printf.sprintf
-                 {|<circle class="cbadge" cx="%d" cy="%d" r="9"/><text class="cnum" x="%d" y="%d">%d</text>|}
-                 (mx + 46) my (mx + 46) (my + 4) claims
+                 {|<circle class="cbadge%s" cx="%d" cy="%d" r="9"/><text class="cnum%s" x="%d" y="%d">%d</text>|}
+                 cand (mx + 46) my cand (mx + 46) (my + 4) claims
            in
            (* an inline style, because the stylesheet's text-anchor would
               beat a presentation attribute *)
@@ -236,8 +248,11 @@ let diagram ?(rename = fun (_ : string) -> None)
              || List.exists e.T.eg_from ~f:gone
            then ""
            else
-             edge_svg ~live:(not (dead e.T.eg_id))
-               ~claims:(List.length (T.claim_sites_on e.T.eg_id))
+             let sites = T.claim_sites_on e.T.eg_id in
+             edge_svg ~live:(not (dead e.T.eg_id)) ~claims:(List.length sites)
+               ~candidate_only:
+                 ((not (List.is_empty sites))
+                 && List.for_all sites ~f:(fun p -> not p.T.cs_implemented))
                e))
   in
   let ns =
@@ -360,6 +375,8 @@ ul.unpl{margin:.2rem 0 0;padding-left:1.2rem;font-size:.88rem;color:var(--mut)}
 .declmark text{font:11px ui-sans-serif,sans-serif;fill:var(--acc);
 text-anchor:middle}
 .cnum{font:700 11px ui-sans-serif,sans-serif;fill:#fff;text-anchor:middle}
+.cbadge.cand{fill:var(--card);stroke:var(--acc);stroke-width:1.6;stroke-dasharray:3 2;opacity:1}
+.cnum.cand{fill:var(--acc)}
 .key{display:flex;flex-wrap:wrap;gap:1.1rem;font-size:.85rem;
 color:var(--mut);margin:.4rem 0 1.4rem}
 .key span{display:flex;align-items:center;gap:.4rem}
@@ -1025,6 +1042,8 @@ else's · <b class="clm">prs</b> a claim</span>
 <span><i class="sw b"></i> no claim recovers this relation</span>
 <span>◇ the experiment declares something here</span>
 <span>? = candidate, no evaluator</span>
+<span><svg width="20" height="20" viewBox="0 0 20 20"><circle class="cbadge cand" cx="10" cy="10" r="7"/></svg>
+every claim here is a placeholder — named, not implemented</span>
 </div>
 
 <div class="note"><strong>The artifact band is one binding mechanism.</strong>

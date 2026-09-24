@@ -1223,8 +1223,21 @@ let claim_sites : claim_site list =
       cs_implemented = false };
     { cs_claim = "compatibility_version_satisfied"; cs_edges = [ "link_mod" ];
       cs_implemented = false };
-    (* --- the diagonal: the ONE candidate on a cooperation edge --- *)
+    (* --- the diagonal: the first candidate on a cooperation edge --- *)
     { cs_claim = "discovery_matches_link"; cs_edges = [ "discover" ];
+      cs_implemented = false };
+    (* --- THE BRIDGE'S CLAIMS (2026-09-23, status.md §2.7 E): placeholders
+       for what a bridge states, on the edges where it states it. Each has
+       its evidence recorded for zarith and no comparator yet, so each is a
+       candidate badge — the bridge edges stop reading as bare because the
+       CLAIM is known, not because anything decides it. --- *)
+    { cs_claim = "gate_admits_the_world"; cs_edges = [ "conf_probe" ];
+      cs_implemented = false };
+    { cs_claim = "declared_gate_matches_package"; cs_edges = [ "depends" ];
+      cs_implemented = false };
+    { cs_claim = "gate_bounds_the_library"; cs_edges = [ "depends"; "conf_probe" ];
+      cs_implemented = false };
+    { cs_claim = "depext_names_the_provided_package"; cs_edges = [ "depext" ];
       cs_implemented = false } ]
 
 (** The claims sitting on one edge. *)

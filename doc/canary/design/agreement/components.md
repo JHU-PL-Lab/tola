@@ -226,6 +226,28 @@ exists. A second unmodeled provider can therefore look missing.
 Interposition needs both a resolution trace and an allowed-target policy.
 A recorder supplies facts; the comparison with that policy supplies blame.
 
+### 5.7 Bridges between package managers
+
+A bridge is package content that exists so one package manager can reach
+another. opam's `conf-gmp` makes three statements: the binding package
+depends on it (with or without a bound), its depexts name the system package
+that provides GMP (`libgmp-dev` on Debian), and its build is a check that
+asks the system whether GMP is there (`pkg-config --exists gmp`, falling
+back to compiling against `gmp.h`). None of the three is re-established per
+world. canary installs with `--assume-depexts`, and opam runs a conf
+package's check only when it first installs the package.
+
+A run now records all three where a bridge is modeled (zarith's, for now):
+the package's depends, the depext mapping, and the check's verdict in this
+world, beside what pkg-config found and which package ships the capability
+file. The claims that would read that record are `gate_admits_the_world`,
+`declared_gate_matches_package`, `gate_bounds_the_library` and
+`depext_names_the_provided_package`. A version bound on a bridge often
+bounds only the bridge's own packaging, which is what the third one is
+about. The capability file the check reads is not a bridge: it belongs to
+the package that ships it. It is why `discovery_matches_link` sits with
+them.
+
 ## 6. Deployment and execution
 
 Deployment can change paths and contents; execution chooses resources and

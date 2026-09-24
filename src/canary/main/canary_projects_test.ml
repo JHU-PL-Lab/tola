@@ -1450,6 +1450,59 @@ let bridge_record_pin : Canary_project_test.pure_test =
             | None -> false))
   }
 
+(* A PLACEHOLDER CLAIM IS DRAWN AS ONE (2026-09-23, user: "we can have
+   placeholder registry … and use special node to show not-implemented
+   yet"). The bridge's claims are placeholders in the registry — candidates,
+   named and with no evaluator — on the edges where a bridge states them;
+   and an edge whose claims are ALL placeholders gets a hollow badge, while
+   an edge with an implemented claim keeps the filled one. Held over every
+   edge of the page, so a claim that lands flips its badge and this says
+   so. *)
+let placeholder_badges_pin : Canary_project_test.pure_test =
+  { name = "overview.placeholders_are_drawn_as_such";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:""
+            ~generated_at:"pin"
+        in
+        (* the recorded template draws every edge, so its group is the one
+           read *)
+        let template =
+          match String.substr_index page ~pattern:{|id="recwrap"|} with
+          | None -> ""
+          | Some i -> String.drop_prefix page i
+        in
+        let group_of id =
+          match
+            String.substr_index template ~pattern:(Printf.sprintf {|data-edge="%s"|} id)
+          with
+          | None -> None
+          | Some i ->
+              let rest = String.drop_prefix template i in
+              Option.map (String.substr_index rest ~pattern:"</g>") ~f:(String.prefix rest)
+        in
+        let candidate_only id =
+          let sites = T.claim_sites_on id in
+          (not (List.is_empty sites))
+          && List.for_all sites ~f:(fun p -> not p.T.cs_implemented)
+        in
+        let bridge_edges = [ "depends"; "conf_probe"; "depext"; "discover" ] in
+        List.for_all bridge_edges ~f:candidate_only
+        && List.for_all bridge_edges ~f:(fun id ->
+               List.for_all (T.claim_sites_on id) ~f:(fun p ->
+                   List.exists Canary_agreement.proposed_agreements ~f:(fun c ->
+                       String.equal c.Canary_agreement.prop_slug p.T.cs_claim)))
+        && List.for_all T.edges ~f:(fun e ->
+               match group_of e.T.eg_id with
+               | None -> false
+               | Some g ->
+                   Bool.equal
+                     (String.is_substring g ~substring:{|class="cbadge cand"|})
+                     (candidate_only e.T.eg_id)))
+  }
+
 (* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
    template numbers its sections by hand, and moving the agreement table
    in produced two sections called "3." — found by reading the page, not
@@ -6670,6 +6723,7 @@ let base_tests : Canary_project_test.pure_test list =
       recorded_names_pin;
       overlay_words_pin;
       bridge_record_pin;
+      placeholder_badges_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

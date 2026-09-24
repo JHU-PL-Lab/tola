@@ -2108,6 +2108,81 @@ let proposed_agreements : proposed list =
          insufficient, and recording it as a violation is the only way it \
          stays counted";
       prop_frame = In_frame };
+    (* ── THE BRIDGE'S CLAIMS (2026-09-23, status.md §2.7 E) ──────────
+
+       A bridge between package managers makes three statements, and a
+       run now RECORDS all three for zarith's world (the bridge step's
+       record): the binding package depends on it, it names a system
+       package, and its check accepts the system. Each is a claim with
+       both sides in hand and no comparator yet — placeholders in the
+       registry, as the user asked, drawn as candidate badges on the
+       bridge edges. Three are the claims `package_gates.md` §6
+       proposed and never entered here; the fourth, the depext one, came
+       out of recording the bridge. *)
+    { prop_kind = Admissibility;
+      prop_slug = "gate_admits_the_world";
+      prop_doc = "§5.7";
+      prop_claim =
+        "the world canary constructed would satisfy the binding package's \
+         gate — its constraint on the bridge, and the bridge's own check \
+         against this world's system — if the package manager were asked. \
+         canary installs with --assume-depexts, and opam runs a conf \
+         package's check only when it first installs it, so neither half \
+         is exercised per world unless canary asks";
+      prop_needs =
+        "a comparator over what is ALREADY RECORDED for zarith: the \
+         bridge record's check verdict (the predicate's pkg-config \
+         invocation, run in this world) and the installed versions. \
+         Today the verdict decides the bridge step's own pass or fail and \
+         reaches no agreement; and only zarith records a bridge";
+      prop_frame = In_frame };
+    { prop_kind = Promise;
+      prop_slug = "declared_gate_matches_package";
+      prop_doc = "§5.7";
+      prop_claim =
+        "the gate the project DECLARES for its binding (pm_gate) is the \
+         one the binding package's own metadata states: the same bridge \
+         package, with the same constraint. A declaration compared with a \
+         declaration — package_gates.md §7.3 asks whether that deserves \
+         an agreement's status";
+      prop_needs =
+        "a comparator: the bridge record keeps the binding package's \
+         `depends` as opam prints it and whether it names the bridge; \
+         what is missing is reading the constraint out of it and \
+         comparing both with the declared gate. package_gates.md §7.2 \
+         asks whether this belongs to the offline spec audit instead";
+      prop_frame = In_frame };
+    { prop_kind = Promise;
+      prop_slug = "gate_bounds_the_library";
+      prop_doc = "§5.7";
+      prop_claim =
+        "a version bound the binding package puts on its bridge really \
+         bounds the C LIBRARY — the bridge's check enforces a version — \
+         rather than the packaging of the check: conf-libffi's 2.0.0 is \
+         the conf package's revision while libffi is 3.x. Measured at 13 \
+         of 370 conf packages (surveys/conf_packages.md §G1a)";
+      prop_needs =
+        "the predicate is RECORDED (the bridge record keeps its text and \
+         the pkg-config invocation, including any --atleast-version); \
+         what is missing is the version-domain model the user deferred \
+         (status.md §2.7 E, version transport) — today one declared bool, \
+         tracks_lib";
+      prop_frame = In_frame };
+    { prop_kind = Admissibility;
+      prop_slug = "depext_names_the_provided_package";
+      prop_doc = "§5.7";
+      prop_claim =
+        "the system package the bridge maps to (its depexts, as opam \
+         evaluates them for this platform) is the system package the world \
+         provisions the library from — the symbolic path lands where the \
+         artifact path is. opam's depext machinery would have installed \
+         the one it names; canary installs the one the project declares";
+      prop_needs =
+        "a comparator over recorded facts: the bridge record's depexts \
+         and the owner of the capability file its check found, against \
+         the lib row's declared system package. Both sides exist for \
+         zarith (libgmp-dev, libgmp-dev)";
+      prop_frame = In_frame };
     { prop_kind = Admissibility;
       prop_slug = "discovery_matches_link";
       prop_doc = "§5.3";
@@ -2117,15 +2192,18 @@ let proposed_agreements : proposed list =
          — `pkg-config` at solve time, the linker's search at build \
          time, RUNPATH at run time — and nothing checks that they agreed";
       prop_needs =
-        "the first resolver's answer RECORDED; nothing captures what a \
-         conf-* check accepted. Its falsifier already exists as a \
-         written-up finding — the ncurses/libtinfo report, where \
-         identical sonames, symbols and version nodes segfaulted because \
-         two prefixes answered differently. ⚠ Open question it raises: \
-         it roots in no toolchain's rule (nothing ENFORCES the three \
-         agreeing) yet it has an oracle (run both resolvers and compare), \
-         so it asks whether `rooted` should mean a tool ENFORCED it or a \
-         tool ANSWERED it. See directions.md §1";
+        "the first resolver's answer is now RECORDED where a bridge is: \
+         the bridge step keeps what pkg-config answered for the \
+         predicate's module, library directory included (zarith only, \
+         2026-09-23). What is missing is the comparison with the library \
+         the link resolved, and the answer everywhere else. Its falsifier \
+         already exists as a written-up finding — the ncurses/libtinfo \
+         report, where identical sonames, symbols and version nodes \
+         segfaulted because two prefixes answered differently. ⚠ Open \
+         question it raises: it roots in no toolchain's rule (nothing \
+         ENFORCES the three agreeing) yet it has an oracle (run both \
+         resolvers and compare), so it asks whether `rooted` should mean \
+         a tool ENFORCED it or a tool ANSWERED it. See directions.md §1";
       prop_frame = In_frame };
     { prop_kind = Admissibility;
       prop_slug = "interposition_binds_build_target";

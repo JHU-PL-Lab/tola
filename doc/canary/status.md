@@ -1126,6 +1126,50 @@ Open, found on the way — none of them fixed here:
   layers and for the logged results; the agreement registry is
   discussed against it.
 
+*Placeholders — the method (user, 2026-09-23).* Bottom-up: take the
+checking components that are easy to record, and mark the ones canary
+cannot retrieve. A registry can carry placeholders, and so can the
+action graph. Both are drawn as a special marker, in the detailed log
+and on the diagram, so "not implemented yet" is visible rather than
+blank.
+
+- **Placeholder REGISTRY — done the same day.** Of the four bridge
+  checks, only `discovery_matches_link` was in the registry's candidate
+  table. `package_gates.md` §6 had proposed three more and never entered
+  them. They are candidates now — `gate_admits_the_world`,
+  `declared_gate_matches_package`, `gate_bounds_the_library` — along
+  with the new `depext_names_the_provided_package`, with claim sites on
+  the bridge edges. `discovery_matches_link`'s "needs" now says that
+  pkg-config's answer is recorded where a bridge is. `components.md`
+  §5.7 explains why the bridge's claims exist. On the diagram, an edge
+  whose claims are all placeholders gets a hollow, dashed badge, and the
+  census reads 30 claims (13 implemented, 17 candidates). The bridge box
+  moved left, so its `depends` edge, which was 22px long with the badge
+  under the boxes, can be read. Pinned by
+  `overview.placeholders_are_drawn_as_such`.
+- **Placeholder ACTIONS — proposed, waiting on the user's pick.** The
+  inventory of what a package manager does inside an install and canary
+  does not record:
+
+  | edge | what the package manager does | can canary record it? |
+  | --- | --- | --- |
+  | `resolve_sys` | apt picks a candidate version (pins, priorities) | yes, easily: `apt-cache policy` |
+  | `resolve_lang` | opam's solver picks every version | the plan, easily (opam prints it); the reasoning, no — opam reports a solution, not why |
+  | `depends` / `conf_probe` | opam builds the bridge in this run, running its check | yes, easily: the install prints `∗ installed conf-gmp.5` |
+  | `depext` | opam would install the system package | not exercised: `--assume-depexts` |
+  | `realize_cap` | what the capability file declares | yes, easily: `pkg-config --cflags --libs` |
+  | `discover` | pkg-config inside the package's own build | no, as things stand: it happens inside opam's build, whose log opam deletes on success |
+  | `install_lang` | the binding's compile inside the install | same as `discover` |
+
+  The shape proposed: a placeholder STEP beside the step whose action
+  the package manager performs, like a dummy step but with one of two
+  reasons — "not recorded yet, and how it could be" or "cannot be
+  retrieved, and why". It is logged per world, carried in the run
+  record, placed on its edge, drawn as a special node, and it becomes a
+  real step when implemented. The alternative is markers on the
+  diagram's model only, with no log entry. Easy rows would become real
+  records rather than placeholders.
+
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;
 the draft itself is not edited here):
