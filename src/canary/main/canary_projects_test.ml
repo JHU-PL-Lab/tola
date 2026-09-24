@@ -1286,6 +1286,48 @@ let recorded_names_pin : Canary_project_test.pure_test =
               | _ -> false)
           | _ -> false
         in
+        (* A DECLARATION NAMES ONLY WHAT THE WORLD USES (2026-09-23, the
+           bypass bug): where a view's binding is not fetched, the upstream
+           gate names no bridge, and the package node is unnamed or the
+           package the world publishes. Exercised, not vacuous: zarith's
+           built world names zarith-no-conf and no bridge. *)
+        let binding_not_fetched (v : R.view) =
+          match
+            List.find m.M.rows ~f:(fun (r : M.row) ->
+                String.equal r.M.project v.R.vw_project
+                && String.equal r.M.scenario v.R.vw_scenario)
+          with
+          | None -> false
+          | Some r -> (
+              match R.assignment_of_row r with
+              | None -> false
+              | Some (_, a) ->
+                  List.exists a ~f:(fun (id, (pl : Canary_artifact.placement)) ->
+                      Poly.equal (Canary_artifact.kind_of id)
+                        (Canary_basic.Binding v.R.vw_lang)
+                      && not
+                           (Poly.equal pl.Canary_artifact.provision
+                              Canary_artifact.Fetched)))
+        in
+        let unfetched = List.filter views ~f:binding_not_fetched in
+        let names_only_the_world =
+          List.for_all unfetched ~f:(fun v ->
+              (not (List.Assoc.mem v.R.vw_names "bridge" ~equal:String.equal))
+              &&
+              match List.Assoc.find v.R.vw_names "pkg_lang" ~equal:String.equal with
+              | None -> true
+              | Some (label, _) ->
+                  List.exists Canary_registry.all_projects ~f:(fun (name, pr) ->
+                      String.equal name v.R.vw_project
+                      && List.exists pr.Canary_project_run.pr_wrapper_pkgs
+                           ~f:(fun (l, w) ->
+                             Poly.equal l v.R.vw_lang && String.equal w label)))
+          && List.exists unfetched ~f:(fun v ->
+                 String.equal v.R.vw_project "zarith"
+                 && Poly.equal
+                      (List.Assoc.find v.R.vw_names "pkg_lang" ~equal:String.equal)
+                      (Some ("zarith-no-conf", "declared")))
+        in
         let on_linux = Poly.equal (Canary_store.platform ()) Canary_store.Wsl in
         let ratchet =
           [ ("conf", [ "bridge"; "hdr_sys"; "lib_sys"; "pm_lang"; "pkg_lang";
@@ -1296,7 +1338,7 @@ let recorded_names_pin : Canary_project_test.pure_test =
           @ (if on_linux then [ ("conf", [ "pm_sys"; "pkg_sys" ]); ("none", [ "pm_sys" ]) ]
              else [])
         in
-        well_formed && Option.is_some hand && shape_agrees
+        well_formed && Option.is_some hand && shape_agrees && names_only_the_world
         && List.for_all ratchet ~f:(fun (key, nodes) ->
                List.for_all nodes ~f:(agrees key)))
   }

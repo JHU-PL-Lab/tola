@@ -1078,10 +1078,15 @@ Open, found on the way — none of them fixed here:
 - *The system package's version comes from the run only on the
   overview*, and only where a bridge is recorded. The result page still
   asks the rendering machine (finding 2).
-- *A bypassed bridge is still named.* zarith's built world draws the
-  bridge node dimmed but labelled `conf-gmp` from the declaration, since
-  a declared name does not know about the world; under decision 3 the
-  instance would say it bypasses the bridge.
+- *A bypassed bridge was still named* — FIXED the same day (user: "looks
+  a bug"). A declaration names a node only in a world that uses what it
+  declares: the gate and the binding row's package describe the upstream
+  package, which a world installs only when it fetches the binding. So
+  zarith's built world names no bridge and names its package
+  `zarith-no-conf`, the one it publishes; llvm's built worlds name
+  neither. The sibling was the package node, wrong the same way. Pinned
+  in `overview.recorded_views_are_named`, which went red with the fix
+  reverted.
 - *Driving against the world's own library* — running the check with
   `PKG_CONFIG_PATH` at a library the world built — is what the built
   case is about, and it is not done: its counterpart, sqlite, has no
@@ -1093,6 +1098,48 @@ Open, found on the way — none of them fixed here:
   §2). sqlite and ssl route theirs and use pkg-config predicates.
   llvm's would exit 3, because its predicate is a script, and torch's
   depext has no check.
+
+*After E1 — the user's direction (2026-09-23).*
+
+- **To-do, once enough bridges are modeled: the bridge check becomes an
+  action of its own**, run as a PRECURSOR — before the binding is fetched
+  or built, asking whether this world admits the gate — instead of a
+  sibling after the install that carries the install's action. That opam
+  also runs the check while installing is not a problem.
+- **The pipeline is: canary runs → records → the reading side parses →
+  the layered diagram renders.** Canary triggers the package-manager
+  actions, bridge ones included, so canary records them — in the action
+  log or in a log of their own — and the page is drawn from what was
+  recorded, never from anything else. Where zarith stands: the bridge
+  step writes its record, and the overview parses it and renders it (the
+  dotted accent edges, and the sentences under the diagram). The gaps,
+  which are one gap seen three ways:
+  (a) a bridge is recorded only where a project asks for it (zarith),
+  not wherever canary performs a package-manager action that goes
+  through one — which is why generalizing looked like per-project
+  routing;
+  (b) what the package manager does INSIDE an install is not recorded —
+  `opam install zarith` prints `∗ installed conf-gmp.5` when it built the
+  bridge and ran its check in this run, and nothing reads that output;
+  (c) no agreement reads the record.
+- **The layered diagram is the structure** for the artifact and package
+  layers and for the logged results; the agreement registry is
+  discussed against it.
+
+*Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
+user's, uncommitted — this is where canary and the draft are compared;
+the draft itself is not edited here):
+
+| draft | canary |
+| --- | --- |
+| PM · package · artifact layers | the same three, plus a PROGRAM band for the two consumer programs |
+| package bridge — "an explicit symbolic relation" (§13) | a THING, a variant per package manager: `Canary_bridge.t` (decision 1). The draft's definition still says relation |
+| `.pc` among artifact-level interface metadata (§7), drawn in the artifact layer (§3.1) | package layer, owned by the package that ships it, a source of claims, not a bridge (decision 2) |
+| topology character (Table 3) | `Canary_topology.character`: the conf rows now read the draft's "symbolic package bridge + artifact validation"; the canary-only situations (a built side still gated) stay canary's |
+| discovery as an action (§13) | an edge is an action when the package manager dispatches it separately and observably (decision 4): `conf_probe` is one; pkg-config inside zarith's configure is information |
+| package-specific override as graph rewriting (§10) | `Package_builds_lib` / `Bundled` gates, and canary's own zarith-no-conf bypass; template + instance (decision 3) not built yet |
+| version domains (§8) | one bool per bridge (`gb_reaches_lib` ← `tracks_lib`); deferred |
+| topology → agreements → evidence → verdict (§11) | the bridge record is the evidence; the agreements are next |
 
 ---
 

@@ -345,8 +345,19 @@ let strip_gloss pkg =
   | Some i -> String.prefix pkg i
   | None -> pkg
 
+(** ⚠ A DECLARATION NAMES A NODE ONLY IN A WORLD THAT USES WHAT IT
+    DECLARES (2026-09-23, user: "looks a bug"). The package gate and the
+    binding row's package describe the UPSTREAM package — the one a world
+    installs when it FETCHES the binding. A world that builds its binding
+    here does not install it: zarith's publishes zarith-no-conf, which
+    drops conf-gmp, and llvm's uses its build tree. The first cut named
+    the bridge [conf-gmp] and the package [zarith] in those worlds anyway,
+    because a declaration does not know which world it is read in. So the
+    bridge is named only where the binding is fetched, and the package is
+    the upstream one there, the package this world PUBLISHES where it
+    builds and publishes one ([publishes]), and nothing otherwise. *)
 let declared_names (pr : Canary_project_run.project_run)
-    (a : Canary_artifact.assignment) (lang : Canary_lang.lang) :
+    (a : Canary_artifact.assignment) (lang : Canary_lang.lang) ~(publishes : bool) :
     (string * string) list =
   let platform_pm = Canary_store.system_pm_of_platform (Canary_store.platform ()) in
   let id_of k =
@@ -355,6 +366,11 @@ let declared_names (pr : Canary_project_run.project_run)
       ~f:fst
   in
   let provider k = Option.bind (id_of k) ~f:(Canary_project_run.provenance_of pr) in
+  let binding_fetched =
+    List.exists a ~f:(fun (id, (pl : Canary_artifact.placement)) ->
+        Poly.equal (Canary_artifact.kind_of id) (Canary_basic.Binding lang)
+        && Poly.equal pl.Canary_artifact.provision Canary_artifact.Fetched)
+  in
   let decl =
     let mech =
       Canary_project_analysis.mechanism_for (Canary_pipeline.analysed_of pr) lang
@@ -409,16 +425,22 @@ let declared_names (pr : Canary_project_run.project_run)
             non_empty (String.concat ~sep:", " (List.map files ~f:Stdlib.Filename.basename))) );
       ("src_sys", repo Canary_basic.Source);
       ( "bridge",
-        Option.first_some
-          (Option.bind decl ~f:(fun d ->
-               Option.bind d.Canary_binding_decl.pm_gate ~f:bridge_of_gate))
-          (List.find_map (T.bridges_of_join (T.join_of pr lang)) ~f:(fun g ->
-               match g.T.gb_bridge with
-               | Canary_bridge.Opam (Canary_bridge.Conf_package pkg) -> Some pkg
-               | Canary_bridge.Opam (Canary_bridge.Depext_field d) ->
-                   Some ("depext: " ^ d))) );
+        if not binding_fetched then None
+        else
+          Option.first_some
+            (Option.bind decl ~f:(fun d ->
+                 Option.bind d.Canary_binding_decl.pm_gate ~f:bridge_of_gate))
+            (List.find_map (T.bridges_of_join (T.join_of pr lang)) ~f:(fun g ->
+                 match g.T.gb_bridge with
+                 | Canary_bridge.Opam (Canary_bridge.Conf_package pkg) -> Some pkg
+                 | Canary_bridge.Opam (Canary_bridge.Depext_field d) ->
+                     Some ("depext: " ^ d))) );
       ("pm_lang", Option.map lang_pkg ~f:(fun (pm, _) -> Canary_store.string_of_pm pm));
-      ("pkg_lang", Option.map lang_pkg ~f:(fun (_, p) -> strip_gloss p));
+      ( "pkg_lang",
+        if binding_fetched then Option.map lang_pkg ~f:(fun (_, p) -> strip_gloss p)
+        else if publishes then
+          List.Assoc.find pr.Canary_project_run.pr_wrapper_pkgs lang ~equal:Poly.equal
+        else None );
       ("src_lang", repo (Canary_basic.Binding_source lang));
       ( "stub_lang",
         Option.map decl ~f:(fun d ->
@@ -555,8 +577,15 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
   (* what the run recorded wins over what the project declared *)
   let names =
     let declared =
+      (* does this world publish its own binding package? — the step
+         list says, not the declaration *)
+      let publishes =
+        List.exists steps ~f:(fun w ->
+            Poly.equal w.M.ws_action (Canary_basic.Publish (Canary_basic.Binding lang))
+            && Option.is_none w.M.ws_inspects)
+      in
       match assignment_of_row r with
-      | Some (pr, a) -> declared_names pr a lang
+      | Some (pr, a) -> declared_names pr a lang ~publishes
       | None -> []
     in
     first_per_node
