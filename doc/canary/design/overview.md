@@ -255,6 +255,52 @@ agreement to implement is picked from the grouping's gaps rather than
 by convenience. After two or three more land, the categories are
 re-grouped by hand.
 
+**The end state is one description per agreement** (user, 2026-09-28: "a
+final status of this task, where all information including the kind
+categories should be synced"). Today an agreement's role and its place
+are stated in two modules that do not read each other. Its role is in
+its family module: the kind, the subject, the basis, the rule it recovers
+(R, `ag_rooted_in`), where the result table shows it (`ag_slot`), and per
+method the second side, where it fires (D) and what it reads, whose
+artifacts are its targets (▣, `artifacts_of_input`). Its place is
+`Canary_topology.claim_sites`, a hand-written list from name to edges,
+from which `sitting_of` derives layers and reach. Six row laws tie the
+kind to the targets, the reference, the format and the evaluator, and
+`overview.agreements_sit_on_the_chain` ties the table's `sits on` to the
+site. Nothing ties the site to R, the slot, the targets or the kind. Read
+off the code for the eleven checked agreements (2026-09-28):
+
+| the site agrees with | holds for | where it does not |
+| --- | --- | --- |
+| R: the site's action is the rule's | 9 of 11 | `dependencies_provided`: the rule is the loader's, at `probe_binding`, and the site is `link_mod`, a build edge. `api_names_present`: the rule is the compiler's, building the application, and the site is `install_surf`, where the surface is installed |
+| the slot: the same action | 10 of 11 | `api_names_present`: shown before the application's build, sited on the install |
+| the targets: ▣ are the site's ends | 10 of 11 | `gate_admits_the_world`: its site joins two packages, the bridge and the capability file, and ▣ can name only artifacts, so it shows `lib` and `ml` |
+
+The kind is not checked against the site at all. Among the eleven, every
+promise sits on one side and every admissibility claim but
+`api_names_present` across the two, but nothing says they must. Synced
+means reaching these, each with a pin:
+
+- **The place belongs to the description.** Each site is derived from R
+  and the targets, with the hand-written list kept as the oracle until
+  the two agree (§6.2 step 3). The exceptions above are the first
+  disagreements to decide.
+- **Targets name the diagram's nodes**, so a member in the package layer
+  can be named (a bridge, a capability file, a package) and the binding
+  splits into source, stub, module and surface. The result table keeps
+  artifact kinds by projecting each node onto the artifact it is or
+  ships. The ▣ columns become node columns grouped by layer and side,
+  the headers §6.3 asks about, and `sits on` and `where` fall away.
+- **Laws tie the kind to the place.** An admissibility claim's site joins
+  its members, a promise's produces its artifact, a preservation's copies
+  it, a behaviour claim's runs it. The site's action is R's wherever R is
+  in this graph, and the slot's action is the site's.
+- **A candidate is a registry row with no evaluator**, with the same
+  fields, so landing one adds an evaluator rather than moving an entry
+  from one list to another, as E2 had to.
+- **The subject** stays the one free grouping, or gives way to the
+  sitting when the categories are re-grouped by hand.
+
 1. **E2 is done (2026-09-27): `gate_admits_the_world`**
    (`canary_agreement_bridge.ml`), the first registered agreement that
    reads the bridge record and the first checked one in the grouping's
@@ -268,11 +314,23 @@ re-grouped by hand.
    binding, so eight other projects gained 23 cells that read `·` until
    their probes run cold, and `no-evid` after: the gap item 3 closes.
 
-   The same record carries both sides of three more claims, each to land
-   the same way: `depext_names_the_provided_package` (the depexts against
-   the lib row's system package, `libgmp-dev` on both sides for zarith),
-   `declared_gate_matches_package`, and `discovery_matches_link`
-   (pkg-config's libdir against the library the binding links).
+   The same record carries three more claims, and each needs a decision
+   before it lands (found 2026-09-28):
+   - `declared_gate_matches_package` compares the project's declared gate
+     with the binding package's metadata. Whether a declaration held
+     against a declaration is an agreement or part of the offline spec
+     audit is `package_gates.md` §7.2–7.3's open question, and the
+     declared constraint does not reach the evidence: the bridge step
+     knows the bridge, not the bound on it.
+   - `depext_names_the_provided_package` compares the bridge's mapping
+     with the system package the world takes the library from. That
+     package reaches no evaluator today, since a provider is not
+     evidence, and both members are packages, so ▣ could show only `lib`
+     and the kind law rejects an admissibility claim with one target and
+     no declaration.
+   - `discovery_matches_link` needs the library the link resolved, which
+     nothing records, since no step asks the linker or the loader. It also
+     sits on `discover`, on the system side, while it compares across.
 2. **The easy placeholders become records**, one at a time, each leaving
    `Canary_pm_action` in the change that records it:
    - `resolve_sys`: apt's chosen candidate and the installed version

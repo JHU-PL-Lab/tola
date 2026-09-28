@@ -407,13 +407,17 @@ a real run — the first checked agreement in the grouping's package-layer
 row across the sides, and 9 of 14 agreements landed. The bridge step now
 passes whenever it records; the verdict is the agreement's.
 
-**Next**, in `design/overview.md` §6.1's order: the three other claims the
-same record carries; then the easy placeholders become records, one at a
-time — the first, apt's chosen version (`resolve_sys`), also retires the
-one value the page asks of the rendering machine; then bridges beyond
-zarith, which turn the 23 new `gatw` cells into decisions (they read `·`
-or `no-evid` today). Four questions from the visual work are parked
-there, not urgent (§6.3).
+**Next is a decision** (2026-09-28). Each of the three other claims the
+bridge record carries needs one before it lands, and most of them are
+questions about the end state the user asked for — one description per
+agreement, its place derived with its role, its targets naming the
+diagram's nodes. Both, and a measurement of how far the code is from it
+today, are in `design/overview.md` §6.1. Independent of that: the easy
+placeholders become records, one at a time — the first, apt's chosen
+version (`resolve_sys`), also retires the one value the page asks of the
+rendering machine; then bridges beyond zarith, which turn the 23 new
+`gatw` cells into decisions (they read `·` or `no-evid` today). Four
+questions from the visual work are parked there, not urgent (§6.3).
 
 The history, with the user's words and every falsified pin, is
 [`worklog/worklog_2026_09.md`](worklog/worklog_2026_09.md), under the
