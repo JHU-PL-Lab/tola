@@ -535,7 +535,8 @@ record, and they already share an index: a drawing is named by its row's
   that never ran, and its cells are filled from the record — the split
   §1 already makes between a chain and a recorded run of it.
 
-**Decisions for the user:**
+**Decisions for the user** (1 and 6 taken, 2026-09-28: one page, and the
+per-run pages retire):
 
 1. One page, or two pages linked both ways. The split was deliberate —
    `Canary_overview_page`'s header argues that a record read beside
@@ -550,6 +551,37 @@ record, and they already share an index: a drawing is named by its row's
    their site.
 5. The two machines: a section each, or one table with a machine column.
 6. The per-run pages: kept and linked from each row, or retired.
+
+**Prototyped for 2 to 5, to confirm** (shown to the user 2026-09-28, over
+four real chains: zarith `4ea4a4-ocaml` and `614dda-ocaml`, sqlite
+`e35b2b` in both languages). The user's point: today's columns put the
+world's artifacts first and then only actions, so the table shows where
+an artifact came from but not which action consumed or produced it.
+Both prototypes make a row a chain — one world in one language, the key
+§1 already draws — and colour columns by the diagram's layers.
+
+- **Action frames**: each action shows what it consumes, the checks on
+  that input, the action, what it produced and the checks on that. An
+  artifact repeats, greyed, wherever it is consumed. The settings block
+  goes: a row's placements become the package-manager, package and source
+  cells of its frames, and §2's rows mark the same columns (▣, R, D and
+  the check's own column).
+- **The diagram unrolled**: every node once, each action just before
+  what it produces, each check just after its site. Narrower; a reader
+  must know which earlier column an action consumed.
+
+In both: a fetch is split into its pieces (resolve, the bridge's depends
+and conf_probe, realize or install), each already a step or a placeholder;
+a check sits at its site. The four rows show why the site: at the slot,
+zarith's fetched-library rows have no column for the declaration checks
+every run decides, and its built row carries five probe-check columns
+that stay `·` forever. For the two machines, a row is a chain on a
+machine, with the same chain's machines adjacent — which needs the log
+change: realize writes a manifest per run (each step's id, action,
+pieces, what it consumes and produces, the checks it may evaluate and
+their columns), log events name a step id with typed fields, and each
+inspection's summary is logged once, so every view reads the manifest
+and the events instead of re-deriving the steps from today's code.
 
 **Then, in order, each with a pin:** the links, which change no layout;
 one column model, in `base/`, used by both tables; the inspection
