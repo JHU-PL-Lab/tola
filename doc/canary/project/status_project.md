@@ -587,8 +587,9 @@ directions):
   the Installed worlds exist to draw. So: the axis, not the shortcut.
 - [ ] **Flavor 2 (deploy-mismatch)** — `close_deps`/`dep_mode`
   built, not yet wired to a live run.
-- [ ] **Web results page** — per-project bug reports + fixed-PR links
-  in `canary_html.ml`.
+- [ ] **Web results page** — per-project bug reports + fixed-PR links,
+  on the overview page, whose §1.2 is the result table since 2026-09-28
+  (`canary_html.ml` retired with the per-run pages).
 
 ## 3. Planned milestone — the mismatch-matrix report (discuss later)
 
@@ -614,8 +615,8 @@ shape (see [`../design/enumeration/stage1_declare_spec.md`
 The report then tells the maintainer: "your HEAD binding broke against
 your released lib (the forward cell); here is the failing check, and here
 is our fork with the fix passing it." That is a narrative over the
-matrix, not a dump of run artifacts — `canary_html.ml`'s output changes
-accordingly. Full design discussion still deferred; what is settled is
+matrix, not a dump of run artifacts — the overview page's result table
+(§1.2) changes accordingly. Full design discussion still deferred; what is settled is
 the axis vocabulary.
 
 **Where the registry stands against this shape**: the per-project `2×2

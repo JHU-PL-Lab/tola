@@ -407,15 +407,17 @@ a real run — the first checked agreement in the grouping's package-layer
 row across the sides, and 9 of 14 agreements landed. The bridge step now
 passes whenever it records; the verdict is the agreement's.
 
-**Now: the result matrix joins the overview page** (user, 2026-09-28,
+**Done: the result matrix joined the overview page** (user, 2026-09-28,
 ahead of the next agreement; decided: one page, the per-run pages retire,
-prototype A for the columns). Done: the column model (`Canary_frames`,
+prototype A for the columns). The column model (`Canary_frames`,
 `canary checks --frames`), one reader per inspection, and the table itself
 as the overview's §1.2 — one row per chain and machine, linked both ways
 with §1's drawings, its check cells read at each claim's site; §2's
-agreement overview on the same frames; and the per-run manifest the
-record now reads instead of re-deriving. Next: the old pages retire,
-once the user confirms which files go. The plan and its record are
+agreement overview on the same frames; the per-run manifest the record
+now reads instead of re-deriving; and the old pages retired — nothing a
+run writes is copied to `docs/` any more, the tracked
+`docs/canary/projects/` tree (1,797 files) went, and its addresses point
+at §1.2. The plan, its record and what it left open are
 `design/overview.md` §6.4.
 
 **Then the rest of phase E** (§6.1). Each of the three other claims the

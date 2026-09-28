@@ -1,4 +1,0 @@
-File "canary/examples/z3/z3_example.ml", line 1:
-Error: The files /home/red/.opam/canary/lib/ocaml/stdlib.cmi
-       and /home/red/code/contrib/z3-all/z3/../build-arbipher/src/api/ml/z3.cmi
-       make inconsistent assumptions over interface Stdlib

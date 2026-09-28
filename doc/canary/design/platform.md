@@ -228,7 +228,10 @@ prevent, arriving through the door the override opened. There is no
 honest filename for it (a mac's rendering of the WSL view is neither
 machine's record), so an overridden run writes the **local `_out` copy
 only** and says it is skipping `docs/`. The rule: what lands in the
-tracked tree is what this machine measured **about itself**.
+tracked tree is what this machine measured **about itself**. Since the
+result page retired (2026-09-28) the rule governs the overview's runs
+file, the one per-machine file left in `docs/`: a `--platform` render
+writes it under `_out/canary/`.
 
 For the WSL side picking this branch up, in order:
 
@@ -308,13 +311,19 @@ Ordered by what unblocks what. Items marked ⇢ have a home in
    manuscript: the same checking-point exists on both platforms at
    different resolution, which says something about what a surface theory
    must be parametric in. The inspector already extracts the field.
-6. **The cross-platform viewer.** The per-platform tracked-output split
-   (`matrix_mac.html`, `<p>_mac/`) is a POSTPONEMENT, not the design.
-   The real answer is a runner per platform feeding one aggregating
-   viewer — the same question the fingerprint answers for the switch and
-   the platform: how does a verdict name the world it was earned in?
-   Landing it means deleting `Canary_basic.platform_suffix` and its two
-   call sites.
+6. **The cross-platform viewer — landed as the overview page**
+   (2026-09-28). The per-platform tracked-output split (`matrix_mac.html`,
+   `<p>_mac/`) was a POSTPONEMENT, waiting for a runner per platform
+   feeding one aggregating viewer. The overview page is that viewer: it
+   loads every machine's runs file and shows a row per chain per machine
+   in §1.2, and the per-machine result pages and run copies retired
+   ([`overview.md`](overview.md) §6.4 step 5). What stays per machine is
+   the runs file each machine writes from its own log
+   (`Canary_basic.platform_suffix_of`), and that is the design rather
+   than a postponement: a writer owns its file, and the page joins them.
+   Still open is the question underneath: a verdict names the world it
+   was earned in only by which file holds it — the question the
+   fingerprint answers for the switch and the platform.
 
 ### Deliberately not doing
 

@@ -1,9 +1,12 @@
 # Diagram system — pipeline + design ideas
 
-**Kind: rationale.** What the diagram pipeline produces today. Remaining hardening is backlog #37, not this doc.
+**Kind: rationale.** What the diagram pipeline produces today.
 
-Every `canary action <project>` run writes Mermaid diagrams and an HTML
-viewer alongside the step output. This doc covers the big-to-middle
+Every `canary action <project>` run writes Mermaid diagrams alongside
+the step output. (Until 2026-09-28 it also wrote an HTML viewer showing
+them beside the step list; that per-run page retired with the result
+matrix's, and a run is read on the overview page —
+[`overview.md`](overview.md) §6.4.) This doc covers the big-to-middle
 picture: how the diagrams are produced and what design ideas the output
 implements. Renderer mechanics (per-parameter behaviour, subgraph
 rules) live in module docstrings under [`src/canary/backend/`](../../../src/canary/backend/).
@@ -41,16 +44,15 @@ fans out across the sibling backends.
         │        ~steps, ~run_status, ~artifact_names
         ▼
   backend/canary_diagram.ml       ← produces every .mmd in one call
-        │  (also calls Canary_html.render for result.html)
         ▼
-  -run/diagrams/*.mmd + result.html + index.html
+  -run/diagrams/*.mmd
 ```
 
 `canary_diagram` and `canary_local_runner` are leaf consumers —
 they never call back upward. `canary_run_info` orchestrates them as
 siblings, fanning out the same `step list` to each backend.
 
-> **Four step-list backends.** Four files in `backend/` each consume
+> **Three step-list backends.** Three files in `backend/` each consume
 > `step list`, differing only in what they produce:
 >
 > - [canary_local_runner.ml](../../../src/canary/backend/canary_local_runner.ml)
@@ -58,10 +60,11 @@ siblings, fanning out the same `step list` to each backend.
 >   Produces `run_status` (and side effects on disk).
 > - [canary_gh.ml](../../../src/canary/backend/canary_gh.ml) — emits
 >   GitHub Actions YAML.
-> - [canary_html.ml](../../../src/canary/backend/canary_html.ml) — renders
->   `result.html`.
 > - [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) —
 >   renders `.mmd` diagram files.
+>
+> A fourth, `canary_html.ml`, rendered the per-run `result.html` and
+> retired with it on 2026-09-28.
 >
 > `backend/` also holds three non-rendering siblings:
 > [canary_run_info.ml](../../../src/canary/backend/canary_run_info.ml)
@@ -70,14 +73,14 @@ siblings, fanning out the same `step list` to each backend.
 > [canary_status.ml](../../../src/canary/backend/canary_status.ml)
 > (the `canary status` verdict matrix).
 >
-> Three of them write a file for someone else to consume; the local
+> Two of them write a file for someone else to consume; the local
 > runner does the work itself. The retired yaml-and-shell backend pair
 > both emitted files for later execution; `canary_local_runner.ml`
 > replaces the shell half with in-process execution.
 >
 > The shared upstream is [canary_step_builder.ml](../../../src/canary/action/canary_step_builder.ml):
 > it owns `script_spec` and `derive_steps`, building the
-> `step list` that all four backends consume.
+> `step list` that all three backends consume.
 
 The single translator between layers is `result_status_of_run`
 ([canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml)),
@@ -170,34 +173,22 @@ _out/canary/projects/<project>/
       probes.mmd
       binding_ocaml.mmd
       binding_python.mmd     ← one per binding language
-    result.html              ← interactive viewer (all diagrams + action list)
+    manifest/<world>.json    ← the steps the runner realized for each world
     actions.log              ← per-step verdict log
     run_info.json            ← project + env metadata
     run_state.json           ← run verdicts (for view_project re-render)
 ```
 
-`_out/canary/projects/index.html` at the parent level is regenerated
-after every run and links to each project's `result.html`. Web-viewable
-files are copied to `docs/canary/projects/<project>/` for GitHub Pages.
-
----
-
-## The HTML viewer (result.html)
-
-[`Canary_html`](../../../src/canary/backend/canary_html.ml)
-emits a single self-contained HTML file per run.
-
-- **Left pane** — view selector tabs + Mermaid block.
-- **Right pane** — action list (top) + step detail (bottom).
-- **Cross-diagram navigation** — clicking an action list row
-  highlights the matching diagram node in the current view and
-  lazy-loads the step's output files (`probe.log`, `inspect.json`, …).
-  Conversely, clicking a node selects the action list row and loads
-  the same files.
-- **The viewer is the action list's source of truth** — diagrams
-  reflect that list, not the other way around. The truth invariant
-  (see above) guarantees that clicking `[5]` in the overview and
-  `[5]` in the full diagram select the same row.
+None of it is copied to `docs/`. Until 2026-09-28 each run also wrote a
+`result.html` viewer (the diagrams beside the step list) and refreshed a
+run index at `_out/canary/projects/index.html`, and its web-viewable
+files were copied to `docs/canary/projects/<project>/` for GitHub Pages
+— 1,797 tracked files by the time the copy went. A run is read on the
+overview page now (`docs/canary/overview.html`, §1 and §1.2), from the
+record and the manifest; `canary view <project>` still regenerates a
+run's diagrams from `run_state.json` — except where that file holds an
+action `action_of_string` cannot read, which today is zarith's
+(`overview.md` §6.4, the follow-ups).
 
 ---
 
@@ -219,21 +210,19 @@ Each item is tracked elsewhere; this section is the diagram-side index.
   unannotated because the *actual installed version* isn't recorded.
   Fixing requires each fetch step's script to write a `version.txt`.
 
-- **GH CI result integration** — the viewer shows only local results
-  today. The intent is to also pull GH CI run results committed back
-  to the repo so the same viewer shows local and CI side-by-side.
+- **GH CI result integration** — the overview page draws only local
+  runs today (one runs file per machine). The intent is to also pull GH
+  CI run results committed back to the repo, so the same page shows
+  local and CI runs side by side.
 
 - **Connectivity-check false positives** — the post-gen invariant
   checker's BFS path-finding misreports some legal routes through
   intermediate artifact nodes. Fixed by the model-first rewrite, or
   by patching the BFS directly.
 
-- **Bundled mermaid.js** — viewer uses the CDN by default; offline
-  use needs a `--bundle-mermaid` flag (not yet wired).
-
-Backlog ref: #37 (bundled mermaid.js for offline viewing). Summary-node
-fidelity (old #36) shipped — `scan_source` and each `*_inspect` follow-up
-now render dedicated nodes.
+Summary-node fidelity (old #36) shipped — `scan_source` and each
+`*_inspect` follow-up now render dedicated nodes. Bundling mermaid.js for
+offline viewing (old #37) went with the viewer that loaded it.
 
 ---
 
@@ -244,5 +233,4 @@ now render dedicated nodes.
 | The exact data the renderer consumes | `Canary_step_model.step` ([canary_step_model.ml](../../../src/canary/action/canary_step_model.ml)) |
 | Per-renderer parameter list | top of each function in [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) — `mermaid_of_action_rule_schema`, `mermaid_full`, `mermaid_view` |
 | Why the schema and full renderers differ | [canary_diagram.ml:54+ and :1128+](../../../src/canary/backend/canary_diagram.ml) — the two big blocks |
-| How the HTML viewer dispatches clicks | [canary_html.ml](../../../src/canary/backend/canary_html.ml) |
 | Status-to-colour mapping | `result_status_of_run` in [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) |

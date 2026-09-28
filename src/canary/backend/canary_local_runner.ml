@@ -4,10 +4,9 @@
     [derive_steps]) and {i executes} the steps' shell commands directly,
     in-process. Sibling of:
     - {!Canary_gh} — emits GitHub Actions YAML for the same step list.
-    - {!Canary_html} — renders the result viewer.
     - {!Canary_diagram} — renders Mermaid + the view machinery.
 
-    Where the YAML/HTML/Mermaid backends produce a file for someone else
+    Where the YAML/Mermaid backends produce a file for someone else
     to consume, this backend produces a [run_status] table by actually
     running the commands and recording each step's verdict
     (Done/Failed/Skipped) plus log lines into [actions.log].

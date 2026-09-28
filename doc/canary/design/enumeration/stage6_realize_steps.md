@@ -5,9 +5,9 @@
 **Kind: rationale.** Pass 6 of six, the last. Standalone. Pass 5 hands
 over an ordered list of scenarios; this one turns each into a **step
 list** — the pipeline's object code — and then a backend consumes it.
-EXECUTING is one of four backends, not a stage above them: `run_graph`
+EXECUTING is one of three backends, not a stage above them: `run_graph`
 runs it here, `render_gh_step` emits GitHub Actions YAML,
-`mermaid_of_steps` draws it, `render_steps_data` renders the page. This
+`mermaid_of_steps` draws it. This
 doc covers making the step list, running it, and deciding
 what happened. The map is [`README.md`](README.md).
 
@@ -399,9 +399,10 @@ neutral cell — see [`../matrix.md`](../matrix.md) §6.
 | `derive_steps` | `action/canary_step_builder.ml` | runner_spec → step list |
 | `run_graph` | `backend/canary_local_runner.ml` | step list → verdict (wrapped by `Canary_run_info.run_project`, which also writes the log, the diagrams and `run_state.json`) |
 
-Four backends consume the same step list: the local runner executes it,
+Three backends consume the same step list: the local runner executes it,
 `canary_gh.ml` renders GH Actions YAML, `canary_diagram.ml` renders
-Mermaid, `canary_html.ml` renders the result page.
+Mermaid. (`canary_html.ml` rendered a run's own result page until that
+page retired on 2026-09-28.)
 
 ## 8. Why a realize dump is an APPLICATION, not a projection
 

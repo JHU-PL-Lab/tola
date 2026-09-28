@@ -2593,10 +2593,13 @@ let agreement_named (name : string) : agreement_row option =
     not a coincidence, and the table is where it shows. *)
 (** ONE SUMMARY ROW, rendered by more than one medium (2026-09-14,
     user: "we can just use the same table in both the doc and the
-    html"). The generated catalogue prints these as markdown and the
-    result page prints them as its key — and the result page NEEDS a
-    key, because its check columns are headed by short codes and three
-    letters with no legend is a puzzle rather than a table.
+    html"). The generated catalogue prints these as markdown, and the
+    result page printed them as its key — it NEEDED a key, because its
+    check columns were headed by short codes and three letters with no
+    legend is a puzzle rather than a table. That key was absorbed into
+    the agreement overview on 2026-09-17, which still reads these rows
+    (the rooting on its R cells), and the result page itself retired on
+    2026-09-28.
 
     Sharing the rows rather than the rendered text is what keeps the
     two honest: a markdown table pasted into a web page would drift the

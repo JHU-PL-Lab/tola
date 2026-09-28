@@ -145,25 +145,26 @@ let string_of_artifact_kind = function
     forwarding alias to it, not a second detector. *)
 let detect_distro () = Canary_store.platform ()
 
-(** The per-platform suffix for TRACKED web output (2026-08-26, user).
+(** The per-platform suffix for TRACKED per-machine output (2026-08-26,
+    user) — since 2026-09-28 only the overview's runs file,
+    [overview_runs<suffix>.js].
 
-    [docs/] is committed, and the run outputs under it are named by
-    project alone — so two machines running the same project write the
-    same tracked files and each run reads as a wholesale change, with the
-    later commit erasing the other platform's record. The eventual answer
-    is a runner per platform feeding ONE aggregating viewer; until then
-    this suffix keeps the two records SEPARATE rather than merged badly:
-    Linux keeps the existing names (no churn, every link intact), macOS
-    writes [<name>_mac] beside them.
+    [docs/] is committed, and a file both machines write under one name
+    makes each run read as a wholesale change, the later commit erasing
+    the other platform's record. So each machine writes its own: Linux
+    keeps the existing name, macOS writes [<name>_mac] beside it. This
+    used to be a postponement, waiting for ONE aggregating viewer; that
+    viewer is now the overview page, which loads every machine's runs
+    file and shows a row per chain per machine (design/overview.md §6.4).
+    So the suffix stays: it partitions the file each writer owns, and the
+    page joins them. (The per-machine result page and run copies it also
+    named retired the same day.)
 
     Scope is deliberately the tracked copy only — the local [_out] tree is
     gitignored and already per-machine, so it stays unsuffixed and the run
-    cache is unaffected. Deleting this function is what landing the
-    aggregator will look like. *)
+    cache is unaffected. *)
 let platform_suffix_of (d : Canary_store.distro) : string =
   match d with MacOS_local -> "_mac" | Wsl -> ""
-
-let platform_suffix () : string = platform_suffix_of (detect_distro ())
 
 (* ── THE DYNAMIC LOADER, PER PLATFORM (2026-08-26) ──────────────────
 

@@ -1,8 +1,8 @@
 (** [Canary_status] — `canary status <project>`: reconstruct the
     per-variant × per-step verdict matrix from a project's [actions.log].
 
-    The persisted [run_state.json] / [result.html] collapse a multi-variant
-    run to the first variant's steps + a merged status (dedup by tag), so
+    The persisted [run_state.json] collapses a multi-variant run to the
+    first variant's steps + a merged status (dedup by tag), so
     the per-variant detail (z3 dev/stable, llvm dev/19, ssl-variant's 2×2)
     is only in [actions.log] — as [variant_start] markers + per-step
     [done]/[failed] verdicts. This command parses that back into a matrix.

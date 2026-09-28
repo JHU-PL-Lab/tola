@@ -1213,7 +1213,7 @@ let view_cmd =
   in
   Cmd.v
     (Cmd.info "view"
-       ~doc:"Regenerate diagrams and HTML from saved run_state.json")
+       ~doc:"Regenerate a run's diagrams from its saved run_state.json")
     Term.(const run $ project $ const ())
 
 let write_workflow out name yaml =
@@ -1443,7 +1443,7 @@ let artifact_inspect_cmd =
 let compat_cmd =
   (* Two modes:
      - Positional <project> [<variant>] uses cached summaries under
-       docs/canary/projects/<project>/<variant>/.
+       _out/canary/projects/<project>/<variant>/.
      - Explicit --stub PATH --lib PATH uses raw summary.json paths. *)
   let project =
     Arg.(
@@ -1523,30 +1523,6 @@ let verify_cmd =
           outcomes. Reports per-layer prediction-vs-observation alignment.")
     Term.(const run $ project $ variant $ const ())
 
-let index_cmd =
-  let run () =
-    let projects_root = "_out/canary/projects" in
-    let entries = Canary_diagram.scan_index_entries ~projects_root in
-    let now =
-      let t = Unix.gettimeofday () in
-      let tm = Unix.localtime t in
-      Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" (tm.tm_year + 1900)
-        (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec
-    in
-    let html = Canary_html.render_index ~entries ~generated_at:now in
-    let path = projects_root ^ "/index.html" in
-    let oc = Stdlib.open_out path in
-    Stdlib.output_string oc html;
-    Stdlib.close_out oc;
-    Fmt.pr "Wrote %s (%d runs)@." path (List.length entries)
-  in
-  Cmd.v
-    (Cmd.info "index"
-       ~doc:
-         "Refresh the top-level index.html listing every (project, variant) \
-          run found under _out/canary/projects/.")
-    Term.(const run $ const ())
-
 (* ── the result table (2026-08-17) ── *)
 let result_cmd =
   let project =
@@ -1575,7 +1551,7 @@ let result_cmd =
              columns, and per cell the step's state (ran/warm/blocked/\
              unrecorded), the agreement outcome, and when the log recorded \
              it; per row the platform the run logged. Stdout carries the \
-             JSON and nothing else, and the web page is not rewritten.")
+             JSON and nothing else.")
   in
   let run project md json () =
     let projects =
@@ -1592,38 +1568,25 @@ let result_cmd =
     if json then
       (* THE RUN RECORD (2026-09-23, status.md §2.7 phase A): the JSON
          and nothing else on stdout — the page notice used to follow it,
-         so no consumer could parse the output (finding 1).
-
-         And NO page write. A machine read is often of one project, and
-         the page is the tracked all-project record: `result zarith
-         --json` replaced docs/canary/projects/matrix.html with a
-         two-row table the first time it was run for this plan. An
-         export that rewrites a committed file as a side effect is not a
-         read. *)
+         so no consumer could parse the output (finding 1). *)
       print_string (Canary_matrix.json_export m)
-    else begin
-      if md then Canary_matrix.pp_md m else Canary_matrix.pp_text m;
-      (* the web page refresh rides the pure read (the [canary index]
-         precedent — web copies live in docs/canary for GH Pages) *)
-      let now =
-        let t = Unix.gettimeofday () in
-        let tm = Unix.localtime t in
-        Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" (tm.tm_year + 1900)
-          (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec
-      in
-      Canary_matrix.write_web ~projects_root:"_out/canary/projects" m
-        ~generated_at:now
-    end
+    (* WRITES NOTHING, in every view (2026-09-28). The text and markdown
+       views used to refresh the web page as a side effect of the read;
+       that page retired (design/overview.md §6.4 step 5), and the table
+       on the web is §1.2 of the overview, which `canary overview`
+       writes. *)
+    else if md then Canary_matrix.pp_md m
+    else Canary_matrix.pp_text m
   in
   Cmd.v
     (Cmd.info "result"
        ~doc:
          "The result table: rows = project × scenario (the enumerated \
           worlds), columns = actions, cells = last-run verdicts \
-          (✓/✗/xfail[cN]/·/⊘). Pure read of the run artifacts; the text \
-          and markdown views also refresh the web page \
-          (docs/canary/projects/matrix.html). --json prints the run \
-          record and writes nothing.")
+          (✓/✗/xfail[cN]/·/⊘). Pure read of the run artifacts; writes \
+          nothing. The table on the web is §1.2 of \
+          docs/canary/overview.html, which `canary overview` writes. \
+          --json prints the run record.")
     Term.(const run $ project $ md $ json $ const ())
 
 (* THE OVERVIEW PAGE (2026-09-23, user: "the page contains more material
@@ -1654,10 +1617,13 @@ let overview_cmd =
         (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
     in
     let m = Canary_matrix.matrix_of Canary_registry.all_projects in
-    let overview = Canary_matrix.agreement_overview m ~generated_at:now in
+    let overview = Canary_matrix.agreement_overview m in
     Canary_overview_page.write Canary_registry.all_specs ~overview
       ~generated_at:now;
     Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
+    Fmt.pr "wrote %s/{%s} (pointers to its §1.2)@."
+      Canary_overview_page.pointer_dir
+      (String.concat "," Canary_overview_page.pointer_files);
     (* §2.1's recorded worlds, beside the page and never inside it
        (status.md §2.7 phase C) — the tracked copy only when this machine
        is rendering itself *)
@@ -1668,13 +1634,13 @@ let overview_cmd =
        ~doc:
          "Render the OVERVIEW page (docs/canary/overview.html): the layered \
           chain from the package managers down to the running program, \
-          the concrete cooperation cases, the agreement overview, where \
-          every claim sits and which relations carry none, and the \
-          cooperation topologies. General mechanism, except the agreement \
-          overview's decided/blame columns, which are counted from \
-          recorded runs. Also writes this machine's recorded worlds \
-          (docs/canary/overview_runs.js, _mac on macOS), which the page's \
-          §2.1 draws over the same layout. Pure read.")
+          the concrete cooperation cases, the result table (§1.2), the \
+          agreement overview, where every claim sits and which relations \
+          carry none, and the cooperation topologies. Also writes this \
+          machine's recorded worlds (docs/canary/overview_runs.js, _mac on \
+          macOS), which §1 and §1.2 draw, and the pointers that keep the \
+          retired result page's addresses (docs/canary/projects/) landing \
+          on §1.2. Runs nothing.")
     Term.(const run $ const ())
 
 let tiny_scenarios_list_cmd =
@@ -2383,7 +2349,6 @@ let () =
         tiny_scenarios_cmd;
         compat_cmd;
         verify_cmd;
-        index_cmd;
         result_cmd;
         overview_cmd;
         prebuilt_cmd;

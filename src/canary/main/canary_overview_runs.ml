@@ -11,9 +11,10 @@
     A FILE, NOT THE PAGE. [overview_runs.js] adds to a global that the
     page reads through a plain [<script src>]: a browser refuses [fetch()]
     on [file://], so a page loading JSON would work on GitHub Pages and
-    show nothing when opened locally (§2.7 finding 4). It is per machine,
-    like [matrix.html] — [_mac] beside the Linux one — and a [--platform]
-    render never writes the tracked copy. *)
+    show nothing when opened locally (§2.7 finding 4). It is per machine
+    — [_mac] beside the Linux one, named by
+    [Canary_basic.platform_suffix_of] — and a [--platform] render never
+    writes the tracked copy. *)
 
 open Base
 module M = Canary_matrix
@@ -1045,8 +1046,9 @@ let all_file_names = List.map [ Canary_store.Wsl; Canary_store.MacOS_local ] ~f:
 
 (** Where this run writes: the tracked copy beside the page, unless the
     platform is OVERRIDDEN — a [--platform] render is neither machine's
-    record, the rule [Canary_matrix.write_web] states for the result
-    page. *)
+    record (design/platform.md, "A hypothetical render is not a record":
+    first stated for the result page, and this file's alone since that
+    page retired on 2026-09-28). *)
 let target ~(hypothetical : bool) : string =
   let name = file_name_of (Canary_store.platform ()) in
   if hypothetical then "_out/canary/" ^ name else "docs/canary/" ^ name

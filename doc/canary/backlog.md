@@ -150,12 +150,11 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     matrix strategy (ubuntu × macos, OCaml version axis). Re-scope
     against `Canary_ci`, not the retired `*_ci_spec` path.
 
-37. **Bundled mermaid.js for the HTML viewer** — `backend/canary_html.ml`
-    loads mermaid from a CDN, so a run's `result.html` needs network access
-    to render. Add a `--bundle-mermaid` flag that inlines the library for
-    offline / archived viewing. (All the rest of the original #37 — inline
-    render, per-view selector, log drill-down in a side drawer — shipped;
-    see `design/diagram.md`.)
+37. ~~**Bundled mermaid.js for the HTML viewer**~~ — **moot 2026-09-28.**
+    The viewer that loaded mermaid from a CDN, a run's `result.html`
+    rendered by `backend/canary_html.ml`, retired with the per-run pages
+    (`design/overview.md` §6.4 step 5), so there is nothing left to bundle
+    it into. A run's diagrams remain as `.mmd` files.
 
 38. **`pack_python` action — local pip wheel packaging** — `pack_binding` is
     currently OCaml-only (opam packaging). A Python equivalent would build a
@@ -291,7 +290,10 @@ No hurry — all items below are queued for when their forcing function arrives.
   OCaml — no shell), verified via `canary view llvm`; the accumulated
   junk pruned (docs 27G → 53M, 501k → 3.2k files; untracked churn
   868 → ~120); the 4 tracked ssl probe binaries deleted +
-  gitignored (`docs/**/ssl_app_*`).
+  gitignored (`docs/**/ssl_app_*`). **And gone entirely 2026-09-28**:
+  the copy itself was deleted with the per-run pages, and the tracked
+  `docs/canary/projects/` tree with it (1,797 files, 93 MB) — only three
+  pointers to the overview's §1.2 remain there.
 - **Env/PATH discipline utility** (user, 2026-08-06). Step
   commands splice PATH-like variables ad hoc (`LD_LIBRARY_PATH=$PWD/…:$…`
   probe repoints, `PYTHONPATH` in the tiny workspace, `OCAMLPATH`,

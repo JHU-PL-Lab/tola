@@ -6,7 +6,9 @@ or later inherit the fix.
 **Found**: 2026-08-13, user report: "any canary command takes time to scan
 the project directory, which is not the same as before"
 **Fix**: root `dune` `(dirs ...)` exclusion + filtered docs copy in
-`canary_diagram.ml` + one-time prune. All verified.
+`canary_diagram.ml` + one-time prune. All verified. (The docs copy was
+itself deleted on 2026-09-28, with the per-run pages and the tracked
+`docs/canary/projects/` tree; the `(dirs ...)` exclusion stands.)
 
 ---
 

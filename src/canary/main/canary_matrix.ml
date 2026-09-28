@@ -9,8 +9,10 @@ open Base
    per-scenario run record). The future extension: pre/post-check
    columns ("each checks") appended to the action set.
 
-   Rendered in the cmd (text/md/json) and as the web page
-   [docs/canary/projects/matrix.html]. Pure read — no execution. *)
+   Rendered in the cmd (text/md/json). Its web page retired on
+   2026-09-28: the table on the web is §1.2 of [docs/canary/overview.html],
+   drawn from the views [Canary_overview_runs] computes from this record
+   (design/overview.md §6.4). Pure read — no execution. *)
 
 (** WHAT A CELL'S MARK WAS RENDERED FROM (2026-09-23, status.md §2.7
     phase A — the record a run overlay reads). The mark is for a reader
@@ -2255,13 +2257,8 @@ let to_json (m : t) : Yojson.Basic.t =
 let json_export (m : t) : string =
   Yojson.Basic.pretty_to_string (to_json m) ^ "\n"
 
-(* ── HTML (the web page) ── *)
+(* ── HTML: the agreement overview, §2 of the overview page ── *)
 
-(** Self-contained page: the full union-column table — project | ref
-    (linked to the remote commit/tree) | platform | actions — colored
-    cells showing the provision choice + the verdict. The long
-    scenario ids live in the cell tooltips. The styling mirrors
-    {!Canary_html}'s badge tones without importing its machinery. *)
 (* ── WHERE THE AGREEMENTS SIT (2026-09-27) ──────────────────────────────
 
    Every agreement the diagram places — registered and candidate —
@@ -2346,15 +2343,11 @@ let pp_sittings (m : t) : string =
          "agreements" ]
     @ List.map groups ~f:line)
 
-(** Returns [(agreement_overview, result_page)] (2026-09-23, user: the
-    agreement table moves to the methodology page).
-
-    A PAIR RATHER THAN A MOVE. The overview is ~250 lines of rendering
-    built from the registry, and lifting it into another module means
-    retyping it — which CLAUDE.md is explicit about being the expensive
-    kind of edit, and it would have bought nothing: the block is already
-    one self-contained string. So it is computed here as before and
-    RETURNED, and the two pages each embed it or not.
+(** THE AGREEMENT OVERVIEW — §2 of the overview page (2026-09-23, user:
+    the agreement table moves to the methodology page). It was rendered
+    here beside the result page it came from, and returned as a pair;
+    that page retired on 2026-09-28 (design/overview.md §6.4 step 5), so
+    the overview is all this renders.
 
     ⚠ The overview is NOT pure mechanism, which is why moving it needed
     a decision rather than a cut. Its last two columns — `decided` and
@@ -2362,72 +2355,18 @@ let pp_sittings (m : t) : string =
     that receives it inherits a dependency on run state, and says so;
     the alternative was to split the table at that seam and show a
     reader two halves of one row in two places. *)
-let render_parts (m : t) ~(generated_at : string) : string * string =
+let agreement_overview (m : t) : string =
   let esc s =
     s
     |> String.substr_replace_all ~pattern:"&" ~with_:"&amp;"
     |> String.substr_replace_all ~pattern:"<" ~with_:"&lt;"
     |> String.substr_replace_all ~pattern:">" ~with_:"&gt;"
   in
-  let cell_cls mark =
-    match mark with
-    | "" -> "blank"
-    | "·" -> "notrun"
-    | "⊘" -> "blocked"
-    | "✗" -> "fail"
-    | s when String.is_prefix s ~prefix:"xfail" -> "xfail"
-    | _ -> "ok"
-  in
-  (* the SETTING block leads (2026-08-19, user): the world first — one
-     column per artifact — then the actions. The old single [ref] column
-     is gone: the source artifacts' own setting cells carry the ref and
-     its link, so a project with two sources shows two labelled refs
-     instead of one column that meant a different artifact per project. *)
-  (* THE CHECK KEY — the same rows the generated catalogue prints
-     (2026-09-14, user: "we can just use the same table in both the doc
-     and the html"). The page's check columns are headed by three-letter
-     codes, which are compact and not guessable, so the page has to
-     carry its own key; taking it from [Canary_agreement.summary_rows]
-     rather than restating it is what stops the two from drifting.
-
-     ALWAYS VISIBLE (2026-09-14, user). It was behind a disclosure
-     first, on the theory that a key is for a reader who meets an
-     unfamiliar code. That was wrong the moment the code became the
-     column's only name: the table is unreadable without it, so hiding
-     it behind a click hides the table. *)
-  (* GROUPED BY ACTION, as the terminal view is: a rule down the left
-     edge of each action's first column, so a reader can see where one
-     action's pre-checks, run, result and verdicts begin and end. *)
-  let group_of c =
-    if List.mem m.check_columns c ~equal:String.equal then
-      Option.value_map (String.lsplit2 c ~on:':') ~default:c ~f:(fun (slot, _) ->
-          Option.value
-            (String.chop_suffix slot ~suffix:"_post")
-            ~default:
-              (Option.value (String.chop_suffix slot ~suffix:"_pre")
-                 ~default:slot))
-    else if List.mem m.artifact_columns c ~equal:String.equal then
-      Option.value_map (String.lsplit2 c ~on:'=') ~default:c ~f:fst
-    else c
-  in
-  let group_starts =
-    let _, acc =
-      List.fold m.columns ~init:(None, []) ~f:(fun (prev, acc) c ->
-          let g = group_of c in
-          let starts =
-            match prev with Some p -> not (String.equal p g) | None -> true
-          in
-          (Some g, if starts then c :: acc else acc))
-    in
-    acc
-  in
-  let is_group_start c = List.mem group_starts c ~equal:String.equal in
   (* THE TALLIES, hoisted out of the retired check-key table
-     (2026-09-17). Counted from the RENDERED cells rather than re-read
-     from the logs, so a key cannot disagree with the table it explains:
-     if a reader can see eight ticks in the [dse] column, the tally says
-     eight. The agreement overview carries them now — see below for why there
-     is no longer a separate key. *)
+     (2026-09-17). Counted from the record's cells rather than re-read
+     from the logs, so a count cannot disagree with the table `canary
+     result` prints: if a reader can see eight ticks in the [dse] column,
+     the tally says eight. *)
   let tally code =
     let held = ref 0 and broke = ref 0 in
     List.iter m.rows ~f:(fun (rr : row) ->
@@ -2822,296 +2761,10 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
        above the table. Leaving both was a duplication introduced the
        same day the glossary landed. *)
   in
-  let header =
-    (* the two identity columns are FROZEN (2026-08-20, user: the page is
-       too wide): they stay put while the action columns scroll, so a row
-       never loses its number and project. The classes carry the sticky
-       offsets — see the [idx]/[proj] rules in the style block. *)
-    "<th class=\"idx\">#</th><th class=\"proj\">project</th>"
-    ^ String.concat ~sep:""
-        (List.map m.setting_columns ~f:(fun c ->
-             "<th class=\"seth\">" ^ esc c ^ "</th>"))
-    ^ "<th class=\"platform\">platform</th>"
-    ^ String.concat ~sep:""
-        (List.map m.columns ~f:(fun c ->
-             Printf.sprintf "<th class=\"%s\">%s</th>"
-               (if is_group_start c then "gs" else "")
-               (esc c)))
-  in
-  let body =
-    String.concat ~sep:""
-      (List.map m.rows ~f:(fun (r : row) ->
-           let setting_cells =
-             String.concat ~sep:""
-               (List.map m.setting_columns ~f:(fun label ->
-                    match
-                      List.Assoc.find r.settings label ~equal:String.equal
-                    with
-                    | Some (Some s) ->
-                        let title =
-                          let base =
-                            match s.title with
-                            | Some t -> t ^ " · " ^ r.scenario
-                            | None -> r.scenario
-                          in
-                          (* WHY it is red — the agreement that failed
-                             while reading this artifact. Without the
-                             name the colour would say "something about
-                             this is wrong", which is the vagueness the
-                             failing-action cell already had *)
-                          match s.implicated with
-                          | None -> base
-                          | Some slugs -> base ^ " · implicated by " ^ slugs
-                        in
-                        let inner =
-                          match s.url with
-                          | Some url ->
-                              Printf.sprintf "<a href=\"%s\">%s</a>" (esc url)
-                                (esc s.text)
-                          | None -> esc s.text
-                        in
-                        Printf.sprintf
-                          "<td class=\"set%s\" title=\"%s\">%s</td>"
-                          (match s.implicated with
-                           | None -> ""
-                           | Some _ -> " blamed")
-                          (esc title) inner
-                    (* the project doesn't declare this artifact — an
-                       honest blank, not a glyph *)
-                    | _ -> "<td class=\"blank\"></td>"))
-           in
-           let cells =
-             String.concat ~sep:""
-               (List.map m.columns ~f:(fun tag ->
-                    match
-                      List.Assoc.find r.cells tag ~equal:String.equal
-                    with
-                    | Some (Some c) ->
-                        (* the tooltip's third part is the verdict's
-                           DETAIL — the reason (the xfail's
-                           confirmed-expected-failure text names the
-                           fix; a failure's postcondition message) *)
-                        let why =
-                          match c.detail with
-                          | Some d -> " · " ^ d
-                          | None -> ""
-                        in
-                        (* the action cell is a MARK (2026-08-19): the
-                           artifact's provision moved to the setting
-                           block, so it no longer repeats in every cell —
-                           it stays in the tooltip, where the per-STEP
-                           stage still distinguishes "built it" from
-                           "staged it" *)
-                        (* a CHECK cell shows its coverage beside the
-                           mark, and carries a class of its own so the
-                           page can set it apart from the actions it
-                           sits between *)
-                        let is_check =
-                          List.mem m.check_columns tag ~equal:String.equal
-                        in
-                        (* an ARTIFACT cell holds a summary, not a
-                           verdict, so [cell_cls] would read its text
-                           as an unknown mark; it gets its own class,
-                           and turns red only when a check that read
-                           it failed *)
-                        let is_artifact =
-                          List.mem m.artifact_columns tag ~equal:String.equal
-                        in
-                        let cls =
-                          (if is_artifact then
-                             if Option.is_some c.detail then "art blamed"
-                             else "art"
-                           else
-                             cell_cls c.mark ^ if is_check then " chk" else "")
-                          ^ if is_group_start tag then " gs" else ""
-                        in
-                        Printf.sprintf
-                          "<td class=\"%s\" title=\"%s · %s · %s%s\"><span class=\"mk\">%s</span></td>"
-                          cls (esc r.scenario) (esc tag) (esc c.provision)
-                          (esc why)
-                          (esc
-                             (if is_check then c.mark ^ " " ^ c.provision
-                              else c.mark))
-                    (* a BLANK still carries the group rule: the border
-                       is a line down the table separating one action's
-                       columns from the next, and a line that skips the
-                       empty cells is not a line, it is a scatter of
-                       ticks (2026-09-14, user) *)
-                    | _ ->
-                        Printf.sprintf "<td class=\"blank%s\"></td>"
-                          (if is_group_start tag then " gs" else "")))
-           in
-           Printf.sprintf
-             "<tr><td class=\"idx\" title=\"%s\">%d</td><td class=\"proj\">%s</td>%s<td class=\"platform\">%s</td>%s</tr>"
-             (esc r.code) r.index (esc r.project) setting_cells
-             (esc r.platform) cells))
-  in
-  let page =
-    Printf.sprintf
-      {|<!doctype html>
-<html><head><meta charset="utf-8"><title>canary result matrix</title>
-<style>
-/* THE SCROLL BOX (2026-08-20, user: "the page is too width"). The wrap
-   always had overflow-x, but its scrollbar sat under 42 rows of table —
-   you had to scroll to the bottom of the PAGE to find the control that
-   moved the table sideways, which reads as "no scroller at all".
+  recovery_grid
 
-   The page is now a flex column pinned to the viewport, so the wrap gets
-   exactly the leftover height and owns BOTH scrollbars. A calc() on the
-   header height would have worked until the meta paragraph rewrapped;
-   flex measures it instead of guessing. [min-height: 0] on the flex item
-   is the part that is easy to omit — without it a flex child refuses to
-   shrink below its content and the box overflows the viewport again. */
-html, body { height: 100%%; }
-body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem 2rem;
-       box-sizing: border-box; color: #24292f;
-       display: flex; flex-direction: column; }
-h1 { font-size: 1.4rem; margin: 0 0 .5rem; flex: 0 0 auto; }
-.meta { color: #6a737d; font-size: .85rem; margin-bottom: 1rem; flex: 0 0 auto;
-        max-height: 7rem; overflow-y: auto; }
-.wrap { flex: 1 1 auto; min-height: 8rem; overflow: auto;
-        border: 1px solid #d0d7de; border-radius: 6px; }
-table { border-collapse: separate; border-spacing: 0; font-size: .82rem; }
-th, td { padding: 4px 8px; border-bottom: 1px solid #eaeef2; white-space: nowrap; text-align: left; }
-th { background: #f6f8fa; position: sticky; top: 0; z-index: 2; }
-/* the two identity columns are FROZEN: scrolling right must not cost you
-   the row's number and project, which are how a row is referred to */
-td.idx, th.idx { position: sticky; left: 0; width: 2.6rem; min-width: 2.6rem; z-index: 1; background: #fff; }
-td.proj, th.proj { position: sticky; left: 2.6rem; width: 5.2rem; min-width: 5.2rem; z-index: 1;
-                   background: #fff; border-right: 1px solid #d0d7de; }
-th.idx, th.proj { background: #f6f8fa; z-index: 3; }
-td.set { font-family: ui-monospace, monospace; font-size: .78rem; background: #f6f8fa88; }
-td.set a { color: #0969da; text-decoration: none; }
-td.set a:hover { text-decoration: underline; }
-/* a CHECK column reads as an annotation on the action beside it, not
-   as another step: lighter, smaller, and visually subordinate so the
-   chain of actions still scans as the spine of the row */
-td.chk { font-size: .72rem; opacity: .85; background: #fbfcfd; letter-spacing: -.02em; }
-/* an artifact a failing CHECK was reading. The same red as a failed
-   cell, because it is the same finding seen from the other end — the
-   check says what disagreed, this says what it disagreed about. */
-td.set.blamed { background: #ffebe9; box-shadow: inset 2px 0 0 #cf222e; }
-/* an ARTIFACT cell: what the step left behind, as the inspector
-   recorded it. Monospace because the contents line up column-wise
-   (a soname tail, then a count), and quiet because it is context for
-   the verdicts around it rather than a verdict itself. */
-td.art { font-family: ui-monospace, monospace; font-size: .72rem; color: #57606a; background: #f6f8fa55; }
-td.art.blamed { background: #ffebe9; color: #82071e; box-shadow: inset 2px 0 0 #cf222e; }
-th.seth { background: #eef1f4; }
-td.platform { color: #57606a; font-size: .75rem; }
-td.idx { color: #57606a; font-size: .75rem; text-align: right; }
-td .prov { color: #57606a; font-family: ui-monospace, monospace; font-size: .7rem; margin-right: 5px; }
-td .mk { font-weight: 600; }
-td.ok { background: #dafbe1; } td.xfail { background: #fff8c5; }
-td.fail { background: #ffebe9; } td.fail .mk { font-weight: 800; }
-td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; }
-td.blank { background: #f6f8fa; }
-/* the CHECK KEY: the column heads are codes, so this is how the table
-   is read at all — shown, not hidden behind a disclosure. */
-div.key { margin: 0 0 .9rem; font-size: .8rem; }
-div.keyh { font-weight: 600; margin-bottom: .3rem; }
-table.keytbl { border-collapse: collapse; margin-top: .5rem; }
-table.keytbl th, table.keytbl td { border: 1px solid #d0d7de; padding: .2rem .5rem; text-align: left; font-weight: 400; }
-table.keytbl th { background: #f6f8fa; font-weight: 600; }
-table.keytbl td.kc { font-family: ui-monospace, monospace; font-weight: 700; }
-span.kq { color: #8c959f; }
-/* THE AGREEMENT OVERVIEW's grid cells are two letters wide and the whole point
-   is the SHAPE they make across a row, so colour carries the meaning and
-   the text only confirms it: a reader should see where R sits relative
-   to D before reading either. */
-table.grid th.gcol { font-family: ui-monospace, monospace; font-size: .62rem;
-  writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap;
-  padding: .3rem .15rem; vertical-align: bottom; }
-table.grid td.g { text-align: center; font-family: ui-monospace, monospace;
-  font-size: .65rem; font-weight: 700; padding: .2rem .25rem; }
-/* WHERE THE CODE IS. `none` is red because an agreement with no
-   evaluator is the table's real to-do list — the status word said
-   "planned" without saying planned WHERE. */
-table.grid td.impl { font-family: ui-monospace, monospace; font-size: .68rem;
-  white-space: nowrap; }
-table.grid td.impl.none { background: #ffebe9; color: #a40e26; font-weight: 700; }
-/* AN EXISTING TOOL that answers the same claim, and RED like any other
-   unimplemented cell (2026-09-21, user: "given the tool is not
-   implemented yet, can we also show them in red").
-
-   The column answers one question — does this check run here — and for
-   a tool we name but never invoke the answer is no, exactly as it is
-   for a claim nobody wrote an evaluator for. Two different reasons, one
-   honest colour; the CELL still distinguishes them, because an
-   unimplemented claim of ours reads `family·—` and a tool's row reads
-   the tool's name. Italic keeps the second recognisable at a glance. */
-tr.extrow { background: #fffafa; }
-tr.extrow td.kc { color: #a40e26; }
-table.grid td.impl.ext { background: #ffebe9; color: #a40e26;
-  font-style: italic; }
-table.grid td.lm { font-size: .72rem; white-space: nowrap; }
-/* WHERE THE CLAIM COMES FROM. Its own class, not `lm`'s, because the
-   overview pin counts `lm` cells against the lang/mech labels and a
-   third cell sharing the class silently broke that count. */
-table.grid td.kind { font-size: .72rem; white-space: nowrap; color: #57606a; }
-/* THE TABLE'S OWN VERDICT — whether it passed its own laws. Quiet when
-   it passes; a reader should notice it only when it has something to
-   say, which is why the failing form is the one that gets colour. */
-p.verdict { font-size: .78rem; color: #1a7f37; margin: .2rem 0 .6rem;
-  font-family: ui-monospace, monospace; }
-p.verdict.bad { color: #a40e26; font-weight: 700; }
-/* the kind glossary, above the data that uses it */
-div.kinds { font-size: .8rem; margin: 0 0 .8rem; max-width: 62rem; }
-div.kinds dl { margin: .4rem 0 .4rem; display: grid;
-  grid-template-columns: max-content 1fr; gap: .15rem .7rem; }
-div.kinds dt { font-family: ui-monospace, monospace; font-weight: 700;
-  color: #0a3069; }
-div.kinds dd { margin: 0; }
-/* THE COLUMN LEGEND, one row per column. It used to be a single
-   paragraph that every new column appended to, so looking up `lag`
-   meant reading six others first; a list makes the term findable.
-   Entries say what the CELL means — the reasoning lives in
-   design/matrix.md. (No angle brackets in this comment on purpose: a
-   CSS comment is raw text to the parser, but a tag spelled here makes
-   every tool that greps the page report a paragraph that is not one.) */
-dl.legend { font-size: .78rem; margin: .5rem 0 .6rem; max-width: 62rem;
-  display: grid; grid-template-columns: max-content 1fr; gap: .2rem .8rem; }
-dl.legend dt { font-family: ui-monospace, monospace; font-weight: 700;
-  color: #0a3069; white-space: nowrap; }
-dl.legend dd { margin: 0; color: #57606a; }
-td.g.rd { background: #d1e7dd; color: #0a3622; }   /* rule and check together */
-td.g.rr { background: #ffe8cc; color: #7a3e00; }   /* the rule ran here */
-td.g.dd { background: #dbeafe; color: #0a3069; }   /* the check fires here */
-td.g.nn { background: #fbfcfd; }
-td.g.tgt { background: #f0e6ff; color: #512a97; }   /* an artifact the claim ranges over */
-h2 { font-size: 1rem; margin: 1.6rem 0 .5rem; padding-bottom: .25rem;
-  border-bottom: 1px solid #d0d7de; font-weight: 600; }
-/* the left edge of one action's group of columns — on EVERY cell in
-   the column including the blanks, so it reads as a rule down the
-   table rather than a scatter of ticks. Thin, because it separates
-   rather than emphasises. */
-th.gs, td.gs { border-left: 1px solid #afb8c1; }
-</style></head><body>
-<h1>canary — what is checked, and what it decided</h1>
-<p class="meta">This page is a RECORD: what ran here, and what it decided.
-For the general mechanism behind it — the chains that can exist, the
-bridges that join two package ecosystems, and where a claim could sit —
-see <a href="../overview.html">the overview</a>. It carries no
-verdicts except two columns of its agreement table, which count what
-the runs decided.</p>
-<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). A <b>_pre:</b> / <b>_post:</b> column is ONE AGREEMENT at one point in the chain — <i>_pre</i> a requirement the next action depends on, <i>_post</i> a verdict on what the last one made — and its cell is that agreement's own outcome, so a column can be read down the rows and compared. A claim gets a column only where it can be decided: not where it is unimplemented, and not where the mechanism cannot carry it (an OCaml <i>.a</i> archive records no NEEDED, so the identity claims have no column on that side and do on Python's shared object). An <b>=artifact</b> column is not a stage and nothing runs there — it is what the action LEFT BEHIND, read off the inspection that step wrote (a library shows its soname tail and export count, a binding its module count). It turns red when a check that read it failed, so a finding names both the claim that broke and the artifact it was about.</div>
-<p class="meta"><b>The agreement overview has moved</b> to
-<a href="../overview.html#overview">the overview page</a>. It is the
-TEMPLATE of the table below — that one says what a run decided, this one
-says what the shape of the checking IS — so an empty column here can be
-looked up there, to see whether anything was ever meant to fill it. The
-link is the cost of the split; the reason is that the template describes
-mechanism and this page describes one machine's record.</p>
-
-<h2>The result matrix — one row per enumerated world</h2>
-<div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
-</body></html>|}
-      (esc generated_at) header body
-  in
-  (recovery_grid, page)
-
-(** THE OVERVIEW'S OWN STYLING, so the table can be rendered somewhere
-    other than this page (2026-09-23).
+(** THE OVERVIEW'S OWN STYLING, which the page embedding the table
+    carries (2026-09-23).
 
     Found the hard way: moving the block produced a table using 21
     classes the receiving page did not define, so every R/D mark, every
@@ -3119,14 +2772,9 @@ mechanism and this page describes one machine's record.</p>
     A table whose whole point is the SHAPE the marks make across a row
     is not readable without them.
 
-    Written against the receiving page's colour tokens rather than this
-    page's literals, so it follows dark mode where the host supports it
-    and degrades to the same greys where it does not.
-
-    ⚠ TO CLEAN UP: this page's own style block still carries the
-    originals, now dead here since the overview left. They are unused
-    rather than wrong, and deleting thirty scattered rules from one
-    literal is its own edit. *)
+    Written against the receiving page's colour tokens, so it follows
+    that page's dark mode. (The result page it came from kept a copy of
+    these rules in fixed colours; that page retired on 2026-09-28.) *)
 let overview_css =
   {|table.grid{border-collapse:collapse;font-size:.8rem;width:100%}
 table.grid th,table.grid td{border:1px solid var(--line);padding:.22rem .4rem}
@@ -3171,65 +2819,3 @@ td.g.nn{background:transparent}
 td.g.tgt{background:#f0e6ff;color:#512a97}
 td.g.own{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
 .grid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}|}
-
-(** The result page alone — what [write_web] needs. *)
-let render_html (m : t) ~(generated_at : string) : string =
-  snd (render_parts m ~generated_at)
-
-(** The agreement overview alone — what the methodology page needs. *)
-let agreement_overview (m : t) ~(generated_at : string) : string =
-  fst (render_parts m ~generated_at)
-
-(* The web file locations (the docs copy is the GH Pages view).
-
-   ONE FILE PER PLATFORM (2026-08-26, user). [docs/] is TRACKED, so a
-   single [matrix.html] makes two machines fight over one committed file:
-   the mac's verdicts would overwrite the WSL box's and each run would
-   read as a wholesale change. The eventual answer is a runner per
-   platform feeding ONE aggregating viewer — a real design question about
-   how a verdict names the world it was earned in (the same question the
-   step fingerprint answers for the switch). This suffix POSTPONES it
-   without letting the two machines corrupt each other's record: Linux
-   keeps [matrix.html] (no churn, every existing link intact), macOS
-   writes [matrix_mac.html] beside it. The suffix itself is
-   [Canary_basic.platform_suffix] — shared with the per-project docs copy
-   in [Canary_diagram], because both name the same tracked tree. *)
-let matrix_filename () : string =
-  "matrix" ^ Canary_basic.platform_suffix () ^ ".html"
-let web_path ~projects_root = projects_root ^ "/" ^ matrix_filename ()
-let docs_path () = "docs/canary/projects/" ^ matrix_filename ()
-
-(** A HYPOTHETICAL RENDER MUST NOT BECOME THE RECORD (2026-08-26, caught
-    by doing it). [--platform] lets one machine render the other's view;
-    the tracked filename is chosen by [platform_suffix], which reads the
-    SELECTED platform — so `--platform=wsl` on the mac wrote
-    [matrix.html], the WSL box's committed record, with a matrix the mac
-    had produced. That is precisely the cross-machine corruption the
-    per-platform filename exists to prevent, arriving through the door
-    the override opened.
-
-    The fix is not a better filename, because there is no honest one: a
-    mac's rendering of the WSL view is neither machine's record. So an
-    overridden run writes the LOCAL copy only (look at it, diff it, dump
-    it) and leaves [docs/] alone, saying so. What lands in the tracked
-    tree stays exactly "what this machine measured about itself". *)
-let write_web ~projects_root (m : t) ~(generated_at : string) : unit =
-  let html = render_html m ~generated_at in
-  let hypothetical = Canary_store.platform_is_overridden () in
-  let targets =
-    if hypothetical then [ web_path ~projects_root ]
-    else [ web_path ~projects_root; docs_path () ]
-  in
-  List.iter targets ~f:(fun path ->
-      let oc = Stdlib.open_out path in
-      Stdlib.output_string oc html;
-      Stdlib.close_out oc);
-  if hypothetical then
-    Fmt.pr
-      "Wrote %s (%d rows) — docs/ NOT updated: --platform render of %s is \
-       not this machine's record@."
-      (web_path ~projects_root) (List.length m.rows)
-      (Canary_store.string_of_platform (Canary_store.platform ()))
-  else
-    Fmt.pr "Wrote %s and %s (%d rows)@." (web_path ~projects_root)
-      (docs_path ()) (List.length m.rows)

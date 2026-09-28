@@ -10,17 +10,19 @@
 **Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
 
 
-Two tables, on two pages since 2026-09-23: the agreement overview is §2
-of the overview page (`docs/canary/overview.html`), and the result matrix
-is `docs/canary/projects/matrix.html`, one file per machine. Bringing the
-matrix onto the overview page, with one column model for both tables and
-each row linked to its drawing, is under review in
-[`overview.md`](overview.md) §6.4.
+Two tables, on one page since 2026-09-28: the result table is §1.2 of
+the overview page (`docs/canary/overview.html`) and the agreement
+overview is its §2, both over the same frame columns, with each result
+row linked to its drawing in §1 ([`overview.md`](overview.md) §6.4). The
+result matrix's own page retired the same day; its address,
+`docs/canary/projects/matrix.html`, is now a pointer to §1.2. `canary
+result` still prints the matrix in the terminal — as text, as markdown,
+or as the JSON record.
 
 | # | table | what it is |
 | --- | --- | --- |
-| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `kind`, `implemented at`, `lang`, `mech`, `object`, `sits on` and `where` (since 2026-09-27: where the claim sits on the overview's layered chain — its claim site's edges, the layers their ends lie in, and whether it stays on one side, reaches across, or runs end to end), lag, and what the rows below decided and blame. **Followed by a second, simple CANDIDATE table** — name, kind, and what stands in the way — for the claims that have no methods and so no columns to fill — **and by every agreement, candidates included, grouped by where it sits**, each group counting placed, checked and decided, which is where the gaps show (`design/overview.md` §1) |
-| 2 | the result matrix | one row per enumerated WORLD — what a run decided |
+| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern), over §1.2's frame columns (since 2026-09-28): `▣` on the nodes the claim reads, `R` where its rule ran and `D` where the check fires on the pieces, `◆` its own check column; plus code, `kind`, `implemented at`, `lang`, `mech`, `object`, `sits on` and `where` (since 2026-09-27: where the claim sits on the overview's layered chain — its claim site's edges, the layers their ends lie in, and whether it stays on one side, reaches across, or runs end to end), lag, and what the rows below decided and blame. **Followed by a second, simple CANDIDATE table** — name, kind, and what stands in the way — for the claims that have no methods and so no columns to fill — **and by every agreement, candidates included, grouped by where it sits**, each group counting placed, checked and decided, which is where the gaps show (`design/overview.md` §1) |
+| 2 | the result table (§1.2) | one row per CHAIN (a world in one binding language) on a machine — what a run decided; `canary result` prints the same record as one row per WORLD |
 
 Table 1 is table 2's TEMPLATE. An empty column in the matrix can be
 looked up in the grid to see whether anything was ever meant to fill it,
@@ -91,10 +93,12 @@ agreements (`behavior_matches`, `repack_preserves_api`,
 `repack_complete`), which is not a coincidence: no tool enforced their
 relation, so there is nothing to re-derive.
 
-`make view` regenerates the page; `canary checks --firing` prints the
-same grid in the terminal, and `matrix.page_titles_and_agreement_overview`
-pins the two renderings to one value — it counts the HTML's cells
-against what `overview_rows` computes.
+`make view` regenerates the page, and
+`matrix.page_titles_and_agreement_overview` counts its cells against
+what `Canary_frames.row_marks` computes over `overview_rows`. `canary
+checks --firing` prints the grid in the terminal, still over the old
+action columns rather than the frames (a follow-up in
+[`overview.md`](overview.md) §6.4).
 
 > 2026-08-19. Opened by the user's observation on the sqlite rows: "ref
 > is not the only world … how do you explain #6?" **Resolved the same
@@ -102,8 +106,9 @@ against what `overview_rows` computes.
 > block — one column per artifact, carrying that artifact's placement —
 > and the single `ref` column is gone. §2's analysis is kept because it
 > is the reason the layout changed.
-> Renderer: [`canary_matrix.ml`](../../../src/canary/main/canary_matrix.ml);
-> `canary result` writes `docs/canary/projects/matrix.html`.
+> Renderer: [`canary_matrix.ml`](../../../src/canary/main/canary_matrix.ml)
+> for the terminal views and the record; the web table is §1.2 of the
+> overview page, which `canary overview` writes.
 
 ## 0. The overview's row order, and why it is that one
 
@@ -433,8 +438,9 @@ verdict; a **word** means it did not:
 Those five used to be one dot. A check column only exists where the
 claim *can* be decided (`check_cols_of_chain` requires an evaluator and
 static applicability), so a non-verdict cell in one is a **defect**, not
-a blank — which is why each carries a **blame**, counted under the table
-and per agreement in the HTML key:
+a blank — which is why each carries a **blame**, counted under the
+terminal table and per agreement in the agreement overview's `blame`
+column:
 
 ```
 gap: 50 evidence  18 vacuous  4 version      # sqlite, 2026-09-15

@@ -60,8 +60,7 @@ step list            IR: steps ────────────────�
   │
   ├──▶ run_graph          execute here          → actions.log → verdicts
   ├──▶ render_gh_step     GitHub Actions YAML
-  ├──▶ mermaid_of_steps   diagram (muted)
-  └──▶ render_steps_data  HTML page
+  └──▶ mermaid_of_steps   diagram (muted)
 ```
 
 **The diagram has no branch any more** (2026-09-16). It used to fork at
@@ -119,12 +118,14 @@ MachineIR, MC) and its passes separately (mem2reg, GVN, regalloc),
 because many passes share one IR and only a few lower between them.
 Carrying both in one filename beats choosing.
 
-**The step list is the object code, and the backends are targets.** Four
-of them consume it, and **executing is one of the four**, not a stage
+**The step list is the object code, and the backends are targets.** Three
+of them consume it, and **executing is one of the three**, not a stage
 above them: `run_graph` runs it here, `render_gh_step` emits CI YAML,
-`mermaid_of_steps` draws it, `render_steps_data` renders the page. So the
-chain is 1–6 and then a fan-out, not 1–7 — numbering the targets would
-imply a sequence where there is a choice.
+`mermaid_of_steps` draws it. (A fourth, `render_steps_data`, rendered a
+run's own page; that page retired on 2026-09-28, and a run is read on the
+overview page from the record — `../overview.md` §6.4.) So the chain is
+1–6 and then a fan-out, not 1–7 — numbering the targets would imply a
+sequence where there is a choice.
 
 **Pass 5 is a performance pass, not a correctness one.** The runner runs
 whatever order it is given; ordering only changes how many times a

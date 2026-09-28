@@ -178,7 +178,8 @@ Project analysis determines which claims a mechanism can carry. Realization
 places inspections and attaches a world, language, and mechanism to steps.
 The runner's `evaluate_step` selects firing, suitable methods, resolves their
 evidence, and merges results into one record used by reporting and acceptance.
-The log records `agreement_outcome` events, from which the result page is read.
+The log records `agreement_outcome` events, from which the result table is read
+(`canary result`, and the result table on the overview page).
 The full pipeline belongs to [enumeration/](../enumeration/README.md), with
 applicability in pass 2 and firing/evidence placement in pass 6.
 

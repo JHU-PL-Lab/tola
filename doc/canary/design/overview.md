@@ -1,10 +1,10 @@
 # The overview page — recorded runs on the layered chain
 
 `canary overview` renders `docs/canary/overview.html`, and `make view`
-renders it together with the result page. Its §1 draws ONE chain, from
-the package managers down to the program that runs, chosen from its parts
-with a panel of buttons. When the chosen chain is one canary runs, §1 also
-paints what a recorded run of it did. This document says how §1 is built
+runs it. Its §1 draws ONE chain, from the package managers down to the
+program that runs, chosen from its parts with a panel of buttons. When
+the chosen chain is one canary runs, §1 also paints what a recorded run
+of it did, and §1.2 holds the result table: a row per chain and machine. This document says how §1 is built
 today, names the two lists that keep the drawing honest, and gives the
 plan from here. Read it before changing the page.
 
@@ -243,8 +243,9 @@ second, or the pins fail.
 ## 6. The plan
 
 In order (user, 2026-09-28): first §6.4, the result matrix joining this
-page; then the rest of phase E (§6.1); then the derivations of §6.2.
-What §6.3 parks is not urgent.
+page — done the same day, its follow-ups listed at its end; then the
+rest of phase E (§6.1); then the derivations of §6.2. What §6.3 parks is
+not urgent.
 
 ### 6.1 Phase E — the rest of the bridges
 
@@ -451,12 +452,13 @@ rewrites; to settle when a second template exists).
 
 ### 6.4 First: one record, several views — the result matrix joins this page
 
-A review, not yet a decision (user, 2026-09-28: "we can also migrate the
-old matrix page into the overview page … It looks like we can have two
-views for the same analysis and data, and if we can index them together,
-we can chain those two sources"). The user put it ahead of the next
-agreement: clarify how a result is rendered from the workflow, update
-the docs, then resume §6.1.
+A review, decided and carried out the same day (user, 2026-09-28: "we
+can also migrate the old matrix page into the overview page … It looks
+like we can have two views for the same analysis and data, and if we can
+index them together, we can chain those two sources"). The user put it
+ahead of the next agreement: clarify how a result is rendered from the
+workflow, update the docs, then resume §6.1. The review below describes
+the pages as they were before the six steps at its end.
 
 **What the workflow produces.** Part of it is static, computed from code
 with no run: the worlds each project has (passes 3 to 5), each named by a
@@ -638,8 +640,23 @@ code.
    frame cells and holds that a checked claim has ◆ at each of its sites
    and a planned one at none. `canary checks --firing` still prints the
    old action columns in the terminal.
-5. **The old pages retire**: `matrix.html` points here, and the per-run
-   pages go.
+5. **The old pages retire** — done (2026-09-28; the user chose the whole
+   tree). Nothing a run writes is copied to `docs/` any more, and the
+   tracked `docs/canary/projects/` tree went: 1,797 files and 93 MB —
+   each run's `result.html`, log, run info and diagrams, and the
+   inspections and logs of its steps. Each old address keeps a pointer
+   to §1.2 (`matrix.html`, `matrix_mac.html`, `index.html`), written
+   with this page (`Canary_overview_page.pointer_files`). The per-run
+   page's renderer, `canary_html.ml` (one of four step-list backends,
+   now three), went with it, as did `canary index` and the run index it
+   refreshed; a run still writes its diagrams, as files in `_out/`, and
+   `canary view` regenerates them (not yet for zarith — the last
+   follow-up below). The result page's half of the matrix
+   renderer went too, so `Canary_matrix.agreement_overview` is all it
+   renders as HTML. `canary result` writes nothing, and `make view` is
+   `canary overview`. Pinned by `matrix.page_titles_and_agreement_overview`,
+   which fails if an old address holds a table or no pointer (falsified
+   both ways).
 6. **The manifest** — done (2026-09-28). The runner writes, for each
    world it runs, the steps it realized (`Canary_manifest`:
    `_out/canary/projects/<project>/-run/manifest/<world>.json` — each
@@ -655,6 +672,32 @@ code.
    summary logged once — a view still reads the inspection files, which a
    later run of the world overwrites. A run through `run_project_multi`
    (ssl) writes no manifest and is re-derived.
+
+**What the six steps left open**, none of it blocking §6.1:
+
+- The simplification the user postponed (2026-09-28: "some material is
+  still verbose and can be simplified, but let's postpone it later when
+  the major task is done and working well").
+- `canary checks --firing` still prints the old action columns (step 4),
+  and the table's looks are not in `visual_hints` (step 3).
+- The ten action families with no edge have no frame, so their steps
+  have no column (the review's point 4).
+- sqlite's Python rows are mostly empty: 14 of their edges read `absent`,
+  against 8 in the OCaml rows, because CPython's stdlib binding is
+  provisioned by a dummy fetch, and `place_step` places a dummy on no
+  edge.
+- The staged copy is never named. An installed-library world stages the
+  library and inspects the copy (`probe_lib_staged`), but that
+  inspection is not read into `staged_sys`, which gets no name or count.
+- Step 6's log change: typed fields on log events, each inspection's
+  summary logged once, and a manifest for the multi-variant runner.
+- `canary view`, now the only way to regenerate a run's diagrams, fails
+  on zarith: its saved `run_state.json` holds `fetch_binding_source_ocaml`,
+  which `action_of_string` cannot read, and `load_run_state` raises. It
+  predates step 5 (found while checking it; cairo, libffi, sqlite and
+  zlib regenerate) and is the gap the manifest's codec works around.
+  Widening `action_of_string` is a change of its own, because the
+  catalogue backticks an action name only when that function parses it.
 
 §6.1's agreements resume after.
 
@@ -679,6 +722,7 @@ code.
 | `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
 | `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it |
 | `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
+| `matrix.page_titles_and_agreement_overview` | §2's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
 | `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |

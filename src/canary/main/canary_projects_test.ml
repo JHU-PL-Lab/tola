@@ -2408,7 +2408,7 @@ let agreements_sit_pin : Canary_project_test.pure_test =
           && is "package_resolution_suffices" T.End_to_end [ T.L_pm; T.L_package; T.L_program ]
         in
         let m = M.matrix_of Canary_registry.all_projects in
-        let overview = M.agreement_overview m ~generated_at:"pin" in
+        let overview = M.agreement_overview m in
         (* the first cell after a row's slug that carries the site *)
         let site_cell slug =
           match String.substr_index overview ~pattern:(Printf.sprintf "<td>%s</td>" slug) with
@@ -7464,14 +7464,14 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
              columns were five of its columns and two of its tooltips. *)
           String.is_substring h ~substring:"agreement overview"
           && not (String.is_substring h ~substring:"The check key")
-          (* it is on the methodology page and NOT on the result page,
-             so the move cannot decay into a copy on both *)
+          (* ONE PAGE since 2026-09-28 (user; design/overview.md §6.4 step
+             5): the result table is §1.2 of this page, and the old
+             result page's address is a pointer landing there — it holds
+             neither table, so nothing can decay into a copy on both *)
           && (not (matrix_has "Agreement overview"))
-          && matrix_has "The result matrix"
-          (* and the result page still POINTS at it — a split that loses
-             the link is worse than no split, because the overview is the
-             template an empty column there is looked up in *)
-          && matrix_has "overview.html"
+          && (not (matrix_has "<table"))
+          && matrix_has "overview.html#results"
+          && String.is_substring h ~substring:{|<h3 id="results">|}
           (* one ACTION cell per (row × action column) and one TARGET
              cell per (row × artifact column) — both in the `g` family,
              so the total counts them together *)

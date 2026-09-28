@@ -3,8 +3,8 @@
 
     Lives in [backend/] (since 2026-06-01 Phase 9b) because it
     composes multiple sibling backends —
-    {!Canary_local_runner.run_graph} to execute, {!Canary_diagram}
-    + {!Canary_html} for rendering — into the single entry point
+    {!Canary_local_runner.run_graph} to execute, {!Canary_diagram} for
+    the run's diagrams — into the single entry point
     [run_project] that [canary_main.ml] calls. Living in [action/]
     would force [action → backend] edges that don't belong there.
 
@@ -119,8 +119,8 @@ let dump_run_info ?(filename = "run_info") ~dir (info : run_info) =
   path
 
 (* ── Run-state serialisation ──
-   Saves per-step verdicts so [view_project] can rebuild diagrams +
-   HTML without re-executing. The runtime closures ([cmd],
+   Saves per-step verdicts so [view_project] can rebuild the diagrams
+   without re-executing. The runtime closures ([cmd],
    [check_post]) aren't serialised; on load they default to stubs that
    refuse to run.
 
@@ -257,8 +257,8 @@ let load_run_state ~dir =
   in
   (project_name, steps, run_status, artifact_names)
 
-(* Regenerate diagrams/ and result.html from a saved run_state.json without
-   re-running any steps. Equivalent to the tail of run_project/run_project_multi. *)
+(* Regenerate diagrams/ from a saved run_state.json without re-running any
+   steps. Equivalent to the tail of run_project/run_project_multi. *)
 let view_project ~root ~project () =
   let (project_name, _variant) =
     match String.rsplit2 project ~on:'/' with
@@ -270,8 +270,8 @@ let view_project ~root ~project () =
   let (_, steps, run_status, artifact_names) = load_run_state ~dir:run_dir in
   let log_path = [%string "%{run_dir}/actions.log"] in
   let logger = create_logger ~log_path in
-  Canary_diagram.write_project_output ~dir ~project_name ~variant:"" ~steps ~run_status
-    ~artifact_names ~root logger;
+  Canary_diagram.write_project_output ~dir ~steps ~run_status ~artifact_names
+    logger;
   logger.close ()
 
 let run_project ?(failfast = false) ?run_info
@@ -298,8 +298,8 @@ let run_project ?(failfast = false) ?run_info
   if not (String.is_empty variant_id) then
     logger.log ~tag:"*" ~event:"variant_start" ~detail:(Some variant_id);
   let status = run_graph ~failfast logger ~project ~root steps in
-  Canary_diagram.write_project_output ~dir ~project_name ~variant:variant_id ~steps
-    ~run_status:status ~artifact_names ~root logger;
+  Canary_diagram.write_project_output ~dir ~steps ~run_status:status
+    ~artifact_names logger;
   save_run_state ~dir:run_dir ~project_name steps ~artifact_name:artifact_names status;
   logger.close ();
   status
@@ -356,8 +356,8 @@ let dump_run_info_multi ~dir ~project_name
   Stdlib.close_out oc;
   Fmt.pr "[run_info] %s@." path
 
-(* Run multiple variants of a project sharing one log, one result.html, one
-   diagrams/ directory. Steps from all variants share the flat projects/<name>/
+(* Run multiple variants of a project sharing one log and one diagrams/
+   directory. Steps from all variants share the flat projects/<name>/
    step dirs; only filenames are variant-keyed (e.g. probe_stable.log). *)
 let run_project_multi ?(failfast = false) ~project_name ~root
     ?(artifact_names : artifact_kind -> string option = fun _ -> None)
@@ -390,7 +390,7 @@ let run_project_multi ?(failfast = false) ~project_name ~root
                       if Hashtbl.mem seen_tags s.tag then false
                       else (Hashtbl.set seen_tags ~key:s.tag ~data:(); true)) in
   let merged_status = merge_step_statuses (List.map all_results ~f:snd) in
-  Canary_diagram.write_project_output ~dir ~project_name ~variant:"" ~steps:all_steps
-    ~run_status:merged_status ~artifact_names ~root logger;
+  Canary_diagram.write_project_output ~dir ~steps:all_steps
+    ~run_status:merged_status ~artifact_names logger;
   save_run_state ~dir:run_dir ~project_name all_steps ~artifact_name:artifact_names merged_status;
   logger.close ()

@@ -1,14 +1,22 @@
 (** [Canary_overview_page] — the OVERVIEW page, `canary overview`
     (2026-09-22; renamed from the "model" page 2026-09-23, user).
 
-    A separate page from `matrix.html`, deliberately. That one is a
-    RECORD: per project, per scenario, what a run decided. This one is
-    GENERAL MECHANISM — what chains can exist, what joins them, where a
-    claim could sit — with no project, no version and no verdict on it.
-    The multi-PM model's own §14 says not to put verdicts in the
-    methodology tables, and a reader scrolling from "what happened here"
-    into "what can exist anywhere" without a page break will read the
-    second as the first.
+    It began as a separate page from the result matrix, deliberately.
+    That one was a RECORD: per project, per scenario, what a run decided.
+    This one was GENERAL MECHANISM — what chains can exist, what joins
+    them, where a claim could sit — with no project, no version and no
+    verdict on it. The multi-PM model's own §14 says not to put verdicts
+    in the methodology tables, and a reader scrolling from "what happened
+    here" into "what can exist anywhere" without a page break will read
+    the second as the first.
+
+    ONE PAGE since 2026-09-28 (user; design/overview.md §6.4). §1's
+    recorded runs had already crossed that line — each drawn over the
+    generic chain and marked as a run — so the result table joined them
+    as §1.2, and the matrix's own page retired. What keeps record and
+    mechanism apart now is the marking rather than the page break: a run
+    is drawn over the chain as a run, and the table of runs is a section
+    of its own.
 
     The generic diagram and every concrete case come from ONE layout
     function over {!Canary_topology.nodes} and {!Canary_topology.edges}.
@@ -2162,12 +2170,11 @@ let render (projects : (string * Canary_project_run.project_run) list)
 %s</style></head><body><main>
 
 <h1>How two package ecosystems are joined</h1>
-<p class="lede">General mechanism — no project, no version, no verdict in
-the page itself. What ran and what it decided is the
-<a href="projects/matrix.html">result matrix</a>; this page is what
-<em>can</em> exist, which is a different question. The one exception is a
-package's recorded run, which §1 draws when you choose that package, from
-a separate per-machine file.</p>
+<p class="lede">The chain two package ecosystems form, drawn from canary's
+code (§1); what every chain canary runs recorded, laid out on it
+(<a href="#results">§1.2</a>); and the agreements that check it (§2). What
+a run recorded is read from a separate file per machine, never embedded in
+the page.</p>
 
 <div class="note"><strong>A bridge is a thing, not a relation.</strong>
 It is concrete, separate package content whose purpose is package-manager
@@ -2389,7 +2396,7 @@ which <code>canary overview</code> computes from the run record — each
 edge's state from the steps placed on it, each badge from its claims'
 outcomes, and the edges around a bridge from what a bridge step recorded
 (one bridge so far: conf-gmp, on zarith).
-· <a href="projects/matrix.html">result matrix</a></div>
+· <a href="#results">the results (§1.2)</a></div>
 %s</main></body></html>|}
     (css ^ "\n" ^ results_css) Canary_matrix.overview_css
     (* §1 the chain — the missing steps COUNTED from the catalogue, the
@@ -2422,7 +2429,32 @@ outcomes, and the edges around a bridge from what a bridge step recorded
 
 let docs_path = "docs/canary/overview.html"
 
+(** THE RESULT PAGES' OLD ADDRESSES (2026-09-28, user: one page, and the
+    per-run pages retire — design/overview.md §6.4 step 5). The result
+    matrix is §1.2 of this page now, and nothing is copied into
+    [docs/canary/projects/] any more; what stays there is a line at each
+    address a link may still use — [matrix.html], the macOS copy's
+    [matrix_mac.html] and the run index [index.html] — that lands on
+    §1.2. Written with the page because they point at it. The same bytes
+    on every machine, so, unlike the runs file, a [--platform] render may
+    write them. *)
+let pointer_dir = "docs/canary/projects"
+
+let pointer_files = [ "matrix.html"; "matrix_mac.html"; "index.html" ]
+
+let pointer_html =
+  {|<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="0; url=../overview.html#results">
+<title>canary results</title></head><body>
+<p>The result table is §1.2 of <a href="../overview.html#results">the overview page</a>.</p>
+</body></html>
+|}
+
 let write (projects : (string * Canary_project_run.project_run) list)
     ~(overview : string) ~(generated_at : string) : unit =
   let html = render projects ~overview ~generated_at in
-  Stdio.Out_channel.write_all docs_path ~data:html
+  Stdio.Out_channel.write_all docs_path ~data:html;
+  Canary_step_model.ensure_dir pointer_dir;
+  List.iter pointer_files ~f:(fun f ->
+      Stdio.Out_channel.write_all (pointer_dir ^ "/" ^ f) ~data:pointer_html)

@@ -1,4 +1,0 @@
-usage: inspect_binding.py [-h] --kind {mli,stub} [--path PATH] [--dir DIR]
-                          [--watchlist WATCHLIST] [--prefix PREFIX]
-                          [--module-prefix MODULE_PREFIX]
-inspect_binding.py: error: --kind stub requires --path

@@ -122,21 +122,18 @@ canary-refresh:
 agreement-catalogue:
 	@$(CANARY) checks --catalogue
 
-# THE WEB VIEW — three tables on one page: the check key, the RECOVERY
-# GRID (where each rule ran vs where it is checked), and the result
-# matrix. A pure READ of actions.log; it runs nothing.
+# THE WEB VIEW — the overview page: the chain and its recorded runs (§1),
+# the result table (§1.2) and the agreement overview (§2), which is the
+# result table's template — an empty column there can be looked up in §2
+# to see whether anything was ever meant to fill it. A pure READ of
+# actions.log and the run manifests; it runs nothing.
 #
-# The grid is registry-wide and the matrix is per-run, so the page is
-# the template beside the concrete: an empty column in the matrix can be
-# looked up in the grid to see whether anything was ever meant to fill
-# it.
-# Both pages, since the agreement overview moved off the result page on
-# 2026-09-23: running only `result` left the overview unrefreshed.
+# ONE PAGE since 2026-09-28 (user): the result page this also refreshed
+# retired, and docs/canary/projects/ holds only the pointers the overview
+# writes beside itself.
 view:
-	@$(CANARY) result > /dev/null
 	@$(CANARY) overview > /dev/null
-	@echo "open docs/canary/projects/matrix.html  (what ran)"
-	@echo "open docs/canary/overview.html         (the overview: chain, cases, agreements)"
+	@echo "open docs/canary/overview.html  (the chain, its runs, the result table, the agreements)"
 
 canary-post-check: canary-sqlite canary-agreement-roundtrip canary-tiny1-bridge
 	@echo "post-check: sqlite + round-trip + tiny1 bridge all passed"

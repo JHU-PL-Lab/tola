@@ -26,7 +26,7 @@ let probe_action_of_kind = function
 
    check_diagram_invariant verifies coverage + connectivity per diagram.
 
-   write_project_output orchestrates all diagrams + HTML + index per run. *)
+   write_project_output writes and checks all of a run's diagrams. *)
 
 
 let label_of_artifact_kind k =
@@ -1756,129 +1756,6 @@ let mermaid_view
            mermaid_of_steps ?status ~title ~all_steps:steps
              ~filter:(view_predicate view) ())
 
-let _list_dirs path =
-  if not (Stdlib.Sys.file_exists path) then []
-  else
-    try
-      Stdlib.Sys.readdir path
-      |> Array.to_list
-      |> List.filter ~f:(fun n ->
-          let p = path ^ "/" ^ n in
-          Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p)
-    with _ -> []
-
-let _read_file_lines path =
-  try
-    let ic = Stdlib.open_in path in
-    let rec loop acc =
-      match Stdlib.input_line ic with
-      | l -> loop (l :: acc)
-      | exception End_of_file -> Stdlib.close_in ic; List.rev acc
-    in
-    loop []
-  with _ -> []
-
-(* Coarse status counts from actions.log: each step emits a "done" or
-   "failed" or "skipped" event line. We count distinct step tags. *)
-let _counts_from_log ~variant_dir =
-  let log = variant_dir ^ "/actions.log" in
-  let lines = _read_file_lines log in
-  let by_tag = Hashtbl.create (module String) in
-  List.iter lines ~f:(fun line ->
-      (* Format: "[YYYY-MM-DD HH:MM:SS.SSS] <tag><spaces><event>  ..." *)
-      match String.lsplit2 line ~on:']' with
-      | None -> ()
-      | Some (_, rest) ->
-          let rest = String.lstrip rest in
-          (match String.split rest ~on:' ' with
-           | tag :: rest_tokens ->
-               let event = List.find rest_tokens ~f:(fun t ->
-                   not (String.is_empty t)) in
-               (match event with
-                | Some "done" -> Hashtbl.set by_tag ~key:tag ~data:"done"
-                | Some "failed" -> Hashtbl.set by_tag ~key:tag ~data:"failed"
-                | Some "skipped" ->
-                    (* Don't override done/failed *)
-                    if not (Hashtbl.mem by_tag tag) then
-                      Hashtbl.set by_tag ~key:tag ~data:"skipped"
-                | _ -> ())
-           | _ -> ()));
-  let total = Hashtbl.length by_tag in
-  let done_ = Hashtbl.count by_tag ~f:(String.equal "done") in
-  let failed = Hashtbl.count by_tag ~f:(String.equal "failed") in
-  let skipped = Hashtbl.count by_tag ~f:(String.equal "skipped") in
-  (total, done_, failed, skipped)
-
-let _format_mtime (t : float) =
-  let tm = Unix.localtime t in
-  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
-    (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
-    tm.tm_hour tm.tm_min tm.tm_sec
-
-let _source_kind_of_run_info ~variant_dir =
-  let p = variant_dir ^ "/run_info.json" in
-  if not (Stdlib.Sys.file_exists p) then ""
-  else
-    let lines = _read_file_lines p in
-    (* New multi-variant format: find source inside first "variants" object.
-       Old flat format: find top-level "source" key.
-       Both cases: first line matching `"source": "..."` wins. *)
-    List.find_map lines ~f:(fun l ->
-        let l = String.strip l in
-        match String.chop_prefix l ~prefix:{|"source": |} with
-        | Some s ->
-            Some (String.strip ~drop:(fun c ->
-                Char.equal c '"' || Char.equal c ','
-                || Char.equal c ' ') s)
-        | None -> None)
-    |> Option.value ~default:""
-
-let _counts_from_run_state ~run_dir =
-  let p = run_dir ^ "/run_state.json" in
-  if not (Stdlib.Sys.file_exists p) then _counts_from_log ~variant_dir:run_dir
-  else
-    try
-      let j = Yojson.Basic.from_file p in
-      let open Yojson.Basic.Util in
-      let steps = j |> member "steps" |> to_list in
-      let counts = List.fold steps ~init:(0, 0, 0, 0)
-          ~f:(fun (t, d, f, s) sj ->
-              let st = sj |> member "status" |> to_string in
-              match st with
-              | "done"    -> (t+1, d+1, f,   s  )
-              | "failed"  -> (t+1, d,   f+1, s  )
-              | "skipped" -> (t+1, d,   f,   s+1)
-              | _         -> (t,   d,   f,   s  ))
-      in
-      counts
-    with _ -> _counts_from_log ~variant_dir:run_dir
-
-let scan_index_entries ~projects_root : Canary_html.index_entry list =
-  if not (Stdlib.Sys.file_exists projects_root) then []
-  else
-    let make_entry ~project ~proj_dir =
-      let run_dir = proj_dir ^ "/-run" in
-      let html_path = run_dir ^ "/result.html" in
-      if not (Stdlib.Sys.file_exists html_path) then None
-      else
-        let mtime = (Unix.stat html_path).st_mtime in
-        let (total, done_, failed, skipped) = _counts_from_run_state ~run_dir in
-        let src = _source_kind_of_run_info ~variant_dir:run_dir in
-        Some Canary_html.{
-          project; variant = "";
-          run_at = _format_mtime mtime;
-          href = project ^ "/-run/result.html";
-          total_steps = total;
-          done_steps = done_;
-          failed_steps = failed;
-          skipped_steps = skipped;
-          source_kind = src;
-        }
-    in
-    let projects = _list_dirs projects_root in
-    List.filter_map projects ~f:(fun project ->
-        make_entry ~project ~proj_dir:(projects_root ^ "/" ^ project))
-
 (* Read run_info.json and return (variant_id, version, actions) triples.
    `actions` is the list of step tags that ran in that variant. *)
 let _variant_infos_of_run_info ~run_dir : (string * string * string list) list =
@@ -1907,13 +1784,13 @@ let _variant_infos_of_run_info ~run_dir : (string * string * string list) list =
     with _ -> []
 
 (* ── Output generation ──
-   Writes diagrams/all.mmd, per-view diagrams, result.html, and refreshes
-   index.html. Shared by run_project (single-variant) and run_project_multi. *)
+   Writes diagrams/all.mmd, full.mmd and the per-view diagrams, then checks
+   them. Shared by run_project (single-variant) and run_project_multi. *)
 
-let write_project_output ~dir ~project_name ~variant ~steps
+let write_project_output ~dir ~steps
     ~(run_status : (string, step_status) Hashtbl.t)
     ~(artifact_names : artifact_kind -> string option)
-    ~root logger =
+    logger =
   let node_status = result_status_of_run steps run_status in
   let langs =
     List.filter_map steps ~f:(fun s ->
@@ -2028,7 +1905,6 @@ let write_project_output ~dir ~project_name ~variant ~steps
     [ `Source; `Lib; `Probes ]
     @ List.map langs ~f:(fun l -> `Binding l)
   in
-  let emitted_views = ref [] in
   List.iter views ~f:(fun v ->
       let filtered = List.filter steps ~f:(view_predicate v) in
       if not (List.is_empty filtered) then begin
@@ -2043,81 +1919,15 @@ let write_project_output ~dir ~project_name ~variant ~steps
         let oc = Stdlib.open_out path in
         Stdlib.output_string oc mmd;
         Stdlib.close_out oc;
-        emitted_views := (v, mmd) :: !emitted_views;
         logger.log ~tag:"*" ~event:"view"
           ~detail:(Some [%string "%{view_name v} (%{Int.to_string (List.length filtered)} steps)"])
       end);
-  let html_path = [%string "%{run_dir}/result.html"] in
-  let html_views =
-    Canary_html.{ name = "overview"; title = "Overview"; mmd = overview_mmd }
-    :: Canary_html.{ name = "full"; title = "Full"; mmd = full_mmd }
-    :: List.rev_map !emitted_views ~f:(fun (v, mmd) ->
-        let n = view_name v in
-        let title = match v with
-          | `Source -> "Source"
-          | `Lib -> "Lib"
-          | `Pack -> "Pack"
-          | `Probes -> "Probes"
-          | `Full -> "Full"
-          | `Binding lang ->
-              "Binding (" ^ Canary_lang.display_of_lang lang ^ ")"
-        in
-        Canary_html.{ name = n; title; mmd })
-  in
-  let html_steps =
-    List.map steps ~f:(fun s ->
-        let exp_str = match s.expectation with
-          | Expect_success -> "Expect_success"
-          | Expect_failure _ -> "Expect_failure"
-          | Expect_compat_failure _ -> "Expect_compat_failure"
-          | Expect_compat_derived _ -> "Expect_compat_derived"
-        in
-        let status_str = match Hashtbl.find node_status s.tag with
-          | Some Canary.Done -> "done"
-          | Some Canary.Done_fail -> "expected_fail"
-          | Some Canary.Failed -> "failed"
-          | Some Canary.Skipped -> "skipped"
-          | Some Canary.Not_in_spec | None -> "not_in_spec"
-        in
-        (* output_rel: path from -run/ to the step dir one level up. *)
-        let step_dir = Canary_basic.step_dir_of_tag s.output_tag in
-        Canary_html.{
-          id = Hashtbl.find step_ids s.tag;
-          tag = s.tag;
-          action = string_of_action s.action;
-          output_rel = "../" ^ step_dir;
-          variant_key = s.variant_id;
-          expectation = exp_str;
-          status = status_str;
-        })
-  in
-  let run_at =
-    let t = Unix.gettimeofday () in
-    let tm = Unix.localtime t in
-    Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
-      (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
-      tm.tm_hour tm.tm_min tm.tm_sec
-  in
-  let html =
-    Canary_html.render
-      ~project:project_name ~variant
-      ~run_at ~index_rel:"../../index.html"
-      ~views:html_views
-      ~default_view:"overview"
-      ~steps:html_steps
-  in
-  let oc = Stdlib.open_out html_path in
-  Stdlib.output_string oc html;
-  Stdlib.close_out oc;
-  logger.log ~tag:"*" ~event:"html" ~detail:(Some html_path);
-  let projects_root = [%string "%{root}/canary/projects"] in
-  let index_path = projects_root ^ "/index.html" in
-  let entries = scan_index_entries ~projects_root in
-  let index_html = Canary_html.render_index ~entries ~generated_at:run_at in
-  let oc = Stdlib.open_out index_path in
-  Stdlib.output_string oc index_html;
-  Stdlib.close_out oc;
-  logger.log ~tag:"*" ~event:"index" ~detail:(Some index_path);
+  (* NO PAGE (2026-09-28, user: one page, and the per-run pages retire —
+     design/overview.md §6.4 step 5). This wrote the run's result.html,
+     which embedded the diagrams above beside the step list, and the run
+     index listing every such page. A run is read on the overview page
+     now (§1 draws it, §1.2 is its row), from the record and the manifest
+     the runner writes; the diagrams stay, as files. *)
   (* ── Diagram invariant check ────────────────────────────────────────────
      Two properties are verified for every .mmd written:
 
@@ -2343,79 +2153,11 @@ let write_project_output ~dir ~project_name ~variant ~steps
   if all_ok then
     logger.log ~tag:"*" ~event:"invariant" ~detail:(Some "ALL OK")
   else
-    logger.log ~tag:"!" ~event:"invariant" ~detail:(Some "SOME FAILED");
-  (* Copy web-viewable output to docs/ for GitHub Pages.
-
-     2026-08-13: was a blanket `cp -r <dir>/*` — it copied whole run
-     directories (fetched source checkouts incl. `.git`, build/install
-     trees) into the tracked docs tree (27G of churn; see backlog
-     "docs/canary copy bloat"). Now a filtered recursive copy: only
-     web-viewable files (json/log/mmd/html) outside known artifact
-     directories. The tracked ssl probe binaries (ssl_app_core/ssl_app_nlv)
-     predate this filter and no longer update — candidates for git rm. *)
-  let web_viewable name =
-    List.exists [ ".json"; ".log"; ".mmd"; ".html" ] ~f:(fun ext ->
-        String.is_suffix name ~suffix:ext)
-  in
-  let artifact_dir name =
-    List.mem
-      [ ".git"; "_build"; "_cache"; "_opam"; "pack-repo"; "src"; "build";
-        "install"; "lib"; "bin"; "staged"; "sandbox"; "workspace" ]
-      name ~equal:String.equal
-  in
-  let copy_file ~src ~dst =
-    let ic = Stdlib.open_in_bin src in
-    let oc = Stdlib.open_out_bin dst in
-    (try
-       let buf = Bytes.create 65536 in
-       let rec loop () =
-         match Stdlib.input ic buf 0 65536 with
-         | 0 -> ()
-         | n ->
-             Stdlib.output oc buf 0 n;
-             loop ()
-       in
-       loop ()
-     with e ->
-       Stdlib.close_in_noerr ic;
-       Stdlib.close_out_noerr oc;
-       raise e);
-    Stdlib.close_in ic;
-    Stdlib.close_out oc
-  in
-  let rec copy_web ~src ~dst =
-    match Stdlib.Sys.readdir src with
-    | exception _ -> ()
-    | entries ->
-        Array.iter entries ~f:(fun name ->
-            let s = src ^ "/" ^ name in
-            let d = dst ^ "/" ^ name in
-            if Stdlib.Sys.is_directory s then begin
-              if not (artifact_dir name) then begin
-                (try Unix.mkdir d 0o755 with _ -> ());
-                copy_web ~src:s ~dst:d
-              end
-            end
-            else if web_viewable name
-                    && not (String.is_substring name ~substring:"_example") then
-              copy_file ~src:s ~dst:d)
-  in
-  let docs_projects = "docs/canary/projects" in
-  (* per-platform tracked dir (2026-08-26): [zlib] on Linux,
-     [zlib_mac] on macOS. Same reason as the matrix's filename — two
-     machines must not overwrite each other's committed record while the
-     cross-platform aggregating viewer is still an open question. The
-     index scan below then lists both, side by side and unmerged, which
-     is the honest shape of "postponed". See
-     [Canary_basic.platform_suffix]. *)
-  let docs_dir =
-    [%string "%{docs_projects}/%{project_name}%{Canary_basic.platform_suffix ()}"]
-  in
-  ignore (Stdlib.Sys.command [%string "mkdir -p \"%{docs_dir}\""]);
-  copy_web ~src:dir ~dst:docs_dir;
-  let entries = scan_index_entries ~projects_root:docs_projects in
-  let docs_index_html = Canary_html.render_index ~entries ~generated_at:run_at in
-  let docs_index_path = docs_projects ^ "/index.html" in
-  let oc = Stdlib.open_out docs_index_path in
-  Stdlib.output_string oc docs_index_html;
-  Stdlib.close_out oc
+    logger.log ~tag:"!" ~event:"invariant" ~detail:(Some "SOME FAILED")
+  (* NOTHING IS COPIED TO docs/ ANY MORE (2026-09-28, user: one page; the
+     per-run pages retire — design/overview.md §6.4 step 5). A run's
+     web-viewable output was copied into docs/canary/projects/<project>
+     for GitHub Pages after every run: 1,797 tracked files, 93 MB, by the
+     time it went. Everything the published pages show now comes from
+     docs/canary/overview.html and the per-machine overview_runs.js;
+     the run's own output stays in _out/, untracked. *)
