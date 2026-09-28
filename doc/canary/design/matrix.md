@@ -10,8 +10,12 @@
 **Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
 
 
-The page presents the Agreement overview and its candidate list, followed
-by the per-world result matrix:
+Two tables, on two pages since 2026-09-23: the agreement overview is §2
+of the overview page (`docs/canary/overview.html`), and the result matrix
+is `docs/canary/projects/matrix.html`, one file per machine. Bringing the
+matrix onto the overview page, with one column model for both tables and
+each row linked to its drawing, is under review in
+[`overview.md`](overview.md) §6.4.
 
 | # | table | what it is |
 | --- | --- | --- |

@@ -242,8 +242,9 @@ second, or the pins fail.
 
 ## 6. The plan
 
-In order (user, 2026-09-27): finish phase E, then the derivations of
-§6.2. What §6.3 parks is not urgent.
+In order (user, 2026-09-28): first §6.4, the result matrix joining this
+page; then the rest of phase E (§6.1); then the derivations of §6.2.
+What §6.3 parks is not urgent.
 
 ### 6.1 Phase E — the rest of the bridges
 
@@ -447,6 +448,113 @@ version domain a bridge carries across — one bool today, and llvm's
 `conf-llvm-shared {= 19}` is the first bridge that carries one), and
 *topology names* (the template carries the name, an instance its
 rewrites; to settle when a second template exists).
+
+### 6.4 First: one record, several views — the result matrix joins this page
+
+A review, not yet a decision (user, 2026-09-28: "we can also migrate the
+old matrix page into the overview page … It looks like we can have two
+views for the same analysis and data, and if we can index them together,
+we can chain those two sources"). The user put it ahead of the next
+agreement: clarify how a result is rendered from the workflow, update
+the docs, then resume §6.1.
+
+**What the workflow produces.** Part of it is static, computed from code
+with no run: the worlds each project has (passes 3 to 5), each named by a
+stable `code`, a digest of project and scenario; each world's steps (pass
+6), typed and placed on this page's edges; each world's chain per
+language; the columns a world's row can have — its actions, the check
+slots its chains carry, the artifacts a check reads; and this page's
+graph, bands and claim sites. The rest comes from a run: each step's
+state and each agreement's outcome in `actions.log`, and the inspections
+each step wrote. `Canary_matrix.matrix_of` joins the two into one record,
+which `canary result --json` exports.
+
+**The views of it today:**
+
+| view | where | one row per | shape from | content from |
+| --- | --- | --- | --- | --- |
+| the result matrix | `projects/matrix.html`, one file per machine | world | the record's columns | the record's cells |
+| a recorded run | §1, from `overview_runs.js`, one file per machine | world × language | this page's graph | the record's steps, edges and claims, and the inspections, read a second time |
+| a chain, or a choice | §1 | chain | this page's graph | code |
+| the agreement overview | §2 | agreement × firing pattern | the registry | code, with `decided` and `blame` counted from the record |
+| the grouping and the census | §2 and §3 | claim site | the claim sites | code, with `decided` counted from the record |
+| a run's own page | `projects/<project>/-run/result.html` | step | the step list | that run's log |
+
+The result matrix and a recorded drawing are already two views of one
+record, and they already share an index: a drawing is named by its row's
+`code` and a language (`4ea4a4-ocaml`). Nothing uses the index yet.
+
+**Where the two views part:**
+
+1. Neither links to the other. A row does not open its drawing, and a
+   drawing does not name its row.
+2. A row is a world and a drawing is a world in one language, so
+   sqlite's one row is two drawings.
+3. The two tables order the actions differently. The matrix puts the
+   library's actions first and then one block per language, each in
+   lifecycle order; §2 follows the action catalogue, which puts
+   `probe_lib` last.
+4. Neither table shows where an action sits on the chain, although most
+   actions now carry their edges here (§6.2 step 1). Most sit on one side
+   and one layer. A fetch spans three: it resolves (package-manager
+   layer), installs a package (package layer) and realizes its content
+   (artifact layer), and the placeholder and bridge steps already split
+   it along those lines. The ten action families with no edge (the source
+   fetches, configure, the application's actions) need a place of their
+   own.
+5. The inspections are summarized twice, separately: the matrix's
+   artifact cells (`Canary_matrix.inspection_of_step`) and the drawing's
+   node names (`Canary_overview_runs.read_inspection`) read the same
+   files.
+6. A check column sits at the agreement's slot and a badge at its site —
+   §6.1's end-state finding, seen from the pages.
+7. The pages are styled separately: the matrix page has fixed colours and
+   no dark mode, and §2 carries a copy of its table rules
+   (`Canary_matrix.overview_css`, marked for clean-up).
+8. The matrix is one file per machine, while this page already loads
+   both machines' runs.
+9. `matrix.md` still described the combined page that split on
+   2026-09-23 (corrected with this review).
+
+**The proposal: one record, one index, every view a projection of both.**
+
+- **The row code, with a language, addresses a world everywhere.** A row
+  opens its drawing in §1 (`#rec=`), a drawing names its row, and an
+  agreement's row in §2 leads to its check columns in the matrix.
+- **One column model for both tables, read off this page.** Each action
+  column takes the side and layer of the edges its family realizes, and
+  the band colour those carry here. Left to right: the system side
+  (package manager, package, artifacts), the binding, the language side
+  (artifacts, package, package manager), then the program. This is the
+  chain as the user describes it: two package managers, two packages,
+  one binding.
+- **Each step's inspection summarized once**, in the record, for both the
+  artifact cell and the node name.
+- **The matrix as a section of this page**, below the diagram, rows
+  grouped by project. A row's shape is drawn from code even for a world
+  that never ran, and its cells are filled from the record — the split
+  §1 already makes between a chain and a recorded run of it.
+
+**Decisions for the user:**
+
+1. One page, or two pages linked both ways. The split was deliberate —
+   `Canary_overview_page`'s header argues that a record read beside
+   mechanism, with no page break, reads as mechanism — and §1's recorded
+   runs have already crossed that line, each drawn over the generic
+   chain and marked as a run.
+2. The column order for both tables: by side and layer as above, or the
+   matrix's current order.
+3. A fetch: one column coloured by its side, or split into its pieces
+   where the run records them.
+4. Check columns: beside their action as now, or under the layer of
+   their site.
+5. The two machines: a section each, or one table with a machine column.
+6. The per-run pages: kept and linked from each row, or retired.
+
+**Then, in order, each with a pin:** the links, which change no layout;
+one column model, in `base/`, used by both tables; the inspection
+summaries in the record; the matrix section on this page, with
+`matrix.html` pointing to it. §6.1's agreements resume after.
 
 ## 7. The pins
 

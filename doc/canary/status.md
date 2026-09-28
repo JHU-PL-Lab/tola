@@ -407,17 +407,26 @@ a real run — the first checked agreement in the grouping's package-layer
 row across the sides, and 9 of 14 agreements landed. The bridge step now
 passes whenever it records; the verdict is the agreement's.
 
-**Next is a decision** (2026-09-28). Each of the three other claims the
-bridge record carries needs one before it lands, and most of them are
-questions about the end state the user asked for — one description per
-agreement, its place derived with its role, its targets naming the
-diagram's nodes. Both, and a measurement of how far the code is from it
-today, are in `design/overview.md` §6.1. Independent of that: the easy
-placeholders become records, one at a time — the first, apt's chosen
-version (`resolve_sys`), also retires the one value the page asks of the
-rendering machine; then bridges beyond zarith, which turn the 23 new
-`gatw` cells into decisions (they read `·` or `no-evid` today). Four
-questions from the visual work are parked there, not urgent (§6.3).
+**Next: the result matrix joins the overview page** (user, 2026-09-28,
+ahead of the next agreement). The result matrix and a recorded drawing
+are already two views of one record, indexed by the same row code, and
+nothing links them; the two tables order their columns differently and
+neither shows the chain's layers. The review — what each view reads, nine
+places they part, a proposal (one index, one column model coloured by the
+diagram's layers, the matrix as a section of the overview page) and six
+decisions for the user — is `design/overview.md` §6.4.
+
+**Then the rest of phase E** (§6.1). Each of the three other claims the
+bridge record carries needs a decision before it lands, and most of them
+are questions about the end state the user asked for — one description
+per agreement, its place derived with its role, its targets naming the
+diagram's nodes; §6.1 measures how far the code is from it. Independent
+of that: the easy placeholders become records, one at a time — the
+first, apt's chosen version (`resolve_sys`), also retires the one value
+the page asks of the rendering machine; then bridges beyond zarith, which
+turn the 23 new `gatw` cells into decisions (they read `·` or `no-evid`
+today). Four questions from the visual work are parked there, not urgent
+(§6.3).
 
 The history, with the user's words and every falsified pin, is
 [`worklog/worklog_2026_09.md`](worklog/worklog_2026_09.md), under the
