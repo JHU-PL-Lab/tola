@@ -1186,6 +1186,163 @@ let frames_pin : Canary_project_test.pure_test =
         lines_ok && edges_once && nodes_once && in_own_frame && every_site)
   }
 
+(* ONE READER PER INSPECTION (2026-09-28, design/overview.md §6.4 step 2).
+   The result table's artifact cells and the overview's node names parsed
+   the same inspection files in two modules, and agreed only because each
+   was written carefully. [Canary_matrix.reading_of_inspection] reads an
+   inspection once; the table's cell, the diagram's name and the result
+   table's count are renderings of that reading. Held two ways:
+
+   - [Canary_overview_runs] dispatches on no artifact kind of its own —
+     its code names none of them, only the bridge record's, which
+     describes packages rather than an artifact;
+   - on fixtures, each kind's reading renders the cell, the name and the
+     count the pages have always shown. *)
+let one_reader_pin : Canary_project_test.pure_test =
+  { name = "overview.one_reader_per_inspection";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let code =
+          Canary_project_test.code_without_comments "src/canary/main/canary_overview_runs.ml"
+        in
+        let parses_none =
+          List.for_all [ {|"native"|}; {|"c_stub"|}; {|"ocaml"|}; {|"ocaml_mli"|}; {|"python"|} ]
+            ~f:(fun k -> not (String.is_substring code ~substring:k))
+        in
+        let read s = M.reading_of_inspection (Yojson.Basic.from_string s) in
+        let renders s ~cell ~name ~count =
+          match read s with
+          | None -> false
+          | Some r ->
+              Poly.equal (M.cell_text_of_reading r) cell
+              && Poly.equal (M.name_text_of_reading r) name
+              && Poly.equal (M.count_text_of_reading r) count
+        in
+        parses_none
+        && renders
+             {|{"kind":"native","path":"/usr/lib/x86_64-linux-gnu/libgmp.so",
+                "elf":{"soname":"libgmp.so.10"},"counts":{"total":620}}|}
+             ~cell:(Some "so.10 620") ~name:(Some "libgmp.so.10") ~count:(Some "620 exports")
+        && renders {|{"kind":"c_stub","path":"/x/libzarith.a","requires":["a","b"]}|}
+             ~cell:(Some "2 req") ~name:(Some "libzarith.a") ~count:(Some "2 required")
+        && renders {|{"kind":"ocaml","path":"zarith","modules":["Z","Q","Big_int_Z","Zarith_version"]}|}
+             ~cell:(Some "4 mod") ~name:(Some "zarith (4 modules)") ~count:None
+        && renders {|{"kind":"python","path":"sqlite3","attrs":["connect","Row","Error"]}|}
+             ~cell:(Some "3 attr") ~name:(Some "sqlite3 (3 names)") ~count:None
+        (* an mli summary's path is the package: no name, only a count *)
+        && renders {|{"kind":"ocaml_mli","path":"zarith","modules":["Z","Q"]}|}
+             ~cell:(Some "2 mod") ~name:None ~count:(Some "2 modules")
+        && Option.is_none (read {|{"kind":"bridge","package":"conf-gmp"}|}))
+  }
+
+(* THE RESULT TABLE JOINS THE PAGE (2026-09-28, user: one page, prototype
+   A; design/overview.md §6.4 step 3). §1.2 lays the runs files' views out
+   over [Canary_frames]' columns and computes nothing. Held:
+
+   - the page embeds the column model exactly: parsed back, its frames,
+     labels and columns are [Canary_frames.frames], in order;
+   - §1.2 is there, its script runs after the runs files load, and the
+     links run both ways — a row's name draws its chain in §1
+     ([window.canaryDraw]), a drawn run links back to its row;
+   - every view's check outcome is the worst the world's log recorded for
+     that claim in that language, or [n/a] where the chain's mechanism
+     cannot carry it;
+   - NO LOGGED VERDICT IS LEFT OUT: every outcome the log holds for a
+     checked claim in a view's language is in that view. This is the
+     reason the table reads the site and not the slot — zarith's
+     fetched-library worlds decide the library's declaration checks at
+     probe_lib and have no build_lib slot to show them in. *)
+let results_table_pin : Canary_project_test.pure_test =
+  { name = "overview.results_table_is_the_column_model";
+    check =
+      (fun () ->
+        let module Fr = Canary_frames in
+        let module R = Canary_overview_runs in
+        let module M = Canary_matrix in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+        in
+        let opening = {|<script type="application/json" id="framesdata">|} in
+        let embedded =
+          Option.bind (String.substr_index page ~pattern:opening) ~f:(fun i ->
+              let from = i + String.length opening in
+              Option.map (String.substr_index page ~pos:from ~pattern:"</script>") ~f:(fun j ->
+                  String.sub page ~pos:from ~len:(j - from)
+                  |> String.substr_replace_all ~pattern:"<\\/" ~with_:"</"))
+        in
+        let get j k = match j with `Assoc kv -> List.Assoc.find kv k ~equal:String.equal | _ -> None in
+        let model_ok =
+          match Option.map embedded ~f:Yojson.Basic.from_string with
+          | exception _ -> false
+          | None -> false
+          | Some j -> (
+              match get j "frames" with
+              | Some (`List fs) when List.length fs = List.length Fr.frames ->
+                  List.for_all2_exn fs Fr.frames ~f:(fun fj fr ->
+                      Poly.equal (get fj "label") (Some (`String fr.Fr.fr_label))
+                      &&
+                      match get fj "cols" with
+                      | Some (`List cs) when List.length cs = List.length fr.Fr.fr_columns ->
+                          List.for_all2_exn cs fr.Fr.fr_columns ~f:(fun cj col ->
+                              match col with
+                              | Fr.Node n -> Poly.equal (get cj "id") (Some (`String n))
+                              | Fr.Piece { label; _ } ->
+                                  Poly.equal (get cj "label") (Some (`String label))
+                              | Fr.Check { slug; _ } ->
+                                  Poly.equal (get cj "slug") (Some (`String slug)))
+                      | _ -> false)
+              | _ -> false)
+        in
+        let section_ok =
+          String.is_substring page ~substring:{|<h3 id="results">1.2 |}
+          && String.is_substring page ~substring:"window.canaryDraw="
+          && String.is_substring page ~substring:"'#row-'+v.key"
+          &&
+          match
+            ( String.substr_index page ~pattern:"overview_runs.js",
+              String.substr_index page ~pattern:"getElementById('framesdata')" )
+          with
+          | Some runs, Some table -> runs < table
+          | _ -> false
+        in
+        let m = M.matrix_of Canary_registry.all_projects in
+        let views = R.views m in
+        let row_of (v : R.view) =
+          List.find m.M.rows ~f:(fun (r : M.row) ->
+              String.equal r.M.project v.R.vw_project && String.equal r.M.scenario v.R.vw_scenario)
+        in
+        let in_lang (v : R.view) l = Option.is_none l || Poly.equal l (Some v.R.vw_lang) in
+        let checked slug =
+          List.exists Fr.checked_rows ~f:(fun r -> String.equal r.Canary_agreement.ag_slug slug)
+        in
+        let outcomes_ok =
+          List.for_all views ~f:(fun v ->
+              match row_of v with
+              | None -> false
+              | Some r ->
+                  List.for_all v.R.vw_outcomes ~f:(fun (slug, o) ->
+                      String.equal o "n/a"
+                      ||
+                      let logged =
+                        List.filter_map r.M.verdicts ~f:(fun (s, l, label) ->
+                            if String.equal s slug && in_lang v l then Some label else None)
+                      in
+                      List.mem logged o ~equal:String.equal
+                      && List.for_all logged ~f:(fun x -> M.outcome_rank x <= M.outcome_rank o)))
+        in
+        let none_left_out =
+          List.for_all views ~f:(fun v ->
+              match row_of v with
+              | None -> false
+              | Some r ->
+                  List.for_all r.M.verdicts ~f:(fun (slug, l, _) ->
+                      (not (in_lang v l)) || (not (checked slug))
+                      || List.Assoc.mem v.R.vw_outcomes slug ~equal:String.equal))
+        in
+        model_ok && section_ok && outcomes_ok && none_left_out)
+  }
+
 (* A PLACEHOLDER STEP STANDS FOR WHAT A PACKAGE MANAGER DOES, UNSEEN
    (2026-09-23, status.md §2.7 E; user: "I like the placeholder steps").
    Derived for every project from the providers it declares, so this holds
@@ -8540,6 +8697,8 @@ let base_tests : Canary_project_test.pure_test list =
       bridge_step_pin;
       gate_after_bridge_pin;
       frames_pin;
+      one_reader_pin;
+      results_table_pin;
       placeholder_steps_pin;
       overview_overlay_pin;
       recorded_names_pin;

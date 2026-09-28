@@ -67,7 +67,7 @@ The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 187 project + 119 artifact + 17 PM = 323** (2026-09-28). `make canary-test`
+**Tests: 189 project + 119 artifact + 17 PM = 325** (2026-09-28). `make canary-test`
 after every edit under `src/canary/`; `make canary-post-check` before
 committing.
 
@@ -407,14 +407,14 @@ a real run — the first checked agreement in the grouping's package-layer
 row across the sides, and 9 of 14 agreements landed. The bridge step now
 passes whenever it records; the verdict is the agreement's.
 
-**Next: the result matrix joins the overview page** (user, 2026-09-28,
-ahead of the next agreement). The result matrix and a recorded drawing
-are already two views of one record, indexed by the same row code, and
-nothing links them; the two tables order their columns differently and
-neither shows the chain's layers. The review — what each view reads, nine
-places they part, a proposal (one index, one column model coloured by the
-diagram's layers, the matrix as a section of the overview page) and six
-decisions for the user — is `design/overview.md` §6.4.
+**Now: the result matrix joins the overview page** (user, 2026-09-28,
+ahead of the next agreement; decided: one page, the per-run pages retire,
+prototype A for the columns). Done: the column model (`Canary_frames`,
+`canary checks --frames`), one reader per inspection, and the table itself
+as the overview's §1.2 — one row per chain and machine, linked both ways
+with §1's drawings, its check cells read at each claim's site. Next:
+§2's agreement overview on the same header, then the old pages retire,
+then the manifest. The plan and its record are `design/overview.md` §6.4.
 
 **Then the rest of phase E** (§6.1). Each of the three other claims the
 bridge record carries needs a decision before it lands, and most of them

@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-27 21:28",
+  "generated": "2026-09-28 15:33",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,7 +10,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:42.236", "2026-09-27 21:27:48.235" ],
+      "span": [ "2026-09-28 15:33:35.166", "2026-09-28 15:33:41.125" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -198,6 +198,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "270 exports", "stub_lang": "58 required" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -244,7 +257,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:42.236", "2026-09-27 21:27:48.260" ],
+      "span": [ "2026-09-28 15:33:35.166", "2026-09-28 15:33:41.149" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -401,6 +414,19 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "270 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -418,7 +444,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:50.236", "2026-09-27 21:27:56.297" ],
+      "span": [ "2026-09-28 15:33:43.303", "2026-09-28 15:33:49.579" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -606,6 +632,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "270 exports", "stub_lang": "62 required" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -652,7 +691,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:50.236", "2026-09-27 21:27:56.321" ],
+      "span": [ "2026-09-28 15:33:43.303", "2026-09-28 15:33:49.603" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -809,6 +848,19 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "270 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -826,7 +878,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:49.213", "2026-09-27 21:27:50.127" ],
+      "span": [ "2026-09-28 15:33:42.200", "2026-09-28 15:33:43.159" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1019,6 +1071,20 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "270 exports", "stub_lang": "58 required" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1065,7 +1131,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:49.213", "2026-09-27 21:27:50.151" ],
+      "span": [ "2026-09-28 15:33:42.200", "2026-09-28 15:33:43.187" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1228,6 +1294,20 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "270 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -1245,7 +1325,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:57.298", "2026-09-27 21:27:58.207" ],
+      "span": [ "2026-09-28 15:33:50.563", "2026-09-28 15:33:51.481" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1438,6 +1518,20 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "270 exports", "stub_lang": "62 required" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1484,7 +1578,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:57.298", "2026-09-27 21:27:58.230" ],
+      "span": [ "2026-09-28 15:33:50.563", "2026-09-28 15:33:51.504" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1647,6 +1741,20 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "270 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "violated",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -1664,7 +1772,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:25.036", "2026-09-27 21:27:31.200" ],
+      "span": [ "2026-09-28 15:33:17.405", "2026-09-28 15:33:23.865" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1852,6 +1960,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "272 exports", "stub_lang": "58 required" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -1898,7 +2019,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:25.036", "2026-09-27 21:27:31.227" ],
+      "span": [ "2026-09-28 15:33:17.405", "2026-09-28 15:33:23.889" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2055,6 +2176,19 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "272 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -2072,7 +2206,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:33.476", "2026-09-27 21:27:39.468" ],
+      "span": [ "2026-09-28 15:33:26.170", "2026-09-28 15:33:32.406" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2260,6 +2394,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "272 exports", "stub_lang": "62 required" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -2306,7 +2453,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:33.476", "2026-09-27 21:27:39.492" ],
+      "span": [ "2026-09-28 15:33:26.170", "2026-09-28 15:33:32.430" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2463,6 +2610,19 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "272 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -2480,7 +2640,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:31.370", "2026-09-27 21:27:32.318" ],
+      "span": [ "2026-09-28 15:33:23.983", "2026-09-28 15:33:24.959" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2673,6 +2833,20 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "272 exports", "stub_lang": "58 required" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -2719,7 +2893,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:31.370", "2026-09-27 21:27:32.343" ],
+      "span": [ "2026-09-28 15:33:23.983", "2026-09-28 15:33:24.983" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2882,6 +3056,20 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "272 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -2899,7 +3087,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:39.581", "2026-09-27 21:27:40.516" ],
+      "span": [ "2026-09-28 15:33:32.521", "2026-09-28 15:33:33.431" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3092,6 +3280,20 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "272 exports", "stub_lang": "62 required" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3138,7 +3340,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:39.581", "2026-09-27 21:27:40.540" ],
+      "span": [ "2026-09-28 15:33:32.521", "2026-09-28 15:33:33.455" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3301,6 +3503,20 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "272 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "staged_interface_preserved": "holds",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -3318,7 +3534,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:48.351", "2026-09-27 21:27:49.098" ],
+      "span": [ "2026-09-28 15:33:41.243", "2026-09-28 15:33:42.089" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3495,6 +3711,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "stub_lang": "58 required", "lib_sys": "1422 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3547,7 +3776,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:48.351", "2026-09-27 21:27:49.122" ],
+      "span": [ "2026-09-28 15:33:41.243", "2026-09-28 15:33:42.112" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3695,6 +3924,19 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "1422 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -3719,7 +3961,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:56.409", "2026-09-27 21:27:57.187" ],
+      "span": [ "2026-09-28 15:33:49.689", "2026-09-28 15:33:50.453" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3896,6 +4138,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "stub_lang": "62 required", "lib_sys": "1422 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "gate_admits_the_world": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -3948,7 +4203,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-27 21:27:56.409", "2026-09-27 21:27:57.212" ],
+      "span": [ "2026-09-28 15:33:49.689", "2026-09-28 15:33:50.477" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4096,6 +4351,19 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "1422 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "n/a",
+        "dependencies_provided": "unavailable",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -4291,6 +4559,8 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": {},
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -4510,6 +4780,8 @@
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
+      "counts": {},
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -4699,6 +4971,8 @@
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
+      "counts": {},
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -4851,6 +5125,12 @@
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
+      "counts": {
+        "lib_sys": "3 exports",
+        "stub_lang": "3 required",
+        "surf_lang": "1 modules"
+      },
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -5004,6 +5284,11 @@
         "no_duplicate_implementation", "interposition_binds_build_target",
         "denotation_stable_across_worlds", "compatibility_version_satisfied"
       ],
+      "counts": { "lib_sys": "3 exports", "stub_lang": "3 required" },
+      "outcomes": {
+        "signatures_agree": "n/a",
+        "gate_admits_the_world": "n/a"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cext",
@@ -5196,6 +5481,22 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied", "discovery_matches_link"
       ],
+      "counts": {
+        "surf_lang": "4 modules",
+        "stub_lang": "23 required",
+        "lib_sys": "620 exports"
+      },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "undeclared",
+        "soname_matches_requirement": "unavailable",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "unavailable",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "unavailable"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -5426,6 +5727,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "stub_lang": "23 required", "lib_sys": "620 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "holds",
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "undeclared",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds",
+        "gate_admits_the_world": "holds"
+      },
       "observed": {
         "depends": "zarith's depends names conf-gmp",
         "conf_probe": "conf-gmp's check: pkg-config --print-errors --exists gmp — holds",
@@ -5656,6 +5970,15 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "stub_lang": "223 required" },
+      "outcomes": {
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_requirement": "holds",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "violated"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -5882,6 +6205,15 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "stub_lang": "223 required", "lib_sys": "420 exports" },
+      "outcomes": {
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_requirement": "holds",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "violated"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -6108,6 +6440,15 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "stub_lang": "17 required" },
+      "outcomes": {
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_requirement": "holds",
+        "required_versions_exported": "holds",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -6337,6 +6678,15 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "stub_lang": "17 required", "lib_sys": "42 exports" },
+      "outcomes": {
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_requirement": "holds",
+        "required_versions_exported": "holds",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -6557,6 +6907,18 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": {},
+      "outcomes": {
+        "declared_symbols_exported": "inconclusive",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -6774,6 +7136,18 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "102 exports" },
+      "outcomes": {
+        "declared_symbols_exported": "inconclusive",
+        "required_symbols_exported": "unavailable",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "vacuous",
+        "required_versions_exported": "inconclusive",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "holds"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -6988,6 +7362,8 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": {},
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -7205,6 +7581,8 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": { "lib_sys": "185 exports" },
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -7430,6 +7808,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": {
+        "surf_lang": "4 modules",
+        "stub_lang": "43 required",
+        "lib_sys": "519 exports"
+      },
+      "outcomes": {
+        "required_symbols_exported": "holds",
+        "api_names_present": "violated",
+        "soname_matches_requirement": "holds",
+        "required_versions_exported": "holds",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "violated"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -7655,6 +8046,19 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
+      "counts": {
+        "surf_lang": "4 modules",
+        "stub_lang": "43 required",
+        "lib_sys": "519 exports"
+      },
+      "outcomes": {
+        "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_requirement": "holds",
+        "required_versions_exported": "holds",
+        "signatures_agree": "unavailable",
+        "dependencies_provided": "violated"
+      },
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -7868,6 +8272,8 @@
         "compatibility_version_satisfied", "declared_gate_matches_package",
         "gate_bounds_the_library"
       ],
+      "counts": { "surf_lang": "19 modules", "lib_sys": "75526 exports" },
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",
@@ -8069,6 +8475,8 @@
         "compatibility_version_satisfied", "declared_gate_matches_package",
         "gate_bounds_the_library"
       ],
+      "counts": { "surf_lang": "19 modules", "lib_sys": "75526 exports" },
+      "outcomes": {},
       "observed": {},
       "chain": {
         "mechanism": "cstubs",

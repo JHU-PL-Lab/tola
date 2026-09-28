@@ -602,10 +602,29 @@ code.
    not a piece of ours); headers built from source are their own frame;
    checks sit in code order; and the two probes carry their consumer
    programs as products.
-2. **Each inspection summarized once**, in the views, for both a node's
-   name and its summary.
-3. **The table on this page**, rendered from the column model and the
-   runs files, one row per chain and machine, linked both ways with §1.
+2. **Each inspection summarized once** — done (2026-09-28).
+   `Canary_matrix.reading_of_inspection` reads an artifact's inspection
+   into the node it describes, its name and its count; the result
+   table's cell, the diagram's name and §1.2's count render that one
+   reading, and `Canary_overview_runs` parses no artifact kind of its own
+   (the bridge record, which describes packages, stays its alone).
+   Pinned by `overview.one_reader_per_inspection`.
+3. **The table on this page** — done (2026-09-28): §1.2, one row per
+   chain and machine, rendered by the page's script from the column
+   model (embedded as `framesdata`) and the runs files' views, which
+   compute every word. A row's name draws its chain in §1; a drawn run
+   links back to its row. Two view fields were added for it: `counts`
+   (from the one reading) and `outcomes` — every checked agreement's
+   outcome for the chain, read from the world's logged verdicts in its
+   language rather than through the result table's slot columns, so a
+   check shows at its site in every world. That fixes the invisible
+   verdicts: zarith's fetched-library rows now show the library's
+   declaration checks their runs decide at `probe_lib`. Pinned by
+   `overview.results_table_is_the_column_model`, whose last clause — no
+   logged verdict left out of its chain's view — fails if the views go
+   back to the slot columns. The table's looks are not yet in
+   `visual_hints`: that list's element kinds are the diagram's, and a
+   cell is a new kind.
 4. **§2 on the same header**: ▣, R, D and ◆ in the frame columns.
 5. **The old pages retire**: `matrix.html` points here, and the per-run
    pages go.
@@ -632,6 +651,8 @@ code.
 | `overview.bridge_record_is_read` | the reader of the bridge record, on a fixture |
 | `steps.gate_is_read_after_its_bridge_runs` | the gate fires at the probe, reads the file the bridge step writes, and the probe waits for that step |
 | `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
+| `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it |
+| `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
 | `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |

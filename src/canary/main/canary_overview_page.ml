@@ -1861,6 +1861,10 @@ if(jbox&&J){
       +(v.span?' — '+v.span[0]+' … '+v.span[1]:' — nothing recorded yet')
       +(v.chain?'\nchain: '+v.chain.mechanism+' · '+v.chain.lang_side+' ↔ '
         +v.chain.native_side+' · '+v.chain.character:'');
+    // …and back to its row in §1.2
+    if(head){ var ra=document.createElement('a'); ra.href='#row-'+v.key;
+      ra.textContent='its row in §1.2';
+      head.appendChild(document.createTextNode('\n')); head.appendChild(ra); }
     var ob=v.observed||{};
     list('jrecobserved','What this run recorded around the bridge:',
       Object.keys(ob).map(function(e){ return '<li><code>'+jesc(e)+'</code> — '+jesc(ob[e])+'</li>'; }));
@@ -1910,6 +1914,8 @@ if(jbox&&J){
       want=h?decodeURIComponent(h[1]):null, world=r?decodeURIComponent(r[1]):null;
   var go=function(id,w){ if(caseOf(id)){ pick('c',id); if(w&&VIEWS[w]){ S.v=w; draw(); }
     jbox.scrollIntoView(); } };
+  // §1.2's rows draw their chain here
+  window.canaryDraw=function(key){ var w=VIEWS[key]; if(!w) return false; go(w['case'],key); return true; };
   if(world&&VIEWS[world]) go(VIEWS[world]['case'],world);
   else if(want&&caseOf(want)) go(want);
   else draw();
@@ -1931,6 +1937,203 @@ if(strip){
     g.addEventListener('mouseleave',function(){ strip.classList.remove('lit'); });
   });
 }
+})();
+</script>|}
+
+(* ── §1.2 THE RESULT TABLE (2026-09-28, design/overview.md §6.4) ─────
+
+   The result matrix joins this page (user: one page; prototype A for its
+   columns). A row is a CHAIN — one world in one language, the key §1
+   draws — on one machine; the columns are [Canary_frames]'s, the same
+   header §2 will use. The page computes nothing: the header is the
+   column model, embedded here, and every cell is a word a view in the
+   runs files already carries ([Canary_overview_runs]: edge states, node
+   names and counts, claim outcomes). The script only lays them out. *)
+
+let layer_word : T.layer -> string = function
+  | T.L_pm -> "pm"
+  | T.L_package -> "pkg"
+  | T.L_artifact -> "art"
+  | T.L_program -> "prog"
+
+(** The column model as the table's script reads it: each node's label and
+    layer, and each frame's columns — a piece with the layer it makes, a
+    check with the layer of its site's product. *)
+let frames_json () : string =
+  let module Fr = Canary_frames in
+  let layer_of_node n =
+    Option.value_map (T.node_by_id n) ~default:"art" ~f:(fun nd -> layer_word nd.T.nd_layer)
+  in
+  let layer_of_edge id =
+    Option.value_map (List.find T.edges ~f:(fun e -> String.equal e.T.eg_id id)) ~default:"art"
+      ~f:(fun e -> layer_of_node e.T.eg_to)
+  in
+  let strs l = `List (List.map l ~f:(fun s -> `String s)) in
+  let column = function
+    | Fr.Node n -> `Assoc [ ("k", `String "n"); ("id", `String n) ]
+    | Fr.Piece { edges; label } ->
+        `Assoc
+          [ ("k", `String "p"); ("label", `String label); ("edges", strs edges);
+            ("layer", `String (layer_of_edge (List.hd_exn edges))) ]
+    | Fr.Check { slug; code; site; stage } ->
+        `Assoc
+          [ ("k", `String "c"); ("slug", `String slug); ("code", `String code);
+            ("site", `String site);
+            ("stage", `String (Canary_agreement_common.string_of_stage stage));
+            ("layer", `String (layer_of_edge site)) ]
+  in
+  `Assoc
+    [ ( "nodes",
+        `Assoc
+          (List.map T.nodes ~f:(fun nd ->
+               ( nd.T.nd_id,
+                 `Assoc
+                   [ ("label", `String nd.T.nd_label); ("layer", `String (layer_word nd.T.nd_layer)) ] ))) );
+      ( "frames",
+        `List
+          (List.map Fr.frames ~f:(fun fr ->
+               `Assoc
+                 [ ("side", `String (Fr.string_of_side fr.Fr.fr_side));
+                   ("label", `String fr.Fr.fr_label);
+                   ("cols", `List (List.map fr.Fr.fr_columns ~f:column)) ])) ) ]
+  |> Yojson.Basic.to_string
+  |> String.substr_replace_all ~pattern:"</" ~with_:"<\\/"
+
+let results_section () : string =
+  Printf.sprintf
+    {|<h3 id="results">1.2 The results, one row per chain</h3>
+<p>Every chain canary runs, on each machine that recorded it: a world in one
+language, the key §1 draws. The columns are §1's actions as frames — what an
+action consumes, the checks on that input, its pieces, what it produces, the
+checks on that — by side, then flow (<code>canary checks --frames</code>). An
+artifact appears again, in grey, where it is consumed; a frame the chain does
+not have is hatched. A row's name draws it in §1, and a drawn run links back to
+its row.</p>
+<p class="rt-key"><span class="rt-ok">✓</span> ran · <span class="rt-warm">✓</span> warm ·
+<span class="rt-bad">✗</span> failed or violated · <span class="rt-xf">xf</span> expected
+failure · ⊘ blocked · · not recorded · — not in this run · ⌂ inside a package
+manager's action · ~ someone else's relation · <span class="rt-gap">no-evid no-decl
+no-ref none</span> a check that could not decide · n/a the mechanism cannot carry
+it · <i>italic</i> declared, not recorded</p>
+<div class="rt-wrap"><table class="rt" id="rtable"></table></div>
+<p class="mechnote" id="rtnone" hidden>No run is recorded on this page yet —
+<code>canary overview</code> writes each machine's runs to
+<code>overview_runs.js</code> beside it.</p>
+<script type="application/json" id="framesdata">%s</script>|}
+    (frames_json ())
+
+let results_css =
+  {|.rt-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--card);margin:.6rem 0}
+table.rt{border-collapse:collapse;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.68rem;
+white-space:nowrap;font-variant-numeric:tabular-nums}
+table.rt th,table.rt td{border:1px solid var(--line);padding:.16rem .34rem;text-align:left;vertical-align:middle}
+table.rt th{font-weight:600}
+table.rt th.rt-side{text-transform:uppercase;letter-spacing:.07em;font-size:.6rem;color:var(--mut)}
+table.rt td{max-width:15rem;overflow:hidden;text-overflow:ellipsis}
+table.rt th.rt-lab{position:sticky;left:0;z-index:1;background:var(--card);box-shadow:1px 0 0 var(--line);font-weight:400}
+table.rt th.rt-lab a{color:var(--fg);text-decoration:none}
+table.rt th.rt-lab a:hover{text-decoration:underline}
+.rt-m,.rt-x{color:var(--mut)}
+.rt-pm{background:var(--pm)}
+.rt-pkg{background:var(--pkg)}
+.rt-art{background:var(--art)}
+.rt-prog{background:var(--prog)}
+table.rt th.rt-hp,table.rt th.rt-hc{background:var(--card);border-bottom-width:3px}
+table.rt th.rt-hp::before{content:"▸ ";color:var(--mut)}
+table.rt th.rt-hc{color:var(--acc);font-style:italic}
+table.rt th.rt-u-pm{border-bottom-color:color-mix(in srgb,var(--pm) 35%,var(--fg))}
+table.rt th.rt-u-pkg{border-bottom-color:color-mix(in srgb,var(--pkg) 35%,var(--fg))}
+table.rt th.rt-u-art{border-bottom-color:color-mix(in srgb,var(--art) 35%,var(--fg))}
+table.rt th.rt-u-prog{border-bottom-color:color-mix(in srgb,var(--prog) 35%,var(--fg))}
+table.rt td.rt-p,table.rt td.rt-c{text-align:center}
+table.rt td.rt-rep{color:var(--mut)}
+table.rt td.rt-decl{font-style:italic}
+table.rt td.rt-off{background:repeating-linear-gradient(135deg,transparent 0 4px,color-mix(in srgb,var(--fg) 8%,transparent) 4px 8px)}
+.rt-ok{color:var(--ok);font-weight:700}
+.rt-warm{color:var(--ok);opacity:.55;font-weight:700}
+.rt-bad{color:var(--bad);font-weight:700}
+.rt-xf{color:var(--xf);font-weight:700}
+.rt-gap{color:var(--xf)}
+.rt-dim{color:var(--mut)}
+table.rt tr:target th,table.rt tr:target td{box-shadow:inset 0 0 0 2px var(--acc)}
+p.rt-key{font-size:.78rem;color:var(--mut)}|}
+
+(* the table's script: every word it shows was computed in
+   Canary_overview_runs, and the header is the column model above *)
+let results_script =
+  {|<script>
+(function(){
+var fd=document.getElementById('framesdata'), box=document.getElementById('rtable');
+if(!fd||!box) return;
+var FR; try{ FR=JSON.parse(fd.textContent); }catch(e){ return; }
+var esc=function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+var rows=[];
+(window.CANARY_RUNS||[]).forEach(function(r){
+  (r.views||[]).forEach(function(w){ rows.push({m:r.machine,w:w}); }); });
+if(!rows.length){ var nn=document.getElementById('rtnone'); if(nn) nn.hidden=false; return; }
+rows.sort(function(a,b){ var x=a.w.project+'|'+a.w.id+'|'+a.m, y=b.w.project+'|'+b.w.id+'|'+b.m;
+  return x<y?-1:x>y?1:0; });
+var STEP={ran:['✓','rt-ok'],warm:['✓','rt-warm'],fail:['✗','rt-bad'],xfail:['xf','rt-xf'],
+  blocked:['⊘','rt-bad'],unrecorded:['·','rt-dim'],absent:['—','rt-dim'],inside:['⌂','rt-dim'],
+  observed:['~','rt-dim'],not_ours:['~','rt-dim']};
+var OUT={holds:['✓','rt-ok'],violated:['✗','rt-bad'],error:['err','rt-bad'],
+  unavailable:['no-evid','rt-gap'],undeclared:['no-decl','rt-gap'],inconclusive:['no-ref','rt-gap'],
+  vacuous:['none','rt-gap'],not_implemented:['planned','rt-gap'],not_applicable:['n/a','rt-dim'],
+  'n/a':['n/a','rt-dim'],disabled:['off','rt-dim']};
+var SIDE={system:'System side',binding:'Binding',language:'Language side',program:'Program'};
+var node=function(id){ return FR.nodes[id]||{label:id,layer:'art'}; };
+var F=FR.frames, h1='<tr><th class="rt-lab" rowspan="3">chain · machine</th>', h2='<tr>', h3='<tr>', i=0;
+while(i<F.length){ var s=F[i].side, span=0;
+  while(i<F.length&&F[i].side===s){ span+=F[i].cols.length; i++; }
+  h1+='<th class="rt-side" colspan="'+span+'">'+esc(SIDE[s]||s)+'</th>'; }
+F.forEach(function(f){
+  h2+='<th class="rt-fr" colspan="'+f.cols.length+'">'+esc(f.label)+'</th>';
+  f.cols.forEach(function(c){
+    if(c.k==='n'){ var n=node(c.id);
+      h3+='<th class="rt-'+n.layer+'" title="'+esc(c.id)+'">'+esc(n.label)+'</th>'; }
+    else if(c.k==='p')
+      h3+='<th class="rt-hp rt-u-'+c.layer+'" title="'+esc(c.edges.join(', '))+'">'+esc(c.label)+'</th>';
+    else
+      h3+='<th class="rt-hc rt-u-'+c.layer+'" title="'+esc(c.slug+' — '+c.stage+', at '+c.site)+'">'
+        +(c.stage==='pre'?'›':'»')+esc(c.code)+'</th>'; }); });
+var body=rows.map(function(x){
+  var v=x.w, key=v.id+'@'+x.m, gone=v.gone||[], edges=v.edges||{}, shown={};
+  // a frame is in this chain when a step realized one of its pieces
+  var on=function(f){ return f.cols.some(function(c){ return c.k==='p'&&c.edges.some(function(e){
+    var st=edges[e]; return st&&st!=='absent'&&gone.indexOf(e)<0; }); }); };
+  var tr='<tr id="row-'+esc(key)+'"><th class="rt-lab"><a href="#rec='+encodeURIComponent(key)
+    +'" data-key="'+esc(key)+'"><b>'+esc(v.project)+'</b> '+esc(v.id)+'</a> <span class="rt-m">@'
+    +esc(x.m)+'</span></th>';
+  F.forEach(function(f){ var here=on(f);
+    f.cols.forEach(function(c){
+      if(c.k==='n'){ var n=node(c.id), cls='rt-'+n.layer;
+        if(!here||gone.indexOf(c.id)>=0){ tr+='<td class="'+cls+' rt-off"></td>'; return; }
+        var nm=(v.names||{})[c.id], label=nm?nm.label:'', from=nm?nm.from:'',
+          place=(v.nodes||{})[c.id]||'';
+        // the first cell of a node shows it; a later one is where it is consumed
+        var full=[label,place].filter(function(t){ return t; }).join(' — ');
+        if(shown[c.id]){ tr+='<td class="'+cls+' rt-rep" title="'+esc(full)+'">'+esc(label)+'</td>'; return; }
+        shown[c.id]=1;
+        var cnt=(v.counts||{})[c.id];
+        tr+='<td class="'+cls+(from==='declared'?' rt-decl':'')+'" title="'+esc(full)+'">'
+          +esc(label||place)+(cnt?' <span class="rt-x">'+esc(cnt)+'</span>':'')+'</td>'; }
+      else if(c.k==='p'){
+        if(!here){ tr+='<td class="rt-off"></td>'; return; }
+        var st='absent';
+        c.edges.forEach(function(e){ var s=edges[e]; if(s&&s!=='absent'&&st==='absent') st=s; });
+        var mk=STEP[st]||['?','rt-dim'];
+        tr+='<td class="rt-p '+mk[1]+'" title="'+esc(c.edges.join(', ')+': '+st)+'">'+mk[0]+'</td>'; }
+      else {
+        if(!here){ tr+='<td class="rt-off"></td>'; return; }
+        var o=(v.outcomes||{})[c.slug], mk2=o?(OUT[o]||[o,'rt-dim']):['·','rt-dim'];
+        tr+='<td class="rt-c '+mk2[1]+'" title="'+esc(c.slug+': '+(o||'not evaluated in any recorded run'))
+          +'">'+esc(mk2[0])+'</td>'; } }); });
+  return tr+'</tr>'; }).join('');
+box.innerHTML='<thead>'+h1+h2+h3+'</thead><tbody>'+body+'</tbody>';
+// a row's name draws its chain in §1
+box.addEventListener('click',function(e){ var a=e.target.closest('a[data-key]'); if(!a) return;
+  if(window.canaryDraw&&window.canaryDraw(a.dataset.key)) e.preventDefault(); });
 })();
 </script>|}
 
@@ -2096,6 +2299,8 @@ inside its package-rewrite cases, never in the base picture.</div>
 <h3>1.1 What each node is</h3>
 %s
 
+%s
+
 <h2 id="overview">2. The agreement overview</h2>
 <p>Every agreement, where its rule RAN and where it is CHECKED, over the
 same action columns the result matrix uses — of which it is the
@@ -2187,10 +2392,12 @@ outcomes, and the edges around a bridge from what a bridge step recorded
 (one bridge so far: conf-gmp, on zarith).
 · <a href="projects/matrix.html">result matrix</a></div>
 %s</main></body></html>|}
-    css Canary_matrix.overview_css
+    (css ^ "\n" ^ results_css) Canary_matrix.overview_css
     (* §1 the chain — the missing steps COUNTED from the catalogue, the
-       chain chosen from its parts — and §1.1 its legend *)
+       chain chosen from its parts — §1.1 its legend, and §1.2 every
+       recorded chain in the result table *)
     (missing_steps_note ()) (key_html Chain_key) (join_panel join) (node_legend ())
+    (results_section ())
     (* §2 the agreement overview. The hand-drawn cases that were §2 and
        their recorded copies that were §2.1 went on 2026-09-24 — §1 draws
        every chain and its recorded run; their notes are §1's (user) *)
@@ -2211,8 +2418,8 @@ outcomes, and the edges around a bridge from what a bridge step recorded
     (* §4 the tables *)
     (pm_solo_table projects) (binding_table projects) (coop_table projects)
     (topology_notes projects) (chains_table join)
-    (* the recorded runs' files load BEFORE the script that draws them *)
-    (esc generated_at) (runs_script () ^ script)
+    (* the recorded runs' files load BEFORE the scripts that draw them *)
+    (esc generated_at) (runs_script () ^ script ^ results_script)
 
 let docs_path = "docs/canary/overview.html"
 

@@ -206,6 +206,17 @@ type row = {
       (** per claim the overview places on an edge ([Canary_topology]'s
           claim sites) that has a check column in this row: each column
           and its outcome ([None] = no run evaluated it) *)
+  verdicts : (string * Canary_lang.lang option * string) list;
+      (** EVERY AGREEMENT OUTCOME THE LOG HOLDS FOR THIS WORLD — per claim
+          and per language, worst first over the steps that evaluated it
+          (2026-09-28, design/overview.md §6.4). [claims] above is read
+          through this table's SLOT columns, which a world's chain can
+          lack: zarith's fetched-library worlds decide the library's
+          declaration checks at [probe_lib] and have no [build_lib] slot to
+          show them in. The column model places a check at its SITE,
+          whatever the world, so it reads these. The language is the one
+          the evaluating step's action names; [None] for a step that
+          speaks for none, the library's *)
   chains : chain list;
       (** per binding language, the chain this world realizes *)
 }
@@ -900,56 +911,107 @@ let artifact_cols_of_chain (chain : Canary_basic.action list)
            ~equal:String.equal)
   |> List.map ~f:(fun a -> Artifact a)
 
-(** THE ONE LINE AN INSPECTION IS WORTH, per kind. Concise because the
-    column is 14 characters wide and because the point is a glance:
-    what this artifact is and how much of it there is. The full record
-    is what [canary artifact-summary] and the tooltip are for.
+(** WHAT ONE INSPECTION SAYS, READ ONCE (2026-09-28, design/overview.md
+    §6.4 step 2).
+
+    Two readers used to summarize the same files separately: the result
+    table's artifact cells here, and the overview's node names in
+    [Canary_overview_runs]. They agreed only because each was written
+    carefully — the same library read "so.10 620" in one place and
+    "libgmp.so.10" in the other, computed twice. Now an inspection is
+    parsed here, into the overview node it describes, that node's name in
+    this world and how much of it there is; the cell, the name and the
+    table's count are three renderings of one reading, beside it.
 
     Kind-dispatched rather than generic — a library's headline is its
     identity and export count, a binding surface's is how many names it
     offers, a compiled stub's is how many it demands. Printing
-    "counts.total" for all three would be uniform and useless. *)
-let summarize_inspection (j : Yojson.Basic.t) : string option =
-  let str k = match Canary_agreement_common.field j k with
-    | Some (`String s) -> Some s | _ -> None
+    "counts.total" for all three would be uniform and useless. A bridge
+    record is not read here: it describes packages, not an artifact, and
+    only the overview reads it. *)
+type reading = {
+  rd_kind : string;  (** the inspector's [kind] *)
+  rd_node : string;  (** the overview's node the inspection describes *)
+  rd_name : string option;
+      (** what the node is in this world; [None] where the file names
+          something else — an mli summary's path is the PACKAGE, and the
+          declaration names the file a user actually reads *)
+  rd_count : int option;  (** how much of it there is *)
+  rd_soname : string option;  (** a library's recorded identity *)
+}
+
+let reading_of_inspection (j : Yojson.Basic.t) : reading option =
+  let field = Canary_agreement_common.field in
+  let str j k = match field j k with Some (`String s) when not (String.is_empty s) -> Some s | _ -> None in
+  let len k = match field j k with Some (`List xs) -> Some (List.length xs) | _ -> None in
+  let base = Stdlib.Filename.basename in
+  let read kind node ?name ?count ?soname () =
+    Some { rd_kind = kind; rd_node = node; rd_name = name; rd_count = count; rd_soname = soname }
   in
-  let int_at path =
-    match
-      List.fold path ~init:(Some j) ~f:(fun acc k ->
-          Option.bind acc ~f:(fun x -> Canary_agreement_common.field x k))
-    with
-    | Some (`Int n) -> Some n
-    | _ -> None
-  in
-  let len k =
-    match Canary_agreement_common.field j k with
-    | Some (`List xs) -> Some (List.length xs)
-    | _ -> None
-  in
-  match str "kind" with
-  | Some "native" ->
-      let n = Option.value (int_at [ "counts"; "total" ]) ~default:0 in
-      let soname =
-        match Canary_agreement_common.field j "elf" with
-        | Some e -> (
-            match Canary_agreement_common.field e "soname" with
-            | Some (`String s) when not (String.is_empty s) -> (
-                (* the VERSIONED TAIL is the part that varies and the
-                   part a mismatch turns on — the library's name is
-                   already the setting column beside it, so repeating
-                   "libsqlite3" costs ten characters to say nothing *)
-                match String.substr_index s ~pattern:".so" with
-                | Some i -> String.drop_prefix s (i + 1)
-                | None -> s)
-            | _ -> "-")
+  match str j "kind" with
+  | Some ("native" as k) ->
+      let soname = Option.bind (field j "elf") ~f:(fun e -> str e "soname") in
+      let total =
+        match Option.bind (field j "counts") ~f:(fun c -> field c "total") with
+        | Some (`Int n) -> Some n
+        | _ -> None
+      in
+      read k "lib_sys"
+        ?name:(Option.first_some soname (Option.map (str j "path") ~f:base))
+        ?count:total ?soname ()
+  | Some ("c_stub" as k) ->
+      read k "stub_lang" ?name:(Option.map (str j "path") ~f:base) ?count:(len "requires") ()
+  | Some ("ocaml" as k) -> read k "mod_lang" ?name:(str j "path") ?count:(len "modules") ()
+  | Some ("ocaml_mli" as k) -> read k "surf_lang" ?count:(len "modules") ()
+  | Some ("python" as k) -> read k "mod_lang" ?name:(str j "path") ?count:(len "attrs") ()
+  | _ -> None
+
+(** THE ONE LINE AN INSPECTION IS WORTH in the result table's artifact
+    column. Concise because the column is 14 characters wide and because
+    the point is a glance: what this artifact is and how much of it there
+    is. The full record is what [canary artifact-summary] and the tooltip
+    are for. *)
+let cell_text_of_reading (r : reading) : string option =
+  match r.rd_kind with
+  | "native" ->
+      (* the VERSIONED TAIL is the part that varies and the part a
+         mismatch turns on — the library's name is already the setting
+         column beside it, so repeating "libsqlite3" costs ten characters
+         to say nothing *)
+      let tail =
+        match r.rd_soname with
+        | Some s -> (
+            match String.substr_index s ~pattern:".so" with
+            | Some i -> String.drop_prefix s (i + 1)
+            | None -> s)
         | None -> "-"
       in
-      Some (Printf.sprintf "%s %d" soname n)
-  | Some ("ocaml" | "ocaml_mli") ->
-      Option.map (len "modules") ~f:(Printf.sprintf "%d mod")
-  | Some "c_stub" -> Option.map (len "requires") ~f:(Printf.sprintf "%d req")
-  | Some "python" -> Option.map (len "attrs") ~f:(Printf.sprintf "%d attr")
+      Some (Printf.sprintf "%s %d" tail (Option.value r.rd_count ~default:0))
+  | "ocaml" | "ocaml_mli" -> Option.map r.rd_count ~f:(Printf.sprintf "%d mod")
+  | "c_stub" -> Option.map r.rd_count ~f:(Printf.sprintf "%d req")
+  | "python" -> Option.map r.rd_count ~f:(Printf.sprintf "%d attr")
   | _ -> None
+
+(** The name the overview writes under the node. A module's names its
+    count too — "zarith (4 modules)" — so its count is not repeated. *)
+let name_text_of_reading (r : reading) : string option =
+  Option.map r.rd_name ~f:(fun n ->
+      match (r.rd_kind, r.rd_count) with
+      | "ocaml", Some c -> Printf.sprintf "%s (%d modules)" n c
+      | "python", Some c -> Printf.sprintf "%s (%d names)" n c
+      | _ -> n)
+
+(** How much of the node there is, for the result table's node cell —
+    where the name does not already say it. *)
+let count_text_of_reading (r : reading) : string option =
+  match r.rd_kind with
+  | "native" -> Option.map r.rd_count ~f:(Printf.sprintf "%d exports")
+  | "c_stub" -> Option.map r.rd_count ~f:(Printf.sprintf "%d required")
+  | "ocaml_mli" -> Option.map r.rd_count ~f:(Printf.sprintf "%d modules")
+  | _ -> None
+
+let summarize_inspection (j : Yojson.Basic.t) : string option =
+  Option.bind (reading_of_inspection j) ~f:cell_text_of_reading
 
 (** The inspection a step wrote, if it wrote one. [attach_inspect]
     puts a step's summary in the step's OWN output dir, so this needs
@@ -1465,6 +1527,33 @@ let matrix_of ?(root = "_out")
                     ws_at = at;
                     ws_detail = detail })
             in
+            (* each claim's outcome per language, straight from the log:
+               the evaluating step's own action says which language it
+               spoke for, so no tag is parsed *)
+            let row_verdicts =
+              let lang_of_tag tag =
+                match List.find row_steps ~f:(fun s -> String.equal s.ws_tag tag) with
+                | Some s -> (
+                    match s.ws_action with
+                    | Canary_basic.Build_binding l
+                    | Canary_basic.Probe_binding l
+                    | Canary_basic.Fetch (Canary_basic.Binding l)
+                    | Canary_basic.Publish (Canary_basic.Binding l)
+                    | Canary_basic.Build_app { lang = l }
+                    | Canary_basic.Probe_app { lang = l } ->
+                        Some l
+                    | _ -> None)
+                | None -> None
+              in
+              List.fold scenario_obs ~init:[] ~f:(fun acc (o : Canary_status.agreement_obs) ->
+                  let key = (o.Canary_status.ao_agreement, lang_of_tag o.Canary_status.ao_tag) in
+                  let label = o.Canary_status.ao_outcome in
+                  match List.Assoc.find acc key ~equal:Poly.equal with
+                  | Some prev when outcome_rank prev >= outcome_rank label -> acc
+                  | Some _ -> List.Assoc.add acc key label ~equal:Poly.equal
+                  | None -> acc @ [ (key, label) ])
+              |> List.map ~f:(fun ((slug, lang), label) -> (slug, lang, label))
+            in
             (* THE JOIN'S RESULT (phase B2): each realized edge with the
                steps realizing it, and each placed claim with its
                outcomes here — so the overlay draws and computes nothing *)
@@ -1515,6 +1604,7 @@ let matrix_of ?(root = "_out")
               steps = row_steps;
               edges = row_edges;
               claims = row_claims;
+              verdicts = row_verdicts;
               chains =
                 (let an = Canary_pipeline.analysed_of pr in
                  List.map (Canary_topology.binding_langs pr) ~f:(fun lang ->

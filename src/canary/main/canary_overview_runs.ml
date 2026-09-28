@@ -108,6 +108,18 @@ type view = {
   vw_place_sources : (string * source) list;
       (** node id → where its PLACEMENT line came from — the enumeration,
           a run's record, or the rendering machine *)
+  vw_counts : (string * string) list;
+      (** node id → how much of it the run recorded ("620 exports"), where
+          its name does not already say — the result table's node cells
+          (2026-09-28, design/overview.md §6.4), from the same reading as
+          the name ({!Canary_matrix.reading_of_inspection}) *)
+  vw_outcomes : (string * string) list;
+      (** EVERY CHECKED AGREEMENT'S OUTCOME in this chain, by claim — the
+          result table's check cells. Read from the world's logged
+          outcomes in this language ({!Canary_matrix.row.verdicts}), not
+          through the slot columns [vw_claims] is read from, because the
+          table places a check at its site whatever the world; [n/a] where
+          the chain's mechanism cannot carry the claim *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -311,30 +323,27 @@ let bridge_observations (j : Yojson.Basic.t) : (string * string) list =
           | _ -> None) ]
 
 (* the nodes an inspection's KIND describes, and what it calls each *)
+(* WHAT AN INSPECTION NAMES. An artifact's inspection is read by
+   [Canary_matrix.reading_of_inspection] — the same reading the result
+   table's cells render (2026-09-28, design/overview.md §6.4 step 2), so
+   this module parses no artifact kind of its own. A bridge record
+   describes packages rather than an artifact, and only this page reads
+   it. *)
 let named_by_inspection (j : Yojson.Basic.t) : (string * string) list =
-  let base = Stdlib.Filename.basename in
   match jstr j "kind" with
-  | Some "native" ->
-      Option.to_list
-        (Option.map
-           (Option.first_some
-              (Option.bind (jfield j "elf") ~f:(fun e -> jstr e "soname"))
-              (Option.map (jstr j "path") ~f:base))
-           ~f:(fun n -> ("lib_sys", n)))
-  | Some "c_stub" ->
-      Option.to_list (Option.map (jstr j "path") ~f:(fun p -> ("stub_lang", base p)))
-  | Some ("ocaml" | "python") ->
-      Option.to_list
-        (Option.map (jstr j "path") ~f:(fun p ->
-             ( "mod_lang",
-               match (jlen j "modules", jlen j "attrs") with
-               | Some n, _ -> Printf.sprintf "%s (%d modules)" p n
-               | None, Some n -> Printf.sprintf "%s (%d names)" p n
-               | None, None -> p )))
   | Some "bridge" -> bridge_names j
-  (* NOT the surface: an mli summary's [path] is the PACKAGE, and the
-     declaration names the file a user actually reads *)
-  | _ -> []
+  | _ -> (
+      match M.reading_of_inspection j with
+      | Some r ->
+          Option.to_list
+            (Option.map (M.name_text_of_reading r) ~f:(fun n -> (r.M.rd_node, n)))
+      | None -> [])
+
+(* …and how much of it there is, for the result table's node cell *)
+let counted_by_inspection (j : Yojson.Basic.t) : (string * string) list =
+  match M.reading_of_inspection j with
+  | Some r -> Option.to_list (Option.map (M.count_text_of_reading r) ~f:(fun c -> (r.M.rd_node, c)))
+  | None -> []
 
 let first_per_node (pairs : (string * 'a) list) : (string * 'a) list =
   List.fold pairs ~init:[] ~f:(fun acc (node, x) ->
@@ -346,28 +355,33 @@ let first_per_node (pairs : (string * 'a) list) : (string * 'a) list =
    system package's this world does not use. A dummy is read: CPython's
    stdlib binding has no install step, and its inspection attaches to the
    dummy that holds its place. *)
-let recorded_names ~root (r : M.row) (steps : M.world_step list) :
-    (string * (string * source)) list =
+let recorded_inspections ~root (r : M.row) (steps : M.world_step list) :
+    (string * Yojson.Basic.t) list =
   List.concat_map steps ~f:(fun w ->
       match w.M.ws_place with
       | T.Evidence_for _ | T.Placeholder_for _
       | T.Unplaced (T.Observes_staged_copy | T.Observes_unused_system_copy) ->
           []
       | T.On _ | T.Unplaced _ ->
-          List.concat_map [ "inspect"; "inspect_stub" ] ~f:(fun base ->
-              let path =
-                inspection_path ~root ~project:r.M.project ~scenario:r.M.scenario
-                  ~tag:w.M.ws_tag ~base
-              in
-              Option.value_map
+          List.filter_map [ "inspect"; "inspect_stub" ] ~f:(fun base ->
+              Option.map
                 (read_inspection ~root ~project:r.M.project ~scenario:r.M.scenario
                    ~tag:w.M.ws_tag ~base)
-                ~default:[] ~f:(fun j ->
-                  (* each name with the file it was read from *)
-                  List.map (named_by_inspection j) ~f:(fun (node, label) ->
-                      ( node,
-                        ( label,
-                          from_run path "Canary_overview_runs.named_by_inspection" ) )))))
+                ~f:(fun j ->
+                  ( inspection_path ~root ~project:r.M.project ~scenario:r.M.scenario
+                      ~tag:w.M.ws_tag ~base,
+                    j ))))
+
+let recorded_names ~root (r : M.row) (steps : M.world_step list) :
+    (string * (string * source)) list =
+  List.concat_map (recorded_inspections ~root r steps) ~f:(fun (path, j) ->
+      (* each name with the file it was read from *)
+      List.map (named_by_inspection j) ~f:(fun (node, label) ->
+          (node, (label, from_run path "Canary_overview_runs.named_by_inspection"))))
+  |> first_per_node
+
+let recorded_counts ~root (r : M.row) (steps : M.world_step list) : (string * string) list =
+  List.concat_map (recorded_inspections ~root r steps) ~f:(fun (_, j) -> counted_by_inspection j)
   |> first_per_node
 
 (* the bridge records this view's steps wrote: one per step that drives a
@@ -705,6 +719,29 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
           | [] -> None
           | xs -> Some (e.T.eg_id, List.map xs ~f:(fun (cs, st) -> (cs.T.cs_claim, st))))
   in
+  (* THE RESULT TABLE'S CHECK CELLS (2026-09-28, §6.4): every checked
+     agreement, worst first over what this world's log decided in this
+     language — or [n/a] where the mechanism cannot carry it. From the
+     logged outcomes rather than the slot columns [claims] reads, because
+     the table places a check at its site whatever the world *)
+  let outcomes =
+    List.filter_map Canary_frames.checked_rows ~f:(fun row ->
+        let slug = row.Canary_agreement.ag_slug in
+        let carried =
+          match List.find T.claim_sites ~f:(fun cs -> String.equal cs.T.cs_claim slug) with
+          | Some cs -> Option.is_some (T.claim_state ~mechanism ~lang cs)
+          | None -> true
+        in
+        if not carried then Some (slug, "n/a")
+        else
+          List.fold r.M.verdicts ~init:None ~f:(fun acc (s, l, label) ->
+              if String.equal s slug && (Option.is_none l || Poly.equal l (Some lang)) then
+                match acc with
+                | Some prev when M.outcome_rank prev >= M.outcome_rank label -> acc
+                | _ -> Some label
+              else acc)
+          |> Option.map ~f:(fun o -> (slug, o)))
+  in
   let badges =
     List.filter_map edge_claims ~f:(fun (e, xs) ->
         match
@@ -833,6 +870,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_chain = chain;
     vw_name_sources = List.map sourced_names ~f:(fun (n, (_, s)) -> (n, s));
     vw_place_sources = List.map placed ~f:(fun (n, (_, s)) -> (n, s));
+    vw_counts = recorded_counts ~root r steps;
+    vw_outcomes = outcomes;
     vw_case =
       (match chain with
        | Some c ->
@@ -961,6 +1000,9 @@ let json_of_view (v : view) : Yojson.Basic.t =
           `Assoc (List.map v.vw_place_sources ~f:(fun (n, s) -> (n, json_of_source s))) );
         ("gone", `List (List.map v.vw_gone ~f:(fun n -> `String n)));
         ("candidates", `List (List.map v.vw_candidates ~f:(fun c -> `String c)));
+        (* the result table's node counts and check outcomes (§1.2) *)
+        ("counts", pairs v.vw_counts);
+        ("outcomes", pairs v.vw_outcomes);
         ("observed", pairs v.vw_observed);
         ( "chain",
           match v.vw_chain with
