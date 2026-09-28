@@ -7355,14 +7355,24 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           in
           let open Canary_agreement in
           let rows = overview_rows () in
-          let acts = List.length (overview_columns ()) in
-          let arts = List.length overview_artifact_columns in
-          let tally f =
-            List.sum
-              (module Int)
-              rows
-              ~f:(fun (row : overview_row) ->
-                List.count row.ov_cells ~f:(fun (_, m) -> f m))
+          (* THE FRAME COLUMNS since 2026-09-28 (design/overview.md §6.4
+             step 4): §2 shares §1.2's header, and its marks are
+             [Canary_frames.row_marks] *)
+          let width =
+            List.sum (module Int) Canary_frames.frames ~f:(fun fr ->
+                List.length fr.Canary_frames.fr_columns)
+          in
+          let marks = List.concat_map rows ~f:(fun row -> List.concat (Canary_frames.row_marks row)) in
+          let tally w = List.count marks ~f:(String.equal w) in
+          (* a checked claim shows ◆ at each of its sites, a planned one at
+             none — the join between the registry and the frames *)
+          let own_ok =
+            List.for_all rows ~f:(fun (row : overview_row) ->
+                let slug = row.ov_agreement.ag_slug in
+                let own = List.count (List.concat (Canary_frames.row_marks row)) ~f:(String.equal "◆") in
+                if List.exists Canary_frames.checked_rows ~f:(fun r -> String.equal r.ag_slug slug)
+                then own = List.length (Canary_frames.sites_of slug)
+                else own = 0)
           in
           (* every table on the page is named. TWO since 2026-09-17:
              the check key was absorbed into the overview, because its
@@ -7380,16 +7390,14 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           (* one ACTION cell per (row × action column) and one TARGET
              cell per (row × artifact column) — both in the `g` family,
              so the total counts them together *)
-          && count "class=\"g " = List.length rows * (acts + arts)
-          && count "class=\"g rd\""
-             = tally (function Rooted_and_detected -> true | _ -> false)
-          && count "class=\"g rr\"" = tally (function Rooted -> true | _ -> false)
-          && count "class=\"g dd\""
-             = tally (function Detected -> true | _ -> false)
-          (* the TARGET marks — the artifacts each row ranges over *)
-          && count "class=\"g tgt\""
-             = List.sum (module Int) rows ~f:(fun (row : overview_row) ->
-                   List.length row.ov_reads)
+          && count "class=\"g " = List.length rows * width
+          && count "class=\"g rd\"" = tally "R+D"
+          && count "class=\"g rr\"" = tally "R"
+          && count "class=\"g dd\"" = tally "D"
+          (* the TARGET marks — the nodes each row reads, in its site's frames *)
+          && count "class=\"g tgt\"" = tally "▣"
+          && count "class=\"g own\"" = tally "◆"
+          && own_ok
           (* the absorbed columns: fmt per row, and the short code that
              WAS the key's first column *)
           && count "class=\"mk\"" >= List.length rows

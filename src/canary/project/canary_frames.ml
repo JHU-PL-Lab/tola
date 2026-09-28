@@ -50,6 +50,13 @@ let string_of_side = function
 
 let side_rank = function System -> 0 | Binding -> 1 | Language -> 2 | Program -> 3
 
+(** How a table's header names the side — one spelling for both tables. *)
+let label_of_side = function
+  | System -> "system side"
+  | Binding -> "binding"
+  | Language -> "language side"
+  | Program -> "program"
+
 type column =
   | Node of string  (** a node of the diagram, by id *)
   | Piece of { edges : string list; label : string }
@@ -321,6 +328,80 @@ let frames : frame list =
       |> order_by ~index ~feeds:(fun a b -> List.exists (produces a) ~f:(mem (consumes b)))
       |> List.map ~f:(fun (f, ps, label) ->
              { fr_family = f; fr_side = side; fr_label = label; fr_columns = columns_of f ps }))
+
+(* ── §2 on the same header (2026-09-28, design/overview.md §6.4 step 4) ── *)
+
+(** WHICH NODE OF THE DIAGRAM AN EVIDENCE REFERENCE IS ABOUT — the
+    node-level refinement of [Canary_agreement_common.artifacts_of_input].
+    The artifact kinds are coarser than the diagram: the binding is one
+    kind and three nodes (its stub, its module, its surface), and a
+    bridge record is about two packages, the bridge and the capability
+    file its check reads, which no artifact kind names. Here each
+    reference names the nodes it is read from, so §2 can mark a claim's
+    targets in the frames. *)
+let nodes_of_input : C.inspect_input -> string list = function
+  | C.Native_lib _ | C.Versioned_exports _ -> [ "lib_sys" ]
+  | C.Staged_lib _ -> [ "staged_sys" ]
+  | C.Typed_header _ -> [ "hdr_sys" ]
+  | C.C_stub _ -> [ "stub_lang" ]
+  (* a stub's signatures are scanned from its source *)
+  | C.Typed_binding_stub _ -> [ "src_lang" ]
+  (* what a consumer recorded: the stub archive or the extension module,
+     whichever the mechanism makes *)
+  | C.Versioned_req _ | C.Abi_surface _ -> [ "stub_lang"; "mod_lang" ]
+  | C.Ocaml_mli _ | C.Python_attrs _ | C.Typed_binding_user _ -> [ "surf_lang" ]
+  | C.Bridge_record _ -> [ "bridge"; "cap" ]
+  | C.Declared_exports _ | C.Declared_soname _ | C.Declared_version_tags _ -> []
+
+(** One §2 row's marks, per frame and per column: [▣] a node the claim
+    reads, in the frames of its site; [R] the piece where its rule ran,
+    [D] where a method fires ([R+D] both) — the site's piece in a frame
+    that has it, else the frame's last piece; [◆] its own check column.
+    Empty where nothing applies. The row's R and D are the overview's own
+    ({!Canary_agreement.overview_rows}, over a built world), so the two
+    views of one claim cannot place them differently. *)
+let row_marks (row : A.overview_row) : string list list =
+  let r = row.A.ov_agreement in
+  let slug = r.A.ag_slug in
+  let sites = sites_of slug in
+  let mechanism =
+    match row.A.ov_mechs with m :: _ -> m | [] -> Canary_mechanism.Cstubs
+  in
+  let lang = (Canary_mechanism.info_of_mechanism mechanism).Canary_mechanism.mi_lang in
+  let ctx =
+    { C.ac_mechanism = mechanism;
+      ac_lang = lang;
+      ac_world = C.uniform_world ~lang ~mechanism Canary_store.Built;
+      ac_declared = None }
+  in
+  let targets =
+    List.concat_map r.A.ag.C.ag_methods ~f:(fun m -> m.C.m_inputs ctx)
+    |> List.concat_map ~f:nodes_of_input
+  in
+  let families pred =
+    List.filter_map row.A.ov_cells ~f:(fun (a, mk) -> if pred mk then Some (F.of_action a) else None)
+  in
+  let rooted = families (function A.Rooted | A.Rooted_and_detected -> true | _ -> false) in
+  let detected = families (function A.Detected | A.Rooted_and_detected -> true | _ -> false) in
+  List.map frames ~f:(fun fr ->
+      let pieces =
+        List.filter_map fr.fr_columns ~f:(function Piece { edges; _ } -> Some edges | _ -> None)
+      in
+      let site_piece = List.find pieces ~f:(List.exists ~f:(mem sites)) in
+      let marked = match site_piece with Some p -> Some p | None -> List.last pieces in
+      let at fams edges =
+        List.mem fams fr.fr_family ~equal:F.equal
+        && Option.exists marked ~f:(List.equal String.equal edges)
+      in
+      List.map fr.fr_columns ~f:(function
+        | Node n -> if Option.is_some site_piece && mem targets n then "▣" else ""
+        | Piece { edges; _ } -> (
+            match (at rooted edges, at detected edges) with
+            | true, true -> "R+D"
+            | true, false -> "R"
+            | false, true -> "D"
+            | false, false -> "")
+        | Check { slug = s; _ } -> if String.equal s slug then "◆" else ""))
 
 (* ── printing ── *)
 

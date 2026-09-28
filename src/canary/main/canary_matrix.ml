@@ -2491,19 +2491,60 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
   in
   let recovery_grid =
     let module CR = Canary_agreement in
+    let module Fr = Canary_frames in
     let rows = CR.overview_rows () in
-    let cols = CR.overview_columns () in
-    let cell_class = function
-      | CR.Rooted_and_detected -> "rd"
-      | CR.Rooted -> "rr"
-      | CR.Detected -> "dd"
-      | CR.Nothing_here -> "nn"
-    in
-    let cell_text = function
-      | CR.Rooted_and_detected -> "R+D"
-      | CR.Rooted -> "R"
-      | CR.Detected -> "D"
-      | CR.Nothing_here -> ""
+    (* THE SAME HEADER AS §1.2 (2026-09-28, design/overview.md §6.4 step
+       4): the frames of [Canary_frames], by side, then frame, then
+       column — so a claim's marks sit in the very columns its outcomes
+       fill in the result table, and one of them is its own (◆). The
+       layer classes are §1.2's. *)
+    let frame_head =
+      let layer n =
+        Option.value_map (Canary_topology.node_by_id n) ~default:"art" ~f:(fun nd ->
+            match nd.Canary_topology.nd_layer with
+            | Canary_topology.L_pm -> "pm"
+            | Canary_topology.L_package -> "pkg"
+            | Canary_topology.L_artifact -> "art"
+            | Canary_topology.L_program -> "prog")
+      in
+      let layer_of_edge id =
+        Option.value_map
+          (List.find Canary_topology.edges ~f:(fun e -> String.equal e.Canary_topology.eg_id id))
+          ~default:"art" ~f:(fun e -> layer e.Canary_topology.eg_to)
+      in
+      let sides =
+        List.fold Fr.frames ~init:[] ~f:(fun acc fr ->
+            let n = List.length fr.Fr.fr_columns in
+            match acc with
+            | (s, k) :: rest when Poly.equal s fr.Fr.fr_side -> (s, k + n) :: rest
+            | _ -> (fr.Fr.fr_side, n) :: acc)
+        |> List.rev
+      in
+      ( String.concat
+          (List.map sides ~f:(fun (s, n) ->
+               Printf.sprintf "<th class=\"rt-side\" colspan=\"%d\">%s</th>" n
+                 (esc (Fr.label_of_side s)))),
+        String.concat
+          (List.map Fr.frames ~f:(fun fr ->
+               Printf.sprintf "<th class=\"rt-fr\" colspan=\"%d\">%s</th>"
+                 (List.length fr.Fr.fr_columns) (esc fr.Fr.fr_label))),
+        String.concat
+          (List.concat_map Fr.frames ~f:(fun fr ->
+               List.map fr.Fr.fr_columns ~f:(function
+                 | Fr.Node n ->
+                     Printf.sprintf "<th class=\"rt-%s\" title=\"%s\">%s</th>" (layer n) (esc n)
+                       (esc
+                          (Option.value_map (Canary_topology.node_by_id n) ~default:n
+                             ~f:(fun nd -> nd.Canary_topology.nd_label)))
+                 | Fr.Piece { edges; label } ->
+                     Printf.sprintf "<th class=\"rt-hp rt-u-%s\" title=\"%s\">%s</th>"
+                       (layer_of_edge (List.hd_exn edges))
+                       (esc (String.concat ~sep:", " edges)) (esc label)
+                 | Fr.Check { slug; code; site; stage } ->
+                     Printf.sprintf "<th class=\"rt-hc rt-u-%s\" title=\"%s\">%s%s</th>"
+                       (layer_of_edge site) (esc slug)
+                       (match stage with Canary_agreement_common.Pre -> "›" | Canary_agreement_common.Post -> "»")
+                       (esc code)))) )
     in
     (* the ROOTING detail, keyed by slug — tool and artifact are prose
        and belong on the R cell as a tooltip rather than as two more
@@ -2531,16 +2572,22 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
        Unimplemented claims sort last.</dd>"
     ^ "<dt>code</dt><dd>the AGREEMENT's identity, so a repeated code is one \
        claim with several patterns, shown adjacent. It is the key to the \
-       result matrix's check-column headings.</dd>"
+       check columns of §1.2's result table.</dd>"
     ^ "<dt>one row per pattern</dt><dd>a claim whose firing differs between \
        mechanisms gets a row each; a uniform claim stays one row and says \
        so by leaving <b>mech</b> empty.</dd>"
-    ^ "<dt>&#9635;</dt><dd>an ARTIFACT the claim ranges over — its target. \
-       A declaration is not an artifact, which is why some claims show \
-       one.</dd>"
-    ^ "<dt>R &middot; D &middot; R+D</dt><dd>R = the action whose rule RAN \
-       (hover for the tool and the artifact); D = a method FIRES here; R+D \
-       = both. A row with no R roots in no action of this graph.</dd>"
+    ^ "<dt>columns</dt><dd>§1.2's frames — each action as §1 draws it, \
+       by side, then flow — so a row marks the very columns the result \
+       table fills.</dd>"
+    ^ "<dt>&#9635;</dt><dd>a NODE the claim reads, marked in the frames of \
+       its site. A declaration is not a node, which is why some claims \
+       show one.</dd>"
+    ^ "<dt>R &middot; D &middot; R+D</dt><dd>on a piece: R = its rule RAN \
+       there (hover for the tool and the artifact); D = a method FIRES \
+       there; R+D = both — the site's piece in a frame that has it. A row \
+       with no R roots in no action of this graph.</dd>"
+    ^ "<dt>&#9670;</dt><dd>the claim's own check column: where §1.2 shows \
+       its outcome.</dd>"
     ^ "<dt>implemented at</dt><dd><code>&lt;module&gt;&middot;&lt;function&gt;</code> \
        — the EVALUATOR, in \
        <code>src/canary/agreement/canary_agreement_&lt;module&gt;.ml</code>. \
@@ -2616,17 +2663,16 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
        watchlist stands in for the application's uses. Naming the evidence \
        is not the same as naming the claim, which is why <b>kind</b> and \
        the record's <code>against</code> are two fields.</p></div>"
-    ^ "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
-     <th>kind</th><th>implemented at</th><th>lang</th><th>mech</th>\
-     <th>object</th><th>sits on</th><th>where</th>"
-    ^ String.concat ~sep:""
-        (List.map CR.overview_artifact_columns ~f:(fun k ->
-             "<th class=\"seth\">" ^ esc (CR.artifact_col_label k) ^ "</th>"))
-    ^ String.concat ~sep:""
-        (List.map cols ~f:(fun a ->
-             "<th class=\"gcol\">" ^ esc (Canary_basic.string_of_action a)
-             ^ "</th>"))
-    ^ "<th>lag</th><th>decided</th><th>blame</th></tr></thead><tbody>"
+    ^ (let sides, frame_labels, columns = frame_head in
+       "<table class=\"keytbl grid\"><thead><tr>"
+       ^ String.concat
+           (List.map
+              [ "code"; "agreement"; "kind"; "implemented at"; "lang"; "mech"; "object";
+                "sits on"; "where" ]
+              ~f:(fun h -> "<th rowspan=\"3\">" ^ h ^ "</th>"))
+       ^ sides
+       ^ "<th rowspan=\"3\">lag</th><th rowspan=\"3\">decided</th><th rowspan=\"3\">blame</th></tr>"
+       ^ "<tr>" ^ frame_labels ^ "</tr><tr>" ^ columns ^ "</tr></thead><tbody>")
     ^ String.concat ~sep:""
         (List.map rows ~f:(fun (row : CR.overview_row) ->
              let r = row.CR.ov_agreement in
@@ -2713,22 +2759,17 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
                       (esc (Canary_topology.string_of_reach s.Canary_topology.st_reach))
                 | None ->
                     "<td class=\"lm site none\">not placed</td><td class=\"lm where\"></td>")
-             (* the TARGET artifacts — what the claim ranges over *)
+             (* the claim in the frames: what it reads (▣), where its
+                rule ran (R) and where it fires (D), and its own column *)
              ^ String.concat ~sep:""
-                 (List.map CR.overview_artifact_columns ~f:(fun k ->
-                      if
-                        List.mem row.CR.ov_reads k ~equal:Poly.equal
-                      then "<td class=\"g tgt\">&#9635;</td>"
-                      else "<td class=\"g nn\"></td>"))
-             ^ String.concat ~sep:""
-                 (List.map row.CR.ov_cells ~f:(fun (_, mk) ->
-                      let t =
-                        match mk with
-                        | CR.Rooted | CR.Rooted_and_detected -> root_title
-                        | _ -> ""
-                      in
-                      Printf.sprintf "<td class=\"g %s\"%s>%s</td>"
-                        (cell_class mk) t (cell_text mk)))
+                 (List.concat_map (Fr.row_marks row) ~f:(fun marks ->
+                      List.map marks ~f:(function
+                        | "▣" -> "<td class=\"g tgt\">&#9635;</td>"
+                        | "R" -> Printf.sprintf "<td class=\"g rr\"%s>R</td>" root_title
+                        | "D" -> "<td class=\"g dd\">D</td>"
+                        | "R+D" -> Printf.sprintf "<td class=\"g rd\"%s>R+D</td>" root_title
+                        | "◆" -> "<td class=\"g own\">&#9670;</td>"
+                        | _ -> "<td class=\"g nn\"></td>")))
              ^ "<td>"
              ^ (match CR.row_lag row with
                 | Some d -> Int.to_string d
@@ -3112,6 +3153,7 @@ td.g.rr{background:#ffe8cc;color:#7a3e00}
 td.g.dd{background:#dbeafe;color:#0a3069}
 td.g.nn{background:transparent}
 td.g.tgt{background:#f0e6ff;color:#512a97}
+td.g.own{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
 .grid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}|}
 
 (** The result page alone — what [write_web] needs. *)

@@ -625,7 +625,19 @@ code.
    back to the slot columns. The table's looks are not yet in
    `visual_hints`: that list's element kinds are the diagram's, and a
    cell is a new kind.
-4. **§2 on the same header**: ▣, R, D and ◆ in the frame columns.
+4. **§2 on the same header** — done (2026-09-28). The agreement
+   overview's artifact-target and action columns gave way to §1.2's
+   frames, with one row's marks from `Canary_frames.row_marks`: ▣ on the
+   nodes the claim reads, in the frames of its site
+   (`Canary_frames.nodes_of_input` names the node each kind of evidence
+   is about — the node-level refinement of the artifact targets, so the
+   gate's members are the bridge and the capability file, which no
+   artifact kind could name); R and D on the pieces, from the overview's
+   own rooting and firing; ◆ on the claim's own check column. Pinned by
+   `matrix.page_titles_and_agreement_overview`, which now counts the
+   frame cells and holds that a checked claim has ◆ at each of its sites
+   and a planned one at none. `canary checks --firing` still prints the
+   old action columns in the terminal.
 5. **The old pages retire**: `matrix.html` points here, and the per-run
    pages go.
 6. **The manifest**, and the record reads it.

@@ -1994,6 +1994,7 @@ let frames_json () : string =
           (List.map Fr.frames ~f:(fun fr ->
                `Assoc
                  [ ("side", `String (Fr.string_of_side fr.Fr.fr_side));
+                   ("side_label", `String (Fr.label_of_side fr.Fr.fr_side));
                    ("label", `String fr.Fr.fr_label);
                    ("cols", `List (List.map fr.Fr.fr_columns ~f:column)) ])) ) ]
   |> Yojson.Basic.to_string
@@ -2028,23 +2029,23 @@ table.rt{border-collapse:collapse;font-family:ui-monospace,SFMono-Regular,Menlo,
 white-space:nowrap;font-variant-numeric:tabular-nums}
 table.rt th,table.rt td{border:1px solid var(--line);padding:.16rem .34rem;text-align:left;vertical-align:middle}
 table.rt th{font-weight:600}
-table.rt th.rt-side{text-transform:uppercase;letter-spacing:.07em;font-size:.6rem;color:var(--mut)}
+th.rt-side{text-transform:uppercase;letter-spacing:.07em;font-size:.6rem;color:var(--mut)}
 table.rt td{max-width:15rem;overflow:hidden;text-overflow:ellipsis}
 table.rt th.rt-lab{position:sticky;left:0;z-index:1;background:var(--card);box-shadow:1px 0 0 var(--line);font-weight:400}
 table.rt th.rt-lab a{color:var(--fg);text-decoration:none}
 table.rt th.rt-lab a:hover{text-decoration:underline}
 .rt-m,.rt-x{color:var(--mut)}
-.rt-pm{background:var(--pm)}
-.rt-pkg{background:var(--pkg)}
-.rt-art{background:var(--art)}
-.rt-prog{background:var(--prog)}
-table.rt th.rt-hp,table.rt th.rt-hc{background:var(--card);border-bottom-width:3px}
-table.rt th.rt-hp::before{content:"▸ ";color:var(--mut)}
-table.rt th.rt-hc{color:var(--acc);font-style:italic}
-table.rt th.rt-u-pm{border-bottom-color:color-mix(in srgb,var(--pm) 35%,var(--fg))}
-table.rt th.rt-u-pkg{border-bottom-color:color-mix(in srgb,var(--pkg) 35%,var(--fg))}
-table.rt th.rt-u-art{border-bottom-color:color-mix(in srgb,var(--art) 35%,var(--fg))}
-table.rt th.rt-u-prog{border-bottom-color:color-mix(in srgb,var(--prog) 35%,var(--fg))}
+.rt-pm,table.grid th.rt-pm{background:var(--pm)}
+.rt-pkg,table.grid th.rt-pkg{background:var(--pkg)}
+.rt-art,table.grid th.rt-art{background:var(--art)}
+.rt-prog,table.grid th.rt-prog{background:var(--prog)}
+table th.rt-hp,table th.rt-hc{background:var(--card);border-bottom-width:3px;border-bottom-style:solid}
+th.rt-hp::before{content:"▸ ";color:var(--mut)}
+table th.rt-hc{color:var(--acc);font-style:italic}
+table th.rt-u-pm{border-bottom-color:color-mix(in srgb,var(--pm) 35%,var(--fg))}
+table th.rt-u-pkg{border-bottom-color:color-mix(in srgb,var(--pkg) 35%,var(--fg))}
+table th.rt-u-art{border-bottom-color:color-mix(in srgb,var(--art) 35%,var(--fg))}
+table th.rt-u-prog{border-bottom-color:color-mix(in srgb,var(--prog) 35%,var(--fg))}
 table.rt td.rt-p,table.rt td.rt-c{text-align:center}
 table.rt td.rt-rep{color:var(--mut)}
 table.rt td.rt-decl{font-style:italic}
@@ -2081,12 +2082,11 @@ var OUT={holds:['✓','rt-ok'],violated:['✗','rt-bad'],error:['err','rt-bad'],
   unavailable:['no-evid','rt-gap'],undeclared:['no-decl','rt-gap'],inconclusive:['no-ref','rt-gap'],
   vacuous:['none','rt-gap'],not_implemented:['planned','rt-gap'],not_applicable:['n/a','rt-dim'],
   'n/a':['n/a','rt-dim'],disabled:['off','rt-dim']};
-var SIDE={system:'System side',binding:'Binding',language:'Language side',program:'Program'};
 var node=function(id){ return FR.nodes[id]||{label:id,layer:'art'}; };
 var F=FR.frames, h1='<tr><th class="rt-lab" rowspan="3">chain · machine</th>', h2='<tr>', h3='<tr>', i=0;
-while(i<F.length){ var s=F[i].side, span=0;
+while(i<F.length){ var s=F[i].side, lab=F[i].side_label, span=0;
   while(i<F.length&&F[i].side===s){ span+=F[i].cols.length; i++; }
-  h1+='<th class="rt-side" colspan="'+span+'">'+esc(SIDE[s]||s)+'</th>'; }
+  h1+='<th class="rt-side" colspan="'+span+'">'+esc(lab)+'</th>'; }
 F.forEach(function(f){
   h2+='<th class="rt-fr" colspan="'+f.cols.length+'">'+esc(f.label)+'</th>';
   f.cols.forEach(function(c){
@@ -2303,10 +2303,9 @@ inside its package-rewrite cases, never in the base picture.</div>
 
 <h2 id="overview">2. The agreement overview</h2>
 <p>Every agreement, where its rule RAN and where it is CHECKED, over the
-same action columns the result matrix uses — of which it is the
-template, so an empty column there can be looked up here. It lives on
-this page because it describes the <em>shape</em> of the checking rather
-than one machine's record.</p>
+same frames as §1.2's result table — of which it is the template, so an
+empty column there can be looked up here, and ◆ marks the column each
+claim fills.</p>
 <div class="note warn"><strong>Two of its columns are not
 mechanism.</strong> <code>decided</code> and <code>blame</code> are
 counted from recorded runs, per agreement, so this section alone depends
