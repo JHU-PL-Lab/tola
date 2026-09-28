@@ -1257,3 +1257,65 @@ the draft itself is not edited here):
 | package-specific override as graph rewriting (§10) | `Package_builds_lib` / `Bundled` gates, and canary's own zarith-no-conf bypass; template + instance (decision 3) not built yet |
 | version domains (§8) | one bool per bridge (`gb_reaches_lib` ← `tracks_lib`); deferred |
 | topology → agreements → evidence → verdict (§11) | the bridge record is the evidence; the agreements are next |
+
+**Phase E2 landed 2026-09-27: `gate_admits_the_world`, the first
+agreement that reads the bridge record.** The user chose bottom-up —
+one agreement first, then the re-categorization — once the diagram, the
+agreement table and the logs named the same agreements in the same
+places ("now we are just selecting one feasible track to finish it").
+
+*The family.* `canary_agreement_bridge.ml` is the seventh family, and
+`Bridges` a new subject. The claim leaves the candidate list for the
+registry: admissibility, rooted in opam's install of the binding
+(`fetch_binding_ocaml`), slotted `fetch_binding_ocaml_pre`, applicable
+where the language's package manager defines bridge kinds — opam does,
+pip defines none — and firing at the binding's probe in a world whose
+binding is fetched. It reads the record's verdict rather than computing
+one: the recorder already ran the rule, so this is the first agreement
+whose evidence is the rule re-run rather than a projection the rule
+left. Six counterexamples: holds, violated, a failing query with a
+fallback, a bridge the binding does not depend on, an undispatchable
+predicate, no record.
+
+*Three decisions it forced.*
+
+- The bridge step passes whenever it writes the record. It had failed on
+  a check that did not hold, which was E1's only way to surface the
+  verdict; with an agreement to carry it, a refusing gate is a finding
+  like any other — reported, not fatal, and fatal under `--strict` at
+  the step that read it. A failing bridge step would also have blocked
+  the probe that evaluates the claim, hiding the violation it exists to
+  show.
+- The probe depends on the bridge step. Without the edge the two were
+  siblings and a cold run could read the last run's record — the
+  reader-before-writer bug that made `probe_binding` depend on
+  `probe_lib`. The tag both sides use is spelled once,
+  `Canary_agreement_common.bridge_record_tag`.
+- One record can speak for two artifacts. The registry's law says an
+  admissibility claim ranges over two, and a bridge is a package with no
+  artifact kind, so `artifact_of_input` became `artifacts_of_input`,
+  returning a list: the bridge record implicates the library and the
+  binding, and the bridge itself gets no column.
+
+*What the real run said.* zarith's fetched world: `holds`, decided at
+`probe_binding_ocaml` after the bridge step re-ran. Falsified twice
+through the runner. With `PKG_CONFIG_LIBDIR=/nonexistent` the query
+failed and the outcome was `unavailable` — conf-gmp's predicate would
+then compile `test.c` against `gmp.h`, and canary does not run that
+fallback, so a failing query cannot refute the gate; that is the honest
+answer, and the reason the evaluator distinguishes it. With the fallback
+taken out of the record, `violated`, recorded as an unconfirmed
+disagreement, the probe still passing, and ✗ in the result table's new
+`gatw` column. Restored to `holds`. The overview's recorded zarith world
+now draws `conf_probe` with a filled green badge beside the hollow one
+for the version bound; 9 of 14 agreements are landed.
+
+The column costs something visible: it stands in front of
+`fetch_binding_ocaml` in every world that fetches an OCaml binding, so
+eight other projects gained 23 cells that read `·` until their probes
+run cold, and `no-evid` after. That is the gap "bridges beyond zarith"
+closes, now counted rather than described. Pinned by the new
+`steps.gate_is_read_after_its_bridge_runs` (falsified by removing the
+dependency), and by the updated `overview.placeholders_are_drawn_as_such`
+and `overview.chain_absence_is_never_recorded`, which had held that every
+bridge claim was a candidate.

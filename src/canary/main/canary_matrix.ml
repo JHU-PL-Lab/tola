@@ -1121,14 +1121,14 @@ let declared_against ~(lang : Canary_lang.lang)
         ~f:(fun m ->
           match m.Canary_agreement_common.m_reference with
           | Canary_agreement_common.Declared_facts ->
-              List.filter_map
+              List.concat_map
                 (m.Canary_agreement_common.m_inputs
                    { Canary_agreement_common.ac_mechanism =
                        Canary_project_analysis.mechanism_for an lang;
                      ac_lang = lang;
                      ac_world = world;
                      ac_declared = an.Canary_project_analysis.an_declared })
-                ~f:(Canary_agreement_common.artifact_of_input ~lang)
+                ~f:(Canary_agreement_common.artifacts_of_input ~lang)
           (* every other reference kind holds the artifact against
              something that is not a project declaration, so a
              single-valued declaration cannot be what is wrong *)
@@ -1310,7 +1310,7 @@ let check_cell ~(chain : Canary_basic.action list)
           List.concat_map
             r.Canary_agreement.ag.Canary_agreement_common.ag_methods
             ~f:(fun m ->
-              List.filter_map
+              List.concat_map
                 (m.Canary_agreement_common.m_inputs
                    { Canary_agreement_common.ac_mechanism =
                        Canary_project_analysis.mechanism_for an lang;
@@ -1318,8 +1318,8 @@ let check_cell ~(chain : Canary_basic.action list)
                      ac_world = world;
                      ac_declared = an.Canary_project_analysis.an_declared })
                 ~f:(fun i ->
-                  Option.map
-                    (Canary_agreement_common.artifact_of_input ~lang i)
+                  List.map
+                    (Canary_agreement_common.artifacts_of_input ~lang i)
                     ~f:(fun k -> (k, slug))))
           |> List.dedup_and_sort ~compare:Stdlib.compare
   in

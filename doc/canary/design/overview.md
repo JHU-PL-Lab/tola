@@ -84,9 +84,10 @@ registry) and decided (a recorded run reached holds or violated).
 | end to end | pm/package/program | 1 | 0 | 0 |
 
 Checked agreements cluster where the binding meets the library; the
-bridge, the running program and the end-to-end claim have none, and no
-agreement sits on a package manager's resolution alone. Two agreements
-have evaluators and have never been decided by a run —
+bridge, the running program and the end-to-end claim had none, and no
+agreement sits on a package manager's resolution alone. Since E2 (§6.1)
+the bridge's row has one: `gate_admits_the_world`, decided on zarith. Two
+agreements have evaluators and have never been decided by a run —
 `signatures_agree` and `declared_versions_exported`. And one coordinate
 is not always enough: `discovery_matches_link` sits on `discover`, both of
 whose ends are on the system side, while what it compares reaches the
@@ -190,6 +191,15 @@ asks for one. **Only zarith is wired**, through conf-gmp. The overview
 names the bridge, the system package and the capability file from that
 record, and says in one sentence per edge what the run saw.
 
+**The verdict is an agreement's, not the step's** (2026-09-27). The bridge
+step passes whenever it writes the record; until then it failed on a check
+that did not hold. `gate_admits_the_world` reads the record's verdict at
+the binding's probe, which waits for the bridge step, so a gate that
+refuses the world is a finding the run reports — `violated` in the log, ✗
+in the result table's `gatw` column, a red badge on `conf_probe` — rather
+than a failed step that stops the chain. `--strict` makes it fail the
+probe, as it does for every agreement.
+
 ## 4. Where each value comes from
 
 A value on §1 comes from code — a declaration or a rule in canary — or
@@ -245,15 +255,24 @@ agreement to implement is picked from the grouping's gaps rather than
 by convenience. After two or three more land, the categories are
 re-grouped by hand.
 
-1. **E2: the first agreement that reads the bridge record.**
-   `gate_admits_the_world` is the cheapest: zarith's record already says
-   whether conf-gmp's check held. The record also carries both sides of
-   `discovery_matches_link` (pkg-config's libdir against the library the
-   binding links), `depext_names_the_provided_package`, and
-   `declared_gate_matches_package`. Each lands the way every agreement
-   lands — a real run's log decides it — and turns a hollow badge on a
-   bridge edge into a filled one. It is the first checked agreement in
-   the grouping's empty row, the package layer across the sides.
+1. **E2 is done (2026-09-27): `gate_admits_the_world`**
+   (`canary_agreement_bridge.ml`), the first registered agreement that
+   reads the bridge record and the first checked one in the grouping's
+   empty row, the package layer across the sides. A real run decided it:
+   it holds on zarith's fetched world. Falsified twice through the
+   runner. With pkg-config blinded, the query fails and the outcome is
+   `unavailable`, because conf-gmp's predicate would then compile against
+   `gmp.h` and canary does not run that fallback. With the fallback taken
+   out of the record, it is `violated`. Its column, `gatw`, stands in
+   front of `fetch_binding_ocaml` in every world that fetches an OCaml
+   binding, so eight other projects gained 23 cells that read `·` until
+   their probes run cold, and `no-evid` after: the gap item 3 closes.
+
+   The same record carries both sides of three more claims, each to land
+   the same way: `depext_names_the_provided_package` (the depexts against
+   the lib row's system package, `libgmp-dev` on both sides for zarith),
+   `declared_gate_matches_package`, and `discovery_matches_link`
+   (pkg-config's libdir against the library the binding links).
 2. **The easy placeholders become records**, one at a time, each leaving
    `Canary_pm_action` in the change that records it:
    - `resolve_sys`: apt's chosen candidate and the installed version
@@ -273,7 +292,10 @@ re-grouped by hand.
 4. **Later:** the bridge check as its own step, run before the binding is
    fetched or built; the check driven against a library the world built
    itself, which is the built case's point (sqlite has no bridge wired);
-   brew's owner query and the rest on macOS, never run there.
+   the predicate's fallback, which the record keeps and canary does not
+   run (conf-gmp's compiles a `test.c` that ships with the conf package),
+   so a failing query decides nothing; brew's owner query and the rest on
+   macOS, never run there.
 
 Open findings the plan should not forget, each recorded in the worklog:
 an unreached step logs nothing, so "blocked upstream" and "never
@@ -353,6 +375,14 @@ Not urgent (user, 2026-09-27):
 - **A candidate states no applicability**, so it is counted wherever its
   edge is drawn: `compatibility_version_satisfied`, a Mach-O agreement,
   shows on ELF chains.
+- **The table's `sits on` and `where` may be one view too many** (user,
+  2026-09-27). They largely restate what the artifact marks (▣) and the
+  action marks (R, D) imply. Headers grouping those columns by layer and
+  side could say it in less width. They are not duplicates yet: `sits
+  on` reads the hand-written claim sites, while ▣, R and D come from each
+  agreement's methods and rooting, and the two can disagree
+  (`discovery_matches_link`). Once §6.2 step 3 derives the sites from
+  rooting, the columns can give way to such headers.
 
 And two left open by the bridge decisions: *version transport* (which
 version domain a bridge carries across — one bool today, and llvm's
@@ -377,6 +407,7 @@ rewrites; to settle when a second template exists).
 | `overview.recorded_views_are_named` | recorded names over declared ones, and the ratchet of names that agree with the drawings |
 | `overview.overlay_words_rank_worst_first` | the order in which several steps' states merge on one edge |
 | `overview.bridge_record_is_read` | the reader of the bridge record, on a fixture |
+| `steps.gate_is_read_after_its_bridge_runs` | the gate fires at the probe, reads the file the bridge step writes, and the probe waits for that step |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
 | `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |

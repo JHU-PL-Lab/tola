@@ -1325,10 +1325,12 @@ let derive_steps ~root ~project
      language, and only where the binding is really installed — a dummy
      fetch installs nothing, so it resolves no bridge. It depends on the
      install (the bridge is in the store) and on the library's fetch (the
-     capability it checks for is on the system), writes its record into
-     its OWN directory, and fails when the check does not hold. A bridge
-     the driver cannot drive — a depext field has no check — gets no
-     step. *)
+     capability it checks for is on the system), and writes its record
+     into its OWN directory. It passes when the record is written, whatever
+     the check answered: the verdict is [gate_admits_the_world]'s, read at
+     the binding's probe (2026-09-27; until then this step failed on a
+     check that did not hold). A bridge the driver cannot drive — a depext
+     field has no check — gets no step. *)
   let bridge_steps ~fetch_tag lang =
     let binding_pkg =
       List.Assoc.find
@@ -1346,11 +1348,14 @@ let derive_steps ~root ~project
     List.filter_map mine ~f:(fun (_, b) ->
         Option.map (Canary_bridge_driver.record_cmd b ~binding_pkg ~sys_pm)
           ~f:(fun cmd ->
-            (* one bridge keeps the plain suffix; several are told apart
-               by package, as sibling probes are by location *)
+            (* one bridge keeps the plain tag, which is the one the bridge
+               family reads — both spell it through [bridge_record_tag];
+               several are told apart by package, as sibling probes are by
+               location *)
             let tag =
-              if List.length mine = 1 then fetch_tag ^ "_bridge"
-              else fetch_tag ^ "_bridge_" ^ Canary_bridge.package_of b
+              let one = Canary_agreement_common.bridge_record_tag lang in
+              if List.length mine = 1 then one
+              else one ^ "_" ^ Canary_bridge.package_of b
             in
             let check_post ~output_dir ~variant_key =
               has_file ~output_dir
@@ -1516,6 +1521,29 @@ let derive_steps ~root ~project
      carrying the answer keeps one place that knows where a dep's output
      lives — the alternative duplicates this map in the runner, which is
      the producer/consumer split backlog §50 is about. *)
+  (* THE PROBE WAITS FOR THE BRIDGE (2026-09-27). [gate_admits_the_world]
+     fires at a binding's probe and reads the record the bridge step
+     beside the install wrote, so the probe depends on every bridge step
+     of its language. Without the edge the two are siblings, and a cold
+     run could read the LAST run's record — the reader-before-writer bug
+     that made [probe_binding] depend on [probe_lib]. *)
+  let bridge_tags_of lang =
+    List.filter_map raw_steps ~f:(fun s ->
+        match (s.bridge, s.action) with
+        | Some _, Fetch (Binding l) when Poly.equal l lang -> Some s.tag
+        | _ -> None)
+  in
+  let raw_steps =
+    List.map raw_steps ~f:(fun s ->
+        match s.action with
+        | Probe_binding l ->
+            let more =
+              List.filter (bridge_tags_of l) ~f:(fun t ->
+                  not (List.mem s.deps t ~equal:String.equal))
+            in
+            if List.is_empty more then s else { s with deps = s.deps @ more }
+        | _ -> s)
+  in
   let by_tag = Hashtbl.create (module String) in
   List.iter raw_steps ~f:(fun s -> Hashtbl.set by_tag ~key:s.tag ~data:s.output_dir);
   List.map raw_steps ~f:(fun s ->

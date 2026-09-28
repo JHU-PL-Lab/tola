@@ -66,6 +66,7 @@ let agreement_modules : (string * (agreement_id * agreement) list) list =
     ("identity", Canary_agreement_identity.checks);
     ("types", Canary_agreement_types.checks);
     ("staging", Canary_agreement_staging.checks);
+    ("bridge", Canary_agreement_bridge.checks);
     ("composed", Canary_agreement_composed.checks) ]
 
 let declared_agreements : (agreement_id * agreement) list =
@@ -211,6 +212,7 @@ let agreement_registry : agreement_row list =
          than what the inspector was told to assume";
     row Dependencies_provided ~doc:"§5.6";
     row Staged_interface_preserved ~doc:"§6.1";
+    row Gate_admits_the_world ~doc:"§5.7";
     row Repack_preserves_api ~doc:"§6.3.1"
       ~waiting_on:
         "a statement of what \"preserves\" permits — a rename, a merge, \
@@ -1197,11 +1199,11 @@ let reads_of (r : agreement_row) ~(mechanism : Canary_mechanism.mechanism)
     Canary_basic.artifact_kind list =
   let world = uniform_world ~lang ~mechanism provision in
   List.concat_map r.ag.ag_methods ~f:(fun m ->
-      List.filter_map
+      List.concat_map
         (m.m_inputs
            { ac_mechanism = mechanism; ac_lang = lang; ac_world = world;
              ac_declared = None })
-        ~f:(artifact_of_input ~lang))
+        ~f:(artifacts_of_input ~lang))
   |> List.dedup_and_sort ~compare:Poly.compare
 
 (* ── ROW ORDER: WHEN IT FIRES, THEN WHOSE (2026-09-17, user: "we also
@@ -2114,28 +2116,13 @@ let proposed_agreements : proposed list =
        run now RECORDS all three for zarith's world (the bridge step's
        record): the binding package depends on it, it names a system
        package, and its check accepts the system. Each is a claim with
-       both sides in hand and no comparator yet — placeholders in the
-       registry, as the user asked, drawn as candidate badges on the
-       bridge edges. Three are the claims `package_gates.md` §6
-       proposed and never entered here; the fourth, the depext one, came
-       out of recording the bridge. *)
-    { prop_kind = Admissibility;
-      prop_slug = "gate_admits_the_world";
-      prop_doc = "§5.7";
-      prop_claim =
-        "the world canary constructed would satisfy the binding package's \
-         gate — its constraint on the bridge, and the bridge's own check \
-         against this world's system — if the package manager were asked. \
-         canary installs with --assume-depexts, and opam runs a conf \
-         package's check only when it first installs it, so neither half \
-         is exercised per world unless canary asks";
-      prop_needs =
-        "a comparator over what is ALREADY RECORDED for zarith: the \
-         bridge record's check verdict (the predicate's pkg-config \
-         invocation, run in this world) and the installed versions. \
-         Today the verdict decides the bridge step's own pass or fail and \
-         reaches no agreement; and only zarith records a bridge";
-      prop_frame = In_frame };
+       both sides in hand — placeholders in the registry, as the user
+       asked, drawn as candidate badges on the bridge edges. Three are
+       the claims `package_gates.md` §6 proposed and never entered here;
+       the fourth, the depext one, came out of recording the bridge.
+       The first of them to get a comparator, `gate_admits_the_world`,
+       left this list for the registry on 2026-09-27
+       (`canary_agreement_bridge.ml`). *)
     { prop_kind = Promise;
       prop_slug = "declared_gate_matches_package";
       prop_doc = "§5.7";
@@ -2387,6 +2374,7 @@ let string_of_input (i : inspect_input) : string =
   | Declared_version_tags t ->
       "DECLARED version tags (" ^ Int.to_string (List.length t) ^ ")"
   | Staged_lib ps -> one "staged native summary" ps
+  | Bridge_record ps -> one "bridge record" ps
 
 (** THE record for one agreement, as text. [markdown] switches the
     same content to a doc section so the generated catalogue and the

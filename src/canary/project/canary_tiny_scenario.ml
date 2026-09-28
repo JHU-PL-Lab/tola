@@ -1714,6 +1714,7 @@ let violates_label = function
   | Repack_complete -> "API-faithfulness"
   | Dependencies_provided -> "NeededProvided"
   | Staged_interface_preserved -> "StagedInterface"
+  | Gate_admits_the_world -> "BridgeGate"
 
 let json_of_entry (e : scenario_spec) : Yojson.Basic.t =
   `Assoc [

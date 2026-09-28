@@ -67,7 +67,7 @@ The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 184 project + 119 artifact + 17 PM = 320** (2026-09-27). `make canary-test`
+**Tests: 186 project + 119 artifact + 17 PM = 322** (2026-09-27). `make canary-test`
 after every edit under `src/canary/`; `make canary-post-check` before
 committing.
 
@@ -401,13 +401,19 @@ sits on the chain is a column of the agreement table and a grouping under
 it, counting placed, checked and decided, so the diagram, the table and
 the run logs agree about where each agreement is, and the gaps show.
 
-**Next: E2**, the first agreement that reads the bridge record
-(`gate_admits_the_world`) — the first checked one in the grouping's
-empty package-layer row. Then the easy placeholders become records, one
-at a time; the first, apt's chosen version (`resolve_sys`), also retires
-the one value the page asks of the rendering machine. Then bridges
-beyond zarith. The ordered list is `design/overview.md` §6.1. Three
-questions from the visual work are parked there, not urgent (§6.3).
+**E2 is done** (2026-09-27): `gate_admits_the_world`, the first agreement
+that reads the bridge record, holds on zarith's fetched world, decided by
+a real run — the first checked agreement in the grouping's package-layer
+row across the sides, and 9 of 14 agreements landed. The bridge step now
+passes whenever it records; the verdict is the agreement's.
+
+**Next**, in `design/overview.md` §6.1's order: the three other claims the
+same record carries; then the easy placeholders become records, one at a
+time — the first, apt's chosen version (`resolve_sys`), also retires the
+one value the page asks of the rendering machine; then bridges beyond
+zarith, which turn the 23 new `gatw` cells into decisions (they read `·`
+or `no-evid` today). Four questions from the visual work are parked
+there, not urgent (§6.3).
 
 The history, with the user's words and every falsified pin, is
 [`worklog/worklog_2026_09.md`](worklog/worklog_2026_09.md), under the

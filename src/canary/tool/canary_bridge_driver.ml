@@ -105,8 +105,17 @@ let invocation ~(package : string) ~(kind : string) ~(pm : string)
 
 (** The command that dispatches the bridge's check in this world and
     records what the bridge is and did, into the step's [inspect.json].
-    It exits with the check's verdict: 0 holds, 1 does not, 3
-    ({!not_dispatchable}) the predicate makes no query canary can run.
+
+    It SUCCEEDS WHEN THE RECORD IS WRITTEN, whatever the check said
+    (2026-09-27). The script exits with the verdict — 0 holds, 1 does
+    not, 3 ({!not_dispatchable}) the predicate makes no query canary can
+    run — and until then the step failed on a check that did not hold.
+    The verdict is [gate_admits_the_world]'s now, read from the record's
+    [check] like every other agreement's evidence, so a gate that refuses
+    the world is a finding the step reports rather than a step that
+    breaks the run; [--strict] turns it back into a failure, at the step
+    that reads it. Any other status, or an empty record, is the recorder
+    failing, and fails the step.
 
     [binding_pkg] is the package whose [depends] names the bridge; the
     record keeps what that package declares, which is the evidence the
@@ -136,8 +145,13 @@ let record_cmd (b : Canary_bridge.t) ~(binding_pkg : string option)
       in
       Some
         (fun ~output_dir ~variant_key ->
-          Printf.sprintf "%s > %s/%s"
+          let out =
+            Stdlib.Filename.quote
+              (output_dir ^ "/"
+              ^ Canary_basic.filename ~variant_key ~base:record_base ~ext:"json")
+          in
+          Printf.sprintf
+            "%s > %s; rc=$?; test -s %s && { test $rc -le 1 || test $rc -eq %d; }"
             (invocation ~package:pkg ~kind:"conf_package" ~pm:"opam"
                ~sys_pm:(Canary_store.string_of_pm sys_pm) ?binding_pkg q)
-            output_dir
-            (Canary_basic.filename ~variant_key ~base:record_base ~ext:"json"))
+            out out not_dispatchable)

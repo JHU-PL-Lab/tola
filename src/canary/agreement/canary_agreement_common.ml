@@ -146,6 +146,11 @@ type inspect_input =
      staging check compares TWO native summaries and the pair has to be
      addressable (2026-09-12) *)
   | Staged_lib of string list
+  (* what a BRIDGE between package managers is and what its check said in
+     this world — the record a bridge step writes (2026-09-27). Not an
+     inspection of an artifact: the bridge is a package canary's artifact
+     catalogue has no kind for *)
+  | Bridge_record of string list
 
 (* Each family's evidence RECORDS and their loaders live with the family
    that reads them (2026-09-02): [stub_inspect]/[native_inspect] in
@@ -178,6 +183,9 @@ type subject =
   | Behavior         (** what running it does *)
   | Dependencies     (** whether a recorded requirement has a provider *)
   | Repacking        (** the relation between a binding's two layers *)
+  | Bridges
+      (** what a bridge between two package managers states — its check,
+          its mapping, the bound on it — and whether the world honours it *)
   | Action_outcome
       (** the weakest claim available: the tool did not error, and its
           declared output appeared. No artifact is read — which is why
@@ -196,6 +204,7 @@ let string_of_subject = function
   | Behavior -> "behavior"
   | Dependencies -> "dependencies"
   | Repacking -> "repacking"
+  | Bridges -> "bridges"
   | Action_outcome -> "action-outcome"
   | Framework -> "framework"
 
@@ -553,35 +562,44 @@ let paths_of_input (i : inspect_input) : string list =
   match i with
   | C_stub ps | Native_lib ps | Ocaml_mli ps | Python_attrs ps
   | Versioned_exports ps | Versioned_req ps | Abi_surface ps | Typed_header ps
-  | Typed_binding_stub ps | Typed_binding_user ps | Staged_lib ps ->
+  | Typed_binding_stub ps | Typed_binding_user ps | Staged_lib ps
+  | Bridge_record ps ->
       ps
   | Declared_exports _ | Declared_soname _ | Declared_version_tags _ -> []
 
-(** WHICH ARTIFACT AN EVIDENCE REFERENCE IS ABOUT (2026-09-14, user).
+(** WHICH ARTIFACTS AN EVIDENCE REFERENCE IS ABOUT (2026-09-14, user).
 
     A failing check should be able to point at what it was reading, and
     the evidence already says: a native summary is about the library, a
     stub or a surface is about the binding, a header signature set is
     about the headers.
 
-    [None] FOR A DECLARATION, and that is the interesting case rather
+    NONE FOR A DECLARATION, and that is the interesting case rather
     than a gap. A declaration is the project's word, not an artifact,
     and it has no column to colour. So the artifacts a violation
     implicates are exactly one for a [Declared_facts] comparison and
     exactly two for a [Peer_artifact] one — which means "red" means two
     different things, and the difference is readable off
     [m_reference]: this artifact is wrong, versus these two disagree.
-    Seven of the thirteen agreements are declaration comparisons and
-    six are peer ones, so both cases are live. *)
-let artifact_of_input ~(lang : Canary_lang.lang) (i : inspect_input) :
-    Canary_basic.artifact_kind option =
+    Seven of the fourteen agreements are declaration comparisons and
+    seven are peer ones, so both cases are live.
+
+    A LIST since 2026-09-27, because one record can speak for two
+    artifacts. A bridge record holds the binding package's gate and the
+    system's answer about the library, so the two members of the tuple
+    [gate_admits_the_world] is about are the binding and the library —
+    the bridge between them is a package the catalogue has no artifact
+    kind for, and gets no column of its own. *)
+let artifacts_of_input ~(lang : Canary_lang.lang) (i : inspect_input) :
+    Canary_basic.artifact_kind list =
   match i with
-  | Native_lib _ | Staged_lib _ | Versioned_exports _ -> Some Canary_basic.Lib
+  | Native_lib _ | Staged_lib _ | Versioned_exports _ -> [ Canary_basic.Lib ]
   | C_stub _ | Ocaml_mli _ | Python_attrs _ | Versioned_req _ | Abi_surface _
   | Typed_binding_stub _ | Typed_binding_user _ ->
-      Some (Canary_basic.Binding lang)
-  | Typed_header _ -> Some Canary_basic.Headers
-  | Declared_exports _ | Declared_soname _ | Declared_version_tags _ -> None
+      [ Canary_basic.Binding lang ]
+  | Typed_header _ -> [ Canary_basic.Headers ]
+  | Bridge_record _ -> [ Canary_basic.Lib; Canary_basic.Binding lang ]
+  | Declared_exports _ | Declared_soname _ | Declared_version_tags _ -> []
 
 (** THE DECLARED HALF, AS EVIDENCE (2026-09-14).
 
@@ -784,6 +802,17 @@ let binding_evidence_tag (w : Canary_artifact.assignment)
 
 let build_lib_tag = Canary_basic.string_of_action Canary_basic.Build_lib
 
+(** WHERE A BRIDGE'S RECORD SITS: the step that dispatches a binding's
+    one bridge, a sibling of the binding's fetch (2026-09-27). Stated
+    once, here, because two layers need it — the step builder names its
+    step with it and the bridge family reads the record from it — and a
+    tag spelled twice is how a reader comes to look where no writer
+    writes. A binding with several bridges tags each by package instead
+    ([_bridge_<package>]); none does, and this names only the one. *)
+let bridge_record_tag (l : Canary_lang.lang) : string =
+  Canary_basic.string_of_action (Canary_basic.Fetch (Canary_basic.Binding l))
+  ^ "_bridge"
+
 (** WHERE THE LIBRARY'S INSPECTION SITS — the lib-side twin of
     [binding_evidence_tag], and it was missing (2026-09-12).
 
@@ -901,6 +930,8 @@ type agreement_id =
   | Dependencies_provided
   (* staging — the one DISTANCE-0 agreement: both copies still exist *)
   | Staged_interface_preserved
+  (* bridges — what a bridge between package managers states *)
+  | Gate_admits_the_world
   (* repacking — PROVISIONAL names, see above *)
   | Repack_preserves_api
   | Repack_complete
@@ -917,6 +948,7 @@ let string_of_agreement_id = function
   | Signatures_agree -> "signatures_agree"
   | Dependencies_provided -> "dependencies_provided"
   | Staged_interface_preserved -> "staged_interface_preserved"
+  | Gate_admits_the_world -> "gate_admits_the_world"
   | Repack_preserves_api -> "repack_preserves_api"
   | Repack_complete -> "repack_complete"
 
@@ -926,8 +958,8 @@ let all_agreement_ids =
   [ Declared_symbols_exported; Required_symbols_exported; Api_names_present;
     Behavior_matches; Soname_matches_declaration; Soname_matches_requirement;
     Declared_versions_exported; Required_versions_exported; Signatures_agree;
-    Dependencies_provided; Staged_interface_preserved; Repack_preserves_api;
-    Repack_complete ]
+    Dependencies_provided; Staged_interface_preserved; Gate_admits_the_world;
+    Repack_preserves_api; Repack_complete ]
 
 (** Parse a canonical name back into an id. Case-insensitive on the
     name; nothing else is accepted, and in particular the retired

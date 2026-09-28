@@ -240,13 +240,23 @@ package's check only when it first installs the package.
 A run now records all three where a bridge is modeled (zarith's, for now):
 the package's depends, the depext mapping, and the check's verdict in this
 world, beside what pkg-config found and which package ships the capability
-file. The claims that would read that record are `gate_admits_the_world`,
+file. The claims that read that record are `gate_admits_the_world`,
 `declared_gate_matches_package`, `gate_bounds_the_library` and
 `depext_names_the_provided_package`. A version bound on a bridge often
 bounds only the bridge's own packaging, which is what the third one is
 about. The capability file the check reads is not a bridge: it belongs to
 the package that ships it. It is why `discovery_matches_link` sits with
 them.
+
+`gate_admits_the_world` is the first of them checked. Its evidence is
+unusual: not a projection the rule left behind, but the rule run again —
+canary dispatches the bridge's own query in the world and reads the
+answer. That makes its limit sharp. A predicate may fall back when its
+query fails, as conf-gmp's compiles against `gmp.h`, and canary runs only
+the query; so a query that holds decides the claim, and one that fails
+decides it only for a predicate with no fallback. The rest is recorded as
+unavailable, naming the fallback, because the evidence that would decide
+it was not produced.
 
 ## 6. Deployment and execution
 

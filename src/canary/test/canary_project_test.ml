@@ -1808,9 +1808,10 @@ let agreement_fixture_tests : pure_test list =
           Poly.equal covered
             C.[ Api_names_present; Declared_symbols_exported;
                 Declared_versions_exported; Dependencies_provided;
-                Required_symbols_exported; Required_versions_exported;
-                Signatures_agree; Soname_matches_declaration;
-                Soname_matches_requirement; Staged_interface_preserved ]
+                Gate_admits_the_world; Required_symbols_exported;
+                Required_versions_exported; Signatures_agree;
+                Soname_matches_declaration; Soname_matches_requirement;
+                Staged_interface_preserved ]
           && List.for_all CR.agreement_registry ~f:(fun r ->
                  (* the invariant the set above is an instance of *)
                  Bool.equal
@@ -3291,6 +3292,7 @@ let check_module_pattern_pin : pure_test =
             ("types", Canary_agreement_types.checks);
             ("behaviour", Canary_agreement_behaviour.checks);
             ("staging", Canary_agreement_staging.checks);
+            ("bridge", Canary_agreement_bridge.checks);
             ("composed", Canary_agreement_composed.checks) ]
         in
         let all = List.concat_map families ~f:snd in

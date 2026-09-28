@@ -1026,6 +1026,73 @@ let bridge_step_pin : Canary_project_test.pure_test =
         && List.equal String.equal rollout [ "zarith conf-gmp" ])
   }
 
+(* THE GATE IS READ AFTER ITS BRIDGE RUNS (2026-09-27, E2). The agreement
+   that reads a bridge record fires at the binding's probe; the record is
+   written by the bridge step beside the install. Two things could make
+   the reader look at the wrong file, and neither shows in a single run:
+
+   - the TAG: the step builder names the bridge step and the family names
+     the record's path — both through [bridge_record_tag] now, and this
+     holds them to one answer;
+   - the ORDER: a probe that did not wait for the bridge step would read
+     the last run's record on a cold run and report it as this one's.
+
+   Over every world of every active project: each bridge step carries the
+   tag, the gate fires in that world exactly at the language's probe, it
+   reads the file the bridge step writes, and every probe step of the
+   language depends on the bridge step. Exercised on zarith's fetched
+   world — the only bridge step today. *)
+let gate_after_bridge_pin : Canary_project_test.pure_test =
+  { name = "steps.gate_is_read_after_its_bridge_runs";
+    check =
+      (fun () ->
+        let module SM = Canary_step_model in
+        let module C = Canary_agreement_common in
+        let gate =
+          C.method_of
+            (Canary_agreement.row_of C.Gate_admits_the_world).Canary_agreement.ag
+            "bridge_check_in_this_world"
+        in
+        let checked = ref 0 in
+        let ok =
+          List.for_all Canary_registry.all_projects ~f:(fun (_, pr) ->
+              List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  let steps =
+                    Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
+                      ~ctx:(Canary_pipeline.ctx_of pr a) a
+                  in
+                  List.for_all steps ~f:(fun (b : SM.step) ->
+                      match (b.SM.bridge, b.SM.action, gate) with
+                      | None, _, _ -> true
+                      | Some _, Canary_basic.Fetch (Canary_basic.Binding lang), Some m -> (
+                          Int.incr checked;
+                          match Canary_mechanism.default_mechanism_of_lang lang with
+                          | None -> false
+                          | Some mechanism ->
+                          let reads =
+                            List.concat_map
+                              (m.C.m_inputs
+                                 { C.ac_mechanism = mechanism; ac_lang = lang;
+                                   ac_world = a; ac_declared = None })
+                              ~f:C.paths_of_input
+                          in
+                          let probes =
+                            List.filter steps ~f:(fun (s : SM.step) ->
+                                Poly.equal s.SM.action (Canary_basic.Probe_binding lang))
+                          in
+                          String.equal b.SM.tag (C.bridge_record_tag lang)
+                          && Poly.equal (m.C.m_firing mechanism lang a)
+                               [ Canary_basic.Probe_binding lang ]
+                          && List.equal String.equal reads
+                               [ b.SM.tag ^ "/" ^ Canary_bridge_driver.record_base ^ ".json" ]
+                          && (not (List.is_empty probes))
+                          && List.for_all probes ~f:(fun (s : SM.step) ->
+                                 List.mem s.SM.deps b.SM.tag ~equal:String.equal))
+                      | Some _, _, _ -> false)))
+        in
+        ok && !checked > 0)
+  }
+
 (* A PLACEHOLDER STEP STANDS FOR WHAT A PACKAGE MANAGER DOES, UNSEEN
    (2026-09-23, status.md §2.7 E; user: "I like the placeholder steps").
    Derived for every project from the providers it declares, so this holds
@@ -1657,7 +1724,8 @@ let bridge_record_pin : Canary_project_test.pure_test =
    and an edge whose claims are ALL placeholders gets a hollow badge, while
    an edge with an implemented claim keeps the filled one. Held over every
    edge of the page, so a claim that lands flips its badge and this says
-   so.
+   so — which it did on 2026-09-27, when [gate_admits_the_world] got an
+   evaluator and [conf_probe] its first filled badge.
 
    TWO BADGES SINCE 2026-09-24 (user, on the numbers on the edges): a
    filled one for the agreements canary checks on the relation for the
@@ -1702,12 +1770,18 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
         in
         let bridge_edges = [ "depends"; "conf_probe"; "depext"; "discover" ] in
         let shown g cls = String.is_substring g ~substring:(Printf.sprintf {|class="cbadge %s"|} cls) in
+        (* every bridge edge carries a claim; the gate on conf_probe is the
+           one checked (E2, 2026-09-27), and every other one is still a
+           candidate — named, with no evaluator *)
         List.for_all bridge_edges ~f:(fun id ->
             (not (List.is_empty (T.claim_sites_on id)))
             && List.for_all (T.claim_sites_on id) ~f:(fun p ->
-                   (not (evaluated p.T.cs_claim))
-                   && List.exists Canary_agreement.proposed_agreements ~f:(fun c ->
-                          String.equal c.Canary_agreement.prop_slug p.T.cs_claim)))
+                   if String.equal p.T.cs_claim "gate_admits_the_world" then
+                     evaluated p.T.cs_claim && String.equal id "conf_probe"
+                   else
+                     (not (evaluated p.T.cs_claim))
+                     && List.exists Canary_agreement.proposed_agreements ~f:(fun c ->
+                            String.equal c.Canary_agreement.prop_slug p.T.cs_claim)))
         && List.for_all T.edges ~f:(fun e ->
                let sites = T.claim_sites_on e.T.eg_id in
                match group_of e.T.eg_id with
@@ -2938,9 +3012,10 @@ let record_chains_pin : Canary_project_test.pure_test =
    - an edge the chain lacks is never realized, observed or placeheld, and
      carries no badge;
    - no claim a run DECIDED (holds or violated) is dropped as not applying;
-   - exercised both ways on zarith: its bridged view keeps the bridge and
-     lists the bridge's placeholder claims, its artifact-only view has no
-     bridge and lists none of them; and the page hides by class.
+   - exercised both ways on zarith: its bridged view keeps the bridge,
+     counts the gate as checked on conf_probe and lists the bridge's
+     other claims as placeholders; its artifact-only view has no bridge
+     and none of them; and the page hides by class.
 
    It caught the rules twice before they landed: llvm's built worlds stage
    the library the first draft said had no staged copy, and torch's opam
@@ -2996,9 +3071,18 @@ let chain_absence_pin : Canary_project_test.pure_test =
                   in
                   (not decided) || List.Assoc.mem v.R.vw_claims slug ~equal:String.equal)
         in
-        let bridge_claims =
-          [ "gate_admits_the_world"; "declared_gate_matches_package";
-            "gate_bounds_the_library"; "depext_names_the_provided_package" ]
+        (* the bridge's claims: the gate is CHECKED since E2 (2026-09-27),
+           the other three are still candidates *)
+        let bridge_candidates =
+          [ "declared_gate_matches_package"; "gate_bounds_the_library";
+            "depext_names_the_provided_package" ]
+        in
+        let checked_on (v : R.view) edge claim =
+          match List.Assoc.find v.R.vw_edge_claims edge ~equal:String.equal with
+          | Some cs ->
+              List.exists cs ~f:(fun (c, st) ->
+                  String.equal c claim && Poly.equal st T.Checked)
+          | None -> false
         in
         let zarith k =
           List.find views ~f:(fun v ->
@@ -3009,10 +3093,15 @@ let chain_absence_pin : Canary_project_test.pure_test =
           match (zarith T.Co_conf, zarith T.Co_artifacts) with
           | Some bridged, Some bare ->
               (not (List.mem bridged.R.vw_gone "bridge" ~equal:String.equal))
-              && List.for_all bridge_claims ~f:(List.mem bridged.R.vw_candidates ~equal:String.equal)
+              && List.for_all bridge_candidates
+                   ~f:(List.mem bridged.R.vw_candidates ~equal:String.equal)
+              && checked_on bridged "conf_probe" "gate_admits_the_world"
               && List.mem bare.R.vw_gone "bridge" ~equal:String.equal
               && List.mem bare.R.vw_gone "conf_probe" ~equal:String.equal
-              && not (List.exists bridge_claims ~f:(List.mem bare.R.vw_candidates ~equal:String.equal))
+              && (not
+                    (List.exists bridge_candidates
+                       ~f:(List.mem bare.R.vw_candidates ~equal:String.equal)))
+              && not (checked_on bare "conf_probe" "gate_admits_the_world")
           | _ -> false
         in
         let page =
@@ -8222,6 +8311,11 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                   "build_binding_ocaml_pre:rve"; "build_binding_ocaml_pre:sa";
                   "build_binding_ocaml_pre:smr";
                   "build_binding_ocaml"; "build_binding_ocaml=ocaml";
+                  (* gate_admits_the_world (2026-09-27): a requirement
+                     the install depends on, so it reads in front of the
+                     fetch. OCaml only — pip defines no bridge, so the
+                     python block has no such column *)
+                  "fetch_binding_ocaml_pre:gatw";
                   "fetch_binding_ocaml"; "fetch_binding_ocaml=ocaml";
                   "pack_binding_ocaml"; "probe_binding_ocaml_pre:anp";
                   "probe_binding_ocaml_pre:dp";
@@ -8351,6 +8445,7 @@ let base_tests : Canary_project_test.pure_test list =
       record_join_pin;
       every_step_placed_pin;
       bridge_step_pin;
+      gate_after_bridge_pin;
       placeholder_steps_pin;
       overview_overlay_pin;
       recorded_names_pin;
