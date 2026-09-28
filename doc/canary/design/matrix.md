@@ -15,7 +15,7 @@ by the per-world result matrix:
 
 | # | table | what it is |
 | --- | --- | --- |
-| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `kind`, `implemented at`, `lang`, `mech`, `object`, lag, and what the rows below decided and blame. **Followed by a second, simple CANDIDATE table** — name, kind, and what stands in the way — for the claims that have no methods and so no columns to fill |
+| 1 | **the agreement overview** | one row per (agreement × distinct firing pattern) — leading ARTIFACT columns marking the claim's TARGET (`▣`), then the action columns with `R` where the rule ran and `D` where the check fires, plus code, `kind`, `implemented at`, `lang`, `mech`, `object`, `sits on` and `where` (since 2026-09-27: where the claim sits on the overview's layered chain — its claim site's edges, the layers their ends lie in, and whether it stays on one side, reaches across, or runs end to end), lag, and what the rows below decided and blame. **Followed by a second, simple CANDIDATE table** — name, kind, and what stands in the way — for the claims that have no methods and so no columns to fill — **and by every agreement, candidates included, grouped by where it sits**, each group counting placed, checked and decided, which is where the gaps show (`design/overview.md` §1) |
 | 2 | the result matrix | one row per enumerated WORLD — what a run decided |
 
 Table 1 is table 2's TEMPLATE. An empty column in the matrix can be

@@ -59,6 +59,39 @@ the agreements canary checks on that relation for the chain drawn, hollow
 for those only named. Both count `edge_claims` for the drawn mechanism,
 and the pointer over an edge lists them by name.
 
+**Where each agreement sits is a column of the agreement table**
+(2026-09-27). The table was built before this diagram, and the target is
+to categorize every agreement by it — derived first, re-grouped by hand
+only once a few more agreements have landed (user). `sitting_of` reads an
+agreement's claim site and gives its edges, the layers their ends lie in,
+and how far it reaches: along one side's own chain, across the two
+sides, or end to end over edges leading from one layer to another. The
+table shows it as `sits on` and `where`, and under the table every
+agreement the diagram places, candidates included, is grouped by it, each
+group counting how many are placed, checked (an evaluator in the
+registry) and decided (a recorded run reached holds or violated).
+`canary checks --firing` prints the same grouping. On the day it landed:
+
+| reaches | layers | placed | checked | decided |
+| --- | --- | --- | --- | --- |
+| system side | package/artifact | 5 | 3 | 2 |
+| system side | artifact | 4 | 1 | 1 |
+| language side | package | 1 | 0 | 0 |
+| language side | package/artifact | 4 | 1 | 1 |
+| across the sides | package | 3 | 0 | 0 |
+| across the sides | artifact | 7 | 5 | 4 |
+| across the sides | artifact/program | 5 | 0 | 0 |
+| end to end | pm/package/program | 1 | 0 | 0 |
+
+Checked agreements cluster where the binding meets the library; the
+bridge, the running program and the end-to-end claim have none, and no
+agreement sits on a package manager's resolution alone. Two agreements
+have evaluators and have never been decided by a run —
+`signatures_agree` and `declared_versions_exported`. And one coordinate
+is not always enough: `discovery_matches_link` sits on `discover`, both of
+whose ends are on the system side, while what it compares reaches the
+language side.
+
 ## 2. Choosing a chain
 
 §1's panel offers five choices: the native side's package manager, the
@@ -204,6 +237,14 @@ In order (user, 2026-09-27): finish phase E, then the derivations of
 
 ### 6.1 Phase E — the rest of the bridges
 
+The target behind this phase (user, 2026-09-27) is every agreement
+categorized by the diagram. Its first step is done: where each agreement
+sits is derived and shown (§1), so the diagram, the agreement table and
+the run logs name the same agreements in the same places, and the next
+agreement to implement is picked from the grouping's gaps rather than
+by convenience. After two or three more land, the categories are
+re-grouped by hand.
+
 1. **E2: the first agreement that reads the bridge record.**
    `gate_admits_the_world` is the cheapest: zarith's record already says
    whether conf-gmp's check held. The record also carries both sides of
@@ -211,7 +252,8 @@ In order (user, 2026-09-27): finish phase E, then the derivations of
    binding links), `depext_names_the_provided_package`, and
    `declared_gate_matches_package`. Each lands the way every agreement
    lands — a real run's log decides it — and turns a hollow badge on a
-   bridge edge into a filled one.
+   bridge edge into a filled one. It is the first checked agreement in
+   the grouping's empty row, the package layer across the sides.
 2. **The easy placeholders become records**, one at a time, each leaving
    `Canary_pm_action` in the change that records it:
    - `resolve_sys`: apt's chosen candidate and the installed version
@@ -338,6 +380,7 @@ rewrites; to settle when a second template exists).
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
 | `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |
+| `overview.agreements_sit_on_the_chain` | every agreement has one claim site; the table's `sits on` is it; the grouping lists each once; no run decided an agreement without an evaluator |
 | `overview.every_drawn_line_has_a_source` | every line under a node label has one source; `render` found by swapping the machine's answers |
 | `overview.edge_marks_clear_the_boxes` | no edge under a source it does not join; no label or badge hidden |
 | `overview.visual_vocabulary_is_one_list` | the looks: one list, held to the stylesheet (§5) |

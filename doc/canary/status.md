@@ -395,8 +395,15 @@ chosen from its parts, with every line's source traced and its looks and
 places kept as two checked lists. How the page works now is
 [`design/overview.md`](design/overview.md).
 
+The target behind phase E is every agreement categorized by the
+diagram (user, 2026-09-27). Its first step is done: where each agreement
+sits on the chain is a column of the agreement table and a grouping under
+it, counting placed, checked and decided, so the diagram, the table and
+the run logs agree about where each agreement is, and the gaps show.
+
 **Next: E2**, the first agreement that reads the bridge record
-(`gate_admits_the_world`). Then the easy placeholders become records, one
+(`gate_admits_the_world`) — the first checked one in the grouping's
+empty package-layer row. Then the easy placeholders become records, one
 at a time; the first, apt's chosen version (`resolve_sys`), also retires
 the one value the page asks of the rendering machine. Then bridges
 beyond zarith. The ordered list is `design/overview.md` §6.1. Three

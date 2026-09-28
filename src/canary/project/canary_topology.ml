@@ -1943,6 +1943,77 @@ let edge_claims ~(mechanism : Canary_mechanism.mechanism) ~(lang : Canary_lang.l
 let claim_applies ~(gone : string list) (cs : claim_site) : bool =
   List.exists cs.cs_edges ~f:(fun e -> not (List.mem gone e ~equal:String.equal))
 
+(* ── WHERE AN AGREEMENT SITS ON THE CHAIN (2026-09-27) ───────────────
+
+   A FOURTH AXIS FOR THE AGREEMENT TABLE, DERIVED (user, 2026-09-27: the
+   agreement table was built before the layered diagram, and the target is
+   to categorize every agreement by the diagram; "do 1 first" — derive
+   where each sits, show it as a column and as a grouped view, then
+   implement agreements where the grouping shows gaps). Beside kind (what
+   a claim asserts), reference (what its second side is) and rooting
+   (whose rule it recovers), this says where on the chain it sits: the
+   edges of its claim site, the layers their ends lie in, and how far it
+   reaches — along one side's own chain, across the two sides, or end to
+   end, over edges that lead from one layer to another.
+
+   It is derived from [claim_sites], so it is exactly as right as they
+   are, and the first thing it shows is where one coordinate is not
+   enough: [discovery_matches_link] sits on [discover], both of whose ends
+   are on the system side, while what it compares — pkg-config's answer
+   and the library the binding links — reaches the language side. *)
+type reach = Own_side of side | Across_sides | End_to_end
+
+type sitting = {
+  st_edges : string list;  (** the claim site's edges *)
+  st_layers : layer list;  (** the layers their ends lie in, top down *)
+  st_reach : reach;
+}
+
+let layer_rank = function L_pm -> 0 | L_package -> 1 | L_artifact -> 2 | L_program -> 3
+
+(** Where one claim site sits. END TO END: its edges lead to more than one
+    node and their ends span more than one layer — a chain of relations,
+    not alternatives for one (the library's declaration agreements sit on
+    both of the library's producers, which is two ways to one node). *)
+let sitting_of_site (cs : claim_site) : sitting =
+  let es =
+    List.filter_map cs.cs_edges ~f:(fun id ->
+        List.find edges ~f:(fun e -> String.equal e.eg_id id))
+  in
+  let ns =
+    List.concat_map es ~f:(fun e -> e.eg_to :: e.eg_from)
+    |> List.dedup_and_sort ~compare:String.compare
+    |> List.filter_map ~f:node_by_id
+  in
+  let layers =
+    List.map ns ~f:(fun n -> n.nd_layer)
+    |> List.dedup_and_sort ~compare:(fun a b -> Int.compare (layer_rank a) (layer_rank b))
+  in
+  let heads = List.map es ~f:(fun e -> e.eg_to) |> List.dedup_and_sort ~compare:String.compare in
+  let reach =
+    if List.length heads > 1 && List.length layers > 1 then End_to_end
+    else
+      match List.map ns ~f:(fun n -> n.nd_side) |> List.dedup_and_sort ~compare:Poly.compare with
+      | [ s ] -> Own_side s
+      | _ -> Across_sides
+  in
+  { st_edges = cs.cs_edges; st_layers = layers; st_reach = reach }
+
+(** Where an agreement sits, by its name — [None] if nothing places it. *)
+let sitting_of (slug : string) : sitting option =
+  Option.map
+    (List.find claim_sites ~f:(fun cs -> String.equal cs.cs_claim slug))
+    ~f:sitting_of_site
+
+let string_of_reach = function
+  | Own_side S_sys -> "system side"
+  | Own_side S_lang -> "language side"
+  | Across_sides -> "across the sides"
+  | End_to_end -> "end to end"
+
+let string_of_layers (ls : layer list) : string =
+  String.concat ~sep:"/" (List.map ls ~f:string_of_layer)
+
 (** The claims one chain can carry, in [claim_sites] order, once each. *)
 let claims_of_chain ~(gone : string list) : string list =
   List.filter_map claim_sites ~f:(fun cs ->

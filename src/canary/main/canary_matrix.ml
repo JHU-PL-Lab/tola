@@ -2156,6 +2156,90 @@ let json_export (m : t) : string =
     cells showing the provision choice + the verdict. The long
     scenario ids live in the cell tooltips. The styling mirrors
     {!Canary_html}'s badge tones without importing its machinery. *)
+(* ── WHERE THE AGREEMENTS SIT (2026-09-27) ──────────────────────────────
+
+   Every agreement the diagram places — registered and candidate —
+   grouped by where it sits on the chain ([Canary_topology.sitting_of]),
+   each group with three counts: placed; checked, meaning the registry
+   has an evaluator for it; and decided, meaning some recorded run reached
+   holds or violated for it. The diagram's badges, the agreement table's
+   "sits on" column and this grouping all read the same claim sites, and
+   the decided count reads the same run logs the table's own "decided"
+   column does, so the three views cannot disagree about where an
+   agreement is. The grouping is where the gaps show (user, 2026-09-27:
+   categorize every agreement by the diagram — derived first, re-grouped
+   by hand only once a few more agreements have landed). *)
+type sitting_member = { sm_slug : string; sm_checked : bool; sm_decided : bool }
+
+type sitting_group = {
+  sg_reach : Canary_topology.reach;
+  sg_layers : Canary_topology.layer list;
+  sg_members : sitting_member list;
+}
+
+(** The agreements some recorded run decided — held or violated. *)
+let decided_slugs (m : t) : string list =
+  List.concat_map m.rows ~f:(fun r ->
+      List.filter_map r.claims ~f:(fun (slug, cols) ->
+          Option.some_if
+            (List.exists cols ~f:(fun (_, o) ->
+                 match o with Some ("holds" | "violated") -> true | _ -> false))
+            slug))
+  |> List.dedup_and_sort ~compare:String.compare
+
+let sitting_groups (m : t) : sitting_group list =
+  let module T = Canary_topology in
+  let decided = decided_slugs m in
+  let reach_rank = function
+    | T.Own_side T.S_sys -> 0
+    | T.Own_side T.S_lang -> 1
+    | T.Across_sides -> 2
+    | T.End_to_end -> 3
+  in
+  let key (s : T.sitting) = (reach_rank s.T.st_reach, List.map s.T.st_layers ~f:T.layer_rank) in
+  let placed =
+    List.map T.claim_sites ~f:(fun cs ->
+        ( T.sitting_of_site cs,
+          { sm_slug = cs.T.cs_claim;
+            sm_checked = T.implemented cs;
+            sm_decided = List.mem decided cs.T.cs_claim ~equal:String.equal } ))
+  in
+  List.map placed ~f:(fun (s, _) -> key s)
+  |> List.dedup_and_sort ~compare:Poly.compare
+  |> List.filter_map ~f:(fun k ->
+         match List.filter placed ~f:(fun (s, _) -> Poly.equal (key s) k) with
+         | [] -> None
+         | (s, _) :: _ as group ->
+             Some
+               { sg_reach = s.T.st_reach;
+                 sg_layers = s.T.st_layers;
+                 sg_members = List.map group ~f:snd })
+
+(** An agreement's mark in the grouping: decided in a run, checked but
+    not yet decided in any, or named only. *)
+let sitting_mark (sm : sitting_member) : string =
+  if sm.sm_decided then "✓" else if sm.sm_checked then "·" else "?"
+
+(** The grouping, for the terminal. *)
+let pp_sittings (m : t) : string =
+  let module T = Canary_topology in
+  let groups = sitting_groups m in
+  let line (g : sitting_group) =
+    Printf.sprintf "  %-18s %-24s %2d %3d %3d   %s" (T.string_of_reach g.sg_reach)
+      (T.string_of_layers g.sg_layers) (List.length g.sg_members)
+      (List.count g.sg_members ~f:(fun sm -> sm.sm_checked))
+      (List.count g.sg_members ~f:(fun sm -> sm.sm_decided))
+      (String.concat ~sep:" "
+         (List.map g.sg_members ~f:(fun sm ->
+              Canary_agreement_common.short_code_of_slug sm.sm_slug ^ sitting_mark sm)))
+  in
+  String.concat ~sep:"\n"
+    ([ "where the agreements sit on the chain — placed / checked / decided \
+        (✓ decided in a run · checked, never decided · ? named only)";
+       Printf.sprintf "  %-18s %-24s %2s %3s %3s   %s" "reaches" "layers" "pl" "chk" "dec"
+         "agreements" ]
+    @ List.map groups ~f:line)
+
 (** Returns [(agreement_overview, result_page)] (2026-09-23, user: the
     agreement table moves to the methodology page).
 
@@ -2284,6 +2368,37 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
              n (esc b))
     |> String.concat ~sep:" · "
   in
+  (* the agreements grouped by where they sit (2026-09-27), under the
+     table: every agreement the diagram places, candidates included *)
+  let sittings_html =
+    let module T = Canary_topology in
+    let chip (sm : sitting_member) =
+      Printf.sprintf "<code title=\"%s\">%s</code>%s" (esc sm.sm_slug)
+        (esc (Canary_agreement_common.short_code_of_slug sm.sm_slug))
+        (sitting_mark sm)
+    in
+    "<h3>Where the agreements sit on the chain</h3>"
+    ^ "<p class=\"kq\">Every agreement the diagram places — registered and \
+       candidate — grouped by where its claim site sits. <b>checked</b>: \
+       the registry has an evaluator for it. <b>decided</b>: a recorded \
+       run reached holds or violated. After each code: ✓ decided in a \
+       run, · checked but never decided, ? named only.</p>"
+    ^ "<table class=\"keytbl sittings\"><thead><tr><th>reaches</th>\
+       <th>layers</th><th>placed</th><th>checked</th><th>decided</th>\
+       <th>agreements</th></tr></thead><tbody>"
+    ^ String.concat ~sep:""
+        (List.map (sitting_groups m) ~f:(fun g ->
+             Printf.sprintf
+               "<tr><td>%s</td><td>%s</td><td class=\"n\">%d</td><td \
+                class=\"n\">%d</td><td class=\"n\">%d</td><td>%s</td></tr>"
+               (esc (T.string_of_reach g.sg_reach))
+               (esc (T.string_of_layers g.sg_layers))
+               (List.length g.sg_members)
+               (List.count g.sg_members ~f:(fun sm -> sm.sm_checked))
+               (List.count g.sg_members ~f:(fun sm -> sm.sm_decided))
+               (String.concat ~sep:" " (List.map g.sg_members ~f:chip))))
+    ^ "</tbody></table>"
+  in
   let recovery_grid =
     let module CR = Canary_agreement in
     let rows = CR.overview_rows () in
@@ -2359,6 +2474,12 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
        value appears only where the row is a strict subset; \
        <code>none</code> in lang and mech means no mechanism carries this \
        at all.</dd>"
+    ^ "<dt>sits on &middot; where</dt><dd>WHERE THE CLAIM SITS ON THE CHAIN \
+       — the diagram's edges it sits on (its claim site), then the layers \
+       their ends lie in and how far it reaches: one side's own chain, \
+       across the two sides, or end to end. The same claim sites give the \
+       diagram its badges; the table under this one groups every agreement \
+       by them.</dd>"
     ^ "<dt>lag</dt><dd>action columns from the root to the nearest firing. \
        NOT the distance between the two SIDES of a comparison, which is a \
        different measure.</dd>"
@@ -2407,7 +2528,7 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
        the record's <code>against</code> are two fields.</p></div>"
     ^ "<table class=\"keytbl grid\"><thead><tr><th>code</th><th>agreement</th>\
      <th>kind</th><th>implemented at</th><th>lang</th><th>mech</th>\
-     <th>object</th>"
+     <th>object</th><th>sits on</th><th>where</th>"
     ^ String.concat ~sep:""
         (List.map CR.overview_artifact_columns ~f:(fun k ->
              "<th class=\"seth\">" ^ esc (CR.artifact_col_label k) ^ "</th>"))
@@ -2488,6 +2609,20 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
              ^ "</td><td class=\"lm\">"
              ^ esc (CR.row_mech_label row)
              ^ "</td><td class=\"mk\">" ^ esc (CR.row_format_label row) ^ "</td>"
+             (* WHERE IT SITS ON THE CHAIN (2026-09-27) — its claim site's
+                edges, then the layers and how far it reaches; the same
+                sites give the diagram its badges *)
+             ^ (match Canary_topology.sitting_of r.CR.ag_slug with
+                | Some s ->
+                    Printf.sprintf
+                      "<td class=\"lm site\">%s</td><td class=\"lm where\" \
+                       title=\"%s\">%s · %s</td>"
+                      (esc (String.concat ~sep:", " s.Canary_topology.st_edges))
+                      (esc (Canary_topology.string_of_reach s.Canary_topology.st_reach))
+                      (esc (Canary_topology.string_of_layers s.Canary_topology.st_layers))
+                      (esc (Canary_topology.string_of_reach s.Canary_topology.st_reach))
+                | None ->
+                    "<td class=\"lm site none\">not placed</td><td class=\"lm where\"></td>")
              (* the TARGET artifacts — what the claim ranges over *)
              ^ String.concat ~sep:""
                  (List.map CR.overview_artifact_columns ~f:(fun k ->
@@ -2521,6 +2656,7 @@ let render_parts (m : t) ~(generated_at : string) : string * string =
                 | Some _ -> "")
              ^ "</td></tr>"))
     ^ "</tbody></table>"
+    ^ sittings_html
     (* THE LEGEND IS A LIST, NOT A PARAGRAPH (2026-09-21, user: "very
        verbose and no line break"). It had grown into a 79-line run-on
        by accretion — every column added its explanation to the end of

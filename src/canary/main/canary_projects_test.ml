@@ -1952,6 +1952,91 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         && samples_unique && samples_used && distinct_looks)
   }
 
+(* EVERY AGREEMENT SITS SOMEWHERE ON THE CHAIN, AND EVERY VIEW SAYS WHERE
+   (2026-09-27, user: the agreement table predates the layered diagram;
+   categorize every agreement by the diagram, deriving first — "when all
+   are set, the diagram, the table, and the running logs are also
+   synced"). Pinned:
+
+   - every registry agreement and every candidate has exactly ONE claim
+     site, so the diagram, the table and the candidate list name the same
+     agreements;
+   - the derivation's specimens: what reaches across the sides, what
+     stays on one side's own chain, what runs end to end — so a change to
+     the rule that decides reach shows up as a named disagreement;
+   - the agreement table's "sits on" cell for each registry agreement is
+     exactly its claim site's edges;
+   - the grouping under it lists each placed agreement once, its counts
+     add up, and the logs agree with the registry: no agreement a run
+     decided lacks an evaluator. *)
+let agreements_sit_pin : Canary_project_test.pure_test =
+  { name = "overview.agreements_sit_on_the_chain";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module M = Canary_matrix in
+        let module A = Canary_agreement in
+        let slugs =
+          List.map A.agreement_registry ~f:(fun r -> r.A.ag_slug)
+          @ List.map A.proposed_agreements ~f:(fun p -> p.A.prop_slug)
+        in
+        let once =
+          List.for_all slugs ~f:(fun s ->
+              List.count T.claim_sites ~f:(fun cs -> String.equal cs.T.cs_claim s) = 1)
+          && List.length T.claim_sites = List.length slugs
+        in
+        let is s reach layers =
+          match T.sitting_of s with
+          | Some st -> Poly.equal st.T.st_reach reach && Poly.equal st.T.st_layers layers
+          | None -> false
+        in
+        let specimens =
+          is "required_symbols_exported" T.Across_sides [ T.L_artifact ]
+          && is "declared_symbols_exported" (T.Own_side T.S_sys) [ T.L_package; T.L_artifact ]
+          && is "api_names_present" (T.Own_side T.S_lang) [ T.L_package; T.L_artifact ]
+          && is "gate_admits_the_world" T.Across_sides [ T.L_package ]
+          && is "behavior_matches" T.Across_sides [ T.L_artifact; T.L_program ]
+          && is "package_resolution_suffices" T.End_to_end [ T.L_pm; T.L_package; T.L_program ]
+        in
+        let m = M.matrix_of Canary_registry.all_projects in
+        let overview = M.agreement_overview m ~generated_at:"pin" in
+        (* the first cell after a row's slug that carries the site *)
+        let site_cell slug =
+          match String.substr_index overview ~pattern:(Printf.sprintf "<td>%s</td>" slug) with
+          | None -> None
+          | Some i -> (
+              let rest = String.drop_prefix overview i in
+              let pat = {|class="lm site">|} in
+              match String.substr_index rest ~pattern:pat with
+              | None -> None
+              | Some j ->
+                  let from = j + String.length pat in
+                  Option.map (String.substr_index rest ~pos:from ~pattern:"</td>") ~f:(fun k ->
+                      String.sub rest ~pos:from ~len:(k - from)))
+        in
+        let table_ok =
+          List.for_all A.agreement_registry ~f:(fun r ->
+              match (site_cell r.A.ag_slug, T.sitting_of r.A.ag_slug) with
+              | Some cell, Some st -> String.equal cell (String.concat ~sep:", " st.T.st_edges)
+              | _ -> false)
+        in
+        let groups = M.sitting_groups m in
+        let members = List.concat_map groups ~f:(fun g -> g.M.sg_members) in
+        let grouping_ok =
+          List.length members = List.length T.claim_sites
+          && List.for_all slugs ~f:(fun s ->
+                 List.count members ~f:(fun sm -> String.equal sm.M.sm_slug s) = 1
+                 && String.is_substring overview
+                      ~substring:(Printf.sprintf {|<code title="%s">|} s))
+          && List.count members ~f:(fun sm -> sm.M.sm_checked)
+             = List.count T.claim_sites ~f:T.implemented
+          (* the logs agree with the registry *)
+          && List.for_all members ~f:(fun sm -> (not sm.M.sm_decided) || sm.M.sm_checked)
+        in
+        once && specimens && table_ok && grouping_ok
+        && String.is_substring (M.pp_sittings m) ~substring:"where the agreements sit on the chain")
+  }
+
 (* NO EDGE MARK HIDES UNDER A BOX, AND NO EDGE RUNS UNDER A SOURCE
    (2026-09-24, user: "the source is not in the package which usually
    contains the library or module, so it's acturally above the edge").
@@ -8279,6 +8364,7 @@ let base_tests : Canary_project_test.pure_test list =
       chain_absence_pin;
       drawn_line_sources_pin;
       badge_counts_pin;
+      agreements_sit_pin;
       edge_marks_pin;
       visual_vocabulary_pin;
       platform_single_source_pin;
