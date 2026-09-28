@@ -744,7 +744,12 @@ let string_of_layer = function
   | L_artifact -> "artifact"
   | L_program -> "program"
 
-type side = S_sys | S_bridge | S_lang
+(** Which package manager's side a node is on — the system side's, or the
+    language side's. The layout draws the first on the left and the second
+    on the right ([Canary_overview_page.layout_rules]). There is no third
+    side: a bridge package is written in the language ecosystem, and a
+    capability file ships inside the native package. *)
+type side = S_sys | S_lang
 
 type node = {
   nd_id : string;
@@ -823,8 +828,11 @@ let nodes : node list =
          the provider, owned by the package that ships it, recording how \
          the artifacts beside it are built against. Not a bridge — a \
          source of claims, and what a conf package's check reads" };
+    (* the language side's, not a third side between the two (user,
+       2026-09-24: "it belongs to the language PM's side"): an opam
+       maintainer writes conf-gmp, and opam resolves it *)
     { nd_id = "bridge"; nd_label = "bridge package"; nd_layer = L_package;
-      nd_side = S_bridge;
+      nd_side = S_lang;
       nd_gloss =
         "a separate package existing only for cooperation (opam's \
          conf-*). Carries package IDENTITY and the depext mapping. THE \

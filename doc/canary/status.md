@@ -1566,6 +1566,38 @@ blank.
     and a hint whose class nothing applies. The comparison sees only a
     hint's own rules, not a look it inherits, so the muted term's rule
     now states its italics.
+- **The layout's rules, in words a redraw can carry — landed 2026-09-27**
+  (user: "my original intension is a collection of my human words or
+  learned rules, e.g. the system is on left and language is one right,
+  vertical line for a package and package content, source is to the
+  upper left/right of a package content, capability life is to the lower
+  right, all packages are on the same height … Those are a bit higher
+  than the code-hint, so that if we switch to another GUI framework .e.g
+  mermaid, we are still aware of the rules on how to migrate them"). The
+  visual vocabulary could not supply these: it records looks (colour,
+  dash, the keys), and the layout's rules had been written only as
+  coordinate checks in one pin and as comments beside the coordinates,
+  which say where things are and not what must stay true. Nor could a
+  later comparison of two renderings recover them, since a mermaid
+  drawing would put every node somewhere else and still be right.
+
+  `Canary_overview_page.layout_rules` now holds 13 rules. Each is a
+  sentence, a reason (with whose rule it is, where it was the user's),
+  and a check. Most are checked over the nodes' places and boxes
+  (`layout_view`), which any rendering can report, so a future drawing
+  can be held to the same list. Three are about what is drawn rather
+  than where, and name the pin that checks them. The page lists all 13
+  under §1's diagram. The first rule is the first reader of
+  `Canary_topology.nd_side`, which every node already carried and
+  nothing read. It had given the bridge a third side of its own between
+  the two, against the user's placement of it on the language side;
+  that side is gone. The layout clauses of
+  `overview.chain_choices_draw_one_chain` moved into the list, so there
+  is one copy. Pinned by the new `overview.layout_rules_hold`: every
+  places rule holds for this layout, every named pin exists, and the
+  page shows the list. Falsified three ways: the package-linked consumer
+  put on the system side, a rule naming a renamed pin, and the
+  capability file moved above its package.
 
 *Alignment with the layered-model draft* (`doc/audit/multi_pm.md`, the
 user's, uncommitted — this is where canary and the draft are compared;

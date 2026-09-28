@@ -173,6 +173,152 @@ let band_label ~y ~label =
   Printf.sprintf {|<text class="bandlabel" x="%d" y="%d">%s</text>|} (canvas_w / 2) (y + 20)
     (esc label)
 
+(* ── THE LAYOUT'S RULES (2026-09-27) ──────────────────────────────────
+
+   THE RULES THE LAYOUT KEEPS, IN WORDS A REDRAW CAN CARRY (user,
+   2026-09-27: "a collection of my human words or learned rules … Those
+   are a bit higher than the code-hint, so that if we switch to another
+   GUI framework e.g. mermaid, we are still aware of the rules on how to
+   migrate them"). The coordinates in [layout] are one drawing of these
+   rules. A redraw in another framework would place things differently,
+   and must keep every rule here.
+
+   Each rule says itself, says why, and says how it is checked: over the
+   nodes' places and boxes, which any rendering can report, so a future
+   drawing is held to the same list; or, where the rule is about what is
+   drawn rather than where, by the pin that checks it. The looks — colour,
+   dash, what the keys say — are the visual vocabulary's
+   ([visual_hints]); these are the places. Held by
+   overview.layout_rules_hold. *)
+
+(** A drawing's places: each node's centre and box. *)
+type layout_view = { lv_at : string -> pos; lv_w : string -> int; lv_h : int }
+
+type layout_check =
+  | Places of (layout_view -> bool)  (** held over any drawing's places *)
+  | Pinned_by of string  (** held over this drawing by that pin *)
+
+type layout_rule = { lr_says : string; lr_why : string; lr_check : layout_check }
+
+let this_layout = { lv_at = pos_of; lv_w = box_w_of; lv_h = box_h }
+
+let layout_rules : layout_rule list =
+  let x v n = (v.lv_at n).px and y v n = (v.lv_at n).py in
+  let side s = List.filter_map T.nodes ~f:(fun n -> Option.some_if (Poly.equal n.T.nd_side s) n.T.nd_id) in
+  let one_line v f ns =
+    match ns with [] -> true | n :: rest -> List.for_all rest ~f:(fun m -> f v m = f v n)
+  in
+  let rule says why check = { lr_says = says; lr_why = why; lr_check = check } in
+  [ rule
+      "The system side is on the left and the language side on the right: every node on \
+       the system side lies left of every node on the language side."
+      "The two package managers' worlds meet in the middle, and every edge that crosses \
+       between them is a cooperation. Each node's side is data (Canary_topology.nd_side). \
+       (user, 2026-09-24)"
+      (Places
+         (fun v ->
+           List.for_all (side T.S_sys) ~f:(fun a ->
+               List.for_all (side T.S_lang) ~f:(fun b -> x v a < x v b))));
+    rule
+      "Layers stack from the top: package managers, packages, artifacts, programs. Each \
+       node sits inside its layer's band."
+      "The chain runs from who resolves, through what is claimed, to what is on disk and \
+       what runs."
+      (Places
+         (fun v ->
+           List.for_all T.nodes ~f:(fun n ->
+               List.exists bands_def ~f:(fun (top, h, _, cls) ->
+                   String.equal cls (T.string_of_layer n.T.nd_layer)
+                   && top < y v n.T.nd_id && y v n.T.nd_id < top + h))));
+    rule
+      "A package and what it ships form one vertical line: its package manager above it, \
+       its content straight below it — native package, headers, library; binding package, \
+       stub, module, surface. On the native line the staged copy sits under the library \
+       it copies."
+      "user, 2026-09-27: \"vertical line for a package and package content\""
+      (Places
+         (fun v ->
+           one_line v x [ "pm_sys"; "pkg_sys"; "hdr_sys"; "lib_sys"; "staged_sys" ]
+           && one_line v x [ "pm_lang"; "pkg_lang"; "stub_lang"; "mod_lang"; "surf_lang" ]));
+    rule "Every package sits at the same height, the bridge package among them."
+      "A bridge package is a package: conf-gmp is an opam package, as libgmp-dev is an apt \
+       one. (user, 2026-09-24)"
+      (Places (fun v -> one_line v y [ "pkg_sys"; "bridge"; "pkg_lang" ]));
+    rule
+      "Nodes of one kind on the two sides share a row: the two package managers, the two \
+       sources, headers and stub, library and module, staged copy and surface, the two \
+       consumers."
+      "user, 2026-09-24: \"if they are on the same abstraction layers, they can stay on \
+       the same horizontal line\""
+      (Places
+         (fun v ->
+           List.for_all
+             [ [ "pm_sys"; "pm_lang" ]; [ "src_sys"; "src_lang" ]; [ "hdr_sys"; "stub_lang" ];
+               [ "lib_sys"; "mod_lang" ]; [ "staged_sys"; "surf_lang" ];
+               [ "consumer_artifact"; "consumer_package" ] ]
+             ~f:(one_line v y)));
+    rule
+      "A source is not package content, so it sits beside its package's line, clear of \
+       it: the native source to the upper left of the headers, the binding source to the \
+       upper right of the stub."
+      "user, 2026-09-24: \"the source is not in the package which usually contains the \
+       library or module\" — drawn on the package's line, it sat on the package's edges \
+       and read as its content."
+      (Places
+         (fun v ->
+           (2 * x v "src_sys") + v.lv_w "src_sys" < 2 * x v "pkg_sys"
+           && (2 * x v "src_lang") - v.lv_w "src_lang" > 2 * x v "pkg_lang"
+           && y v "pkg_sys" < y v "src_sys" && y v "src_sys" < y v "hdr_sys"
+           && y v "pkg_lang" < y v "src_lang" && y v "src_lang" < y v "stub_lang"));
+    rule
+      "The capability file is content inside the native package: it sits a level below \
+       it, off its lower right."
+      "gmp.pc ships in libgmp-dev and is written by its packager — not a package, and not \
+       the bridge's. (user, 2026-09-22 and 2026-09-24)"
+      (Places (fun v -> x v "cap" > x v "pkg_sys" && y v "cap" > y v "pkg_sys"));
+    rule
+      "The bridge package belongs to the language side: it sits between the two packages, \
+       nearer the binding package."
+      "user, 2026-09-24: \"the bridge package should be near to the binding_package, since \
+       it belongs to the language PM's side\""
+      (Places
+         (fun v ->
+           x v "pkg_sys" < x v "bridge" && x v "bridge" < x v "pkg_lang"
+           && x v "pkg_lang" - x v "bridge" < x v "bridge" - x v "pkg_sys"));
+    rule
+      "The two consumers sit under the side whose resolution they use: the artifact-linked \
+       one, which names paths, toward the system side; the package-linked one, which names \
+       a package, toward the language side."
+      "Which side resolved a program's inputs is the difference between the two probes."
+      (Places (fun v -> x v "consumer_artifact" < x v "consumer_package"));
+    rule "The two sides are named over their columns."
+      "user, 2026-09-24: a hint for \"the left part and right part for the system and \
+       language division\". A dividing line was not drawn: every edge crossing it is a \
+       cooperation, and one would carry its label on the line."
+      (Pinned_by "overview.visual_vocabulary_is_one_list");
+    rule "No two boxes overlap."
+      "A box drawn over another hides a node."
+      (Places
+         (fun v ->
+           List.for_all T.nodes ~f:(fun a ->
+               List.for_all T.nodes ~f:(fun b ->
+                   String.equal a.T.nd_id b.T.nd_id
+                   || 2 * abs (x v a.T.nd_id - x v b.T.nd_id)
+                      >= v.lv_w a.T.nd_id + v.lv_w b.T.nd_id
+                   || abs (y v a.T.nd_id - y v b.T.nd_id) >= v.lv_h))));
+    rule
+      "Nothing drawn hides anything else: no edge runs under a source it does not join, and \
+       no label or badge lies under a box, another edge's marks or a band's title."
+      "A mark under a box is lost, and a package's edge under a source drew the source as \
+       package content. (2026-09-24)"
+      (Pinned_by "overview.edge_marks_clear_the_boxes");
+    rule
+      "One diagram: every chain is drawn on the same layout and switched from the panel, \
+       never drawn a second time beside it."
+      "Laid end to end, chains are compared by memory. (user, 2026-09-24, when §2's \
+       drawings were merged into §1)"
+      (Pinned_by "overview.chain_choices_draw_one_chain") ]
+
 (** Nodes are drawn AFTER edges so the boxes mask the lines that run
     under them — which is what lets every edge be a straight centre-to-
     centre segment instead of a routed path. *)
@@ -535,6 +681,9 @@ details.jprov{margin:.7rem 0 0;font-size:.88rem}
 details.jprov summary{cursor:pointer;color:var(--mut)}
 details.jprov table{font-size:.82rem;margin:.4rem 0 .2rem}
 details.jprov td{vertical-align:top}
+ol.lrules{margin:.4rem 0;padding-left:1.4rem;max-width:none}
+ol.lrules li{max-width:none;margin:.15rem 0}
+ol.lrules .lwhy{color:var(--mut)}
 .src{font:600 10.5px ui-monospace,monospace;padding:0 .3rem;border:1px solid var(--line);
 border-radius:4px;white-space:nowrap}
 .src.code{color:var(--acc)}.src.run{color:var(--ok)}
@@ -1470,6 +1619,7 @@ neither, and flagged wherever it appears. Each is computed with its value in
 page only looks it up. Only these lines are traced so far: what decides which
 nodes and edges are drawn, a recorded run's edge states and badges, and the
 lists below are inventoried in <code>doc/canary/design/overview_provenance.md</code>.</p></details>
+%s
 <div id="jrec" hidden>
 <div class="key reckey">
 %s
@@ -1504,6 +1654,14 @@ lists below are inventoried in <code>doc/canary/design/overview_provenance.md</c
          Printf.sprintf
            {|<p class="mechnote">No cooperation button: %s. Their packages are among the concrete ones, drawn with what canary cannot read left in (§4.3).</p>|}
            (esc (String.concat ~sep:"; " us)))
+    (* the layout's rules, as a redraw must keep them *)
+    (Printf.sprintf
+       {|<details class="jprov" id="jrules"><summary>How this diagram is laid out — %d rules a redraw in any framework must keep</summary><ol class="lrules">%s</ol><p class="mechnote">Each is held against these places by <code>overview.layout_rules_hold</code>, or by the pin it names; the looks are the keys'.</p></details>|}
+       (List.length layout_rules)
+       (String.concat
+          (List.map layout_rules ~f:(fun r ->
+               Printf.sprintf "<li><strong>%s</strong> <span class=\"lwhy\">%s</span></li>"
+                 (esc r.lr_says) (esc r.lr_why)))))
     (* the recorded run's key, from the vocabulary *)
     (key_html Run_key)
     data

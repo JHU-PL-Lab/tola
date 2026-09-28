@@ -2647,47 +2647,10 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all [ "<b>.pc file</b>"; "<b>conf-* package</b>"; "<b>depext field</b>" ]
                ~f:(fun s -> String.is_substring page ~substring:s)
         in
-        (* THE DIAGRAM IS LAYERED: nodes of one abstraction layer share a
-           row. The bridge package IS A PACKAGE, so it shares the row of the
-           two packages it joins, between them and right of centre; the
-           capability file is CONTENT inside the native package, so it sits
-           below that package, off its lower-right (user, 2026-09-24); no two
-           boxes overlap *)
-        let at = Canary_overview_page.pos_of in
-        let same_row a b = (at a).Canary_overview_page.py = (at b).Canary_overview_page.py in
-        let x n = (at n).Canary_overview_page.px and y n = (at n).Canary_overview_page.py in
-        let layered =
-          List.for_all
-            [ ("pm_sys", "pm_lang"); ("pkg_sys", "pkg_lang"); ("bridge", "pkg_lang");
-              ("src_sys", "src_lang"); ("hdr_sys", "stub_lang"); ("lib_sys", "mod_lang");
-              ("staged_sys", "surf_lang"); ("consumer_artifact", "consumer_package") ]
-            ~f:(fun (a, b) -> same_row a b)
-          && x "pkg_sys" < x "bridge" && x "bridge" < x "pkg_lang"
-          (* the bridge is the language side's: nearer its binding package
-             than the native one (user, 2026-09-24) *)
-          && x "pkg_lang" - x "bridge" < x "bridge" - x "pkg_sys"
-          && x "cap" > x "pkg_sys" && y "cap" > y "pkg_sys"
-          (* A SOURCE IS BESIDE ITS PACKAGE'S COLUMN, NOT IN IT (user,
-             2026-09-24): the column holds what the package ships, straight
-             under it; the native source sits left of it and the binding
-             source right, clear of the column's line, on one row *)
-          && List.for_all [ "hdr_sys"; "lib_sys"; "staged_sys" ] ~f:(fun n -> x n = x "pkg_sys")
-          && List.for_all [ "stub_lang"; "mod_lang"; "surf_lang" ] ~f:(fun n ->
-                 x n = x "pkg_lang")
-          && (2 * x "src_sys") + Canary_overview_page.box_w_of "src_sys" < 2 * x "pkg_sys"
-          && (2 * x "src_lang") - Canary_overview_page.box_w_of "src_lang" > 2 * x "pkg_lang"
-          (* no two boxes overlap, each at its own width *)
-          && List.for_all T.nodes ~f:(fun a ->
-                 List.for_all T.nodes ~f:(fun b ->
-                     String.equal a.T.nd_id b.T.nd_id
-                     ||
-                     let pa = at a.T.nd_id and pb = at b.T.nd_id in
-                     2 * abs (pa.Canary_overview_page.px - pb.Canary_overview_page.px)
-                     >= Canary_overview_page.box_w_of a.T.nd_id
-                        + Canary_overview_page.box_w_of b.T.nd_id
-                     || abs (pa.Canary_overview_page.py - pb.Canary_overview_page.py)
-                        >= Canary_overview_page.box_h))
-        in
+        (* the layout's own rules — layered rows, a package's line, the
+           sources beside it, the bridge with the language side — moved to
+           [Canary_overview_page.layout_rules] on 2026-09-27, where they are
+           stated in words and held by overview.layout_rules_hold *)
         (* EVERY PACKAGE IN CANARY CARRIES A COOPERATION, KNOWN BEFORE ANY
            RUN (2026-09-24, user: "when we click any button for
            package_in_canary, it shall also show one cooperation button in
@@ -2717,7 +2680,7 @@ let chain_choices_pin : Canary_project_test.pure_test =
         in
         cases_are_rows && cases_are_their_worlds && names_ok && depends_ok && narrows
         && runs_ok && page_ok && grouped && labelled && related_ok && merged && terms_ok
-        && layered && every_package_cooperates && gates_agree)
+        && every_package_cooperates && gates_agree)
   }
 
 (* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):
@@ -8333,5 +8296,36 @@ let base_tests : Canary_project_test.pure_test list =
       source_refresh_scope_pin;
       gh_derived_polarity_pin ]
 
-let tests : Canary_project_test.pure_test list = base_tests
+(* THE LAYOUT KEEPS ITS RULES (2026-09-27, user: "a collection of my human
+   words or learned rules … so that if we switch to another GUI framework
+   e.g. mermaid, we are still aware of the rules on how to migrate them").
+   [Canary_overview_page.layout_rules] states each rule in words, with
+   why and whose it is. This holds the drawing to it: every rule checked
+   over places holds over this layout's, and every rule checked by a pin
+   names a pin that exists — so the list cannot point at a check that
+   was renamed away. Defined after [base_tests] for that reason. A
+   future drawing can be held to the same places-rules by handing them
+   its own positions ([layout_view]). *)
+let layout_rules_pin : Canary_project_test.pure_test =
+  { name = "overview.layout_rules_hold";
+    check =
+      (fun () ->
+        let module P = Canary_overview_page in
+        (not (List.is_empty P.layout_rules))
+        && List.for_all P.layout_rules ~f:(fun r ->
+               (not (String.is_empty r.P.lr_says))
+               && (not (String.is_empty r.P.lr_why))
+               &&
+               match r.P.lr_check with
+               | P.Places holds -> holds P.this_layout
+               | P.Pinned_by name ->
+                   List.exists base_tests ~f:(fun t ->
+                       String.equal t.Canary_project_test.name name))
+        (* the page shows the list *)
+        && String.is_substring
+             (P.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin")
+             ~substring:{|id="jrules"|})
+  }
+
+let tests : Canary_project_test.pure_test list = base_tests @ [ layout_rules_pin ]
 
