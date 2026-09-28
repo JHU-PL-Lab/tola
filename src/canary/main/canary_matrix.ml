@@ -198,6 +198,11 @@ type row = {
       (** every step of this world, in the realize pass's order — the
           record's view, which no text renderer draws (status.md §2.7
           B1) *)
+  steps_from : string;
+      (** where [steps] came from: ["run"] — the manifest the world's last
+          run wrote ({!Canary_manifest}) — or ["code"], re-derived from
+          today's code because no run recorded one (2026-09-28,
+          design/overview.md §6.4 step 6) *)
   edges : (string * string list) list;
       (** THE JOIN, per edge of the overview's graph that this world
           REALIZES: the tags of the steps realizing it, in edge order
@@ -1438,14 +1443,26 @@ let matrix_of ?(root = "_out")
         List.map scenarios ~f:(fun a ->
             (* the world's steps, derived ONCE: the chain the cells range
                over is their actions, and the record lists them all *)
-            let world_steps = Canary_pipeline.display_steps_of pr a in
-            let chain_acts = Canary_pipeline.actions_of_steps world_steps in
-            let chain_tags =
-              List.map chain_acts ~f:Canary_basic.string_of_action
-            in
             let scenario =
               Stdlib.Filename.basename
                 (Canary_project_run.scenario_dir_of ~pr_name:project a)
+            in
+            (* WHAT THE RUN REALIZED, where a run recorded it (2026-09-28,
+               design/overview.md §6.4 step 6): the manifest the runner
+               wrote for this world. Re-derived from today's code only for
+               a world no run has recorded — and then the record says so *)
+            let recorded = Canary_manifest.read ~root ~project ~scenario in
+            let world_steps =
+              match recorded with
+              | Some es -> es
+              | None -> List.map (Canary_pipeline.display_steps_of pr a) ~f:Canary_manifest.of_step
+            in
+            let chain_acts =
+              List.map world_steps ~f:(fun e -> e.Canary_manifest.me_action)
+              |> List.dedup_and_sort ~compare:Poly.compare
+            in
+            let chain_tags =
+              List.map chain_acts ~f:Canary_basic.string_of_action
             in
             let sl = log_of_scenario ~scenario logs in
             let scenario_obs =
@@ -1502,27 +1519,23 @@ let matrix_of ?(root = "_out")
             (* every step, each in its own log line's state — the
                siblings and inspections the cells have no column for *)
             let row_steps =
-              List.map world_steps ~f:(fun (s : Canary_step_model.step) ->
-                  let state, at, detail =
-                    reading_of_run sl s.Canary_step_model.tag
-                  in
-                  { ws_tag = s.Canary_step_model.tag;
-                    ws_action = s.Canary_step_model.action;
-                    ws_location = s.Canary_step_model.location;
-                    ws_inspects = s.Canary_step_model.inspects;
-                    ws_dummy = s.Canary_step_model.dummy;
-                    ws_bridge = s.Canary_step_model.bridge;
-                    ws_placeholder = s.Canary_step_model.placeholder;
+              List.map world_steps ~f:(fun (e : Canary_manifest.entry) ->
+                  let state, at, detail = reading_of_run sl e.Canary_manifest.me_tag in
+                  { ws_tag = e.Canary_manifest.me_tag;
+                    ws_action = e.Canary_manifest.me_action;
+                    ws_location = e.Canary_manifest.me_location;
+                    ws_inspects = e.Canary_manifest.me_inspects;
+                    ws_dummy = e.Canary_manifest.me_dummy;
+                    ws_bridge = e.Canary_manifest.me_bridge;
+                    ws_placeholder = e.Canary_manifest.me_placeholder;
                     ws_place =
                       Canary_topology.place_step
-                        ~gone:(Canary_topology.gone_for_action gones s.Canary_step_model.action)
-                        ~pr ~world:a
-                        ~action:s.Canary_step_model.action
-                        ~location:s.Canary_step_model.location
-                        ~inspects:s.Canary_step_model.inspects
-                        ~dummy:s.Canary_step_model.dummy
-                        ~bridge:s.Canary_step_model.bridge
-                        ~placeholder:s.Canary_step_model.placeholder;
+                        ~gone:(Canary_topology.gone_for_action gones e.Canary_manifest.me_action)
+                        ~pr ~world:a ~action:e.Canary_manifest.me_action
+                        ~location:e.Canary_manifest.me_location
+                        ~inspects:e.Canary_manifest.me_inspects
+                        ~dummy:e.Canary_manifest.me_dummy ~bridge:e.Canary_manifest.me_bridge
+                        ~placeholder:e.Canary_manifest.me_placeholder;
                     ws_state = state;
                     ws_at = at;
                     ws_detail = detail })
@@ -1602,6 +1615,7 @@ let matrix_of ?(root = "_out")
                   ~f:(fun (sl : Canary_status.scenario_log) ->
                     sl.Canary_status.sl_platforms);
               steps = row_steps;
+              steps_from = (match recorded with Some _ -> "run" | None -> "code");
               edges = row_edges;
               claims = row_claims;
               verdicts = row_verdicts;
@@ -2199,6 +2213,8 @@ let to_json (m : t) : Yojson.Basic.t =
                             Option.map c ~f:(fun c -> (tag, json_of_cell c))))
                    );
                    ("steps", `List (List.map r.steps ~f:json_of_world_step));
+                   (* the run's own manifest, or re-derived from code *)
+                   ("steps_from", `String r.steps_from);
                    ( "edges",
                      `Assoc
                        (List.map r.edges ~f:(fun (id, tags) ->

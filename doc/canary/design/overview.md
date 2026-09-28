@@ -640,7 +640,21 @@ code.
    old action columns in the terminal.
 5. **The old pages retire**: `matrix.html` points here, and the per-run
    pages go.
-6. **The manifest**, and the record reads it.
+6. **The manifest** — done (2026-09-28). The runner writes, for each
+   world it runs, the steps it realized (`Canary_manifest`:
+   `_out/canary/projects/<project>/-run/manifest/<world>.json` — each
+   step's tag, action, location, what it inspects, a dummy's reason, its
+   bridge, its placeholder and its dependencies, with the machine and the
+   opam switch). The record reads it and re-derives from today's code only
+   for a world no run recorded, saying which in `steps_from` (`run` or
+   `code`). The codec is total over the types — an action is decoded
+   against every action the type has, because `action_of_string` does not
+   read them all. Pinned by `manifest.records_what_a_run_realized`
+   (falsified by a record that ignores the manifest). Not yet done of the
+   log change: log events carrying typed fields, and each inspection's
+   summary logged once — a view still reads the inspection files, which a
+   later run of the world overwrites. A run through `run_project_multi`
+   (ssl) writes no manifest and is re-derived.
 
 §6.1's agreements resume after.
 
@@ -665,6 +679,7 @@ code.
 | `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
 | `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it |
 | `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
+| `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
 | `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |

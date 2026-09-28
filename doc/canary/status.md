@@ -67,7 +67,7 @@ The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 189 project + 119 artifact + 17 PM = 325** (2026-09-28). `make canary-test`
+**Tests: 190 project + 119 artifact + 17 PM = 326** (2026-09-28). `make canary-test`
 after every edit under `src/canary/`; `make canary-post-check` before
 committing.
 
@@ -412,9 +412,11 @@ ahead of the next agreement; decided: one page, the per-run pages retire,
 prototype A for the columns). Done: the column model (`Canary_frames`,
 `canary checks --frames`), one reader per inspection, and the table itself
 as the overview's §1.2 — one row per chain and machine, linked both ways
-with §1's drawings, its check cells read at each claim's site. Next:
-§2's agreement overview on the same header, then the old pages retire,
-then the manifest. The plan and its record are `design/overview.md` §6.4.
+with §1's drawings, its check cells read at each claim's site; §2's
+agreement overview on the same frames; and the per-run manifest the
+record now reads instead of re-deriving. Next: the old pages retire,
+once the user confirms which files go. The plan and its record are
+`design/overview.md` §6.4.
 
 **Then the rest of phase E** (§6.1). Each of the three other claims the
 bridge record carries needs a decision before it lands, and most of them

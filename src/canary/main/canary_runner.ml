@@ -73,6 +73,10 @@ let run_project_spec ?policy (pr : project_run) ~root
         let is_bad = not (all_good a) in
         let project = ctx.Canary_pipeline.sc_project in
         let steps = Canary_pipeline.steps_of ~root pr ~ctx a in
+        (* WHAT THIS RUN REALIZED, for the record to read back rather than
+           re-derive from later code (2026-09-28, design/overview.md §6.4
+           step 6) *)
+        Canary_manifest.write ~root ~project:pr.pr_name ~scenario:(Filename.basename ws) steps;
         let status =
           Canary_run_info.run_project ~failfast
             ~run_info:

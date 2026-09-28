@@ -1343,6 +1343,91 @@ let results_table_pin : Canary_project_test.pure_test =
         model_ok && section_ok && outcomes_ok && none_left_out)
   }
 
+(* THE RECORD READS WHAT A RUN REALIZED (2026-09-28, design/overview.md
+   §6.4 step 6). The runner writes each world's realized steps as a
+   manifest ([Canary_manifest]); the record reads it and re-derives from
+   today's code only where no run wrote one. Held:
+
+   - the codec is total: every action the type has, every kind of
+     location, both kinds of bridge and every placeholder a package
+     manager's catalogue names come back as they went in;
+   - every world of every active project round-trips: its realized steps,
+     written and read back, are the same entries;
+   - THE RECORD PREFERS THE MANIFEST. In a fixture tree, one zarith world
+     gets a manifest with a step left out: its row shows exactly the
+     manifest's steps and says [run]; the other world, with none, is
+     re-derived and says [code]. *)
+let manifest_pin : Canary_project_test.pure_test =
+  { name = "manifest.records_what_a_run_realized";
+    check =
+      (fun () ->
+        let module Mf = Canary_manifest in
+        let module M = Canary_matrix in
+        let roundtrip e = Poly.equal (Mf.entry_of_json (Mf.json_of_entry e)) (Some e) in
+        let bare a =
+          { Mf.me_tag = Canary_basic.string_of_action a; me_action = a; me_location = None;
+            me_inspects = None; me_dummy = None; me_bridge = None; me_placeholder = None;
+            me_deps = [ "x" ] }
+        in
+        let e0 = bare Canary_basic.Probe_lib in
+        let codec_total =
+          List.for_all Mf.all_actions ~f:(fun a -> roundtrip (bare a))
+          && List.for_all
+               Canary_store.
+                 [ Build_tree; Staged; Pm (Sys_pm { pm = Apt });
+                   Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) ]
+               ~f:(fun l -> roundtrip { e0 with Mf.me_location = Some l })
+          && List.for_all
+               Canary_bridge.[ Opam (Conf_package "conf-gmp"); Opam (Depext_field "libtorch") ]
+               ~f:(fun b -> roundtrip { e0 with Mf.me_bridge = Some b })
+          && List.for_all Mf.pms ~f:(fun pm ->
+                 List.for_all
+                   (Canary_pm_action.inside_install pm ~of_binding:true
+                   @ Canary_pm_action.inside_install pm ~of_binding:false)
+                   ~f:(fun ph -> roundtrip { e0 with Mf.me_placeholder = Some ph }))
+          && roundtrip { e0 with Mf.me_inspects = Some "fetch_lib"; me_dummy = Some "nothing" }
+        in
+        let worlds_roundtrip =
+          List.for_all Canary_registry.all_projects ~f:(fun (_, pr) ->
+              List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  List.for_all (Canary_pipeline.display_steps_of pr a) ~f:(fun s ->
+                      roundtrip (Mf.of_step s))))
+        in
+        let prefers_the_manifest =
+          let root = "_out/canary/test/manifest-fixture" in
+          ignore (Stdlib.Sys.command (Printf.sprintf "rm -rf %s" (Stdlib.Filename.quote root)) : int);
+          let pr = Canary_project_zarith.zarith_run in
+          match Canary_project_run.scenarios_of pr with
+          | a :: b :: _ ->
+              let scenario w =
+                Stdlib.Filename.basename (Canary_project_run.scenario_dir_of ~pr_name:"zarith" w)
+              in
+              let steps = Canary_pipeline.display_steps_of pr a in
+              let dropped = List.last_exn steps in
+              let kept =
+                List.filter steps ~f:(fun s -> not (phys_equal s dropped))
+              in
+              Mf.write ~root ~project:"zarith" ~scenario:(scenario a) kept;
+              let m = M.matrix_of ~root [ ("zarith", pr) ] in
+              let row w =
+                List.find m.M.rows ~f:(fun r -> String.equal r.M.scenario (scenario w))
+              in
+              let tags r = List.map r.M.steps ~f:(fun w -> w.M.ws_tag) in
+              (match (row a, row b) with
+               | Some ra, Some rb ->
+                   String.equal ra.M.steps_from "run"
+                   && List.equal String.equal (tags ra)
+                        (List.map kept ~f:(fun s -> s.Canary_step_model.tag))
+                   && String.equal rb.M.steps_from "code"
+                   && List.equal String.equal (tags rb)
+                        (List.map (Canary_pipeline.display_steps_of pr b) ~f:(fun s ->
+                             s.Canary_step_model.tag))
+               | _ -> false)
+          | _ -> false
+        in
+        codec_total && worlds_roundtrip && prefers_the_manifest)
+  }
+
 (* A PLACEHOLDER STEP STANDS FOR WHAT A PACKAGE MANAGER DOES, UNSEEN
    (2026-09-23, status.md §2.7 E; user: "I like the placeholder steps").
    Derived for every project from the providers it declares, so this holds
@@ -8707,6 +8792,7 @@ let base_tests : Canary_project_test.pure_test list =
       frames_pin;
       one_reader_pin;
       results_table_pin;
+      manifest_pin;
       placeholder_steps_pin;
       overview_overlay_pin;
       recorded_names_pin;
