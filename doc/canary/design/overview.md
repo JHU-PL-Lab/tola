@@ -552,7 +552,8 @@ per-run pages retire):
 5. The two machines: a section each, or one table with a machine column.
 6. The per-run pages: kept and linked from each row, or retired.
 
-**Prototyped for 2 to 5, to confirm** (shown to the user 2026-09-28, over
+**Decided for 2 to 5: prototype A** (user, 2026-09-28: "A and the rest
+looks good"; shown to them the same day over
 four real chains: zarith `4ea4a4-ocaml` and `614dda-ocaml`, sqlite
 `e35b2b` in both languages). The user's point: today's columns put the
 world's artifacts first and then only actions, so the table shows where
@@ -576,17 +577,41 @@ a check sits at its site. The four rows show why the site: at the slot,
 zarith's fetched-library rows have no column for the declaration checks
 every run decides, and its built row carries five probe-check columns
 that stay `·` forever. For the two machines, a row is a chain on a
-machine, with the same chain's machines adjacent — which needs the log
-change: realize writes a manifest per run (each step's id, action,
-pieces, what it consumes and produces, the checks it may evaluate and
-their columns), log events name a step id with typed fields, and each
-inspection's summary is logged once, so every view reads the manifest
-and the events instead of re-deriving the steps from today's code.
+machine, with the same chain's machines adjacent. That needs no log
+change, since each machine already writes its own runs file from its
+own log. The log change is for history: realize writes a manifest per
+run (each step's id, action, pieces, what it consumes and produces, the
+checks it may evaluate and their columns), log events name a step id
+with typed fields, and each inspection's summary is logged once, so a
+view reads what a run realized instead of re-deriving it from today's
+code.
 
-**Then, in order, each with a pin:** the links, which change no layout;
-one column model, in `base/`, used by both tables; the inspection
-summaries in the record; the matrix section on this page, with
-`matrix.html` pointing to it. §6.1's agreements resume after.
+**Then, in order, each with a pin:**
+
+1. **The column model** — done (2026-09-28): `Canary_frames`, printed by
+   `canary checks --frames`. A frame per connected group of one action
+   family's edges; sibling edges (same inputs, products in one layer)
+   merged into one piece; pieces in flow order; frames by side then flow;
+   each agreement with an evaluator at each of its sites — a verdict
+   after its site's products, a requirement before the piece that makes
+   its frame's artifacts, or after its site's products when the
+   requirement is a later action's. Pinned against the confirmed layout
+   by `frames.derive_the_confirmed_layout`. It differs from the prototype
+   in four places, each because the diagram says so: the capability file
+   is not in the fetch's frame (shipping it is the packager's relation,
+   not a piece of ours); headers built from source are their own frame;
+   checks sit in code order; and the two probes carry their consumer
+   programs as products.
+2. **Each inspection summarized once**, in the views, for both a node's
+   name and its summary.
+3. **The table on this page**, rendered from the column model and the
+   runs files, one row per chain and machine, linked both ways with §1.
+4. **§2 on the same header**: ▣, R, D and ◆ in the frame columns.
+5. **The old pages retire**: `matrix.html` points here, and the per-run
+   pages go.
+6. **The manifest**, and the record reads it.
+
+§6.1's agreements resume after.
 
 ## 7. The pins
 
@@ -606,6 +631,7 @@ summaries in the record; the matrix section on this page, with
 | `overview.overlay_words_rank_worst_first` | the order in which several steps' states merge on one edge |
 | `overview.bridge_record_is_read` | the reader of the bridge record, on a fixture |
 | `steps.gate_is_read_after_its_bridge_runs` | the gate fires at the probe, reads the file the bridge step writes, and the probe waits for that step |
+| `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
 | `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |

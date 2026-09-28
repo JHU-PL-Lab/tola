@@ -778,11 +778,22 @@ let checks_cmd =
               compares, where its evidence appears, whether it is \
               implemented, and what a pass does not establish.")
   in
+  let frames =
+    Arg.(value & flag & info [ "frames" ]
+           ~doc:
+             "Print the COLUMN MODEL the result table and the agreement \
+              overview share (design/overview.md §6.4): one frame per \
+              action as the overview's diagram draws it — what it \
+              consumes, the checks on that input, the action's pieces, \
+              what it produces, the checks on that — by side, then flow.")
+  in
   (* `--topology` was DELETED 2026-09-23 (user): it printed the topology
      table the overview page already carries. The topologies are on
      `canary overview` §5. *)
-  let run project firing catalogue observed landing dummies agreement md () =
+  let run project firing catalogue observed landing dummies agreement md
+      frames () =
     match (project, firing, catalogue) with
+    | _, _, _ when frames -> Fmt.pr "%s@." (Canary_frames.pp ())
     | _, _, _ when Option.is_some agreement -> (
         let name = Option.get agreement in
         match Canary_agreement.agreement_named name with
@@ -959,7 +970,7 @@ let checks_cmd =
           COULD DECIDE vs DID DECIDE summary whose gap rows are the work \
           queue. No execution.")
     Term.(const run $ project $ firing $ catalogue $ observed $ landing
-          $ dummies $ agreement $ md $ const ())
+          $ dummies $ agreement $ md $ frames $ const ())
 
 let spec_check_cmd =
   let project =

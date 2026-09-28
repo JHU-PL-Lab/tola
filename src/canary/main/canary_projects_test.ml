@@ -1093,6 +1093,99 @@ let gate_after_bridge_pin : Canary_project_test.pure_test =
         ok && !checked > 0)
   }
 
+(* THE COLUMN MODEL IS THE CONFIRMED LAYOUT (2026-09-28, user: "A and the
+   rest looks good", design/overview.md §6.4). [Canary_frames] derives the
+   result table's and the agreement overview's shared header from the
+   overview's graph and the registry; this holds the derivation to the
+   layout the user confirmed, line by line, and to the properties that
+   make it the diagram's:
+
+   - every action edge of the graph is in exactly one piece of one frame;
+   - no node repeats within a frame (it repeats ACROSS frames, where it is
+     consumed again — that is the point);
+   - every agreement with an evaluator has a check column at each of its
+     site edges, in the frame of that edge, and no other check columns.
+
+   Four places the derivation differs from the prototype as shown, each
+   because the diagram says so: the capability file is not in the fetch's
+   frame (the packager ships it — someone else's relation, not a piece of
+   ours); the headers built from source are their own frame
+   (build_headers is its own action); checks sit in code order; and the
+   two probes carry their consumer programs as products. *)
+let frames_pin : Canary_project_test.pure_test =
+  { name = "frames.derive_the_confirmed_layout";
+    check =
+      (fun () ->
+        let module Fr = Canary_frames in
+        let module T = Canary_topology in
+        let want =
+          [ "system fetch_lib: pm_sys ▸resolve pkg_sys ▸realize lib_sys hdr_sys »dse »dve »smd";
+            "system build_lib: src_sys ▸build_lib lib_sys »dse »dve »smd";
+            "system build_headers: src_sys ▸build_hdr hdr_sys";
+            "system install_lib: lib_sys ▸stage staged_sys »sip";
+            "system probe_lib: lib_sys ▸probe_lib";
+            "binding build_binding: src_lang hdr_sys ›sa ▸build_stub stub_lang lib_sys ›dp \
+             ›rse ›rve ›smr ▸link_mod mod_lang";
+            "language fetch_binding: pm_lang ▸resolve pkg_lang ▸depends bridge ▸conf_probe cap \
+             ›gatw ▸install mod_lang surf_lang ›anp";
+            "language pack_binding: mod_lang ▸pack pkg_lang";
+            "program probe_binding · run: mod_lang lib_sys ▸run consumer_artifact";
+            "program probe_binding · run_packaged: pkg_lang ▸run_packaged consumer_package" ]
+        in
+        let got = List.map Fr.frames ~f:Fr.pp_frame in
+        let lines_ok = List.equal String.equal want got in
+        if not lines_ok then List.iter got ~f:(fun l -> Fmt.pr "    got: %s@." l);
+        let pieces =
+          List.concat_map Fr.frames ~f:(fun fr ->
+              List.filter_map fr.Fr.fr_columns ~f:(function
+                | Fr.Piece { edges; _ } -> Some edges
+                | _ -> None))
+          |> List.concat
+        in
+        let action_edges =
+          List.filter_map T.edges ~f:(fun e ->
+              match e.T.eg_annotation with T.Action _ -> Some e.T.eg_id | _ -> None)
+        in
+        let edges_once =
+          List.for_all action_edges ~f:(fun id ->
+              List.count pieces ~f:(String.equal id) = 1)
+          && List.length pieces = List.length action_edges
+        in
+        let nodes_once =
+          List.for_all Fr.frames ~f:(fun fr ->
+              let ns =
+                List.filter_map fr.Fr.fr_columns ~f:(function Fr.Node n -> Some n | _ -> None)
+              in
+              List.length ns = List.length (List.dedup_and_sort ns ~compare:String.compare))
+        in
+        (* each check in the frame that holds its site edge, and every
+           checked agreement at every one of its sites *)
+        let checks =
+          List.concat_map Fr.frames ~f:(fun fr ->
+              let own =
+                List.concat_map fr.Fr.fr_columns ~f:(function
+                  | Fr.Piece { edges; _ } -> edges
+                  | _ -> [])
+              in
+              List.filter_map fr.Fr.fr_columns ~f:(function
+                | Fr.Check { slug; site; _ } -> Some (slug, site, List.mem own site ~equal:String.equal)
+                | _ -> None))
+        in
+        let in_own_frame = List.for_all checks ~f:(fun (_, _, ok) -> ok) in
+        let every_site =
+          List.for_all Fr.checked_rows ~f:(fun r ->
+              let slug = r.Canary_agreement.ag_slug in
+              List.for_all (Fr.sites_of slug) ~f:(fun site ->
+                  List.count checks ~f:(fun (s, e, _) ->
+                      String.equal s slug && String.equal e site)
+                  = 1))
+          && List.length checks
+             = List.sum (module Int) Fr.checked_rows ~f:(fun r ->
+                   List.length (Fr.sites_of r.Canary_agreement.ag_slug))
+        in
+        lines_ok && edges_once && nodes_once && in_own_frame && every_site)
+  }
+
 (* A PLACEHOLDER STEP STANDS FOR WHAT A PACKAGE MANAGER DOES, UNSEEN
    (2026-09-23, status.md §2.7 E; user: "I like the placeholder steps").
    Derived for every project from the providers it declares, so this holds
@@ -8446,6 +8539,7 @@ let base_tests : Canary_project_test.pure_test list =
       every_step_placed_pin;
       bridge_step_pin;
       gate_after_bridge_pin;
+      frames_pin;
       placeholder_steps_pin;
       overview_overlay_pin;
       recorded_names_pin;
