@@ -8069,6 +8069,178 @@ let record_export_pin : Canary_project_test.pure_test =
             in
             reads_the_log && covers && export_is_the_matrix) }
 
+(* §2 COUNTS WHAT §1.2 SHOWS (2026-09-28, design/overview.md §6.4). The
+   agreement overview's `decided` and `blame` count §1.2's cells — one per
+   chain, a world in one binding language — which §1.2's rows are drawn
+   from. They used to count the record's SLOT columns, which a
+   fetched-library world lacks for the checks it decides at its probe:
+   that day §2 said 4 ✓ · 4 ✗ for declared_symbols_exported where §1.2
+   showed 14 ✓ · 8 ✗, and 8 ✓ against 22 ✓ for
+   soname_matches_declaration. (A cell whose frame the chain lacks is
+   counted here and hatched there; §6.4 lists them.)
+
+   Against a log the pin writes itself, in zarith's shape: both of its
+   worlds fetch the library, so neither has the build_lib slot the
+   library's declaration checks are read at, and the fixture decides them
+   at probe_lib, where the old count saw nothing. Every §2 row of every
+   checked agreement is parsed back and held to the views the runs file
+   is written from; the witness clause keeps the comparison from passing
+   on two empty sides. *)
+let agreement_counts_pin : Canary_project_test.pure_test =
+  { name = "overview.agreement_counts_are_the_tables";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module R = Canary_overview_runs in
+        let project = "zarith" in
+        match List.Assoc.find Canary_registry.all_projects project ~equal:String.equal with
+        | None -> false
+        | Some pr ->
+            let root = "_out/canary/test/counts-fixture" in
+            let module F = Record_fixture in
+            let log = F.create () in
+            List.iter (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                let scenario =
+                  Stdlib.Filename.basename (Canary_project_run.scenario_dir_of ~pr_name:project a)
+                in
+                ignore (F.line log "*" "variant_start" (Some scenario) : string);
+                List.iter
+                  [ ("probe_lib", "declared_symbols_exported/declared_exports_vs_library: holds");
+                    ("probe_lib", "soname_matches_declaration/declared_soname_vs_library: undeclared");
+                    ("probe_binding_ocaml", "api_names_present/watchlist_vs_user_surface: holds");
+                    ( "probe_binding_ocaml",
+                      "dependencies_provided/recorded_dependencies_vs_world_providers: unavailable" ) ]
+                  ~f:(fun (tag, detail) ->
+                    ignore (F.line log tag "agreement_outcome" (Some detail) : string)));
+            F.save log ~root ~project;
+            let m = M.matrix_of ~root [ (project, pr) ] in
+            let views = R.views ~root m in
+            let overview = M.agreement_overview m in
+            (* the text of a cell, its tags dropped *)
+            let text s =
+              let b = Buffer.create (String.length s) in
+              let depth = ref 0 in
+              String.iter s ~f:(fun c ->
+                  if Char.equal c '<' then Int.incr depth
+                  else if Char.equal c '>' then Int.decr depth
+                  else if !depth = 0 then Buffer.add_char b c);
+              String.split (Buffer.contents b) ~on:' '
+              |> List.filter ~f:(fun w -> not (String.is_empty w))
+            in
+            (* every §2 row of this agreement: its last two cells, decided
+               and blame *)
+            let rows_of slug =
+              let pat = Printf.sprintf "<td>%s</td>" slug in
+              let rec go pos acc =
+                match String.substr_index overview ~pos ~pattern:pat with
+                | None -> List.rev acc
+                | Some i -> (
+                    match String.substr_index overview ~pos:i ~pattern:"</tr>" with
+                    | None -> List.rev acc
+                    | Some j ->
+                        let cells =
+                          String.substr_replace_all (String.sub overview ~pos:i ~len:(j - i))
+                            ~pattern:"</td>" ~with_:"\n"
+                          |> String.split ~on:'\n'
+                          |> List.filter ~f:(fun c -> not (String.is_empty c))
+                        in
+                        let acc =
+                          match List.rev cells with
+                          | blame :: decided :: _ -> (text decided, text blame) :: acc
+                          | _ -> acc
+                        in
+                        go j acc)
+              in
+              go 0 []
+            in
+            (* "14 ✓ · 8 ✗" → the number before each mark *)
+            let before mark ws =
+              let rec go = function
+                | n :: m :: _ when String.equal m mark ->
+                    Option.value (Int.of_string_opt n) ~default:(-1)
+                | _ :: rest -> go rest
+                | [] -> 0
+              in
+              go ws
+            in
+            let shown slug =
+              let os =
+                List.filter_map views ~f:(fun v ->
+                    List.Assoc.find v.R.vw_outcomes slug ~equal:String.equal)
+              in
+              (List.count os ~f:(String.equal "holds"), List.count os ~f:(String.equal "violated"))
+            in
+            let decided_agree =
+              List.for_all Canary_frames.checked_rows ~f:(fun r ->
+                  let slug = r.Canary_agreement.ag_slug in
+                  let rows = rows_of slug in
+                  (not (List.is_empty rows))
+                  && List.for_all rows ~f:(fun (decided, _) ->
+                         Poly.equal (before "✓" decided, before "✗" decided) (shown slug)))
+            in
+            (* "11 evidence · 4 version" → the count per blame word *)
+            let pairs ws =
+              let rec go acc = function
+                | n :: w :: rest when Option.is_some (Int.of_string_opt n) ->
+                    go ((w, Int.of_string n) :: acc) rest
+                | _ :: rest -> go acc rest
+                | [] -> acc
+              in
+              List.sort (go [] ws) ~compare:Poly.compare
+            in
+            let blamed slug =
+              List.filter_map views ~f:(fun v -> List.Assoc.find v.R.vw_blames slug ~equal:String.equal)
+              |> List.sort_and_group ~compare:String.compare
+              |> List.map ~f:(fun g -> (List.hd_exn g, List.length g))
+              |> List.sort ~compare:Poly.compare
+            in
+            let blames_agree =
+              List.for_all Canary_frames.checked_rows ~f:(fun r ->
+                  let slug = r.Canary_agreement.ag_slug in
+                  List.for_all (rows_of slug) ~f:(fun (_, blame) ->
+                      Poly.equal (pairs blame) (blamed slug)))
+            in
+            (* the fixture's library verdicts, one per world, where no slot is *)
+            let worlds = List.length (Canary_project_run.scenarios_of pr) in
+            let witness =
+              Poly.equal (shown "declared_symbols_exported") (worlds, 0)
+              && Poly.equal (blamed "soname_matches_declaration") [ ("declaration", worlds) ]
+              && Poly.equal (blamed "dependencies_provided") [ ("evidence", worlds) ]
+            in
+            (* the record carries the cells: parsed back, each row's are its own *)
+            let exported =
+              match Yojson.Basic.from_string (M.json_export m) with
+              | exception _ -> false
+              | j ->
+                  let rows = F.items j "rows" in
+                  List.length rows = List.length m.M.rows
+                  && List.for_all2_exn rows m.M.rows ~f:(fun jr (r : M.row) ->
+                         List.for_all r.M.checks ~f:(fun (lang, cells) ->
+                             match
+                               Option.bind (F.field jr "checks") ~f:(fun c ->
+                                   F.field c (Canary_lang.string_of_lang lang))
+                             with
+                             | Some (`Assoc kv) ->
+                                 List.length kv = List.length cells
+                                 && List.for_all cells ~f:(fun (slug, c) ->
+                                        match List.Assoc.find kv slug ~equal:String.equal with
+                                        | Some jc ->
+                                            Poly.equal (F.str jc "outcome") (Some c.M.chk_outcome)
+                                            && Poly.equal (F.str jc "blame") c.M.chk_blame
+                                        | None -> false)
+                             | _ -> false))
+            in
+            (* and §1.2 shows each cell's blame, glossed from the one list *)
+            let page =
+              Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+            in
+            let tooltip =
+              String.is_substring page ~substring:"b=(v.blames||{})[c.slug]"
+              && List.for_all M.blame_gloss ~f:(fun (w, g) ->
+                     String.is_substring page ~substring:(Printf.sprintf "\"%s\":\"%s\"" w g))
+            in
+            decided_agree && blames_agree && witness && exported && tooltip) }
+
 (* EVERY STEP OF A WORLD IS IN THE RECORD (2026-09-23, status.md §2.7
    phase B1). The cells hold one entry per action, while the overview
    joins STEPS onto its edges, and a world has more of them: a lib probe
@@ -8792,6 +8964,7 @@ let base_tests : Canary_project_test.pure_test list =
       frames_pin;
       one_reader_pin;
       results_table_pin;
+      agreement_counts_pin;
       manifest_pin;
       placeholder_steps_pin;
       overview_overlay_pin;

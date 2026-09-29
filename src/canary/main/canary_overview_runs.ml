@@ -116,11 +116,14 @@ type view = {
           the name ({!Canary_matrix.reading_of_inspection}) *)
   vw_outcomes : (string * string) list;
       (** EVERY CHECKED AGREEMENT'S OUTCOME in this chain, by claim — the
-          result table's check cells. Read from the world's logged
-          outcomes in this language ({!Canary_matrix.row.verdicts}), not
-          through the slot columns [vw_claims] is read from, because the
-          table places a check at its site whatever the world; [n/a] where
-          the chain's mechanism cannot carry the claim *)
+          result table's check cells ({!Canary_matrix.row.checks}), which
+          §2 counts. Read from the world's logged outcomes in this
+          language, not through the slot columns [vw_claims] is read from,
+          because the table places a check at its site whatever the world;
+          [n/a] where the chain's mechanism cannot carry the claim *)
+  vw_blames : (string * string) list;
+      (** claim → the blame on its cell, where it has one (the cell's
+          tooltip; {!Canary_matrix.blame_of}) *)
 }
 
 (* ── THE WORDS ─────────────────────────────────────────────────────── *)
@@ -591,11 +594,6 @@ let in_lang (lang : Canary_lang.lang) (a : Canary_basic.action) : bool =
   | None -> true
   | Some l -> Poly.equal l lang
 
-let langs_of_row (r : M.row) : Canary_lang.lang list =
-  List.filter_map r.M.steps ~f:(fun w -> Canary_basic.lang_of_action w.M.ws_action)
-  |> List.fold ~init:[] ~f:(fun acc l ->
-         if List.mem acc l ~equal:Poly.equal then acc else acc @ [ l ])
-
 let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     : view =
   let steps = List.filter r.M.steps ~f:(fun w -> in_lang lang w.M.ws_action) in
@@ -720,28 +718,12 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
           | [] -> None
           | xs -> Some (e.T.eg_id, List.map xs ~f:(fun (cs, st) -> (cs.T.cs_claim, st))))
   in
-  (* THE RESULT TABLE'S CHECK CELLS (2026-09-28, §6.4): every checked
-     agreement, worst first over what this world's log decided in this
-     language — or [n/a] where the mechanism cannot carry it. From the
-     logged outcomes rather than the slot columns [claims] reads, because
-     the table places a check at its site whatever the world *)
-  let outcomes =
-    List.filter_map Canary_frames.checked_rows ~f:(fun row ->
-        let slug = row.Canary_agreement.ag_slug in
-        let carried =
-          match List.find T.claim_sites ~f:(fun cs -> String.equal cs.T.cs_claim slug) with
-          | Some cs -> Option.is_some (T.claim_state ~mechanism ~lang cs)
-          | None -> true
-        in
-        if not carried then Some (slug, "n/a")
-        else
-          List.fold r.M.verdicts ~init:None ~f:(fun acc (s, l, label) ->
-              if String.equal s slug && (Option.is_none l || Poly.equal l (Some lang)) then
-                match acc with
-                | Some prev when M.outcome_rank prev >= M.outcome_rank label -> acc
-                | _ -> Some label
-              else acc)
-          |> Option.map ~f:(fun o -> (slug, o)))
+  (* THE RESULT TABLE'S CHECK CELLS (2026-09-28, §6.4): the row's, in this
+     language ({!Canary_matrix.chain_checks}), which §2 counts *)
+  let cells = Option.value (List.Assoc.find r.M.checks lang ~equal:Poly.equal) ~default:[] in
+  let outcomes = List.map cells ~f:(fun (slug, c) -> (slug, c.M.chk_outcome)) in
+  let blames =
+    List.filter_map cells ~f:(fun (slug, c) -> Option.map c.M.chk_blame ~f:(fun b -> (slug, b)))
   in
   let badges =
     List.filter_map edge_claims ~f:(fun (e, xs) ->
@@ -873,6 +855,7 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     vw_place_sources = List.map placed ~f:(fun (n, (_, s)) -> (n, s));
     vw_counts = recorded_counts ~root r steps;
     vw_outcomes = outcomes;
+    vw_blames = blames;
     vw_case =
       (match chain with
        | Some c ->
@@ -887,13 +870,11 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
       |> List.fold ~init:[] ~f:(fun acc c ->
              if List.mem acc c ~equal:String.equal then acc else acc @ [ c ]) }
 
-(** Every recorded world, once per binding language it speaks. *)
+(** Every recorded world, once per binding language it speaks — the
+    matrix's rule, so the views are the chains §2 counts. *)
 let views ?root (m : M.t) : view list =
   List.concat_map m.M.rows ~f:(fun r ->
-      let langs =
-        match langs_of_row r with [] -> [ Canary_lang.OCaml ] | ls -> ls
-      in
-      List.map langs ~f:(view_of_row ?root m r))
+      List.map (M.langs_of_steps r.M.steps) ~f:(view_of_row ?root m r))
 
 (* ── THE HAND-DRAWN CASES' RECORDED COUNTERPARTS ─────────────────────
 
@@ -1004,6 +985,7 @@ let json_of_view (v : view) : Yojson.Basic.t =
         (* the result table's node counts and check outcomes (§1.2) *)
         ("counts", pairs v.vw_counts);
         ("outcomes", pairs v.vw_outcomes);
+        ("blames", pairs v.vw_blames);
         ("observed", pairs v.vw_observed);
         ( "chain",
           match v.vw_chain with

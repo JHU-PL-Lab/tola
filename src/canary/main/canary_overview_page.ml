@@ -2004,7 +2004,11 @@ let frames_json () : string =
                  [ ("side", `String (Fr.string_of_side fr.Fr.fr_side));
                    ("side_label", `String (Fr.label_of_side fr.Fr.fr_side));
                    ("label", `String fr.Fr.fr_label);
-                   ("cols", `List (List.map fr.Fr.fr_columns ~f:column)) ])) ) ]
+                   ("cols", `List (List.map fr.Fr.fr_columns ~f:column)) ])) );
+      (* what each blame word on a check cell means, for its tooltip *)
+      ( "blames",
+        `Assoc (List.map Canary_matrix.blame_gloss ~f:(fun (w, g) -> (w, `String g)))
+      ) ]
   |> Yojson.Basic.to_string
   |> String.substr_replace_all ~pattern:"</" ~with_:"<\\/"
 
@@ -2134,8 +2138,10 @@ var body=rows.map(function(x){
         tr+='<td class="rt-p '+mk[1]+'" title="'+esc(c.edges.join(', ')+': '+st)+'">'+mk[0]+'</td>'; }
       else {
         if(!here){ tr+='<td class="rt-off"></td>'; return; }
-        var o=(v.outcomes||{})[c.slug], mk2=o?(OUT[o]||[o,'rt-dim']):['·','rt-dim'];
-        tr+='<td class="rt-c '+mk2[1]+'" title="'+esc(c.slug+': '+(o||'not evaluated in any recorded run'))
+        var o=(v.outcomes||{})[c.slug], mk2=o?(OUT[o]||[o,'rt-dim']):['·','rt-dim'],
+          b=(v.blames||{})[c.slug];
+        tr+='<td class="rt-c '+mk2[1]+'" title="'+esc(c.slug+': '+(o||'not evaluated in any recorded run')
+          +(b?' — blame: '+b+' ('+((FR.blames||{})[b]||'')+')':''))
           +'">'+esc(mk2[0])+'</td>'; } }); });
   return tr+'</tr>'; }).join('');
 box.innerHTML='<thead>'+h1+h2+h3+'</thead><tbody>'+body+'</tbody>';

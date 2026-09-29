@@ -24,7 +24,7 @@ page.
 | §1's choices, and what each draws | `Canary_overview_join`, embedded as `#joindata` | the projects' declarations, the drivers, the mechanism and cooperation catalogues |
 | a recorded run on §1, and §1.2's rows | `Canary_overview_runs`, written to `overview_runs.js`, one per machine | the record (§2) |
 | §1.2's columns | `Canary_frames`, embedded as `framesdata` | the graph's edges and the claim sites |
-| §2, the agreement overview | `Canary_matrix.agreement_overview` | the registry; `decided` and `blame` are counted from the record |
+| §2, the agreement overview | `Canary_matrix.agreement_overview` | the registry; `decided` and `blame` are counted over §1.2's cells |
 | §3, the census | `Canary_overview_page.claim_sites_table` | the claim sites and the registry |
 | §4's tables | `Canary_pm_solo`, the mechanism catalogue, `Canary_topology.coop_catalogue`, `Canary_overview_join.cases_of` | code; their prose columns are hand-written |
 
@@ -92,9 +92,11 @@ and the probes produce their consumer programs.
 which only the record's columns still use). At the slot, zarith's
 fetched-library rows had no column for the declaration checks every run
 decides, and its built row carried five probe-check columns that stayed
-empty. §1.2 reads an outcome from the world's logged verdicts in the
-row's language (`row.verdicts`, the view's `outcomes`), so no logged
-verdict is left out.
+empty. A cell of §1.2 is the world's worst logged verdict in the row's
+language or in none, with its blame (`Canary_matrix.chain_checks`, the
+row's `checks`), so no logged verdict is left out. §2's `decided` and
+`blame` count those cells, one per chain: a library's verdict counts once
+in each language it serves.
 
 **One page.** The result matrix's page, its per-machine copy and the
 per-run pages retired on 2026-09-28, and nothing a run writes is copied
@@ -433,9 +435,14 @@ find them. What they left open:
 
 - `canary checks --firing` still prints the old action columns, and
   §1.2's looks are not in `visual_hints` (§5).
-- The agreement overview's `decided` and `blame` still count the record's
-  slot columns, so a verdict §1.2 shows only at its site — zarith's
-  fetched-world `dependencies_provided` — is not counted there.
+- §2 is counted from this machine's record, while §1.2 shows every
+  machine's runs file. They agree while one machine's runs are on the
+  page; a second machine's rows would be in §1.2 and not in §2's counts.
+- §1.2 hatches a check's column when the chain lacks its frame, even
+  where the chain decided the check, and §2 counts it. Eleven cells, all
+  `api_names_present`, whose one site is `install_surf`: sqlite's ten
+  Python rows, whose dummy fetch stands on no edge, and zarith's built
+  world, whose surface no fetch installs.
 - The ten action families with no edge have no frame, so their steps
   have no column.
 - sqlite's Python rows are mostly empty: 14 of their edges read `absent`,
@@ -476,6 +483,7 @@ find them. What they left open:
 | `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
 | `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it |
 | `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
+| `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; §1.2's tooltip glosses each blame |
 | `matrix.page_titles_and_agreement_overview` | the agreement overview's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
 | `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |

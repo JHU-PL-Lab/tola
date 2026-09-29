@@ -123,6 +123,16 @@ type chain = {
           where there is a bridge *)
 }
 
+(** ONE CHECK IN ONE CHAIN, a cell of §1.2 (2026-09-28, design/overview.md
+    §6.4): the agreement's outcome in one world and one binding language,
+    and whose defect it is where that is not a plain verdict. *)
+type chain_check = {
+  chk_outcome : string;
+      (** worst first over what the log decided in the chain's language
+          or in none, or [n/a] where the mechanism cannot carry it *)
+  chk_blame : string option;  (** {!blame_of} *)
+}
+
 (** One SETTING cell (2026-08-19, user: "move all the provider ahead, so
     we have source ref, fetched lib and ocaml ones … more clear to
     readers on which is the setting for this row"): the placement of ONE
@@ -225,6 +235,13 @@ type row = {
           whatever the world, so it reads these. The language is the one
           the evaluating step's action names; [None] for a step that
           speaks for none, the library's *)
+  checks : (Canary_lang.lang * (string * chain_check) list) list;
+      (** §1.2'S CHECK CELLS, per language this world's steps speak for
+          ({!langs_of_steps} — a row of §1.2 each): every checked agreement
+          [verdicts] holds in that language or none, and [n/a] for one the
+          chain's mechanism cannot carry. §1.2 renders them and §2 counts
+          them, so a count is what a reader can count (2026-09-28,
+          design/overview.md §6.4) *)
   chains : chain list;
       (** per binding language, the chain this world realizes *)
 }
@@ -1392,6 +1409,62 @@ let check_cell ~(chain : Canary_basic.action list)
   in
   (c, implicated)
 
+(** The binding languages a world's steps speak for, in step order, and
+    OCaml for a world whose steps name none: a row of §1.2 each. Not the
+    project's binding languages ({!chain}): llvm declares a Python binding
+    and none of its worlds has a Python step, so it has no Python row. *)
+let langs_of_steps (steps : world_step list) : Canary_lang.lang list =
+  List.filter_map steps ~f:(fun w -> Canary_basic.lang_of_action w.ws_action)
+  |> List.fold ~init:[] ~f:(fun acc l ->
+         if List.mem acc l ~equal:Poly.equal then acc else acc @ [ l ])
+  |> function
+  | [] -> [ Canary_lang.OCaml ]
+  | ls -> ls
+
+(** §1.2'S CHECK CELLS for one world ({!row.checks}): in each language its
+    steps speak for, every checked agreement the log decided something
+    about, worst first over the language's own verdicts and the
+    language-free ones (the library's serve every binding), with the
+    blame the slot cells carry; or [n/a] where the language's mechanism
+    cannot carry it. A blame is static, from the spec and the enumeration
+    ({!blame_of}), so it is the slot cell's for the same outcome. *)
+let chain_checks ~(an : Canary_project_analysis.t)
+    ~(world : Canary_artifact.assignment)
+    ~(version_points : Canary_basic.artifact_kind -> int)
+    ~(verdicts : (string * Canary_lang.lang option * string) list)
+    (steps : world_step list) : (Canary_lang.lang * (string * chain_check) list) list =
+  List.map (langs_of_steps steps) ~f:(fun lang ->
+      let mechanism = Canary_project_analysis.mechanism_for an lang in
+      ( lang,
+        List.filter_map Canary_frames.checked_rows ~f:(fun r ->
+            let slug = r.Canary_agreement.ag_slug in
+            let carried =
+              match
+                List.find Canary_topology.claim_sites ~f:(fun cs ->
+                    String.equal cs.Canary_topology.cs_claim slug)
+              with
+              | Some cs -> Option.is_some (Canary_topology.claim_state ~mechanism ~lang cs)
+              | None -> true
+            in
+            if not carried then Some (slug, { chk_outcome = "n/a"; chk_blame = None })
+            else
+              List.fold verdicts ~init:None ~f:(fun acc (s, l, label) ->
+                  if String.equal s slug && (Option.is_none l || Poly.equal l (Some lang)) then
+                    match acc with
+                    | Some prev when outcome_rank prev >= outcome_rank label -> acc
+                    | _ -> Some label
+                  else acc)
+              |> Option.map ~f:(fun outcome ->
+                     let against = declared_against ~lang ~world ~an slug in
+                     ( slug,
+                       { chk_outcome = outcome;
+                         chk_blame =
+                           blame_of ~outcome
+                             ~is_declaration:(not (List.is_empty against))
+                             ~version_blind:
+                               (List.exists against ~f:(fun k -> version_points k > 1)) } )))
+      ))
+
 (* [?root] is where the run logs are read from — the default is the one
    every run writes. A pin passes a fixture tree, which is how the record
    export is checked against a log whose every line it wrote itself. *)
@@ -1619,6 +1692,8 @@ let matrix_of ?(root = "_out")
               edges = row_edges;
               claims = row_claims;
               verdicts = row_verdicts;
+              checks =
+                chain_checks ~an ~world:a ~version_points ~verdicts:row_verdicts row_steps;
               chains =
                 (let an = Canary_pipeline.analysed_of pr in
                  List.map (Canary_topology.binding_langs pr) ~f:(fun lang ->
@@ -1961,6 +2036,19 @@ let to_json (m : t) : Yojson.Basic.t =
                                            match o with
                                            | Some s -> `String s
                                            | None -> `Null ) ])) ))) );
+                   (* §1.2's check cells, per language: what the page
+                      renders and §2 counts *)
+                   ( "checks",
+                     `Assoc
+                       (List.map r.checks ~f:(fun (lang, cells) ->
+                            ( Canary_lang.string_of_lang lang,
+                              `Assoc
+                                (List.map cells ~f:(fun (slug, c) ->
+                                     ( slug,
+                                       `Assoc
+                                         (("outcome", `String c.chk_outcome)
+                                         :: Option.value_map c.chk_blame ~default:[]
+                                              ~f:(fun b -> [ ("blame", `String b) ])) ))) ))) );
                    ( "chains",
                      `List
                        (List.map r.chains ~f:(fun c ->
@@ -2007,14 +2095,13 @@ type sitting_group = {
   sg_members : sitting_member list;
 }
 
-(** The agreements some recorded run decided — held or violated. *)
+(** The agreements some recorded run decided — held or violated in some
+    cell of §1.2 ({!row.checks}), wherever the check sits. *)
 let decided_slugs (m : t) : string list =
   List.concat_map m.rows ~f:(fun r ->
-      List.filter_map r.claims ~f:(fun (slug, cols) ->
-          Option.some_if
-            (List.exists cols ~f:(fun (_, o) ->
-                 match o with Some ("holds" | "violated") -> true | _ -> false))
-            slug))
+      List.concat_map r.checks ~f:(fun (_, cells) ->
+          List.filter_map cells ~f:(fun (slug, c) ->
+              match c.chk_outcome with "holds" | "violated" -> Some slug | _ -> None)))
   |> List.dedup_and_sort ~compare:String.compare
 
 let sitting_groups (m : t) : sitting_group list =
@@ -2089,47 +2176,39 @@ let agreement_overview (m : t) : string =
     |> String.substr_replace_all ~pattern:"<" ~with_:"&lt;"
     |> String.substr_replace_all ~pattern:">" ~with_:"&gt;"
   in
-  (* THE TALLIES, hoisted out of the retired check-key table
-     (2026-09-17). Counted from the record's cells rather than re-read
-     from the logs, so a count cannot disagree with the table `canary
-     result` prints: if a reader can see eight ticks in the [dse] column,
-     the tally says eight. *)
-  let tally code =
-    let held = ref 0 and broke = ref 0 in
-    List.iter m.rows ~f:(fun (rr : row) ->
-        List.iter rr.cells ~f:(fun (tag, cell) ->
-            match (String.lsplit2 tag ~on:':', cell) with
-            | Some (_, c), Some cc when String.equal c code ->
-                if String.equal cc.mark "✓" then Int.incr held
-                else if String.equal cc.mark "✗" then Int.incr broke
-            | _ -> ()));
-    match (!held, !broke) with
+  (* THE TALLIES count §1.2's cells ({!row.checks}), the ones its rows are
+     drawn from, so the two tables read one set of outcomes. One cell per
+     chain, so a library's verdict counts once in each language it serves,
+     as §1.2 shows it (2026-09-28, user: "chains count is ok"). They
+     counted the record's slot columns until then, which a fetched-library
+     world lacks for the checks it decides at its probe: §2 said 4 ✓ · 4 ✗
+     for declared_symbols_exported where §1.2 showed 14 ✓ · 8 ✗. A cell
+     whose frame the chain lacks is counted and hatched in §1.2
+     (design/overview.md §6.4). *)
+  let cells_of slug =
+    List.concat_map m.rows ~f:(fun (rr : row) ->
+        List.filter_map rr.checks ~f:(fun (_, cells) ->
+            List.Assoc.find cells slug ~equal:String.equal))
+  in
+  let tally slug =
+    let cells = cells_of slug in
+    let count o = List.count cells ~f:(fun c -> String.equal c.chk_outcome o) in
+    match (count "holds", count "violated") with
     | 0, 0 -> "<span class=\"kq\">not decided in any row</span>"
     | h, 0 -> Printf.sprintf "%d ✓" h
     | 0, b -> Printf.sprintf "%d ✗" b
     | h, b -> Printf.sprintf "%d ✓ · %d ✗" h b
   in
-  (* AND WHAT THOSE ROWS BLAME (2026-09-15, user: "before we fix that,
+  (* AND WHAT THOSE CELLS BLAME (2026-09-15, user: "before we fix that,
      can we attribute it as one thing to blame in the table, so we can
-     see how eager we need to fix it").
-
-     Counted off the same rendered cells as [tally], for the same
-     reason: a key that re-derived its numbers could disagree with the
-     table it explains. A blank cell here means this agreement's rows
-     are all fine — which is the only row of the key a reader can skip. *)
-  let blame_tally code =
+     see how eager we need to fix it"). Counted off the same cells as
+     [tally]. A blank cell here means this agreement's cells are all fine,
+     which is the only row of the key a reader can skip. *)
+  let blame_tally slug =
     let counts : (string, int) Hashtbl.t = Hashtbl.create (module String) in
-    List.iter m.rows ~f:(fun (rr : row) ->
-        List.iter rr.cells ~f:(fun (tag, cell) ->
-            match (String.lsplit2 tag ~on:':', cell) with
-            | Some (_, c), Some cc when String.equal c code -> (
-                match cc.blame with
-                | None -> ()
-                | Some b ->
-                    Hashtbl.update counts b ~f:(function
-                      | None -> 1
-                      | Some n -> n + 1))
-            | _ -> ()));
+    List.iter (cells_of slug) ~f:(fun c ->
+        Option.iter c.chk_blame ~f:(fun b ->
+            Hashtbl.update counts b ~f:(function None -> 1 | Some n -> n + 1)));
     Hashtbl.to_alist counts
     |> List.sort ~compare:(fun (_, a) (_, b) -> Int.compare b a)
     |> List.map ~f:(fun (b, n) ->
@@ -2302,6 +2381,11 @@ let agreement_overview (m : t) : string =
     ^ "<dt>lag</dt><dd>action columns from the root to the nearest firing. \
        NOT the distance between the two SIDES of a comparison, which is a \
        different measure.</dd>"
+    ^ "<dt>decided &middot; blame</dt><dd>counted over §1.2's cells, one \
+       per chain, so a library's verdict counts once in each language it \
+       serves. <b>decided</b>: ✓ held, ✗ violated. <b>blame</b>: whose \
+       defect a cell is — every undecided cell's, and a violation's where \
+       one declared value stands for several versions; glossed below.</dd>"
     (* `kind` is the one column with no prior vocabulary, so it gets the
        glossary immediately above the table rather than a line here. A
        pointer, so the legend is still a complete list of columns. *)
@@ -2461,11 +2545,11 @@ let agreement_overview (m : t) : string =
                 borrowing the claim's — nothing here has run a tool. *)
              ^ "</td><td>"
              ^ (match ext with
-                | None -> tally (Canary_agreement_common.short_code_of_slug r.CR.ag_slug)
+                | None -> tally r.CR.ag_slug
                 | Some _ -> "<span class=\"kq\">—</span>")
              ^ "</td><td>"
              ^ (match ext with
-                | None -> blame_tally (Canary_agreement_common.short_code_of_slug r.CR.ag_slug)
+                | None -> blame_tally r.CR.ag_slug
                 | Some _ -> "")
              ^ "</td></tr>"))
     ^ "</tbody></table>"
