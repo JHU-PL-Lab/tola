@@ -59,14 +59,18 @@ canary-tiny1-bridge:
 # workaround for the cache — it is what the assertion is about. A warm
 # step re-checks nothing and emits no agreement outcome, so a gate that
 # accepted a warm run would pass on a log written weeks ago. Only the
-# markers of the step that READS the evidence are removed; the build,
-# the fetch and the install stay warm, so this costs one probe.
+# markers of the steps that READ the evidence are removed, and the
+# library build's; the fetch and the install stay warm.
 # The LANDED agreements, one name per line. A row is added here only
 # after a real run decided it AND a deliberate break flipped it; the
 # gate then keeps it decided. Dropping the probe markers (and the lib
 # probes' own output) is what stops a warm tree from answering: the
 # evidence has to be produced by THIS run, in an order where the step
 # that reads it runs second.
+# EVERY WORLD, not --thin (2026-09-29): the rm clears every world's
+# lib-probe output, and a world the gate did not re-run kept its logged
+# verdicts with its inspections gone, which the overview page then drew
+# without them. Measured: 25 s, against 22 s thin.
 CANARY_LANDED_AGREEMENTS = api_names_present required_symbols_exported \
                            declared_symbols_exported staged_interface_preserved \
                            soname_matches_declaration soname_matches_requirement \
@@ -76,7 +80,7 @@ canary-agreement-roundtrip:
 	@rm -f _out/canary/projects/sqlite/probe_binding/*/*.ok
 	@rm -f _out/canary/projects/sqlite/probe_lib*/*.ok _out/canary/projects/sqlite/probe_lib*/*.json
 	@rm -f _out/canary/projects/sqlite/build_lib/*.ok
-	$(CANARY) action sqlite --thin
+	$(CANARY) action sqlite
 	$(CANARY) checks sqlite --observed
 	@for a in $(CANARY_LANDED_AGREEMENTS); do \
 	  $(CANARY) checks sqlite --observed | grep -q "$$a .* \(holds\|violated\)" \

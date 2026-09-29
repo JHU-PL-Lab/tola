@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-29 03:08",
+  "generated": "2026-09-29 03:26",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,13 +10,13 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:53.291", "2026-09-29 03:07:53.533" ],
+      "span": [ "2026-09-29 03:26:15.522", "2026-09-29 03:26:16.403" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
@@ -29,9 +29,9 @@
         "build_stub": "inside",
         "link_mod": "inside",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -264,13 +264,13 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:53.291", "2026-09-29 03:07:53.533" ],
+      "span": [ "2026-09-29 03:26:15.522", "2026-09-29 03:26:16.427" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
@@ -283,9 +283,9 @@
         "build_stub": "absent",
         "link_mod": "included",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -473,13 +473,13 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:08:00.899", "2026-09-29 03:08:01.142" ],
+      "span": [ "2026-09-29 03:26:25.072", "2026-09-29 03:26:25.959" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
@@ -492,9 +492,9 @@
         "build_stub": "inside",
         "link_mod": "inside",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -727,13 +727,13 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:08:00.899", "2026-09-29 03:08:01.142" ],
+      "span": [ "2026-09-29 03:26:25.072", "2026-09-29 03:26:25.983" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "absent",
         "depext": "not_ours",
@@ -746,9 +746,9 @@
         "build_stub": "absent",
         "link_mod": "included",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -936,13 +936,13 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:53.799", "2026-09-29 03:07:54.040" ],
+      "span": [ "2026-09-29 03:26:17.203", "2026-09-29 03:26:18.126" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "warm",
         "depext": "not_ours",
@@ -957,7 +957,7 @@
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -1032,6 +1032,7 @@
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
         "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -1056,6 +1057,11 @@
         "stub_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -1129,7 +1135,11 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
-      "counts": { "lib_sys": "270 exports", "stub_lang": "58 required" },
+      "counts": {
+        "lib_sys": "270 exports",
+        "stub_lang": "58 required",
+        "staged_sys": "270 exports"
+      },
       "outcomes": {
         "declared_symbols_exported": "violated",
         "required_symbols_exported": "holds",
@@ -1196,13 +1206,13 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:53.799", "2026-09-29 03:07:54.040" ],
+      "span": [ "2026-09-29 03:26:17.203", "2026-09-29 03:26:18.150" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "warm",
         "depext": "not_ours",
@@ -1217,7 +1227,7 @@
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -1277,6 +1287,7 @@
       "names": {
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -1299,6 +1310,11 @@
         "mod_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -1374,7 +1390,7 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
-      "counts": { "lib_sys": "270 exports" },
+      "counts": { "lib_sys": "270 exports", "staged_sys": "270 exports" },
       "outcomes": {
         "declared_symbols_exported": "violated",
         "required_symbols_exported": "unavailable",
@@ -1413,13 +1429,13 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:08:01.410", "2026-09-29 03:08:01.653" ],
+      "span": [ "2026-09-29 03:26:26.788", "2026-09-29 03:26:27.708" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "warm",
         "depext": "not_ours",
@@ -1434,7 +1450,7 @@
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -1509,6 +1525,7 @@
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
         "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -1533,6 +1550,11 @@
         "stub_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -1606,7 +1628,11 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
-      "counts": { "lib_sys": "270 exports", "stub_lang": "62 required" },
+      "counts": {
+        "lib_sys": "270 exports",
+        "stub_lang": "62 required",
+        "staged_sys": "270 exports"
+      },
       "outcomes": {
         "declared_symbols_exported": "violated",
         "required_symbols_exported": "holds",
@@ -1673,13 +1699,13 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:08:01.410", "2026-09-29 03:08:01.653" ],
+      "span": [ "2026-09-29 03:26:26.788", "2026-09-29 03:26:27.731" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
         "realize_hdr": "absent",
         "realize_cap": "not_ours",
-        "build_lib": "warm",
+        "build_lib": "ran",
         "build_hdr": "absent",
         "stage": "warm",
         "depext": "not_ours",
@@ -1694,7 +1720,7 @@
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -1754,6 +1780,7 @@
       "names": {
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -1776,6 +1803,11 @@
         "mod_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -1851,7 +1883,7 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
-      "counts": { "lib_sys": "270 exports" },
+      "counts": { "lib_sys": "270 exports", "staged_sys": "270 exports" },
       "outcomes": {
         "declared_symbols_exported": "violated",
         "required_symbols_exported": "unavailable",
@@ -1890,7 +1922,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:46.476", "2026-09-29 03:07:52.351" ],
+      "span": [ "2026-09-29 03:26:08.783", "2026-09-29 03:26:14.543" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2143,7 +2175,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:46.476", "2026-09-29 03:07:52.374" ],
+      "span": [ "2026-09-29 03:26:08.783", "2026-09-29 03:26:14.566" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2351,7 +2383,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:54.051", "2026-09-29 03:07:59.926" ],
+      "span": [ "2026-09-29 03:26:18.163", "2026-09-29 03:26:24.082" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2604,7 +2636,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:54.051", "2026-09-29 03:07:59.951" ],
+      "span": [ "2026-09-29 03:26:18.163", "2026-09-29 03:26:24.105" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2812,7 +2844,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:52.386", "2026-09-29 03:07:53.256" ],
+      "span": [ "2026-09-29 03:26:14.578", "2026-09-29 03:26:15.486" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2908,6 +2940,7 @@
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
         "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -2932,6 +2965,11 @@
         "stub_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -3005,7 +3043,11 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
-      "counts": { "lib_sys": "272 exports", "stub_lang": "58 required" },
+      "counts": {
+        "lib_sys": "272 exports",
+        "stub_lang": "58 required",
+        "staged_sys": "272 exports"
+      },
       "outcomes": {
         "declared_symbols_exported": "holds",
         "required_symbols_exported": "holds",
@@ -3071,7 +3113,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:52.386", "2026-09-29 03:07:53.279" ],
+      "span": [ "2026-09-29 03:26:14.578", "2026-09-29 03:26:15.509" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3152,6 +3194,7 @@
       "names": {
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -3174,6 +3217,11 @@
         "mod_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -3249,7 +3297,7 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
-      "counts": { "lib_sys": "272 exports" },
+      "counts": { "lib_sys": "272 exports", "staged_sys": "272 exports" },
       "outcomes": {
         "declared_symbols_exported": "holds",
         "required_symbols_exported": "unavailable",
@@ -3287,7 +3335,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:59.963", "2026-09-29 03:08:00.862" ],
+      "span": [ "2026-09-29 03:26:24.118", "2026-09-29 03:26:25.034" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3383,6 +3431,7 @@
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (1 modules)", "from": "recorded" },
         "stub_lang": { "label": "libsqlite3_stubs.a", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -3407,6 +3456,11 @@
         "stub_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -3480,7 +3534,11 @@
         "declared_gate_matches_package", "gate_bounds_the_library",
         "depext_names_the_provided_package"
       ],
-      "counts": { "lib_sys": "272 exports", "stub_lang": "62 required" },
+      "counts": {
+        "lib_sys": "272 exports",
+        "stub_lang": "62 required",
+        "staged_sys": "272 exports"
+      },
       "outcomes": {
         "declared_symbols_exported": "holds",
         "required_symbols_exported": "holds",
@@ -3546,7 +3604,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:59.963", "2026-09-29 03:08:00.886" ],
+      "span": [ "2026-09-29 03:26:24.118", "2026-09-29 03:26:25.059" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3627,6 +3685,7 @@
       "names": {
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
+        "staged_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
         "pm_sys": { "label": "apt", "from": "declared" },
         "pkg_sys": { "label": "sqlite3", "from": "declared" },
         "hdr_sys": { "label": "sqlite3.h", "from": "declared" },
@@ -3649,6 +3708,11 @@
         "mod_lang": {
           "kind": "run",
           "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+          "at": "Canary_overview_runs.named_by_inspection"
+        },
+        "staged_sys": {
+          "kind": "run",
+          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
           "at": "Canary_overview_runs.named_by_inspection"
         },
         "pm_sys": {
@@ -3724,7 +3788,7 @@
         "denotation_stable_across_worlds", "package_resolution_suffices",
         "compatibility_version_satisfied"
       ],
-      "counts": { "lib_sys": "272 exports" },
+      "counts": { "lib_sys": "272 exports", "staged_sys": "272 exports" },
       "outcomes": {
         "declared_symbols_exported": "holds",
         "required_symbols_exported": "unavailable",
@@ -3762,7 +3826,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:53.544", "2026-09-29 03:07:53.789" ],
+      "span": [ "2026-09-29 03:26:16.438", "2026-09-29 03:26:17.168" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3781,9 +3845,9 @@
         "build_stub": "inside",
         "link_mod": "inside",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -4013,7 +4077,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:07:53.544", "2026-09-29 03:07:53.789" ],
+      "span": [ "2026-09-29 03:26:16.438", "2026-09-29 03:26:17.191" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4032,9 +4096,9 @@
         "build_stub": "absent",
         "link_mod": "included",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -4221,7 +4285,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:08:01.153", "2026-09-29 03:08:01.400" ],
+      "span": [ "2026-09-29 03:26:25.995", "2026-09-29 03:26:26.750" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4240,9 +4304,9 @@
         "build_stub": "inside",
         "link_mod": "inside",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {
@@ -4472,7 +4536,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:08:01.153", "2026-09-29 03:08:01.400" ],
+      "span": [ "2026-09-29 03:26:25.995", "2026-09-29 03:26:26.774" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4491,9 +4555,9 @@
         "build_stub": "absent",
         "link_mod": "included",
         "pack": "absent",
-        "probe_lib": "warm",
+        "probe_lib": "ran",
         "run": "absent",
-        "run_packaged": "warm",
+        "run_packaged": "ran",
         "same_program": "claim"
       },
       "claims": {

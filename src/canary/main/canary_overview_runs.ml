@@ -333,20 +333,21 @@ let bridge_observations (j : Yojson.Basic.t) : (string * string) list =
    table's cells render (2026-09-28, design/overview.md §6.4 step 2), so
    this module parses no artifact kind of its own. A bridge record
    describes packages rather than an artifact, and only this page reads
-   it. *)
-let named_by_inspection (j : Yojson.Basic.t) : (string * string) list =
+   it. [?location] is where the writing step looked, which says which
+   copy of a library it describes. *)
+let named_by_inspection ?location (j : Yojson.Basic.t) : (string * string) list =
   match jstr j "kind" with
   | Some "bridge" -> bridge_names j
   | _ -> (
-      match M.reading_of_inspection j with
+      match M.reading_of_inspection ?location j with
       | Some r ->
           Option.to_list
             (Option.map (M.name_text_of_reading r) ~f:(fun n -> (r.M.rd_node, n)))
       | None -> [])
 
 (* …and how much of it there is, for the result table's node cell *)
-let counted_by_inspection (j : Yojson.Basic.t) : (string * string) list =
-  match M.reading_of_inspection j with
+let counted_by_inspection ?location (j : Yojson.Basic.t) : (string * string) list =
+  match M.reading_of_inspection ?location j with
   | Some r -> Option.to_list (Option.map (M.count_text_of_reading r) ~f:(fun c -> (r.M.rd_node, c)))
   | None -> []
 
@@ -354,19 +355,18 @@ let first_per_node (pairs : (string * 'a) list) : (string * 'a) list =
   List.fold pairs ~init:[] ~f:(fun acc (node, x) ->
       if List.Assoc.mem acc node ~equal:String.equal then acc else acc @ [ (node, x) ])
 
-(* Every step's own directory holds what it and its inspections wrote.
-   Two kinds of step are left out: an inspection (its parent's directory
-   is read instead) and a probe of ANOTHER copy — the staged one, or a
-   system package's this world does not use. A dummy is read: CPython's
-   stdlib binding has no install step, and its inspection attaches to the
-   dummy that holds its place. *)
+(* Every step's own directory holds what it and its inspections wrote,
+   each with where its step looked. Two kinds of step are left out: an
+   inspection (its parent's directory is read instead) and a probe of a
+   system package's copy this world does not use. A probe of the staged
+   copy is read, and names the staged copy (2026-09-29). A dummy is read:
+   CPython's stdlib binding has no install step, and its inspection
+   attaches to the dummy that holds its place. *)
 let recorded_inspections ~root (r : M.row) (steps : M.world_step list) :
-    (string * Yojson.Basic.t) list =
+    (string * Canary_store.location option * Yojson.Basic.t) list =
   List.concat_map steps ~f:(fun w ->
       match w.M.ws_place with
-      | T.Evidence_for _ | T.Placeholder_for _
-      | T.Unplaced (T.Observes_staged_copy | T.Observes_unused_system_copy) ->
-          []
+      | T.Evidence_for _ | T.Placeholder_for _ | T.Unplaced T.Observes_unused_system_copy -> []
       | T.On _ | T.Included_for _ | T.Unplaced _ ->
           List.filter_map [ "inspect"; "inspect_stub" ] ~f:(fun base ->
               Option.map
@@ -375,18 +375,20 @@ let recorded_inspections ~root (r : M.row) (steps : M.world_step list) :
                 ~f:(fun j ->
                   ( inspection_path ~root ~project:r.M.project ~scenario:r.M.scenario
                       ~tag:w.M.ws_tag ~base,
+                    w.M.ws_location,
                     j ))))
 
 let recorded_names ~root (r : M.row) (steps : M.world_step list) :
     (string * (string * source)) list =
-  List.concat_map (recorded_inspections ~root r steps) ~f:(fun (path, j) ->
+  List.concat_map (recorded_inspections ~root r steps) ~f:(fun (path, location, j) ->
       (* each name with the file it was read from *)
-      List.map (named_by_inspection j) ~f:(fun (node, label) ->
+      List.map (named_by_inspection ?location j) ~f:(fun (node, label) ->
           (node, (label, from_run path "Canary_overview_runs.named_by_inspection"))))
   |> first_per_node
 
 let recorded_counts ~root (r : M.row) (steps : M.world_step list) : (string * string) list =
-  List.concat_map (recorded_inspections ~root r steps) ~f:(fun (_, j) -> counted_by_inspection j)
+  List.concat_map (recorded_inspections ~root r steps) ~f:(fun (_, location, j) ->
+      counted_by_inspection ?location j)
   |> first_per_node
 
 (* the bridge records this view's steps wrote: one per step that drives a

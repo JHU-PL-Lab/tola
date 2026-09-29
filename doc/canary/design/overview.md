@@ -61,8 +61,10 @@ watchlists, the binding's package) and the world's placements. The
 agreements read these files first. The page reads the same ones through
 one reader, `Canary_matrix.reading_of_inspection`, which turns each into
 a node, a name and a count; the bridge record is the overview's alone. A
-file is named for the world, not the run, so the next run of that world
-replaces it (§6.4).
+library's node is the copy its step looked at, so an installed world
+names both its build tree's copy and its staged one. A file is named for
+the world, not the run, so the next run of that world replaces it
+(§6.4).
 
 **The record reads what a run realized.** The runner writes each world's
 steps to its manifest (`Canary_manifest`), and `matrix_of` reads it,
@@ -455,9 +457,6 @@ find them. What they left open:
   `install_surf`, and no fetch installs a built binding's surface.
 - The ten action families with no edge have no frame, so their steps
   have no column.
-- The staged copy is never named. An installed-library world stages the
-  library and inspects the copy (`probe_lib_staged`), but that
-  inspection is not read into `staged_sys`.
 - Step 6's log change: typed fields on log events, each inspection's
   summary logged once (a later run of a world replaces its files, §2),
   and a manifest for the multi-variant runner.
@@ -487,7 +486,8 @@ find them. What they left open:
 | `overview.bridge_record_is_read` | the reader of the bridge record, on a fixture |
 | `steps.gate_is_read_after_its_bridge_runs` | the gate fires at the probe, reads the file the bridge step writes, and the probe waits for that step |
 | `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
-| `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it |
+| `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it; a library's node is the copy its step looked at |
+| `overview.staged_copy_is_named` | an installed world's staged copy is named and counted from its own inspection, and the build tree's copy from its own |
 | `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
 | `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; §1.2's tooltip glosses each blame |
 | `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |

@@ -1267,7 +1267,16 @@ let one_reader_pin : Canary_project_test.pure_test =
         (* an mli summary's path is the package: no name, only a count *)
         && renders {|{"kind":"ocaml_mli","path":"zarith","modules":["Z","Q"]}|}
              ~cell:(Some "2 mod") ~name:None ~count:(Some "2 modules")
-        && Option.is_none (read {|{"kind":"bridge","package":"conf-gmp"}|}))
+        && Option.is_none (read {|{"kind":"bridge","package":"conf-gmp"}|})
+        (* a library's reading describes the copy its step looked at *)
+        &&
+        let lib = Yojson.Basic.from_string {|{"kind":"native","elf":{"soname":"libz.so.1"}}|} in
+        let node ?location () =
+          Option.map (M.reading_of_inspection ?location lib) ~f:(fun r -> r.M.rd_node)
+        in
+        Poly.equal (node ()) (Some "lib_sys")
+        && Poly.equal (node ~location:Canary_store.Build_tree ()) (Some "lib_sys")
+        && Poly.equal (node ~location:Canary_store.Staged ()) (Some "staged_sys"))
   }
 
 (* THE RESULT TABLE JOINS THE PAGE (2026-09-28, user: one page, prototype
@@ -8344,6 +8353,63 @@ let badge_words_pin : Canary_project_test.pure_test =
                    Poly.equal (List.Assoc.find v.R.vw_badges "realize_sys" ~equal:String.equal)
                      (Some "partial"))) }
 
+(* THE STAGED COPY IS NAMED (2026-09-29, design/overview.md §6.4). An
+   installed world inspects two copies of its library, the build tree's
+   after build_lib and the staged one at probe_lib_staged, and the page
+   read only the first: the staged copy's node had no name and no count
+   while staged_interface_preserved held on it. The reader takes where the
+   step looked, so the staged probe's inspection names staged_sys, and the
+   build tree's still names lib_sys.
+
+   Over a fixture tree in sqlite's shape, with no log: each installed
+   world's two copies carry distinct names, so neither can stand for the
+   other. *)
+let staged_copy_pin : Canary_project_test.pure_test =
+  { name = "overview.staged_copy_is_named";
+    check =
+      (fun () ->
+        let module M = Canary_matrix in
+        let module R = Canary_overview_runs in
+        let project = "sqlite" in
+        match List.Assoc.find Canary_registry.all_projects project ~equal:String.equal with
+        | None -> false
+        | Some pr ->
+            let root = "_out/canary/test/staged-fixture" in
+            let module F = Record_fixture in
+            let native soname total =
+              Printf.sprintf
+                {|{"kind":"native","path":"/x/libsqlite3.so","elf":{"soname":"%s"},"counts":{"total":%d}}|}
+                soname total
+            in
+            let scenario_of a =
+              Stdlib.Filename.basename (Canary_project_run.scenario_dir_of ~pr_name:project a)
+            in
+            let file tag a =
+              Printf.sprintf "%s/canary/projects/%s/%s/%s" root project
+                (Canary_basic.step_dir_of_tag tag)
+                (Canary_basic.filename ~variant_key:(scenario_of a) ~base:"inspect" ~ext:"json")
+            in
+            let installed =
+              List.filter (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  Poly.equal (R.provision_of_kind a Canary_basic.Lib) (Some Canary_artifact.Installed))
+            in
+            List.iter installed ~f:(fun a ->
+                F.write (file "build_lib" a) (native "libsqlite3.so.build" 9);
+                F.write (file "probe_lib_staged" a) (native "libsqlite3.so.staged" 7));
+            let views = R.views ~root (M.matrix_of ~root [ (project, pr) ]) in
+            let of_installed =
+              List.filter views ~f:(fun v ->
+                  List.exists installed ~f:(fun a -> String.equal (scenario_of a) v.R.vw_scenario))
+            in
+            let name (v : R.view) n = List.Assoc.find v.R.vw_names n ~equal:String.equal in
+            (not (List.is_empty of_installed))
+            && List.for_all of_installed ~f:(fun v ->
+                   Poly.equal (name v "staged_sys") (Some ("libsqlite3.so.staged", "recorded"))
+                   && Poly.equal
+                        (List.Assoc.find v.R.vw_counts "staged_sys" ~equal:String.equal)
+                        (Some "7 exports")
+                   && Poly.equal (name v "lib_sys") (Some ("libsqlite3.so.build", "recorded")))) }
+
 (* EVERY STEP OF A WORLD IS IN THE RECORD (2026-09-23, status.md §2.7
    phase B1). The cells hold one entry per action, while the overview
    joins STEPS onto its edges, and a world has more of them: a lib probe
@@ -9069,6 +9135,7 @@ let base_tests : Canary_project_test.pure_test list =
       results_table_pin;
       agreement_counts_pin;
       badge_words_pin;
+      staged_copy_pin;
       manifest_pin;
       placeholder_steps_pin;
       overview_overlay_pin;

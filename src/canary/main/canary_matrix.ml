@@ -956,7 +956,9 @@ let artifact_cols_of_chain (chain : Canary_basic.action list)
     only the overview reads it. *)
 type reading = {
   rd_kind : string;  (** the inspector's [kind] *)
-  rd_node : string;  (** the overview's node the inspection describes *)
+  rd_node : string;
+      (** the overview's node the inspection describes — for a library,
+          the copy its step looked at ([?location]) *)
   rd_name : string option;
       (** what the node is in this world; [None] where the file names
           something else — an mli summary's path is the PACKAGE, and the
@@ -965,7 +967,8 @@ type reading = {
   rd_soname : string option;  (** a library's recorded identity *)
 }
 
-let reading_of_inspection (j : Yojson.Basic.t) : reading option =
+let reading_of_inspection ?(location : Canary_store.location option) (j : Yojson.Basic.t) :
+    reading option =
   let field = Canary_agreement_common.field in
   let str j k = match field j k with Some (`String s) when not (String.is_empty s) -> Some s | _ -> None in
   let len k = match field j k with Some (`List xs) -> Some (List.length xs) | _ -> None in
@@ -981,7 +984,11 @@ let reading_of_inspection (j : Yojson.Basic.t) : reading option =
         | Some (`Int n) -> Some n
         | _ -> None
       in
-      read k "lib_sys"
+      (* THE COPY IS THE STEP'S (2026-09-29): a library's inspection
+         describes the copy its step looked at, and an installed world
+         looks at two, the build tree's and the staged one *)
+      read k
+        (match location with Some Canary_store.Staged -> "staged_sys" | _ -> "lib_sys")
         ?name:(Option.first_some soname (Option.map (str j "path") ~f:base))
         ?count:total ?soname ()
   | Some ("c_stub" as k) ->
