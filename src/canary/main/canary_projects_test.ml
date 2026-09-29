@@ -2227,7 +2227,7 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         let norm s = String.concat ~sep:" " (words s) in
         (* the stylesheet's innermost blocks: selector → declarations *)
         let rules =
-          let s = P.css in
+          let s = P.css () in
           let n = String.length s in
           let rec go i start acc =
             if i >= n then List.rev acc

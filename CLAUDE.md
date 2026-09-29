@@ -863,6 +863,12 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
 
 - `cc` = Claude Code (user shorthand)
 - Allowed bash: `make *` and `dune *` only
+- **Comments state the concluded design, briefly** (user, 2026-09-29):
+  the sections, terms and workflows as they are now. The reasoning
+  happens in the chat; the history belongs in the worklog and the commit
+  messages. A later agent follows the conclusion; it does not need the
+  argument that reached it. Much of today's code still carries long
+  dated comments: shorten them when you move or change that code.
 
 ## Concurrent agents (worktrees)
 

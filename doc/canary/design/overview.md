@@ -27,6 +27,7 @@ page.
 | §2, the agreement overview | `Canary_matrix.agreement_overview` | the registry; `decided` and `blame` are counted over §1.2's cells |
 | §3, the census | `Canary_overview_page.claim_sites_table` | the claim sites and the registry |
 | §4's tables | `Canary_pm_solo`, the mechanism catalogue, `Canary_topology.coop_catalogue`, `Canary_overview_join.cases_of` | code; their prose columns are hand-written |
+| the stylesheets and scripts | `canary/overview/` (`page.css`, `results.css`, `agreements.css`, `page.js`, `results.js`), inlined by `Canary_overview_assets` | hand-written files; artifact-test's `overview.scripts_parse` runs `node --check` on the scripts |
 
 The page's script looks answers up in the embedded data and the runs
 files and decides nothing of its own, except in the five places §4 lists.
@@ -234,6 +235,21 @@ This is the overview task's one status (user, 2026-09-29): the list
 below says what is left and what each item needs, and `status.md` points
 here. §6.1 to §6.4 keep the design the items refer to, under the numbers
 code comments cite. How each piece landed is the worklog.
+
+**Now: the page's source, reorganized** (user, 2026-09-29: "Let's do this
+first"), in four steps, each keeping the rendered page byte-identical.
+One kind of information has one home: logic in small OCaml modules, the
+stylesheets and scripts in `canary/overview/`, the page's prose in a
+template there with slots the generator fills, design here, history in
+the worklog and the commits. The steps: (1) the stylesheets and scripts
+move out, done 2026-09-29; (2) the page's prose moves into the template;
+(3) `canary_overview_page.ml` splits into the diagram, the two checked
+lists, the tables, the hand-drawn cases and the assembly, and §2 leaves
+`canary_matrix.ml` for its own module; (4) the moved code keeps short
+comments that state the concluded design (CLAUDE.md's Conventions).
+**Then:** a
+diagram on the page of the workflow that generates its information (user,
+2026-09-29).
 
 The list is grouped by what an item needs before it can start. Its first
 open question is the order. The plan of 2026-09-28 was the rest of phase

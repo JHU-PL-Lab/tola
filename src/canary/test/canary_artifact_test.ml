@@ -1670,7 +1670,16 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
             bridge_shell_tests ~output_dir)
       else (Fmt.pr "pkg-config not found — skipping bridge recorder tests@."; [])
     in
-    native @ ocaml_ @ ocaml_stub @ python @ mutation_apply @ bridge
+    (* the overview page's scripts are files that no other test runs *)
+    let page_scripts =
+      if Stdlib.Sys.command "which node > /dev/null 2>&1" = 0
+      then (Fmt.pr "node found — checking the overview page's scripts parse@.";
+            [ { Canary_pm_test.name = "overview.scripts_parse";
+                cmd = {|for f in canary/overview/*.js; do node --check "$f" || exit 1; done|};
+                expected_rc = 0 } ])
+      else (Fmt.pr "node not found — skipping the overview page's script check@."; [])
+    in
+    native @ ocaml_ @ ocaml_stub @ python @ mutation_apply @ bridge @ page_scripts
   in
   let sh_pass = ref 0 in
   let sh_fail = ref 0 in

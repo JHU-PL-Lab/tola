@@ -1,0 +1,43 @@
+table.grid{border-collapse:collapse;font-size:.8rem;width:100%}
+table.grid th,table.grid td{border:1px solid var(--line);padding:.22rem .4rem}
+table.grid th.gcol{font-family:ui-monospace,monospace;font-size:.62rem;
+writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;
+padding:.3rem .15rem;vertical-align:bottom}
+table.grid td.g{text-align:center;font-family:ui-monospace,monospace;
+font-size:.65rem;font-weight:700;padding:.2rem .25rem}
+table.grid td.impl{font-family:ui-monospace,monospace;font-size:.68rem;
+white-space:nowrap}
+table.grid td.impl.none,table.grid td.impl.ext{
+background:color-mix(in srgb,var(--warn) 16%,transparent);
+color:var(--warn);font-weight:700}
+table.grid td.impl.ext{font-style:italic;font-weight:400}
+tr.extrow{background:color-mix(in srgb,var(--warn) 6%,transparent)}
+tr.extrow td.kc{color:var(--warn)}
+table.grid td.lm{font-size:.72rem;white-space:nowrap}
+table.grid td.kind{font-size:.72rem;white-space:nowrap;color:var(--mut)}
+th.seth{background:var(--card)}
+td .mk{font-weight:600}
+table.keytbl{border-collapse:collapse;margin-top:.5rem;font-size:.82rem}
+table.keytbl th,table.keytbl td{border:1px solid var(--line);
+padding:.2rem .5rem;text-align:left;font-weight:400}
+table.keytbl th{background:var(--card);font-weight:600}
+table.keytbl td.kc{font-family:ui-monospace,monospace;font-weight:700}
+span.kq{color:var(--mut)}
+p.verdict{font-size:.78rem;color:#1a7f37;margin:.2rem 0 .6rem;
+font-family:ui-monospace,monospace}
+p.verdict.bad{color:var(--warn);font-weight:700}
+div.kinds{font-size:.8rem;margin:0 0 .8rem;max-width:62rem}
+div.kinds dl,dl.legend{margin:.4rem 0;display:grid;
+grid-template-columns:max-content 1fr;gap:.18rem .8rem}
+div.kinds dt,dl.legend dt{font-family:ui-monospace,monospace;
+font-weight:700;color:var(--acc);white-space:nowrap}
+div.kinds dd,dl.legend dd{margin:0}
+dl.legend{font-size:.78rem;max-width:62rem}
+dl.legend dd{color:var(--mut)}
+td.g.rd{background:#d1e7dd;color:#0a3622}
+td.g.rr{background:#ffe8cc;color:#7a3e00}
+td.g.dd{background:#dbeafe;color:#0a3069}
+td.g.nn{background:transparent}
+td.g.tgt{background:#f0e6ff;color:#512a97}
+td.g.own{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.grid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
