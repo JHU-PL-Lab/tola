@@ -20,13 +20,15 @@ page.
 | on the page | computed by | from |
 | --- | --- | --- |
 | §1's graph: 16 nodes, 21 edges, and the edges each agreement sits on | `Canary_topology` (`nodes`, `edges`, `claim_sites`) | hand-written; pins hold them to the registry and to every step the runner derives, and §6.2 derives them |
-| §1's places, looks and keys | `Canary_overview_page` (`layout`, `visual_hints`, `layout_rules`) | hand-written, held by the two lists' pins (§5) |
+| §1's drawing: places, boxes, bands, edges and their marks | `Canary_overview_diagram` (`layout`, `diagram`) | hand-written places over the graph |
+| §1's looks, keys and placement rules | `Canary_overview_looks` (`visual_hints`, `layout_rules`) | hand-written, held by the two lists' pins (§5) |
+| §1's panel: the choices, each case's note, the rules shown | `Canary_overview_panel`, the notes in `Canary_overview_cases` | the join data, the looks, the hand-written notes |
 | §1's choices, and what each draws | `Canary_overview_join`, embedded as `#joindata` | the projects' declarations, the drivers, the mechanism and cooperation catalogues |
 | a recorded run on §1, and §1.2's rows | `Canary_overview_runs`, written to `overview_runs.js`, one per machine | the record (§2) |
 | §1.2's columns | `Canary_frames`, embedded as `framesdata` | the graph's edges and the claim sites |
-| §2, the agreement overview | `Canary_matrix.agreement_overview` | the registry; `decided` and `blame` are counted over §1.2's cells |
-| §3, the census | `Canary_overview_page.claim_sites_table` | the claim sites and the registry |
-| §4's tables | `Canary_pm_solo`, the mechanism catalogue, `Canary_topology.coop_catalogue`, `Canary_overview_join.cases_of` | code; their prose columns are hand-written |
+| §2, the agreement overview | `Canary_agreement_overview.render` | the registry; `decided` and `blame` are counted over §1.2's cells |
+| §3, the census | `Canary_overview_tables.claim_sites_table` | the claim sites and the registry |
+| §4's tables | `Canary_overview_tables`, over `Canary_pm_solo`, the mechanism catalogue, `Canary_topology.coop_catalogue`, `Canary_overview_join.cases_of` | code; their prose columns are hand-written |
 | the page's prose, stylesheets and scripts | `canary/overview/`: `page.html`, the template whose `{{slots}}` `Canary_overview_page.render` fills, and `page.css`, `results.css`, `agreements.css`, `page.js`, `results.js`, inlined by `Canary_overview_assets` | hand-written files; artifact-test's `overview.scripts_parse` runs `node --check` on the scripts |
 
 The page's script looks answers up in the embedded data and the runs
@@ -242,12 +244,13 @@ One kind of information has one home: logic in small OCaml modules, the
 stylesheets and scripts in `canary/overview/`, the page's prose in a
 template there with slots the generator fills, design here, history in
 the worklog and the commits. The steps: (1) the stylesheets and scripts
-move out, done 2026-09-29; (2) the page's prose moves into the template,
-done 2026-09-29; (3) `canary_overview_page.ml` splits into the diagram, the two checked
-lists, the tables, the hand-drawn cases and the assembly, and §2 leaves
-`canary_matrix.ml` for its own module; (4) the moved code keeps short
-comments that state the concluded design (CLAUDE.md's Conventions).
-**Then:** a
+move out; (2) the page's prose moves into the template; (3)
+`canary_overview_page.ml` splits into the diagram, the two checked lists,
+the tables, the hand-drawn cases, the panel and the assembly, and §2
+leaves `canary_matrix.ml` for its own module (§1's map); (4) the moved
+code keeps short comments that state the concluded design (CLAUDE.md's
+Conventions). All four done 2026-09-29.
+**Next:** a
 diagram on the page of the workflow that generates its information (user,
 2026-09-29).
 

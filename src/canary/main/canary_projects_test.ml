@@ -1889,15 +1889,15 @@ let overview_overlay_pin : Canary_project_test.pure_test =
 let hand_cases_json () : Yojson.Basic.t =
   let strs l = `List (List.map l ~f:(fun s -> `String s)) in
   `Assoc
-    (List.map Canary_overview_page.hand_cases ~f:(fun (c : Canary_overview_page.case) ->
-         ( c.Canary_overview_page.ca_key,
+    (List.map Canary_overview_cases.hand_cases ~f:(fun (c : Canary_overview_cases.case) ->
+         ( c.Canary_overview_cases.ca_key,
            `Assoc
              [ ( "names",
                  `Assoc
-                   (List.map c.Canary_overview_page.ca_names ~f:(fun (n, l) -> (n, `String l)))
+                   (List.map c.Canary_overview_cases.ca_names ~f:(fun (n, l) -> (n, `String l)))
                );
-               ("hidden", strs c.Canary_overview_page.ca_hidden);
-               ("dead", strs c.Canary_overview_page.ca_dead) ] )))
+               ("hidden", strs c.Canary_overview_cases.ca_hidden);
+               ("dead", strs c.Canary_overview_cases.ca_dead) ] )))
 
 let recorded_names_pin : Canary_project_test.pure_test =
   { name = "overview.recorded_views_are_named";
@@ -2216,7 +2216,7 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
 (* THE VISUAL VOCABULARY IS ONE LIST (2026-09-24, user: "shall we keep all
    our visual hints in a place, so we can always check for them all and
    you won't be forget the old ones, and we can detect if there are
-   conflicts"). [Canary_overview_page.visual_hints] is that place; this
+   conflicts"). [Canary_overview_looks.visual_hints] is that place; this
    holds it to the stylesheet and to the page:
 
    - every §1 rule of the stylesheet belongs to exactly one hint or to the
@@ -2241,7 +2241,7 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
   { name = "overview.visual_vocabulary_is_one_list";
     check =
       (fun () ->
-        let module P = Canary_overview_page in
+        let module P = Canary_overview_looks in
         let words s =
           List.filter (String.split_on_chars s ~on:[ ' '; '\n'; '\t' ]) ~f:(fun w ->
               not (String.is_empty w))
@@ -2249,7 +2249,7 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         let norm s = String.concat ~sep:" " (words s) in
         (* the stylesheet's innermost blocks: selector → declarations *)
         let rules =
-          let s = P.css () in
+          let s = Canary_overview_page.css () in
           let n = String.length s in
           let rec go i start acc =
             if i >= n then List.rev acc
@@ -2477,8 +2477,9 @@ let agreements_sit_pin : Canary_project_test.pure_test =
           && is "behavior_matches" T.Across_sides [ T.L_artifact; T.L_program ]
           && is "package_resolution_suffices" T.End_to_end [ T.L_pm; T.L_package; T.L_program ]
         in
+        let module AO = Canary_agreement_overview in
         let m = M.matrix_of Canary_registry.all_projects in
-        let overview = M.agreement_overview m in
+        let overview = AO.render m in
         (* the first cell after a row's slug that carries the site *)
         let site_cell slug =
           match String.substr_index overview ~pattern:(Printf.sprintf "<td>%s</td>" slug) with
@@ -2499,21 +2500,21 @@ let agreements_sit_pin : Canary_project_test.pure_test =
               | Some cell, Some st -> String.equal cell (String.concat ~sep:", " st.T.st_edges)
               | _ -> false)
         in
-        let groups = M.sitting_groups m in
-        let members = List.concat_map groups ~f:(fun g -> g.M.sg_members) in
+        let groups = AO.sitting_groups m in
+        let members = List.concat_map groups ~f:(fun g -> g.AO.sg_members) in
         let grouping_ok =
           List.length members = List.length T.claim_sites
           && List.for_all slugs ~f:(fun s ->
-                 List.count members ~f:(fun sm -> String.equal sm.M.sm_slug s) = 1
+                 List.count members ~f:(fun sm -> String.equal sm.AO.sm_slug s) = 1
                  && String.is_substring overview
                       ~substring:(Printf.sprintf {|<code title="%s">|} s))
-          && List.count members ~f:(fun sm -> sm.M.sm_checked)
+          && List.count members ~f:(fun sm -> sm.AO.sm_checked)
              = List.count T.claim_sites ~f:T.implemented
           (* the logs agree with the registry *)
-          && List.for_all members ~f:(fun sm -> (not sm.M.sm_decided) || sm.M.sm_checked)
+          && List.for_all members ~f:(fun sm -> (not sm.AO.sm_decided) || sm.AO.sm_checked)
         in
         once && specimens && table_ok && grouping_ok
-        && String.is_substring (M.pp_sittings m) ~substring:"where the agreements sit on the chain")
+        && String.is_substring (AO.pp_sittings m) ~substring:"where the agreements sit on the chain")
   }
 
 (* NO EDGE MARK HIDES UNDER A BOX, AND NO EDGE RUNS UNDER A SOURCE
@@ -2541,7 +2542,7 @@ let edge_marks_pin : Canary_project_test.pure_test =
   { name = "overview.edge_marks_clear_the_boxes";
     check =
       (fun () ->
-        let module P = Canary_overview_page in
+        let module P = Canary_overview_diagram in
         let module T = Canary_topology in
         let module J = Canary_overview_join in
         let rect_of n =
@@ -2842,7 +2843,7 @@ let coverage_tables_pin : Canary_project_test.pure_test =
           && List.for_all T.coop_catalogue ~f:(fun i ->
                  let as_row =
                    String.is_substring section
-                     ~substring:("<b>" ^ Canary_overview_page.esc i.T.co_name ^ "</b>")
+                     ~substring:("<b>" ^ Canary_overview_assets.esc i.T.co_name ^ "</b>")
                  in
                  Bool.equal as_row (List.mem instantiated i.T.co_kind ~equal:Poly.equal))
           (* one chain per distinct instance, with its mechanism named *)
@@ -2930,10 +2931,10 @@ let package_band_pin : Canary_project_test.pure_test =
                            ~f:(List.mem (strings (field c "dead")) ~equal:String.equal)
                       (* and the case illustrates the cooperation its world
                          has — §1 shows its notes with that cooperation *)
-                      && List.exists Canary_overview_page.hand_cases
-                           ~f:(fun (h : Canary_overview_page.case) ->
-                             String.equal h.Canary_overview_page.ca_key key
-                             && Poly.equal h.Canary_overview_page.ca_coop (T.coop_of t)))
+                      && List.exists Canary_overview_cases.hand_cases
+                           ~f:(fun (h : Canary_overview_cases.case) ->
+                             String.equal h.Canary_overview_cases.ca_key key
+                             && Poly.equal h.Canary_overview_cases.ca_coop (T.coop_of t)))
               | _ -> false)
           && List.length cases = 5
         in
@@ -3165,8 +3166,8 @@ let chain_choices_pin : Canary_project_test.pure_test =
               let info = T.info_of_coop b.T.cb_kind in
               has
                 (Printf.sprintf {|>%s <span class="bl">%s</span></button>|}
-                   (Canary_overview_page.esc info.T.co_label)
-                   (Canary_overview_page.esc (J.pm_label j b.T.cb_kind))))
+                   (Canary_overview_assets.esc info.T.co_label)
+                   (Canary_overview_assets.esc (J.pm_label j b.T.cb_kind))))
           && String.equal (J.pm_label j T.Co_conf) ("opam ↔ " ^ sys)
           && String.equal (J.pm_label j T.Co_local) "no PM"
           && has {|>package in canary<|}
@@ -3189,8 +3190,8 @@ let chain_choices_pin : Canary_project_test.pure_test =
           List.length (String.substr_index_all page ~may_overlap:false ~pattern:{|class="diagram"|}) = 1
           && (not (String.is_substring page ~substring:{|id="recwrap"|}))
           && (not (String.is_substring page ~substring:{|id="cases"|}))
-          && List.for_all Canary_overview_page.hand_cases ~f:(fun (c : Canary_overview_page.case) ->
-                 has (Canary_overview_page.esc c.Canary_overview_page.ca_title))
+          && List.for_all Canary_overview_cases.hand_cases ~f:(fun (c : Canary_overview_cases.case) ->
+                 has (Canary_overview_assets.esc c.Canary_overview_cases.ca_title))
         in
         (* THE THIRD ROUND (2026-09-24, user): the package layer's two
            in-between nodes say the package managers' TERMS — the
@@ -3213,7 +3214,7 @@ let chain_choices_pin : Canary_project_test.pure_test =
         in
         (* the layout's own rules — layered rows, a package's line, the
            sources beside it, the bridge with the language side — moved to
-           [Canary_overview_page.layout_rules] on 2026-09-27, where they are
+           [Canary_overview_looks.layout_rules] on 2026-09-27, where they are
            stated in words and held by overview.layout_rules_hold *)
         (* EVERY PACKAGE IN CANARY CARRIES A COOPERATION, KNOWN BEFORE ANY
            RUN (2026-09-24, user: "when we click any button for
@@ -8194,7 +8195,7 @@ let agreement_counts_pin : Canary_project_test.pure_test =
         match chain_cell_fixture () with
         | None -> false
         | Some (pr, m, views) ->
-            let overview = M.agreement_overview m in
+            let overview = Canary_agreement_overview.render m in
             (* the text of a cell, its tags dropped *)
             let text s =
               let b = Buffer.create (String.length s) in
@@ -9194,7 +9195,7 @@ let base_tests : Canary_project_test.pure_test list =
 (* THE LAYOUT KEEPS ITS RULES (2026-09-27, user: "a collection of my human
    words or learned rules … so that if we switch to another GUI framework
    e.g. mermaid, we are still aware of the rules on how to migrate them").
-   [Canary_overview_page.layout_rules] states each rule in words, with
+   [Canary_overview_looks.layout_rules] states each rule in words, with
    why and whose it is. This holds the drawing to it: every rule checked
    over places holds over this layout's, and every rule checked by a pin
    names a pin that exists — so the list cannot point at a check that
@@ -9205,7 +9206,7 @@ let layout_rules_pin : Canary_project_test.pure_test =
   { name = "overview.layout_rules_hold";
     check =
       (fun () ->
-        let module P = Canary_overview_page in
+        let module P = Canary_overview_looks in
         (not (List.is_empty P.layout_rules))
         && List.for_all P.layout_rules ~f:(fun r ->
                (not (String.is_empty r.P.lr_says))
@@ -9218,7 +9219,7 @@ let layout_rules_pin : Canary_project_test.pure_test =
                        String.equal t.Canary_project_test.name name))
         (* the page shows the list *)
         && String.is_substring
-             (P.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin")
+             (Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin")
              ~substring:{|id="jrules"|})
   }
 

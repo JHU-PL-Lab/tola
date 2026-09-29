@@ -905,7 +905,8 @@ let checks_cmd =
            candidates included — with how many some recorded run decided,
            read from the same logs as the result table *)
         Fmt.pr "@.%s@."
-          (Canary_matrix.pp_sittings (Canary_matrix.matrix_of Canary_registry.all_projects));
+          (Canary_agreement_overview.pp_sittings
+             (Canary_matrix.matrix_of Canary_registry.all_projects));
         (* THE SAME TOOLS THE `_ext` ROWS NAME, TRANSPOSED (2026-09-21,
            user: "It's also a good way to understand their roles"). The
            table reads by claim; this reads by tool, and carries what
@@ -1605,7 +1606,7 @@ let overview_cmd =
           (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
       in
       let m = Canary_matrix.matrix_of Canary_registry.all_projects in
-      let overview = Canary_matrix.agreement_overview m in
+      let overview = Canary_agreement_overview.render m in
       Canary_overview_page.write Canary_registry.all_specs ~overview
         ~generated_at:now;
       Fmt.pr "wrote %s@." Canary_overview_page.docs_path;

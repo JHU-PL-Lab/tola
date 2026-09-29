@@ -748,7 +748,7 @@ let string_of_layer = function
 
 (** Which package manager's side a node is on — the system side's, or the
     language side's. The layout draws the first on the left and the second
-    on the right ([Canary_overview_page.layout_rules]). There is no third
+    on the right ([Canary_overview_looks.layout_rules]). There is no third
     side: a bridge package is written in the language ecosystem, and a
     capability file ships inside the native package. *)
 type side = S_sys | S_lang

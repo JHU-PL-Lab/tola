@@ -7,6 +7,15 @@ open Base
 
 let dir = "canary/overview"
 
+(** HTML-escapes a text for an element or an attribute value. *)
+let esc (s : string) : string =
+  String.concat_map s ~f:(function
+    | '&' -> "&amp;"
+    | '<' -> "&lt;"
+    | '>' -> "&gt;"
+    | '"' -> "&quot;"
+    | c -> String.of_char c)
+
 let read (name : string) : string =
   let path = dir ^ "/" ^ name in
   match Stdlib.In_channel.with_open_bin path Stdlib.In_channel.input_all with
