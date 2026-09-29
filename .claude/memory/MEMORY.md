@@ -18,6 +18,7 @@
 - [dune sandbox + promote](feedback_dune_sandbox.md) — alias deps force build order but don't expose files in sandbox; use glob_files + promote instead
 - [Latin letters not Greek](feedback_option_letters.md) — use a/b/c/d or 1/2/3/4 for option lists
 - [Protect contrib/ build caches](feedback_protect_contrib_cache.md) — never rm -rf contrib/* (heavy z3/llvm builds)
+- [Patient with new actions](feedback_patient_with_new_actions.md) — a change adding an action/step is planned and held, not landed in the flow (2026-09-29)
 
 ## User Preferences
 - "cc" means Claude Code (this CLI tool)

@@ -323,7 +323,23 @@ The work, in order:
 2. **The easy placeholders become records**, one at a time, each leaving
    `Canary_pm_action` in the change that records it:
    - `resolve_sys`: apt's chosen candidate and the installed version
-     (`apt-cache policy`), which also retires the one render read (§4);
+     (`apt-cache policy`), which also retires the one render read (§4).
+     Planned 2026-09-29 and held, since it adds a step (user: be patient
+     with a change that adds an action). An inspection of `fetch_lib`
+     runs `LC_ALL=C apt-cache policy <pkg>` and writes a `resolution`
+     record into the fetch's directory: the package, the installed
+     version, the candidate, and the version table with priorities and
+     origins. apt's `policy` placeholder leaves `Canary_pm_action` in the
+     same change. The library's placement text and `pkg_sys`'s line take
+     the version from the record, `resolve_sys`'s tooltip says what apt
+     chose, and `Canary_matrix.sys_pkg_version` goes. Pins: the render
+     clause of `overview.every_drawn_line_has_a_source` flips to "nothing
+     is asked of the rendering machine"; a fixture pin for a world with a
+     record and one without; an artifact-test case on the command's
+     output. Two choices are open, with a recommendation each: brew keeps
+     its placeholder and a brew world shows no version, rather than
+     `brew info --json=v2` checked only against a sample; and a world no
+     run recorded shows no version, rather than the renderer's answer;
    - `depends` and `conf_probe`: opam's install output says when it built
      the bridge and ran its check in this run (`∗ installed conf-gmp.5`);
    - `resolve_lang`: the plan opam prints — the solution, though not why;
