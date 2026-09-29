@@ -115,6 +115,17 @@ why not. The page draws it as a marker on the edges it stands for, and an
 action edge that no step of ours performed but a package manager did
 reads `inside` rather than `absent`.
 
+**A binding included with its language** (2026-09-29; user: a special
+case, to revisit when similar ones appear). sqlite's Python binding is
+CPython's stdlib `sqlite3`, so its fetch is a dummy. `place_step` stands
+that dummy on the relations the interpreter's own build and install made
+(`install_lang`, `install_surf` and `link_mod`; a C extension has no stub
+build of its own), and they read `included`. `resolve_lang` stays
+`absent`, since nothing resolved the binding. The rule takes two facts
+together: the fetch is a dummy, and the binding's declaration puts no
+package manager between it and the library. `topology.every_step_has_a_place`
+lists the included bindings, so a second case is met there.
+
 **A bridge is a thing, and canary drives it.** The four decisions (user,
 2026-09-23):
 
@@ -439,16 +450,15 @@ find them. What they left open:
   machine's runs file. They agree while one machine's runs are on the
   page; a second machine's rows would be in §1.2 and not in §2's counts.
 - §1.2 hatches a check's column when the chain lacks its frame, even
-  where the chain decided the check, and §2 counts it. Eleven cells, all
-  `api_names_present`, whose one site is `install_surf`: sqlite's ten
-  Python rows, whose dummy fetch stands on no edge, and zarith's built
-  world, whose surface no fetch installs.
+  where the chain decided the check, and §2 counts it. One cell: zarith's
+  built world decides `api_names_present`, whose one site is
+  `install_surf`, and no fetch installs a built binding's surface.
+- §1's badges still read the record's slot columns (`row.claims`), so in
+  the fetched-library worlds of sqlite, zarith and zlib the `realize_sys`
+  badge reads `unevaluated` where §1.2 shows the library's checks
+  decided.
 - The ten action families with no edge have no frame, so their steps
   have no column.
-- sqlite's Python rows are mostly empty: 14 of their edges read `absent`,
-  against 8 in the OCaml rows, because CPython's stdlib binding is
-  provisioned by a dummy fetch, and `place_step` places a dummy on no
-  edge.
 - The staged copy is never named. An installed-library world stages the
   library and inspects the copy (`probe_lib_staged`), but that
   inspection is not read into `staged_sys`.
@@ -471,7 +481,7 @@ find them. What they left open:
 | `matrix.record_joins_edges_and_claims` | the record's edges and claims recomputed from its steps |
 | `matrix.record_carries_each_worlds_chain` | each world's chain per language: sides, cooperation, what it lacks, its agreements |
 | `topology.graph_matches_the_registry` | every placed agreement and edge exists; every annotation well formed |
-| `topology.every_step_has_a_place` | every realized step has an edge, or a typed reason it has none |
+| `topology.every_step_has_a_place` | every realized step has an edge, or a typed reason it has none; the bindings included with their language are listed |
 | `topology.joins_are_distinguished` | the five kinds of join stay five, each held to the project that is its specimen |
 | `overview.package_band_is_one_cooperation` | the band rules reproduce every hand-drawn case |
 | `overview.chain_choices_draw_one_chain` | the choices, the packages in canary, their names, terms and cooperations |

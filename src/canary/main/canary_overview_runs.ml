@@ -366,7 +366,7 @@ let recorded_inspections ~root (r : M.row) (steps : M.world_step list) :
       | T.Evidence_for _ | T.Placeholder_for _
       | T.Unplaced (T.Observes_staged_copy | T.Observes_unused_system_copy) ->
           []
-      | T.On _ | T.Unplaced _ ->
+      | T.On _ | T.Included_for _ | T.Unplaced _ ->
           List.filter_map [ "inspect"; "inspect_stub" ] ~f:(fun base ->
               Option.map
                 (read_inspection ~root ~project:r.M.project ~scenario:r.M.scenario
@@ -628,11 +628,18 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
         | [] -> None
         | xs -> Some (e.T.eg_id, xs))
   in
+  (* the relations a binding included with its language stands on: its
+     dummy fetch marks them ({!Canary_topology.included_edges}) *)
+  let included =
+    List.concat_map steps ~f:(fun w ->
+        match w.M.ws_place with T.Included_for ids -> ids | _ -> [])
+  in
   (* EVERY edge gets a word, so the template has nothing left over: a
      realized edge its worst step's; an action edge this world does not
      realize [absent] — or [inside], where a package manager established
-     the relation inside one of our actions and a placeholder says so;
-     someone else's rule [not_ours] — or [observed] where this run
+     the relation inside one of our actions and a placeholder says so, or
+     [included], where the language's own build and install made it before
+     the run; someone else's rule [not_ours] — or [observed] where this run
      recorded what that rule said here — and a claim edge [claim] *)
   let edges =
     List.map T.edges ~f:(fun e ->
@@ -650,7 +657,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
               in
               match List.filter_map tags ~f:word_of_tag with
               | [] ->
-                  if List.Assoc.mem placeholders e.T.eg_id ~equal:String.equal then
+                  if List.mem included e.T.eg_id ~equal:String.equal then "included"
+                  else if List.Assoc.mem placeholders e.T.eg_id ~equal:String.equal then
                     "inside"
                   else "absent"
               | w :: ws ->
@@ -792,7 +800,7 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     List.filter_map steps ~f:(fun w ->
         match w.M.ws_place with
         | T.Unplaced u -> Some (w.M.ws_tag, T.string_of_unplaced u)
-        | T.On _ | T.Evidence_for _ | T.Placeholder_for _ -> None)
+        | T.On _ | T.Evidence_for _ | T.Placeholder_for _ | T.Included_for _ -> None)
   in
   let stamps =
     List.filter_map steps ~f:(fun w -> w.M.ws_at)
@@ -823,7 +831,8 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     List.concat_map T.edges ~f:(fun e ->
         match List.Assoc.find edges e.T.eg_id ~equal:String.equal with
         | Some w
-          when step_rank w >= 0 || String.equal w "observed" || String.equal w "inside" ->
+          when step_rank w >= 0
+               || List.mem [ "observed"; "inside"; "included" ] w ~equal:String.equal ->
             e.T.eg_to :: e.T.eg_from
         | _ -> [])
     @ List.filter_map names ~f:(fun (n, (_, from)) ->

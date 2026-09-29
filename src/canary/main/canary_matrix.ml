@@ -1959,6 +1959,8 @@ let json_of_place : Canary_topology.place -> Yojson.Basic.t = function
   | Canary_topology.Evidence_for p -> `Assoc [ ("evidence_for", `String p) ]
   | Canary_topology.Placeholder_for ids ->
       `Assoc [ ("placeholder_for", `List (List.map ids ~f:(fun i -> `String i))) ]
+  | Canary_topology.Included_for ids ->
+      `Assoc [ ("included_for", `List (List.map ids ~f:(fun i -> `String i))) ]
   | Canary_topology.Unplaced u ->
       `Assoc
         [ ("unplaced", `String (Canary_topology.code_of_unplaced u));

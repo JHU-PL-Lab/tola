@@ -353,7 +353,9 @@ let coop_catalogue : coop_info list =
          library";
       co_artifact_join = "the loader resolves the extension's recorded dependency";
       co_versions = "none is declared anywhere";
-      co_recorded = "a dummy step holds the binding's place" };
+      co_recorded =
+        "a dummy step holds the binding's place; the relations the \
+         interpreter's build and install made read included" };
     { co_kind = Co_undeclared;
       co_label = "undeclared";
       co_name = "⚠ undeclared — cannot be classified";
@@ -1170,6 +1172,11 @@ type place =
           package manager established INSIDE the parent action, unseen by
           canary. It realizes nothing either — it marks, on those edges,
           what is not recorded and why *)
+  | Included_for of string list
+      (** a dummy fetch of a binding INCLUDED WITH ITS LANGUAGE
+          (2026-09-29): the edges whose relation the language's own build
+          and install made, before the run. It realizes none of them — it
+          marks them [included] ({!included_edges}) *)
   | Unplaced of unplaced
 
 (** The world's artifact of one kind: its provision there, and the
@@ -1213,6 +1220,24 @@ let placeholder_place ~pr ~world ~(action : Canary_basic.action)
       Placeholder_for [ "build_stub"; "link_mod"; "discover" ]
   | _ -> Unplaced (Unexpected "a placeholder for an action the graph does not place")
 
+(** WHAT A BINDING INCLUDED WITH ITS LANGUAGE STANDS ON (2026-09-29, user:
+    "fix `c` with `included`. it's a special case, and we can visit it
+    later when similar cases appear"). CPython ships [sqlite3] in its
+    standard library, so sqlite's Python fetch is a dummy: no action
+    provisions the binding. The relations a fetched binding's package
+    would bring still exist — the module and its surface installed, the
+    stub built and the module linked against the library — and the
+    interpreter's own build and install made them. Resolution is not
+    among them: no package manager resolved anything, so [resolve_lang]
+    stays absent.
+
+    Recognised by two facts together: the fetch is a dummy, and the
+    binding's declaration puts no package manager between it and the
+    library ({!No_pm_between}). sqlite's Python binding is the one case,
+    and [topology.every_step_has_a_place] lists it, so a second one is
+    met there rather than drawn by a rule written for the first. *)
+let included_edges = [ "install_lang"; "install_surf"; "build_stub"; "link_mod" ]
+
 (** THE RULE. [location], [inspects], [dummy], [bridge] and
     [placeholder] are the step's own fields ([Canary_step_model.step]);
     the world and the project answer what the step alone cannot — where
@@ -1246,7 +1271,18 @@ let place_step ~(gone : string list) ~(pr : Canary_project_run.project_run)
   in
   match (inspects, dummy, placeholder) with
   | Some parent, _, _ -> Evidence_for parent
-  | None, Some _, _ -> Unplaced Does_no_work
+  | None, Some _, _ -> (
+      match action with
+      | Canary_basic.Fetch (Canary_basic.Binding lang) -> (
+          match join_of pr lang with
+          | No_pm_between _ -> (
+              match
+                List.filter included_edges ~f:(fun id -> not (List.mem gone id ~equal:String.equal))
+              with
+              | [] -> Unplaced Does_no_work
+              | kept -> Included_for kept)
+          | _ -> Unplaced Does_no_work)
+      | _ -> Unplaced Does_no_work)
   | None, None, Some ph -> (
       match placeholder_place ~pr ~world ~action ph with
       | Placeholder_for ids -> (

@@ -608,6 +608,7 @@ stroke-width:2;opacity:1;stroke-dasharray:1 4}
 .rec .edge.st-observed line{stroke:var(--acc);stroke-width:2;stroke-dasharray:2 3;opacity:1}
 .rec .edge.st-inside line,.rec .edge.st-inside path{stroke:var(--mut);stroke-width:1.8;
 stroke-dasharray:8 3 2 3;opacity:.9}
+.rec .edge.st-included line,.rec .edge.st-included path{stroke:var(--mut);stroke-width:2;opacity:.9}
 .phm{display:none}.phm.on{display:inline}
 .phm rect{fill:var(--card);stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 2}
 .phm text{font:700 11px ui-monospace,monospace;fill:var(--mut);text-anchor:middle}
@@ -635,6 +636,7 @@ table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.bl{border-top:3px dashed var(--bad)}.sw.cl{border-top:2px dashed var(--acc)}
 .sw.gr{border-top:2px solid var(--fg);opacity:.18}
 .swl.in{stroke:var(--mut);stroke-width:2;stroke-dasharray:8 3 2 3}
+.sw.ic{border-top:2px solid var(--mut)}
 .kbtn{font:600 11px ui-sans-serif,system-ui,sans-serif;padding:0 .45rem;
 border:1px solid var(--line);border-radius:999px;color:var(--fg)}
 .kbtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -885,6 +887,8 @@ let visual_hints : visual_hint list =
     state "inside"
       {|<svg width="26" height="6" viewBox="0 0 26 6"><line class="swl in" x1="0" y1="3" x2="26" y2="3"/></svg>|}
       "happened inside a package manager's action — unseen";
+    state "included" (sw "ic")
+      "included with the language — made by its own build and install, before the run";
     state "claim" ~rules:[ ".rec .edge.st-claim line" ] (sw "cl")
       "a claim of ours — only the claim relates the two ends";
     hint "outcome.violated" Badge [ "cl-violated" ] [ ".rec .edge.cl-violated .cbadge.chk" ]
@@ -1698,7 +1702,7 @@ if(jbox&&J){
     (r.views||[]).forEach(function(w){
       w.key=w.id+'@'+r.machine; w.machine=r.machine; VIEWS[w.key]=w;
       (BYCASE[w['case']]=BYCASE[w['case']]||[]).push(w); }); });
-  var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','inside','not_ours','observed','claim'],
+  var STATES=['ran','warm','xfail','fail','blocked','unrecorded','absent','inside','included','not_ours','observed','claim'],
       OUTS=['violated','holds','partial','undecided','unevaluated'];
   // a line longer than its box is squeezed to fit rather than cut: every
   // character stays readable on hover-zoom, and none spills onto an edge
@@ -2025,7 +2029,7 @@ its row.</p>
 <p class="rt-key"><span class="rt-ok">✓</span> ran · <span class="rt-warm">✓</span> warm ·
 <span class="rt-bad">✗</span> failed or violated · <span class="rt-xf">xf</span> expected
 failure · ⊘ blocked · · not recorded · — not in this run · ⌂ inside a package
-manager's action · ~ someone else's relation · <span class="rt-gap">no-evid no-decl
+manager's action · ∈ included with the language · ~ someone else's relation · <span class="rt-gap">no-evid no-decl
 no-ref none</span> a check that could not decide · n/a the mechanism cannot carry
 it · <i>italic</i> declared, not recorded</p>
 <div class="rt-wrap"><table class="rt" id="rtable"></table></div>
@@ -2089,6 +2093,7 @@ rows.sort(function(a,b){ var x=a.w.project+'|'+a.w.id+'|'+a.m, y=b.w.project+'|'
   return x<y?-1:x>y?1:0; });
 var STEP={ran:['✓','rt-ok'],warm:['✓','rt-warm'],fail:['✗','rt-bad'],xfail:['xf','rt-xf'],
   blocked:['⊘','rt-bad'],unrecorded:['·','rt-dim'],absent:['—','rt-dim'],inside:['⌂','rt-dim'],
+  included:['∈','rt-dim'],
   observed:['~','rt-dim'],not_ours:['~','rt-dim']};
 var OUT={holds:['✓','rt-ok'],violated:['✗','rt-bad'],error:['err','rt-bad'],
   unavailable:['no-evid','rt-gap'],undeclared:['no-decl','rt-gap'],inconclusive:['no-ref','rt-gap'],

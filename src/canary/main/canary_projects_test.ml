@@ -813,6 +813,10 @@ let topology_graph_pin : Canary_project_test.pure_test =
    - the steps the page cannot place are LISTED, as (action family,
      reason) — each is a page error or a model gap, so a new one must
      fail here rather than render as a quiet grey;
+   - so are the bindings INCLUDED WITH THEIR LANGUAGE, whose dummy fetch
+     marks the relations the language's own build and install made
+     (2026-09-29): sqlite's Python binding, the one case, which until
+     then was the listed gap [fetch_binding dummy];
    - every action edge on the page is realized by some world, so the
      page draws nothing canary never does.
 
@@ -842,14 +846,15 @@ let every_step_placed_pin : Canary_project_test.pure_test =
               else None)
         in
         let placed =
-          List.concat_map (Canary_registry.all_projects @ ungated) ~f:(fun (_, pr) ->
+          List.concat_map (Canary_registry.all_projects @ ungated) ~f:(fun (name, pr) ->
               List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
                   let steps =
                     Canary_pipeline.steps_of ~warn:false ~root:"_out/canary" pr
                       ~ctx:(Canary_pipeline.ctx_of pr a) a
                   in
                   let gones = T.world_gone ~pr ~world:a in
-                  ( steps,
+                  ( name,
+                    steps,
                     List.map steps ~f:(fun (s : SM.step) ->
                         ( s,
                           T.place_step ~gone:(T.gone_for_action gones s.SM.action)
@@ -858,7 +863,7 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                             ~dummy:s.SM.dummy ~bridge:s.SM.bridge
                             ~placeholder:s.SM.placeholder )) )))
         in
-        let all = List.concat_map placed ~f:snd in
+        let all = List.concat_map placed ~f:(fun (_, _, places) -> places) in
         let edge_exists id =
           List.exists T.edges ~f:(fun e -> String.equal e.T.eg_id id)
         in
@@ -866,7 +871,7 @@ let every_step_placed_pin : Canary_project_test.pure_test =
           Canary_action_family.to_string (Canary_action_family.of_action s.SM.action)
         in
         let well_formed =
-          List.for_all placed ~f:(fun (steps, places) ->
+          List.for_all placed ~f:(fun (_, steps, places) ->
               List.for_all places ~f:(fun ((s : SM.step), p) ->
                   match p with
                   | T.On ids -> (not (List.is_empty ids)) && List.for_all ids ~f:edge_exists
@@ -876,6 +881,19 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                       Option.is_some s.SM.placeholder
                       && (not (List.is_empty ids))
                       && List.for_all ids ~f:edge_exists
+                  (* an included binding marks action edges that exist,
+                     and only a dummy that stands in for a binding's fetch
+                     is placed this way *)
+                  | T.Included_for ids ->
+                      Option.is_some s.SM.dummy
+                      && (match s.SM.action with
+                          | Canary_basic.Fetch (Canary_basic.Binding _) -> true
+                          | _ -> false)
+                      && (not (List.is_empty ids))
+                      && List.for_all ids ~f:(fun id ->
+                             List.exists T.edges ~f:(fun e ->
+                                 String.equal e.T.eg_id id
+                                 && match e.T.eg_annotation with T.Action _ -> true | _ -> false))
                   | T.Evidence_for parent ->
                       List.exists steps ~f:(fun (q : SM.step) ->
                           String.equal q.SM.tag parent
@@ -890,11 +908,11 @@ let every_step_placed_pin : Canary_project_test.pure_test =
           List.filter_map all ~f:(fun (s, p) ->
               match p with
               | T.Unplaced u -> Some (family s ^ " " ^ T.code_of_unplaced u)
-              | T.On _ | T.Evidence_for _ | T.Placeholder_for _ -> None)
+              | T.On _ | T.Evidence_for _ | T.Placeholder_for _ | T.Included_for _ -> None)
           |> List.dedup_and_sort ~compare:String.compare
         in
         let listed =
-          [ "configure no_edge"; "fetch_binding dummy";
+          [ "configure no_edge";
             "fetch_binding_source no_edge"; "fetch_lib lib_from_language_pm";
             "fetch_source no_edge"; "probe_app no_edge";
             "probe_lib staged_copy"; "probe_lib unused_system_copy";
@@ -905,7 +923,7 @@ let every_step_placed_pin : Canary_project_test.pure_test =
           List.concat_map all ~f:(fun (_, p) ->
               match p with
               | T.On ids -> ids
-              | T.Evidence_for _ | T.Placeholder_for _ | T.Unplaced _ -> [])
+              | T.Evidence_for _ | T.Placeholder_for _ | T.Included_for _ | T.Unplaced _ -> [])
         in
         let action_edges_realized =
           List.for_all T.edges ~f:(fun e ->
@@ -930,7 +948,23 @@ let every_step_placed_pin : Canary_project_test.pure_test =
           List.filter_map all ~f:(fun ((s : SM.step), p) ->
               match (s.SM.bridge, p) with Some _, p -> Some p | None, _ -> None)
         in
+        (* THE BINDINGS INCLUDED WITH THEIR LANGUAGE, by project and
+           action family, with the relations each stands on: sqlite's
+           CPython stdlib binding, whose chain (a C extension) has no stub
+           build of its own. A second case is added here deliberately
+           (user, 2026-09-29: "we can visit it later when similar cases
+           appear") *)
+        let included =
+          List.concat_map placed ~f:(fun (name, _, places) ->
+              List.filter_map places ~f:(fun ((s : SM.step), p) ->
+                  match p with
+                  | T.Included_for ids -> Some (name ^ " " ^ family s, ids)
+                  | _ -> None))
+          |> List.dedup_and_sort ~compare:Poly.compare
+        in
         well_formed
+        && Poly.equal included
+             [ ("sqlite fetch_binding", [ "install_lang"; "install_surf"; "link_mod" ]) ]
         && List.equal String.equal gaps listed
         && action_edges_realized
         && List.mem realized "run" ~equal:String.equal
@@ -1552,7 +1586,8 @@ let placeholder_steps_pin : Canary_project_test.pure_test =
    - the drawn facts are the ones the cases are about — the conf world's
      consumer is the package-linked one, torch's world has no system
      side, the built world builds its library and still resolves the
-     bridge, and sqlite's PYTHON view is not painted by its OCaml fetch;
+     bridge, and sqlite's PYTHON view is not painted by its OCaml fetch
+     but reads its stdlib binding's relations as [included];
    - EVERY VIEW NAMES THE PACKAGE IT REALIZES — one of §1's packages in
      canary — which is how choosing a package finds its recorded worlds
      since §2.1 went into §1 (2026-09-24);
@@ -1586,7 +1621,7 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         let text = R.payload m ~generated_at:"pin" in
         let words =
           [ "ran"; "warm"; "xfail"; "fail"; "blocked"; "unrecorded"; "absent";
-            "inside"; "not_ours"; "observed"; "claim" ]
+            "inside"; "included"; "not_ours"; "observed"; "claim" ]
         in
         let edge_ids = List.map T.edges ~f:(fun e -> e.T.eg_id) in
         let assoc_keys j k =
@@ -1745,6 +1780,10 @@ let overview_overlay_pin : Canary_project_test.pure_test =
           && drawn "built" "build_lib" && is "built" "resolve_sys" "absent"
           && drawn "built" "depends"
           && is "none" "resolve_lang" "absent" && drawn "none" "run_packaged"
+          (* CPython's stdlib binding: nothing resolved it, but its module,
+             surface and link to the library came with the interpreter *)
+          && is "none" "install_lang" "included" && is "none" "install_surf" "included"
+          && is "none" "link_mod" "included"
         in
         let page =
           Canary_overview_page.render Canary_registry.all_specs ~overview:""

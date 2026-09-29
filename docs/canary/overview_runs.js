@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-28 21:12",
+  "generated": "2026-09-29 02:43",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,7 +10,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:32.757", "2026-09-28 21:12:33.002" ],
+      "span": [ "2026-09-29 02:43:04.515", "2026-09-29 02:43:04.769" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -264,7 +264,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:32.757", "2026-09-28 21:12:33.002" ],
+      "span": [ "2026-09-29 02:43:04.515", "2026-09-29 02:43:04.769" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -278,10 +278,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -298,7 +298,11 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "build_lib": "violated" },
+      "badges": {
+        "build_lib": "violated",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -307,6 +311,17 @@
           [ "exports_accounted_for", "placeholder" ],
           [ "source_is_declared_ref", "placeholder" ],
           [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
         ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
@@ -318,7 +333,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
       "names": {
@@ -335,7 +349,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
-        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "pm_lang", "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -459,7 +473,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:40.345", "2026-09-28 21:12:40.587" ],
+      "span": [ "2026-09-29 02:43:12.317", "2026-09-29 02:43:12.566" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -713,7 +727,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:40.345", "2026-09-28 21:12:40.587" ],
+      "span": [ "2026-09-29 02:43:12.317", "2026-09-29 02:43:12.566" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -727,10 +741,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -747,7 +761,11 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "build_lib": "violated" },
+      "badges": {
+        "build_lib": "violated",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -756,6 +774,17 @@
           [ "exports_accounted_for", "placeholder" ],
           [ "source_is_declared_ref", "placeholder" ],
           [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
         ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
@@ -767,7 +796,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
       "names": {
@@ -784,7 +812,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
-        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "pm_lang", "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -908,7 +936,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:33.269", "2026-09-28 21:12:33.513" ],
+      "span": [ "2026-09-29 02:43:05.052", "2026-09-29 02:43:05.302" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1168,7 +1196,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:33.269", "2026-09-28 21:12:33.513" ],
+      "span": [ "2026-09-29 02:43:05.052", "2026-09-29 02:43:05.302" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1182,10 +1210,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -1203,7 +1231,12 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": { "build_lib": "violated", "stage": "holds" },
+      "badges": {
+        "build_lib": "violated",
+        "stage": "holds",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -1217,6 +1250,17 @@
           [ "staged_interface_preserved", "checked" ],
           [ "no_build_paths_in_installed_library", "placeholder" ]
         ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
@@ -1227,7 +1271,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
@@ -1245,7 +1288,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
-        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -1370,7 +1413,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:40.850", "2026-09-28 21:12:41.098" ],
+      "span": [ "2026-09-29 02:43:12.828", "2026-09-29 02:43:13.074" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1630,7 +1673,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:40.850", "2026-09-28 21:12:41.098" ],
+      "span": [ "2026-09-29 02:43:12.828", "2026-09-29 02:43:13.074" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1644,10 +1687,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -1665,7 +1708,12 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": { "build_lib": "violated", "stage": "holds" },
+      "badges": {
+        "build_lib": "violated",
+        "stage": "holds",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -1679,6 +1727,17 @@
           [ "staged_interface_preserved", "checked" ],
           [ "no_build_paths_in_installed_library", "placeholder" ]
         ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
@@ -1689,7 +1748,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
@@ -1707,7 +1765,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
-        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -1832,7 +1890,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:25.703", "2026-09-28 21:12:31.757" ],
+      "span": [ "2026-09-29 02:42:57.495", "2026-09-29 02:43:03.509" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2085,7 +2143,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:25.703", "2026-09-28 21:12:31.783" ],
+      "span": [ "2026-09-29 02:42:57.495", "2026-09-29 02:43:03.535" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2099,10 +2157,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -2119,7 +2177,11 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "build_lib": "partial" },
+      "badges": {
+        "build_lib": "partial",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -2128,6 +2190,17 @@
           [ "exports_accounted_for", "placeholder" ],
           [ "source_is_declared_ref", "placeholder" ],
           [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
         ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
@@ -2139,7 +2212,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
       "names": {
@@ -2156,7 +2228,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
-        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "pm_lang", "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -2279,7 +2351,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:33.524", "2026-09-28 21:12:39.377" ],
+      "span": [ "2026-09-29 02:43:05.312", "2026-09-29 02:43:11.285" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2532,7 +2604,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:33.524", "2026-09-28 21:12:39.400" ],
+      "span": [ "2026-09-29 02:43:05.312", "2026-09-29 02:43:11.307" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2546,10 +2618,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "ran",
         "run": "absent",
@@ -2566,7 +2638,11 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "build_lib": "partial" },
+      "badges": {
+        "build_lib": "partial",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -2575,6 +2651,17 @@
           [ "exports_accounted_for", "placeholder" ],
           [ "source_is_declared_ref", "placeholder" ],
           [ "build_tree_configured_for_source", "placeholder" ]
+        ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
         ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
@@ -2586,7 +2673,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
       "names": {
@@ -2603,7 +2689,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
-        "pm_lang", "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "pm_lang", "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -2726,7 +2812,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:31.797", "2026-09-28 21:12:32.721" ],
+      "span": [ "2026-09-29 02:43:03.547", "2026-09-29 02:43:04.479" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2985,7 +3071,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:31.797", "2026-09-28 21:12:32.744" ],
+      "span": [ "2026-09-29 02:43:03.547", "2026-09-29 02:43:04.502" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2999,10 +3085,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -3020,7 +3106,12 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": { "build_lib": "partial", "stage": "holds" },
+      "badges": {
+        "build_lib": "partial",
+        "stage": "holds",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -3034,6 +3125,17 @@
           [ "staged_interface_preserved", "checked" ],
           [ "no_build_paths_in_installed_library", "placeholder" ]
         ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
@@ -3044,7 +3146,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
@@ -3062,7 +3163,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
-        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -3186,7 +3287,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:39.412", "2026-09-28 21:12:40.310" ],
+      "span": [ "2026-09-29 02:43:11.319", "2026-09-29 02:43:12.282" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3445,7 +3546,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:39.412", "2026-09-28 21:12:40.332" ],
+      "span": [ "2026-09-29 02:43:11.319", "2026-09-29 02:43:12.305" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3459,10 +3560,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "absent",
         "run": "absent",
@@ -3480,7 +3581,12 @@
         "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
-      "badges": { "build_lib": "partial", "stage": "holds" },
+      "badges": {
+        "build_lib": "partial",
+        "stage": "holds",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "build_lib": [
           [ "declared_symbols_exported", "checked" ],
@@ -3494,6 +3600,17 @@
           [ "staged_interface_preserved", "checked" ],
           [ "no_build_paths_in_installed_library", "placeholder" ]
         ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
+        ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
@@ -3504,7 +3621,6 @@
       },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
-        "fetch_binding_python": "a dummy step: it performs nothing",
         "probe_lib_staged": "observes the staged copy, which has no observation edge",
         "probe_lib_apt": "observes the system package's library, which this world does not use"
       },
@@ -3522,7 +3638,7 @@
       },
       "dim": [
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
-        "src_lang", "stub_lang", "surf_lang", "consumer_artifact"
+        "src_lang", "consumer_artifact"
       ],
       "name_sources": {
         "lib_sys": {
@@ -3646,7 +3762,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:33.013", "2026-09-28 21:12:33.259" ],
+      "span": [ "2026-09-29 02:43:04.780", "2026-09-29 02:43:05.041" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3894,7 +4010,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:33.013", "2026-09-28 21:12:33.259" ],
+      "span": [ "2026-09-29 02:43:04.780", "2026-09-29 02:43:05.041" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3908,10 +4024,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -3925,13 +4041,28 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "realize_sys": "unevaluated" },
+      "badges": {
+        "realize_sys": "unevaluated",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "realize_sys": [
           [ "declared_symbols_exported", "checked" ],
           [ "soname_matches_declaration", "checked" ],
           [ "declared_versions_exported", "checked" ],
           [ "exports_accounted_for", "placeholder" ]
+        ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
         ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
@@ -3941,9 +4072,7 @@
         "lib_sys": "apt sqlite3.3.45.1",
         "mod_lang": "pip sqlite3"
       },
-      "unplaced": {
-        "fetch_binding_python": "a dummy step: it performs nothing"
-      },
+      "unplaced": {},
       "names": {
         "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
@@ -3958,7 +4087,7 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
-        "stub_lang", "surf_lang", "consumer_artifact"
+        "consumer_artifact"
       ],
       "name_sources": {
         "mod_lang": {
@@ -4086,7 +4215,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:40.598", "2026-09-28 21:12:40.840" ],
+      "span": [ "2026-09-29 02:43:12.577", "2026-09-29 02:43:12.818" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4334,7 +4463,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-28 21:12:40.598", "2026-09-28 21:12:40.840" ],
+      "span": [ "2026-09-29 02:43:12.577", "2026-09-29 02:43:12.818" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4348,10 +4477,10 @@
         "conf_probe": "absent",
         "discover": "not_ours",
         "resolve_lang": "absent",
-        "install_lang": "absent",
-        "install_surf": "absent",
+        "install_lang": "included",
+        "install_surf": "included",
         "build_stub": "absent",
-        "link_mod": "absent",
+        "link_mod": "included",
         "pack": "absent",
         "probe_lib": "warm",
         "run": "absent",
@@ -4365,13 +4494,28 @@
         "dependencies_provided": "undecided",
         "api_names_present": "holds"
       },
-      "badges": { "realize_sys": "unevaluated" },
+      "badges": {
+        "realize_sys": "unevaluated",
+        "install_surf": "holds",
+        "link_mod": "undecided"
+      },
       "edge_claims": {
         "realize_sys": [
           [ "declared_symbols_exported", "checked" ],
           [ "soname_matches_declaration", "checked" ],
           [ "declared_versions_exported", "checked" ],
           [ "exports_accounted_for", "placeholder" ]
+        ],
+        "install_lang": [
+          [ "package_contains_declared_files", "placeholder" ]
+        ],
+        "install_surf": [ [ "api_names_present", "checked" ] ],
+        "link_mod": [
+          [ "required_symbols_exported", "checked" ],
+          [ "soname_matches_requirement", "checked" ],
+          [ "required_versions_exported", "checked" ],
+          [ "dependencies_provided", "checked" ],
+          [ "compatibility_version_satisfied", "placeholder" ]
         ],
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
@@ -4381,9 +4525,7 @@
         "lib_sys": "apt sqlite3.3.45.1",
         "mod_lang": "pip sqlite3"
       },
-      "unplaced": {
-        "fetch_binding_python": "a dummy step: it performs nothing"
-      },
+      "unplaced": {},
       "names": {
         "mod_lang": { "label": "sqlite3 (210 names)", "from": "recorded" },
         "lib_sys": { "label": "libsqlite3.so.0", "from": "recorded" },
@@ -4398,7 +4540,7 @@
       },
       "dim": [
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
-        "stub_lang", "surf_lang", "consumer_artifact"
+        "consumer_artifact"
       ],
       "name_sources": {
         "mod_lang": {
