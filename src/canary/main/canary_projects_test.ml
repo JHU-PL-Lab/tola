@@ -3472,9 +3472,9 @@ let chain_absence_pin : Canary_project_test.pure_test =
    - the generic lines' sources are all code, and the page has the list
      and looks each source up by the route its value took.
 
-   The rest of what the diagram draws — which nodes and edges, a recorded
-   run's states and badges, the lists — is inventoried for audit in
-   doc/canary/design/overview_provenance.md. *)
+   What is not traced yet — a recorded run's states and badges, the band
+   rules, the script's own rules, §1.2's cells — is listed in
+   doc/canary/design/overview.md §4. *)
 let drawn_line_sources_pin : Canary_project_test.pure_test =
   { name = "overview.every_drawn_line_has_a_source";
     check =

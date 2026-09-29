@@ -418,7 +418,10 @@ now reads instead of re-deriving; and the old pages retired — nothing a
 run writes is copied to `docs/` any more, the tracked
 `docs/canary/projects/` tree (1,797 files) went, and its addresses point
 at §1.2. The plan, its record and what it left open are
-`design/overview.md` §6.4.
+`design/overview.md` §6.4. A revisit followed the same day (user): one
+results command, `canary overview` (`--json` prints the record that
+`canary result` used to), and `design/overview.md` cut to what the page
+does not say, with `overview_provenance.md` absorbed into its §4.
 
 **Then the rest of phase E** (§6.1). Each of the three other claims the
 bridge record carries needs a decision before it lands, and most of them

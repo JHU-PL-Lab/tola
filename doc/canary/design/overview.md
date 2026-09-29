@@ -1,169 +1,117 @@
-# The overview page — recorded runs on the layered chain
+# The overview page — how it is built, and the plan
 
-`canary overview` renders `docs/canary/overview.html`, and `make view`
-runs it. Its §1 draws ONE chain, from the package managers down to the
-program that runs, chosen from its parts with a panel of buttons. When
-the chosen chain is one canary runs, §1 also paints what a recorded run
-of it did, and §1.2 holds the result table: a row per chain and machine. This document says how §1 is built
-today, names the two lists that keep the drawing honest, and gives the
-plan from here. Read it before changing the page.
+`canary overview` writes `docs/canary/overview.html`, and `make view`
+runs it. The page explains itself: its sections, its keys, the rules its
+layout keeps and where each line under a node label comes from are all
+on the page. This document holds what the page cannot: the code behind
+each part (§1), how a run reaches it (§2), the bridges and placeholders a
+recorded run is drawn with (§3), where each value comes from (§4), the
+two lists that hold the drawing (§5), the plan (§6) and the pins (§7).
+Read the page first.
 
-Two companions: [`overview_provenance.md`](overview_provenance.md)
-inventories where every value on §1 comes from, as a map for an audit;
-[`../worklog/worklog_2026_09.md`](../worklog/worklog_2026_09.md) is the
-history — how each piece landed, the user's words at each step, and every
-pin with the breaks that turned it red. What is open today is the short
-§2.6 and §2.7 of [`../status.md`](../status.md).
+The history — how each piece landed, the user's words at each step, and
+every pin with the breaks that turned it red — is
+[`../worklog/worklog_2026_09.md`](../worklog/worklog_2026_09.md). It also
+keeps this document's former §6.4, the week the result table joined the
+page.
 
-The page's other sections — the agreement overview (§2), the claim census
-(§3) and canary's own tables (§4) — are described where their data lives:
-[`matrix.md`](matrix.md) and [`agreement/README.md`](agreement/README.md).
+## 1. Each part of the page, and the code behind it
 
-## 1. The chain
+| on the page | computed by | from |
+| --- | --- | --- |
+| §1's graph: 16 nodes, 21 edges, and the edges each agreement sits on | `Canary_topology` (`nodes`, `edges`, `claim_sites`) | hand-written; pins hold them to the registry and to every step the runner derives, and §6.2 derives them |
+| §1's places, looks and keys | `Canary_overview_page` (`layout`, `visual_hints`, `layout_rules`) | hand-written, held by the two lists' pins (§5) |
+| §1's choices, and what each draws | `Canary_overview_join`, embedded as `#joindata` | the projects' declarations, the drivers, the mechanism and cooperation catalogues |
+| a recorded run on §1, and §1.2's rows | `Canary_overview_runs`, written to `overview_runs.js`, one per machine | the record (§2) |
+| §1.2's columns | `Canary_frames`, embedded as `framesdata` | the graph's edges and the claim sites |
+| §2, the agreement overview | `Canary_matrix.agreement_overview` | the registry; `decided` and `blame` are counted from the record |
+| §3, the census | `Canary_overview_page.claim_sites_table` | the claim sites and the registry |
+| §4's tables | `Canary_pm_solo`, the mechanism catalogue, `Canary_topology.coop_catalogue`, `Canary_overview_join.cases_of` | code; their prose columns are hand-written |
 
-**Sixteen nodes, twenty-one edges**, written by hand in
-`Canary_topology.nodes` and `Canary_topology.edges`. They are
-placeholders, to be derived from the action catalogue (§6.2). Until then,
-pins hold them to the registry and to every step the runner derives
-(`topology.graph_matches_the_registry`,
-`topology.every_step_has_a_place`).
+The page's script looks answers up in the embedded data and the runs
+files and decides nothing of its own, except in the five places §4 lists.
 
-**Four layers and two sides.** Top to bottom: package managers, packages,
-artifacts, programs. Left and right: the system package manager's side
-and the language package manager's side, read from each node's `nd_side`.
-There is no third side. A bridge package is the language side's, since an
-opam maintainer writes conf-gmp and opam resolves it. A capability file
-is the system side's, since it ships inside the native package. The two
-consumer programs sit under the side whose resolution they use.
+## 2. How a run reaches the page
 
-**An edge is one relation**, and its annotation names who makes it true:
-an action of ours (an action family, `Canary_action_family`, which is an
-action with its language erased), someone else's rule (`Info`, drawn in
-italics: the packager, the depext table, pkg-config), or, on one edge, a
-claim of ours (`same_program`, carrying `package_resolution_suffices`).
-One action often makes several relations true, which is why `fetch_lib`
-and `fetch_binding` each label several edges. What the relation is shows
-when the pointer is over the edge.
+```
+canary action <project>
+  realize   the world's steps, inspection steps included
+  run       actions.log: each step's state, each agreement's outcome
+            each step's directory: inspection files, bridge records
+            -run/manifest/<world>.json: the steps it realized
+  ▼
+Canary_matrix.matrix_of: the record (`canary overview --json`)
+  ▼
+Canary_overview_runs: one view per world and binding language
+  ▼
+overview_runs.js, one per machine: §1 paints a view, §1.2 renders one row per view
+```
 
-**Where things go is governed by `layout_rules`** — thirteen rules, each a
-sentence with its reason and whose it is, checked over the nodes' places
-(§5). The coordinates in `layout` are one drawing of those rules; a port
-to another framework keeps the rules, not the coordinates.
+**Inspections are steps.** When realize turns a world into steps, it
+adds an inspection step after each step that provides an artifact the
+agreements read: after a binding is installed or built, its surface and,
+for a compiled binding, the symbols its stub requires
+(`inspect_binding.py`, `inspect_ocaml.py`, `inspect_python.py`); at the
+library's probe or after its build, its exports and identity
+(`inspect_native.py`). A bridge step writes its record
+(`inspect_bridge.py`). Each writes a JSON file with a `kind` into its
+parent step's directory, named for the world. Which inspection steps a
+world gets follows from the project's declarations (symbol prefixes,
+watchlists, the binding's package) and the world's placements. The
+agreements read these files first. The page reads the same ones through
+one reader, `Canary_matrix.reading_of_inspection`, which turns each into
+a node, a name and a count; the bridge record is the overview's alone. A
+file is named for the world, not the run, so the next run of that world
+replaces it (§6.4).
 
-**The badges count agreements.** `Canary_topology.claim_sites` says only
-WHERE each agreement sits — a set of edges, so an end-to-end agreement can
-span several. Whether an agreement is checked is the registry's answer:
-`implemented` for the census, and per binding mechanism `claim_state`,
-which is pass 2's `carried_slugs`. Each edge has two badges: filled for
-the agreements canary checks on that relation for the chain drawn, hollow
-for those only named. Both count `edge_claims` for the drawn mechanism,
-and the pointer over an edge lists them by name.
+**The record reads what a run realized.** The runner writes each world's
+steps to its manifest (`Canary_manifest`), and `matrix_of` reads it,
+re-deriving from today's code only for a world no run recorded; each row
+says which in `steps_from`. The manifest decodes an action against every
+action the type has (`Canary_manifest.all_actions`), because
+`action_of_string` does not read them all. A run through
+`run_project_multi` (ssl) writes no manifest yet.
 
-**Where each agreement sits is a column of the agreement table**
-(2026-09-27). The table was built before this diagram, and the target is
-to categorize every agreement by it — derived first, re-grouped by hand
-only once a few more agreements have landed (user). `sitting_of` reads an
-agreement's claim site and gives its edges, the layers their ends lie in,
-and how far it reaches: along one side's own chain, across the two
-sides, or end to end over edges leading from one layer to another. The
-table shows it as `sits on` and `where`, and under the table every
-agreement the diagram places, candidates included, is grouped by it, each
-group counting how many are placed, checked (an evaluator in the
-registry) and decided (a recorded run reached holds or violated).
-`canary checks --firing` prints the same grouping. On the day it landed:
+**A row of §1.2 is a chain on a machine**, because a chain — one world in
+one binding language — is what §1 draws, so sqlite's ten worlds are
+twenty rows. Each machine writes its own runs file from its own log and
+the page loads every machine's, so one table holds both.
 
-| reaches | layers | placed | checked | decided |
-| --- | --- | --- | --- | --- |
-| system side | package/artifact | 5 | 3 | 2 |
-| system side | artifact | 4 | 1 | 1 |
-| language side | package | 1 | 0 | 0 |
-| language side | package/artifact | 4 | 1 | 1 |
-| across the sides | package | 3 | 0 | 0 |
-| across the sides | artifact | 7 | 5 | 4 |
-| across the sides | artifact/program | 5 | 0 | 0 |
-| end to end | pm/package/program | 1 | 0 | 0 |
+**Its columns are frames** (prototype A, user, 2026-09-28), because the
+old columns put a world's artifacts first and then only actions, which
+showed where an artifact came from but not which action consumed or
+produced it. A frame is a connected group of one action family's edges;
+edges with the same inputs and their products in one layer merge into
+one piece; frames go by side, then flow. Four places differ from the
+prototype, each because the graph says so: the capability file is not in
+the fetch's frame, since shipping it is the packager's relation; headers
+built from source are a frame of their own; checks sit in code order;
+and the probes produce their consumer programs.
 
-Checked agreements cluster where the binding meets the library; the
-bridge, the running program and the end-to-end claim had none, and no
-agreement sits on a package manager's resolution alone. Since E2 (§6.1)
-the bridge's row has one: `gate_admits_the_world`, decided on zarith. Two
-agreements have evaluators and have never been decided by a run —
-`signatures_agree` and `declared_versions_exported`. And one coordinate
-is not always enough: `discovery_matches_link` sits on `discover`, both of
-whose ends are on the system side, while what it compares reaches the
-language side.
+**A check shows where it sits on the chain**, not at its slot (`ag_slot`,
+which only the record's columns still use). At the slot, zarith's
+fetched-library rows had no column for the declaration checks every run
+decides, and its built row carried five probe-check columns that stayed
+empty. §1.2 reads an outcome from the world's logged verdicts in the
+row's language (`row.verdicts`, the view's `outcomes`), so no logged
+verdict is left out.
 
-## 2. Choosing a chain
+**One page.** The result matrix's page, its per-machine copy and the
+per-run pages retired on 2026-09-28, and nothing a run writes is copied
+to `docs/` any more. The old addresses under `docs/canary/projects/` are
+pointers to §1.2 (`Canary_overview_page.pointer_files`).
 
-§1's panel offers five choices: the native side's package manager, the
-language side's, a binding mechanism, a cooperation, or a package in
-canary.
+## 3. Bridges and placeholders
 
-- A **mechanism** chooses the artifact band — which artifact nodes and
-  edges exist for it (`Canary_topology.artifact_variant_of`) — and the
-  package manager that ships its language's bindings.
-- A **cooperation** chooses the package band: what none of the worlds of
-  that kind has is not drawn (`band_hidden`), and what they have but never
-  exercise is greyed (`band_dead`). Chosen package managers narrow the band
-  to the worlds that have them (`band_over`); a choice no world has falls
-  back to the nearest one some world has, and the page says what it let
-  go.
-- A **package in canary** is one of the chains canary runs, the rows of
-  §4.4 — one list, `Canary_overview_join.cases_of`. Choosing it sets the
-  other four and names its nodes from its project's declarations
-  (`declared_names`). Where nothing names a node, the package managers'
-  terms stand in: ".pc file" from the PM-solo table, "conf-* package" and
-  "depext field" from `Canary_bridge.kind_term`.
-
-**Every package in canary carries a cooperation**, known before any run:
-it is derived from the world's two placements and the binding package's
-declared gate (`pr_binding_decls`' `pm_gate`, else `pr_pm_gates`, which
-the opam-binding template fills). A world is needed, so the derivation
-sits beside firing rather than in pass 2; no run is needed.
-
-Everything a choice draws is computed in `Canary_overview_join` and
-embedded in the page as `#joindata`. The page's script keeps the state
-and looks answers up. Five small rules still live in the script, and are
-listed for the audit in `overview_provenance.md` §3.4.
-
-## 3. A recorded run on the chain
-
-**The record is `canary result --json`** (`Canary_matrix`). Per world,
-per binding language: every step the realize pass derives, with its typed
-action, the location a probe reads, the step an inspection summarizes,
-and the state and time its log line gives; `edges`, each edge with the
-steps that realize it (`Canary_topology.place_step`); `claims`, each
-placed agreement with its outcomes; and `chains`, one per language — the
-mechanism, the two sides, the cooperation, what the chain lacks, and the
-agreements that apply to it.
-
-**The overlay** is `Canary_overview_runs.view_of_row`, written to
-`docs/canary/overview_runs.js` — one file per machine, `_mac` on macOS,
-loaded by a script tag and never embedded in the page. Each view gives:
-
-- every edge a state word, worst first when several steps realize it:
-  `ran`, `warm`, `xfail`, `fail`, `blocked`, `unrecorded`; `absent` where
-  no step realizes an action edge; `inside` where a package manager
-  established the relation inside one of our actions; `not_ours` or
-  `observed` for someone else's rule, by whether the run recorded what
-  that rule said; `claim` for the claim edge;
-- each realized edge the agreements it counts, and its filled badge a
-  word from exactly the checked ones' outcomes — `unevaluated` where a
-  checked agreement has no recorded outcome;
-- the nodes' names, recorded first (the inspections the world's steps
-  wrote) and declared second, each saying which; the placement line; the
-  nodes nothing in the run touched, dimmed; and what the chain lacks, not
-  drawn at all.
-
-**Placeholders say what canary does not see.** `Canary_pm_action` records,
-per package manager, what it does inside one of our actions that the run
-does not record — apt choosing a candidate, opam planning, solving and
-building. The pipeline derives a placeholder step for each beside every
-fetch that is not a dummy. A placeholder does no work and logs why it is
-empty: `not_yet` (and how it could be recorded) or `out_of_reach` (and why
-not). On the page it is a marker on the edges it stands for, and an action
-edge no step of ours performs, but a package manager did, reads `inside`
-rather than `absent`.
+**A placeholder says what canary does not see.** `Canary_pm_action`
+records, per package manager, what it does inside one of our actions that
+the run does not record: apt choosing a candidate; opam planning, solving
+and building. The pipeline derives a placeholder step for each beside
+every fetch that is not a dummy. It does no work and logs why it is
+empty: `not_yet`, with how it could be recorded, or `out_of_reach`, with
+why not. The page draws it as a marker on the edges it stands for, and an
+action edge that no step of ours performed but a package manager did
+reads `inside` rather than `absent`.
 
 **A bridge is a thing, and canary drives it.** The four decisions (user,
 2026-09-23):
@@ -182,101 +130,131 @@ rather than `absent`.
    so `conf_probe` is an action edge.
 
 `Canary_bridge_driver` (`tool/`) knows which questions a conf package
-answers and how to dispatch its check in a world — the predicate's own
-pkg-config call, its opam filters evaluated against `opam var`.
-`canary/scripts/inspect_bridge.py` writes the record and exits 0 (the
-check holds), 1 (it does not) or 3 (canary cannot dispatch it). A step
-that drives a bridge carries it (`step.bridge`); `runner_spec.bridges`
-asks for one. **Only zarith is wired**, through conf-gmp. The overview
-names the bridge, the system package and the capability file from that
-record, and says in one sentence per edge what the run saw.
+answers and how to dispatch its check in a world: the predicate's own
+pkg-config call, with its opam filters evaluated against `opam var`.
+`inspect_bridge.py` writes the record and exits 0 (the check holds), 1
+(it does not) or 3 (canary cannot dispatch it). A step that drives a
+bridge carries it (`step.bridge`); `runner_spec.bridges` asks for one.
+Only zarith is wired, through conf-gmp.
 
 **The verdict is an agreement's, not the step's** (2026-09-27). The bridge
-step passes whenever it writes the record; until then it failed on a check
-that did not hold. `gate_admits_the_world` reads the record's verdict at
-the binding's probe, which waits for the bridge step, so a gate that
-refuses the world is a finding the run reports — `violated` in the log, ✗
-in the result table's `gatw` column, a red badge on `conf_probe` — rather
-than a failed step that stops the chain. `--strict` makes it fail the
-probe, as it does for every agreement.
+step passes whenever it writes the record. `gate_admits_the_world` reads
+the record's verdict at the binding's probe, which waits for the bridge
+step, so a gate that refuses the world is a finding the run reports —
+`violated` in the log, ✗ in its check cell, a red badge on `conf_probe` —
+rather than a failed step that stops the chain. `--strict` makes it fail
+the probe, as it does for every agreement.
 
 ## 4. Where each value comes from
 
-A value on §1 comes from code — a declaration or a rule in canary — or
-from a run — a file a recorded run wrote. `Canary_overview_runs.source`
-carries which, with what was read and the function that read it. The
-lines under the node labels are traced end to end, and the page lists
-each with its source under the diagram.
+**The rule** (user, 2026-09-24: "Can I confirm all the data in diagrams
+… are coming from either code or logs?") is stated on the page, under §1's
+diagram: every value comes from code, hand-written declarations
+included, or from a file a recorded run wrote, and a value asked of the
+machine rendering the page (*render*) is a defect to flag, never to hide.
+The platform is not a render read: it is carried (`--platform`), and a
+value that depends on it says so.
 
-**One value is neither**: the installed version of a system package
-fetched with no pinned version is asked of the machine rendering the page
-(`Canary_matrix.sys_pkg_version`), because the run never recorded it. The
-page flags it as `render`. Recording it at the fetch step, which is the
-first item of §6.1's second step, retires it.
+**Traced end to end: the lines under the node labels.**
+`Canary_overview_runs.source` carries, with each value, which of the three
+it is, what was read and the function that read it. One list produces the
+value and its source together, so the two cannot disagree about which
+declaration answered, and the page lists every line with its source
+under §1's diagram. `overview.every_drawn_line_has_a_source` holds it; its
+render clause swaps the rendering machine's answers for a sentinel and
+recomputes, so a render read is observed rather than re-derived.
 
-Everything else §1 draws — which nodes and edges, a run's states and
-badges, the lists under the diagram — is inventoried for audit, with the
-procedure the traced part followed, in `overview_provenance.md`.
+It found one render read: the installed version of a system package
+fetched with no pinned version (`Canary_matrix.sys_pkg_version`), in
+twelve placements across seven projects, because the run never recorded
+the version it fetched. Recording it at the fetch (§6.1 item 2,
+`resolve_sys`) makes its source a run.
 
-## 5. The two lists that keep the drawing honest
+**Not traced yet**, in the order to take them:
 
-**`visual_hints`** — every look §1 uses: forty hints, each naming the
-stylesheet rules that make it, the drawings it can show in (always, the
-generic drawing, or a recorded run), its exclusive group (an edge has one
-state), and its key sample and words. Both keys on the page are rendered
-from the list. `overview.visual_vocabulary_is_one_list` holds it to the
-stylesheet: every §1 rule belongs to exactly one hint or to the base look,
-every hint's classes are applied, every hint is explained, no two key
-entries share a sample, and no two hints that can show on one kind of
-element at once look alike — colour, dash, width and opacity compared the
-way a reader sees them.
+1. a recorded run's edge states: the placement is code and the state is
+   run, so the source to show is the log and the step tags;
+2. the badges, from the log's `agreement_outcome` lines;
+3. the band rules (`band_hidden`, `band_dead`), which return node ids
+   without saying which clause removed a node;
+4. the five rules still in the page's script — `nearest()` lets go of
+   the native side's package manager first when no chain has the choice;
+   `pick('m')` chooses a mechanism's only dependent package manager; a
+   chosen package stays chosen only while all four choices agree with it;
+   clicking a package manager off outlines nothing; `srcOf` repeats the
+   route each value was looked up by. Each can move into
+   `Canary_overview_join` as data;
+5. §1.2's cells, which read the same views: names and counts from the
+   recorded inspections, piece states from the edges, outcomes from the
+   logged verdicts.
 
-**`layout_rules`** — the places. Each rule is a sentence, a reason and a
-check: over the nodes' places and boxes (`layout_view`, which any
-rendering can report, so a future drawing can be held to the same list),
-or by a named pin where the rule is about what is drawn rather than
-where. `overview.layout_rules_hold`.
+**How to trace one.** Start from the script line that writes the value,
+and name the field it reads. Follow the OCaml that fills that field to a
+declaration, a rule, a file under `_out`, or a process the renderer runs.
+Make that function return the value with its source, from the same list:
+a second function that re-derives the source can disagree with the
+value. Carry the source in the data, look it up in the script by the
+value's own route, list it on the page, and pin it — every shown value
+has a source, a run source names a file that exists, and a render read is
+found by changing the machine's answer. Break each clause once before
+trusting it.
 
-A new look goes into the first list and a new placement rule into the
-second, or the pins fail.
+## 5. The two lists that hold the drawing
+
+`visual_hints` holds every look §1 uses, and both of §1's keys are
+rendered from it; `overview.visual_vocabulary_is_one_list` holds it to the
+stylesheet — every rule owned once, every hint applied and explained, and
+no two hints that can show together looking alike. `layout_rules` holds
+the places, each a sentence with its reason, checked over the nodes'
+places (`layout_view`) or by a named pin; `overview.layout_rules_hold`. A
+new look goes into the first list and a new placement rule into the
+second, or the pins fail. The coordinates in `layout` are one drawing of
+the rules; a port to another framework keeps the rules, not the
+coordinates. §1.2's looks are not in `visual_hints` yet: its element kinds
+are the diagram's, and a table cell is a new kind.
 
 ## 6. The plan
 
-In order (user, 2026-09-28): first §6.4, the result matrix joining this
-page — done the same day, its follow-ups listed at its end; then the
-rest of phase E (§6.1); then the derivations of §6.2. What §6.3 parks is
-not urgent.
+In order (user, 2026-09-28): the rest of phase E (§6.1), then the
+derivations of §6.2. What §6.3 parks is not urgent. §6.4 was done first.
 
 ### 6.1 Phase E — the rest of the bridges
 
 The target behind this phase (user, 2026-09-27) is every agreement
 categorized by the diagram. Its first step is done: where each agreement
-sits is derived and shown (§1), so the diagram, the agreement table and
-the run logs name the same agreements in the same places, and the next
-agreement to implement is picked from the grouping's gaps rather than
-by convenience. After two or three more land, the categories are
-re-grouped by hand.
+sits is derived and shown, as a column of the agreement overview and a
+grouping under it, so the diagram, that table and the run logs name the
+same agreements in the same places, and the next agreement to implement
+is picked from the grouping's gaps rather than by convenience. After two
+or three more land, the categories are re-grouped by hand.
 
 **The end state is one description per agreement** (user, 2026-09-28: "a
 final status of this task, where all information including the kind
 categories should be synced"). Today an agreement's role and its place
 are stated in two modules that do not read each other. Its role is in
 its family module: the kind, the subject, the basis, the rule it recovers
-(R, `ag_rooted_in`), where the result table shows it (`ag_slot`), and per
-method the second side, where it fires (D) and what it reads, whose
-artifacts are its targets (▣, `artifacts_of_input`). Its place is
+(R, `ag_rooted_in`), its column in the record (`ag_slot`), and per method
+the second side, where it fires (D) and what it reads, whose artifacts
+are its targets (`artifacts_of_input`). Its place is
 `Canary_topology.claim_sites`, a hand-written list from name to edges,
 from which `sitting_of` derives layers and reach. Six row laws tie the
 kind to the targets, the reference, the format and the evaluator, and
-`overview.agreements_sit_on_the_chain` ties the table's `sits on` to the
-site. Nothing ties the site to R, the slot, the targets or the kind. Read
-off the code for the eleven checked agreements (2026-09-28):
+`overview.agreements_sit_on_the_chain` ties the agreement overview's
+`sits on` to the site. Nothing ties the site to R, the slot, the targets
+or the kind. Read off the code for the eleven checked agreements
+(2026-09-28):
 
 | the site agrees with | holds for | where it does not |
 | --- | --- | --- |
 | R: the site's action is the rule's | 9 of 11 | `dependencies_provided`: the rule is the loader's, at `probe_binding`, and the site is `link_mod`, a build edge. `api_names_present`: the rule is the compiler's, building the application, and the site is `install_surf`, where the surface is installed |
-| the slot: the same action | 10 of 11 | `api_names_present`: shown before the application's build, sited on the install |
-| the targets: ▣ are the site's ends | 10 of 11 | `gate_admits_the_world`: its site joins two packages, the bridge and the capability file, and ▣ can name only artifacts, so it shows `lib` and `ml` |
+| the slot: the same action | 10 of 11 | `api_names_present`: filed before the application's build, sited on the install |
+| the targets: they are the site's ends | 10 of 11 | `gate_admits_the_world`: its site joins two packages, the bridge and the capability file, and a target can name only an artifact kind, so the registry says `lib` and `ml` |
+
+The agreement overview's ▣ no longer shows that last gap: since §6.4 it
+marks the nodes each kind of evidence describes
+(`Canary_frames.nodes_of_input`), which puts `gate_admits_the_world`'s on
+the bridge and the capability file. The registry's own targets are still
+artifact kinds.
 
 The kind is not checked against the site at all. Among the eleven, every
 promise sits on one side and every admissibility claim but
@@ -289,10 +267,10 @@ means reaching these, each with a pin:
   disagreements to decide.
 - **Targets name the diagram's nodes**, so a member in the package layer
   can be named (a bridge, a capability file, a package) and the binding
-  splits into source, stub, module and surface. The result table keeps
-  artifact kinds by projecting each node onto the artifact it is or
-  ships. The ▣ columns become node columns grouped by layer and side,
-  the headers §6.3 asks about, and `sits on` and `where` fall away.
+  splits into source, stub, module and surface. The record keeps artifact
+  kinds by projecting each node onto the artifact it is or ships. Once
+  the targets are nodes, the agreement overview's `sits on` and `where`
+  can go (§6.3).
 - **Laws tie the kind to the place.** An admissibility claim's site joins
   its members, a promise's produces its artifact, a preservation's copies
   it, a behaviour claim's runs it. The site's action is R's wherever R is
@@ -303,21 +281,15 @@ means reaching these, each with a pin:
 - **The subject** stays the one free grouping, or gives way to the
   sitting when the categories are re-grouped by hand.
 
-1. **E2 is done (2026-09-27): `gate_admits_the_world`**
+The work, in order:
+
+1. **E2 is done** (2026-09-27): `gate_admits_the_world`
    (`canary_agreement_bridge.ml`), the first registered agreement that
-   reads the bridge record and the first checked one in the grouping's
-   empty row, the package layer across the sides. A real run decided it:
-   it holds on zarith's fetched world. Falsified twice through the
-   runner. With pkg-config blinded, the query fails and the outcome is
-   `unavailable`, because conf-gmp's predicate would then compile against
-   `gmp.h` and canary does not run that fallback. With the fallback taken
-   out of the record, it is `violated`. Its column, `gatw`, stands in
-   front of `fetch_binding_ocaml` in every world that fetches an OCaml
-   binding, so eight other projects gained 23 cells that read `·` until
-   their probes run cold, and `no-evid` after: the gap item 3 closes.
+   reads the bridge record, holds on zarith's fetched world. §3 says how
+   it decides; the worklog says how it landed and how it was falsified.
 
    The same record carries three more claims, and each needs a decision
-   before it lands (found 2026-09-28):
+   before it lands:
    - `declared_gate_matches_package` compares the project's declared gate
      with the binding package's metadata. Whether a declaration held
      against a declaration is an agreement or part of the offline spec
@@ -327,16 +299,16 @@ means reaching these, each with a pin:
    - `depext_names_the_provided_package` compares the bridge's mapping
      with the system package the world takes the library from. That
      package reaches no evaluator today, since a provider is not
-     evidence, and both members are packages, so ▣ could show only `lib`
-     and the kind law rejects an admissibility claim with one target and
-     no declaration.
+     evidence, and both members are packages, so the registry could
+     target only `lib`, and the kind law rejects an admissibility claim
+     with one target and no declaration.
    - `discovery_matches_link` needs the library the link resolved, which
      nothing records, since no step asks the linker or the loader. It also
      sits on `discover`, on the system side, while it compares across.
 2. **The easy placeholders become records**, one at a time, each leaving
    `Canary_pm_action` in the change that records it:
    - `resolve_sys`: apt's chosen candidate and the installed version
-     (`apt-cache policy`), which also retires the one `render` value (§4);
+     (`apt-cache policy`), which also retires the one render read (§4);
    - `depends` and `conf_probe`: opam's install output says when it built
      the bridge and ran its check in this run (`∗ installed conf-gmp.5`);
    - `resolve_lang`: the plan opam prints — the solution, though not why;
@@ -348,7 +320,8 @@ means reaching these, each with a pin:
 3. **Bridges beyond zarith.** cairo, libffi, zlib and zstd route their
    gates since 2026-09-24; sqlite and ssl route theirs and use pkg-config
    predicates. llvm's predicate is a script, so its record says exit 3;
-   torch's depext has no check.
+   torch's depext has no check. Until each is wired, every project that
+   fetches an OCaml binding shows `gatw` without a verdict.
 4. **Later:** the bridge check as its own step, run before the binding is
    fetched or built; the check driven against a library the world built
    itself, which is the built case's point (sqlite has no bridge wired);
@@ -389,8 +362,8 @@ Next, in order:
    gap, and deciding which is the work.
 3. **Claim sites from rooting.** Derive each agreement's edges from
    `ag_rooted_in.rt_action` and the artifacts it reads, and diff against
-   `claim_sites`. After this the overview's R column and the diagram's
-   badges come from one source.
+   `claim_sites`. After this the agreement overview's R marks and the
+   diagram's badges come from one source.
 4. **One typed triple.** Reconcile `Canary_topology.t` with the dimension
    triple of [`../project/projects.md`](../project/projects.md) §1
    (native-lib origin × lib discovery × binding origin), which is a table
@@ -435,14 +408,13 @@ Not urgent (user, 2026-09-27):
 - **A candidate states no applicability**, so it is counted wherever its
   edge is drawn: `compatibility_version_satisfied`, a Mach-O agreement,
   shows on ELF chains.
-- **The table's `sits on` and `where` may be one view too many** (user,
-  2026-09-27). They largely restate what the artifact marks (▣) and the
-  action marks (R, D) imply. Headers grouping those columns by layer and
-  side could say it in less width. They are not duplicates yet: `sits
-  on` reads the hand-written claim sites, while ▣, R and D come from each
-  agreement's methods and rooting, and the two can disagree
-  (`discovery_matches_link`). Once §6.2 step 3 derives the sites from
-  rooting, the columns can give way to such headers.
+- **The agreement overview's `sits on` and `where` may be one view too
+  many** (user, 2026-09-27). Its columns are the frames now, grouped by
+  side and layer, and its ▣, R and D marks show much of what the two say.
+  They are not duplicates yet: `sits on` reads the hand-written claim
+  sites, while ▣, R and D come from each agreement's evidence and
+  rooting, and the two can disagree (`discovery_matches_link`). Once §6.2
+  step 3 derives the sites from rooting, the columns can go.
 
 And two left open by the bridge decisions: *version transport* (which
 version domain a bridge carries across — one bool today, and llvm's
@@ -450,256 +422,38 @@ version domain a bridge carries across — one bool today, and llvm's
 *topology names* (the template carries the name, an instance its
 rewrites; to settle when a second template exists).
 
-### 6.4 First: one record, several views — the result matrix joins this page
+### 6.4 Done first: the result matrix joined this page (2026-09-28)
 
-A review, decided and carried out the same day (user, 2026-09-28: "we
-can also migrate the old matrix page into the overview page … It looks
-like we can have two views for the same analysis and data, and if we can
-index them together, we can chain those two sources"). The user put it
-ahead of the next agreement: clarify how a result is rendered from the
-workflow, update the docs, then resume §6.1. The review below describes
-the pages as they were before the six steps at its end.
+One page; a row per chain and machine; frames as columns; each check
+where it sits; one reader per inspection; the manifest. §2 says what each
+is and why. The review, the decisions, the prototypes and the six steps
+are in [`../worklog/worklog_2026_09.md`](../worklog/worklog_2026_09.md)
+under this heading, which is where code comments citing "§6.4 step N"
+find them. What they left open:
 
-**What the workflow produces.** Part of it is static, computed from code
-with no run: the worlds each project has (passes 3 to 5), each named by a
-stable `code`, a digest of project and scenario; each world's steps (pass
-6), typed and placed on this page's edges; each world's chain per
-language; the columns a world's row can have — its actions, the check
-slots its chains carry, the artifacts a check reads; and this page's
-graph, bands and claim sites. The rest comes from a run: each step's
-state and each agreement's outcome in `actions.log`, and the inspections
-each step wrote. `Canary_matrix.matrix_of` joins the two into one record,
-which `canary result --json` exports.
-
-**The views of it today:**
-
-| view | where | one row per | shape from | content from |
-| --- | --- | --- | --- | --- |
-| the result matrix | `projects/matrix.html`, one file per machine | world | the record's columns | the record's cells |
-| a recorded run | §1, from `overview_runs.js`, one file per machine | world × language | this page's graph | the record's steps, edges and claims, and the inspections, read a second time |
-| a chain, or a choice | §1 | chain | this page's graph | code |
-| the agreement overview | §2 | agreement × firing pattern | the registry | code, with `decided` and `blame` counted from the record |
-| the grouping and the census | §2 and §3 | claim site | the claim sites | code, with `decided` counted from the record |
-| a run's own page | `projects/<project>/-run/result.html` | step | the step list | that run's log |
-
-The result matrix and a recorded drawing are already two views of one
-record, and they already share an index: a drawing is named by its row's
-`code` and a language (`4ea4a4-ocaml`). Nothing uses the index yet.
-
-**Where the two views part:**
-
-1. Neither links to the other. A row does not open its drawing, and a
-   drawing does not name its row.
-2. A row is a world and a drawing is a world in one language, so
-   sqlite's one row is two drawings.
-3. The two tables order the actions differently. The matrix puts the
-   library's actions first and then one block per language, each in
-   lifecycle order; §2 follows the action catalogue, which puts
-   `probe_lib` last.
-4. Neither table shows where an action sits on the chain, although most
-   actions now carry their edges here (§6.2 step 1). Most sit on one side
-   and one layer. A fetch spans three: it resolves (package-manager
-   layer), installs a package (package layer) and realizes its content
-   (artifact layer), and the placeholder and bridge steps already split
-   it along those lines. The ten action families with no edge (the source
-   fetches, configure, the application's actions) need a place of their
-   own.
-5. The inspections are summarized twice, separately: the matrix's
-   artifact cells (`Canary_matrix.inspection_of_step`) and the drawing's
-   node names (`Canary_overview_runs.read_inspection`) read the same
-   files.
-6. A check column sits at the agreement's slot and a badge at its site —
-   §6.1's end-state finding, seen from the pages.
-7. The pages are styled separately: the matrix page has fixed colours and
-   no dark mode, and §2 carries a copy of its table rules
-   (`Canary_matrix.overview_css`, marked for clean-up).
-8. The matrix is one file per machine, while this page already loads
-   both machines' runs.
-9. `matrix.md` still described the combined page that split on
-   2026-09-23 (corrected with this review).
-
-**The proposal: one record, one index, every view a projection of both.**
-
-- **The row code, with a language, addresses a world everywhere.** A row
-  opens its drawing in §1 (`#rec=`), a drawing names its row, and an
-  agreement's row in §2 leads to its check columns in the matrix.
-- **One column model for both tables, read off this page.** Each action
-  column takes the side and layer of the edges its family realizes, and
-  the band colour those carry here. Left to right: the system side
-  (package manager, package, artifacts), the binding, the language side
-  (artifacts, package, package manager), then the program. This is the
-  chain as the user describes it: two package managers, two packages,
-  one binding.
-- **Each step's inspection summarized once**, in the record, for both the
-  artifact cell and the node name.
-- **The matrix as a section of this page**, below the diagram, rows
-  grouped by project. A row's shape is drawn from code even for a world
-  that never ran, and its cells are filled from the record — the split
-  §1 already makes between a chain and a recorded run of it.
-
-**Decisions for the user** (1 and 6 taken, 2026-09-28: one page, and the
-per-run pages retire):
-
-1. One page, or two pages linked both ways. The split was deliberate —
-   `Canary_overview_page`'s header argues that a record read beside
-   mechanism, with no page break, reads as mechanism — and §1's recorded
-   runs have already crossed that line, each drawn over the generic
-   chain and marked as a run.
-2. The column order for both tables: by side and layer as above, or the
-   matrix's current order.
-3. A fetch: one column coloured by its side, or split into its pieces
-   where the run records them.
-4. Check columns: beside their action as now, or under the layer of
-   their site.
-5. The two machines: a section each, or one table with a machine column.
-6. The per-run pages: kept and linked from each row, or retired.
-
-**Decided for 2 to 5: prototype A** (user, 2026-09-28: "A and the rest
-looks good"; shown to them the same day over
-four real chains: zarith `4ea4a4-ocaml` and `614dda-ocaml`, sqlite
-`e35b2b` in both languages). The user's point: today's columns put the
-world's artifacts first and then only actions, so the table shows where
-an artifact came from but not which action consumed or produced it.
-Both prototypes make a row a chain — one world in one language, the key
-§1 already draws — and colour columns by the diagram's layers.
-
-- **Action frames**: each action shows what it consumes, the checks on
-  that input, the action, what it produced and the checks on that. An
-  artifact repeats, greyed, wherever it is consumed. The settings block
-  goes: a row's placements become the package-manager, package and source
-  cells of its frames, and §2's rows mark the same columns (▣, R, D and
-  the check's own column).
-- **The diagram unrolled**: every node once, each action just before
-  what it produces, each check just after its site. Narrower; a reader
-  must know which earlier column an action consumed.
-
-In both: a fetch is split into its pieces (resolve, the bridge's depends
-and conf_probe, realize or install), each already a step or a placeholder;
-a check sits at its site. The four rows show why the site: at the slot,
-zarith's fetched-library rows have no column for the declaration checks
-every run decides, and its built row carries five probe-check columns
-that stay `·` forever. For the two machines, a row is a chain on a
-machine, with the same chain's machines adjacent. That needs no log
-change, since each machine already writes its own runs file from its
-own log. The log change is for history: realize writes a manifest per
-run (each step's id, action, pieces, what it consumes and produces, the
-checks it may evaluate and their columns), log events name a step id
-with typed fields, and each inspection's summary is logged once, so a
-view reads what a run realized instead of re-deriving it from today's
-code.
-
-**Then, in order, each with a pin:**
-
-1. **The column model** — done (2026-09-28): `Canary_frames`, printed by
-   `canary checks --frames`. A frame per connected group of one action
-   family's edges; sibling edges (same inputs, products in one layer)
-   merged into one piece; pieces in flow order; frames by side then flow;
-   each agreement with an evaluator at each of its sites — a verdict
-   after its site's products, a requirement before the piece that makes
-   its frame's artifacts, or after its site's products when the
-   requirement is a later action's. Pinned against the confirmed layout
-   by `frames.derive_the_confirmed_layout`. It differs from the prototype
-   in four places, each because the diagram says so: the capability file
-   is not in the fetch's frame (shipping it is the packager's relation,
-   not a piece of ours); headers built from source are their own frame;
-   checks sit in code order; and the two probes carry their consumer
-   programs as products.
-2. **Each inspection summarized once** — done (2026-09-28).
-   `Canary_matrix.reading_of_inspection` reads an artifact's inspection
-   into the node it describes, its name and its count; the result
-   table's cell, the diagram's name and §1.2's count render that one
-   reading, and `Canary_overview_runs` parses no artifact kind of its own
-   (the bridge record, which describes packages, stays its alone).
-   Pinned by `overview.one_reader_per_inspection`.
-3. **The table on this page** — done (2026-09-28): §1.2, one row per
-   chain and machine, rendered by the page's script from the column
-   model (embedded as `framesdata`) and the runs files' views, which
-   compute every word. A row's name draws its chain in §1; a drawn run
-   links back to its row. Two view fields were added for it: `counts`
-   (from the one reading) and `outcomes` — every checked agreement's
-   outcome for the chain, read from the world's logged verdicts in its
-   language rather than through the result table's slot columns, so a
-   check shows at its site in every world. That fixes the invisible
-   verdicts: zarith's fetched-library rows now show the library's
-   declaration checks their runs decide at `probe_lib`. Pinned by
-   `overview.results_table_is_the_column_model`, whose last clause — no
-   logged verdict left out of its chain's view — fails if the views go
-   back to the slot columns. The table's looks are not yet in
-   `visual_hints`: that list's element kinds are the diagram's, and a
-   cell is a new kind.
-4. **§2 on the same header** — done (2026-09-28). The agreement
-   overview's artifact-target and action columns gave way to §1.2's
-   frames, with one row's marks from `Canary_frames.row_marks`: ▣ on the
-   nodes the claim reads, in the frames of its site
-   (`Canary_frames.nodes_of_input` names the node each kind of evidence
-   is about — the node-level refinement of the artifact targets, so the
-   gate's members are the bridge and the capability file, which no
-   artifact kind could name); R and D on the pieces, from the overview's
-   own rooting and firing; ◆ on the claim's own check column. Pinned by
-   `matrix.page_titles_and_agreement_overview`, which now counts the
-   frame cells and holds that a checked claim has ◆ at each of its sites
-   and a planned one at none. `canary checks --firing` still prints the
-   old action columns in the terminal.
-5. **The old pages retire** — done (2026-09-28; the user chose the whole
-   tree). Nothing a run writes is copied to `docs/` any more, and the
-   tracked `docs/canary/projects/` tree went: 1,797 files and 93 MB —
-   each run's `result.html`, log, run info and diagrams, and the
-   inspections and logs of its steps. Each old address keeps a pointer
-   to §1.2 (`matrix.html`, `matrix_mac.html`, `index.html`), written
-   with this page (`Canary_overview_page.pointer_files`). The per-run
-   page's renderer, `canary_html.ml` (one of four step-list backends,
-   now three), went with it, as did `canary index` and the run index it
-   refreshed; a run still writes its diagrams, as files in `_out/`, and
-   `canary view` regenerates them (not yet for zarith — the last
-   follow-up below). The result page's half of the matrix
-   renderer went too, so `Canary_matrix.agreement_overview` is all it
-   renders as HTML. `canary result` writes nothing, and `make view` is
-   `canary overview`. Pinned by `matrix.page_titles_and_agreement_overview`,
-   which fails if an old address holds a table or no pointer (falsified
-   both ways).
-6. **The manifest** — done (2026-09-28). The runner writes, for each
-   world it runs, the steps it realized (`Canary_manifest`:
-   `_out/canary/projects/<project>/-run/manifest/<world>.json` — each
-   step's tag, action, location, what it inspects, a dummy's reason, its
-   bridge, its placeholder and its dependencies, with the machine and the
-   opam switch). The record reads it and re-derives from today's code only
-   for a world no run recorded, saying which in `steps_from` (`run` or
-   `code`). The codec is total over the types — an action is decoded
-   against every action the type has, because `action_of_string` does not
-   read them all. Pinned by `manifest.records_what_a_run_realized`
-   (falsified by a record that ignores the manifest). Not yet done of the
-   log change: log events carrying typed fields, and each inspection's
-   summary logged once — a view still reads the inspection files, which a
-   later run of the world overwrites. A run through `run_project_multi`
-   (ssl) writes no manifest and is re-derived.
-
-**What the six steps left open**, none of it blocking §6.1:
-
-- The simplification the user postponed (2026-09-28: "some material is
-  still verbose and can be simplified, but let's postpone it later when
-  the major task is done and working well").
-- `canary checks --firing` still prints the old action columns (step 4),
-  and the table's looks are not in `visual_hints` (step 3).
+- `canary checks --firing` still prints the old action columns, and
+  §1.2's looks are not in `visual_hints` (§5).
+- The agreement overview's `decided` and `blame` still count the record's
+  slot columns, so a verdict §1.2 shows only at its site — zarith's
+  fetched-world `dependencies_provided` — is not counted there.
 - The ten action families with no edge have no frame, so their steps
-  have no column (the review's point 4).
+  have no column.
 - sqlite's Python rows are mostly empty: 14 of their edges read `absent`,
   against 8 in the OCaml rows, because CPython's stdlib binding is
   provisioned by a dummy fetch, and `place_step` places a dummy on no
   edge.
 - The staged copy is never named. An installed-library world stages the
   library and inspects the copy (`probe_lib_staged`), but that
-  inspection is not read into `staged_sys`, which gets no name or count.
+  inspection is not read into `staged_sys`.
 - Step 6's log change: typed fields on log events, each inspection's
-  summary logged once, and a manifest for the multi-variant runner.
+  summary logged once (a later run of a world replaces its files, §2),
+  and a manifest for the multi-variant runner.
 - `canary view`, now the only way to regenerate a run's diagrams, fails
   on zarith: its saved `run_state.json` holds `fetch_binding_source_ocaml`,
-  which `action_of_string` cannot read, and `load_run_state` raises. It
-  predates step 5 (found while checking it; cairo, libffi, sqlite and
-  zlib regenerate) and is the gap the manifest's codec works around.
-  Widening `action_of_string` is a change of its own, because the
-  catalogue backticks an action name only when that function parses it.
-
-§6.1's agreements resume after.
+  which `action_of_string` cannot read. It is the gap the manifest's
+  codec works around. Widening `action_of_string` is a change of its own,
+  because the catalogue backticks an action name only when that function
+  parses it.
 
 ## 7. The pins
 
@@ -722,15 +476,15 @@ code.
 | `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
 | `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it |
 | `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
-| `matrix.page_titles_and_agreement_overview` | §2's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
+| `matrix.page_titles_and_agreement_overview` | the agreement overview's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
 | `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
 | `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |
 | `overview.agreements_sit_on_the_chain` | every agreement has one claim site; the table's `sits on` is it; the grouping lists each once; no run decided an agreement without an evaluator |
-| `overview.every_drawn_line_has_a_source` | every line under a node label has one source; `render` found by swapping the machine's answers |
+| `overview.every_drawn_line_has_a_source` | every line under a node label has one source; a render read found by swapping the machine's answers (§4) |
 | `overview.edge_marks_clear_the_boxes` | no edge under a source it does not join; no label or badge hidden |
 | `overview.visual_vocabulary_is_one_list` | the looks: one list, held to the stylesheet (§5) |
 | `overview.layout_rules_hold` | the places: every rule holds, every named pin exists (§5) |
-| `overview.tables_list_what_canary_covers` | §4's tables list exactly what canary has drivers and projects for |
+| `overview.tables_list_what_canary_covers` | the page's §4 tables list exactly what canary has drivers and projects for |
 | `overview.sections_numbered_in_order` | the page's sections are numbered 1 to n |

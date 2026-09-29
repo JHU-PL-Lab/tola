@@ -1624,9 +1624,9 @@ this machine — <code>canary overview</code> writes what each machine ran to
 <span class="src render">render</span> asked of the machine rendering this page —
 neither, and flagged wherever it appears. Each is computed with its value in
 <code>Canary_overview_runs</code> and <code>Canary_overview_join</code>; the
-page only looks it up. Only these lines are traced so far: what decides which
-nodes and edges are drawn, a recorded run's edge states and badges, and the
-lists below are inventoried in <code>doc/canary/design/overview_provenance.md</code>.</p></details>
+page only looks it up. Only these lines are traced so far; what is not yet —
+a recorded run's edge states and badges, the band rules, the script's own
+rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
 %s
 <div id="jrec" hidden>
 <div class="key reckey">
