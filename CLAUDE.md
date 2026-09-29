@@ -121,11 +121,11 @@ deliberately. The to-do is `doc/canary/design/platform.md` §7.
 
 **Post-change verification.** After every edit that touches `src/canary/`, run
 `make canary-test`. This catches regressions in enumeration, compat theory,
-tool assumptions (nm/ocamlobjinfo/python3), and PM presence — 97 + 109 + 14
-tests, pure + shell, ~5s. The shared `Canary_runner.run_project_spec`
+tool assumptions (nm/ocamlobjinfo/python3), and PM presence — pure and
+shell tests, about 20 s (the count is in `doc/canary/status.md` §1). The shared `Canary_runner.run_project_spec`
 means both CLI and tests exercise the same pipeline. Before committing or
-ending a session, also run `make canary-post-check` (sqlite + tiny1 bridge,
-heavier, ~2min).
+ending a session, also run `make canary-post-check` (sqlite, the agreement
+round trip and the tiny1 bridge; about 40 s when warm).
 ```
 
 ### Working on the enumeration — what to read, in order
@@ -395,9 +395,8 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_project_cairo.ml`       | cairo project via `Canary_opam_binding` (conf-* + opam binding); Level A                                  |
 | `src/canary/project/canary_project_zarith.ml`      | zarith project via `Canary_opam_binding` (conf-* + opam binding); Level A                                 |
 | `src/canary/project/canary_project_torch.ml`       | torch project (2026-08-30). NOT the opam-binding template — the registry's first lib whose stable point is **opam** (`libtorch.2.1.2+linux-x86_64`, an unzipped upstream binary), first `Cpp_api`, and first mangled-C++ surface (87,877 symbols; prefixes must be Itanium-spelled — `_ZN2at`, not `at::`). 2 scenarios = the binding's two PACKAGINGS at one version: stock `torch.v0.17.0` (a declared build xfail — it does not build with dune 3.23.1) and the canary-local `v0.17.0-canary1` carrying the one-line upstream fix. The version axis genuinely has one point (on OCaml 5.4.1, v0.16 and the 0.x series need `base/core < v0.17`). The lib's 2.2.1 point is named and unrealized |
-| `src/canary/project/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
-| `src/canary/project/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_agreement_bindings` (Task 2 Phase D 2026-07-21). |
-| `src/canary/project/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_agreement_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |
+| `src/canary/project/canary_project_llvm.ml`        | LLVM spec, a `project_run` (its worlds are in Build & Run). The released-binding world's OCaml probe expects the `Opcode.UncondBr` compat failure, derived through `Canary_scenario.lower_expectation_agnostic` over `llvm_stable_agreement_bindings`. |
+| `src/canary/project/canary_project_z3.ml`          | z3 spec, a `project_run` (its worlds are in Build & Run). Its Python probe expects the `z3.parser_context` compat failure, derived through `lower_expectation_agnostic` over `z3_agreement_bindings`. |
 | `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_agreement_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
@@ -421,7 +420,6 @@ reconciling with, not duplicating.
 | `canary/scripts/inspect_ocaml.py`            | ocamlobjinfo parser → `ocaml` summary (module list)                                                    |
 | `canary/scripts/inspect_python.py`           | Python `dir()` parser → `python` summary (attrs + watchlist + extras)                                  |
 | `canary/scripts/inspect_bridge.py`           | Bridge recorder → `bridge` record (what a conf package is, what its check answered here); runs only the templates it is handed plus the predicate's own pkg-config. `--parse-predicate` for tests |
-| `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
 | `doc/canary/index.md`                          | **THE doc index** — every file under `doc/canary/`, grouped by intent. A new doc gets its row there; the rows below are only the ones a coding session hits constantly |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
 | `doc/canary/design/enumeration/stage6_realize_steps.md` | **Pass 6, realize** (`world → steps`) — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. **§2b THE OCCASION** (2026-09-16) — when a check fires: the three gates (applicability at pass 2, firing here, evidence at run time), what realize attaches, why evaluation is not a further pass, where the evidence address comes from. Absorbed `algorithm_explainer.md` |
@@ -698,10 +696,11 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   no `CANARY_BUILD_DIR` set, so `B=build` (local to sandbox), cmake
   runs fresh in a writable local dir.
 - **ELF symbol versioning in nm output**: Linux shared libs (e.g., LLVM)
-  use versioned symbols — `nm -D` outputs `LLVMAddAlias2@@LLVM_19.1`
-  not `LLVMAddAlias2`. `assert_binary_symbols.py` regex must allow
-  `(?:@@?\S+)?$` suffix; a bare `\w+$` anchor silently matches nothing.
-  Fix is in `parse_defined_symbols` in `canary/scripts/assert_binary_symbols.py`.
+  use versioned symbols — `nm -D` outputs `LLVMAddAlias2@@LLVM_19.1`,
+  not `LLVMAddAlias2`, so a parser anchored on a bare name (`\w+$`)
+  silently matches nothing. `canary/scripts/inspect_native.py` splits the
+  suffix: `@@VER` on a defined symbol is a versioned export, `@VER` on an
+  undefined one a versioned requirement.
 - **`find_llvm_config_cmd` composability**: it's a multi-line `if/elif/fi`
   shell expression. Cannot be safely nested inside `$()` as a sub-argument
   (e.g., `$(find_llvm_config_cmd --libdir)` is wrong). Always assign to a
