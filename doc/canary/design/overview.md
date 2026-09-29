@@ -230,8 +230,133 @@ are the diagram's, and a table cell is a new kind.
 
 ## 6. The plan
 
-In order (user, 2026-09-28): the rest of phase E (§6.1), then the
-derivations of §6.2. What §6.3 parks is not urgent. §6.4 was done first.
+This is the overview task's one status (user, 2026-09-29): the list
+below says what is left and what each item needs, and `status.md` points
+here. §6.1 to §6.4 keep the design the items refer to, under the numbers
+code comments cite. How each piece landed is the worklog.
+
+The list is grouped by what an item needs before it can start. Its first
+open question is the order. The plan of 2026-09-28 was the rest of phase
+E, then §6.2's derivations; but phase E's end state needs §6.2 step 3,
+claim sites from rooting. So the question is whether A and §6.2's
+derivations come before C.
+
+**A. Decide first.** Design; no code until it is settled; in dependency
+order.
+
+1. **Targets name the diagram's nodes** (§6.1), so a member in the
+   package layer (a bridge, a capability file, a package) can be named,
+   and the binding splits into source, stub, module and surface. This
+   unblocks `depext_names_the_provided_package` and lets §2's `sits on`
+   and `where` go (§6.3).
+2. **Claim sites are derived from rooting and targets** (§6.2 step 3),
+   with the hand-written `claim_sites` kept as the oracle until the two
+   agree. The disagreements to decide are §6.1's table:
+   `dependencies_provided`, `api_names_present` and
+   `gate_admits_the_world`. One consequence is visible today: zarith's
+   built world decides `api_names_present` at its probe, the check's one
+   site is `install_surf`, and no fetch installs a built binding's
+   surface, so §1.2 hatches that cell while §2 counts it.
+3. **Laws tie an agreement's kind to its place** (§6.1).
+4. **A candidate is a registry row with no evaluator** (§6.1).
+5. **The three other claims the bridge record carries**, a decision each:
+   - `declared_gate_matches_package` compares the project's declared gate
+     with the binding package's metadata. Whether a declaration held
+     against a declaration is an agreement or part of the offline spec
+     audit is `package_gates.md` §7.2–7.3's open question, and the
+     declared constraint does not reach the evidence: the bridge step
+     knows the bridge, not the bound on it.
+   - `depext_names_the_provided_package` compares the bridge's mapping
+     with the system package the world takes the library from. That
+     package reaches no evaluator, since a provider is not evidence, and
+     both members are packages, so the registry could target only `lib`,
+     and the kind law rejects an admissibility claim with one target and
+     no declaration. A target that names a package waits for A1.
+   - `discovery_matches_link` needs the library the link resolved, which
+     nothing records, since no step asks the linker or the loader (a C
+     item). It also sits on `discover`, on the system side, while it
+     compares across.
+
+**B. Ready, and adds no action.**
+
+- `canary checks --firing` still prints the old action columns, and
+  §1.2's looks are not in `visual_hints` (§5).
+- §2 is counted from this machine's record, while §1.2 shows every
+  machine's runs file; the two differ once a second machine's rows are on
+  the page.
+- The ten action families with no edge have no frame, so their steps
+  have no column, and a failure there would show nowhere in §1.2.
+- The log: typed fields on its events; each inspection's summary logged
+  once, since a later run of a world replaces its files (§2); a manifest
+  for the multi-variant runner (ssl).
+- `canary view`, the only way left to regenerate a run's diagrams, fails
+  on zarith: its saved `run_state.json` holds
+  `fetch_binding_source_ocaml`, which `action_of_string` cannot read.
+  Widening that function is a change of its own, because the catalogue
+  backticks an action name only when it parses.
+- §6.2 step 2, edges from the catalogue, and step 4, one typed triple.
+- A pin that the page's scripts parse, and one over §1.2 as rendered
+  (proposed 2026-09-29). No pin runs the page's JavaScript, so a syntax
+  error, or a rule in the script that hides a cell, passes them all; the
+  hidden cells of 2026-09-28 were found by running §1.2's script under
+  node by hand.
+
+**C. Adds an action or a step: held** (user, 2026-09-29: "Let me/us be
+more patient on modification needing to add new actions"). Each gets a
+written plan before it is picked up.
+
+- **`resolve_sys` as a record**, planned 2026-09-29: apt's chosen
+  candidate and the installed version, which also retires the one render
+  read (§4). An inspection of `fetch_lib` runs `LC_ALL=C apt-cache
+  policy <pkg>` and writes a `resolution` record into the fetch's
+  directory: the package, the installed version, the candidate, and the
+  version table with priorities and origins. apt's `policy` placeholder
+  leaves `Canary_pm_action` in the same change. The library's placement
+  text and `pkg_sys`'s line take the version from the record,
+  `resolve_sys`'s tooltip says what apt chose, and
+  `Canary_matrix.sys_pkg_version` goes. Pins: the render clause of
+  `overview.every_drawn_line_has_a_source` flips to "nothing is asked of
+  the rendering machine"; a fixture pin for a world with a record and
+  one without; an artifact-test case on the command's output. Two
+  choices are open, with a recommendation each: brew keeps its
+  placeholder and a brew world shows no version, rather than
+  `brew info --json=v2` checked only against a sample; and a world no
+  run recorded shows no version, rather than the renderer's answer.
+- **The other placeholders as records**, one at a time, each leaving
+  `Canary_pm_action` in the change that records it: `depends` and
+  `conf_probe` (opam's install output says when it built the bridge and
+  ran its check: `∗ installed conf-gmp.5`), `resolve_lang` (the plan opam
+  prints — the solution, though not why) and `realize_cap` (what the
+  capability file declares, `pkg-config --cflags --libs`). `discover` and
+  `install_lang` stay out of reach: they happen inside opam's build,
+  whose log opam deletes on success.
+- **Bridges beyond zarith.** cairo, libffi, zlib and zstd route their
+  gates since 2026-09-24; sqlite and ssl route theirs and use pkg-config
+  predicates. llvm's predicate is a script, so its record says exit 3;
+  torch's depext has no check. Until each is wired, every project that
+  fetches an OCaml binding shows `gatw` without a verdict.
+- **The bridge check as its own step**, run before the binding is fetched
+  or built.
+- **The linking lift** (§6.2 step 5), the first step that changes what a
+  run does.
+- **A record of the library the link resolved**, which
+  `discovery_matches_link` needs.
+
+**D. Parked.** §6.3's questions, and these:
+
+- the bridge check driven against a library the world built itself,
+  which is the built case's point (sqlite has no bridge wired);
+- the predicate's fallback, which the record keeps and canary does not
+  run (conf-gmp's compiles a `test.c` that ships with the conf package),
+  so a failing query decides nothing;
+- brew's owner query and the rest on macOS, never run there;
+- three findings, each recorded in the worklog: an unreached step logs
+  nothing, so "blocked upstream" and "never attempted" both read
+  `unrecorded`; the log's timestamps carry no zone, which matters when a
+  mac record is drawn beside a WSL one; and the opam-binding template's
+  vendored-library worlds declare their lib probe at `Pm (Sys_pm apt)`
+  while probing the prebuilt copy, which needs a `location` constructor
+  for a supplied copy, or the prebuilt declared a build tree.
 
 ### 6.1 Phase E — the rest of the bridges
 
@@ -296,79 +421,12 @@ means reaching these, each with a pin:
 - **The subject** stays the one free grouping, or gives way to the
   sitting when the categories are re-grouped by hand.
 
-The work, in order:
-
-1. **E2 is done** (2026-09-27): `gate_admits_the_world`
-   (`canary_agreement_bridge.ml`), the first registered agreement that
-   reads the bridge record, holds on zarith's fetched world. §3 says how
-   it decides; the worklog says how it landed and how it was falsified.
-
-   The same record carries three more claims, and each needs a decision
-   before it lands:
-   - `declared_gate_matches_package` compares the project's declared gate
-     with the binding package's metadata. Whether a declaration held
-     against a declaration is an agreement or part of the offline spec
-     audit is `package_gates.md` §7.2–7.3's open question, and the
-     declared constraint does not reach the evidence: the bridge step
-     knows the bridge, not the bound on it.
-   - `depext_names_the_provided_package` compares the bridge's mapping
-     with the system package the world takes the library from. That
-     package reaches no evaluator today, since a provider is not
-     evidence, and both members are packages, so the registry could
-     target only `lib`, and the kind law rejects an admissibility claim
-     with one target and no declaration.
-   - `discovery_matches_link` needs the library the link resolved, which
-     nothing records, since no step asks the linker or the loader. It also
-     sits on `discover`, on the system side, while it compares across.
-2. **The easy placeholders become records**, one at a time, each leaving
-   `Canary_pm_action` in the change that records it:
-   - `resolve_sys`: apt's chosen candidate and the installed version
-     (`apt-cache policy`), which also retires the one render read (§4).
-     Planned 2026-09-29 and held, since it adds a step (user: be patient
-     with a change that adds an action). An inspection of `fetch_lib`
-     runs `LC_ALL=C apt-cache policy <pkg>` and writes a `resolution`
-     record into the fetch's directory: the package, the installed
-     version, the candidate, and the version table with priorities and
-     origins. apt's `policy` placeholder leaves `Canary_pm_action` in the
-     same change. The library's placement text and `pkg_sys`'s line take
-     the version from the record, `resolve_sys`'s tooltip says what apt
-     chose, and `Canary_matrix.sys_pkg_version` goes. Pins: the render
-     clause of `overview.every_drawn_line_has_a_source` flips to "nothing
-     is asked of the rendering machine"; a fixture pin for a world with a
-     record and one without; an artifact-test case on the command's
-     output. Two choices are open, with a recommendation each: brew keeps
-     its placeholder and a brew world shows no version, rather than
-     `brew info --json=v2` checked only against a sample; and a world no
-     run recorded shows no version, rather than the renderer's answer;
-   - `depends` and `conf_probe`: opam's install output says when it built
-     the bridge and ran its check in this run (`∗ installed conf-gmp.5`);
-   - `resolve_lang`: the plan opam prints — the solution, though not why;
-   - `realize_cap`: what the capability file declares
-     (`pkg-config --cflags --libs`).
-
-   `discover` and `install_lang` stay out of reach: they happen inside
-   opam's build, whose log opam deletes on success.
-3. **Bridges beyond zarith.** cairo, libffi, zlib and zstd route their
-   gates since 2026-09-24; sqlite and ssl route theirs and use pkg-config
-   predicates. llvm's predicate is a script, so its record says exit 3;
-   torch's depext has no check. Until each is wired, every project that
-   fetches an OCaml binding shows `gatw` without a verdict.
-4. **Later:** the bridge check as its own step, run before the binding is
-   fetched or built; the check driven against a library the world built
-   itself, which is the built case's point (sqlite has no bridge wired);
-   the predicate's fallback, which the record keeps and canary does not
-   run (conf-gmp's compiles a `test.c` that ships with the conf package),
-   so a failing query decides nothing; brew's owner query and the rest on
-   macOS, never run there.
-
-Open findings the plan should not forget, each recorded in the worklog:
-an unreached step logs nothing, so "blocked upstream" and "never
-attempted" both read `unrecorded`; the log's timestamps carry no zone,
-which matters when a mac record is drawn beside a WSL one; and the
-opam-binding template's vendored-library worlds declare their lib probe
-at `Pm (Sys_pm apt)` while probing the prebuilt copy, which needs a
-`location` constructor for a supplied copy, or the prebuilt declared a
-build tree.
+E2 landed on 2026-09-27: `gate_admits_the_world`
+(`canary_agreement_bridge.ml`), the first registered agreement that reads
+the bridge record, holds on zarith's fetched world. §3 says how it
+decides, and the worklog how it landed and how it was falsified. The
+work toward the end state is the list at the top of §6: its decisions
+are A, and what adds an action is C.
 
 ### 6.2 Then: the page's hand-written parts, derived from the framework
 
@@ -460,28 +518,10 @@ where it sits; one reader per inspection; the manifest. §2 says what each
 is and why. The review, the decisions, the prototypes and the six steps
 are in [`../worklog/worklog_2026_09.md`](../worklog/worklog_2026_09.md)
 under this heading, which is where code comments citing "§6.4 step N"
-find them. What they left open:
-
-- `canary checks --firing` still prints the old action columns, and
-  §1.2's looks are not in `visual_hints` (§5).
-- §2 is counted from this machine's record, while §1.2 shows every
-  machine's runs file. They agree while one machine's runs are on the
-  page; a second machine's rows would be in §1.2 and not in §2's counts.
-- §1.2 hatches a check's column when the chain lacks its frame, even
-  where the chain decided the check, and §2 counts it. One cell: zarith's
-  built world decides `api_names_present`, whose one site is
-  `install_surf`, and no fetch installs a built binding's surface.
-- The ten action families with no edge have no frame, so their steps
-  have no column.
-- Step 6's log change: typed fields on log events, each inspection's
-  summary logged once (a later run of a world replaces its files, §2),
-  and a manifest for the multi-variant runner.
-- `canary view`, now the only way to regenerate a run's diagrams, fails
-  on zarith: its saved `run_state.json` holds `fetch_binding_source_ocaml`,
-  which `action_of_string` cannot read. It is the gap the manifest's
-  codec works around. Widening `action_of_string` is a change of its own,
-  because the catalogue backticks an action name only when that function
-  parses it.
+find them. What they left open is in the list at the top of §6: B, and
+A2 for zarith's hatched cell. The fixes of 2026-09-29 (§2 and the badges
+count §1.2's cells, sqlite's stdlib binding reads `included`, the staged
+copy is named) closed the rest.
 
 ## 7. The pins
 

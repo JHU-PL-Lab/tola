@@ -25,9 +25,9 @@ fact needing no world belongs there. `canary emit <p> --stage <name>`
 prints any of them. Map:
 [`design/enumeration/README.md`](design/enumeration/README.md).
 
-**The agreement layer: 13 implemented claims, 8 landed** — landed
+**The agreement layer: 14 agreements, 9 landed** (2026-09-29) — landed
 meaning a real project's run decided `holds` or `violated`, which is the
-only evidence a check works. Plus **13 candidates**: named, classified,
+only evidence a check works. Plus **16 candidates**: named, classified,
 no evaluator. The live answers are `canary checks --landing` and
 `canary checks --firing`; the docs maintain no second catalogue.
 
@@ -37,8 +37,8 @@ code is, the languages and mechanisms that carry it, the object format
 it ranges over, its target artifacts, and the action grid marking where
 the rule RAN against where the check FIRES. It is the template of the
 result matrix, and since 2026-09-23 it lives on the overview page
-(`canary overview`, `docs/canary/overview.html`; `make view` renders
-both), not above the matrix. Layout and row order:
+(`canary overview`, `docs/canary/overview.html`; `make view`), not above
+the matrix. Layout and row order:
 [`design/matrix.md`](design/matrix.md).
 
 **Three axes describe a claim, and they are independent** — `ag_kind`
@@ -375,65 +375,21 @@ report dishonestly on Linux. That is §2.1's reporting question rather
 than this claim's, and it is why this one is third despite being the
 cheapest to evaluate.
 
-### 2.6 Merging the overview page into the framework — after §2.7
+### 2.6 Merging the overview page into the framework
 
-Replace the overview's hand-written parts with derivations from the
-framework, bottom-up, keeping each hand-written part as the check until
-its derivation agrees. Terminology is settled, and the edges carry typed
-actions. **Starts after §2.7's phase E** (user, 2026-09-27). The next
-steps, in order — edges from the action catalogue, claim sites from
-rooting, one typed triple, the linking lift — and the three mismatches a
-derivation must decide are
-[`design/overview.md`](design/overview.md) §6.2.
+Part of the overview task's one list since 2026-09-29: the steps are
+[`design/overview.md`](design/overview.md) §6.2, and §6's list says
+where they fall in the order.
 
-### 2.7 Run results on the overview diagrams — phase E continues
+### 2.7 The overview page — its status is `design/overview.md` §6
 
-Phases A to D and E1 are done: the run record, every step placed on the
-diagram, the overlay, recorded names, and the first bridge (conf-gmp on
-zarith) modeled, driven and recorded. On that base, §1 became one chain
-chosen from its parts, with every line's source traced and its looks and
-places kept as two checked lists. How the page works now is
-[`design/overview.md`](design/overview.md).
-
-The target behind phase E is every agreement categorized by the
-diagram (user, 2026-09-27). Its first step is done: where each agreement
-sits on the chain is a column of the agreement table and a grouping under
-it, counting placed, checked and decided, so the diagram, the table and
-the run logs agree about where each agreement is, and the gaps show.
-
-**E2 is done** (2026-09-27): `gate_admits_the_world`, the first agreement
-that reads the bridge record, holds on zarith's fetched world, decided by
-a real run — the first checked agreement in the grouping's package-layer
-row across the sides, and 9 of 14 agreements landed. The bridge step now
-passes whenever it records; the verdict is the agreement's.
-
-**Done: the result matrix joined the overview page** (user, 2026-09-28,
-ahead of the next agreement; decided: one page, the per-run pages retire,
-prototype A for the columns). The column model (`Canary_frames`,
-`canary checks --frames`), one reader per inspection, and the table itself
-as the overview's §1.2 — one row per chain and machine, linked both ways
-with §1's drawings, its check cells read at each claim's site; §2's
-agreement overview on the same frames; the per-run manifest the record
-now reads instead of re-deriving; and the old pages retired — nothing a
-run writes is copied to `docs/` any more, the tracked
-`docs/canary/projects/` tree (1,797 files) went, and its addresses point
-at §1.2. The plan, its record and what it left open are
-`design/overview.md` §6.4. A revisit followed the same day (user): one
-results command, `canary overview` (`--json` prints the record that
-`canary result` used to), and `design/overview.md` cut to what the page
-does not say, with `overview_provenance.md` absorbed into its §4.
-
-**Then the rest of phase E** (§6.1). Each of the three other claims the
-bridge record carries needs a decision before it lands, and most of them
-are questions about the end state the user asked for — one description
-per agreement, its place derived with its role, its targets naming the
-diagram's nodes; §6.1 measures how far the code is from it. Independent
-of that: the easy placeholders become records, one at a time — the
-first, apt's chosen version (`resolve_sys`), also retires the one value
-the page asks of the rendering machine; then bridges beyond zarith, which
-turn the 23 new `gatw` cells into decisions (they read `·` or `no-evid`
-today). Four questions from the visual work are parked there, not urgent
-(§6.3).
+The overview task keeps its status in one place,
+[`design/overview.md`](design/overview.md) §6 (user, 2026-09-29): a list
+grouped by what each item needs, with decisions first, then work that
+adds no action, work that adds an action (held), and what is parked.
+Where it stands on 2026-09-29: the page is the one results page; phases A
+to D, E1 and E2 are done; the result table has joined the page, and §2's
+counts and §1's badges read §1.2's cells.
 
 The history, with the user's words and every falsified pin, is
 [`worklog/worklog_2026_09.md`](worklog/worklog_2026_09.md), under the
