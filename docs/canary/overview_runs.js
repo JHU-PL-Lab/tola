@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-29 02:43",
+  "generated": "2026-09-29 03:08",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,7 +10,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:04.515", "2026-09-29 02:43:04.769" ],
+      "span": [ "2026-09-29 03:07:53.291", "2026-09-29 03:07:53.533" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -36,14 +36,14 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "gate_admits_the_world": "undecided"
       },
       "badges": {
@@ -264,7 +264,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:04.515", "2026-09-29 02:43:04.769" ],
+      "span": [ "2026-09-29 03:07:53.291", "2026-09-29 03:07:53.533" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -290,13 +290,13 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
-        "dependencies_provided": "undecided",
-        "api_names_present": "holds"
+        "dependencies_provided": "undecided"
       },
       "badges": {
         "build_lib": "violated",
@@ -473,7 +473,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:12.317", "2026-09-29 02:43:12.566" ],
+      "span": [ "2026-09-29 03:08:00.899", "2026-09-29 03:08:01.142" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -499,14 +499,14 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "gate_admits_the_world": "undecided"
       },
       "badges": {
@@ -727,7 +727,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:12.317", "2026-09-29 02:43:12.566" ],
+      "span": [ "2026-09-29 03:08:00.899", "2026-09-29 03:08:01.142" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -753,13 +753,13 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
-        "dependencies_provided": "undecided",
-        "api_names_present": "holds"
+        "dependencies_provided": "undecided"
       },
       "badges": {
         "build_lib": "violated",
@@ -936,7 +936,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:05.052", "2026-09-29 02:43:05.302" ],
+      "span": [ "2026-09-29 03:07:53.799", "2026-09-29 03:07:54.040" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -962,14 +962,14 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "staged_interface_preserved": "holds",
         "gate_admits_the_world": "undecided"
       },
@@ -1196,7 +1196,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:05.052", "2026-09-29 02:43:05.302" ],
+      "span": [ "2026-09-29 03:07:53.799", "2026-09-29 03:07:54.040" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1222,13 +1222,13 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
         "dependencies_provided": "undecided",
-        "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
       "badges": {
@@ -1413,7 +1413,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:12.828", "2026-09-29 02:43:13.074" ],
+      "span": [ "2026-09-29 03:08:01.410", "2026-09-29 03:08:01.653" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1439,14 +1439,14 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "staged_interface_preserved": "holds",
         "gate_admits_the_world": "undecided"
       },
@@ -1673,7 +1673,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:12.828", "2026-09-29 02:43:13.074" ],
+      "span": [ "2026-09-29 03:08:01.410", "2026-09-29 03:08:01.653" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1699,13 +1699,13 @@
       },
       "claims": {
         "declared_symbols_exported": "violated",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
         "dependencies_provided": "undecided",
-        "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
       "badges": {
@@ -1890,7 +1890,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:42:57.495", "2026-09-29 02:43:03.509" ],
+      "span": [ "2026-09-29 03:07:46.476", "2026-09-29 03:07:52.351" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1916,14 +1916,14 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "gate_admits_the_world": "undecided"
       },
       "badges": {
@@ -2143,7 +2143,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:42:57.495", "2026-09-29 02:43:03.535" ],
+      "span": [ "2026-09-29 03:07:46.476", "2026-09-29 03:07:52.374" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2169,13 +2169,13 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
-        "dependencies_provided": "undecided",
-        "api_names_present": "holds"
+        "dependencies_provided": "undecided"
       },
       "badges": {
         "build_lib": "partial",
@@ -2351,7 +2351,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:05.312", "2026-09-29 02:43:11.285" ],
+      "span": [ "2026-09-29 03:07:54.051", "2026-09-29 03:07:59.926" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2377,14 +2377,14 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "gate_admits_the_world": "undecided"
       },
       "badges": {
@@ -2604,7 +2604,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:05.312", "2026-09-29 02:43:11.307" ],
+      "span": [ "2026-09-29 03:07:54.051", "2026-09-29 03:07:59.951" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2630,13 +2630,13 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
-        "dependencies_provided": "undecided",
-        "api_names_present": "holds"
+        "dependencies_provided": "undecided"
       },
       "badges": {
         "build_lib": "partial",
@@ -2812,7 +2812,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:03.547", "2026-09-29 02:43:04.479" ],
+      "span": [ "2026-09-29 03:07:52.386", "2026-09-29 03:07:53.256" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2838,14 +2838,14 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "staged_interface_preserved": "holds",
         "gate_admits_the_world": "undecided"
       },
@@ -3071,7 +3071,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:03.547", "2026-09-29 02:43:04.502" ],
+      "span": [ "2026-09-29 03:07:52.386", "2026-09-29 03:07:53.279" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3097,13 +3097,13 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
         "dependencies_provided": "undecided",
-        "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
       "badges": {
@@ -3287,7 +3287,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:11.319", "2026-09-29 02:43:12.282" ],
+      "span": [ "2026-09-29 03:07:59.963", "2026-09-29 03:08:00.862" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3313,14 +3313,14 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "staged_interface_preserved": "holds",
         "gate_admits_the_world": "undecided"
       },
@@ -3546,7 +3546,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:11.319", "2026-09-29 02:43:12.305" ],
+      "span": [ "2026-09-29 03:07:59.963", "2026-09-29 03:08:00.886" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3572,13 +3572,13 @@
       },
       "claims": {
         "declared_symbols_exported": "holds",
-        "soname_matches_declaration": "holds",
-        "declared_versions_exported": "undecided",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
         "dependencies_provided": "undecided",
-        "api_names_present": "holds",
         "staged_interface_preserved": "holds"
       },
       "badges": {
@@ -3762,7 +3762,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:04.780", "2026-09-29 02:43:05.041" ],
+      "span": [ "2026-09-29 03:07:53.544", "2026-09-29 03:07:53.789" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3787,16 +3787,19 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "holds",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "gate_admits_the_world": "undecided"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
@@ -4010,7 +4013,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:04.780", "2026-09-29 02:43:05.041" ],
+      "span": [ "2026-09-29 03:07:53.544", "2026-09-29 03:07:53.789" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4035,14 +4038,17 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "holds",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
-        "dependencies_provided": "undecided",
-        "api_names_present": "holds"
+        "dependencies_provided": "undecided"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "install_surf": "holds",
         "link_mod": "undecided"
       },
@@ -4215,7 +4221,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:12.577", "2026-09-29 02:43:12.818" ],
+      "span": [ "2026-09-29 03:08:01.153", "2026-09-29 03:08:01.400" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4240,16 +4246,19 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "holds",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "gate_admits_the_world": "undecided"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
@@ -4463,7 +4472,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 02:43:12.577", "2026-09-29 02:43:12.818" ],
+      "span": [ "2026-09-29 03:08:01.153", "2026-09-29 03:08:01.400" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4488,14 +4497,17 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "holds",
         "required_symbols_exported": "undecided",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "holds",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
-        "dependencies_provided": "undecided",
-        "api_names_present": "holds"
+        "dependencies_provided": "undecided"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "install_surf": "holds",
         "link_mod": "undecided"
       },
@@ -4693,13 +4705,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "unevaluated",
-        "soname_matches_requirement": "unevaluated",
-        "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
-        "signatures_agree": "unevaluated",
         "api_names_present": "unevaluated",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "unevaluated",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "unevaluated",
+        "signatures_agree": "unevaluated",
+        "dependencies_provided": "unevaluated"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -4919,13 +4933,13 @@
       },
       "claims": {
         "declared_symbols_exported": "unevaluated",
-        "soname_matches_declaration": "unevaluated",
-        "declared_versions_exported": "unevaluated",
         "required_symbols_exported": "unevaluated",
+        "soname_matches_declaration": "unevaluated",
         "soname_matches_requirement": "unevaluated",
+        "declared_versions_exported": "unevaluated",
         "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
         "signatures_agree": "unevaluated",
+        "dependencies_provided": "unevaluated",
         "staged_interface_preserved": "unevaluated"
       },
       "badges": {
@@ -5107,13 +5121,13 @@
       },
       "claims": {
         "declared_symbols_exported": "unevaluated",
-        "soname_matches_declaration": "unevaluated",
-        "declared_versions_exported": "unevaluated",
         "required_symbols_exported": "unevaluated",
+        "soname_matches_declaration": "unevaluated",
         "soname_matches_requirement": "unevaluated",
+        "declared_versions_exported": "unevaluated",
         "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
         "signatures_agree": "unevaluated",
+        "dependencies_provided": "unevaluated",
         "staged_interface_preserved": "unevaluated"
       },
       "badges": {
@@ -5299,13 +5313,13 @@
       },
       "claims": {
         "declared_symbols_exported": "unevaluated",
-        "soname_matches_declaration": "unevaluated",
-        "declared_versions_exported": "unevaluated",
         "required_symbols_exported": "unevaluated",
+        "soname_matches_declaration": "unevaluated",
         "soname_matches_requirement": "unevaluated",
+        "declared_versions_exported": "unevaluated",
         "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
-        "signatures_agree": "unevaluated"
+        "signatures_agree": "unevaluated",
+        "dependencies_provided": "unevaluated"
       },
       "badges": {
         "build_lib": "unevaluated",
@@ -5458,10 +5472,10 @@
       },
       "claims": {
         "declared_symbols_exported": "unevaluated",
-        "soname_matches_declaration": "unevaluated",
-        "declared_versions_exported": "unevaluated",
         "required_symbols_exported": "unevaluated",
+        "soname_matches_declaration": "unevaluated",
         "soname_matches_requirement": "unevaluated",
+        "declared_versions_exported": "unevaluated",
         "required_versions_exported": "unevaluated",
         "dependencies_provided": "unevaluated"
       },
@@ -5616,15 +5630,18 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "holds",
         "required_symbols_exported": "holds",
+        "api_names_present": "holds",
+        "soname_matches_declaration": "undecided",
         "soname_matches_requirement": "undecided",
+        "declared_versions_exported": "undecided",
         "required_versions_exported": "undecided",
-        "dependencies_provided": "undecided",
         "signatures_agree": "undecided",
-        "api_names_present": "holds"
+        "dependencies_provided": "undecided"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "build_stub": "undecided",
         "link_mod": "partial"
       },
@@ -5839,16 +5856,19 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "holds",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
+        "soname_matches_declaration": "undecided",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds",
         "gate_admits_the_world": "holds"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "conf_probe": "holds",
         "install_surf": "holds",
         "build_stub": "undecided",
@@ -6123,13 +6143,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "violated",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "violated"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -6359,13 +6381,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "violated",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "violated"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -6598,13 +6622,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "holds",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "holds",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -6834,13 +6860,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "holds",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "holds",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -7073,16 +7101,18 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "undecided",
         "required_symbols_exported": "undecided",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
@@ -7312,16 +7342,18 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "undecided",
         "required_symbols_exported": "undecided",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "undecided",
-        "dependencies_provided": "holds",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "holds",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "undecided",
+        "required_versions_exported": "undecided",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "holds"
       },
       "badges": {
-        "realize_sys": "unevaluated",
+        "realize_sys": "partial",
         "install_surf": "holds",
         "build_stub": "undecided",
         "link_mod": "partial"
@@ -7548,13 +7580,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "unevaluated",
-        "soname_matches_requirement": "unevaluated",
-        "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
-        "signatures_agree": "unevaluated",
         "api_names_present": "unevaluated",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "unevaluated",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "unevaluated",
+        "signatures_agree": "unevaluated",
+        "dependencies_provided": "unevaluated"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -7765,13 +7799,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "unevaluated",
-        "soname_matches_requirement": "unevaluated",
-        "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
-        "signatures_agree": "unevaluated",
         "api_names_present": "unevaluated",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "unevaluated",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "unevaluated",
+        "signatures_agree": "unevaluated",
+        "dependencies_provided": "unevaluated"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -7985,13 +8021,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "holds",
-        "dependencies_provided": "violated",
-        "signatures_agree": "undecided",
         "api_names_present": "violated",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "holds",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "violated"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -8227,13 +8265,15 @@
         "same_program": "claim"
       },
       "claims": {
+        "declared_symbols_exported": "unevaluated",
         "required_symbols_exported": "holds",
-        "soname_matches_requirement": "holds",
-        "required_versions_exported": "holds",
-        "dependencies_provided": "violated",
-        "signatures_agree": "undecided",
         "api_names_present": "holds",
-        "gate_admits_the_world": "unevaluated"
+        "soname_matches_declaration": "unevaluated",
+        "soname_matches_requirement": "holds",
+        "declared_versions_exported": "unevaluated",
+        "required_versions_exported": "holds",
+        "signatures_agree": "undecided",
+        "dependencies_provided": "violated"
       },
       "badges": {
         "realize_sys": "unevaluated",
@@ -8467,11 +8507,11 @@
       },
       "claims": {
         "required_symbols_exported": "unevaluated",
+        "api_names_present": "unevaluated",
         "soname_matches_requirement": "unevaluated",
         "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
         "signatures_agree": "unevaluated",
-        "api_names_present": "unevaluated"
+        "dependencies_provided": "unevaluated"
       },
       "badges": {
         "install_surf": "unevaluated",
@@ -8671,11 +8711,11 @@
       },
       "claims": {
         "required_symbols_exported": "unevaluated",
+        "api_names_present": "unevaluated",
         "soname_matches_requirement": "unevaluated",
         "required_versions_exported": "unevaluated",
-        "dependencies_provided": "unevaluated",
         "signatures_agree": "unevaluated",
-        "api_names_present": "unevaluated"
+        "dependencies_provided": "unevaluated"
       },
       "badges": {
         "install_surf": "unevaluated",

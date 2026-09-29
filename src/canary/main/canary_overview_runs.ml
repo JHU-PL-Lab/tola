@@ -64,8 +64,9 @@ type view = {
   vw_edges : (string * string) list;
       (** EVERY edge of the template, with its state word *)
   vw_claims : (string * string) list;
-      (** each claim the graph places that this view evaluates, with its
-          outcome word *)
+      (** each checked claim this chain decided something about, in the
+          word of its §1.2 cell, and each a badge here counts with no
+          outcome yet, [unevaluated]; the badges colour from these *)
   vw_badges : (string * string) list;
       (** per edge with a CHECKED agreement: the word its filled badge
           takes, from the outcomes of exactly those agreements *)
@@ -594,7 +595,7 @@ let in_lang (lang : Canary_lang.lang) (a : Canary_basic.action) : bool =
   | None -> true
   | Some l -> Poly.equal l lang
 
-let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
+let view_of_row ?(root = "_out") (r : M.row) (lang : Canary_lang.lang)
     : view =
   let steps = List.filter r.M.steps ~f:(fun w -> in_lang lang w.M.ws_action) in
   let word_of_tag t =
@@ -665,13 +666,6 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
                   List.fold ws ~init:w ~f:(fun acc x ->
                       if step_rank x > step_rank acc then x else acc)) ))
   in
-  let column_in_lang label =
-    match
-      List.find m.M.typed_columns ~f:(fun c -> String.equal (M.label_of_col c) label)
-    with
-    | Some c -> in_lang lang (M.action_of_col c)
-    | None -> false
-  in
   (* the chain this view draws, and what it lacks — which the page does
      not draw, and no claim of which applies *)
   let chain = List.find r.M.chains ~f:(fun c -> Poly.equal c.M.ch_lang lang) in
@@ -681,25 +675,9 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     | None -> true
     | Some c -> List.mem c.M.ch_claims slug ~equal:String.equal
   in
-  (* one claim, several columns: the matrix's own merge, worst first —
-     for the claims that APPLY to this chain *)
-  let claims =
-    List.filter_map (List.filter r.M.claims ~f:(fun (slug, _) -> applies slug))
-      ~f:(fun (slug, cols) ->
-        let outcomes =
-          List.filter_map cols ~f:(fun (label, o) ->
-              if column_in_lang label then Some o else None)
-        in
-        let rank o = M.outcome_rank (Option.value o ~default:"") in
-        match outcomes with
-        | [] -> None
-        | o :: os ->
-            Some
-              ( slug,
-                outcome_word
-                  (List.fold os ~init:o ~f:(fun acc x ->
-                       if rank x > rank acc then x else acc)) ))
-  in
+  (* THE RESULT TABLE'S CHECK CELLS (2026-09-28, §6.4): the row's, in this
+     language ({!Canary_matrix.chain_checks}), which §2 counts *)
+  let cells = Option.value (List.Assoc.find r.M.checks lang ~equal:Poly.equal) ~default:[] in
   (* WHAT EACH EDGE'S BADGES COUNT in this chain (2026-09-24): the
      agreements on the edge that apply to its mechanism — the list §1
      counts for that mechanism — and the filled badge's word from the
@@ -726,9 +704,27 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
           | [] -> None
           | xs -> Some (e.T.eg_id, List.map xs ~f:(fun (cs, st) -> (cs.T.cs_claim, st))))
   in
-  (* THE RESULT TABLE'S CHECK CELLS (2026-09-28, §6.4): the row's, in this
-     language ({!Canary_matrix.chain_checks}), which §2 counts *)
-  let cells = Option.value (List.Assoc.find r.M.checks lang ~equal:Poly.equal) ~default:[] in
+  (* EACH CHECKED CLAIM IN THE WORD OF ITS §1.2 CELL, so a badge colours
+     what the table shows (2026-09-29, design/overview.md §6.4): one this
+     chain decided something about, and one a badge here counts with no
+     outcome yet, which reads [unevaluated]. They read the record's slot
+     columns until then, which a fetched-library world lacks for the
+     checks it decides at its probe: the realize_sys badge of sqlite's,
+     zarith's and zlib's fetched-library worlds read unevaluated beside
+     their ✓ in §1.2. *)
+  let claims =
+    let counted slug =
+      List.exists edge_claims ~f:(fun (_, xs) ->
+          List.exists xs ~f:(fun (s, st) -> String.equal s slug && Poly.equal st T.Checked))
+    in
+    List.filter_map Canary_frames.checked_rows ~f:(fun row ->
+        let slug = row.Canary_agreement.ag_slug in
+        match List.Assoc.find cells slug ~equal:String.equal with
+        | Some c when String.equal c.M.chk_outcome "n/a" -> None
+        | Some c when applies slug -> Some (slug, outcome_word (Some c.M.chk_outcome))
+        | None when counted slug -> Some (slug, outcome_word None)
+        | _ -> None)
+  in
   let outcomes = List.map cells ~f:(fun (slug, c) -> (slug, c.M.chk_outcome)) in
   let blames =
     List.filter_map cells ~f:(fun (slug, c) -> Option.map c.M.chk_blame ~f:(fun b -> (slug, b)))
@@ -883,7 +879,7 @@ let view_of_row ?(root = "_out") (m : M.t) (r : M.row) (lang : Canary_lang.lang)
     matrix's rule, so the views are the chains §2 counts. *)
 let views ?root (m : M.t) : view list =
   List.concat_map m.M.rows ~f:(fun r ->
-      List.map (M.langs_of_steps r.M.steps) ~f:(view_of_row ?root m r))
+      List.map (M.langs_of_steps r.M.steps) ~f:(view_of_row ?root r))
 
 (* ── THE HAND-DRAWN CASES' RECORDED COUNTERPARTS ─────────────────────
 

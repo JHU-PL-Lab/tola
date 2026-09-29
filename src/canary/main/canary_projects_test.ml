@@ -8108,6 +8108,37 @@ let record_export_pin : Canary_project_test.pure_test =
             in
             reads_the_log && covers && export_is_the_matrix) }
 
+(* THE CHAIN-CELL FIXTURE (2026-09-28): a log in zarith's shape, which the
+   pins holding §2's counts and §1's badges to §1.2's cells read. Both of
+   zarith's worlds fetch the library, so neither has the build_lib slot
+   the library's declaration checks are read at, and the log decides them
+   at probe_lib, where only a chain's cells see them; beside them, one
+   binding check decided and one not. *)
+let chain_cell_fixture () :
+    (Canary_project_run.project_run * Canary_matrix.t * Canary_overview_runs.view list) option =
+  let project = "zarith" in
+  Option.map (List.Assoc.find Canary_registry.all_projects project ~equal:String.equal)
+    ~f:(fun pr ->
+      let root = "_out/canary/test/counts-fixture" in
+      let module F = Record_fixture in
+      let log = F.create () in
+      List.iter (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+          let scenario =
+            Stdlib.Filename.basename (Canary_project_run.scenario_dir_of ~pr_name:project a)
+          in
+          ignore (F.line log "*" "variant_start" (Some scenario) : string);
+          List.iter
+            [ ("probe_lib", "declared_symbols_exported/declared_exports_vs_library: holds");
+              ("probe_lib", "soname_matches_declaration/declared_soname_vs_library: undeclared");
+              ("probe_binding_ocaml", "api_names_present/watchlist_vs_user_surface: holds");
+              ( "probe_binding_ocaml",
+                "dependencies_provided/recorded_dependencies_vs_world_providers: unavailable" ) ]
+            ~f:(fun (tag, detail) ->
+              ignore (F.line log tag "agreement_outcome" (Some detail) : string)));
+      F.save log ~root ~project;
+      let m = Canary_matrix.matrix_of ~root [ (project, pr) ] in
+      (pr, m, Canary_overview_runs.views ~root m))
+
 (* §2 COUNTS WHAT §1.2 SHOWS (2026-09-28, design/overview.md §6.4). The
    agreement overview's `decided` and `blame` count §1.2's cells — one per
    chain, a world in one binding language — which §1.2's rows are drawn
@@ -8118,42 +8149,20 @@ let record_export_pin : Canary_project_test.pure_test =
    soname_matches_declaration. (A cell whose frame the chain lacks is
    counted here and hatched there; §6.4 lists them.)
 
-   Against a log the pin writes itself, in zarith's shape: both of its
-   worlds fetch the library, so neither has the build_lib slot the
-   library's declaration checks are read at, and the fixture decides them
-   at probe_lib, where the old count saw nothing. Every §2 row of every
-   checked agreement is parsed back and held to the views the runs file
-   is written from; the witness clause keeps the comparison from passing
-   on two empty sides. *)
+   Over the chain-cell fixture, where the old count saw nothing of the
+   library's checks. Every §2 row of every checked agreement is parsed
+   back and held to the views the runs file is written from; the witness
+   clause keeps the comparison from passing on two empty sides. *)
 let agreement_counts_pin : Canary_project_test.pure_test =
   { name = "overview.agreement_counts_are_the_tables";
     check =
       (fun () ->
         let module M = Canary_matrix in
         let module R = Canary_overview_runs in
-        let project = "zarith" in
-        match List.Assoc.find Canary_registry.all_projects project ~equal:String.equal with
+        let module F = Record_fixture in
+        match chain_cell_fixture () with
         | None -> false
-        | Some pr ->
-            let root = "_out/canary/test/counts-fixture" in
-            let module F = Record_fixture in
-            let log = F.create () in
-            List.iter (Canary_project_run.scenarios_of pr) ~f:(fun a ->
-                let scenario =
-                  Stdlib.Filename.basename (Canary_project_run.scenario_dir_of ~pr_name:project a)
-                in
-                ignore (F.line log "*" "variant_start" (Some scenario) : string);
-                List.iter
-                  [ ("probe_lib", "declared_symbols_exported/declared_exports_vs_library: holds");
-                    ("probe_lib", "soname_matches_declaration/declared_soname_vs_library: undeclared");
-                    ("probe_binding_ocaml", "api_names_present/watchlist_vs_user_surface: holds");
-                    ( "probe_binding_ocaml",
-                      "dependencies_provided/recorded_dependencies_vs_world_providers: unavailable" ) ]
-                  ~f:(fun (tag, detail) ->
-                    ignore (F.line log tag "agreement_outcome" (Some detail) : string)));
-            F.save log ~root ~project;
-            let m = M.matrix_of ~root [ (project, pr) ] in
-            let views = R.views ~root m in
+        | Some (pr, m, views) ->
             let overview = M.agreement_overview m in
             (* the text of a cell, its tags dropped *)
             let text s =
@@ -8279,6 +8288,61 @@ let agreement_counts_pin : Canary_project_test.pure_test =
                      String.is_substring page ~substring:(Printf.sprintf "\"%s\":\"%s\"" w g))
             in
             decided_agree && blames_agree && witness && exported && tooltip) }
+
+(* §1'S BADGES COLOUR FROM §1.2'S CELLS (2026-09-29, design/overview.md
+   §6.4). A badge's word is [badge_word] over the checked agreements on
+   its edge, each in the word of its chain's cell, [unevaluated] where no
+   run decided anything. The badges read the record's slot columns until
+   then, so in the fetched-library worlds of sqlite, zarith and zlib the
+   realize_sys badge read unevaluated beside the library checks §1.2
+   showed decided.
+
+   Held over every view, the chain-cell fixture's and this machine's
+   recorded ones. The witness is the fixture's realize_sys badge, which
+   the slot columns left unevaluated: partial, from
+   declared_symbols_exported holding, soname_matches_declaration
+   undeclared and declared_versions_exported unevaluated. *)
+let badge_words_pin : Canary_project_test.pure_test =
+  { name = "overview.badges_colour_from_the_cells";
+    check =
+      (fun () ->
+        let module R = Canary_overview_runs in
+        let module T = Canary_topology in
+        let from_cells (v : R.view) =
+          List.for_all v.R.vw_badges ~f:(fun (e, word) ->
+              match List.Assoc.find v.R.vw_edge_claims e ~equal:String.equal with
+              | None -> false
+              | Some xs ->
+                  String.equal word
+                    (R.badge_word
+                       (List.filter_map xs ~f:(fun (slug, st) ->
+                            match st with
+                            | T.Checked ->
+                                Some
+                                  (R.outcome_word
+                                     (List.Assoc.find v.R.vw_outcomes slug ~equal:String.equal))
+                            | T.Placeholder -> None))))
+        in
+        (* and a claim with no outcome is listed only where a badge counts
+           it: a built world does not stage, so staged_interface_preserved
+           is no claim of its run *)
+        let unevaluated_only_where_counted (v : R.view) =
+          List.for_all v.R.vw_claims ~f:(fun (slug, word) ->
+              (not (String.equal word "unevaluated"))
+              || List.exists v.R.vw_edge_claims ~f:(fun (_, xs) ->
+                     List.exists xs ~f:(fun (s, st) ->
+                         String.equal s slug && Poly.equal st T.Checked)))
+        in
+        match chain_cell_fixture () with
+        | None -> false
+        | Some (pr, _, views) ->
+            let recorded = R.views (Canary_matrix.matrix_of Canary_registry.all_projects) in
+            List.for_all (views @ recorded) ~f:(fun v ->
+                from_cells v && unevaluated_only_where_counted v)
+            && List.length views = List.length (Canary_project_run.scenarios_of pr)
+            && List.for_all views ~f:(fun v ->
+                   Poly.equal (List.Assoc.find v.R.vw_badges "realize_sys" ~equal:String.equal)
+                     (Some "partial"))) }
 
 (* EVERY STEP OF A WORLD IS IN THE RECORD (2026-09-23, status.md §2.7
    phase B1). The cells hold one entry per action, while the overview
@@ -9004,6 +9068,7 @@ let base_tests : Canary_project_test.pure_test list =
       one_reader_pin;
       results_table_pin;
       agreement_counts_pin;
+      badge_words_pin;
       manifest_pin;
       placeholder_steps_pin;
       overview_overlay_pin;

@@ -96,7 +96,7 @@ empty. A cell of §1.2 is the world's worst logged verdict in the row's
 language or in none, with its blame (`Canary_matrix.chain_checks`, the
 row's `checks`), so no logged verdict is left out. §2's `decided` and
 `blame` count those cells, one per chain: a library's verdict counts once
-in each language it serves.
+in each language it serves. §1's badges colour from the same cells.
 
 **One page.** The result matrix's page, its per-machine copy and the
 per-run pages retired on 2026-09-28, and nothing a run writes is copied
@@ -453,10 +453,6 @@ find them. What they left open:
   where the chain decided the check, and §2 counts it. One cell: zarith's
   built world decides `api_names_present`, whose one site is
   `install_surf`, and no fetch installs a built binding's surface.
-- §1's badges still read the record's slot columns (`row.claims`), so in
-  the fetched-library worlds of sqlite, zarith and zlib the `realize_sys`
-  badge reads `unevaluated` where §1.2 shows the library's checks
-  decided.
 - The ten action families with no edge have no frame, so their steps
   have no column.
 - The staged copy is never named. An installed-library world stages the
@@ -494,6 +490,7 @@ find them. What they left open:
 | `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it |
 | `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
 | `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; §1.2's tooltip glosses each blame |
+| `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |
 | `matrix.page_titles_and_agreement_overview` | the agreement overview's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
 | `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |
 | `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
