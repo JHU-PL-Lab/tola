@@ -575,6 +575,9 @@ The live picture is [`doc/canary/status.md`](doc/canary/status.md): §1
 where things stand, §2 what is open. Results are read on the overview
 page (`make view`, `docs/canary/overview.html`); its plan and open items
 are [`doc/canary/design/overview.md`](doc/canary/design/overview.md) §6.
+An agent does not read `overview.html` or `overview_runs.js` whole (about
+90 k and 110 k tokens): it queries `canary overview --json`, the runs
+file's JSON, or `canary checks`.
 Per-project findings are in
 [`doc/canary/project/issues.md`](doc/canary/project/issues.md),
 lower-priority items in [`doc/canary/backlog.md`](doc/canary/backlog.md),

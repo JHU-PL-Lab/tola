@@ -296,10 +296,14 @@ order.
   backticks an action name only when it parses.
 - §6.2 step 2, edges from the catalogue, and step 4, one typed triple.
 - A pin that the page's scripts parse, and one over §1.2 as rendered
-  (proposed 2026-09-29). No pin runs the page's JavaScript, so a syntax
+  (user, 2026-09-29). No pin runs the page's JavaScript, so a syntax
   error, or a rule in the script that hides a cell, passes them all; the
   hidden cells of 2026-09-28 were found by running §1.2's script under
-  node by hand.
+  node by hand. It needs node, a new tool assumption, so it belongs in
+  artifact-test.
+- The script's decisions move into the data (user, 2026-09-29): the five
+  rules §4 lists, and §1.2's hatching of a frame the chain lacks. Then
+  checking the views' JSON is checking what a reader sees.
 
 **C. Adds an action or a step: held** (user, 2026-09-29: "Let me/us be
 more patient on modification needing to add new actions"). Each gets a
