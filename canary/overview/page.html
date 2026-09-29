@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Canary Overview</title>
+<style>{{css}}
+{{agreements_css}}</style></head><body><main>
+
+<h1>How two package ecosystems are joined</h1>
+<p class="lede">The chain two package ecosystems form, drawn from canary's
+code (§1); what every chain canary runs recorded, laid out on it
+(<a href="#results">§1.2</a>); and the agreements that check it (§2). What
+a run recorded is read from a separate file per machine, never embedded in
+the page.</p>
+
+<div class="note"><strong>A bridge is a thing, not a relation.</strong>
+It is concrete, separate package content whose purpose is package-manager
+cooperation. It lives in neither the pure native side nor the pure
+language side — which is exactly why a binding-level view cannot see it,
+and why this page exists. It is also <em>optional</em>: two ecosystems may
+cooperate through a bridge, or through nothing but the artifacts, and a
+language package that links whatever the system installed is not thereby
+broken.</div>
+
+<div class="note"><strong>A capability file is not a bridge.</strong>
+A <code>conf-*</code> package carries package <em>identity</em> plus the
+depext mapping, and a check. A <code>.pc</code> file carries
+<em>capability</em> — a name, a version, cflags, libs — and belongs to the
+package that ships it, as a META file belongs to its OCaml package. They
+are written by different people and they can disagree, which is why the
+file is a source of claims; but what validates the symbolic path against
+the artifacts is the bridge's own check, which reads the file. Each
+package manager defines its own kinds of bridge. Cargo's
+<code>*-sys</code> topology has no bridge and a capability file, which is
+what makes it artifact-centric rather than bridgeless.</div>
+
+<h2>1. The generic chain</h2>
+<p>Nodes are what exists. An edge points from components to a component
+and carries one annotation. Most carry the <strong>action</strong> of ours
+that realizes the relation. Where we run nothing, an edge carries
+<em>information</em> in italics: whatever does establish the relation — and,
+while a package's recorded run is drawn, what that run recorded about it.
+One edge carries a
+<strong class="clm">claim</strong>, by its code, because a claim of ours
+is the only thing relating its two ends. A claim is an agreement: a row of
+§2, or a candidate one not yet in the registry. An edge's badges count the
+agreements placed on it that apply to the chain drawn — filled for those
+canary checks, hollow for those only named so far — so they change with
+the mechanism, and in a recorded run the filled one takes the colour of
+those agreements' outcomes. An agreement placed on several edges is
+counted on each. Hover an edge for what it establishes and which
+agreements its badges count.</p>
+<p class="mechnote"><strong>Not yet every step.</strong> {{missing_steps}}</p>
+<div class="key">
+{{chain_key}}
+</div>
+
+<div class="note"><strong>The artifact band is one binding mechanism.</strong>
+As first drawn it was the C-shim shape — headers, a compiled stub, a
+language module. A <code>ctypes</code> binding compiles nothing and has
+no stub node at all; its library is opened by name at import, so two of
+these edges do not merely go quiet, they do not exist. So the whole
+diagram is a <em>join</em>: one artifact-layer row (a binding mechanism,
+§4.2) with one package-and-PM row (a cooperation, §4.3), between two
+package managers (§4.1). No one table draws a chain; together they do.
+Pick below: a package manager for each side, a binding mechanism (the
+artifact band) and a cooperation (the package band) — or a package in
+canary, one of the chains canary runs (§4.4), which picks all four and
+writes under each generic label what its project declares the node is.
+A mechanism also picks the package manager that ships its language's
+bindings, and any button but a package's outlines the package nodes it
+is about. A cooperation's band is drawn from the chains that realize it,
+narrowed to the chosen package managers, so a node that is absent does
+not exist in any of them; a greyed edge exists and does not fire. The
+line under the diagram says which projects canary runs the choice for.
+The chains are switched rather than stacked: laid end to end, they are
+compared by memory, which is the one thing that makes them hard to
+compare.</div>
+<div class="note"><strong>A package's recorded run is drawn on the same
+layout.</strong> Choosing a package also draws the last run of it that a
+machine recorded, if one did — the recorded world can be switched where
+the package has several. An edge is then coloured by what the steps
+realizing it did, a claim badge by the outcomes of the claims placed
+there, and a node the run did not touch is dimmed. An edge someone else's
+rule establishes is dotted: grey where nothing is recorded, in the accent
+colour where the run recorded what that rule said — which is what a bridge
+step does: it runs the bridge's own check in its world and records the
+mapping, the capability file and pkg-config's answer. A name under a node
+is upright where the run recorded it and italic where only the project
+declares it, and a third line gives where the run placed the artifact.
+What the world's chain does not have at all is not drawn, and a claim
+sitting only there does not apply: a bridge's claims apply only where
+there is a bridge. The key and what the run recorded are under the
+diagram.</div>
+{{join_panel}}
+<p id="edet" class="edet">hover an edge</p>
+
+<div class="note warn"><strong>One edge runs both ways.</strong>
+<code>binding package</code> ↔ <code>language module</code> is an
+<em>install</em> when the binding is fetched and a <em>pack</em> when it
+is built here. Those are different actions establishing different
+relations, and which one applies is a fact about the world, not about the
+project. Both are drawn; in any given world exactly one is live.</div>
+
+<div class="note warn"><strong>There are two consumer programs, not
+one.</strong> The <em>artifact-linked</em> one is handed the language
+module and the native library by path — every input named explicitly. It
+answers <em>is the code right</em>. The <em>package-linked</em> one names
+only the binding package and lets the package manager resolve the rest.
+It answers <em>is the recipe right</em>, which fails differently: an
+install can omit a file the consumer needs, a META can be wrong, a conf
+chain can fail to resolve, and none of that is visible to the first
+probe. <strong>They should be the same program</strong> — that is what
+makes the pair informative rather than merely two tests, and the edge
+between them is a claim nothing else in this graph can make.
+<br><br><strong>The linking lift</strong> is the method that derives the
+second from the first: same source, same expected result, only the
+resolution changes — from inputs named by path to a package named by
+the consumer. It should be universal, computed from the binding
+mechanism plus a project's static facts (what the package is called,
+what the consumer imports). Where a project must customize it, the
+customization comes in two kinds that must not be confused: telling the
+lift a <em>name</em> it cannot derive is static information, while
+supplying a <em>resolution</em> the package failed to provide — an
+environment variable pointing at the native library — is the package
+admitting its recipe is insufficient, and is recorded as a finding.</div>
+
+<div class="note"><strong>The declaration is a badge, not a node.</strong>
+It used to be drawn as a box, and its position was arbitrary — nothing in
+the chain produces it, it takes part in no action, and no tool ever
+enforced it. It is the <em>experiment's own statement</em> about one
+artifact, so it is now a ◇ on the two nodes that carry one; hover for
+what is declared there. Those two account for all four
+declaration-facing claims. It also explains why they behave differently:
+such a claim cannot fail because two tools disagreed — it fails because
+the world differs from what we <em>said</em> it would be, which is a
+defect in the spec as often as in the software.</div>
+
+<div class="note warn"><strong>One node the three-layer picture does not
+have:</strong> the <em>source</em>, which the layered model carries only
+inside its package-rewrite cases, never in the base picture.</div>
+
+<h3>1.1 What each node is</h3>
+{{node_legend}}
+
+<h3 id="results">1.2 The results, one row per chain</h3>
+<p>Every chain canary runs, on each machine that recorded it: a world in one
+language, the key §1 draws. The columns are §1's actions as frames — what an
+action consumes, the checks on that input, its pieces, what it produces, the
+checks on that — by side, then flow (<code>canary checks --frames</code>). An
+artifact appears again, in grey, where it is consumed; a frame the chain does
+not have is hatched. A row's name draws it in §1, and a drawn run links back to
+its row.</p>
+<p class="rt-key"><span class="rt-ok">✓</span> ran · <span class="rt-warm">✓</span> warm ·
+<span class="rt-bad">✗</span> failed or violated · <span class="rt-xf">xf</span> expected
+failure · ⊘ blocked · · not recorded · — not in this run · ⌂ inside a package
+manager's action · ∈ included with the language · ~ someone else's relation · <span class="rt-gap">no-evid no-decl
+no-ref none</span> a check that could not decide · n/a the mechanism cannot carry
+it · <i>italic</i> declared, not recorded</p>
+<div class="rt-wrap"><table class="rt" id="rtable"></table></div>
+<p class="mechnote" id="rtnone" hidden>No run is recorded on this page yet —
+<code>canary overview</code> writes each machine's runs to
+<code>overview_runs.js</code> beside it.</p>
+<script type="application/json" id="framesdata">{{frames_json}}</script>
+
+<h2 id="overview">2. The agreement overview</h2>
+<p>Every agreement, where its rule RAN and where it is CHECKED, over the
+same frames as §1.2's result table — of which it is the template, so an
+empty column there can be looked up here, and ◆ marks the column each
+claim fills.</p>
+<div class="note warn"><strong>Two of its columns are not
+mechanism.</strong> <code>decided</code> and <code>blame</code> are
+counted from recorded runs, per agreement, so this section alone depends
+on run state — unlike everything else here. Splitting the table at that
+seam would have shown one row's halves on two pages, which is worse.</div>
+{{agreement_overview}}
+
+<h2 id="census">3. Where every claim sits, and the edges where none do</h2>
+<p>{{sites}} claims — {{sites_checked}} implemented, {{sites_named}} candidates — placed on the edges of §1.
+A <em>claim site</em> is a set of edges rather than one, and {{sites_multi}} already
+span several: the library's declaration-facing claims sit on both edges
+that can produce a library, and <code>package_resolution_suffices</code>
+runs end to end from the language PM to the package-linked program.</p>
+{{claim_sites_table}}
+
+<div class="note warn"><strong>{{bare_count}} edges carry no claim at all</strong>
+({{bare_edges}}). Every one is a relation a real tool establishes and from which we
+recover nothing. Most are the package layer and the cooperation between
+the two ecosystems; almost everything we have sits on the two edges
+where a compiler or a linker ran.</div>
+
+<div class="note"><strong>The network analogy, and where it breaks.</strong>
+Two hosts in a network stack implement the <em>same protocol</em> at each
+layer, so both a per-layer invariant and an end-to-end invariant have a
+stated contract to check against. Here the horizontal relation at the
+package layer is a bridge somebody wrote, or nothing — not a protocol,
+and not symmetric between the two sides. A bridge may carry identity
+while dropping version, which in network terms is a layer that forwards
+the address and silently discards the checksum. That asymmetry is why the
+end-to-end invariants are the ones we do not have.</div>
+
+<h2 id="tables">4. What canary covers: three tables, and the chains they compose</h2>
+<p>A chain is one binding mechanism (§4.2) between two package managers
+(two rows of §4.1), joined by their cooperation (§4.3); §4.4 lists the
+chains canary runs. Every cell is computed from canary's own code — the
+package managers' drivers, the mechanism catalogue, the bridge model, the
+cooperation kinds and the projects' declarations — so a table lists only
+what canary covers. The layered-model draft's tables were the reference
+for the columns; they also cover ecosystems canary does not reach yet
+(RPM, Cargo, Cabal, RubyGems, Conda, Nix).</p>
+<h3>4.1 Each package manager on its own</h3>
+{{pm_solo_table}}
+<h3>4.2 Binding mechanisms</h3>
+{{binding_table}}
+<h3>4.3 How two package managers cooperate</h3>
+{{coop_table}}
+{{topology_notes}}
+<h3>4.4 The chains canary runs</h3>
+<p>One row per distinct chain among a project's worlds: its binding
+language, where each side comes from, and so which cooperation joins
+them. A project appears more than once when its worlds differ — a world
+that builds its binding does not go through the package gate its project
+declares, so a chain is a fact about the world, not the project. These
+are §1's packages in canary, and each project links to its chain drawn
+there.</p>
+{{chains_table}}
+
+<div class="foot">Generated {{generated_at}}. <strong>What is derived and what is not</strong>,
+since the page is meant to trade the second for the first over time:
+the tables of §4 are computed from canary's code — the package managers'
+drivers, the mechanism catalogue, the bridge model, the cooperation kinds
+and each project's declared provisions, gates and C-API components —
+though their prose columns (what a package is, how a join travels) are
+written in <code>canary_pm_solo.ml</code> and
+<code>canary_topology.ml</code>; §1's artifact band comes from the
+mechanism catalogue, and its package band from the worlds of each
+cooperation kind, by one rule per node in <code>canary_topology.ml</code>;
+the agreement overview from the registry and recorded runs.
+The nodes, the edges and which edge each claim sits on are
+<em>hand-written lists</em> in <code>canary_topology.ml</code> —
+placeholders, checked by pins against the registry but not yet computed
+from the action catalogue — and so are the five cases §1's cooperation
+notes quote, which this page used to draw by hand and which the pins
+still hold the derivations to. Each edge's annotation is typed, though:
+an action family the catalogue has, a registered or candidate claim, or
+information; and which of the catalogue's actions have no edge is
+computed. The diagram is SVG emitted from that data, with one
+hand-placed coordinate per node. A package's recorded run is not in this
+page: it is read from <code>overview_runs.js</code> (one per machine),
+which <code>canary overview</code> computes from the run record — each
+edge's state from the steps placed on it, each badge from its claims'
+outcomes, and the edges around a bridge from what a bridge step recorded
+(one bridge so far: conf-gmp, on zarith).
+· <a href="#results">the results (§1.2)</a></div>
+{{scripts}}</main></body></html>

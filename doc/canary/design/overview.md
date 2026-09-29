@@ -27,7 +27,7 @@ page.
 | §2, the agreement overview | `Canary_matrix.agreement_overview` | the registry; `decided` and `blame` are counted over §1.2's cells |
 | §3, the census | `Canary_overview_page.claim_sites_table` | the claim sites and the registry |
 | §4's tables | `Canary_pm_solo`, the mechanism catalogue, `Canary_topology.coop_catalogue`, `Canary_overview_join.cases_of` | code; their prose columns are hand-written |
-| the stylesheets and scripts | `canary/overview/` (`page.css`, `results.css`, `agreements.css`, `page.js`, `results.js`), inlined by `Canary_overview_assets` | hand-written files; artifact-test's `overview.scripts_parse` runs `node --check` on the scripts |
+| the page's prose, stylesheets and scripts | `canary/overview/`: `page.html`, the template whose `{{slots}}` `Canary_overview_page.render` fills, and `page.css`, `results.css`, `agreements.css`, `page.js`, `results.js`, inlined by `Canary_overview_assets` | hand-written files; artifact-test's `overview.scripts_parse` runs `node --check` on the scripts |
 
 The page's script looks answers up in the embedded data and the runs
 files and decides nothing of its own, except in the five places §4 lists.
@@ -242,8 +242,8 @@ One kind of information has one home: logic in small OCaml modules, the
 stylesheets and scripts in `canary/overview/`, the page's prose in a
 template there with slots the generator fills, design here, history in
 the worklog and the commits. The steps: (1) the stylesheets and scripts
-move out, done 2026-09-29; (2) the page's prose moves into the template;
-(3) `canary_overview_page.ml` splits into the diagram, the two checked
+move out, done 2026-09-29; (2) the page's prose moves into the template,
+done 2026-09-29; (3) `canary_overview_page.ml` splits into the diagram, the two checked
 lists, the tables, the hand-drawn cases and the assembly, and §2 leaves
 `canary_matrix.ml` for its own module; (4) the moved code keeps short
 comments that state the concluded design (CLAUDE.md's Conventions).
@@ -563,6 +563,7 @@ copy is named) closed the rest.
 | `steps.gate_is_read_after_its_bridge_runs` | the gate fires at the probe, reads the file the bridge step writes, and the probe waits for that step |
 | `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
 | `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it; a library's node is the copy its step looked at |
+| `overview.template_slots_are_filled` | the page's template is filled exactly: a slot with no value, a value with no slot or an unclosed slot fails |
 | `overview.staged_copy_is_named` | an installed world's staged copy is named and counted from its own inspection, and the build tree's copy from its own |
 | `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
 | `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; §1.2's tooltip glosses each blame |

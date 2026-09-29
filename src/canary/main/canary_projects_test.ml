@@ -1279,6 +1279,28 @@ let one_reader_pin : Canary_project_test.pure_test =
         && Poly.equal (node ~location:Canary_store.Staged ()) (Some "staged_sys"))
   }
 
+(* THE PAGE IS A TEMPLATE (2026-09-29): its prose is
+   [canary/overview/page.html], whose [{{slot}}]s [render] fills. A slot
+   with no value, a value with no slot, or an unclosed slot fails the
+   fill. *)
+let template_pin : Canary_project_test.pure_test =
+  { name = "overview.template_slots_are_filled";
+    check =
+      (fun () ->
+        let module A = Canary_overview_assets in
+        let raises f = match f () with _ -> false | exception Failure _ -> true in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+        in
+        String.equal
+          (A.fill_text ~what:"t" "a{{x}}b{{y}}c" [ ("x", "1"); ("y", "{{z}}") ])
+          "a1b{{z}}c"
+        && raises (fun () -> A.fill_text ~what:"t" "a{{x}}b" [])
+        && raises (fun () -> A.fill_text ~what:"t" "ab" [ ("x", "1") ])
+        && raises (fun () -> A.fill_text ~what:"t" "a{{x" [ ("x", "1") ])
+        && String.is_prefix page ~prefix:"<!DOCTYPE html>")
+  }
+
 (* THE RESULT TABLE JOINS THE PAGE (2026-09-28, user: one page, prototype
    A; design/overview.md §6.4 step 3). §1.2 lays the runs files' views out
    over [Canary_frames]' columns and computes nothing. Held:
@@ -9132,6 +9154,7 @@ let base_tests : Canary_project_test.pure_test list =
       gate_after_bridge_pin;
       frames_pin;
       one_reader_pin;
+      template_pin;
       results_table_pin;
       agreement_counts_pin;
       badge_words_pin;
