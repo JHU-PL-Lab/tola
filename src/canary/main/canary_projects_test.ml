@@ -5255,7 +5255,7 @@ let blame_attribution_pin : Canary_project_test.pure_test =
    an index cell from the method's FIRING in an actual world. llvm
    derives an [install_lib] step, no llvm world is [Installed], so
    [staged_interface_preserved] slots there and fires nowhere, and
-   `canary result llvm` carries an [install_lib_post:sip] column that no
+   llvm's run record carries an [install_lib_post:sip] column that no
    llvm world can fill. That is a real observation about the result
    table and it is written down in issues rather than pinned here —
    pinning a containment that is false would only teach the next person
@@ -7826,8 +7826,8 @@ module Record_fixture = struct
     | _ -> None
 end
 
-(* THE RUN RECORD (2026-09-23, status.md §2.7 phase A). `canary result
-   --json` is what the overview will draw recorded runs from, so two
+(* THE RUN RECORD (2026-09-23, status.md §2.7 phase A). The record
+   (`canary overview --json`) is what the overview draws recorded runs from, so two
    things must hold, and this pins both against a log it writes itself.
 
    (1) THE RECORD READS THE LOG. Every step state the log can express

@@ -212,12 +212,16 @@ The override exists so that one machine can show what the other will do.
 It reaches the whole pipeline — verified end to end:
 
 ```console
-$ canary result zlib --md | grep -o '| brew [^|]*'
-| brew zlib.1.3.2
+$ canary overview --json zlib | grep -o '"lib": "apt[^"]*"'
+"lib": "apt zlib1g-dev.1:1.3.dfsg"
 
-$ canary --platform=wsl result zlib --md | grep -o '| apt [^|]*'
-| apt zlib1g-dev
+$ canary --platform=macos overview --json zlib | grep -o '"lib": "brew[^"]*"'
+"lib": "brew zlib"
 ```
+
+(On WSL, 2026-09-28. The version comes from asking this machine's
+package manager, so the mac-side rendering here has none; on the mac it
+reads `brew zlib.1.3.2`.)
 
 **A hypothetical render is not a record.** Found by doing it: the first
 `--platform=wsl result` on the mac overwrote `docs/…/matrix.html` — the

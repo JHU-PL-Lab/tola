@@ -109,8 +109,8 @@ Tool / empirical (**agent-ownable**):
 - [ ] **Concrete checking** — the agreement registry (§4 stage 2). The
       runner side lands projects fine; what a landing *checks* is still
       per-project tables plus c1..c8. This is
-      [`../status.md`](status.md) M2 step 6. The Agreement overview in
-      `canary result` is the live catalogue; rationale is in
+      [`../status.md`](status.md) M2 step 6. The Agreement overview (§2
+      of the overview page) is the live catalogue; rationale is in
       [components.md](design/agreement/components.md) and open engineering
       work in [backlog.md](backlog.md) §51.
       **Not descopable** (user, 2026-08-26).

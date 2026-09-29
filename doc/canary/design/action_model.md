@@ -28,7 +28,7 @@ though it were the action.
 
 ## 2. `<action>_post` is a hook, not a specification
 
-`canary result`'s columns read `pre → action → artifact → post`. The
+The run record's columns read `pre → action → artifact → post`. The
 `_post` half is **a trigger moment: "the action has run, its outputs
 exist"** — not a statement of what runs there.
 
@@ -287,7 +287,7 @@ one of these is in it.
 | what the agreement layer reads | where | if §9 moves it |
 | --- | --- | --- |
 | **`ag_rooted_in.rt_action` is a STRING**, parsed by `action_of_string` | 10 registry rows | a renamed or split action stops parsing → the `R` mark silently vanishes. `agreements.rooting_names_an_action`, `agreements.overview_matches_rooting` |
-| **`ag_slot` maps a claim to (action, stage)** — its column in `canary result` | every row | a moved action moves or deletes a check column. `matrix.key_explains_every_check_column`, `checks.index_speaks_each_action_language` |
+| **`ag_slot` maps a claim to (action, stage)** — its column in the run record | every row | a moved action moves or deletes a check column. `matrix.key_explains_every_check_column`, `checks.index_speaks_each_action_language` |
 | **`m_firing` names actions** — `firing_default`, `firing_lib_declaration`, `firing_probe_only` | `canary_agreement_common.ml` | a split changes WHERE claims fire: semantics, not a rename. `agreements.firing_defaults` |
 | **The overview's columns ARE `store_actions`** | `overview_columns ()` | the table's width, row order and `lag` move with the catalogue. `agreements.rows_obey_their_own_laws`, `agreements.overview_groups_a_claims_patterns`, `matrix.page_titles_and_agreement_overview` |
 | **`retarget_action` enumerates the lang-carrying constructors** | `canary_agreement.ml` | a NEW constructor carrying a language must be added there, or a row's `R` lands in another language's column. `agreements.rooting_speaks_the_rows_language` |

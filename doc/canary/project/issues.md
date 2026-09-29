@@ -31,10 +31,10 @@
 > torch merely surfaced stay here — the `status` substring bug below is
 > one.
 
-### Open — `canary result` can show a check column no world can fill (2026-09-15)
+### Open — the result table can show a check no world can fill (2026-09-15)
 
-`canary result llvm` carries an `install_lib_post:sip` column whose every
-cell is, and will stay, blank. llvm derives an `install_lib` step, so
+llvm's rows carry a `sip` check (the run record's `install_lib_post:sip`
+column) whose every cell is, and will stay, blank. llvm derives an `install_lib` step, so
 `staged_interface_preserved`'s SLOT resolves against its chain and the
 column appears; but no llvm world is `Installed`, so the method's FIRING
 never selects it and nothing can ever decide it.
@@ -106,6 +106,13 @@ over each SCENARIO's chain rather than calling it once on the union of
 actions. zarith would then gain a `probe_binding_ocaml_pre:dp` column
 that only row #2 fills. Same root cause as the llvm case above, so both
 should be decided together.
+
+**The second instance is resolved on the page (2026-09-28).** The result
+table (overview §1.2) shows each outcome where the agreement sits on the
+chain, not at its slot, so zarith's fetched-binding row shows `dp`'s
+`holds` in its build_binding frame (`design/overview.md` §6.4 step 3).
+The run record's slot columns still drop it, but nothing renders them
+any more. The llvm case stands as decided above.
 
 ### Open — z3's local publish cannot succeed, so the package it makes is never exercised (2026-09-15)
 
@@ -573,7 +580,7 @@ ACTION vocabulary does not: `Probe_binding of lang` and
 
 - `canary emit tiny-full --stage realize` shows ONE
   `build_binding_python` / `probe_binding_python` pair, not two;
-- that is one log tag and one `canary result` column, so an
+- that is one log tag and one result-table column, so an
   `agreement_outcome` cannot say which binding produced it;
 - `an_mechanisms` is an assoc list and `mechanism_for` takes the first,
   so pass 2 computes applicability for **Cext alone** and never asks

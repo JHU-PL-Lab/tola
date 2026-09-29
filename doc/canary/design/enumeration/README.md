@@ -88,8 +88,9 @@ world) and pass 6 (build-vs-install parity is a check).
 - **Adding an action** — [`../action_playbook.md`](../action_playbook.md);
   what an action IS, and what `_post` means, is
   [`../action_model.md`](../action_model.md).
-- **Reporting** — [`../matrix.md`](../matrix.md). `canary result` reads
-  `actions.log` after a run, so it is a CONSUMER of the pipeline's
+- **Reporting** — [`../matrix.md`](../matrix.md). The run record
+  (`canary overview --json`) reads `actions.log` after a run, so it is
+  a CONSUMER of the pipeline's
   output, not a pass in it. It was numbered as one until 2026-08-24.
 - What a check **CLAIMS** — `../agreement/`, and start at its
   [`README.md`](../agreement/README.md).

@@ -138,7 +138,7 @@ Bad scenarios come in two flavors:
 ## Agreement catalogue
 
 The names are the registry's; the tags are what a scenario name carries.
-The Agreement overview in `canary result` shows the live list;
+The Agreement overview on the overview page (`make view`) shows the live list;
 `canary checks --agreement NAME` prints a claim and its reference expectations.
 The numbered
 `c1`..`c9` identifiers were retired on 2026-09-12, and the three that compared

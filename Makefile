@@ -95,7 +95,7 @@ canary-agreement-roundtrip:
 # A warm step re-checks nothing and logs nothing, so a project's
 # recorded outcomes outlive the registry that produced them: after
 # applicability became a static property (2026-09-14) the old
-# `not_applicable` lines stayed in the logs, and `canary result` marks
+# `not_applicable` lines stayed in the logs, and the result table marks
 # those cells `stale`. This is how you clear them.
 # It drops the markers of the steps that DECIDE — probes, binding
 # builds, staging — and re-runs. Fetches and the library build stay
@@ -114,7 +114,7 @@ canary-refresh:
 	        "_out/canary/projects/$(PROJECT)/$$s"/*/*.ok 2>/dev/null; \
 	done; true
 	$(CANARY) action $(PROJECT)
-	@echo "refresh: $(PROJECT) re-decided its agreements — 'canary result $(PROJECT)' to see the gap"
+	@echo "refresh: $(PROJECT) re-decided its agreements — 'make view' to see the gap on the overview page (§1.2)"
 
 # Print the live catalogue. The Agreement overview is the primary reference;
 # no generated catalogue is maintained in the design docs.

@@ -152,7 +152,7 @@ inputs somewhere else:
 
 | function | question |
 | --- | --- |
-| `carries t ~lang slug` | can this project decide this AGREEMENT here? (`canary result`'s columns) |
+| `carries t ~lang slug` | can this project decide this AGREEMENT here? (the run record's check columns) |
 | `suits t ~lang m` | …this METHOD? (the check index, which counts methods) |
 | `mechanism_for t lang` | what does this project bind this language through? |
 | `langs t` | which languages does it declare? |

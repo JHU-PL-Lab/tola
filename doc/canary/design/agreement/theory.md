@@ -3,7 +3,7 @@
 **Kind: theory.** Why there is anything to check at all, what an agreement
 *is* in terms of the actions that build software, and a procedure for finding
 the next one. [components.md](components.md) explores the same space by
-component. The Agreement overview in `canary result` contains the registered
+component. The Agreement overview on the overview page contains the registered
 claims; [README.md](README.md) explains how to read their results.
 
 This document does not describe what Canary runs. It describes the thing

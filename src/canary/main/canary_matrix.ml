@@ -9,10 +9,11 @@ open Base
    per-scenario run record). The future extension: pre/post-check
    columns ("each checks") appended to the action set.
 
-   Rendered in the cmd (text/md/json). Its web page retired on
-   2026-09-28: the table on the web is §1.2 of [docs/canary/overview.html],
-   drawn from the views [Canary_overview_runs] computes from this record
-   (design/overview.md §6.4). Pure read — no execution. *)
+   Exported as the run record by `canary overview --json`. Its web page
+   and its terminal tables retired on 2026-09-28: the table is §1.2 of
+   [docs/canary/overview.html], drawn from the views
+   [Canary_overview_runs] computes from this record (design/overview.md
+   §6.4). Pure read — no execution. *)
 
 (** WHAT A CELL'S MARK WAS RENDERED FROM (2026-09-23, status.md §2.7
     phase A — the record a run overlay reads). The mark is for a reader
@@ -1110,9 +1111,6 @@ let mark_of_outcome = function
   | "not_implemented" -> "planned"
   | _ -> "·"
 
-(** Is this mark a verdict the check actually reached? *)
-let is_verdict = function "✓" | "✗" -> true | _ -> false
-
 (* ── BLAME (2026-09-15, user) ──────────────────────────────────────
 
    A check column exists only when some method has an EVALUATOR and the
@@ -1803,277 +1801,6 @@ let matrix_of ?(root = "_out")
   { setting_columns = List.map setting_cols ~f:fst; columns;
     typed_columns = cols; check_columns; artifact_columns; rows }
 
-(* ── text renderer ── *)
-
-(** Per-project grouped sections; columns with no chain presence in
-    the group are elided (the honest blank is invisible, not a glyph). *)
-let pp_text (m : t) : unit =
-  let groups =
-    List.group m.rows ~break:(fun a b ->
-        not (String.equal a.project b.project))
-  in
-  let width = 14 in
-  List.iter groups ~f:(fun group ->
-      (match group with
-       | [] -> ()
-       | (r : row) :: _ ->
-           (* a column is in the group when any row's cell is non-None *)
-           let used =
-             List.filter m.columns ~f:(fun tag ->
-                 List.exists group ~f:(fun (rr : row) ->
-                     match
-                       List.Assoc.find rr.cells tag ~equal:String.equal
-                     with
-                     | Some (Some _) -> true
-                     | _ -> false))
-           in
-           let pad s =
-             if String.length s >= width then s ^ " "
-             else s ^ String.make (width - String.length s) ' '
-           in
-           (* the terminal view is column-aligned, so an over-long setting
-              (a verbose declared package) is elided rather than allowed to
-              shift the row; md/html/json carry it in full *)
-           let fit s =
-             if String.length s <= width - 1 then s
-             else String.prefix s (width - 2) ^ "…"
-           in
-           (* the SETTING block, elided per group like the action columns:
-              only the artifacts THIS project declares *)
-           let set_used =
-             List.filter m.setting_columns ~f:(fun label ->
-                 List.exists group ~f:(fun (rr : row) ->
-                     match
-                       List.Assoc.find rr.settings label ~equal:String.equal
-                     with
-                     | Some (Some _) -> true
-                     | _ -> false))
-           in
-           (* a check column is rendered by its STAGE alone: it is
-              always adjacent to the action it names, so repeating
-              [probe_binding_python] in the header buys nothing and
-              costs 20 columns of width *)
-           (* A CHECK column is one agreement, and its full label
-              ([probe_binding_ocaml_pre:required_symbols_exported]) is
-              far too wide for a terminal. The action is adjacent, so
-              the header carries the STAGE and the agreement's
-              initials: »pre·rse. The initials are unique across the
-              thirteen, and the legend below names them. *)
-           (* the terminal drops only the ACTION half — it is the
-              column immediately to the left — and keeps the code, which
-              is already the name *)
-           let header tag =
-             if List.mem m.check_columns tag ~equal:String.equal then
-               match String.lsplit2 tag ~on:':' with
-               | Some (slot, code) ->
-                   (if String.is_suffix slot ~suffix:"_post" then "»" else "›")
-                   ^ code
-               | None -> tag
-             else if List.mem m.artifact_columns tag ~equal:String.equal then
-               match String.lsplit2 tag ~on:'=' with
-               | Some (_, kind) -> "=" ^ kind
-               | None -> tag
-             else tag
-           in
-           (* GROUP BY ACTION (2026-09-14, user). A row is
-              [›pre … action …=out …»post] repeated, and with nothing
-              between groups the eye cannot tell where one action's
-              columns stop. A bar before each action's leading column
-              is the same device the setting block already uses to
-              separate the world from the run. *)
-           let group_of tag =
-             if List.mem m.check_columns tag ~equal:String.equal then
-               Option.value_map (String.lsplit2 tag ~on:':') ~default:tag
-                 ~f:(fun (slot, _) ->
-                   Option.value
-                     (String.chop_suffix slot ~suffix:"_post")
-                     ~default:
-                       (Option.value
-                          (String.chop_suffix slot ~suffix:"_pre")
-                          ~default:slot))
-             else if List.mem m.artifact_columns tag ~equal:String.equal then
-               Option.value_map (String.lsplit2 tag ~on:'=') ~default:tag ~f:fst
-             else tag
-           in
-           let with_bars f =
-             let _, out =
-               List.fold used ~init:(None, []) ~f:(fun (prev, acc) tag ->
-                   let g = group_of tag in
-                   let sep =
-                     match prev with
-                     | Some p when not (String.equal p g) -> [ "| " ]
-                     | _ -> []
-                   in
-                   (Some g, acc @ sep @ [ f tag ]))
-             in
-             String.concat ~sep:"" out
-           in
-           Fmt.pr "@.%s — %d scenario(s)@." r.project (List.length group);
-           Fmt.pr "  %s%s| %s@." (pad "#")
-             (String.concat ~sep:"" (List.map set_used ~f:pad))
-             (with_bars (fun t -> pad (header t)));
-           List.iter group ~f:(fun (rr : row) ->
-               let cells =
-                 with_bars (fun tag ->
-                     match
-                       List.Assoc.find rr.cells tag ~equal:String.equal
-                     with
-                     (* an artifact a failing check read: marked, not
-                        coloured, because the terminal has no red *)
-                     | Some (Some c)
-                       when List.mem m.artifact_columns tag ~equal:String.equal
-                            && Option.is_some c.detail ->
-                         pad (fit ("!" ^ c.mark))
-                     | Some (Some c) -> pad c.mark
-                     | Some None -> pad ""
-                     | None -> pad "")
-               in
-               let sets =
-                 List.map set_used ~f:(fun label ->
-                     match
-                       List.Assoc.find rr.settings label ~equal:String.equal
-                     with
-                     (* the terminal has no red, so an implicated
-                        artifact is marked rather than coloured — the
-                        same information, in the medium that carries *)
-                     | Some (Some s) when Option.is_some s.implicated ->
-                         pad ("!" ^ fit s.text)
-                     | Some (Some s) -> pad (fit s.text)
-                     | _ -> pad "—")
-               in
-               (* the global row index: "#N" for fast pointing; the
-                  stable code is the historical pointer (see {!row.code}) *)
-               Fmt.pr "  %s%s| %s@."
-                 (pad (Printf.sprintf "#%d" rr.index))
-                 (String.concat ~sep:"" sets)
-                 cells)));
-  let total = List.length m.rows in
-  Fmt.pr "@.legend: ✓ done · not run ⊘ blocked xfail[cN] expected failure (cN confirming contracts) ✗ failed@.";
-  (* the CHECK legend, printed only when there are check columns to
-     explain. The initials are unambiguous but not guessable, and a
-     three-letter column head with no key is a puzzle rather than a
-     table. [›] is a requirement the next action depends on, [»] a
-     verdict on what the last one made, [=] the artifact itself. *)
-  (if not (List.is_empty m.check_columns) then
-     let seen =
-       List.filter_map m.check_columns ~f:(fun c ->
-           Option.map (String.lsplit2 c ~on:':') ~f:snd)
-       |> List.dedup_and_sort ~compare:String.compare
-     in
-     Fmt.pr
-       "checks: › needed before the action  » verdict on what it made  = the \
-        artifact@.        %s@."
-       (String.concat ~sep:"  "
-          (List.filter_map (Canary_agreement.summary_rows ()) ~f:(fun r ->
-               if
-                 List.mem seen r.Canary_agreement.sr_code ~equal:String.equal
-               then
-                 Some
-                   (r.Canary_agreement.sr_code ^ " "
-                  ^ r.Canary_agreement.sr_slug)
-               else None))));
-  (* AND WHAT A NON-VERDICT CELL SAYS. A symbol means the check reached
-     a verdict, a word means it did not — the words are meant to read
-     without a key, but [no-ref] is the one that does not quite, so the
-     whole set is glossed rather than the odd one out. *)
-  (if
-     List.exists m.rows ~f:(fun (r : row) ->
-         List.exists r.cells ~f:(function
-           | _, Some c -> not (is_verdict c.mark || String.equal c.mark "·")
-           | _ -> false))
-   then
-     Fmt.pr
-       "        no-evid nothing wrote the evidence  no-decl the project \
-        declared nothing  none nothing of this kind here@.        \
-        no-ref nothing to compare against  stale log predates the \
-        registry  off disabled@.");
-  (* THE GAP, COUNTED (2026-09-15, user). A check column exists only
-     where the claim CAN be decided, so every non-verdict cell in one is
-     a defect rather than a blank — and the blame says whose. Printed
-     only when there is a gap, because a clean table should not carry a
-     paragraph explaining an empty set. *)
-  (let counts : (string, int) Hashtbl.t = Hashtbl.create (module String) in
-   List.iter m.rows ~f:(fun (r : row) ->
-       List.iter r.cells ~f:(fun (_, cell) ->
-           match cell with
-           | Some { blame = Some b; _ } ->
-               Hashtbl.update counts b ~f:(function None -> 1 | Some n -> n + 1)
-           | _ -> ()));
-   let rows =
-     Hashtbl.to_alist counts
-     |> List.sort ~compare:(fun (_, a) (_, b) -> Int.compare b a)
-   in
-   if not (List.is_empty rows) then begin
-     Fmt.pr "@.gap: %s@."
-       (String.concat ~sep:"  "
-          (List.map rows ~f:(fun (b, n) -> Printf.sprintf "%d %s" n b)));
-     List.iter blame_gloss ~f:(fun (w, g) ->
-         if List.Assoc.mem rows w ~equal:String.equal then
-           Fmt.pr "     %-12s %s@." w g)
-   end);
-  Fmt.pr "%d scenario(s) across %d project(s)@." total
-    (List.length (List.dedup_and_sort ~compare:String.compare (List.map m.rows ~f:(fun r -> r.project))))
-
-(* ── markdown renderer (GH-renderable) ── *)
-
-let pp_md (m : t) : unit =
-  List.iter (List.group m.rows ~break:(fun a b ->
-      not (String.equal a.project b.project))) ~f:(fun group ->
-      match group with
-      | [] -> ()
-      | (r : row) :: _ ->
-          let used =
-            List.filter m.columns ~f:(fun tag ->
-                List.exists group ~f:(fun (rr : row) ->
-                    match
-                      List.Assoc.find rr.cells tag ~equal:String.equal
-                    with
-                    | Some (Some _) -> true
-                    | _ -> false))
-          in
-          let set_used =
-            List.filter m.setting_columns ~f:(fun label ->
-                List.exists group ~f:(fun (rr : row) ->
-                    match
-                      List.Assoc.find rr.settings label ~equal:String.equal
-                    with
-                    | Some (Some _) -> true
-                    | _ -> false))
-          in
-          Fmt.pr "### %s@." r.project;
-          Fmt.pr "| # | %s | %s | scenario |@."
-            (String.concat ~sep:" | " set_used)
-            (String.concat ~sep:" | " used);
-          Fmt.pr "| --- | %s | %s | --- |@."
-            (String.concat ~sep:" | " (List.map set_used ~f:(fun _ -> "---")))
-            (String.concat ~sep:" | " (List.map used ~f:(fun _ -> "---")));
-          List.iter group ~f:(fun (rr : row) ->
-              let cells =
-                List.map used ~f:(fun tag ->
-                    match
-                      List.Assoc.find rr.cells tag ~equal:String.equal
-                    with
-                    | Some (Some c) -> c.mark
-                    | Some None -> " "
-                    | None -> " ")
-              in
-              let sets =
-                List.map set_used ~f:(fun label ->
-                    match
-                      List.Assoc.find rr.settings label ~equal:String.equal
-                    with
-                    | Some (Some s) -> s.text
-                    | _ -> "—")
-              in
-              (* the scenario id stays as the LAST column: the setting
-                 block names the world, but the id is what `_out` dirs and
-                 `canary status` are keyed by *)
-              Fmt.pr "| #%d | %s | %s | %s |@." rr.index
-                (String.concat ~sep:" | " sets)
-                (String.concat ~sep:" | " cells)
-                rr.scenario);
-          Fmt.pr "@.")
-
 (* ── JSON — THE RUN RECORD (2026-09-23, status.md §2.7 phase A) ──
 
    What a program reads to draw a recorded run — first the overview's
@@ -2250,7 +1977,7 @@ let to_json (m : t) : Yojson.Basic.t =
                                   `List (List.map c.ch_claims ~f:(fun s -> `String s)) ) ])) )
                  ])) ) ]
 
-(** THE RECORD AS PRINTED — what [canary result --json] writes to stdout,
+(** THE RECORD AS PRINTED — what [canary overview --json] writes to stdout,
     and ALL it writes (§2.7 finding 1: the page notice used to follow it,
     and the output did not parse). A function rather than a line in the
     command so a pin can parse exactly the text a consumer receives. *)

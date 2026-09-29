@@ -1523,72 +1523,6 @@ let verify_cmd =
           outcomes. Reports per-layer prediction-vs-observation alignment.")
     Term.(const run $ project $ variant $ const ())
 
-(* ── the result table (2026-08-17) ── *)
-let result_cmd =
-  let project =
-    Arg.(
-      value
-      & pos 0 (some string) None
-      & info [] ~docv:"PROJECT"
-          ~doc:
-            "Project to restrict the matrix to (default @all — every \
-             registry project).")
-  in
-  let md =
-    Arg.(
-      value & flag
-      & info [ "md" ]
-          ~doc:
-            "Render as markdown tables (per-project sections) instead of \
-             the aligned text view.")
-  in
-  let json =
-    Arg.(
-      value & flag
-      & info [ "json" ]
-          ~doc:
-            "Print the RUN RECORD as JSON instead of the text view: typed \
-             columns, and per cell the step's state (ran/warm/blocked/\
-             unrecorded), the agreement outcome, and when the log recorded \
-             it; per row the platform the run logged. Stdout carries the \
-             JSON and nothing else.")
-  in
-  let run project md json () =
-    let projects =
-      match project with
-      | Some p -> (
-          match List.assoc_opt p Canary_registry.all_projects with
-          | Some pr -> [ (p, pr) ]
-          | None ->
-              Fmt.epr "Unknown project: %s@." p;
-              Stdlib.exit 2)
-      | None -> Canary_registry.all_projects
-    in
-    let m = Canary_matrix.matrix_of projects in
-    if json then
-      (* THE RUN RECORD (2026-09-23, status.md §2.7 phase A): the JSON
-         and nothing else on stdout — the page notice used to follow it,
-         so no consumer could parse the output (finding 1). *)
-      print_string (Canary_matrix.json_export m)
-    (* WRITES NOTHING, in every view (2026-09-28). The text and markdown
-       views used to refresh the web page as a side effect of the read;
-       that page retired (design/overview.md §6.4 step 5), and the table
-       on the web is §1.2 of the overview, which `canary overview`
-       writes. *)
-    else if md then Canary_matrix.pp_md m
-    else Canary_matrix.pp_text m
-  in
-  Cmd.v
-    (Cmd.info "result"
-       ~doc:
-         "The result table: rows = project × scenario (the enumerated \
-          worlds), columns = actions, cells = last-run verdicts \
-          (✓/✗/xfail[cN]/·/⊘). Pure read of the run artifacts; writes \
-          nothing. The table on the web is §1.2 of \
-          docs/canary/overview.html, which `canary overview` writes. \
-          --json prints the run record.")
-    Term.(const run $ project $ md $ json $ const ())
-
 (* THE OVERVIEW PAGE (2026-09-23, user: "the page contains more material
    than `canary checks --topology` suggests"). It holds the layered chain,
    the concrete cases, the agreement overview, the claim census and the
@@ -1608,40 +1542,95 @@ let result_cmd =
    so they still are — reading the catalogue would have added muted z3's
    stale logs to every count and changed a table this move was meant to
    leave alone. The topologies read DECLARATIONS, where muting must not
-   hide a project, so they use the catalogue. *)
+   hide a project, so they use the catalogue.
+
+   THE ONE RESULTS COMMAND (2026-09-28, user: "can we keep use one
+   command e.g. overview"). `canary result` folded in here: its `--json`
+   is this command's, and its text and markdown tables went. They drew
+   the result matrix's old layout — a world per row, a check at its slot
+   — so keeping them meant a second table to keep in step with §1.2,
+   which is why the matrix's page retired. *)
 let overview_cmd =
-  let run () =
-    let now =
-      let tm = Unix.localtime (Unix.gettimeofday ()) in
-      Printf.sprintf "%04d-%02d-%02d %02d:%02d" (tm.tm_year + 1900)
-        (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
-    in
-    let m = Canary_matrix.matrix_of Canary_registry.all_projects in
-    let overview = Canary_matrix.agreement_overview m in
-    Canary_overview_page.write Canary_registry.all_specs ~overview
-      ~generated_at:now;
-    Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
-    Fmt.pr "wrote %s/{%s} (pointers to its §1.2)@."
-      Canary_overview_page.pointer_dir
-      (String.concat "," Canary_overview_page.pointer_files);
-    (* §2.1's recorded worlds, beside the page and never inside it
-       (status.md §2.7 phase C) — the tracked copy only when this machine
-       is rendering itself *)
-    Fmt.pr "wrote %s@." (Canary_overview_runs.write m ~generated_at:now)
+  let project =
+    Arg.(
+      value
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT"
+          ~doc:
+            "With --json, the project to restrict the record to (default: \
+             every registry project). The page always covers them all.")
+  in
+  let json =
+    Arg.(
+      value & flag
+      & info [ "json" ]
+          ~doc:
+            "Print the RUN RECORD as JSON instead of writing the page: \
+             typed columns, and per cell the step's state (ran/warm/\
+             blocked/unrecorded), the agreement outcome, and when the log \
+             recorded it; per row the platform the run logged, its steps, \
+             edges, claims and chains. Stdout carries the JSON and nothing \
+             else, and nothing is written.")
+  in
+  let run project json () =
+    if json then begin
+      let projects =
+        match project with
+        | Some p -> (
+            match List.assoc_opt p Canary_registry.all_projects with
+            | Some pr -> [ (p, pr) ]
+            | None ->
+                Fmt.epr "Unknown project: %s@." p;
+                Stdlib.exit 2)
+        | None -> Canary_registry.all_projects
+      in
+      (* THE RUN RECORD (2026-09-23, status.md §2.7 phase A): the JSON
+         and nothing else on stdout — the page notice used to follow it,
+         so no consumer could parse the output (finding 1). *)
+      print_string
+        (Canary_matrix.json_export (Canary_matrix.matrix_of projects))
+    end
+    else begin
+      (match project with
+       | Some p ->
+           Fmt.epr
+             "canary overview: the page covers every project; a project \
+              (%s) narrows only --json@."
+             p;
+           Stdlib.exit 2
+       | None -> ());
+      let now =
+        let tm = Unix.localtime (Unix.gettimeofday ()) in
+        Printf.sprintf "%04d-%02d-%02d %02d:%02d" (tm.tm_year + 1900)
+          (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
+      in
+      let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+      let overview = Canary_matrix.agreement_overview m in
+      Canary_overview_page.write Canary_registry.all_specs ~overview
+        ~generated_at:now;
+      Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
+      Fmt.pr "wrote %s/{%s} (pointers to its §1.2)@."
+        Canary_overview_page.pointer_dir
+        (String.concat "," Canary_overview_page.pointer_files);
+      (* the recorded worlds, beside the page and never inside it
+         (status.md §2.7 phase C) — the tracked copy only when this
+         machine is rendering itself *)
+      Fmt.pr "wrote %s@." (Canary_overview_runs.write m ~generated_at:now)
+    end
   in
   Cmd.v
     (Cmd.info "overview"
        ~doc:
          "Render the OVERVIEW page (docs/canary/overview.html): the layered \
           chain from the package managers down to the running program, \
-          the concrete cooperation cases, the result table (§1.2), the \
-          agreement overview, where every claim sits and which relations \
-          carry none, and the cooperation topologies. Also writes this \
-          machine's recorded worlds (docs/canary/overview_runs.js, _mac on \
-          macOS), which §1 and §1.2 draw, and the pointers that keep the \
-          retired result page's addresses (docs/canary/projects/) landing \
-          on §1.2. Runs nothing.")
-    Term.(const run $ const ())
+          the result table (§1.2), the agreement overview, where every \
+          claim sits and which relations carry none, and the cooperation \
+          topologies. Also writes this machine's recorded worlds \
+          (docs/canary/overview_runs.js, _mac on macOS), which §1 and §1.2 \
+          draw, and the pointers that keep the retired result page's \
+          addresses (docs/canary/projects/) landing on §1.2. With --json, \
+          prints the run record instead and writes nothing. Runs nothing.")
+    Term.(const run $ project $ json $ const ())
 
 let tiny_scenarios_list_cmd =
   Cmd.v
@@ -2193,7 +2182,7 @@ let set_platform v =
 
 (* STRICT MODE (2026-09-15). Third flag of the same shape, and for the
    same reason: it is a property of the INVOCATION, not of a project or
-   a subcommand, and a run that dumps (`emit`, `result`) should report
+   a subcommand, and a run that dumps (`emit`, `overview --json`) should report
    the same mode the run that executed was in.
 
      --strict              a detected disagreement fails the step
@@ -2349,7 +2338,6 @@ let () =
         tiny_scenarios_cmd;
         compat_cmd;
         verify_cmd;
-        result_cmd;
         overview_cmd;
         prebuilt_cmd;
       ]

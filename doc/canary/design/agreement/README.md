@@ -1,6 +1,6 @@
 # Agreements
 
-**Start with the Agreement overview in `canary result` (`make view`).**
+**Start with the Agreement overview on the overview page (`make view`).**
 It is the reference for which claims exist, their targets and originating
 rules, where they are checked, what is implemented, and what runs decided.
 The candidate table records proposed claims and their blockers. We do not
@@ -178,8 +178,8 @@ Project analysis determines which claims a mechanism can carry. Realization
 places inspections and attaches a world, language, and mechanism to steps.
 The runner's `evaluate_step` selects firing, suitable methods, resolves their
 evidence, and merges results into one record used by reporting and acceptance.
-The log records `agreement_outcome` events, from which the result table is read
-(`canary result`, and the result table on the overview page).
+The log records `agreement_outcome` events, from which the result table on the
+overview page is read (`canary overview --json` prints the record it draws).
 The full pipeline belongs to [enumeration/](../enumeration/README.md), with
 applicability in pass 2 and firing/evidence placement in pass 6.
 

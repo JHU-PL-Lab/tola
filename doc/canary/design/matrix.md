@@ -2,7 +2,8 @@
 
 > Moved out of `enumeration/` on 2026-08-24. It had been numbered as
 > a pass of the pipeline, and that was wrong: the matrix is built by
-> `canary result`, which READS `actions.log` after a run. The pipeline's
+> `Canary_matrix.matrix_of` (`canary overview --json` prints it), which
+> READS `actions.log` after a run. The pipeline's
 > dataflow ends at pass 6 (realize) writing verdicts; reporting is a CONSUMER of
 > the log, not a pass in it. The enumeration map is
 > [`enumeration/README.md`](enumeration/README.md).
@@ -15,14 +16,14 @@ the overview page (`docs/canary/overview.html`) and the agreement
 overview is its §2, both over the same frame columns, with each result
 row linked to its drawing in §1 ([`overview.md`](overview.md) §6.4). The
 result matrix's own page retired the same day; its address,
-`docs/canary/projects/matrix.html`, is now a pointer to §1.2. `canary
-result` still prints the matrix in the terminal — as text, as markdown,
-or as the JSON record.
+`docs/canary/projects/matrix.html`, is now a pointer to §1.2. There is
+no terminal table any more: `canary overview --json` prints the record
+the page is drawn from.
 
 | # | table | what it is |
 | --- | --- | --- |
 | 1 | **the agreement overview** | one row per (agreement × distinct firing pattern), over §1.2's frame columns (since 2026-09-28): `▣` on the nodes the claim reads, `R` where its rule ran and `D` where the check fires on the pieces, `◆` its own check column; plus code, `kind`, `implemented at`, `lang`, `mech`, `object`, `sits on` and `where` (since 2026-09-27: where the claim sits on the overview's layered chain — its claim site's edges, the layers their ends lie in, and whether it stays on one side, reaches across, or runs end to end), lag, and what the rows below decided and blame. **Followed by a second, simple CANDIDATE table** — name, kind, and what stands in the way — for the claims that have no methods and so no columns to fill — **and by every agreement, candidates included, grouped by where it sits**, each group counting placed, checked and decided, which is where the gaps show (`design/overview.md` §1) |
-| 2 | the result table (§1.2) | one row per CHAIN (a world in one binding language) on a machine — what a run decided; `canary result` prints the same record as one row per WORLD |
+| 2 | the result table (§1.2) | one row per CHAIN (a world in one binding language) on a machine — what a run decided; `canary overview --json` prints the same record, one row per WORLD |
 
 Table 1 is table 2's TEMPLATE. An empty column in the matrix can be
 looked up in the grid to see whether anything was ever meant to fill it,
@@ -106,9 +107,8 @@ action columns rather than the frames (a follow-up in
 > block — one column per artifact, carrying that artifact's placement —
 > and the single `ref` column is gone. §2's analysis is kept because it
 > is the reason the layout changed.
-> Renderer: [`canary_matrix.ml`](../../../src/canary/main/canary_matrix.ml)
-> for the terminal views and the record; the web table is §1.2 of the
-> overview page, which `canary overview` writes.
+> Record: [`canary_matrix.ml`](../../../src/canary/main/canary_matrix.ml);
+> the table is §1.2 of the overview page, which `canary overview` writes.
 
 ## 0. The overview's row order, and why it is that one
 
@@ -419,8 +419,8 @@ costs a full set of rows. Two different rules; only the first exists.
 
 ## 8. A cell in a CHECK column — mark, then blame
 
-`canary result <project>`'s check columns carry the gap directly, which
-is where you meet it first. A **symbol** means the check reached a
+The result table's check cells carry the gap directly, which is where
+you meet it first. A **symbol** means the check reached a
 verdict; a **word** means it did not:
 
 | cell | outcome | means |
@@ -438,9 +438,9 @@ verdict; a **word** means it did not:
 Those five used to be one dot. A check column only exists where the
 claim *can* be decided (`check_cols_of_chain` requires an evaluator and
 static applicability), so a non-verdict cell in one is a **defect**, not
-a blank — which is why each carries a **blame**, counted under the
-terminal table and per agreement in the agreement overview's `blame`
-column:
+a blank — which is why each carries a **blame**, counted per agreement
+in the agreement overview's `blame` column. The terminal table used to
+print the total under itself:
 
 ```
 gap: 50 evidence  18 vacuous  4 version      # sqlite, 2026-09-15

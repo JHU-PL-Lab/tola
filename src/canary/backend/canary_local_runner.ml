@@ -658,7 +658,7 @@ let run_step logger ~root:_ ~project:_ (step : step) : step_status =
                  (Canary_agreement_common.strict_mode): while an
                  agreement is being landed, a finding should stop the
                  run at the step that read the evidence rather than
-                 leave `canary result` printing ✗ beside a scenario
+                 leave the result table showing ✗ beside a scenario
                  that says PASS. The violations are the SAME ones
                  reported above — strict mode adds no evaluation, it
                  only decides what an existing one means. *)

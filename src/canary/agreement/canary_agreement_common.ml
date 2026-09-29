@@ -1033,7 +1033,7 @@ let evaluation_schema = "named-agreements-2"
    broken step.
 
    What strict mode is FOR is the gap that opens while an agreement is
-   being landed: [canary result] prints ✗ for the check and the
+   being landed: the result table shows ✗ for the check and the
    scenario still says PASS, so the two views of one run disagree and
    the developer has to read the log to find out which is right. Under
    [--strict] they agree — the step that READ the disagreeing evidence
@@ -1430,9 +1430,12 @@ type agreement = {
           where the rule ran and detected wherever evidence survives,
           and those are usually different actions. *)
   ag_slot : check_slot;
-      (** WHERE A READER LOOKS FOR THIS — see {!check_slot}. The
-          column in [canary result]; one per agreement however many
-          actions it fires at. *)
+      (** WHERE A READER LOOKS FOR THIS — see {!check_slot}. The check
+          column of the run record ([canary overview --json]), whose
+          cells the agreement overview's decided and blame count; one
+          per agreement however many actions it fires at. The result
+          table (§1.2) shows the outcome at the agreement's site
+          instead (design/overview.md §6.4). *)
   ag_fault_tag : string;
   ag_methods : checking_method list;
 }

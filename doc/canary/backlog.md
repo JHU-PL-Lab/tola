@@ -439,8 +439,8 @@ No hurry — all items below are queued for when their forcing function arrives.
 
     The two directories were written when checking was a separate
     concern bolted onto a run. It is not any more: a step carries an
-    `agreement_ctx`, the runner calls `evaluate_in_context`, and
-    `canary result`'s columns are `pre → action → artifact → post`.
+    `agreement_ctx`, the runner calls `evaluate_in_context`, and the run
+    record's columns are `pre → action → artifact → post`.
     Checking is a phase of the pipeline, and the docs still describe two
     pipelines.
 
@@ -459,10 +459,11 @@ No hurry — all items below are queued for when their forcing function arrives.
       FIRING needs a world and stays at realize. So the seam does not
       run between the two directories: part of the CLAIM's own
       machinery is already an enumeration pass.
-    - **Two action-column orders still exist** (§51 below):
-      `canary result` uses `Canary_matrix.compare_column`, `--firing`
-      uses `Canary_basic.actions_of_lang`. A unified pipeline doc that
-      shows one grid has to pick.
+    - **Three action-column orders now exist** (§51 below): the run
+      record uses `Canary_matrix.compare_column`, `--firing` uses
+      `Canary_basic.actions_of_lang`, and the overview page's two tables
+      use the frames (`Canary_frames`, 2026-09-28). A unified pipeline
+      doc that shows one grid has to pick; the frames are the candidate.
     - **The reading path.** `enumeration/README.md`'s four-step *How to
       read this, if you are new* is the best thing in either directory;
       `agreement/README.md` is a map of four files. One merged entry
@@ -660,7 +661,7 @@ No hurry — all items below are queued for when their forcing function arrives.
       next `Native_lib_probe`-shaped win.
 
 51. **Agreement engineering.** Per-claim implementation status and blockers
-    belong to the Agreement overview and candidate table in `canary result`;
+    belong to the Agreement overview and candidate table on the overview page;
     use `canary checks --agreement NAME` for details. The short procedure is
     [agreement/README.md](design/agreement/README.md) §4. This list keeps only
     work that cuts across individual rows:
@@ -693,16 +694,17 @@ No hurry — all items below are queued for when their forcing function arrives.
       exist* — so replacing it means handing the renderer `sv_inputs`,
       not swapping a predicate. A green CI job therefore does not
       establish parity with a local run.
-    - **The action-unit perspective** (was §7.4.4): can `canary result`'s
-      action columns carry agreements BETWEEN actions? Not blocked by
-      the medium — `--firing` is already that grid — but by missing
-      data: `m_firing` is where an agreement is DETECTED, and nothing
-      typed records where it is ROOTED. Cheap version when it earns its
-      place: a second mark letter (`R`) in the firing table. Also
-      recorded there: two action-column lists exist (`canary result`
-      uses `Canary_matrix.compare_column`, `--firing` uses
-      `Canary_basic.actions_of_lang`) and they cannot share until
-      `compare_column` moves down to `base/`.
+    - ~~**The action-unit perspective**~~ (was §7.4.4) — **done
+      2026-09-28.** The question was whether the result table's action
+      columns could carry agreements BETWEEN actions. `ag_rooted_in`
+      supplied the missing data (where an agreement is ROOTED) on
+      2026-09-13, and the overview page's frames (`Canary_frames`) now
+      put each check before or after the pieces of the action it sits
+      on, with R and D marked on the same columns in the Agreement
+      overview (`design/overview.md` §6.4). Still open: the run record's
+      columns (`Canary_matrix.compare_column`) and `--firing`'s
+      (`Canary_basic.actions_of_lang`) are two more orders, see §49's
+      bullet above.
 
     ~~**Finish `mechanism_info`**~~ (was §7.4.3) — **substantially done.**
     The decidable fields it asked for exist on the catalogue
