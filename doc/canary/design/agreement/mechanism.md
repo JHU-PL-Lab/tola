@@ -46,23 +46,17 @@ executable does; Canary inspects that executable. Both cstubs and cext
 therefore support dependency claims today, through different artifacts.
 The static/dynamic discipline alone does not determine available evidence.
 
-| | lang | discipline | stub? | records NEEDED? | typed stub? | wired |
-| --- | --- | --- | --- | --- | --- | --- |
-| `Cstubs` | OCaml | static | ✅ | ✅ *(via the linked executable)* | ✅ | yes |
-| `Cext` | Python | static | ✅ | ✅ | ❌ *(no extractor — a canary gap, not a mechanism one)* | yes |
-| `Ctypes` | Python | dynamic | ❌ | ❌ | ❌ *(types are values)* | yes |
-| `Cffi` | Python | dynamic | ❌ | ❌ | ✅ *(a cdef re-declares the C surface)* | no |
-| `Dynlink` | OCaml | dynamic | ❌ | ❌ | ❌ | no |
-
-`Cffi` is the row worth remembering: the one dynamic mechanism with a
-typed boundary, which is why "dynamic ⇒ nothing to read" is wrong as a
-rule.
+Each mechanism's three values are in section 3.2 of the overview page.
+Two of them need a word the table cannot give. `Cext` has no typed stub
+because canary has no extractor for one — a canary gap, not a mechanism
+one. `Cffi` is the one dynamic mechanism with a typed boundary (a cdef
+re-declares the C surface), which is why "dynamic ⇒ nothing to read" is
+wrong as a rule.
 
 ## 3. The provider axis, which does not exist yet
 
-> 2026-09-17, user: *"I wish the mechanism can cover more binding cases
-> including `{c-static-lib, c-dynamic-lib} × ({ocaml-binding-via-c-stub,
-> ocaml-binding-via-dynlink} + {python-cstatic, python-ctypes})`."*
+The goal is both provider forms under each consumer mechanism:
+`{c-static-lib, c-dynamic-lib} × {cstubs, dynlink, cext, ctypes}`.
 
 **A static provider turns off the same agreements a dynamic consumer
 does, and for the same reason** — nobody recorded a dependency. Today
@@ -94,9 +88,8 @@ already reads both forms, because the consumer's stub comes in both —
 
 ### Every cell of the 2 × 4
 
-The user asked for all of them, not just the impossible one. Two
-questions per cell — *can it exist*, and *what does it mean* — and the
-answers are not symmetric.
+Two questions per cell — *can it exist*, and *what does it mean* — and
+the answers are not symmetric.
 
 | | **cstubs** (OCaml) | **dynlink** (OCaml) | **cext** (Python) | **ctypes** (Python) |
 | --- | --- | --- | --- | --- |
@@ -177,8 +170,8 @@ catalogue, not the project.
 3. **Check** — project-agnostic, artifact-type dependent, once (1) and
    (2) have identified the facts and the products.
 
-> **The uniform part is the CHECKING, not the build** (user,
-> 2026-08-15). However an external project builds its artifacts, how to
+> **The uniform part is the checking, not the build.** However an
+> external project builds its artifacts, how to
 > USE them and how to CHECK them are relatively uniform, and the
 > mechanism identification is what drives the selection.
 
@@ -229,7 +222,7 @@ The long-term question, in two steps:
    up. A PM is a policy for provision × version identity × checking
    points across the store lifecycle.
 
-> Framing (user, 2026-08-05): engineering cost has dropped; the leverage
+> The framing: engineering cost has dropped; the leverage
 > is theory and design. Canary's role in that regime is the EMPIRICAL
 > instrument — the catalogue makes the design space explicit as data,
 > the agreements make outcomes measurable, and tiny makes controlled

@@ -170,8 +170,8 @@ Aligned. Two points the page now makes concrete:
   - `signatures_agree`: evaluated, no evidence yet;
   - `behavior_matches`, `repack_preserves_api`, `repack_complete`: no
     evaluator.
-- **§4.3's "no local paths under the install profile"** is not
-  registered; it may be a candidate.
+- **§4.3's "no local paths under the install profile"** is the candidate
+  `no_build_paths_in_installed_library`, not yet registered.
 - **§4.4:** OCaml has two mechanisms in the catalogue (cstubs, dynlink),
   and Python three (cext, ctypes, cffi). The draft says OCaml binds only
   through compiled C stubs. The mechanism decides which claims apply: a

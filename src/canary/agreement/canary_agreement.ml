@@ -1,5 +1,5 @@
 (** [Canary_agreement] — TIER 3: THE LIST, and everything derived from
-    it. Design: [doc/canary/design/agreement/agreements.md].
+    it. Design: [doc/canary/design/agreement/README.md].
 
     The agreement layer is three tiers: [Canary_agreement_common]
     declares the types; each [Canary_agreement_<topic>] is one family
@@ -3346,10 +3346,9 @@ let pp_out_of_table_md () : string =
   done;
   Buffer.contents b
 
-(** The generated catalogue: every agreement's full record, as
-    markdown. Written to [doc/canary/design/agreement/agreements.md] and
-    pinned against this output, so the document is a build product
-    rather than a second copy. *)
+(** The catalogue as markdown: every agreement's full record, printed by
+    [canary checks --catalogue --md]. No document keeps a copy; the
+    overview page's section 2 is the reference. *)
 let pp_catalogue_md () : string =
   let b = Buffer.create 16384 in
   Buffer.add_string b

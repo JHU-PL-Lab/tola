@@ -3,8 +3,9 @@
 **Kind: theory.** Why there is anything to check at all, what an agreement
 *is* in terms of the actions that build software, and a procedure for finding
 the next one. [components.md](components.md) explores the same space by
-component. The Agreement overview on the overview page contains the registered
-claims; [README.md](README.md) explains how to read their results.
+component. The agreement table, section 2 of the overview page, contains
+the registered claims; [README.md](README.md) explains how to read their
+results.
 
 This document does not describe what Canary runs. It describes the thing
 Canary is an implementation of, and it is written so that a reader who never
@@ -132,7 +133,7 @@ table; `canary checks --landing` reports what real runs have decided.
 | **Established** | this build tree is configured for *these* sources, *this* toolchain, *these* options                                                                                                                                                      |
 | **Survives**    | the build tree and its cache; the options, in a form nobody reads back                                                                                                                                                                    |
 | **Loss**        | identity (which sources) and relation (which options the result assumes)                                                                                                                                                                  |
-| **Post-fact**   | **not checked.** A build tree configured for source A and reused with source B is a recombination Canary does not currently look at. Its analogue is well known in practice — a stale `CMakeCache.txt` — and there is no agreement for it |
+| **Post-fact**   | **not checked.** A build tree configured for source A and reused with source B is a recombination Canary does not currently look at. Its analogue is well known in practice — a stale `CMakeCache.txt` — and it is the candidate `build_tree_configured_for_source` |
 
 ### 5.3 `build_lib` — the compiler and linker
 
@@ -144,13 +145,13 @@ The central action, and the one with the richest surviving projection.
 | **Established** | (a) every call agrees with a visible declaration; (b) every referenced symbol is defined; (c) the output records the requested identity and the requested dependency list                                                                                           |
 | **Survives**    | exported symbol names; version tags; the recorded soname; `NEEDED`; debug information, sometimes                                                                                                                                                                    |
 | **Loss**        | relation, mostly — the declarations are gone and the definitions are compiled                                                                                                                                                                                       |
-| **Post-fact**   | *names*: `declared_symbols_exported`. *types*: the DWARF comparison ([`components.md`](components.md) §2.2, proposed) — the only route back to (a), and it depends on debug information being present. *identity of the output*: `soname_matches_declaration`, `declared_versions_exported` |
+| **Post-fact**   | *names*: `declared_symbols_exported`. *types*: the DWARF comparison (the candidate `signatures_match_debug_info`; [`components.md`](components.md) §2.2) — the only route back to (a), and it depends on debug information being present. *identity of the output*: `soname_matches_declaration`, `declared_versions_exported` |
 
 One projection is unclaimed: symbols the library exports that appear in
 **neither** the headers nor this project's declaration. They came from
-somewhere — a statically linked archive, a vendored copy — and nothing in the
-catalogue says so. Tiny already produces the fault (`symbol_orphan`) and the
-tracker already records that no agreement claims it.
+somewhere — a statically linked archive, a vendored copy — and no registered
+agreement says so. Tiny already produces the fault (`symbol_orphan`), and the
+candidate `exports_accounted_for` names it.
 
 ### 5.4 `install_lib` — staging
 
@@ -160,7 +161,7 @@ tracker already records that no agreement claims it.
 | **Established** | the staged tree is a relocation of the build tree preserving the declared interface                                                                                                                                                                                                                                                                                     |
 | **Survives**    | **both sides** — the build tree and the staged tree exist at once                                                                                                                                                                                                                                                                                                       |
 | **Loss**        | almost none, while the run lasts                                                                                                                                                                                                                                                                                                                                        |
-| **Post-fact**   | comparison is nearly complete *because nothing was lost yet*. Canary compares symbol counts, soname, RPATH/RUNPATH and NEEDED across the two (`install_diff_note`); the fuller model is [`staged_parity.md`](../staged_parity.md). This is the one action where a checker can be almost as strong as the tool, and it is worth noticing why: the inputs are still there |
+| **Post-fact**   | comparison is nearly complete *because nothing was lost yet*. Canary's `staged_interface_preserved` compares symbol counts, soname, RPATH/RUNPATH and NEEDED across the two; the fuller model is [`staged_parity.md`](../staged_parity.md). This is the one action where a checker can be almost as strong as the tool, and it is worth noticing why: the inputs are still there |
 
 ### 5.5 `build_binding` — the foreign-call boundary
 
@@ -197,7 +198,7 @@ to supply evidence for.
 | **Established** | the package contains the artifacts the recipe named                                                                  |
 | **Survives**    | the package                                                                                                          |
 | **Loss**        | identity (which build tree) and relation (what the recipe required)                                                  |
-| **Post-fact**   | completeness against a declared file list; Canary's staged-file checks are hand-listed, and the general form is open |
+| **Post-fact**   | completeness against a declared file list — the candidate `package_contains_declared_files`; Canary's staged-file checks are still hand-listed |
 
 ### 5.8 `build_app` — the consumer
 
@@ -237,9 +238,10 @@ Three patterns fall out, and none was designed in:
 
 ### 5.11 Target and origin — a decomposition the table made visible
 
-The agreement overview (`canary checks --firing`, `make view` table 1)
-marks target artifact kinds with ▣ and rule origins with R. Ask whether
-the originating action produces or consumes the target:
+The agreement table (section 2 of the overview page, and
+`canary checks --firing`) marks target artifact kinds with ▣ and rule
+origins with R. Ask whether the originating action produces or consumes
+the target:
 
 Count the ▣ in a row and the claims fall into three groups — one
 target, two targets, none — and the groups are worth reading off the
@@ -248,12 +250,6 @@ live table rather than listed here. Within the one-target group,
 produces a copy for preservation, and application compilation consumes
 the binding surface for `api_names_present`, so the second question
 separates claims the first would have merged.
-
-*(A transcription of the three groups stood here until 2026-09-17, kept
-honest by a pin that compared it against the generated table. The
-overview is the up-to-date truth, so the pin and the copy both go: the
-argument is which QUESTIONS decompose the catalogue, and that does not
-need the membership lists to be repeated.)*
 
 This decomposition helps find candidates, but it does not determine
 `ag_kind` or `m_reference`. The promise and preservation examples both
@@ -288,8 +284,8 @@ each action, for each input, ask:
 Two checks that the procedure is sound before trusting it on new ground: run
 on Canary's own chain, it re-derives the application-uses-⊆-binding-surface
 claim that the watchlist currently approximates, and it re-finds the
-unclaimed orphan-export projection at `build_lib` that the tracker already
-records as a hole. A procedure that re-finds known holes from first
+orphan-export projection at `build_lib`, which the candidate
+`exports_accounted_for` names. A procedure that re-finds known holes from first
 principles is one worth pointing at unknown ones.
 
 ## 7. What this does not explain
@@ -315,7 +311,7 @@ declared" (§5.1), and it looks like a textbook identity gap: recordable,
 cheap, closes exactly. It is in the registry as the proposal
 `source_is_declared_ref`.
 
-It is the wrong category (2026-09-15, user). An agreement is a claim about
+It is the wrong category. An agreement is a claim about
 **the project's artifacts** — what the library exports, what the stub
 requires, what the package contains. "Is the tree at the commit we said" is a
 claim about **whether canary realized the world it claims to be testing**.

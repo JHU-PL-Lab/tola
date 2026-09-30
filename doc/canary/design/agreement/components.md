@@ -1,6 +1,7 @@
 # Why these artifacts need checking
 
-The Agreement overview owns the claims, methods, and implementation status.
+The agreement table, section 2 of the overview page, owns the claims,
+methods, and implementation status.
 This document explains the evidence behind them and what it cannot prove.
 Use `canary checks --agreement NAME` for the exact comparison and examples.
 [theory.md](theory.md) follows actions; this follows the artifacts those
@@ -237,7 +238,7 @@ back to compiling against `gmp.h`). None of the three is re-established per
 world. canary installs with `--assume-depexts`, and opam runs a conf
 package's check only when it first installs the package.
 
-A run now records all three where a bridge is modeled (zarith's, for now):
+A run records all three where a bridge is modeled (only zarith's is):
 the package's depends, the depext mapping, and the check's verdict in this
 world, beside what pkg-config found and which package ships the capability
 file. The claims that read that record are `gate_admits_the_world`,
