@@ -2615,6 +2615,85 @@ let exhibits_pin : Canary_project_test.pure_test =
         && ordered && tables_ok && drawings_ok)
   }
 
+(* THE EXPORT IS THE PAGE'S EXHIBITS (2026-09-30): every exhibit is
+   written or named as not written, with why; a written table is the
+   page's without its caption; a written figure ends with the page's
+   drawing and stands alone — its size, its namespace, every colour it
+   uses defined, no dark mode, no entity XML lacks; nothing written
+   carries the page's numbers. *)
+let exhibits_export_pin : Canary_project_test.pure_test =
+  { name = "overview.exhibits_are_exported";
+    check =
+      (fun () ->
+        let module E = Canary_overview_exhibits in
+        let module X = Canary_overview_export in
+        let overview =
+          Canary_agreement_overview.render (Canary_matrix.matrix_of Canary_registry.all_projects)
+        in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview ~generated_at:"pin"
+        in
+        let files = X.files Canary_registry.all_specs ~overview in
+        let file_of e =
+          List.Assoc.find files
+            (e.E.ex_id ^ match e.E.ex_kind with E.Figure -> ".svg" | E.Table -> ".html")
+            ~equal:String.equal
+        in
+        let accounted =
+          List.for_all E.exhibits ~f:(fun e ->
+              Bool.( <> ) (Option.is_some (file_of e))
+                (List.Assoc.mem X.not_exported e.E.ex_id ~equal:String.equal))
+          && List.length files + List.length X.not_exported = List.length E.exhibits
+        in
+        (* the page's drawing for a figure: what follows its opening tag *)
+        let drawing id =
+          let key = Printf.sprintf {|id="%s">|} id in
+          Option.bind (String.substr_index page ~pattern:(key ^ "<svg")) ~f:(fun p ->
+              Option.both
+                (String.index_from page (p + String.length key) '>')
+                (String.substr_index page ~pos:p ~pattern:"</svg><figcaption>"))
+          |> Option.map ~f:(fun (o, c) -> String.sub page ~pos:(o + 1) ~len:(c + 6 - o - 1))
+        in
+        let stands_alone svg =
+          let vars_used =
+            List.map (String.substr_index_all svg ~may_overlap:false ~pattern:"var(--") ~f:(fun i ->
+                let s = i + 4 in
+                String.sub svg ~pos:s
+                  ~len:(Option.value (String.index_from svg s ')') ~default:s - s))
+          in
+          let named_entities =
+            List.filter_map (String.substr_index_all svg ~may_overlap:false ~pattern:"&") ~f:(fun i ->
+                match String.index_from svg i ';' with
+                | Some j when j - i < 8 -> Some (String.sub svg ~pos:(i + 1) ~len:(j - i - 1))
+                | _ -> None)
+          in
+          String.is_prefix svg ~prefix:{|<svg xmlns="http://www.w3.org/2000/svg" width="|}
+          && List.for_all vars_used ~f:(fun v -> String.is_substring svg ~substring:(v ^ ":"))
+          && (not (String.is_substring svg ~substring:"@media"))
+          && (not (String.is_substring svg ~substring:"data-theme"))
+          && List.for_all named_entities ~f:(fun n ->
+                 List.mem [ "amp"; "lt"; "gt"; "quot"; "apos" ] n ~equal:String.equal
+                 || String.is_prefix n ~prefix:"#")
+        in
+        let matches e content =
+          match e.E.ex_kind with
+          | E.Table ->
+              Option.equal String.equal (E.bare_table e.E.ex_id page) (Some (String.strip content))
+          | E.Figure -> (
+              match drawing e.E.ex_id with
+              | Some d -> String.is_suffix content ~suffix:d && stands_alone content
+              | None -> false)
+        in
+        let unnumbered content =
+          not
+            (List.exists [ "<caption"; "<figcaption"; "<b>Figure "; "<b>Table " ] ~f:(fun p ->
+                 String.is_substring content ~substring:p))
+        in
+        accounted
+        && List.for_all E.exhibits ~f:(fun e ->
+               match file_of e with Some c -> matches e c && unnumbered c | None -> true))
+  }
+
 (* ONE SPELLING OF A MARK (2026-09-30). The record and the result table
    used to map outcomes to marks separately, and disagreed: an evaluator
    error was ✗ in one and err in the other, and a stale log line showed
@@ -9448,6 +9527,7 @@ let base_tests : Canary_project_test.pure_test list =
       visual_vocabulary_pin;
       flow_pin;
       exhibits_pin;
+      exhibits_export_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;

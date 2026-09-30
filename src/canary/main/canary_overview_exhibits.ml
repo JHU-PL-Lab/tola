@@ -34,6 +34,10 @@ let exhibits : exhibit list =
     t "tab-cooperation" "How two package managers cooperate";
     t "tab-chains" "The chains canary runs" ]
 
+(** Where [canary overview] writes each exhibit on its own, beside the
+    manuscript that embeds them. *)
+let export_dir = "doc/canary/research/exhibits"
+
 let find (id : string) : exhibit =
   match List.find exhibits ~f:(fun e -> String.equal e.ex_id id) with
   | Some e -> e
@@ -58,6 +62,23 @@ let table ?cls (id : string) : string =
     (match cls with Some c -> Printf.sprintf {| class="%s"|} c | None -> "")
     id
     (caption_text (find id))
+
+(** The table exhibit [id] as [html] carries it, without its caption. *)
+let bare_table (id : string) (html : string) : string option =
+  let opening =
+    Option.bind (String.substr_index html ~pattern:(Printf.sprintf {| id="%s">|} id)) ~f:(fun p ->
+        List.last
+          (List.filter (String.substr_index_all html ~may_overlap:false ~pattern:"<table")
+             ~f:(fun i -> i < p)))
+  in
+  Option.bind opening ~f:(fun s ->
+      Option.map (String.substr_index html ~pos:s ~pattern:"</table>") ~f:(fun e ->
+          let t = String.sub html ~pos:s ~len:(e + String.length "</table>" - s) in
+          match
+            (String.substr_index t ~pattern:"<caption>", String.substr_index t ~pattern:"</caption>")
+          with
+          | Some a, Some b -> String.prefix t a ^ String.drop_prefix t (b + String.length "</caption>")
+          | _ -> t))
 
 (** A diagram, as the figure it is. *)
 let figure (id : string) (svg : string) : string =

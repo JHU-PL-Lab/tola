@@ -42,6 +42,15 @@ not say:
   caption, from one list in page order (`Canary_overview_exhibits`). A
   number follows from the order and moves when an exhibit is added; the
   id does not, so the id is what a document cites.
+- `canary overview` also writes each exhibit on its own, named by its id
+  and without its caption, to `doc/canary/research/exhibits/`
+  (`Canary_overview_export`; `--exhibits DIR` writes only these,
+  elsewhere). The generators that make the page make them, so nothing is
+  read back from the page. A figure is a standalone SVG carrying the
+  page's light-theme rules that reach it; a table is an HTML fragment
+  that the embedding document styles. §1's diagram is written in the
+  default choice. The two tables the page's script fills (the lines under
+  the node labels, and §1.2's results) are not written yet.
 
 ## 2. How a run reaches the page
 
@@ -581,6 +590,7 @@ copy is named) closed the rest.
 | `overview.layout_rules_hold` | the places: every rule holds, every named pin exists (§5) |
 | `overview.flow_is_the_page` | the page's §0: every template slot belongs to one section, every heading reads as the outline lists it and in its order, every module it names has a source file, every pin a box names exists, the figure's boxes do not overlap and every arrow is straight (§1) |
 | `overview.exhibits_are_captioned` | each figure and table appears once, in list order, captioned with its number and title and listed in §0; every table and drawing on the page is one of them (§1) |
+| `overview.exhibits_are_exported` | every exhibit is written on its own or named as not written, with why; a written table is the page's without its caption; a written figure ends with the page's drawing and stands alone (its size and namespace, every colour it uses defined, no dark mode, no entity XML lacks); nothing written carries the page's numbers (§1) |
 | `overview.tables_list_what_canary_covers` | the page's §3 tables list exactly what canary has drivers and projects for |
 | `overview.outcome_marks_are_one_list` | one spelling of an outcome's mark: every label a log records has an entry, the page's script spells no word mark, §2 shows the key |
 | `overview.agreement_laws_are_listed` | §2 lists every law of `Canary_agreement.row_rules` |

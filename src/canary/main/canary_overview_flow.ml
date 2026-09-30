@@ -333,7 +333,13 @@ let boxes : box list =
         [ "overview.flow_is_the_page" ];
       box "run_sections" "a run's sections" Sections right_x 712 right_w 58
         [ Link ("§1", "§1 a chain's run"); Link ("§1.2", "§1.2 the results' rows") ]
-        [ "overview.results_table_is_the_column_model"; "overview.recorded_views_are_named" ] ]
+        [ "overview.results_table_is_the_column_model"; "overview.recorded_views_are_named" ];
+      box "exhibits" "exhibits" File left_x 770 260 46
+        [ Main "each figure and table, on its own"; Sub "fig-*.svg · tab-*.html" ]
+        [ "overview.exhibits_are_exported" ]
+        ~title:
+          (Canary_overview_exhibits.export_dir
+         ^ ": for a manuscript to embed, written by Canary_overview_export") ]
 
 let groups : group list =
   [ { gr_id = "code"; gr_name = "the code";
@@ -346,13 +352,13 @@ let arrows : arrow list =
   [ a "code" "passes"; a "passes" "run"; a "passes" "ci"; a "run" "diagrams"; a "run" "out";
     a "out" "record"; a "record" "runs" ~note:"a view per chain";
     a "record" "html" ~note:"§2's counts"; a "code" "page" ~note:"and draws the page";
-    a "page" "html"; a "html" "sections"; a "runs" "run_sections" ]
+    a "page" "html"; a "page" "exhibits"; a "html" "sections"; a "runs" "run_sections" ]
 
 (** The stage names beside the figure. *)
 let lanes : (int * int * string) list =
   [ (left_x, 34, "in the code"); (mid_x, 34, "canary action ‹project›");
     (mid_x + mid_w + 14, 371, "in " ^ root ^ "/"); (mid_x, 440, "make view");
-    (left_x, 736, "the page") ]
+    (left_x, 578, "the page") ]
 
 let box_by_id id = List.find boxes ~f:(fun b -> String.equal b.bx_id id)
 let group_by_id id = List.find groups ~f:(fun g -> String.equal g.gr_id id)
@@ -378,11 +384,15 @@ let route (a : arrow) : ((int * int) * (int * int)) option =
           Some ((bracket_x g, g_last), (bracket_x g, h_first))
       | _ -> None)
   | Some g, None, _, Some b -> (
-      (* level with the target's centre, which lies along the bracket *)
+      (* level with the target's centre, which lies along the bracket, or
+         straight down from the bracket's end into a box below *)
       match group_span g with
       | Some (first, last) ->
           let y = mid_y b and x = bracket_x g in
-          if first <= y && y <= last && x < b.bx_x then Some ((x, y), (b.bx_x, y)) else None
+          if first <= y && y <= last && x < b.bx_x then Some ((x, y), (b.bx_x, y))
+          else if last < b.bx_y && b.bx_x < x && x < b.bx_x + b.bx_w then
+            Some ((x, last), (x, b.bx_y))
+          else None
       | None -> None)
   | None, None, Some s, Some t ->
       let ox0 = max s.bx_x t.bx_x and ox1 = min (s.bx_x + s.bx_w) (t.bx_x + t.bx_w) in
@@ -505,18 +515,20 @@ let box_svg (b : box) : string =
   Printf.sprintf {|<g class="%s">%s%s%s%s%s</g>|} cls title shape (String.concat (List.rev lines))
     (held_svg b) (agents_svg b)
 
-(** The figure: its SVG, captioned. *)
-let figure () : string =
-  Canary_overview_exhibits.figure "fig-flow"
-    (Printf.sprintf
-       {|<svg class="flow" viewBox="0 0 %d %d" role="img" aria-label="How this page is made: from canary's code and its runs to this page">%s%s%s%s</svg>|}
-       canvas_w canvas_h
-       (String.concat (List.map groups ~f:bracket_svg))
-       (String.concat (List.map arrows ~f:arrow_svg))
-       (String.concat (List.map boxes ~f:box_svg))
-       (String.concat
-          (List.map lanes ~f:(fun (x, y, t) ->
-               Printf.sprintf {|<text class="flane" x="%d" y="%d">%s</text>|} x y (esc t)))))
+(** The figure's drawing. *)
+let svg () : string =
+  Printf.sprintf
+    {|<svg class="flow" viewBox="0 0 %d %d" role="img" aria-label="How this page is made: from canary's code and its runs to this page">%s%s%s%s</svg>|}
+    canvas_w canvas_h
+    (String.concat (List.map groups ~f:bracket_svg))
+    (String.concat (List.map arrows ~f:arrow_svg))
+    (String.concat (List.map boxes ~f:box_svg))
+    (String.concat
+       (List.map lanes ~f:(fun (x, y, t) ->
+            Printf.sprintf {|<text class="flane" x="%d" y="%d">%s</text>|} x y (esc t))))
+
+(** The figure: its drawing, captioned. *)
+let figure () : string = Canary_overview_exhibits.figure "fig-flow" (svg ())
 
 (* ── the table ── *)
 

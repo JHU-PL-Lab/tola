@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1220" height="900" viewBox="0 0 1220 900" class="join diagram" role="img"><style><![CDATA[:root{--bg:#fbfaf8;--fg:#1d1c1a;--mut:#6a665f;--line:#d9d4cb;
+--pm:#e8eef6;--pkg:#f3ecdf;--art:#e9f1e9;--prog:#f6e8e8;--warn:#b4451f;
+--card:#fff;--acc:#2b5f8a;--ok:#2f7d3a;--bad:#c0262d;--xf:#b07a12}
+:root{color:var(--fg);font:15px/1.6 ui-serif,Georgia,serif}
+.diagram{width:100%;height:auto;margin:1rem 0;background:var(--card);
+border:1px solid var(--line);border-radius:10px}
+.band{fill:var(--card);stroke:var(--line);stroke-width:1}
+.band.pm{fill:var(--pm)}
+.band.package{fill:var(--pkg)}
+.band.artifact{fill:var(--art)}
+.band.program{fill:var(--prog)}
+.bandlabel{font:600 12px ui-monospace,monospace;fill:var(--mut);text-anchor:middle;
+paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
+.sidecap{font:600 11px ui-sans-serif,system-ui,sans-serif;fill:var(--mut);
+letter-spacing:.14em;text-anchor:middle}
+.node rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
+.node .nlabel{font:600 13px ui-sans-serif,system-ui,sans-serif;
+fill:var(--fg);text-anchor:middle}
+.node.dim{opacity:.32}
+.edge line{stroke:var(--fg);stroke-width:1.4;opacity:.72}
+.edge.diag line{stroke-dasharray:6 4;stroke:var(--acc);stroke-width:1.6}
+.edge.bare line{stroke:var(--warn);stroke-width:2;opacity:.95}
+.edge path{fill:none;stroke:var(--fg);stroke-width:1.4;opacity:.72}
+.edge .elabel{font:11px ui-monospace,monospace;fill:var(--mut);
+text-anchor:middle}
+.edge.bare .elabel{fill:var(--warn);font-weight:700}
+.edge .elabel.info{font-style:italic}
+.edge .elabel.claim{fill:var(--acc);font-weight:700}
+.rec .edge line,.rec .edge path{stroke-dasharray:none}
+.rec .edge.st-ran line,.rec .edge.st-ran path{stroke:var(--ok);stroke-width:2.6;opacity:1}
+.rec .edge.st-warm line,.rec .edge.st-warm path{stroke:var(--ok);stroke-width:2.6;
+opacity:.9;stroke-dasharray:7 3}
+.rec .edge.st-xfail line,.rec .edge.st-xfail path{stroke:var(--xf);stroke-width:2.6;opacity:1}
+.rec .edge.st-fail line,.rec .edge.st-fail path{stroke:var(--bad);stroke-width:3.2;opacity:1}
+.rec .edge.st-blocked line,.rec .edge.st-blocked path{stroke:var(--bad);stroke-width:2.4;
+opacity:1;stroke-dasharray:5 3}
+.rec .edge.st-unrecorded line,.rec .edge.st-unrecorded path{stroke:var(--mut);
+stroke-width:2;opacity:1;stroke-dasharray:1 4}
+.rec .edge.st-absent{opacity:.14}
+.rec .edge.st-not_ours{opacity:.5}
+.rec .edge.st-not_ours line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 5}
+.rec .edge.st-observed line{stroke:var(--acc);stroke-width:2;stroke-dasharray:2 3;opacity:1}
+.rec .edge.st-inside line,.rec .edge.st-inside path{stroke:var(--mut);stroke-width:1.8;
+stroke-dasharray:8 3 2 3;opacity:.9}
+.rec .edge.st-included line,.rec .edge.st-included path{stroke:var(--mut);stroke-width:2;opacity:.9}
+.phm{display:none}
+.phm.on{display:inline}
+.phm rect{fill:var(--card);stroke:var(--mut);stroke-width:1.4;stroke-dasharray:2 2}
+.phm text{font:700 11px ui-monospace,monospace;fill:var(--mut);text-anchor:middle}
+.phm.not_yet rect{stroke:var(--acc)}
+.phm.not_yet text{fill:var(--acc)}
+.rec .edge.st-claim line{stroke:var(--acc);stroke-width:1.6;stroke-dasharray:4 4}
+.rec .edge.cl-violated .cbadge.chk{fill:var(--bad)}
+.rec .edge.cl-holds .cbadge.chk{fill:var(--ok)}
+.rec .edge.cl-partial .cbadge.chk{fill:var(--xf)}
+.rec .edge.cl-undecided .cbadge.chk,.rec .edge.cl-unevaluated .cbadge.chk{fill:var(--mut)}
+.cbadge.none,.cnum.none{display:none}
+.join .edge.jdead .cbadge,.join .edge.jdead .cnum{display:none}
+.rec .gone{display:none}
+.cbadge{fill:var(--acc);opacity:.9}
+.declmark circle{fill:var(--card);stroke:var(--acc);stroke-width:1.4}
+.declmark text{font:11px ui-sans-serif,sans-serif;fill:var(--acc);
+text-anchor:middle}
+.cnum{font:700 11px ui-sans-serif,sans-serif;fill:#fff;text-anchor:middle}
+.cbadge.cand{fill:var(--card);stroke:var(--acc);stroke-width:1.6;stroke-dasharray:3 2;opacity:1}
+.cnum.cand{fill:var(--acc)}
+.join .jrow{margin:.3rem 0;align-items:center}
+.join .gone{display:none}
+.join .edge.jdead{opacity:.18}
+.join .node .ncase{font:italic 11.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+fill:var(--acc);text-anchor:middle}
+.join .node .ncase.rec-name{font-style:normal}
+.join .node .ncase.term{fill:var(--mut);font-style:italic}
+.join .node .nplace{font:10px ui-monospace,SFMono-Regular,Menlo,monospace;
+fill:var(--mut);text-anchor:middle}
+.join .node.related rect{stroke:var(--acc);stroke-width:3}
+svg .edge{cursor:default}
+svg .edge:hover line,svg .edge:hover path{stroke-width:3;opacity:1}
+tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
+svg:root{width:auto;height:auto;max-width:none;margin:0;padding:0;border:0;border-radius:0}]]></style>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+ markerHeight="7" orient="auto-start-reverse">
+<path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/><text class="sidecap" x="230" y="20">SYSTEM SIDE</text><text class="sidecap" x="990" y="20">LANGUAGE SIDE</text><g class="edge bare" data-edge="resolve_sys"><title>our action fetch_lib — a package of this name and version is installable here</title>
+<line x1="230" y1="62" x2="230" y2="200" marker-end="url(#a)"/>
+<text class="elabel" x="230" y="124">fetch_lib</text><g class="phm"><title></title><rect x="173" y="123" width="22" height="16" rx="3"/><text x="184" y="135">…</text></g></g><g class="edge" data-edge="realize_sys"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
+<line x1="230" y1="200" x2="230" y2="566" marker-end="url(#a)"/>
+<text class="elabel" x="230" y="376">fetch_lib</text><circle class="cbadge chk" cx="276" cy="383" r="9"/><text class="cnum chk" x="276" y="387">3</text><circle class="cbadge cand" cx="297" cy="383" r="9" data-x1="276" data-x2="297"/><text class="cnum cand" x="297" y="387" data-x1="276" data-x2="297">1</text><g class="phm"><title></title><rect x="173" y="375" width="22" height="16" rx="3"/><text x="184" y="387">…</text></g></g><g class="edge bare" data-edge="realize_hdr"><title>our action fetch_lib — the package ships the headers it claims</title>
+<line x1="230" y1="200" x2="230" y2="482" marker-end="url(#a)"/>
+<text class="elabel" x="230" y="334">fetch_lib</text><g class="phm"><title></title><rect x="173" y="333" width="22" height="16" rx="3"/><text x="184" y="345">…</text></g></g><g class="edge diag bare" data-edge="realize_cap"><title>packager (we run nothing here) — the capability file describes the payload beside it — and nothing we run reads it</title>
+<line x1="230" y1="200" x2="470" y2="275" marker-end="url(#a)"/>
+<text class="elabel info" x="350" y="230" style="text-anchor:start">packager</text><g class="phm"><title></title><rect x="293" y="229" width="22" height="16" rx="3"/><text x="304" y="241">…</text></g></g><g class="edge gone" data-edge="build_lib"><title>our action build_lib — this source produced this library</title>
+<line x1="91" y1="392" x2="230" y2="566" marker-end="url(#a)"/>
+<text class="elabel" x="202" y="524">build_lib</text><circle class="cbadge chk" cx="248" cy="531" r="9"/><text class="cnum chk" x="248" y="535">3</text><circle class="cbadge cand" cx="269" cy="531" r="9" data-x1="248" data-x2="269"/><text class="cnum cand" x="269" y="535" data-x1="248" data-x2="269">3</text><g class="phm"><title></title><rect x="145" y="523" width="22" height="16" rx="3"/><text x="156" y="535">…</text></g></g><g class="edge bare gone" data-edge="build_hdr"><title>our action build_headers — the public headers are where the build puts them</title>
+<line x1="91" y1="392" x2="230" y2="482" marker-end="url(#a)"/>
+<text class="elabel" x="160" y="430">build_headers</text><g class="phm"><title></title><rect x="103" y="429" width="22" height="16" rx="3"/><text x="114" y="441">…</text></g></g><g class="edge gone" data-edge="stage"><title>our action install_lib — what survived being copied out of the build tree</title>
+<line x1="230" y1="566" x2="230" y2="640" marker-end="url(#a)"/>
+<text class="elabel" x="230" y="596">install_lib</text><circle class="cbadge chk" cx="276" cy="603" r="9"/><text class="cnum chk" x="276" y="607">1</text><circle class="cbadge cand" cx="297" cy="603" r="9" data-x1="276" data-x2="297"/><text class="cnum cand" x="297" y="607" data-x1="276" data-x2="297">1</text><g class="phm"><title></title><rect x="173" y="595" width="22" height="16" rx="3"/><text x="184" y="607">…</text></g></g><g class="edge" data-edge="depext"><title>depext table (we run nothing here) — this virtual capability corresponds to THAT system package — a hand-maintained mapping, reviewed rather than computed</title>
+<line x1="670" y1="200" x2="230" y2="200" marker-end="url(#a)"/>
+<text class="elabel info" x="450" y="193">depext table</text><circle class="cbadge chk none" cx="496" cy="200" r="9"/><text class="cnum chk none" x="496" y="204">0</text><circle class="cbadge cand" cx="496" cy="200" r="9" data-x1="496" data-x2="517"/><text class="cnum cand" x="496" y="204" data-x1="496" data-x2="517">1</text><g class="phm"><title></title><rect x="393" y="192" width="22" height="16" rx="3"/><text x="404" y="204">…</text></g></g><g class="edge" data-edge="depends"><title>our action fetch_binding — the binding package's declared constraint on the bridge is satisfiable</title>
+<line x1="990" y1="200" x2="670" y2="200" marker-end="url(#a)"/>
+<text class="elabel" x="830" y="193">fetch_binding</text><circle class="cbadge chk none" cx="876" cy="200" r="9"/><text class="cnum chk none" x="876" y="204">0</text><circle class="cbadge cand" cx="876" cy="200" r="9" data-x1="876" data-x2="897"/><text class="cnum cand" x="876" y="204" data-x1="876" data-x2="897">2</text><g class="phm"><title></title><rect x="773" y="192" width="22" height="16" rx="3"/><text x="784" y="204">…</text></g></g><g class="edge diag" data-edge="conf_probe"><title>our action fetch_binding — something on this system answers the capability query — THE DIAGONAL, and the one place the symbolic path touches reality</title>
+<line x1="670" y1="200" x2="470" y2="275" marker-end="url(#a)"/>
+<text class="elabel" x="570" y="230">fetch_binding</text><circle class="cbadge chk" cx="616" cy="237" r="9"/><text class="cnum chk" x="616" y="241">1</text><circle class="cbadge cand" cx="637" cy="237" r="9" data-x1="616" data-x2="637"/><text class="cnum cand" x="637" y="241" data-x1="616" data-x2="637">1</text><g class="phm"><title></title><rect x="513" y="229" width="22" height="16" rx="3"/><text x="524" y="241">…</text></g></g><g class="edge diag" data-edge="discover"><title>pkg-config (we run nothing here) — the capability query resolves to THIS library on disk — which may not be the one the world provisioned</title>
+<line x1="470" y1="275" x2="230" y2="566" marker-end="url(#a)"/>
+<text class="elabel info" x="350" y="413" style="text-anchor:start">pkg-config</text><circle class="cbadge chk none" cx="396" cy="420" r="9"/><text class="cnum chk none" x="396" y="424">0</text><circle class="cbadge cand" cx="396" cy="420" r="9" data-x1="396" data-x2="417"/><text class="cnum cand" x="396" y="424" data-x1="396" data-x2="417">1</text><g class="phm"><title></title><rect x="293" y="412" width="22" height="16" rx="3"/><text x="304" y="424">…</text></g></g><g class="edge" data-edge="resolve_lang"><title>our action fetch_binding — the whole dependency set is simultaneously satisfiable</title>
+<line x1="990" y1="62" x2="990" y2="200" marker-end="url(#a)"/>
+<text class="elabel" x="990" y="124">fetch_binding</text><circle class="cbadge chk none" cx="1036" cy="131" r="9"/><text class="cnum chk none" x="1036" y="135">0</text><circle class="cbadge cand" cx="1036" cy="131" r="9" data-x1="1036" data-x2="1057"/><text class="cnum cand" x="1036" y="135" data-x1="1036" data-x2="1057">1</text><g class="phm"><title></title><rect x="933" y="123" width="22" height="16" rx="3"/><text x="944" y="135">…</text></g></g><g class="edge" data-edge="install_lang"><title>our action fetch_binding — the package put its artifacts in the store — the FETCHED direction of the one edge that runs both ways</title>
+<line x1="990" y1="200" x2="990" y2="566" marker-end="url(#a)"/>
+<text class="elabel" x="990" y="266">fetch_binding</text><circle class="cbadge chk none" cx="1036" cy="273" r="9"/><text class="cnum chk none" x="1036" y="277">0</text><circle class="cbadge cand" cx="1036" cy="273" r="9" data-x1="1036" data-x2="1057"/><text class="cnum cand" x="1036" y="277" data-x1="1036" data-x2="1057">1</text><g class="phm"><title></title><rect x="933" y="265" width="22" height="16" rx="3"/><text x="944" y="277">…</text></g></g><g class="edge" data-edge="install_surf"><title>our action fetch_binding — the user-facing surface is installed as the package claims</title>
+<line x1="990" y1="200" x2="990" y2="640" marker-end="url(#a)"/>
+<text class="elabel" x="990" y="325">fetch_binding</text><circle class="cbadge chk" cx="1036" cy="332" r="9"/><text class="cnum chk" x="1036" y="336">1</text><circle class="cbadge cand none" cx="1057" cy="332" r="9" data-x1="1036" data-x2="1057"/><text class="cnum cand none" x="1057" y="336" data-x1="1036" data-x2="1057">0</text><g class="phm"><title></title><rect x="933" y="324" width="22" height="16" rx="3"/><text x="944" y="336">…</text></g></g><g class="edge" data-edge="build_stub"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<line x1="1129" y1="392" x2="990" y2="482" marker-end="url(#a)"/>
+<text class="elabel" x="1060" y="430">build_binding</text><circle class="cbadge chk" cx="1106" cy="437" r="9"/><text class="cnum chk" x="1106" y="441">1</text><circle class="cbadge cand" cx="1127" cy="437" r="9" data-x1="1106" data-x2="1127"/><text class="cnum cand" x="1127" y="441" data-x1="1106" data-x2="1127">1</text><g class="phm"><title></title><rect x="1003" y="429" width="22" height="16" rx="3"/><text x="1014" y="441">…</text></g></g><g class="edge" data-edge="build_stub"><title>our action build_binding — the shim's types agree with the header — everything ABOVE the types it did not establish</title>
+<line x1="230" y1="482" x2="990" y2="482" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="475">build_binding</text><circle class="cbadge chk" cx="656" cy="482" r="9"/><text class="cnum chk" x="656" y="486">1</text><circle class="cbadge cand" cx="677" cy="482" r="9" data-x1="656" data-x2="677"/><text class="cnum cand" x="677" y="486" data-x1="656" data-x2="677">1</text><g class="phm"><title></title><rect x="553" y="474" width="22" height="16" rx="3"/><text x="564" y="486">…</text></g></g><g class="edge" data-edge="link_mod"><title>our action build_binding — every symbol the stub requires was resolved</title>
+<line x1="990" y1="482" x2="990" y2="566" marker-end="url(#a)"/>
+<text class="elabel" x="990" y="517">build_binding</text><circle class="cbadge chk" cx="1036" cy="524" r="9"/><text class="cnum chk" x="1036" y="528">4</text><circle class="cbadge cand" cx="1057" cy="524" r="9" data-x1="1036" data-x2="1057"/><text class="cnum cand" x="1057" y="528" data-x1="1036" data-x2="1057">1</text><g class="phm"><title></title><rect x="933" y="516" width="22" height="16" rx="3"/><text x="944" y="528">…</text></g></g><g class="edge" data-edge="link_mod"><title>our action build_binding — every symbol the stub requires was resolved</title>
+<line x1="230" y1="566" x2="990" y2="566" marker-end="url(#a)"/>
+<text class="elabel" x="610" y="559">build_binding</text><circle class="cbadge chk" cx="656" cy="566" r="9"/><text class="cnum chk" x="656" y="570">4</text><circle class="cbadge cand" cx="677" cy="566" r="9" data-x1="656" data-x2="677"/><text class="cnum cand" x="677" y="570" data-x1="656" data-x2="677">1</text><g class="phm"><title></title><rect x="553" y="558" width="22" height="16" rx="3"/><text x="564" y="570">…</text></g></g><g class="edge" data-edge="pack"><title>our action pack_binding — a package was assembled from what was built — the BUILT direction of the same edge, and a different relation entirely</title>
+<line x1="990" y1="566" x2="990" y2="200" marker-end="url(#a)"/>
+<text class="elabel" x="990" y="376">pack_binding</text><circle class="cbadge chk none" cx="1036" cy="383" r="9"/><text class="cnum chk none" x="1036" y="387">0</text><circle class="cbadge cand" cx="1036" cy="383" r="9" data-x1="1036" data-x2="1057"/><text class="cnum cand" x="1036" y="387" data-x1="1036" data-x2="1057">2</text><g class="phm"><title></title><rect x="933" y="375" width="22" height="16" rx="3"/><text x="944" y="387">…</text></g></g><g class="edge bare" data-edge="probe_lib"><title>the library exists and exports something — STATIC: nothing here loads it</title><path d="M 184 556 a 30 26 0 1 1 22 0"/></g><g class="edge" data-edge="run"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<line x1="990" y1="566" x2="410" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="642" y="676">probe_binding</text><circle class="cbadge chk none" cx="688" cy="683" r="9"/><text class="cnum chk none" x="688" y="687">0</text><circle class="cbadge cand" cx="688" cy="683" r="9" data-x1="688" data-x2="709"/><text class="cnum cand" x="688" y="687" data-x1="688" data-x2="709">5</text><g class="phm"><title></title><rect x="585" y="675" width="22" height="16" rx="3"/><text x="596" y="687">…</text></g></g><g class="edge" data-edge="run"><title>our action probe_binding — it linked, loaded and ran when we named every input ourselves</title>
+<line x1="230" y1="566" x2="410" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="338" y="676">probe_binding</text><circle class="cbadge chk none" cx="384" cy="683" r="9"/><text class="cnum chk none" x="384" y="687">0</text><circle class="cbadge cand" cx="384" cy="683" r="9" data-x1="384" data-x2="405"/><text class="cnum cand" x="384" y="687" data-x1="384" data-x2="405">5</text><g class="phm"><title></title><rect x="281" y="675" width="22" height="16" rx="3"/><text x="292" y="687">…</text></g></g><g class="edge" data-edge="run_packaged"><title>our action probe_binding — naming only the package was enough to build and run the same program: the recipe resolves to everything the code needs</title>
+<line x1="990" y1="200" x2="750" y2="762" marker-end="url(#a)"/>
+<text class="elabel" x="810" y="614">probe_binding</text><circle class="cbadge chk none" cx="856" cy="621" r="9"/><text class="cnum chk none" x="856" y="625">0</text><circle class="cbadge cand" cx="856" cy="621" r="9" data-x1="856" data-x2="877"/><text class="cnum cand" x="856" y="625" data-x1="856" data-x2="877">1</text><g class="phm"><title></title><rect x="753" y="613" width="22" height="16" rx="3"/><text x="764" y="625">…</text></g></g><g class="edge" data-edge="same_program"><title>the claim package_resolution_suffices — the same source, resolved through the package instead of by hand, does the same thing</title>
+<line x1="410" y1="762" x2="750" y2="762" marker-end="url(#a)"/>
+<text class="elabel claim" x="580" y="755">prs</text><circle class="cbadge chk none" cx="626" cy="762" r="9"/><text class="cnum chk none" x="626" y="766">0</text><circle class="cbadge cand" cx="626" cy="762" r="9" data-x1="626" data-x2="647"/><text class="cnum cand" x="626" y="766" data-x1="626" data-x2="647">1</text><g class="phm"><title></title><rect x="523" y="754" width="22" height="16" rx="3"/><text x="534" y="766">…</text></g></g><text class="bandlabel" x="610" y="50">PM LAYER — who resolves and installs</text><text class="bandlabel" x="610" y="160">PACKAGE LAYER — symbolic claims, and the bridge between them</text><text class="bandlabel" x="610" y="370">ARTIFACT LAYER — what is actually on disk</text><text class="bandlabel" x="610" y="730">PROGRAM — the only band where anything runs</text><g class="node pm" data-node="pm_sys"><title>apt, brew, dnf — resolves and installs native packages</title>
+<rect x="126" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="230" y="67" data-y0="67" data-y1="60" data-y2="55">system PM</text><text class="ncase" x="230" y="76" data-y1="76" data-y2="69"></text><text class="nplace" x="230" y="81"></text></g><g class="node package" data-node="pkg_sys"><title>the unit the system PM ships: payload plus metadata</title>
+<rect x="126" y="177" width="208" height="46" rx="7"/>
+<text class="nlabel" x="230" y="205" data-y0="205" data-y1="198" data-y2="193">native package</text><text class="ncase" x="230" y="214" data-y1="214" data-y2="207"></text><text class="nplace" x="230" y="219"></text></g><g class="node artifact gone" data-node="src_sys"><title>the library's own repository at a ref — present when the world builds rather than fetches</title>
+<rect x="16" y="369" width="150" height="46" rx="7"/>
+<text class="nlabel" x="91" y="397" data-y0="397" data-y1="390" data-y2="385">native source</text><text class="ncase" x="91" y="406" data-y1="406" data-y2="399"></text><text class="nplace" x="91" y="411"></text></g><g class="node artifact" data-node="hdr_sys"><title>the syntactic native surface a binding compiles against</title>
+<rect x="126" y="459" width="208" height="46" rx="7"/>
+<text class="nlabel" x="230" y="487" data-y0="487" data-y1="480" data-y2="475">headers</text><text class="ncase" x="230" y="496" data-y1="496" data-y2="489"></text><text class="nplace" x="230" y="501"></text></g><g class="node artifact declared" data-node="lib_sys"><title>the link-time and runtime carrier: exported symbols, identity, recorded dependencies</title>
+<rect x="126" y="543" width="208" height="46" rx="7"/>
+<text class="nlabel" x="230" y="571" data-y0="571" data-y1="564" data-y2="559">native library</text><g class="declmark"><title>DECLARED by the experiment: the c_api's exported functions, the soname, and the symbol-version tags — read by declared_symbols_exported, soname_matches_declaration and declared_versions_exported</title>
+<circle cx="324" cy="553" r="8"/><text x="324" y="557">◇</text></g><text class="ncase" x="230" y="580" data-y1="580" data-y2="573"></text><text class="nplace" x="230" y="585"></text></g><g class="node artifact gone" data-node="staged_sys"><title>the install-prefix face of the same library — a second copy, which is why a claim can compare them</title>
+<rect x="126" y="617" width="208" height="46" rx="7"/>
+<text class="nlabel" x="230" y="645" data-y0="645" data-y1="638" data-y2="633">staged copy</text><text class="ncase" x="230" y="654" data-y1="654" data-y2="647"></text><text class="nplace" x="230" y="659"></text></g><g class="node package" data-node="cap"><title>a .pc file, a CMake config, a *-config script: content inside the provider, owned by the package that ships it, recording how the artifacts beside it are built against. Not a bridge — a source of claims, and what a conf package's check reads</title>
+<rect x="366" y="252" width="208" height="46" rx="7"/>
+<text class="nlabel" x="470" y="280" data-y0="280" data-y1="273" data-y2="268">capability file</text><text class="ncase" x="470" y="289" data-y1="289" data-y2="282"></text><text class="nplace" x="470" y="294"></text></g><g class="node package" data-node="bridge"><title>a separate package existing only for cooperation (opam's conf-*). Carries package IDENTITY and the depext mapping. THE SYMBOLIC BRIDGE</title>
+<rect x="566" y="177" width="208" height="46" rx="7"/>
+<text class="nlabel" x="670" y="205" data-y0="205" data-y1="198" data-y2="193">bridge package</text><text class="ncase" x="670" y="214" data-y1="214" data-y2="207"></text><text class="nplace" x="670" y="219"></text></g><g class="node pm" data-node="pm_lang"><title>opam, pip, cargo — solves constraints and installs</title>
+<rect x="886" y="39" width="208" height="46" rx="7"/>
+<text class="nlabel" x="990" y="67" data-y0="67" data-y1="60" data-y2="55">language PM</text><text class="ncase" x="990" y="76" data-y1="76" data-y2="69"></text><text class="nplace" x="990" y="81"></text></g><g class="node package" data-node="pkg_lang"><title>the unit the language PM ships, with its declared depends</title>
+<rect x="886" y="177" width="208" height="46" rx="7"/>
+<text class="nlabel" x="990" y="205" data-y0="205" data-y1="198" data-y2="193">binding package</text><text class="ncase" x="990" y="214" data-y1="214" data-y2="207"></text><text class="nplace" x="990" y="219"></text></g><g class="node artifact" data-node="src_lang"><title>the binding's own repository — separate from the library's, and often at a different ref</title>
+<rect x="1054" y="369" width="150" height="46" rx="7"/>
+<text class="nlabel" x="1129" y="397" data-y0="397" data-y1="390" data-y2="385">binding source</text><text class="ncase" x="1129" y="406" data-y1="406" data-y2="399"></text><text class="nplace" x="1129" y="411"></text></g><g class="node artifact" data-node="stub_lang"><title>the C shim the binding compiles: what records the symbols it requires of the library</title>
+<rect x="886" y="459" width="208" height="46" rx="7"/>
+<text class="nlabel" x="990" y="487" data-y0="487" data-y1="480" data-y2="475">compiled stub</text><text class="ncase" x="990" y="496" data-y1="496" data-y2="489"></text><text class="nplace" x="990" y="501"></text></g><g class="node artifact" data-node="mod_lang"><title>the compiled language-side artifact the consumer links</title>
+<rect x="886" y="543" width="208" height="46" rx="7"/>
+<text class="nlabel" x="990" y="571" data-y0="571" data-y1="564" data-y2="559">language module</text><text class="ncase" x="990" y="580" data-y1="580" data-y2="573"></text><text class="nplace" x="990" y="585"></text></g><g class="node artifact declared" data-node="surf_lang"><title>the names and types the binding offers its own users</title>
+<rect x="886" y="617" width="208" height="46" rx="7"/>
+<text class="nlabel" x="990" y="645" data-y0="645" data-y1="638" data-y2="633">user surface</text><g class="declmark"><title>DECLARED by the experiment: the watchlist of names the binding must offer — read by api_names_present</title>
+<circle cx="1084" cy="627" r="8"/><text x="1084" y="631">◇</text></g><text class="ncase" x="990" y="654" data-y1="654" data-y2="647"></text><text class="nplace" x="990" y="659"></text></g><g class="node program" data-node="consumer_artifact"><title>every input named by path — the language module and the native library. Says the CODE is right</title>
+<rect x="306" y="739" width="208" height="46" rx="7"/>
+<text class="nlabel" x="410" y="767" data-y0="767" data-y1="760" data-y2="755">consumer (artifact-linked)</text><text class="ncase" x="410" y="776" data-y1="776" data-y2="769"></text><text class="nplace" x="410" y="781"></text></g><g class="node program" data-node="consumer_package"><title>names only the binding package and lets the PM resolve the rest. Says the RECIPE is right — which is the half a build-tree probe cannot see</title>
+<rect x="646" y="739" width="208" height="46" rx="7"/>
+<text class="nlabel" x="750" y="767" data-y0="767" data-y1="760" data-y2="755">consumer (package-linked)</text><text class="ncase" x="750" y="776" data-y1="776" data-y2="769"></text><text class="nplace" x="750" y="781"></text></g></svg>

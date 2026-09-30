@@ -1578,13 +1578,28 @@ let overview_cmd =
       value & flag
       & info [ "flow" ]
           ~doc:
-            "Print §5 of the page instead of writing it: the figure's boxes \
+            "Print §0 of the page instead of writing it: the figure's boxes \
              and arrows, each subject's code and running layers with the \
              sections that show them, and the page's sections with the \
              template slots and modules behind each.")
   in
-  let run project json flow () =
+  let exhibits =
+    Arg.(
+      value
+      & opt (some string) None
+      & info [ "exhibits" ] ~docv:"DIR"
+          ~doc:
+            "Write only the page's figures and tables, each on its own and \
+             without the page's caption, into $(docv) (the page writes them \
+             to doc/canary/research/exhibits/).")
+  in
+  let run project json flow exhibits () =
+    let m () = Canary_matrix.matrix_of Canary_registry.all_projects in
     if flow then print_string (Canary_overview_flow.text ())
+    else if Option.is_some exhibits then
+      Fmt.pr "wrote %s/ (the page's figures and tables)@."
+        (Canary_overview_export.write ?dir:exhibits Canary_registry.all_specs
+           ~overview:(Canary_agreement_overview.render (m ())))
     else if json then begin
       let projects =
         match project with
@@ -1616,11 +1631,13 @@ let overview_cmd =
         Printf.sprintf "%04d-%02d-%02d %02d:%02d" (tm.tm_year + 1900)
           (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
       in
-      let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+      let m = m () in
       let overview = Canary_agreement_overview.render m in
       Canary_overview_page.write Canary_registry.all_specs ~overview
         ~generated_at:now;
       Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
+      Fmt.pr "wrote %s/ (its figures and tables, each on its own)@."
+        (Canary_overview_export.write Canary_registry.all_specs ~overview);
       Fmt.pr "wrote %s/{%s} (pointers to its §1.2)@."
         Canary_overview_page.pointer_dir
         (String.concat "," Canary_overview_page.pointer_files);
@@ -1640,10 +1657,11 @@ let overview_cmd =
           topologies. Also writes this machine's recorded worlds \
           (docs/canary/overview_runs.js, _mac on macOS), which §1 and §1.2 \
           draw, and the pointers that keep the retired result page's \
-          addresses (docs/canary/projects/) landing on §1.2. With --json, \
-          prints the run record instead and writes nothing; with --flow, \
-          prints §5, how the page is made. Runs nothing.")
-    Term.(const run $ project $ json $ flow $ const ())
+          addresses (docs/canary/projects/) landing on §1.2, and each of \
+          its figures and tables on its own (doc/canary/research/exhibits/). \
+          With --json, prints the run record instead and writes nothing; \
+          with --flow, prints §0, how the page is made. Runs nothing.")
+    Term.(const run $ project $ json $ flow $ exhibits $ const ())
 
 let tiny_scenarios_list_cmd =
   Cmd.v

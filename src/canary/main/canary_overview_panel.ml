@@ -70,15 +70,34 @@ let runs_label (j : Canary_overview_join.t) (ids : string list) : string =
   |> List.dedup_and_sort ~compare:String.compare
   |> String.concat ~sep:", "
 
-(** The panel and the one diagram it draws. *)
-let join_panel (j : Canary_overview_join.t) =
+(** §1's diagram in the default choice: the page's opening drawing, and
+    the export's. *)
+let chain_svg (j : Canary_overview_join.t) : string =
   let module J = Canary_overview_join in
-  let m0, k0, pl0 = J.default_choice j in
+  let m0, _, _ = J.default_choice j in
   let gone0, dead0 = J.default_drawing j in
   let classes id =
     (if List.mem gone0 id ~equal:String.equal then [ "gone" ] else [])
     @ if List.mem dead0 id ~equal:String.equal then [ "jdead" ] else []
   in
+  D.diagram ~classes ~case_slots:true ~ph_slots:true
+    ~counts:(fun id ->
+      (* the default drawing's badges, as the script would count them *)
+      let claims =
+        Option.value ~default:[]
+          (Option.bind
+             (List.find (J.variants ()) ~f:(fun v ->
+                  String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m0))
+             ~f:(fun v -> List.Assoc.find (J.mechanism_claims v) id ~equal:String.equal))
+      in
+      let checked = List.count claims ~f:(fun (_, st) -> Poly.equal st T.Checked) in
+      (checked, List.length claims - checked))
+    ()
+
+(** The panel and the one diagram it draws. *)
+let join_panel (j : Canary_overview_join.t) =
+  let module J = Canary_overview_join in
+  let m0, k0, pl0 = J.default_choice j in
   let hidden_unless lit = if lit then "" else " hidden" in
   let button ~g ~v ?(title = "") ~lit label =
     Printf.sprintf {|<button data-g="%s" data-v="%s"%s%s>%s</button>|} g (esc v)
@@ -279,20 +298,7 @@ rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</co
     (row "binding mechanism" m_buttons)
     (row "cooperation" k_buttons)
     (row "package in canary" c_buttons)
-    (E.figure "fig-chain"
-       (D.diagram ~classes ~case_slots:true ~ph_slots:true
-          ~counts:(fun id ->
-            (* the default drawing's badges, as the script would count them *)
-            let claims =
-              Option.value ~default:[]
-                (Option.bind
-                   (List.find (J.variants ()) ~f:(fun v ->
-                        String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m0))
-                   ~f:(fun v -> List.Assoc.find (J.mechanism_claims v) id ~equal:String.equal))
-            in
-            let checked = List.count claims ~f:(fun (_, st) -> Poly.equal st T.Checked) in
-            (checked, List.length claims - checked))
-          ()))
+    (E.figure "fig-chain" (chain_svg j))
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with
      | [] -> ""
