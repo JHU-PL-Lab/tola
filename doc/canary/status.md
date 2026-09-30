@@ -67,7 +67,7 @@ The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 198 project + 120 artifact + 17 PM = 335** (2026-09-30). `make canary-test`
+**Tests: 199 project + 120 artifact + 17 PM = 336** (2026-09-30). `make canary-test`
 after every edit under `src/canary/`; `make canary-post-check` before
 committing.
 

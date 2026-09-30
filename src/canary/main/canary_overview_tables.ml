@@ -7,6 +7,7 @@
 
 open Base
 module T = Canary_topology
+module E = Canary_overview_exhibits
 
 let esc = Canary_overview_assets.esc
 
@@ -40,14 +41,19 @@ let claim_sites_table () =
       (esc e.T.eg_id) annotation (esc e.T.eg_tool) impl cand names
   in
   Printf.sprintf
-    "<table><thead><tr><th>edge</th><th>annotation</th><th>whose rule \
+    "%s<thead><tr><th>edge</th><th>annotation</th><th>whose rule \
      runs</th><th>impl / cand</th><th>claims (<sup>?</sup> = no evaluator)</th></tr></thead><tbody>%s</tbody></table>"
+    (E.table "tab-census")
     (String.concat (List.map T.edges ~f:row))
 
 (* ── §3 ── *)
 
 (** A table that may be wider than the page scrolls on its own. *)
 let wide (html : string) = {|<div class="widetable">|} ^ html ^ "</div>"
+
+(** One of §3's tables, captioned: its head, then its rows. *)
+let cov_table (id : string) (head : string) (rows : string) : string =
+  wide (E.table ~cls:"cov" id ^ head ^ "<tbody>" ^ rows ^ "</tbody></table>")
 
 let cells (xs : string list) =
   "<tr>" ^ String.concat (List.map xs ~f:(fun x -> "<td>" ^ x ^ "</td>")) ^ "</tr>"
@@ -101,13 +107,12 @@ let pm_solo_table projects =
         dash unseen;
         (match pm_users projects pm with [] -> "—" | us -> esc (String.concat ~sep:", " us)) ]
   in
-  wide
-    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
-       (heads
-          [ "package manager"; "store"; "what a package is"; "its versions";
-            "what it ships for others to read"; "its capability file";
-            "bridges it defines"; "inside an install, unseen"; "used by" ])
-       (String.concat (List.map Canary_pm_solo.table ~f:row)))
+  cov_table "tab-pm"
+    (heads
+       [ "package manager"; "store"; "what a package is"; "its versions";
+         "what it ships for others to read"; "its capability file";
+         "bridges it defines"; "inside an install, unseen"; "used by" ])
+    (String.concat (List.map Canary_pm_solo.table ~f:row))
 
 (** Which projects bind through [m], per pass 2 — the mechanism each
     declared binding language resolves to. *)
@@ -158,17 +163,16 @@ let binding_table projects =
          | [] -> "— <span class=\"from\">not wired</span>"
          | us -> esc (String.concat ~sep:", " us)) ]
   in
-  wide
-    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
-       (heads
-          [ "mechanism"; "language"; "discipline"; "how the library is bound";
-            "a compiled stub?"; "does the consumer record its NEEDED?";
-            "a typed boundary?"; "claims checked for it"; "used by" ])
-       (String.concat
-          (List.map ~f:row
-             (Canary_overview_join.by_language
-                (fun (i : Canary_mechanism.mechanism_info) -> i.Canary_mechanism.mi_lang)
-                Canary_mechanism.mechanism_catalogue))))
+  cov_table "tab-mechanisms"
+    (heads
+       [ "mechanism"; "language"; "discipline"; "how the library is bound";
+         "a compiled stub?"; "does the consumer record its NEEDED?";
+         "a typed boundary?"; "claims checked for it"; "used by" ])
+    (String.concat
+       (List.map ~f:row
+          (Canary_overview_join.by_language
+             (fun (i : Canary_mechanism.mechanism_info) -> i.Canary_mechanism.mi_lang)
+             Canary_mechanism.mechanism_catalogue)))
 
 (** The instances of each cooperation, per world: a world that builds its
     binding does not go through the package gate its project declares. *)
@@ -235,13 +239,12 @@ let coop_table projects =
     List.filter T.coop_catalogue ~f:(fun i ->
         not (List.mem covered i.T.co_kind ~equal:Poly.equal))
   in
-  wide
-    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
-       (heads
-          [ "cooperation"; "the two sides"; "its bridge"; "how the packages are joined";
-            "what meets the artifacts"; "how a version constraint travels";
-            "what canary records"; "instances" ])
-       (String.concat (List.map groups ~f:row)))
+  cov_table "tab-cooperation"
+    (heads
+       [ "cooperation"; "the two sides"; "its bridge"; "how the packages are joined";
+         "what meets the artifacts"; "how a version constraint travels";
+         "what canary records"; "instances" ])
+    (String.concat (List.map groups ~f:row))
   ^ Printf.sprintf
       "<p class=\"mechnote\">Classified but instantiated by no project yet: %s.</p>"
       (esc
@@ -254,21 +257,20 @@ let coop_table projects =
     there. *)
 let chains_table (j : Canary_overview_join.t) =
   let module J = Canary_overview_join in
-  wide
-    (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
-       (heads
-          [ "project"; "language"; "binding (§3.2)"; "language side (§3.1)";
-            "native side (§3.1)"; "cooperation (§3.3)" ])
-       (String.concat
-          (List.map j.J.jn_cases ~f:(fun c ->
-               cells
-                 [ Printf.sprintf {|<a href="#chain=%s">%s</a>|} (esc c.J.cs_id)
-                     (esc c.J.cs_project);
-                   esc (Canary_lang.string_of_lang c.J.cs_lang);
-                   esc (Canary_mechanism.string_of_mechanism c.J.cs_mechanism);
-                   esc (T.string_of_supplier c.J.cs_topology.T.tp_lang);
-                   esc (T.string_of_supplier c.J.cs_topology.T.tp_sys);
-                   esc (T.character c.J.cs_topology) ]))))
+  cov_table "tab-chains"
+    (heads
+       [ "project"; "language"; "binding (§3.2)"; "language side (§3.1)";
+         "native side (§3.1)"; "cooperation (§3.3)" ])
+    (String.concat
+       (List.map j.J.jn_cases ~f:(fun c ->
+            cells
+              [ Printf.sprintf {|<a href="#chain=%s">%s</a>|} (esc c.J.cs_id)
+                  (esc c.J.cs_project);
+                esc (Canary_lang.string_of_lang c.J.cs_lang);
+                esc (Canary_mechanism.string_of_mechanism c.J.cs_mechanism);
+                esc (T.string_of_supplier c.J.cs_topology.T.tp_lang);
+                esc (T.string_of_supplier c.J.cs_topology.T.tp_sys);
+                esc (T.character c.J.cs_topology) ])))
 
 (** §3.3's two notes: the bindings in a wrong row for a known reason, and
     why no chain is capability-mediated. Both computed. *)

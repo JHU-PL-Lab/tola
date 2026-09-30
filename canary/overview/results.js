@@ -1,5 +1,5 @@
 (function(){
-var fd=document.getElementById('framesdata'), box=document.getElementById('rtable');
+var fd=document.getElementById('framesdata'), box=document.getElementById('tab-results');
 if(!fd||!box) return;
 var FR; try{ FR=JSON.parse(fd.textContent); }catch(e){ return; }
 var esc=function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -66,7 +66,8 @@ var body=rows.map(function(x){
           +(b?' — blame: '+b+' ('+((FR.blames||{})[b]||'')+')':''))
           +'">'+esc(mk2[0])+'</td>'; } }); });
   return tr+'</tr>'; }).join('');
-box.innerHTML='<thead>'+h1+h2+h3+'</thead><tbody>'+body+'</tbody>';
+var cap=box.querySelector('caption');
+box.innerHTML=(cap?cap.outerHTML:'')+'<thead>'+h1+h2+h3+'</thead><tbody>'+body+'</tbody>';
 // a row's name draws its chain in §1
 box.addEventListener('click',function(e){ var a=e.target.closest('a[data-key]'); if(!a) return;
   if(window.canaryDraw&&window.canaryDraw(a.dataset.key)) e.preventDefault(); });

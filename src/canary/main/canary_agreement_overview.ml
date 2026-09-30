@@ -8,6 +8,7 @@
 
 open Base
 module M = Canary_matrix
+module E = Canary_overview_exhibits
 
 (* ── where the agreements sit ── *)
 
@@ -142,7 +143,8 @@ let render (m : M.t) : string =
        the registry has an evaluator for it. <b>decided</b>: a recorded \
        run reached holds or violated. After each code: ✓ decided in a \
        run, · checked but never decided, ? named only.</p>"
-    ^ "<table class=\"keytbl sittings\"><thead><tr><th>reaches</th>\
+    ^ E.table ~cls:"keytbl sittings" "tab-sittings"
+    ^ "<thead><tr><th>reaches</th>\
        <th>layers</th><th>placed</th><th>checked</th><th>decided</th>\
        <th>agreements</th></tr></thead><tbody>"
     ^ String.concat ~sep:""
@@ -314,7 +316,8 @@ let render (m : M.t) : string =
     ^ "</p>"
     (* each label a log records, the mark §1.2 shows for it, and the
        blame [blame_of] can give it, over the cases it distinguishes *)
-    ^ "<table class=\"okey\"><tr><th>a log records</th><th>meaning</th>\
+    ^ E.table ~cls:"okey" "tab-outcomes"
+    ^ "<tr><th>a log records</th><th>meaning</th>\
        <th>§1.2 shows</th><th>blame</th></tr>"
     ^ String.concat
         (List.map M.outcome_marks ~f:(fun o ->
@@ -352,7 +355,8 @@ let render (m : M.t) : string =
        is not the same as naming the claim, which is why <b>kind</b> and \
        the record's <code>against</code> are two fields.</p></div>"
     ^ (let sides, frame_labels, columns = frame_head in
-       "<table class=\"keytbl grid\"><thead><tr>"
+       E.table ~cls:"keytbl grid" "tab-agreements"
+       ^ "<thead><tr>"
        ^ String.concat
            (List.map
               [ "code"; "agreement"; "kind"; "implemented at"; "lang"; "mech"; "object";

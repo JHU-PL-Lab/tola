@@ -195,5 +195,11 @@ ul.outline ul{padding-left:1.2rem;margin:.1rem 0 .3rem}
 dl.terms{display:grid;grid-template-columns:max-content 1fr;gap:.25rem 1rem;max-width:74ch}
 dl.terms dt{font-weight:600}
 dl.terms dd{margin:0}
+figure.exhibit{margin:1rem 0}
+figure.exhibit>svg{margin:0}
+caption{caption-side:top;text-align:left;padding:0 0 .4rem;font-size:.85rem;color:var(--mut)}
+figcaption{padding:.4rem 0 0;font-size:.85rem;color:var(--mut)}
+caption b,figcaption b{color:var(--fg)}
+details.exlist ul{padding-left:1.2rem;margin:.3rem 0}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}

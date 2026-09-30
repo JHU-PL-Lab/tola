@@ -11,6 +11,7 @@ module T = Canary_topology
 module D = Canary_overview_diagram
 module L = Canary_overview_looks
 module C = Canary_overview_cases
+module E = Canary_overview_exhibits
 
 let esc = Canary_overview_assets.esc
 
@@ -50,8 +51,9 @@ let node_legend () =
       (esc n.T.nd_gloss)
   in
   Printf.sprintf
-    "<table><thead><tr><th>node</th><th>layer</th><th>what it \
+    "%s<thead><tr><th>node</th><th>layer</th><th>what it \
      is</th></tr></thead><tbody>%s</tbody></table>"
+    (E.table "tab-nodes")
     (String.concat (List.map T.nodes ~f:row))
 
 (** The chains the ids name, as a reader reads them: project and language,
@@ -251,7 +253,7 @@ this machine — <code>canary overview</code> writes what each machine ran to
 <p class="mechnote" id="jruns">%s</p>
 <p class="mechnote" id="jmiss" hidden></p>%s
 <details class="jprov" id="jprov"><summary id="jprovsum">Where the lines under the node labels come from</summary>
-<table class="cmp"><thead><tr><th>node</th><th>line</th><th>shown</th><th>source — and the code that read it</th></tr></thead>
+%s<thead><tr><th>node</th><th>line</th><th>shown</th><th>source — and the code that read it</th></tr></thead>
 <tbody id="jprovbody"></tbody></table>
 <p class="mechnote">Every line written under a node label, with where it was read:
 <span class="src code">code</span> a declaration or a rule in canary's source;
@@ -277,19 +279,20 @@ rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</co
     (row "binding mechanism" m_buttons)
     (row "cooperation" k_buttons)
     (row "package in canary" c_buttons)
-    (D.diagram ~classes ~case_slots:true ~ph_slots:true
-       ~counts:(fun id ->
-         (* the default drawing's badges, as the script would count them *)
-         let claims =
-           Option.value ~default:[]
-             (Option.bind
-                (List.find (J.variants ()) ~f:(fun v ->
-                     String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m0))
-                ~f:(fun v -> List.Assoc.find (J.mechanism_claims v) id ~equal:String.equal))
-         in
-         let checked = List.count claims ~f:(fun (_, st) -> Poly.equal st T.Checked) in
-         (checked, List.length claims - checked))
-       ())
+    (E.figure "fig-chain"
+       (D.diagram ~classes ~case_slots:true ~ph_slots:true
+          ~counts:(fun id ->
+            (* the default drawing's badges, as the script would count them *)
+            let claims =
+              Option.value ~default:[]
+                (Option.bind
+                   (List.find (J.variants ()) ~f:(fun v ->
+                        String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m0))
+                   ~f:(fun v -> List.Assoc.find (J.mechanism_claims v) id ~equal:String.equal))
+            in
+            let checked = List.count claims ~f:(fun (_, st) -> Poly.equal st T.Checked) in
+            (checked, List.length claims - checked))
+          ()))
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with
      | [] -> ""
@@ -297,6 +300,7 @@ rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</co
          Printf.sprintf
            {|<p class="mechnote">No cooperation button: %s. Their packages are among the concrete ones, drawn with what canary cannot read left in (§3.3).</p>|}
            (esc (String.concat ~sep:"; " us)))
+    (E.table ~cls:"cmp" "tab-lines")
     (* the layout's rules, as a redraw must keep them *)
     (Printf.sprintf
        {|<details class="jprov" id="jrules"><summary>How this diagram is laid out — %d rules a redraw in any framework must keep</summary><ol class="lrules">%s</ol><p class="mechnote">Each is held against these places by <code>overview.layout_rules_hold</code>, or by the pin it names; the looks are the keys'.</p></details>|}

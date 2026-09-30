@@ -2538,6 +2538,83 @@ let flow_pin : Canary_project_test.pure_test =
         slots_ok && anchors_ok && sections_ok && modules_ok && held_ok && geometry_ok)
   }
 
+(* EVERY FIGURE AND TABLE IS NUMBERED AND TITLED (2026-09-30), so the page
+   and the manuscript cite one by its id. Held: each exhibit appears once,
+   in list order, captioned with its label and title, and §0 lists it;
+   every table the page is rendered with, and every drawing (an svg with
+   role="img"), is one of them. *)
+let exhibits_pin : Canary_project_test.pure_test =
+  { name = "overview.exhibits_are_captioned";
+    check =
+      (fun () ->
+        let module E = Canary_overview_exhibits in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs
+            ~overview:
+              (Canary_agreement_overview.render
+                 (Canary_matrix.matrix_of Canary_registry.all_projects))
+            ~generated_at:"pin"
+        in
+        let all pattern = String.substr_index_all page ~may_overlap:false ~pattern in
+        let tag_at i =
+          match String.index_from page i '>' with
+          | Some j -> String.sub page ~pos:i ~len:(j - i + 1)
+          | None -> ""
+        in
+        let at e = all (Printf.sprintf {|id="%s"|} e.E.ex_id) in
+        let captioned e =
+          match at e with
+          | [ p ] -> (
+              match e.E.ex_kind with
+              | E.Table ->
+                  String.is_substring_at page ~pos:p
+                    ~substring:
+                      (Printf.sprintf {|id="%s"><caption>%s</caption>|} e.E.ex_id
+                         (E.caption_text e))
+              | E.Figure -> (
+                  let close =
+                    Printf.sprintf "<figcaption>%s</figcaption></figure>" (E.caption_text e)
+                  in
+                  match
+                    ( String.substr_index page ~pos:p ~pattern:"</figure>",
+                      String.substr_index page ~pos:p ~pattern:close )
+                  with
+                  | Some f, Some c -> f = c + String.length close - String.length "</figure>"
+                  | _ -> false))
+          | _ -> false
+        in
+        let listed e =
+          String.is_substring page
+            ~substring:
+              (Printf.sprintf {|<li><a href="#%s">%s</a></li>|} e.E.ex_id (E.caption_text e))
+        in
+        let ordered =
+          let ps = List.filter_map E.exhibits ~f:(fun e -> List.hd (at e)) in
+          List.length ps = List.length E.exhibits
+          && List.for_all2_exn (List.drop_last_exn ps) (List.tl_exn ps) ~f:(fun a b -> a < b)
+        in
+        let tables_ok =
+          List.for_all (all "<table") ~f:(fun i ->
+              String.is_substring (tag_at i) ~substring:{| id="tab-|})
+        in
+        let drawings =
+          List.filter (all "<svg") ~f:(fun i ->
+              String.is_substring (tag_at i) ~substring:{|role="img"|})
+        in
+        let drawings_ok =
+          List.length drawings
+          = List.count E.exhibits ~f:(fun e -> Poly.equal e.E.ex_kind E.Figure)
+          && List.for_all drawings ~f:(fun i ->
+                 match String.rsplit2 (String.prefix page i) ~on:'<' with
+                 | Some (_, t) ->
+                     String.is_prefix t ~prefix:{|figure class="exhibit" id="fig-|}
+                     && String.is_suffix t ~suffix:">"
+                 | None -> false)
+        in
+        List.for_all E.exhibits ~f:(fun e -> captioned e && listed e)
+        && ordered && tables_ok && drawings_ok)
+  }
+
 (* ONE SPELLING OF A MARK (2026-09-30). The record and the result table
    used to map outcomes to marks separately, and disagreed: an evaluator
    error was ✗ in one and err in the other, and a stale log line showed
@@ -9370,6 +9447,7 @@ let base_tests : Canary_project_test.pure_test list =
       edge_marks_pin;
       visual_vocabulary_pin;
       flow_pin;
+      exhibits_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;

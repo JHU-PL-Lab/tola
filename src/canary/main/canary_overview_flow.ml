@@ -42,7 +42,7 @@ let sections : section list =
       ~about:"what canary models between two package managers, with a recorded run drawn on it";
     s "§1.1" "What each node is" "nodes" [ "node_legend" ]
       [ "Canary_overview_panel"; "Canary_topology" ];
-    s "§1.2" "The results, one row per chain" "results" [ "frames_json" ]
+    s "§1.2" "The results, one row per chain" "results" [ "frames_json"; "results_table" ]
       [ "Canary_frames"; "Canary_overview_runs" ];
     s "§2" "The agreements" "overview" [ "agreement_overview" ]
       [ "Canary_agreement_overview" ]
@@ -98,6 +98,7 @@ let outline () : string =
               else "<ul>" ^ String.concat (List.map subs ~f:(fun s -> "<li>" ^ item s ^ "</li>")) ^ "</ul>")
            ^ "</li>"))
   ^ "</ul>"
+  ^ Canary_overview_exhibits.list_html ()
 
 (* ── the terms ── *)
 
@@ -504,17 +505,18 @@ let box_svg (b : box) : string =
   Printf.sprintf {|<g class="%s">%s%s%s%s%s</g>|} cls title shape (String.concat (List.rev lines))
     (held_svg b) (agents_svg b)
 
-(** The figure, as SVG. *)
+(** The figure: its SVG, captioned. *)
 let figure () : string =
-  Printf.sprintf
-    {|<svg class="flow" viewBox="0 0 %d %d" role="img" aria-label="How this page is made: from canary's code and its runs to this page">%s%s%s%s</svg>|}
-    canvas_w canvas_h
-    (String.concat (List.map groups ~f:bracket_svg))
-    (String.concat (List.map arrows ~f:arrow_svg))
-    (String.concat (List.map boxes ~f:box_svg))
-    (String.concat
-       (List.map lanes ~f:(fun (x, y, t) ->
-            Printf.sprintf {|<text class="flane" x="%d" y="%d">%s</text>|} x y (esc t))))
+  Canary_overview_exhibits.figure "fig-flow"
+    (Printf.sprintf
+       {|<svg class="flow" viewBox="0 0 %d %d" role="img" aria-label="How this page is made: from canary's code and its runs to this page">%s%s%s%s</svg>|}
+       canvas_w canvas_h
+       (String.concat (List.map groups ~f:bracket_svg))
+       (String.concat (List.map arrows ~f:arrow_svg))
+       (String.concat (List.map boxes ~f:box_svg))
+       (String.concat
+          (List.map lanes ~f:(fun (x, y, t) ->
+               Printf.sprintf {|<text class="flane" x="%d" y="%d">%s</text>|} x y (esc t)))))
 
 (* ── the table ── *)
 
@@ -533,7 +535,8 @@ let table () : string =
       (shown_html s.sj_code.ly_shown) (esc s.sj_run.ly_holds) (from s.sj_run.ly_from)
       (shown_html s.sj_run.ly_shown)
   in
-  {|<table class="flowtab"><tr><th></th><th>code layer: what canary knows</th><th>shown in</th><th>running layer: what a run records</th><th>shown in</th></tr>|}
+  Canary_overview_exhibits.table ~cls:"flowtab" "tab-subjects"
+  ^ {|<tr><th></th><th>code layer: what canary knows</th><th>shown in</th><th>running layer: what a run records</th><th>shown in</th></tr>|}
   ^ String.concat ~sep:"\n" (List.map subjects ~f:row)
   ^ "</table>"
 

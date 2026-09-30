@@ -118,6 +118,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
       ("join_panel", P.join_panel join);
       ("node_legend", P.node_legend ());
       ("frames_json", frames_json ());
+      (* results.js fills it, keeping the caption *)
+      ("results_table", Canary_overview_exhibits.table ~cls:"rt" "tab-results" ^ "</table>");
       ("agreement_overview", overview);
       ("sites", Int.to_string (List.length T.claim_sites));
       ("sites_checked", sites T.implemented);
