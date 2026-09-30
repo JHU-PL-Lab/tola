@@ -55,18 +55,13 @@ implicates the artifact only if the declaration is trusted; a peer mismatch
 initially implicates the pairing. Version direction helps explain a failure
 but does not exclude packaging or environment faults.
 
-World assertions answer a different question: did Canary realize the world
-it says it tested? A wrong package pin or source ref calls the run's evidence
-into question. It is not an agreement finding about the tested software.
-
 ## 2. Reading a result
 
-Only `holds` and `violated` are decided comparisons. Other labels distinguish
-missing evidence (`unavailable`), a missing declaration (`undeclared`),
-nothing of that kind to check (`vacuous`), and evidence that cannot settle
-the comparison (`inconclusive`). `not_implemented`, `disabled`,
-`not_applicable`, and `error` explain why evaluation did not decide.
-These ten labels come from eight outcome constructors: `Unavailable` has
+The key under the agreement table lists every label a log records, its
+mark in the result table, and the blame it can carry; the note above the
+table says how a finding differs from a failed step and from a failed
+world assertion. Only `holds` and `violated` are decided comparisons.
+The ten labels come from eight outcome constructors: `Unavailable` has
 three typed causes.
 
 ### Auditing a row
@@ -78,8 +73,9 @@ cell that narrows nothing and says so anyway.
 
 The laws each row must satisfy are **data**, in
 `Canary_agreement.row_rules` — a name, the law in one sentence, and the
-complaint when a row breaks it. `canary checks --firing` prints them
-beside the table with any violation;
+complaint when a row breaks it. The page lists them under the agreement
+table's verdict line; `canary checks --firing` prints them with any
+violation;
 `agreements.rows_obey_their_own_laws` fails the build on one. The list
 is meant to grow: a rule added there is enforced without touching a
 test, and it is not copied here, so it cannot go stale.
@@ -145,12 +141,9 @@ second. The artifact axis distinguishes them and the action axis does
 not. `analysis.one_mechanism_per_language` names tiny-full as the known
 case and fails on a second one.
 
-A finding and a step verdict are separate. Normally an `Expect_success`
-step passes when its command and postcondition succeed, even if an agreement
-finds a mismatch. An expected-failure test can confirm a finding by observing
-its predicted diagnostic. `--strict` instead fails the step that observes a
-violation; intentional mismatch worlds can therefore fail correctly in that
-mode. Strict and permissive verdicts have different cache fingerprints.
+An expected-failure test can confirm a finding by observing its predicted
+diagnostic. Under `--strict`, intentional mismatch worlds fail correctly,
+and strict and permissive verdicts have different cache fingerprints.
 
 The table's implementation and observed-result columns are also separate:
 an evaluator can exist without ever reaching useful evidence. A cached step

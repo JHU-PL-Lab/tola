@@ -577,4 +577,7 @@ copy is named) closed the rest.
 | `overview.layout_rules_hold` | the places: every rule holds, every named pin exists (§5) |
 | `overview.flow_is_the_page` | the page's §0: every template slot belongs to one section, every heading reads as the outline lists it and in its order, every module it names has a source file, every pin a box names exists, the figure's boxes do not overlap and every arrow is straight (§1) |
 | `overview.tables_list_what_canary_covers` | the page's §3 tables list exactly what canary has drivers and projects for |
+| `overview.outcome_marks_are_one_list` | one spelling of an outcome's mark: every label a log records has an entry, the page's script spells no word mark, §2 shows the key |
+| `overview.agreement_laws_are_listed` | §2 lists every law of `Canary_agreement.row_rules` |
+| `overview.mechanisms_list_their_claims` | §3.2 lists, per mechanism, exactly the claims pass 2's applicability carries |
 | `overview.sections_numbered_in_order` | the page's sections are numbered 1 to n |

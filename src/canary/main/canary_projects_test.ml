@@ -2538,6 +2538,91 @@ let flow_pin : Canary_project_test.pure_test =
         slots_ok && anchors_ok && sections_ok && modules_ok && held_ok && geometry_ok)
   }
 
+(* ONE SPELLING OF A MARK (2026-09-30). The record and the result table
+   used to map outcomes to marks separately, and disagreed: an evaluator
+   error was ✗ in one and err in the other, and a stale log line showed
+   as n/a — the mark of a mechanism that cannot carry the claim. Held:
+   every label a log records has an entry, the page's script spells no
+   mark of its own, and §2 shows the key. *)
+let outcome_marks_pin : Canary_project_test.pure_test =
+  { name = "overview.outcome_marks_are_one_list";
+    check =
+      (fun () ->
+        let module C = Canary_agreement_common in
+        let module M = Canary_matrix in
+        let labels = List.map M.outcome_marks ~f:(fun o -> o.M.om_label) in
+        let recorded =
+          List.map ~f:C.outcome_label
+            [ C.Holds; C.Violated []; C.Unavailable (C.Missing_evidence "");
+              C.Unavailable (C.Missing_declaration ""); C.Unavailable (C.Nothing_to_check "");
+              C.Inconclusive ""; C.Not_implemented ""; C.Not_applicable ""; C.Disabled "";
+              C.Error "" ]
+        in
+        let script = Canary_overview_assets.read "results.js" in
+        let overview =
+          Canary_agreement_overview.render (M.matrix_of Canary_registry.all_projects)
+        in
+        List.for_all recorded ~f:(List.mem labels ~equal:String.equal)
+        && List.length (List.dedup_and_sort labels ~compare:String.compare)
+           = List.length labels
+        && String.is_substring script ~substring:"FR.outcomes"
+        && List.for_all M.outcome_marks ~f:(fun o ->
+               (* the word marks are the outcomes' alone; ✓ and ✗ are
+                  shared with the step states by design *)
+               ((not (String.for_all o.M.om_mark ~f:Char.is_print))
+               || not (String.is_substring script ~substring:("'" ^ o.M.om_mark ^ "'")))
+               && String.is_substring overview
+                    ~substring:(Printf.sprintf "<td><code>%s</code></td>" o.M.om_label)))
+  }
+
+(* THE PAGE STATES THE ROW LAWS (2026-09-30): §2 lists every law of
+   [Canary_agreement.row_rules] beside the verdict that counts them. *)
+let agreement_laws_pin : Canary_project_test.pure_test =
+  { name = "overview.agreement_laws_are_listed";
+    check =
+      (fun () ->
+        let overview =
+          Canary_agreement_overview.render (Canary_matrix.matrix_of Canary_registry.all_projects)
+        in
+        (not (List.is_empty Canary_agreement.row_rules))
+        && String.is_substring overview
+             ~substring:
+               (Printf.sprintf "The %d laws every row keeps" (List.length Canary_agreement.row_rules))
+        && List.for_all Canary_agreement.row_rules ~f:(fun r ->
+               String.is_substring overview
+                 ~substring:(Canary_overview_assets.esc r.Canary_agreement.rr_says)))
+  }
+
+(* A MECHANISM'S CLAIMS ARE PASS 2'S (2026-09-30): §3.2 lists, per
+   mechanism, exactly the registered claims its applicability carries. *)
+let mechanism_claims_pin : Canary_project_test.pure_test =
+  { name = "overview.mechanisms_list_their_claims";
+    check =
+      (fun () ->
+        let table = Canary_overview_tables.binding_table Canary_registry.all_specs in
+        List.for_all Canary_mechanism.mechanism_catalogue ~f:(fun i ->
+            let name = Canary_mechanism.string_of_mechanism i.Canary_mechanism.mi_mechanism in
+            match String.substr_index table ~pattern:("<b>" ^ name ^ "</b>") with
+            | None -> false
+            | Some at ->
+                let row =
+                  let rest = String.drop_prefix table at in
+                  match String.substr_index rest ~pattern:"</tr>" with
+                  | Some j -> String.prefix rest j
+                  | None -> rest
+                in
+                let shown =
+                  List.filter_map Canary_agreement.agreement_registry ~f:(fun r ->
+                      let s = r.Canary_agreement.ag_slug in
+                      Option.some_if
+                        (String.is_substring row ~substring:(Printf.sprintf {|title="%s"|} s))
+                        s)
+                in
+                List.equal String.equal
+                  (List.sort shown ~compare:String.compare)
+                  (List.sort (Canary_overview_tables.carried_by i) ~compare:String.compare)))
+  }
+
 (* EVERY AGREEMENT SITS SOMEWHERE ON THE CHAIN, AND EVERY VIEW SAYS WHERE
    (2026-09-27, user: the agreement table predates the layered diagram;
    categorize every agreement by the diagram, deriving first — "when all
@@ -9285,6 +9370,9 @@ let base_tests : Canary_project_test.pure_test list =
       edge_marks_pin;
       visual_vocabulary_pin;
       flow_pin;
+      outcome_marks_pin;
+      agreement_laws_pin;
+      mechanism_claims_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;

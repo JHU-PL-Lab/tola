@@ -226,13 +226,24 @@ let render (m : M.t) : string =
      Printf.sprintf "<p class=\"verdict%s\">%s</p>"
        (if bad then " bad" else "")
        (esc v))
+    (* the laws themselves, as the registry states them *)
+    ^ Printf.sprintf
+        "<details class=\"laws\"><summary>The %d laws every row keeps</summary><ol>%s</ol></details>"
+        (List.length CR.row_rules)
+        (String.concat
+           (List.map CR.row_rules ~f:(fun r ->
+                Printf.sprintf "<li><b>%s</b> — %s</li>" (esc r.CR.rr_name) (esc r.CR.rr_says))))
     ^ "<dl class=\"legend\">"
     ^ "<dt>row order</dt><dd>trigger action, then agreement, then language, \
-       then mechanism — so a claim's mechanisms sit together. \
-       Unimplemented claims sort last.</dd>"
+       then mechanism. The trigger is language-free: the columns put every \
+       OCaml action before every Python one, so ranking on the column would \
+       scatter one claim across the table. Unimplemented claims sort last, \
+       because the table's first job is to say what canary can check.</dd>"
     ^ "<dt>code</dt><dd>the AGREEMENT's identity, so a repeated code is one \
        claim with several patterns, shown adjacent. It is the key to the \
-       check columns of §1.2's result table.</dd>"
+       check columns of §1.2's result table, which has one column per \
+       claim and none per pattern — which is why the code repeats rather \
+       than being made unique per row.</dd>"
     ^ "<dt>one row per pattern</dt><dd>a claim whose firing differs between \
        mechanisms gets a row each; a uniform claim stays one row and says \
        so by leaving <b>mech</b> empty.</dd>"
@@ -245,7 +256,9 @@ let render (m : M.t) : string =
     ^ "<dt>R &middot; D &middot; R+D</dt><dd>on a piece: R = its rule RAN \
        there (hover for the tool and the artifact); D = a method FIRES \
        there; R+D = both — the site's piece in a frame that has it. A row \
-       with no R roots in no action of this graph.</dd>"
+       with no R roots in no action of this graph. R is placed in the row's \
+       own language: the registry spells a root's action once, and a cext \
+       row must not mark the OCaml column.</dd>"
     ^ "<dt>&#9670;</dt><dd>the claim's own check column: where §1.2 shows \
        its outcome.</dd>"
     ^ "<dt>implemented at</dt><dd><code>&lt;module&gt;&middot;&lt;function&gt;</code> \
@@ -288,12 +301,8 @@ let render (m : M.t) : string =
     ^ "<dt>kind</dt><dd>what the claim ASSERTS — the six values are \
        glossed just below, next to the table that uses them.</dd>"
     ^ "</dl>"
-    ^ "<p class=\"kq\">Why the table is shaped this way — the row-order \
-       key, why a code repeats, why an empty cell is the right notation, \
-       and why the rooting is re-languaged per row — is \
-       <code>doc/canary/design/matrix.md</code>. \
-       One note that belongs here because it misleads in the cell: \
-       <code>soname</code> is an ELF word for a format-neutral fact, the \
+    ^ "<p class=\"kq\">One note that belongs here because it misleads in \
+       the cell: <code>soname</code> is an ELF word for a format-neutral fact, the \
        library's own recorded identity — <code>DT_SONAME</code> on ELF and \
        the <code>LC_ID_DYLIB</code> install name on Mach-O, which the \
        inspector writes into one field. Those claims are NOT elf-only; the \
@@ -303,6 +312,23 @@ let render (m : M.t) : string =
         (List.map M.blame_gloss ~f:(fun (w, g) ->
              "<b>" ^ esc w ^ "</b> " ^ esc g))
     ^ "</p>"
+    (* each label a log records, the mark §1.2 shows for it, and the
+       blame [blame_of] can give it, over the cases it distinguishes *)
+    ^ "<table class=\"okey\"><tr><th>a log records</th><th>meaning</th>\
+       <th>§1.2 shows</th><th>blame</th></tr>"
+    ^ String.concat
+        (List.map M.outcome_marks ~f:(fun o ->
+             let blames =
+               List.map [ (false, false); (false, true); (true, false); (true, true) ]
+                 ~f:(fun (is_declaration, version_blind) ->
+                   M.blame_of ~outcome:o.M.om_label ~is_declaration ~version_blind)
+               |> List.dedup_and_sort ~compare:(Option.compare String.compare)
+               |> List.map ~f:(function None -> "—" | Some b -> b)
+             in
+             Printf.sprintf "<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td></tr>"
+               (esc o.M.om_label) (esc o.M.om_means) (esc o.M.om_mark)
+               (esc (String.concat ~sep:" or " blames))))
+    ^ "</table>"
     ^ "<div class=\"kinds\"><b>kind</b> — what the claim ASSERTS; not what \
        it is held against (the record's <code>against</code>), and not \
        whose rule it recovers (the <b>R</b> column)."

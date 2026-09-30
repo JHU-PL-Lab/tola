@@ -110,71 +110,14 @@ action columns rather than the frames (a follow-up in
 > Record: [`canary_matrix.ml`](../../../src/canary/main/canary_matrix.ml);
 > the table is §1.2 of the overview page, which `canary overview` writes.
 
-## 0. The overview's row order, and why it is that one
+## 0. The agreement table's shape
 
-*(2026-09-17, arrived at over three rounds with the user. The rules are
-in `sort_overview_rows`; the reasoning is here, because a sort key is
-the kind of code that gets "simplified" by someone who cannot see what
-it was for.)*
-
-The key, in order: **unimplemented last · trigger action · agreement ·
-language · mechanism.**
-
-**Unimplemented last, above everything else.** The table's first job is
-to say what canary CAN check. A claim with no evaluator sitting between
-two working ones at the same action reads as though it were one of them.
-The split is REGISTRY-level ("has an evaluator"), not log-level ("has
-decided something in a real run"), because this table is generated from
-the registry alone so that it does not change whenever anything runs —
-so the bottom block is the 3 unimplemented, not the 5 unlanded.
-`canary checks --landing` is the log-level answer.
-
-**Then the trigger action — and it is LANGUAGE-FREE.** This is the
-non-obvious part. The action columns are the union over both modelled
-languages, and they put every OCaml action before every Python one, so
-`required_symbols_exported` fires at column 9 as cstubs and column 16 as
-cext: seven apart, with six other agreements in between. Ranking on the
-column index therefore scatters one claim across the table, and no later
-key can gather it. Ranking on `build_binding` rather than
-`build_binding_ocaml` puts both rows in one place.
-
-**Then the agreement**, which is what the language-free trigger buys: a
-claim's mechanisms end up adjacent, and read as its variants rather than
-as separate entries that happen to share a name. A claim may still
-appear in two blocks if its patterns fire at different actions —
-`api_names_present` does, cstubs at the binding's build and dynlink at
-its probe — so the grouping is per (agreement, trigger), which is how
-`agreements.overview_groups_a_claims_patterns` states it.
-
-**A row that fires nowhere sorts last**, `Int.max_value` being the
-honest key for "never". The top is the wrong place for the least active
-claim.
-
-### Why the `code` column repeats
-
-A repeated code is ONE claim with several patterns, and that only reads
-correctly because the rows are adjacent — scattered, the same repetition
-looks like a duplicate row. It is deliberately not made unique per row:
-the same code names this agreement's **column in the result matrix**,
-where a column is an agreement and there is no column for a pattern.
-Making the overview's code per-row would break the one correspondence
-the two tables have.
-
-### The rooting speaks the row's language
-
-`ag_rooted_in.rt_action` is a string and has to pick one spelling, so
-`required_symbols_exported` says `build_binding_ocaml`. That is right
-for the cstubs row and wrong for the cext row, which marked its `R` in
-the OCaml column and measured `lag` from there — 7, where the linker
-that wrote those undefined references ran at `build_binding_python` and
-the answer is 0. Five rows read 3, 4, 6 or 7 for this reason alone.
-
-`retarget_action` re-languages the root to the row's own language before
-comparing; an action that carries no language is returned unchanged,
-which is what makes it safe to apply everywhere. Pinned by
-`agreements.rooting_speaks_the_rows_language`, which asserts both that
-no `R` lands in another language's column and that no lag exceeds 2 —
-the bound being what would have caught the original.
+The agreement table's legend, section 2 of the overview page, states its
+row order, why a code repeats, and why R is placed in the row's own
+language. In the code: `sort_overview_rows` orders the rows, grouped per
+agreement and trigger (`agreements.overview_groups_a_claims_patterns`),
+and `retarget_action` re-languages a root
+(`agreements.rooting_speaks_the_rows_language`).
 
 ## 1. What a row IS
 

@@ -1692,14 +1692,17 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
         that used to sit in the trailing legend moved HERE rather than
         being copied: one place, before the data that uses it. *)
      :: "ROW ORDER  trigger action, then agreement, then language, then \
-         mechanism —"
-     :: "           so a claim's mechanisms sit together. Unimplemented \
-         claims sort last."
+         mechanism. The"
+     :: "           trigger is language-free, so a claim's mechanisms sit \
+         together; unimplemented"
+     :: "           claims sort last, as the table first says what canary \
+         can check."
      :: "code       the AGREEMENT's identity, so a repeated code is ONE \
          claim with"
-     :: "           several patterns, shown adjacent. It is the key to \
-         the result"
-     :: "           table's check-column headings."
+     :: "           several patterns, shown adjacent. It keys the result \
+         table's check"
+     :: "           columns, one per claim and none per pattern, which is \
+         why it repeats."
      :: "one row    per distinct PATTERN: a claim whose firing differs \
          between mechanisms"
      :: "           gets a row each; a uniform claim stays one row and \
@@ -1709,7 +1712,9 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: "           an artifact, which is why some claims show one."
      :: "R · D · ◉  R = the action whose rule RAN; D = a method FIRES \
          here; ◉ = both."
-     :: "           A row with no R roots in no action of this graph."
+     :: "           A row with no R roots in no action of this graph; R is \
+         placed in the"
+     :: "           row's own language."
      :: "impl. at   `<module>·<function>` — the EVALUATOR, in \
          canary_agreement_<module>.ml."
      :: "           `·—` = none yet, and the module names the file it \
@@ -1753,14 +1758,9 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: "           our claim, which is what filing a tool under one \
          claim would hide."
      :: ""
-     :: "Why the table is shaped this way — the row-order key, why a \
-         code repeats, why an"
-     :: "empty cell is the right notation, why the rooting is \
-         re-languaged per row — is"
-     :: "doc/canary/design/matrix.md. One note that belongs here \
-         because it misleads in"
-     :: "the cell: `soname` is an ELF word for a format-neutral fact, \
-         the library's own"
+     :: "One note that belongs here because it misleads in the cell: \
+         `soname` is an ELF"
+     :: "word for a format-neutral fact, the library's own"
      :: "recorded identity — `DT_SONAME` on ELF, the `LC_ID_DYLIB` \
          install name on Mach-O,"
      :: "which the inspector writes into one field. Those claims are \

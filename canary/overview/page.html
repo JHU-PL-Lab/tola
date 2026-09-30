@@ -160,6 +160,14 @@ mechanism.</strong> <code>decided</code> and <code>blame</code> are
 counted from recorded runs, per agreement, so this section alone depends
 on run state — unlike everything else here. Splitting the table at that
 seam would have shown one row's halves on two pages, which is worse.</div>
+<div class="note"><strong>A finding does not fail its step.</strong> A
+violated agreement is a finding about the artifacts, so the step that read
+the evidence still passes, and §1.2 can show a passed step beside a
+violated check; <code>--strict</code> fails that step instead. A failed
+<em>world assertion</em> — a package pin or source ref other than the
+world declares — is different again: it says the run tested something
+other than it claims, which puts every verdict in that run in
+question.</div>
 {{agreement_overview}}
 
 <h3 id="census">2.2 Every edge, and the claims on it</h3>

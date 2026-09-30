@@ -1097,43 +1097,39 @@ let outcome_rank = function
      | disabled — every undecided outcome ranks alike, which is what stops
      a finding at one firing site being lost to a silence at another *)
 
-(** A VERDICT IS A SYMBOL; A GAP IS A WORD (2026-09-15, user: "I am good
-    to have hold/violated/(expected) error as symbols, but for the
-    gapped cases, if we use the symbol, we need to explain them ahead;
-    otherwise we can use simple english directly").
+(** An outcome label as a check cell shows it: a verdict is a symbol, a
+    gap is a word, so a reader tells them apart without a key; [·] is a
+    cell no run recorded. *)
+type outcome_mark = {
+  om_label : string;  (** as a log records it *)
+  om_mark : string;
+  om_look : string;  (** the result table's class for the cell *)
+  om_means : string;
+}
 
-    Five distinct states used to render as one dot — [unavailable],
-    [not_applicable], [not_implemented], [disabled] and "never recorded"
-    were indistinguishable, so the table said "nothing here" where the
-    honest answers were "nothing wrote the evidence", "your log is
-    stale" and "this has never run cold". That is the same collapse the
-    [2/3] cell had, one level down: the answer was always one hover
-    away.
+(** Every label a log records, and [n/a], which the code decides: a
+    mechanism that cannot carry the claim. The only spelling of a mark:
+    the record and the page's result table both read it. *)
+let outcome_marks : outcome_mark list =
+  let m label mark look means =
+    { om_label = label; om_mark = mark; om_look = look; om_means = means }
+  in
+  [ m "holds" "✓" "rt-ok" "the comparison held";
+    m "violated" "✗" "rt-bad" "the comparison found a counterexample";
+    m "error" "err" "rt-bad" "the evaluator failed";
+    m "unavailable" "no-evid" "rt-gap" "nothing wrote the evidence it reads";
+    m "undeclared" "no-decl" "rt-gap" "the project declared nothing to hold it against";
+    m "inconclusive" "no-ref" "rt-gap" "read, with nothing to compare against";
+    m "vacuous" "none" "rt-gap" "both sides read, and neither has anything of this kind";
+    m "not_implemented" "planned" "rt-gap" "no evaluator yet";
+    m "not_applicable" "stale" "rt-gap" "the log predates the registry's applicability — re-run";
+    m "disabled" "off" "rt-dim" "turned off for the run";
+    m "n/a" "n/a" "rt-dim" "the mechanism cannot carry the claim" ]
 
-    Words rather than glyphs for the gaps, and the split is the
-    semantics: a symbol means the check reached a verdict, a word means
-    it did not. A reader can therefore tell a non-verdict from a verdict
-    without consulting anything, which no pair of glyphs achieves. The
-    key table glosses the four words anyway, since they are also the
-    blame vocabulary.
-
-    [·] stays a dot deliberately: "no run has recorded this cell" is a
-    true ABSENCE, not a state the run reached. *)
-let mark_of_outcome = function
-  | "violated" | "error" -> "✗"
-  | "holds" -> "✓"
-  | "inconclusive" -> "no-ref"
-  | "unavailable" -> "no-evid"
-  (* THE TWO THE CAUSE SPLIT OUT (2026-09-15). All three used to be
-     `unavailable`, so a cell that needed nothing read the same as one
-     waiting on an inspector. `undeclared` is the project's to-do,
-     `vacuous` is nobody's. *)
-  | "undeclared" -> "no-decl"
-  | "vacuous" -> "none"
-  | "not_applicable" -> "stale"
-  | "disabled" -> "off"
-  | "not_implemented" -> "planned"
-  | _ -> "·"
+let mark_of_outcome (outcome : string) : string =
+  match List.find outcome_marks ~f:(fun o -> String.equal o.om_label outcome) with
+  | Some o -> o.om_mark
+  | None -> "·"
 
 (* ── BLAME (2026-09-15, user) ──────────────────────────────────────
 

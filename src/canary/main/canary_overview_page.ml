@@ -73,7 +73,12 @@ let frames_json () : string =
                    ("label", `String fr.Fr.fr_label);
                    ("cols", `List (List.map fr.Fr.fr_columns ~f:column)) ])) );
       ( "blames",
-        `Assoc (List.map Canary_matrix.blame_gloss ~f:(fun (w, g) -> (w, `String g)))
+        `Assoc (List.map Canary_matrix.blame_gloss ~f:(fun (w, g) -> (w, `String g))) );
+      ( "outcomes",
+        `Assoc
+          (List.map Canary_matrix.outcome_marks ~f:(fun o ->
+               ( o.Canary_matrix.om_label,
+                 `List [ `String o.Canary_matrix.om_mark; `String o.Canary_matrix.om_look ] )))
       ) ]
   |> Yojson.Basic.to_string
   |> String.substr_replace_all ~pattern:"</" ~with_:"<\\/"

@@ -32,13 +32,15 @@ finer label under a discipline.
 
 `mechanism_info` carries prose (coupling, check points) and three
 booleans. **Only the booleans are dispatched on**, and each turns a
-group of agreements on or off:
+group of agreements on or off; the claims each mechanism can carry as a
+result are a column of section 3.2 of the overview page, derived from
+the applicability predicates.
 
-| field | asks | what it gates |
-| --- | --- | --- |
-| `mi_compiles_a_stub` | is there a compiled artifact whose undefined references ARE the requirement set? | `required_symbols_exported` |
-| `mi_consumer_records_needed` | does that artifact record WHICH library it needs? | `soname_matches_requirement`, `required_versions_exported`, `dependencies_provided` |
-| `mi_exposes_typed_stub` | is the boundary spelled where a signature can be read? | `signatures_agree` |
+| field | asks |
+| --- | --- |
+| `mi_compiles_a_stub` | is there a compiled artifact whose undefined references ARE the requirement set? |
+| `mi_consumer_records_needed` | does that artifact record WHICH library it needs? |
+| `mi_exposes_typed_stub` | is the boundary spelled where a signature can be read? |
 
 The relevant carrier can be later in the chain than the binding archive.
 An OCaml `.a` has no dynamic dependency record, but the linked probe

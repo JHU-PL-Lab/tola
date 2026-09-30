@@ -14,10 +14,8 @@ var STEP={ran:['✓','rt-ok'],warm:['✓','rt-warm'],fail:['✗','rt-bad'],xfail
   blocked:['⊘','rt-bad'],unrecorded:['·','rt-dim'],absent:['—','rt-dim'],inside:['⌂','rt-dim'],
   included:['∈','rt-dim'],
   observed:['~','rt-dim'],not_ours:['~','rt-dim']};
-var OUT={holds:['✓','rt-ok'],violated:['✗','rt-bad'],error:['err','rt-bad'],
-  unavailable:['no-evid','rt-gap'],undeclared:['no-decl','rt-gap'],inconclusive:['no-ref','rt-gap'],
-  vacuous:['none','rt-gap'],not_implemented:['planned','rt-gap'],not_applicable:['n/a','rt-dim'],
-  'n/a':['n/a','rt-dim'],disabled:['off','rt-dim']};
+// each outcome's mark and look, from Canary_matrix.outcome_marks
+var OUT=FR.outcomes||{};
 var node=function(id){ return FR.nodes[id]||{label:id,layer:'art'}; };
 var F=FR.frames, h1='<tr><th class="rt-lab" rowspan="3">chain · machine</th>', h2='<tr>', h3='<tr>', i=0;
 while(i<F.length){ var s=F[i].side, lab=F[i].side_label, span=0;

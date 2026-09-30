@@ -121,6 +121,22 @@ let mechanism_users (projects : (string * Canary_project_run.project_run) list)
       then Some name
       else None)
 
+(** The registered claims a binding through this mechanism can carry,
+    whatever the project: pass 2's applicability, which reads the
+    mechanism and the language and never the declaration. *)
+let carried_by (i : Canary_mechanism.mechanism_info) : string list =
+  Canary_project_analysis.carried_slugs ~mechanism:i.Canary_mechanism.mi_mechanism
+    ~lang:i.Canary_mechanism.mi_lang ~declared:None
+
+let claims_cell (i : Canary_mechanism.mechanism_info) : string =
+  match carried_by i with
+  | [] -> "—"
+  | slugs ->
+      String.concat ~sep:" "
+        (List.map slugs ~f:(fun s ->
+             Printf.sprintf {|<code title="%s">%s</code>|} (esc s)
+               (esc (Canary_agreement_common.short_code_of_slug s))))
+
 (** §3.2: the binding mechanisms, grouped by language as §1's buttons are. *)
 let binding_table projects =
   let yes b = if b then "yes" else "no" in
@@ -137,6 +153,7 @@ let binding_table projects =
         yes i.Canary_mechanism.mi_compiles_a_stub;
         yes i.Canary_mechanism.mi_consumer_records_needed;
         yes i.Canary_mechanism.mi_exposes_typed_stub;
+        claims_cell i;
         (match mechanism_users projects m with
          | [] -> "— <span class=\"from\">not wired</span>"
          | us -> esc (String.concat ~sep:", " us)) ]
@@ -146,7 +163,7 @@ let binding_table projects =
        (heads
           [ "mechanism"; "language"; "discipline"; "how the library is bound";
             "a compiled stub?"; "does the consumer record its NEEDED?";
-            "a typed boundary?"; "used by" ])
+            "a typed boundary?"; "claims checked for it"; "used by" ])
        (String.concat
           (List.map ~f:row
              (Canary_overview_join.by_language
