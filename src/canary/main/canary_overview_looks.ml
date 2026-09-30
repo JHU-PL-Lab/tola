@@ -154,6 +154,7 @@ type vh_element =
   | Badge
   | Marker  (** a mark on an edge or a node: placeholder, declaration *)
   | Button  (** a button of the panel *)
+  | Flow_box  (** a box of §5's figure *)
 
 (** Where a hint can show: in every drawing, only while no recorded run is
     drawn, or only while one is. *)
@@ -162,6 +163,7 @@ type vh_mode = Always | Generic | Recorded
 type vh_key =
   | Chain_key  (** the key above the diagram *)
   | Run_key  (** the recorded run's key *)
+  | Flow_key  (** the key under §5's figure *)
   | Drawn of string list  (** the drawing says it itself, in these words *)
   | No_key of string  (** it only switches something off; why that needs no key *)
 
@@ -183,7 +185,10 @@ let vocabulary_base : string list =
   [ ".band"; ".node rect"; ".node .nlabel";
     (* a recorded run's state takes the line: the generic dashes go *)
     ".rec .edge line,.rec .edge path"; ".phm"; ".selbar button";
-    ".selbar button:disabled"; ".selbar button:hover"; "svg .edge" ]
+    ".selbar button:disabled"; ".selbar button:hover"; "svg .edge";
+    (* §5's figure: a box is canary's code or a step it runs *)
+    ".flow"; ".flow text"; ".flow .fsub"; ".flow .flane"; ".flow .fnote";
+    ".fbox rect,.fbox .fshape"; ".fline"; ".fhead"; ".flow .flink"; ".flow a:hover .flink" ]
 
 (** The visual vocabulary: every look §1 uses, one entry each — the element
     it styles, its stylesheet rules, the key that explains it and the words
@@ -316,7 +321,15 @@ let visual_hints : visual_hint list =
       ~says:"a package manager did something here that this run cannot record";
     hint "placeholder.not_yet" Marker [ "not_yet" ] [ ".phm.not_yet rect"; ".phm.not_yet text" ]
       Recorded Run_key ~sample:(phm_svg "on not_yet")
-      ~says:"a package manager did something here that this run does not record yet" ]
+      ~says:"a package manager did something here that this run does not record yet";
+    hint "flow.file" Flow_box [ "file"; "ffold" ] [ ".fbox .ffold" ] Always Flow_key
+      ~sample:
+        {|<svg width="30" height="18" viewBox="0 0 30 18"><g class="fbox file"><path class="fshape" d="M1 1H21L29 9V17H1Z"/><path class="ffold" d="M21 1V9H29"/></g></svg>|}
+      ~says:"a file";
+    hint "flow.hand" Flow_box [ "hand" ] [ ".fbox.hand rect" ] Always Flow_key
+      ~sample:
+        {|<svg width="30" height="18" viewBox="0 0 30 18"><g class="fbox hand"><rect x="1" y="1" width="28" height="16" rx="3"/></g></svg>|}
+      ~says:"written for the page, and held to the code by pins" ]
 
 (** One key, rendered from the vocabulary: a sample and its words per
     hint, in the list's order. *)

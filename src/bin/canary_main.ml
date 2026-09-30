@@ -1573,8 +1573,19 @@ let overview_cmd =
              edges, claims and chains. Stdout carries the JSON and nothing \
              else, and nothing is written.")
   in
-  let run project json () =
-    if json then begin
+  let flow =
+    Arg.(
+      value & flag
+      & info [ "flow" ]
+          ~doc:
+            "Print §5 of the page instead of writing it: the figure's boxes \
+             and arrows, each subject's code and running layers with the \
+             sections that show them, and the page's sections with the \
+             template slots and modules behind each.")
+  in
+  let run project json flow () =
+    if flow then print_string (Canary_overview_flow.text ())
+    else if json then begin
       let projects =
         match project with
         | Some p -> (
@@ -1630,8 +1641,9 @@ let overview_cmd =
           (docs/canary/overview_runs.js, _mac on macOS), which §1 and §1.2 \
           draw, and the pointers that keep the retired result page's \
           addresses (docs/canary/projects/) landing on §1.2. With --json, \
-          prints the run record instead and writes nothing. Runs nothing.")
-    Term.(const run $ project $ json $ const ())
+          prints the run record instead and writes nothing; with --flow, \
+          prints §5, how the page is made. Runs nothing.")
+    Term.(const run $ project $ json $ flow $ const ())
 
 let tiny_scenarios_list_cmd =
   Cmd.v

@@ -43,29 +43,17 @@ Each pass, with the IR it takes and the IR it hands on:
 | 5   | **order**     | worlds → worlds    | `assignment list`   | `assignment list` — same elements, resequenced  | `scenarios_in_run_order`                 |
 | 6   | **realize**   | world → steps      | one `assignment`    | `step list`                                     | `realize ∘ dispatch` then `derive_steps` |
 
-```
-artifact_row list    (surface)
-  ▼  1 declare
-project_spec         IR: spec
-  ▼  2 analyse       chain applicability, mechanisms, carried claims
-analysis             IR: analysis — what canary UNDERSTANDS, no world yet
-  ▼  3 enumerate     product × 5 constraints
-assignment list      IR: worlds  — every world the project HAS
-  ▼  4 select        --thin, --refs                    ┐ same IR in and out:
-assignment list      IR: worlds  — what this run asked for
-  ▼  5 order         stable sort on store_state_key    ┘ two optimizations
-assignment list      IR: worlds  — same elements, resequenced
-  ▼  6 realize       per assignment
-step list            IR: steps ──────────────────── the object code
-  │
-  ├──▶ run_graph          execute here          → actions.log → verdicts
-  ├──▶ render_gh_step     GitHub Actions YAML
-  └──▶ mermaid_of_steps   diagram (muted)
-```
+The passes in the whole flow, from canary's code to the overview page,
+are drawn in §5 of that page; `canary overview --flow` prints the same.
+Select is what `--thin` and `--refs` set, and order sorts stably on the
+store state each world locks. The steps have three readers:
+`run_graph` executes them and appends to `actions.log`, `render_gh_step`
+writes GitHub Actions YAML, and `mermaid_of_steps` draws diagrams
+(muted).
 
-**The diagram has no branch any more** (2026-09-16). It used to fork at
-pass 1 — `├──▶ applicable chains (spec alone)` — beside an unnumbered
-*(branch)* row in the table above, and the "open question" section below
+**The pipeline has no branch any more** (2026-09-16). It used to fork at
+pass 1 into applicable chains, computed from the spec alone, beside an
+unnumbered *(branch)* row in the table above, and the "open question" section below
 listed that fork among the accidents it wanted redrawn: *"chain
 applicability with nowhere to live — a real spec-only derivation that is
 neither a pass nor a dump, and hides inside `patterns_of`"*. Pass 2 is

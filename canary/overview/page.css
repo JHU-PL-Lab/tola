@@ -86,7 +86,7 @@ table.cov{font-size:.82rem;min-width:900px}
 table.cov td{vertical-align:top}
 table.cmp tr.agree td{color:var(--mut)}
 table.cmp tr.differ td{background:color-mix(in srgb,var(--xf) 14%,transparent)}
-table.cmp .from{font:11px ui-monospace,monospace;color:var(--mut)}
+table.cmp .from,table.flowtab .from{font:11px ui-monospace,monospace;color:var(--mut)}
 .sw.ok{border-top:3px solid var(--ok)}.sw.okw{border-top:3px dashed var(--ok)}
 .sw.xf{border-top:3px solid var(--xf)}.sw.bad{border-top:3px solid var(--bad)}
 .sw.un{border-top:2px dotted var(--mut)}.sw.ab{border-top:2px solid var(--line)}
@@ -171,5 +171,19 @@ border-radius:6px;background:var(--card)}
 svg .edge{cursor:default}
 svg .edge:hover line,svg .edge:hover path{stroke-width:3;opacity:1}
 tr.bare td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.flow{width:100%;max-width:1000px;height:auto;margin:1rem 0;background:var(--card);
+border:1px solid var(--line);border-radius:10px}
+.flow text{font:13px ui-sans-serif,system-ui,sans-serif;fill:var(--fg)}
+.flow .fsub{font:11.5px ui-monospace,monospace;fill:var(--mut)}
+.flow .flane{font:600 11px ui-monospace,monospace;fill:var(--mut);letter-spacing:.05em}
+.flow .fnote{font:italic 11px ui-sans-serif,system-ui,sans-serif;fill:var(--mut)}
+.fbox rect,.fbox .fshape{fill:var(--bg);stroke:var(--fg);stroke-width:1.2}
+.fbox.hand rect{stroke-dasharray:5 3}
+.fbox .ffold{fill:none;stroke:var(--fg);stroke-width:1.2}
+.fline{fill:none;stroke:var(--fg);stroke-width:1.3;opacity:.7}
+.fhead{fill:var(--fg);opacity:.7}
+.flow .flink{fill:var(--acc)}
+.flow a:hover .flink{text-decoration:underline}
+table.flowtab th:first-child{white-space:nowrap}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}

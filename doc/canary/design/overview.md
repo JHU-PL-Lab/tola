@@ -17,38 +17,33 @@ page.
 
 ## 1. Each part of the page, and the code behind it
 
-| on the page | computed by | from |
-| --- | --- | --- |
-| §1's graph: 16 nodes, 21 edges, and the edges each agreement sits on | `Canary_topology` (`nodes`, `edges`, `claim_sites`) | hand-written; pins hold them to the registry and to every step the runner derives, and §6.2 derives them |
-| §1's drawing: places, boxes, bands, edges and their marks | `Canary_overview_diagram` (`layout`, `diagram`) | hand-written places over the graph |
-| §1's looks, keys and placement rules | `Canary_overview_looks` (`visual_hints`, `layout_rules`) | hand-written, held by the two lists' pins (§5) |
-| §1's panel: the choices, each case's note, the rules shown | `Canary_overview_panel`, the notes in `Canary_overview_cases` | the join data, the looks, the hand-written notes |
-| §1's choices, and what each draws | `Canary_overview_join`, embedded as `#joindata` | the projects' declarations, the drivers, the mechanism and cooperation catalogues |
-| a recorded run on §1, and §1.2's rows | `Canary_overview_runs`, written to `overview_runs.js`, one per machine | the record (§2) |
-| §1.2's columns | `Canary_frames`, embedded as `framesdata` | the graph's edges and the claim sites |
-| §2, the agreement overview | `Canary_agreement_overview.render` | the registry; `decided` and `blame` are counted over §1.2's cells |
-| §3, the census | `Canary_overview_tables.claim_sites_table` | the claim sites and the registry |
-| §4's tables | `Canary_overview_tables`, over `Canary_pm_solo`, the mechanism catalogue, `Canary_topology.coop_catalogue`, `Canary_overview_join.cases_of` | code; their prose columns are hand-written |
-| the page's prose, stylesheets and scripts | `canary/overview/`: `page.html`, the template whose `{{slots}}` `Canary_overview_page.render` fills, and `page.css`, `results.css`, `agreements.css`, `page.js`, `results.js`, inlined by `Canary_overview_assets` | hand-written files; artifact-test's `overview.scripts_parse` runs `node --check` on the scripts |
+§5 of the page draws how the page is made: the path from canary's code
+and its runs to each section, and each subject's code and running
+layers (`Canary_overview_flow`). `canary overview --flow` prints the same
+and lists every section with the template slots it is made of and the
+modules behind it. `overview.flow_is_the_page` holds that list to the
+template, to the page's ids and to the source tree. What the page does
+not say:
 
-The page's script looks answers up in the embedded data and the runs
-files and decides nothing of its own, except in the five places §4 lists.
+- §1's graph is `Canary_topology`'s `nodes`, `edges` and `claim_sites`,
+  written by hand. Pins hold them to the registry and to every step the
+  runner derives, and §6.2 derives them.
+- The page embeds two pieces of data its scripts read: §1's choices as
+  `#joindata` (`Canary_overview_join`) and §1.2's columns as
+  `framesdata` (`Canary_frames`). A run reaches the page only through the
+  runs files beside it, except for §2's counts.
+- `Canary_overview_assets` reads `canary/overview/` from the repository
+  root. Artifact-test's `overview.scripts_parse` runs `node --check` on
+  the scripts.
+- The page's script looks answers up in the embedded data and the runs
+  files and decides nothing of its own, except in the five places §4
+  lists.
 
 ## 2. How a run reaches the page
 
-```
-canary action <project>
-  realize   the world's steps, inspection steps included
-  run       actions.log: each step's state, each agreement's outcome
-            each step's directory: inspection files, bridge records
-            -run/manifest/<world>.json: the steps it realized
-  ▼
-Canary_matrix.matrix_of: the record (`canary overview --json`)
-  ▼
-Canary_overview_runs: one view per world and binding language
-  ▼
-overview_runs.js, one per machine: §1 paints a view, §1.2 renders one row per view
-```
+§5 of the page draws the path, from `canary action` through the files a
+run writes and the record to the runs files. What the drawing does not
+say:
 
 **Inspections are steps.** When realize turns a world into steps, it
 adds an inspection step after each step that provides an artifact the
@@ -219,8 +214,9 @@ trusting it.
 
 ## 5. The two lists that hold the drawing
 
-`visual_hints` holds every look §1 uses, and both of §1's keys are
-rendered from it; `overview.visual_vocabulary_is_one_list` holds it to the
+`visual_hints` holds every look §1 and §5's figure use, and the three
+keys (§1's two, §5's one) are rendered from it;
+`overview.visual_vocabulary_is_one_list` holds it to the
 stylesheet — every rule owned once, every hint applied and explained, and
 no two hints that can show together looking alike. `layout_rules` holds
 the places, each a sentence with its reason, checked over the nodes'
@@ -238,21 +234,16 @@ below says what is left and what each item needs, and `status.md` points
 here. §6.1 to §6.4 keep the design the items refer to, under the numbers
 code comments cite. How each piece landed is the worklog.
 
-**Now: the page's source, reorganized** (user, 2026-09-29: "Let's do this
-first"), in four steps, each keeping the rendered page byte-identical.
-One kind of information has one home: logic in small OCaml modules, the
-stylesheets and scripts in `canary/overview/`, the page's prose in a
-template there with slots the generator fills, design here, history in
-the worklog and the commits. The steps: (1) the stylesheets and scripts
-move out; (2) the page's prose moves into the template; (3)
-`canary_overview_page.ml` splits into the diagram, the two checked lists,
-the tables, the hand-drawn cases, the panel and the assembly, and §2
-leaves `canary_matrix.ml` for its own module (§1's map); (4) the moved
-code keeps short comments that state the concluded design (CLAUDE.md's
-Conventions). All four done 2026-09-29.
-**Next:** a
-diagram on the page of the workflow that generates its information (user,
-2026-09-29).
+**Done 2026-09-29: the page's source, reorganized, and §5.** One kind of
+information has one home: logic in small OCaml modules, the stylesheets
+and scripts in `canary/overview/`, the page's prose in a template there
+whose slots the generator fills, design here, history in the worklog and
+the commits. The page then gained §5, how the page is made (user: "an
+explicit workflow diagram in the page", with layers like §1's, "for
+observing and auditing the mind workflow"): a figure of the path from
+the code and a run to each section, and each subject's code and running
+layers. Its first reading shows the package managers' running layer is
+thin, which is group C below.
 
 The list is grouped by what an item needs before it can start. Its first
 open question is the order. The plan of 2026-09-28 was the rest of phase
@@ -581,5 +572,6 @@ copy is named) closed the rest.
 | `overview.edge_marks_clear_the_boxes` | no edge under a source it does not join; no label or badge hidden |
 | `overview.visual_vocabulary_is_one_list` | the looks: one list, held to the stylesheet (§5) |
 | `overview.layout_rules_hold` | the places: every rule holds, every named pin exists (§5) |
+| `overview.flow_is_the_page` | the page's §5: every template slot belongs to one section, every section's id exists, every module it names has a source file, the figure's boxes do not overlap and every arrow is straight (§1) |
 | `overview.tables_list_what_canary_covers` | the page's §4 tables list exactly what canary has drivers and projects for |
 | `overview.sections_numbered_in_order` | the page's sections are numbered 1 to n |

@@ -2,7 +2,8 @@
     from the modules that draw each part — §1's diagram
     ({!Canary_overview_diagram}), its looks and places
     ({!Canary_overview_looks}) and its panel ({!Canary_overview_panel}); §2
-    ({!Canary_agreement_overview}); §3 and §4 ({!Canary_overview_tables}).
+    ({!Canary_agreement_overview}); §3 and §4 ({!Canary_overview_tables});
+    §5 ({!Canary_overview_flow}).
     §1.2 and a chain's recorded run are laid out by the page's scripts from
     the runs files ({!Canary_overview_runs}), which the page loads and does
     not embed. *)
@@ -123,11 +124,14 @@ let render (projects : (string * Canary_project_run.project_run) list)
       ("coop_table", Tb.coop_table projects);
       ("topology_notes", Tb.topology_notes projects);
       ("chains_table", Tb.chains_table join);
+      ("flow_figure", Canary_overview_flow.figure ());
+      ("flow_key", Canary_overview_looks.key_html Canary_overview_looks.Flow_key);
+      ("flow_table", Canary_overview_flow.table ());
       ("generated_at", esc generated_at);
       (* the runs files load before the scripts that draw them *)
       ("scripts", runs_script () ^ script () ^ results_script ()) ]
 
-let docs_path = "docs/canary/overview.html"
+let docs_path = Canary_overview_assets.docs_path
 
 (** The retired result pages' addresses under [docs/canary/projects/]:
     each holds a pointer to §1.2, written with the page. *)

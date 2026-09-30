@@ -9,8 +9,9 @@
 <p class="lede">The chain two package ecosystems form, drawn from canary's
 code (§1); what every chain canary runs recorded, laid out on it
 (<a href="#results">§1.2</a>); and the agreements that check it (§2). What
-a run recorded is read from a separate file per machine, never embedded in
-the page.</p>
+a run recorded is read from a separate file per machine; only §2's counts
+are written into the page, from the machine that last rendered it. How the
+page is made is <a href="#flow">§5</a>.</p>
 
 <div class="note"><strong>A bridge is a thing, not a relation.</strong>
 It is concrete, separate package content whose purpose is package-manager
@@ -33,7 +34,7 @@ package manager defines its own kinds of bridge. Cargo's
 <code>*-sys</code> topology has no bridge and a capability file, which is
 what makes it artifact-centric rather than bridgeless.</div>
 
-<h2>1. The generic chain</h2>
+<h2 id="generic">1. The generic chain</h2>
 <p>Nodes are what exists. An edge points from components to a component
 and carries one annotation. Most carry the <strong>action</strong> of ours
 that realizes the relation. Where we run nothing, an edge carries
@@ -207,14 +208,14 @@ cooperation kinds and the projects' declarations — so a table lists only
 what canary covers. The layered-model draft's tables were the reference
 for the columns; they also cover ecosystems canary does not reach yet
 (RPM, Cargo, Cabal, RubyGems, Conda, Nix).</p>
-<h3>4.1 Each package manager on its own</h3>
+<h3 id="pm-solo">4.1 Each package manager on its own</h3>
 {{pm_solo_table}}
-<h3>4.2 Binding mechanisms</h3>
+<h3 id="mechanisms">4.2 Binding mechanisms</h3>
 {{binding_table}}
-<h3>4.3 How two package managers cooperate</h3>
+<h3 id="cooperation">4.3 How two package managers cooperate</h3>
 {{coop_table}}
 {{topology_notes}}
-<h3>4.4 The chains canary runs</h3>
+<h3 id="chains">4.4 The chains canary runs</h3>
 <p>One row per distinct chain among a project's worlds: its binding
 language, where each side comes from, and so which cooperation joins
 them. A project appears more than once when its worlds differ — a world
@@ -224,31 +225,33 @@ are §1's packages in canary, and each project links to its chain drawn
 there.</p>
 {{chains_table}}
 
-<div class="foot">Generated {{generated_at}}. <strong>What is derived and what is not</strong>,
-since the page is meant to trade the second for the first over time:
-the tables of §4 are computed from canary's code — the package managers'
-drivers, the mechanism catalogue, the bridge model, the cooperation kinds
-and each project's declared provisions, gates and C-API components —
-though their prose columns (what a package is, how a join travels) are
-written in <code>canary_pm_solo.ml</code> and
-<code>canary_topology.ml</code>; §1's artifact band comes from the
-mechanism catalogue, and its package band from the worlds of each
-cooperation kind, by one rule per node in <code>canary_topology.ml</code>;
-the agreement overview from the registry and recorded runs.
-The nodes, the edges and which edge each claim sits on are
-<em>hand-written lists</em> in <code>canary_topology.ml</code> —
-placeholders, checked by pins against the registry but not yet computed
-from the action catalogue — and so are the five cases §1's cooperation
-notes quote, which this page used to draw by hand and which the pins
-still hold the derivations to. Each edge's annotation is typed, though:
-an action family the catalogue has, a registered or candidate claim, or
-information; and which of the catalogue's actions have no edge is
-computed. The diagram is SVG emitted from that data, with one
-hand-placed coordinate per node. A package's recorded run is not in this
-page: it is read from <code>overview_runs.js</code> (one per machine),
-which <code>canary overview</code> computes from the run record — each
-edge's state from the steps placed on it, each badge from its claims'
-outcomes, and the edges around a bridge from what a bridge step recorded
-(one bridge so far: conf-gmp, on zarith).
+<h2 id="flow">5. How this page is made</h2>
+<p>Two things reach this page: what canary knows, from its code, and what
+a run of a project recorded. The figure is the path each takes, with the
+command that runs each stage; §5.1 follows the same path for each subject
+canary models. <code>canary overview --flow</code> prints both, with every
+module and file they name. Hover a box for what it stands for; a section
+links to itself.</p>
+{{flow_figure}}
+<div class="key">
+{{flow_key}}
+</div>
+<h3 id="subjects">5.1 Each subject, layer by layer</h3>
+<p>The code layer is what canary knows before anything runs; the running
+layer is what a run of a project records. Each shows in its own places on
+this page.</p>
+{{flow_table}}
+<p>Written by hand for the page, and held to the code by pins: the
+chain's nodes, its edges and the edges each claim sits on
+(<code>canary_topology.ml</code>); one position per node of §1's diagram
+and per box of this figure; the cases §1's cooperation notes quote; and
+the prose columns of §4's tables (<code>canary_pm_solo.ml</code>,
+<code>canary_topology.ml</code>). To look inside a stage,
+<code>canary emit &lt;project&gt; --stage N</code> prints one pass,
+<code>canary overview --json</code> the record, and <code>canary
+checks</code> the agreements.</p>
+
+<div class="foot">Generated {{generated_at}}. How the page is made, and
+what in it is written by hand: <a href="#flow">§5</a>
 · <a href="#results">the results (§1.2)</a></div>
 {{scripts}}</main></body></html>

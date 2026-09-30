@@ -17,36 +17,15 @@ rules) live in module docstrings under [`src/canary/backend/`](../../../src/cana
 
 Data flows one direction: the bin layer asks `action/` to build the
 step list, then hands the list to `backend/canary_run_info.ml` which
-fans out across the sibling backends.
-
-```
-  src/bin/canary_main.ml (or projects/canary_run.ml)
-        │
-        │  Canary_step_builder.derive_steps  (script_spec → step list)
-        ▼
-  action/canary_step_builder.ml   ← returns step list
-        │
-        ▼
-  src/bin/canary_main.ml          ← now holds the step list
-        │
-        │  Canary_run_info.run_project ~steps:…
-        ▼
-  backend/canary_run_info.ml      ← orchestrates the backends
-        │
-        │  (1) Canary_local_runner.run_graph
-        ▼
-  backend/canary_local_runner.ml  ← executes each step, returns run_status
-        │  returns (run_status : (tag, step_status) Hashtbl.t)
-        ▼
-  backend/canary_run_info.ml
-        │
-        │  (2) Canary_diagram.write_project_output
-        │        ~steps, ~run_status, ~artifact_names
-        ▼
-  backend/canary_diagram.ml       ← produces every .mmd in one call
-        ▼
-  -run/diagrams/*.mmd
-```
+fans out across the sibling backends. In order:
+`Canary_step_builder.derive_steps` returns the step list;
+`Canary_run_info.run_project ~steps` runs it with
+`Canary_local_runner.run_graph`, which returns each step's status
+(`run_status : (tag, step_status) Hashtbl.t`); then
+`Canary_diagram.write_project_output ~steps ~run_status ~artifact_names`
+writes every `.mmd` under `-run/diagrams/` in one call. Where this sits
+in the whole flow, from canary's code to the overview page, is drawn in
+§5 of that page (`canary overview --flow` prints it).
 
 `canary_diagram` and `canary_local_runner` are leaf consumers —
 they never call back upward. `canary_run_info` orchestrates them as

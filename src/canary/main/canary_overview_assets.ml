@@ -57,3 +57,19 @@ let fill_text ~(what : string) (template : string) (values : (string * string) l
 (** A template asset, filled. *)
 let fill (name : string) (values : (string * string) list) : string =
   fill_text ~what:(dir ^ "/" ^ name) (read name) values
+
+(** The [{{slot}}]s a template asset names, in order. *)
+let slots (name : string) : string list =
+  let t = read name in
+  let rec go pos acc =
+    match String.substr_index t ~pos ~pattern:"{{" with
+    | None -> List.rev acc
+    | Some i -> (
+        match String.substr_index t ~pos:(i + 2) ~pattern:"}}" with
+        | None -> List.rev acc
+        | Some j -> go (j + 2) (String.sub t ~pos:(i + 2) ~len:(j - i - 2) :: acc))
+  in
+  go 0 []
+
+(** Where the page is written. *)
+let docs_path = "docs/canary/overview.html"

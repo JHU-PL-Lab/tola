@@ -2219,8 +2219,9 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
    conflicts"). [Canary_overview_looks.visual_hints] is that place; this
    holds it to the stylesheet and to the page:
 
-   - every §1 rule of the stylesheet belongs to exactly one hint or to the
-     base look, and every rule a hint names exists — a new style cannot
+   - every rule of the stylesheet for §1's diagram and §5's figure belongs
+     to exactly one hint or to the base look, and every rule a hint names
+     exists — a new style cannot
      land without saying what it means, and an old one cannot linger;
    - every hint's classes are applied by the page, in its markup or its
      script (a state class as the script's prefix plus one of its words);
@@ -2279,7 +2280,10 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         in
         let scope =
           [ "band"; "bandlabel"; "sidecap"; "node"; "ncase"; "nplace"; "edge"; "elabel";
-            "cbadge"; "cnum"; "phm"; "declmark"; "gone" ]
+            "cbadge"; "cnum"; "phm"; "declmark"; "gone";
+            (* §5's figure *)
+            "flow"; "fbox"; "fshape"; "ffold"; "fline"; "fhead"; "flink"; "flane"; "fsub";
+            "fnote" ]
         in
         let in_scope sel =
           List.exists scope ~f:(has_class sel) || String.is_prefix sel ~prefix:".selbar button"
@@ -2322,11 +2326,13 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         let all_applied =
           List.for_all hints ~f:(fun h -> List.for_all h.P.vh_classes ~f:applied)
         in
-        let keyed h = match h.P.vh_key with P.Chain_key | P.Run_key -> true | _ -> false in
+        let keyed h =
+          match h.P.vh_key with P.Chain_key | P.Run_key | P.Flow_key -> true | _ -> false
+        in
         let explained =
           List.for_all hints ~f:(fun h ->
               match h.P.vh_key with
-              | P.Chain_key | P.Run_key ->
+              | P.Chain_key | P.Run_key | P.Flow_key ->
                   (not (String.is_empty h.P.vh_sample)) && not (String.is_empty h.P.vh_says)
               | P.Drawn texts ->
                   (not (List.is_empty texts))
@@ -2334,6 +2340,7 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
               | P.No_key why -> not (String.is_empty why))
           && String.is_substring page ~substring:(P.key_html P.Chain_key)
           && String.is_substring page ~substring:(P.key_html P.Run_key)
+          && String.is_substring page ~substring:(P.key_html P.Flow_key)
         in
         let samples = List.filter_map hints ~f:(fun h -> Option.some_if (keyed h) h.P.vh_sample) in
         let samples_unique =
@@ -2429,6 +2436,76 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         in
         (not (List.is_empty scoped)) && claimed_once && rules_exist && all_applied && explained
         && samples_unique && samples_used && distinct_looks)
+  }
+
+(* §5 IS THE PAGE (2026-09-29, user: a figure of how the page is made, and
+   a table of each subject's code and running layers). Holds its data to
+   what exists:
+
+   - every slot of page.html belongs to exactly one section, or to the page
+     as a whole, so a new part of the page takes a place in §5;
+   - every section's anchor is an id on the rendered page, and every
+     section the table or the figure names is listed;
+   - every module the data names has a source file;
+   - the figure's boxes sit inside the canvas without overlapping, and
+     every arrow runs straight between two ends that face each other. *)
+let flow_pin : Canary_project_test.pure_test =
+  { name = "overview.flow_is_the_page";
+    check =
+      (fun () ->
+        let module F = Canary_overview_flow in
+        let slots = Canary_overview_assets.slots "page.html" in
+        let claimed = F.page_slots @ List.concat_map F.sections ~f:(fun s -> s.F.sc_slots) in
+        let slots_ok =
+          List.for_all slots ~f:(fun sl -> List.count claimed ~f:(String.equal sl) = 1)
+          && List.for_all claimed ~f:(List.mem slots ~equal:String.equal)
+        in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+        in
+        let anchors_ok =
+          List.for_all F.sections ~f:(fun s ->
+              String.is_substring page ~substring:(Printf.sprintf {|id="%s"|} s.F.sc_anchor))
+        in
+        let named =
+          List.concat_map F.subjects ~f:(fun s ->
+              List.concat_map [ s.F.sj_code; s.F.sj_run ] ~f:(fun l ->
+                  List.concat_map l.F.ly_shown ~f:snd))
+          @ List.concat_map F.boxes ~f:(fun b ->
+                List.filter_map b.F.bx_lines ~f:(function F.Link (n, _) -> Some n | _ -> None))
+        in
+        let sections_ok = List.for_all named ~f:(fun n -> Option.is_some (F.section_of n)) in
+        let modules =
+          List.concat_map F.sections ~f:(fun s -> s.F.sc_code)
+          @ List.concat_map F.subjects ~f:(fun s ->
+                List.filter s.F.sj_code.F.ly_from ~f:(String.is_prefix ~prefix:"Canary_"))
+        in
+        let has_source m =
+          List.exists
+            [ "base"; "agreement"; "tool"; "action"; "backend"; "project"; "main"; "test" ]
+            ~f:(fun d ->
+              Stdlib.Sys.file_exists
+                (Printf.sprintf "src/canary/%s/%s.ml" d (String.lowercase m)))
+        in
+        let modules_ok = List.for_all modules ~f:has_source in
+        let inside b =
+          b.F.bx_x >= 0 && b.F.bx_y >= 0
+          && b.F.bx_x + b.F.bx_w <= F.canvas_w
+          && b.F.bx_y + b.F.bx_h <= F.canvas_h
+        in
+        let apart a b =
+          a.F.bx_x + a.F.bx_w <= b.F.bx_x
+          || b.F.bx_x + b.F.bx_w <= a.F.bx_x
+          || a.F.bx_y + a.F.bx_h <= b.F.bx_y
+          || b.F.bx_y + b.F.bx_h <= a.F.bx_y
+        in
+        let geometry_ok =
+          List.for_all F.boxes ~f:inside
+          && List.for_all F.boxes ~f:(fun a ->
+                 List.for_all F.boxes ~f:(fun b -> String.equal a.F.bx_id b.F.bx_id || apart a b))
+          && List.for_all F.arrows ~f:(fun a -> Option.is_some (F.route a))
+        in
+        slots_ok && anchors_ok && sections_ok && modules_ok && geometry_ok)
   }
 
 (* EVERY AGREEMENT SITS SOMEWHERE ON THE CHAIN, AND EVERY VIEW SAYS WHERE
@@ -9177,6 +9254,7 @@ let base_tests : Canary_project_test.pure_test list =
       agreements_sit_pin;
       edge_marks_pin;
       visual_vocabulary_pin;
+      flow_pin;
       platform_single_source_pin;
       strict_mode_pin;
       check_index_language_pin;
