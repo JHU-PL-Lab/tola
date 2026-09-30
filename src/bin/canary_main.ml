@@ -1532,10 +1532,10 @@ let verify_cmd =
    model.html). `checks --topology` printed the topology table again and
    was deleted the same day; its two footnotes moved onto the page.
 
-   Named `overview` rather than `theory`: `agreement/theory.md` already
-   owns that word for the argument about what an agreement recovers, and
-   this page is a map generated from code — the next thing it is meant to
-   carry is recorded run results, which is the opposite of theory.
+   Named `overview` rather than `theory`: the argument about what an
+   agreement recovers owns that word (agreement/README.md §5–§8), and
+   this page is a map generated from code that carries recorded run
+   results, which is the opposite of theory.
 
    ⚠ TWO PROJECT LISTS, deliberately. The agreement overview's `decided`
    and `blame` columns are counted from recorded runs, and they were

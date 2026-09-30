@@ -111,7 +111,7 @@ let api_names_present : agreement =
      claim is that the application's uses resolve on the binding's
      surface — could these two have been compiled together — and the
      watchlist is a hand-written stand-in for the application's actual
-     uses (theory.md §5.8). Classifying it by its evidence rather than
+     uses (agreement/README.md §6.8). Classifying it by its evidence rather than
      its claim is exactly the conflation `ag_kind` exists to undo. *)
   { ag_kind = Admissibility;
     ag_subject = Api_names;

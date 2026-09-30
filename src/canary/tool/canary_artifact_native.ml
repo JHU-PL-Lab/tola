@@ -148,7 +148,7 @@ let symbols_undefined ~prefix lines =
    RUNPATH that does not resolve, a version-script mismatch the symbol
    table does not show. [dependencies_provided] reasons about RECORDED
    dependencies; it never asks the loader. That is the identity half
-   theory.md §5.9 says is missing ("the resolutions — which object,
+   agreement/README.md §6.9 says is missing ("the resolutions — which object,
    which definition — survive only with instrumentation"), and it is
    what [interposition_binds_build_target] and
    [denotation_stable_across_worlds] are waiting on. A role-3

@@ -2122,13 +2122,11 @@ let agreement_bridge_pins : pure_test list =
      pointing at the deleted file did not fail them — it just stopped
      them checking half of what they used to. `agreements.pinned_docs_exist`
      is the guard that makes that loud next time. *)
+  (* two documents since 2026-09-30: the README took theory.md as its
+     §5–§8, components.md took mechanism.md as its §3.3–§3.6 *)
   let model_doc = "doc/canary/design/agreement/README.md" in
   let components_doc = "doc/canary/design/agreement/components.md" in
-  let theory_doc = "doc/canary/design/agreement/theory.md" in
-  let mechanism_doc = "doc/canary/design/agreement/mechanism.md" in
-  let agreement_docs =
-    [ model_doc; components_doc; theory_doc; mechanism_doc ]
-  in
+  let agreement_docs = [ model_doc; components_doc ] in
   let read_doc p =
     if Stdlib.Sys.file_exists p then
       Some (Stdlib.In_channel.with_open_text p Stdlib.In_channel.input_all)
@@ -2429,7 +2427,7 @@ let agreement_bridge_pins : pure_test list =
        another catalogue or status list in these docs") and it is not
        mechanically checkable — a table listing agreements is forbidden
        when it restates status and fine when it adds an axis the
-       overview lacks, as `mechanism.md`'s static-provider table does.
+       overview lacks, as components.md §3.4's static-provider table does.
        That one is a reading job. *)
     { name = "agreements.pinned_docs_exist";
       check =
@@ -2440,8 +2438,6 @@ let agreement_bridge_pins : pure_test list =
               let required =
                 [ "doc/canary/design/agreement/README.md";
                   "doc/canary/design/agreement/components.md";
-                  "doc/canary/design/agreement/theory.md";
-                  "doc/canary/design/agreement/mechanism.md";
                   "doc/canary/design/matrix.md" ]
               in
               let missing =
@@ -2801,7 +2797,7 @@ let agreement_bridge_pins : pure_test list =
        claim ever ranged over one artifact under one mechanism and two
        under another, "how many does it target" would stop being a
        property of the CLAIM and become a property of the row — and
-       theory.md §5.11's decomposition, which asks exactly that
+       the agreement README's §6.11 decomposition, which asks exactly that
        question, would need a finer cell before anyone wrote another
        sentence about it. *)
     { name = "agreements.target_count_is_a_property_of_the_claim";
@@ -2833,9 +2829,10 @@ let agreement_bridge_pins : pure_test list =
           List.is_empty bad) };
     (* THE MODEL AND THE REGISTRY NAME THE SAME EXCLUSIONS (2026-09-17).
 
-       `prop_frame` says why a proposal has no row; `theory.md` §7 and
-       §7.1 say the same thing in prose, and they were written months
-       apart. If one grows an exclusion the other does not, the
+       `prop_frame` says why a proposal has no row; the agreement
+       README's §8 and §8.1 (theory.md's §7 and §7.1 until the
+       2026-09-30 merge) say the same thing in prose, and they were
+       written months apart. If one grows an exclusion the other does not, the
        catalogue's "Out of the table" grouping becomes a second opinion
        rather than a rendering of the model — which is the whole defect
        the grouping was added to fix.
@@ -2847,7 +2844,7 @@ let agreement_bridge_pins : pure_test list =
     { name = "agreements.theory_names_the_frame_exclusions";
       check =
         (fun () ->
-          match read_doc "doc/canary/design/agreement/theory.md" with
+          match read_doc model_doc with
           | None -> true
           | Some text ->
               let section ~from ~upto =
@@ -2860,15 +2857,15 @@ let agreement_bridge_pins : pure_test list =
                        | Some j -> String.sub rest ~pos:0 ~len:j
                        | None -> rest)
               in
-              let s7 = section ~from:"## 7. What this does not explain"
-                         ~upto:"### 7.1" in
-              let s71 = section ~from:"### 7.1" ~upto:"\n## " in
+              let s7 = section ~from:"## 8. What this does not explain"
+                         ~upto:"### 8.1" in
+              let s71 = section ~from:"### 8.1" ~upto:"\n## " in
               let bad =
                 List.concat_map CR.proposed_agreements ~f:(fun p ->
                     let want, where =
                       match p.CR.prop_frame with
-                      | CR.Outside_the_frame _ -> (Some s7, "§7")
-                      | CR.Not_an_agreement _ -> (Some s71, "§7.1")
+                      | CR.Outside_the_frame _ -> (Some s7, "§8")
+                      | CR.Not_an_agreement _ -> (Some s71, "§8.1")
                       | CR.In_frame | CR.Unfiled _ -> (None, "")
                     in
                     let named_in sec =
@@ -2881,18 +2878,18 @@ let agreement_bridge_pins : pure_test list =
                         if named_in (Some (Option.value sec ~default:"")) then []
                         else
                           [ Printf.sprintf
-                              "%s is classified out-of-frame but theory.md %s \
+                              "%s is classified out-of-frame but README.md %s \
                                does not name it"
                               p.CR.prop_slug where ]
                     | None ->
                         (* the converse: theory must not claim it *)
                         List.filter_map
-                          [ (s7, "§7"); (s71, "§7.1") ]
+                          [ (s7, "§8"); (s71, "§8.1") ]
                           ~f:(fun (sec, w) ->
                             if named_in (Some (Option.value sec ~default:"")) then
                               Some
                                 (Printf.sprintf
-                                   "theory.md %s names %s, but the registry \
+                                   "README.md %s names %s, but the registry \
                                     does not classify it as excluded"
                                    w p.CR.prop_slug)
                             else None))
@@ -2901,7 +2898,7 @@ let agreement_bridge_pins : pure_test list =
               let bad =
                 match (s7, s71) with
                 | Some _, Some _ -> bad
-                | _ -> "theory.md: §7 or §7.1 heading not found" :: bad
+                | _ -> "README.md: §8 or §8.1 heading not found" :: bad
               in
               if not (List.is_empty bad) then
                 List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);

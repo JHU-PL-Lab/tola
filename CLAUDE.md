@@ -601,10 +601,15 @@ phase E, the rest of the bridges (`design/overview.md` §6.1).
 - **Docs hold only what the page cannot say** (user, 2026-09-28), and a
   table a tool generates gets no hand copy: three did, and all three went
   stale the same way (2026-09-17).
-- **The agreement docs are four files** in `design/agreement/`: README,
-  theory, components and mechanism (user, 2026-09-17). The overview
-  page's §2 is the catalogue. Do not recreate `agreements.md`,
-  `model.md`, `runtime.md` or `landing.md` there.
+- **The agreement docs are two files** in `design/agreement/` (user,
+  2026-09-30): README (using the agreement table, then where agreements
+  come from — the former theory.md) and components (the evidence,
+  component by component, with the binding mechanisms — the former
+  mechanism.md). The overview page's §2 is the catalogue. Do not
+  recreate `theory.md`, `mechanism.md`, `agreements.md`, `model.md`,
+  `runtime.md` or `landing.md` there. In these docs a `§` resolves
+  against the file's own headings (a pin checks it), so name the
+  overview page's sections in words.
 - **A pin whose input vanishes is worse than no pin**, because it reports
   success. `agreements.pinned_docs_exist` holds every document a pin
   reads.

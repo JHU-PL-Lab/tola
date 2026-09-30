@@ -1,5 +1,5 @@
 (** Binding realization — binding_decl × ctx → command builders
-    (M2 step 4, [doc/canary/design/agreement/mechanism.md] §4 stage 2,
+    (M2 step 4, [doc/canary/design/agreement/components.md] §3.5 stage 2,
     2026-08-15).
 
     A project declares its binding as ONE typed record

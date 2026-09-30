@@ -207,8 +207,8 @@ renders through `pre_shell` and aborts a command; the case the pin half
 prevents is the one where the step is *skipped* and no command runs.
 Adding a post position to that type would not help — the decision
 happens before there is a command to prefix. `pin_check_post` *is* a
-world assertion by what it asserts ([`agreement/theory.md`](agreement/theory.md)
-§7.1 has classified it as one since 2026-09-15); what §6's registers
+world assertion by what it asserts ([`agreement/README.md`](agreement/README.md)
+§8.1 has classified it as one since 2026-09-15); what §6's registers
 give is what a failure **means**, and the occasion gives what it
 **does**. For the world register those differ — before the command it
 aborts, at the warm gate it invalidates and re-runs — and both are
@@ -264,7 +264,7 @@ are three registers:
 | the check asserts | fails the step | because |
 | --- | --- | --- |
 | an artifact the action was asked to produce is at its location | **yes** | the action's own contract. This is what `check_post` is |
-| the world is the one this scenario declared — the pin holds, the ref resolves | **yes, and loudest** | not a finding about software: this run tested something other than what it claims, so every verdict in it is suspect ([`agreement/theory.md`](agreement/theory.md) §7.1). `Canary_world`'s `Opam_pin` / `Log_names` |
+| the world is the one this scenario declared — the pin holds, the ref resolves | **yes, and loudest** | not a finding about software: this run tested something other than what it claims, so every verdict in it is suspect ([`agreement/README.md`](agreement/README.md) §8.1). `Canary_world`'s `Opam_pin` / `Log_names` |
 | an agreement over the artifacts | **no** — yes under `--strict` | the action was never asked to make the claim true. sqlite's `dse ✗` at `build_lib` is a real violation of a declaration the compiler was not asked to satisfy; the build did its job |
 
 Two constraints, both easy to lose:
@@ -364,7 +364,7 @@ fuses all three roles in one `&&` chain.
   check and fail to load — a missing transitive `NEEDED`, an
   unresolvable `RUNPATH`, a version-script mismatch the symbol table
   does not show. A role-3 `probe_lib` is NEW COVERAGE, and it is the
-  identity half [`agreement/theory.md`](agreement/theory.md) §5.9 calls
+  identity half [`agreement/README.md`](agreement/README.md) §6.9 calls
   missing.
 
 ## 8. One locator vocabulary, under all of it

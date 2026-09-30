@@ -271,12 +271,12 @@ let string_of_basis = function
     So this is a second axis, not a rename, and the two are orthogonal:
     [api_names_present] is a PAIRING asserted against a DECLARATION,
     because the watchlist stands in for the application's actual uses
-    (theory.md §5.8 says so in as many words). Naming the evidence was
+    (agreement/README.md §6.8 says so in as many words). Naming the evidence was
     never the same as naming the claim. *)
 type agreement_kind =
   | Admissibility
       (** are these artifacts an ADMISSIBLE input tuple for some action —
-          would the tool have accepted them together? theory.md §2 gives
+          would the tool have accepted them together? agreement/README.md §5.2 gives
           the relation this names: an action `A : I₁×…×Iₙ → O` embodies
           `R_A ⊆ I₁×…×Iₙ`, the tuples its rules accept, and running `A`
           is the only witness that a tuple is in it. This kind is the
@@ -300,7 +300,7 @@ type agreement_kind =
           It was `Pairing` for four days, which baked in an arity the
           model does not have: `R_A` is n-ary, so a three-input action's
           claim is not a pair. `Compatibility` is the word a reader
-          reaches for and theory.md forbids it — a pass is a necessary
+          reaches for and agreement/README.md §5.3 forbids it — a pass is a necessary
           condition, never sufficiency, and "compatible" promises
           sufficiency. `Realizability` collides with pass 6.
           Admissibility says exactly what is claimed and no more. *)
@@ -1398,7 +1398,7 @@ type agreement = {
           held against, and therefore what a failure attributes to *)
   ag_rooted_in : rooting;
       (** WHICH ACTION'S RULE THIS RECOVERS, and which tool enforced it
-          — theory.md §2's central concept, made explicit in the code
+          — agreement/README.md §5.2's central concept, made explicit in the code
           (2026-09-13, user).
 
           An action's implementation embodies a relation over its

@@ -770,8 +770,8 @@ No hurry — all items below are queued for when their forcing function arrives.
 53. **The provider-linkage axis** (2026-09-17, user: *"I wish the
     mechanism can cover more binding cases including `{c-static-lib,
     c-dynamic-lib} × …`"*). Written up in
-    [`design/agreement/mechanism.md`](design/agreement/mechanism.md) *"The axis that is
-    missing"*.
+    [`design/agreement/components.md`](design/agreement/components.md) §3.4, *"The
+    provider axis, which does not exist yet"*.
 
     The mechanism catalogue ranges over the CONSUMER. Nothing ranges
     over whether the provider is a `.so` or a `.a`, and it matters as
@@ -797,7 +797,7 @@ No hurry — all items below are queued for when their forcing function arrives.
 
     **All eight cells are analysed** (2026-09-17, user: *"good for
     finding one impossible cell, please consider all the possible
-    ones"*), in `design/agreement/mechanism.md` §3. Three are wired and
+    ones"*), in `design/agreement/components.md` §3.4.2. Three are wired and
     **all three are SHARED** — canary has never tested a static provider
     on any mechanism. One is impossible (ctypes × static). Three are
     possible and cheap. And **dynlink × static is the one worth

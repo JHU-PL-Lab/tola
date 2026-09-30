@@ -304,7 +304,7 @@ are in [`../surveys/conf_mechanism.md`](../surveys/conf_mechanism.md); the
 full classification of every conf package is
 [`../surveys/conf_packages.md`](../surveys/conf_packages.md), with §G1a
 holding the version-carrier measurement. The agreement theory sketched in
-§2 is [`agreement/theory.md`](agreement/theory.md). The three parked
+§2 is [`agreement/README.md`](agreement/README.md) §5–§8. The three parked
 research directions, of which this is the second, are
 [`directions.md`](directions.md), and current state is
 [`../status.md`](../status.md) §2.5.

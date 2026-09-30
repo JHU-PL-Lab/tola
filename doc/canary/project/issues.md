@@ -596,8 +596,8 @@ The fix is a mechanism in the action vocabulary, which is a `base/`
 change touching the step model, the log tags and the matrix columns —
 not worth doing for one witness project, and worth knowing before a
 second one wants it. Related: the provider-linkage axis in
-[`../design/agreement/mechanism.md`](../design/agreement/mechanism.md)
-§3 has the same shape — a real axis with no home in the action graph.
+[`../design/agreement/components.md`](../design/agreement/components.md)
+§3.4 has the same shape — a real axis with no home in the action graph.
 
 **Why it was not simply fixed when it was found.** Routing the artifact
 table's mechanism into pass 2 would move libffi's OCaml side from

@@ -49,7 +49,7 @@ and the header read as a style rather than an object format.
 
 **The leading artifact columns are the claim's TARGET**, and reading
 them against the origin gives a classification the flat list did not
-have: [`agreement/theory.md`](agreement/theory.md) §5.11.
+have: [`agreement/README.md`](agreement/README.md) §6.11.
 
 **`kind` is what the claim ASSERTS** — pairing, promise, quality,
 preservation, behaviour, composition — which is a different question

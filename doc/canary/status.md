@@ -251,8 +251,9 @@ mechanism declared in two places, one of them read).
 
 ### 2.3 The `agreement/` docs — paused, user-owned
 
-Restructured to four files on 2026-09-17 (`README.md` · `theory.md` ·
-`components.md` · `mechanism.md`) with the overview as the entry point.
+Restructured to four files on 2026-09-17 with the overview as the entry
+point, and to two on 2026-09-30: `README.md` (with theory.md as its
+§5–§8) and `components.md` (with mechanism.md as its §3.3–§3.6).
 The OCaml half of that change landed after it — three pins had gone
 silently vacuous when `agreements.md` was deleted, and
 `agreements.pinned_docs_exist` now fails when a document a pin reads
@@ -268,15 +269,15 @@ disappears. **The user is doing the remaining cleanup by hand**
 uses to establish the connection between several inputs and outputs,
 when here is doing to try to recover/recall the post factum. Do we have
 a precise term"). The answer has two halves. The RECOVERY cannot be in
-the name, because it is what an agreement IS — [`theory.md`](design/agreement/theory.md)
-§3 defines one as a necessary condition recovered from surviving
+the name, because it is what an agreement IS — [`README.md`](design/agreement/README.md)
+§5.3 defines one as a necessary condition recovered from surviving
 evidence, so every kind is post factum and that is the genus, not the
-difference. What differs is WHICH relation, and theory.md §2 already
+difference. What differs is WHICH relation, and its §5.2 already
 names this one: `R_A ⊆ I₁×…×Iₙ`, the tuples an action's rules accept.
 The word for belonging to it is **admissible**.
 
 Three rejected, each for a reason worth keeping: `compatibility` is what
-a reader reaches for and theory.md forbids it (a pass is necessary,
+a reader reaches for and the agreement README forbids it (a pass is necessary,
 never sufficient, and "compatible" promises sufficiency);
 `correspondence` is already claimed by the cross-API direction, so it
 would be ambiguous inside canary; `realizability` collides with pass 6.
@@ -299,8 +300,8 @@ regardless of spelling.
 
 *(2026-09-21. Assessed against the code rather than the plan; the
 manuscript can lead with these as rationale, but a plan is only credible
-if each names its falsifier — [`design/agreement/theory.md`](design/agreement/theory.md)
-§6 step 5.)*
+if each names its falsifier — [`design/agreement/README.md`](design/agreement/README.md)
+§7 step 5.)*
 
 **Take them 1 → 2 → 3.** The order is by external blocker, not by value.
 
@@ -429,7 +430,7 @@ template, mechanism as a derivation axis — each pinned; details in
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md)). The rest:
 
 4. [ ] **Typed mechanism payload — the DECLARATION**
-   ([`design/agreement/mechanism.md`](design/agreement/mechanism.md)).
+   ([`design/agreement/components.md`](design/agreement/components.md) §3.5).
    A project declares its binding as ONE flat typed record —
    `binding_decl = { mechanism; c_api; native; coupling; surface_path }`.
    Universal and mandatory: it is what claim selection reads, so every

@@ -334,7 +334,7 @@ let render (m : M.t) : string =
        whose rule it recovers (the <b>R</b> column)."
     ^ "<dl>"
     ^ "<dt>admissibility</dt><dd>would ONE action have accepted these \
-       artifacts together as its inputs? <code>theory.md</code> §2's \
+       artifacts together as its inputs? <code>agreement/README.md</code> §5.2's \
        <code>R_A</code>, the tuples a rule accepts.</dd>"
     ^ "<dt>promise</dt><dd>is this ONE artifact what its own producer said \
        it would be? Nothing is matched.</dd>"

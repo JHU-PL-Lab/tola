@@ -784,7 +784,7 @@ let status_of_row (r : agreement_row) : status =
 (* ── THE RECOVERY GRID (2026-09-17, user) ───────────────────────────
 
    The firing table above answers *where is this DETECTED*. That is half
-   of what theory.md §2 says an agreement is. The other half is where
+   of what agreement/README.md §5.2 says an agreement is. The other half is where
    the information was LOST — the action whose tool established the
    relation and then threw the tuple away — and the two are usually
    different actions.
@@ -1522,7 +1522,7 @@ let mech_label (ms : Canary_mechanism.mechanism list) : string =
     NOT to be confused with the ORIGIN, which the action columns carry.
     The origin is WHICH ACTION's rule ran; the kind is WHAT THE CLAIM IS
     HELD AGAINST. A declaration comparison whose origin produced its
-    target is theory.md §5.11's top-left group — "is the thing you made
+    target is agreement/README.md §6.11's top-left group — "is the thing you made
     what you said it would be" — and that group is the INTERSECTION of
     the two axes, not either one of them.
 
@@ -1772,7 +1772,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
      :: "       and not whose rule it recovers (that is the R column)."
      :: "  admissibility  would ONE action have accepted these artifacts \
          together as its"
-     :: "                 inputs? theory.md §2's `R_A` — the tuples a \
+     :: "                 inputs? agreement/README.md §5.2's `R_A` — the tuples a \
          rule accepts."
      :: "  promise        is this ONE artifact what its own producer \
          said it would be?"
@@ -1828,7 +1828,7 @@ let fill_list ?(mechanism = Canary_mechanism.Cstubs)
     The eight proposals were ONE flat list, so the catalogue printed
     them as eight of a kind. They are not. Four are held up by a schema
     field; three the per-action model does not reach AT ALL, and
-    [theory.md] §7 already says which; one has never been filed. That is
+    [agreement/README.md] §8 already says which; one has never been filed. That is
     four different kinds of work, and a reader deciding what to do next
     was being asked to re-derive the split from prose in three
     documents.
@@ -1845,12 +1845,12 @@ type frame_fit =
           change, and it costs the row's meaning — [lag], decided and
           blame are undefined without a firing *)
   | Outside_the_frame of string
-      (** [theory.md] §7: the model has no vocabulary for it. Set
+      (** [agreement/README.md] §8: the model has no vocabulary for it. Set
           properties and cross-world properties are not per-edge, so
           §6's procedure will never find them and they need their own
           reasoning *)
   | Not_an_agreement of string
-      (** [theory.md] §7.1: it recovers CANARY'S OWN rule, which makes
+      (** [agreement/README.md] §8.1: it recovers CANARY'S OWN rule, which makes
           it a world assertion — "this run tested something other than
           what it says" — rather than a finding about the software *)
   | Unfiled of string
@@ -1879,7 +1879,7 @@ type proposed = {
 (* THE DISTANCE-0 HOLES (2026-09-15, user asked for the plan to live in
    the catalogue rather than in a reply).
 
-   [theory.md] §5 walks every action and states, for each, the
+   [agreement/README.md] §6 walks every action and states, for each, the
    full-information agreement the real tool established and what
    post-fact checking can recover. Walking that against the registry
    leaves these. They come FIRST in the list because distance 0 — both
@@ -1964,7 +1964,7 @@ let proposed_agreements : proposed list =
          ref and the option set";
       prop_frame =
         Unfiled
-          "theory.md §7.1's filter has never been applied to this one, and \
+          "agreement/README.md §8.1's filter has never been applied to this one, and \
            it looks \
            like it falls the same way as source_is_declared_ref: \"was the \
            tree configured for the source we said\" has the same shape as \
@@ -3305,11 +3305,11 @@ let pp_out_of_table_md () : string =
           nobody checks yet. It costs the row's meaning: `lag`, decided \
           and blame are undefined without a firing." );
        ( "Not filed either way",
-         "`theory.md` §7.1's filter — *whose* rule is being recovered — \
+         "`agreement/README.md` §8.1's filter — *whose* rule is being recovered — \
           has never been applied here. Listed separately so it does not \
           sit among the answered ones looking like a peer." );
        ( "Not an agreement",
-         "`theory.md` §7.1. An agreement is a claim about the project's \
+         "`agreement/README.md` §8.1. An agreement is a claim about the project's \
           artifacts. These recover CANARY'S OWN rule, which makes them \
           world assertions: a violated agreement is a finding about the \
           software, a failed world assertion means this run tested \
@@ -3317,7 +3317,7 @@ let pp_out_of_table_md () : string =
           suspect. Kept here rather than deleted, because the CHECK is \
           worth having and only its register is wrong." );
        ( "Outside the per-action frame",
-         "`theory.md` §7. The model reasons per edge, and these are not \
+         "`agreement/README.md` §8. The model reasons per edge, and these are not \
           per-edge. §6's procedure will never find them, so they need \
           their own reasoning rather than more wiring." ) |]
   in
@@ -3376,7 +3376,7 @@ let pp_catalogue_md () : string =
      — so the same method reads different paths in different worlds.\n\n\
      The model these fields belong to is §1 above; why each agreement \
      exists is [`components.md`](components.md), at the anchor its row \
-     carries, and [`theory.md`](theory.md) for why there is anything to \
+     carries, and [`README.md`](README.md) §5 for why there is anything to \
      check at all; how to \
      land one is §4 and §5 below.\n\n";
   Buffer.add_string b (pp_todo_table_md ());

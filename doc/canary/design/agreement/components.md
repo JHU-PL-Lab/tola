@@ -1,11 +1,12 @@
 # Why these artifacts need checking
 
 The agreement table, section 2 of the overview page, owns the claims,
-methods, and implementation status.
-This document explains the evidence behind them and what it cannot prove.
-Use `canary checks --agreement NAME` for the exact comparison and examples.
-[theory.md](theory.md) follows actions; this follows the artifacts those
-actions connect. Registry rationale links use the numbered sections below.
+methods, and implementation status. This document explains the evidence
+behind them and what it cannot prove, and §3.3–§3.6 what each binding
+mechanism can supply. Use `canary checks --agreement NAME` for the exact
+comparison and examples. [README.md](README.md) §6 follows actions; this
+follows the artifacts those actions connect. Registry rationale links use
+the numbered sections below.
 
 ## 2. Common artifact foundation
 
@@ -82,8 +83,8 @@ table also limits what its evidence can demonstrate about actual source.
 
 Loading an OCaml plugin and looking up a native library are different
 operations. Runtime loading of a plugin does not erase the build-time
-evidence inside it. [mechanism.md](mechanism.md) separates the modeled facts
-from the unwired cases.
+evidence inside it. §3.3 separates the modeled facts from the unwired
+cases of §3.4.
 
 #### 3.1.4 User-facing wrappers
 
@@ -126,6 +127,246 @@ artifacts separately before assigning checking sites.
 
 Python wrappers can transform arguments, results, errors, and state. Attribute
 presence says nothing about whether those transformations meet an expectation.
+
+### 3.3 Binding mechanisms: what a binding is, and which claims it can carry
+
+§3.1 and §3.2 follow a language; this follows the mechanism, which is what
+decides which of those claims apply. It covers the two axes a binding
+world varies along, what each decides about applicability, how a project
+declares its side (§3.5), and the open question the catalogue exists to
+make askable (§3.6). The mechanism catalogue supplies the facts that
+`m_applicable` reads; project analysis reports suitability, and runtime
+selection uses the same predicate — [README.md](README.md) §3 describes
+that path.
+
+In the code: `base/canary_mechanism.ml` holds the vocabulary and the
+catalogue, `base/canary_binding_decl.ml` the declaration, and
+`action/canary_binding_templates.ml` the derivation. As pipeline passes,
+applicability is [`../enumeration/stage2_analyse_spec.md`](../enumeration/stage2_analyse_spec.md)
+and what a project declares is [`../enumeration/stage1_declare_spec.md`](../enumeration/stage1_declare_spec.md).
+`canary spec <project>` prints the per-mechanism facts, and
+`canary checks --agreement NAME` a method's applicability.
+
+#### 3.3.1 Two axes, and only one of them is modelled
+
+A binding world has a consumer and a provider, and both vary.
+
+| axis | values | in the code |
+| --- | --- | --- |
+| **consumer mechanism** | `Cstubs` `Cext` `Ctypes` `Cffi` `Dynlink` | `Canary_mechanism.mechanism`, with a `mechanism_info` row each |
+| **provider linkage** | shared `.so` / static `.a` | **nothing** — see §3.4 |
+
+`discipline` (`Static_c_abi` | `Dynamic_ffi`) is the coarse projection of
+the first axis, and it is what the ENUMERATION ranges over: it decides
+whether a `Build_binding` stage exists at all. The mechanism name is the
+finer label under a discipline.
+
+```
+          static (linked into the app)   dynamic (dlopen at runtime)
+  OCaml   cstubs                          Dynlink / .cmxs
+  Python  cext (compiled .so)             ctypes / cffi
+```
+
+#### 3.3.2 The three decidable facts
+
+`mechanism_info` carries prose (coupling, check points) and three
+booleans. **Only the booleans are dispatched on**, and each turns a
+group of agreements on or off; the claims each mechanism can carry as a
+result are a column of section 3.2 of the overview page, derived from
+the applicability predicates.
+
+| field | asks |
+| --- | --- |
+| `mi_compiles_a_stub` | is there a compiled artifact whose undefined references ARE the requirement set? |
+| `mi_consumer_records_needed` | does that artifact record WHICH library it needs? |
+| `mi_exposes_typed_stub` | is the boundary spelled where a signature can be read? |
+
+The relevant carrier can be later in the chain than the binding archive.
+An OCaml `.a` has no dynamic dependency record, but the linked probe
+executable does; Canary inspects that executable. Both cstubs and cext
+therefore support dependency claims today, through different artifacts.
+The static/dynamic discipline alone does not determine available evidence.
+
+Each mechanism's three values are in section 3.2 of the overview page.
+Two of them need a word the table cannot give. `Cext` has no typed stub
+because canary has no extractor for one — a canary gap, not a mechanism
+one. `Cffi` is the one dynamic mechanism with a typed boundary (a cdef
+re-declares the C surface), which is why "dynamic ⇒ nothing to read" is
+wrong as a rule.
+
+### 3.4 The provider axis, which does not exist yet
+
+The goal is both provider forms under each consumer mechanism:
+`{c-static-lib, c-dynamic-lib} × {cstubs, dynlink, cext, ctypes}`.
+
+**A static provider turns off the same agreements a dynamic consumer
+does, and for the same reason** — nobody recorded a dependency. Today
+only the consumer half is a value.
+
+`Canary_artifact.api_component` already distinguishes `Link_lib` (the
+`.so` symlink **or** the `.a`) from `Runtime_lib` (the versioned `.so`,
+*"absent for static linking"*). So the fact is encoded as *which
+components a provider declares* — a shape nothing enumerates over.
+
+The tooling is closer than the model: `inspect_binding.py --kind stub`
+already reads both forms, because the consumer's stub comes in both —
+`["nm", "-D", path] if is_shared else ["nm", path]`.
+`Canary_artifact_native.nm_cmd`, the provider side, hardcodes `nm -D`.
+
+#### 3.4.1 What a static provider changes
+
+| agreement | shared `.so` | static `.a` |
+| --- | --- | --- |
+| `declared_symbols_exported` | `nm -D` | `nm` over the archive — same comparison |
+| `required_symbols_exported` | unchanged | unchanged |
+| `api_names_present` | unchanged | unchanged |
+| `staged_interface_preserved` | unchanged | unchanged |
+| `soname_matches_declaration` | reads `SONAME` | **no SONAME exists** → `not_applicable` |
+| `soname_matches_requirement` | consumer records `NEEDED` | **nothing recorded** — the symbols were absorbed |
+| `declared_versions_exported` | ELF version nodes | **none** |
+| `required_versions_exported` | consumer's version refs | **none** |
+| `dependencies_provided` | `NEEDED` vs providers | **the question moves**: the static lib's own deps become the CONSUMER's, transitively and silently |
+
+#### 3.4.2 Every cell of the 2 × 4
+
+Two questions per cell — *can it exist*, and *what does it mean* — and
+the answers are not symmetric.
+
+| | **cstubs** (OCaml) | **dynlink** (OCaml) | **cext** (Python) | **ctypes** (Python) |
+| --- | --- | --- | --- | --- |
+| **shared `.so`** | ✅ **wired** — most of the roster | ⬜ **possible, unwired.** A `.cmxs` links against the `.so`; `Dynlink` loads the `.cmxs`. Two dynamic levels, and the mechanism's own is the outer one | ✅ **wired** — sqlite | ✅ **wired** — z3, llvm. `CDLL` opens the `.so` by name |
+| **static `.a`** | ⬜ **possible, unwired.** `ocamlmklib` absorbs the archive into the stub archive; the executable records nothing about the lib | ⚠ **possible and strange.** The `.cmxs` statically embeds the archive, so the *library* is static while the *binding* is dlopened. Two copies if two plugins embed it | ⬜ **possible, unwired.** The extension `.so` absorbs the archive; it records no `NEEDED` for the lib and every other `NEEDED` becomes its own | ❌ **IMPOSSIBLE.** `CDLL` calls `dlopen`, and an archive has nothing to open. Not unwired — refused |
+
+Reading the grid:
+
+- **Three cells are wired and all three are shared.** Canary has never
+  tested a static provider at all, on any mechanism.
+- **`ctypes × static` is the only impossible cell**, and the reason is a
+  property of the mechanism (`dlopen` needs a load-time object), so the
+  enumeration should REFUSE it with that reason rather than let a
+  project report `unavailable` forever.
+- **`dynlink × static` is the interesting one.** It is the only cell
+  where "static" and "dynamic" are both true at different levels, and it
+  is where a duplicate-implementation question becomes real: two plugins
+  each embedding the archive means two copies of the library's state in
+  one process. That is a specimen for the candidate
+  `no_duplicate_implementation`.
+- **Possible does not mean implemented.** Static providers need inspection,
+  applicability, and realization support; the steps below identify that work.
+
+#### 3.4.3 What landing it needs, in order
+
+1. **A value in base** — a proposed *linkage* with shared/static cases on the native
+   artifact. `canary_store.ml`/`canary_artifact.ml` vocabulary; the agreements
+   dispatch on it, they do not own it.
+2. **`nm_cmd` reads it** instead of assuming `-D`.
+3. **Per-agreement applicability**, mirroring the consumer's three
+   fields, with proposed facts such as *provider_records_needed* and
+   *provider_carries_version_nodes*.
+4. **An enumeration constraint** refusing `ctypes × static`, with the
+   reason in the message.
+5. **A witness** — a `libtiny.a` beside tiny's `libtiny.so.1` is one
+   CMake target, and every admissible cell gets a controlled specimen.
+
+**Do 1–3 before 4**: once linkage is a value, the refusal is derivable
+from the catalogue (`Ctypes` needs a runtime carrier; `Static` provides
+none) rather than hand-written.
+
+### 3.5 How a project declares its binding
+
+One record, and the split is the point: **facts are what the binding
+IS** (stable — removing a field changes the binding); **analysis is what
+canary checks** (watchlists, probe choice) and stays on canary's side.
+
+```ocaml
+type binding_decl = {
+  mechanism    : Canary_mechanism.mechanism;  (* the identity label *)
+  c_api        : c_api;      (* functions, enums — what it wraps *)
+  native       : native;     (* prefix, soname, headers *)
+  coupling     : coupling;   (* the ONE variant point *)
+  surface_path : string;     (* the user-facing file: tiny.mli, __init__.py *)
+}
+
+type coupling =
+  | Stub_archive of { sources : string list; archive : string }  (* cstubs *)
+  | Compiled_ext of { source : string; product : string }        (* cext *)
+  | Dlopen of { name : string }                                  (* ctypes/dynlink *)
+```
+
+A project **references a mechanism by name and never inlines its
+facts**. The artifact identity carries it (`A_binding (lang, mech)`);
+`canary spec` prints the per-binding mechanism line by reading the
+catalogue, not the project.
+
+**Three stages, and only the middle one is optional.**
+
+1. **Declare** — the record above. Universal and mandatory: it is what
+   applicability reads.
+2. **Build** — `Canary_binding_templates.build_recipe`, derived from
+   the facts where the mechanism determines them, `Raw` where it does
+   not. **An external project's build command is respected as-is** —
+   subtle command-line details are bypassed, not fixed; only in our own
+   fork may we modify one. `pr_raw_build_overrides` + spec-check's *raw
+   build overrides* item make the divergence visible.
+3. **Check** — project-agnostic, artifact-type dependent, once (1) and
+   (2) have identified the facts and the products.
+
+> **The uniform part is the checking, not the build.** However an
+> external project builds its artifacts, how to USE them and how to
+> CHECK them are relatively uniform, and the mechanism identification is
+> what drives the selection.
+
+⚠ **Two declarations of one fact.** A project can state its mechanism
+here *or* on the artifact table's `a_binding` row, and pass 2 reads only
+the first. The opam-binding template fills the second and leaves
+`pr_binding_decls` empty, so cairo, libffi, zlib and zstd declare a
+mechanism nothing sees. Recorded in
+[`../../project/issues.md`](../../project/issues.md) §2 with the reason
+it was not fixed on sight: it would flip four green libffi cells.
+
+### 3.6 The open question the catalogue exists to ask
+
+Mechanisms are **found objects** — cstubs, cext, ctypes grew
+historically, each fixing one pain of its predecessor. Making each a
+structured record turns the design space into data canary can range
+over. The axes it already measures:
+
+- **When is the surface agreement checked?** compile / link / load /
+  first-call. A mechanism is, among other things, a POLICY for placing
+  the checking points. Earlier is louder but stiffer.
+- **What carries the surface claim?** headers, `.mli`, cdef strings,
+  runtime `dir()` — each with a fidelity (typed vs name-only) and a
+  drift mode.
+- **How does version identity travel?** soname, symbol versions, package
+  pins, watchlists — or not at all.
+- **Who provides the native lib?** system / co-provider (the z3-solver
+  wheel bundling libz3) / **static embedding** — §3.4's axis, seen from
+  the packaging side.
+
+**The instrument exists.** tiny binds ONE library through three
+mechanisms and records, per mechanism, where each of its 22 mutations
+manifests — build vs probe, attributed vs unattributed. That is
+empirical data about the design space: a body-only signature lie is
+invisible to every mechanism until run time, and a ctypes binding turns
+even a missing symbol into a first-call failure.
+
+The long-term question, in two steps:
+
+1. **A binding mechanism from first principles** — given the axes, is
+   there a point that dominates the found ones? A typed, machine-checked
+   surface carrier (`signatures_agree` closed by construction);
+   per-symbol version identity (`required_versions_exported` total);
+   checks at the earliest site the provision allows. What does it cost
+   in flexibility, and can canary QUANTIFY the trade — scenarios caught
+   at build vs at probe, per mechanism?
+2. **A package manager from first principles** — the same move one level
+   up. A PM is a policy for provision × version identity × checking
+   points across the store lifecycle.
+
+> The framing: engineering cost has dropped; the leverage is theory and
+> design. Canary's role in that regime is the EMPIRICAL instrument — the
+> catalogue makes the design space explicit as data, the agreements make
+> outcomes measurable, and tiny makes controlled experiments cheap.
 
 ## 4. Versions and replacement
 
@@ -321,4 +562,4 @@ Current structural observations do not establish marshalling, lifetime,
 ownership, GC rooting, or callback safety. New languages and formats may
 need new evidence rather than another instance of an existing comparator.
 The per-action theory's separate limits—set and cross-world properties—are
-in [theory.md](theory.md) §7.
+in [README.md](README.md) §8.

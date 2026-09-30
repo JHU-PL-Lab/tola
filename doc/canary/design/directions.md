@@ -9,7 +9,7 @@ lands.
 > in my mind for next… when in doubt, explore more and record them."*
 > Five directions were asked about. Two had homes already and went
 > there: the provider-linkage axis is
-> [`agreement/mechanism.md`](agreement/mechanism.md) §3, and the
+> [`agreement/components.md`](agreement/components.md) §3.4, and the
 > recovery grid shipped (`canary checks --firing`, second table). The
 > three here have no home yet, which is why they are together.
 
