@@ -154,7 +154,8 @@ type vh_element =
   | Badge
   | Marker  (** a mark on an edge or a node: placeholder, declaration *)
   | Button  (** a button of the panel *)
-  | Flow_box  (** a box of §5's figure *)
+  | Flow_box  (** a box of §0.2's figure *)
+  | Flow_mark  (** a mark on a box of §0.2's figure: the harness's, the agents' *)
 
 (** Where a hint can show: in every drawing, only while no recorded run is
     drawn, or only while one is. *)
@@ -163,7 +164,7 @@ type vh_mode = Always | Generic | Recorded
 type vh_key =
   | Chain_key  (** the key above the diagram *)
   | Run_key  (** the recorded run's key *)
-  | Flow_key  (** the key under §5's figure *)
+  | Flow_key  (** the key under §0.2's figure *)
   | Drawn of string list  (** the drawing says it itself, in these words *)
   | No_key of string  (** it only switches something off; why that needs no key *)
 
@@ -186,9 +187,10 @@ let vocabulary_base : string list =
     (* a recorded run's state takes the line: the generic dashes go *)
     ".rec .edge line,.rec .edge path"; ".phm"; ".selbar button";
     ".selbar button:disabled"; ".selbar button:hover"; "svg .edge";
-    (* §5's figure: a box is canary's code or a step it runs *)
+    (* §0.2's figure: a box is canary's code or a step it runs *)
     ".flow"; ".flow text"; ".flow .fsub"; ".flow .flane"; ".flow .fnote";
-    ".fbox rect,.fbox .fshape"; ".fline"; ".fhead"; ".flow .flink"; ".flow a:hover .flink" ]
+    ".fbox rect,.fbox .fshape"; ".fline"; ".fhead"; ".flow .flink"; ".flow a:hover .flink";
+    ".fdot" ]
 
 (** The visual vocabulary: every look §1 uses, one entry each — the element
     it styles, its stylesheet rules, the key that explains it and the words
@@ -329,7 +331,19 @@ let visual_hints : visual_hint list =
     hint "flow.hand" Flow_box [ "hand" ] [ ".fbox.hand rect" ] Always Flow_key
       ~sample:
         {|<svg width="30" height="18" viewBox="0 0 30 18"><g class="fbox hand"><rect x="1" y="1" width="28" height="16" rx="3"/></g></svg>|}
-      ~says:"written for the page, and held to the code by pins" ]
+      ~says:"written for the page, and held to the code by pins";
+    hint "flow.held" Flow_mark [ "fdot"; "held" ] [ ".fdot.held" ] Always Flow_key
+      ~sample:
+        {|<svg width="14" height="14" viewBox="0 0 14 14"><circle class="fdot held" cx="7" cy="7" r="4.5"/></svg>|}
+      ~says:"held by pins — hover a dot for which";
+    hint "flow.unheld" Flow_mark [ "unheld" ] [ ".fdot.unheld" ] Always Flow_key
+      ~sample:
+        {|<svg width="14" height="14" viewBox="0 0 14 14"><circle class="fdot unheld" cx="7" cy="7" r="4.5"/></svg>|}
+      ~says:"held by no pin";
+    hint "flow.agents" Flow_mark [ "fagent" ] [ ".fagent text"; ".fagent path" ] Always Flow_key
+      ~sample:
+        {|<svg width="22" height="14" viewBox="0 0 22 14"><g class="fagent"><text x="4" y="11">AI</text><path d="M2 10L19 2"/></g></svg>|}
+      ~says:"agents do not read it whole — hover for what they query" ]
 
 (** One key, rendered from the vocabulary: a sample and its words per
     hint, in the list's order. *)

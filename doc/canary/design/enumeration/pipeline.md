@@ -44,7 +44,7 @@ Each pass, with the IR it takes and the IR it hands on:
 | 6   | **realize**   | world → steps      | one `assignment`    | `step list`                                     | `realize ∘ dispatch` then `derive_steps` |
 
 The passes in the whole flow, from canary's code to the overview page,
-are drawn in §5 of that page; `canary overview --flow` prints the same.
+are drawn in §0.2 of that page; `canary overview --flow` prints the same.
 Select is what `--thin` and `--refs` set, and order sorts stably on the
 store state each world locks. The steps have three readers:
 `run_graph` executes them and appends to `actions.log`, `render_gh_step`

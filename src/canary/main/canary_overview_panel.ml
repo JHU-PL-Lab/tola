@@ -112,7 +112,7 @@ let join_panel (j : Canary_overview_join.t) =
              (Printf.sprintf {|%s <span class="bl">%s</span>|} (esc info.T.co_label)
                 (esc (J.pm_label j b.T.cb_kind)))))
   in
-  (* the concrete chains, grouped by project in §4.4's order *)
+  (* the concrete chains, grouped by project in §3.4's order *)
   let projects_in_order =
     List.fold j.J.jn_cases ~init:[] ~f:(fun acc c ->
         if List.mem acc c.J.cs_project ~equal:String.equal then acc
@@ -214,7 +214,7 @@ let join_panel (j : Canary_overview_join.t) =
     with
     | None | Some [] -> "No chain canary runs has this choice."
     | Some ids ->
-        "<strong>Canary runs this chain:</strong> " ^ esc (runs_label j ids) ^ " (§4.4)."
+        "<strong>Canary runs this chain:</strong> " ^ esc (runs_label j ids) ^ " (§3.4)."
   in
   (* the covered cooperations with no band of their own, said rather than
      dropped: their chains are among the concrete ones *)
@@ -295,7 +295,7 @@ rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</co
      | [] -> ""
      | us ->
          Printf.sprintf
-           {|<p class="mechnote">No cooperation button: %s. Their packages are among the concrete ones, drawn with what canary cannot read left in (§4.3).</p>|}
+           {|<p class="mechnote">No cooperation button: %s. Their packages are among the concrete ones, drawn with what canary cannot read left in (§3.3).</p>|}
            (esc (String.concat ~sep:"; " us)))
     (* the layout's rules, as a redraw must keep them *)
     (Printf.sprintf

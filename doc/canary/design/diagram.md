@@ -25,7 +25,7 @@ fans out across the sibling backends. In order:
 `Canary_diagram.write_project_output ~steps ~run_status ~artifact_names`
 writes every `.mmd` under `-run/diagrams/` in one call. Where this sits
 in the whole flow, from canary's code to the overview page, is drawn in
-§5 of that page (`canary overview --flow` prints it).
+§0.2 of that page (`canary overview --flow` prints it).
 
 `canary_diagram` and `canary_local_runner` are leaf consumers —
 they never call back upward. `canary_run_info` orchestrates them as

@@ -1,4 +1,4 @@
-(** §3's census of claim sites and §4's tables of what canary covers —
+(** §2.2's census of claim sites and §3's tables of what canary covers —
     the package managers, the binding mechanisms, the cooperations and the
     chains canary runs. Every cell is computed from canary's code: the
     drivers and {!Canary_pm_solo}, the mechanism catalogue, the bridge
@@ -10,7 +10,7 @@ module T = Canary_topology
 
 let esc = Canary_overview_assets.esc
 
-(** §3: every edge with the claims placed on it, checked and named. *)
+(** §2.2: every edge with the claims placed on it, checked and named. *)
 let claim_sites_table () =
   let row (e : T.edge) =
     let ps = T.claim_sites_on e.T.eg_id in
@@ -44,7 +44,7 @@ let claim_sites_table () =
      runs</th><th>impl / cand</th><th>claims (<sup>?</sup> = no evaluator)</th></tr></thead><tbody>%s</tbody></table>"
     (String.concat (List.map T.edges ~f:row))
 
-(* ── §4 ── *)
+(* ── §3 ── *)
 
 (** A table that may be wider than the page scrolls on its own. *)
 let wide (html : string) = {|<div class="widetable">|} ^ html ^ "</div>"
@@ -73,7 +73,7 @@ let pm_users (projects : (string * Canary_project_run.project_run) list)
       in
       if uses then Some name else None)
 
-(** §4.1: each package manager on its own. *)
+(** §3.1: each package manager on its own. *)
 let pm_solo_table projects =
   let row (r : Canary_pm_solo.row) =
     let pm = r.Canary_pm_solo.ps_pm in
@@ -121,7 +121,7 @@ let mechanism_users (projects : (string * Canary_project_run.project_run) list)
       then Some name
       else None)
 
-(** §4.2: the binding mechanisms, grouped by language as §1's buttons are. *)
+(** §3.2: the binding mechanisms, grouped by language as §1's buttons are. *)
 let binding_table projects =
   let yes b = if b then "yes" else "no" in
   let row (i : Canary_mechanism.mechanism_info) =
@@ -165,7 +165,7 @@ let coop_groups projects =
       | [] -> None
       | xs -> Some (info, xs))
 
-(** §4.3: how two package managers cooperate, and the kinds no project
+(** §3.3: how two package managers cooperate, and the kinds no project
     instantiates yet. *)
 let coop_table projects =
   let groups = coop_groups projects in
@@ -231,7 +231,7 @@ let coop_table projects =
          (String.concat ~sep:"; "
             (List.map uncovered ~f:(fun i -> i.T.co_name))))
 
-(** §4.4: the chains canary runs — one per project, binding language and
+(** §3.4: the chains canary runs — one per project, binding language and
     pair of sides — the same list §1's package buttons are
     ([Canary_overview_join.cases_of]); each row links to its chain drawn
     there. *)
@@ -240,8 +240,8 @@ let chains_table (j : Canary_overview_join.t) =
   wide
     (Printf.sprintf "<table class=\"cov\">%s<tbody>%s</tbody></table>"
        (heads
-          [ "project"; "language"; "binding (§5.2)"; "language side (§5.1)";
-            "native side (§5.1)"; "cooperation (§5.3)" ])
+          [ "project"; "language"; "binding (§3.2)"; "language side (§3.1)";
+            "native side (§3.1)"; "cooperation (§3.3)" ])
        (String.concat
           (List.map j.J.jn_cases ~f:(fun c ->
                cells
@@ -253,7 +253,7 @@ let chains_table (j : Canary_overview_join.t) =
                    esc (T.string_of_supplier c.J.cs_topology.T.tp_sys);
                    esc (T.character c.J.cs_topology) ]))))
 
-(** §4.3's two notes: the bindings in a wrong row for a known reason, and
+(** §3.3's two notes: the bindings in a wrong row for a known reason, and
     why no chain is capability-mediated. Both computed. *)
 let topology_notes (projects : (string * Canary_project_run.project_run) list) =
   let unreachable =

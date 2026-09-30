@@ -17,7 +17,7 @@ page.
 
 ## 1. Each part of the page, and the code behind it
 
-§5 of the page draws how the page is made: the path from canary's code
+§0 of the page draws how the page is made: the path from canary's code
 and its runs to each section, and each subject's code and running
 layers (`Canary_overview_flow`). `canary overview --flow` prints the same
 and lists every section with the template slots it is made of and the
@@ -41,7 +41,7 @@ not say:
 
 ## 2. How a run reaches the page
 
-§5 of the page draws the path, from `canary action` through the files a
+§0.2 of the page draws the path, from `canary action` through the files a
 run writes and the record to the runs files. What the drawing does not
 say:
 
@@ -214,8 +214,8 @@ trusting it.
 
 ## 5. The two lists that hold the drawing
 
-`visual_hints` holds every look §1 and §5's figure use, and the three
-keys (§1's two, §5's one) are rendered from it;
+`visual_hints` holds every look §1 and §0.2's figure use, and the three
+keys (§1's two, §0.2's one) are rendered from it;
 `overview.visual_vocabulary_is_one_list` holds it to the
 stylesheet — every rule owned once, every hint applied and explained, and
 no two hints that can show together looking alike. `layout_rules` holds
@@ -234,16 +234,19 @@ below says what is left and what each item needs, and `status.md` points
 here. §6.1 to §6.4 keep the design the items refer to, under the numbers
 code comments cite. How each piece landed is the worklog.
 
-**Done 2026-09-29: the page's source, reorganized, and §5.** One kind of
-information has one home: logic in small OCaml modules, the stylesheets
-and scripts in `canary/overview/`, the page's prose in a template there
-whose slots the generator fills, design here, history in the worklog and
-the commits. The page then gained §5, how the page is made (user: "an
-explicit workflow diagram in the page", with layers like §1's, "for
-observing and auditing the mind workflow"): a figure of the path from
-the code and a run to each section, and each subject's code and running
-layers. Its first reading shows the package managers' running layer is
-thin, which is group C below.
+**Done 2026-09-29: the page's source, reorganized, and its outline.** One
+kind of information has one home: logic in small OCaml modules, the
+stylesheets and scripts in `canary/overview/`, the page's prose in a
+template there whose slots the generator fills, design here, history in
+the worklog and the commits. The page opens with §0 (user: "an explicit
+workflow diagram in the page", then "how this page is made serves the
+outline's purpose"): the outline and the terms, generated from
+`Canary_overview_flow`; a figure of the path from the code and a run to
+each section, marking what the harness holds and which files agents do
+not read whole; and each subject's code and running layers. §3's census
+became §2.2, the tables §3, and the asides say only current usage. The
+figure shows the diagrams held by no pin, and the table the package
+managers' running layer thin, which is group C below.
 
 The list is grouped by what an item needs before it can start. Its first
 open question is the order. The plan of 2026-09-28 was the rest of phase
@@ -572,6 +575,6 @@ copy is named) closed the rest.
 | `overview.edge_marks_clear_the_boxes` | no edge under a source it does not join; no label or badge hidden |
 | `overview.visual_vocabulary_is_one_list` | the looks: one list, held to the stylesheet (§5) |
 | `overview.layout_rules_hold` | the places: every rule holds, every named pin exists (§5) |
-| `overview.flow_is_the_page` | the page's §5: every template slot belongs to one section, every section's id exists, every module it names has a source file, the figure's boxes do not overlap and every arrow is straight (§1) |
-| `overview.tables_list_what_canary_covers` | the page's §4 tables list exactly what canary has drivers and projects for |
+| `overview.flow_is_the_page` | the page's §0: every template slot belongs to one section, every heading reads as the outline lists it and in its order, every module it names has a source file, every pin a box names exists, the figure's boxes do not overlap and every arrow is straight (§1) |
+| `overview.tables_list_what_canary_covers` | the page's §3 tables list exactly what canary has drivers and projects for |
 | `overview.sections_numbered_in_order` | the page's sections are numbered 1 to n |

@@ -59,8 +59,8 @@ if(jbox&&J){
       return names[id]?{label:names[id], from:'declared'}:null; };
     // THE PACKAGE MANAGERS' TERMS for the package layer's two in-between
     // nodes, wherever no name is known: the capability file the native
-    // side's package manager ships (§4.1), and the kinds of bridge the
-    // chains join through (§4.3) — or, where no chain has the choice,
+    // side's package manager ships (§3.1), and the kinds of bridge the
+    // chains join through (§3.3) — or, where no chain has the choice,
     // those the language side's package manager defines
     var terms={}, pt=J.pm_terms[(c?c.ps:S.ps)||J.sys_pm],
         br=c?(c.bridge||[]):((near&&near.band&&near.band.bridge)||[]), brPm=false;
@@ -163,7 +163,7 @@ if(jbox&&J){
       var seen={}, who=[];
       ids.forEach(function(id){ var x=caseOf(id), w=x?x.project+' ('+x.lang+')':id;
         if(!seen[w]){ seen[w]=1; who.push(w); } });
-      runs.innerHTML=who.length?'<strong>Canary runs this chain:</strong> '+jesc(who.sort().join(', '))+' (§4.4).'
+      runs.innerHTML=who.length?'<strong>Canary runs this chain:</strong> '+jesc(who.sort().join(', '))+' (§3.4).'
         :'No chain canary runs has this choice.'; }
     if(miss){
       var k=J.kinds[S.k]||{}, why='';
@@ -239,7 +239,7 @@ if(jbox&&J){
     var b=e.target.closest('button[data-g]'); if(b) pick(b.dataset.g,b.dataset.v); });
   var wsel=document.getElementById('jworld');
   if(wsel) wsel.addEventListener('change',function(){ S.v=wsel.value; draw(); });
-  // #chain=<id> — §4.4's rows link here; #rec=<world> — one recorded world
+  // #chain=<id> — §3.4's rows link here; #rec=<world> — one recorded world
   var h=/#chain=([^&]+)/.exec(location.hash), r=/#rec=([^&]+)/.exec(location.hash),
       want=h?decodeURIComponent(h[1]):null, world=r?decodeURIComponent(r[1]):null;
   var go=function(id,w){ if(caseOf(id)){ pick('c',id); if(w&&VIEWS[w]){ S.v=w; draw(); }

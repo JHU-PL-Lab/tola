@@ -13,7 +13,7 @@
     draws, and the page's script only keeps the state and looks the
     answers up.
 
-    A concrete chain is a row of §5.4 — ONE list, which that table renders
+    A concrete chain is a row of §3.4 — ONE list, which that table renders
     too — named from its project's DECLARATIONS, never from a run: §1 is
     what can exist and what canary runs; a recorded world is §2.1's. *)
 
@@ -90,7 +90,7 @@ type case = {
           that read it ([Canary_overview_runs.declared_names]) *)
 }
 
-(** The key §5.4 sorts by, so the table and the buttons share one order. *)
+(** The key §3.4 sorts by, so the table and the buttons share one order. *)
 let sort_key (c : case) =
   ( c.cs_project,
     Canary_lang.string_of_lang c.cs_lang,

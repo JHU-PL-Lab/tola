@@ -1,9 +1,9 @@
 (** The overview page, [canary overview]: [canary/overview/page.html] filled
-    from the modules that draw each part — §1's diagram
-    ({!Canary_overview_diagram}), its looks and places
+    from the modules that draw each part — §0 ({!Canary_overview_flow});
+    §1's diagram ({!Canary_overview_diagram}), its looks and places
     ({!Canary_overview_looks}) and its panel ({!Canary_overview_panel}); §2
-    ({!Canary_agreement_overview}); §3 and §4 ({!Canary_overview_tables});
-    §5 ({!Canary_overview_flow}).
+    ({!Canary_agreement_overview}) with §2.2, and §3
+    ({!Canary_overview_tables}).
     §1.2 and a chain's recorded run are laid out by the page's scripts from
     the runs files ({!Canary_overview_runs}), which the page loads and does
     not embed. *)
@@ -106,6 +106,8 @@ let render (projects : (string * Canary_project_run.project_run) list)
   Canary_overview_assets.fill "page.html"
     [ ("css", css () ^ "\n" ^ results_css ());
       ("agreements_css", Canary_agreement_overview.css ());
+      ("outline", Canary_overview_flow.outline ());
+      ("terms", Canary_overview_flow.terms_html ());
       ("missing_steps", P.missing_steps_note ());
       ("chain_key", Canary_overview_looks.key_html Canary_overview_looks.Chain_key);
       ("join_panel", P.join_panel join);

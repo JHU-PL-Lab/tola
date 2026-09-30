@@ -2219,7 +2219,7 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
    conflicts"). [Canary_overview_looks.visual_hints] is that place; this
    holds it to the stylesheet and to the page:
 
-   - every rule of the stylesheet for §1's diagram and §5's figure belongs
+   - every rule of the stylesheet for §1's diagram and §0.2's figure belongs
      to exactly one hint or to the base look, and every rule a hint names
      exists — a new style cannot
      land without saying what it means, and an old one cannot linger;
@@ -2281,9 +2281,9 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         let scope =
           [ "band"; "bandlabel"; "sidecap"; "node"; "ncase"; "nplace"; "edge"; "elabel";
             "cbadge"; "cnum"; "phm"; "declmark"; "gone";
-            (* §5's figure *)
+            (* §0.2's figure *)
             "flow"; "fbox"; "fshape"; "ffold"; "fline"; "fhead"; "flink"; "flane"; "fsub";
-            "fnote" ]
+            "fnote"; "fdot"; "fagent" ]
         in
         let in_scope sel =
           List.exists scope ~f:(has_class sel) || String.is_prefix sel ~prefix:".selbar button"
@@ -2438,15 +2438,18 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         && samples_unique && samples_used && distinct_looks)
   }
 
-(* §5 IS THE PAGE (2026-09-29, user: a figure of how the page is made, and
-   a table of each subject's code and running layers). Holds its data to
-   what exists:
+(* §0 IS THE PAGE'S OUTLINE (2026-09-29, user: the outline, the terms, a
+   figure of how the page is made marking what the harness holds and what
+   agents do not read, and a table of each subject's code and running
+   layers). Holds its data to what exists:
 
    - every slot of page.html belongs to exactly one section, or to the page
-     as a whole, so a new part of the page takes a place in §5;
-   - every section's anchor is an id on the rendered page, and every
-     section the table or the figure names is listed;
-   - every module the data names has a source file;
+     as a whole, so a new part of the page takes a place in the outline;
+   - every section's heading reads as the outline lists it, in the
+     outline's order, and every section the table or the figure names is
+     listed;
+   - every module the data names has a source file, and every pin or make
+     target a box names as holding it exists;
    - the figure's boxes sit inside the canvas without overlapping, and
      every arrow runs straight between two ends that face each other. *)
 let flow_pin : Canary_project_test.pure_test =
@@ -2460,12 +2463,39 @@ let flow_pin : Canary_project_test.pure_test =
           List.for_all slots ~f:(fun sl -> List.count claimed ~f:(String.equal sl) = 1)
           && List.for_all claimed ~f:(List.mem slots ~equal:String.equal)
         in
+        (* with §2 itself, whose subsection §2.1 it renders *)
         let page =
-          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
+          Canary_overview_page.render Canary_registry.all_specs
+            ~overview:
+              (Canary_agreement_overview.render
+                 (Canary_matrix.matrix_of Canary_registry.all_projects))
+            ~generated_at:"pin"
+        in
+        (* each heading, as the outline lists it, at increasing places *)
+        let at =
+          List.map F.sections ~f:(fun s ->
+              String.substr_index page
+                ~pattern:(Printf.sprintf {|id="%s">%s<|} s.F.sc_anchor (F.heading s)))
         in
         let anchors_ok =
-          List.for_all F.sections ~f:(fun s ->
-              String.is_substring page ~substring:(Printf.sprintf {|id="%s"|} s.F.sc_anchor))
+          List.for_all at ~f:Option.is_some
+          && (let ps = List.filter_map at ~f:Fn.id in
+              List.for_all2_exn (List.drop_last_exn ps) (List.tl_exn ps) ~f:(fun a b -> a < b))
+        in
+        let tests_src =
+          String.concat
+            (List.map
+               [ "src/canary/main/canary_projects_test.ml"; "src/canary/test/canary_project_test.ml";
+                 "src/canary/test/canary_artifact_test.ml"; "src/canary/test/canary_pm_test.ml" ]
+               ~f:(fun p -> Stdlib.In_channel.with_open_bin p Stdlib.In_channel.input_all))
+        in
+        let makefile = Stdlib.In_channel.with_open_bin "Makefile" Stdlib.In_channel.input_all in
+        let held_ok =
+          List.for_all F.boxes ~f:(fun b ->
+              List.for_all b.F.bx_held ~f:(fun h ->
+                  match String.chop_prefix h ~prefix:"make " with
+                  | Some target -> String.is_substring makefile ~substring:("\n" ^ target ^ ":")
+                  | None -> String.is_substring tests_src ~substring:(Printf.sprintf {|"%s"|} h)))
         in
         let named =
           List.concat_map F.subjects ~f:(fun s ->
@@ -2505,7 +2535,7 @@ let flow_pin : Canary_project_test.pure_test =
                  List.for_all F.boxes ~f:(fun b -> String.equal a.F.bx_id b.F.bx_id || apart a b))
           && List.for_all F.arrows ~f:(fun a -> Option.is_some (F.route a))
         in
-        slots_ok && anchors_ok && sections_ok && modules_ok && geometry_ok)
+        slots_ok && anchors_ok && sections_ok && modules_ok && held_ok && geometry_ok)
   }
 
 (* EVERY AGREEMENT SITS SOMEWHERE ON THE CHAIN, AND EVERY VIEW SAYS WHERE
@@ -2905,8 +2935,8 @@ let coverage_tables_pin : Canary_project_test.pure_test =
         let page_ok =
           (not (String.is_empty section))
           && List.for_all
-               [ "4.1 Each package manager on its own"; "4.2 Binding mechanisms";
-                 "4.3 How two package managers cooperate"; "4.4 The chains canary runs" ]
+               [ "3.1 Each package manager on its own"; "3.2 Binding mechanisms";
+                 "3.3 How two package managers cooperate"; "3.4 The chains canary runs" ]
                ~f:(fun h -> String.is_substring section ~substring:h)
           (* a binding row per catalogued mechanism *)
           && List.for_all Canary_mechanism.mechanism_catalogue ~f:(fun i ->
@@ -3049,7 +3079,7 @@ let package_band_pin : Canary_project_test.pure_test =
    ([Canary_overview_join]); the page's script only looks it up, so the
    data is what is held:
 
-   - the concrete chains ARE §5.4's rows — one list, each row linking to
+   - the concrete chains ARE §3.4's rows — one list, each row linking to
      its chain — and each is its own worlds: pass 2's mechanism, its
      topology's cooperation, the band over those worlds, and its
      project's declared names on template nodes. zarith's fetched chain
@@ -3272,8 +3302,8 @@ let chain_choices_pin : Canary_project_test.pure_test =
         in
         (* THE THIRD ROUND (2026-09-24, user): the package layer's two
            in-between nodes say the package managers' TERMS — the
-           capability file a manager ships (§4.1's new column), the kinds
-           of bridge a cooperation's chains join through (§4.3's) — and
+           capability file a manager ships (§3.1's column), the kinds
+           of bridge a cooperation's chains join through (§3.3's) — and
            every bridge's term is one its manager defines *)
         let bridges_of key = List.Assoc.find j.J.jn_bridges key ~equal:String.equal in
         let terms_ok =
@@ -3701,7 +3731,8 @@ let drawn_line_sources_pin : Canary_project_test.pure_test =
         && cases_ok && sources_ok && page_ok)
   }
 
-(* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 1..n (2026-09-23). The page
+(* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 0..n (2026-09-23; §0, the
+   outline, since 2026-09-29). The page
    template numbers its sections by hand, and moving the agreement table
    in produced two sections called "3." — found by reading the page, not
    by any check. Reordering sections is now a thing the user asks for, so
@@ -3740,8 +3771,7 @@ let overview_sections_pin : Canary_project_test.pure_test =
             go 0 []
           in
           (not (List.is_empty nums))
-          && List.equal Int.equal nums
-               (List.init (List.length nums) ~f:(fun i -> i + 1)))
+          && List.equal Int.equal nums (List.init (List.length nums) ~f:Fn.id))
   }
 
 let pm_gate_pin : Canary_project_test.pure_test =
@@ -7610,7 +7640,7 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           (* every table on the page is named. TWO since 2026-09-17:
              the check key was absorbed into the overview, because its
              columns were five of its columns and two of its tooltips. *)
-          String.is_substring h ~substring:"agreement overview"
+          String.is_substring h ~substring:{|<h2 id="overview">2. The agreements</h2>|}
           && not (String.is_substring h ~substring:"The check key")
           (* ONE PAGE since 2026-09-28 (user; design/overview.md §6.4 step
              5): the result table is §1.2 of this page, and the old

@@ -184,6 +184,16 @@ border:1px solid var(--line);border-radius:10px}
 .fhead{fill:var(--fg);opacity:.7}
 .flow .flink{fill:var(--acc)}
 .flow a:hover .flink{text-decoration:underline}
+.fdot{stroke-width:1.3}
+.fdot.held{fill:var(--ok);stroke:var(--ok)}
+.fdot.unheld{fill:none;stroke:var(--mut)}
+.fagent text{font:700 9px ui-monospace,monospace;fill:var(--acc)}
+.fagent path{stroke:var(--acc);stroke-width:1.3}
 table.flowtab th:first-child{white-space:nowrap}
+ul.outline{padding-left:1.2rem}
+ul.outline ul{padding-left:1.2rem;margin:.1rem 0 .3rem}
+dl.terms{display:grid;grid-template-columns:max-content 1fr;gap:.25rem 1rem;max-width:74ch}
+dl.terms dt{font-weight:600}
+dl.terms dd{margin:0}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}

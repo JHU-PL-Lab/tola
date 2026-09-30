@@ -136,7 +136,7 @@ let render (m : M.t) : string =
         (esc (Canary_agreement_common.short_code_of_slug sm.sm_slug))
         (sitting_mark sm)
     in
-    "<h3>Where the agreements sit on the chain</h3>"
+    "<h3 id=\"sittings\">2.1 Where they sit on the chain</h3>"
     ^ "<p class=\"kq\">Every agreement the diagram places — registered and \
        candidate — grouped by where its claim site sits. <b>checked</b>: \
        the registry has an evaluator for it. <b>decided</b>: a recorded \
