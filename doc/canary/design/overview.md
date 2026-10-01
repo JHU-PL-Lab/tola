@@ -29,9 +29,16 @@ not say:
   written by hand. Pins hold them to the registry and to every step the
   runner derives, and §6.2 derives them.
 - The page embeds two pieces of data its scripts read: §1's choices as
-  `#joindata` (`Canary_overview_join`) and §1.2's columns as
-  `framesdata` (`Canary_frames`). A run reaches the page only through the
-  runs files beside it, except for §2's counts.
+  `#joindata` (`Canary_overview_join`) and §1.2's column keys as
+  `#rtcols` (`Canary_overview_results`, over `Canary_frames`). A run
+  reaches the page only through the runs files beside it, except for §2's
+  counts.
+- §1.2's cells are computed once, in OCaml, when a machine writes its runs
+  file: `Canary_overview_results.cells` turns a recorded world into a row
+  filed by column key, and the runs file carries it. The header is drawn
+  into the page; the page's script and the export lay the rows of every
+  machine's runs file out under it by key, a column a row predates shown
+  as such.
 - `Canary_overview_assets` reads `canary/overview/` from the repository
   root. Artifact-test's `overview.scripts_parse` runs `node --check` on
   the scripts.
@@ -57,10 +64,9 @@ not say:
   that the embedding document styles. Figure 2 and the lines table are
   written for the page's opening choice; with `--chain ID [--world W]`,
   or `--mechanism`, `--coop`, `--native` and `--lang`, `--exhibits DIR`
-  writes those two for the chain the buttons would draw. A recorded world
-  is one of this machine's until the export reads every machine's runs
-  files, as §1.2's results table will need; that table is not written
-  yet.
+  writes those two for the chain the buttons would draw; a recorded world
+  is one of this machine's. §1.2's results table is written from every
+  machine's runs file, as the page reads them.
 
 ## 2. How a run reaches the page
 
@@ -578,8 +584,9 @@ copy is named) closed the rest.
 | `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it; a library's node is the copy its step looked at |
 | `overview.template_slots_are_filled` | the page's template is filled exactly: a slot with no value, a value with no slot or an unclosed slot fails |
 | `overview.staged_copy_is_named` | an installed world's staged copy is named and counted from its own inspection, and the build tree's copy from its own |
-| `overview.results_table_is_the_column_model` | §1.2 embeds the column model; its links run both ways; every outcome is the log's, and none is left out |
-| `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; §1.2's tooltip glosses each blame |
+| `overview.results_table_is_the_column_model` | one key per frame column, in order; the page carries the header and the keys, and its script lays rows out by key and holds no mark or rule; every recorded row has a cell for every column; its links run both ways; every outcome is the log's, and none is left out |
+| `overview.result_cells_keep_their_rules` | a frame no step realized is hatched; a piece shows its first recorded edge; a node's first cell shows its name and count, a later one repeats the name; every recorded piece's state has a mark |
+| `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; each check cell's tooltip glosses its blame |
 | `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |
 | `matrix.page_titles_and_agreement_overview` | the agreement overview's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
 | `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |
@@ -596,7 +603,7 @@ copy is named) closed the rest.
 | `overview.exhibits_are_captioned` | each figure and table appears once, in list order, captioned with its number and title and listed in §0; every table and drawing on the page is one of them (§1) |
 | `overview.exhibits_are_exported` | every exhibit is written on its own or named as not written, with why; a written table is the page's without its caption; a written figure ends with the page's drawing and stands alone (its size and namespace, every colour it uses defined, no dark mode, no entity XML lacks); nothing written carries the page's numbers; a choice of chain writes only Figure 2 and the lines table (§1) |
 | `overview.tables_list_what_canary_covers` | the page's §3 tables list exactly what canary has drivers and projects for |
-| `overview.outcome_marks_are_one_list` | one spelling of an outcome's mark: every label a log records has an entry, the page's script spells no word mark, §2 shows the key |
+| `overview.outcome_marks_are_one_list` | one spelling of an outcome's mark: every label a log records has an entry, a check cell shows its outcome's mark and look, the page's script spells no word mark, §2 shows the key |
 | `overview.agreement_laws_are_listed` | §2 lists every law of `Canary_agreement.row_rules` |
 | `overview.mechanisms_list_their_claims` | §3.2 lists, per mechanism, exactly the claims pass 2's applicability carries |
 | `overview.sections_numbered_in_order` | the page's sections are numbered 1 to n |

@@ -997,7 +997,18 @@ let view_lines (v : view) : (string * line) list =
           ?src:(List.Assoc.find v.vw_name_sources n ~equal:String.equal)
           label ))
 
-let json_of_view (v : view) : Yojson.Basic.t =
+(** The view's row of §1.2, its cells computed from the view's own fields. *)
+let row_of_view ~(machine : string) (v : view) : Canary_overview_results.row =
+  Canary_overview_results.row ~machine ~project:v.vw_project ~id:v.vw_id
+    { Canary_overview_results.f_edges = v.vw_edges;
+      f_gone = v.vw_gone;
+      f_names = v.vw_names;
+      f_nodes = v.vw_nodes;
+      f_counts = v.vw_counts;
+      f_outcomes = v.vw_outcomes;
+      f_blames = v.vw_blames }
+
+let json_of_view ~(machine : string) (v : view) : Yojson.Basic.t =
   let pairs kvs = `Assoc (List.map kvs ~f:(fun (k, s) -> (k, `String s))) in
   `Assoc
     ([ ("id", `String v.vw_id);
@@ -1032,8 +1043,10 @@ let json_of_view (v : view) : Yojson.Basic.t =
           `Assoc (List.map v.vw_place_sources ~f:(fun (n, s) -> (n, json_of_source s))) );
         ("gone", `List (List.map v.vw_gone ~f:(fun n -> `String n)));
         ("candidates", `List (List.map v.vw_candidates ~f:(fun c -> `String c)));
-        (* the result table's node counts and check outcomes (§1.2) *)
+        (* the result table's node counts and check outcomes (§1.2), and
+           its row, laid out by column *)
         ("counts", pairs v.vw_counts);
+        ("row", Canary_overview_results.json_of_row (row_of_view ~machine v));
         ("outcomes", pairs v.vw_outcomes);
         ("blames", pairs v.vw_blames);
         ("observed", pairs v.vw_observed);
@@ -1062,12 +1075,13 @@ let suffix = ");\n"
 
 let payload (m : M.t) ~(generated_at : string) : string =
   let vs = views m in
+  let machine = Canary_store.string_of_platform (Canary_store.platform ()) in
   prefix
   ^ Yojson.Basic.pretty_to_string
       (`Assoc
-        [ ("machine", `String (Canary_store.string_of_platform (Canary_store.platform ())));
+        [ ("machine", `String machine);
           ("generated", `String generated_at);
-          ("views", `List (List.map vs ~f:json_of_view)) ])
+          ("views", `List (List.map vs ~f:(json_of_view ~machine))) ])
   ^ suffix
 
 let file_name_of (d : Canary_store.distro) : string =
@@ -1090,3 +1104,27 @@ let write (m : M.t) ~(generated_at : string) : string =
   Canary_step_model.ensure_dir (Stdlib.Filename.dirname path);
   Stdio.Out_channel.write_all path ~data:(payload m ~generated_at);
   path
+
+(** Every machine's §1.2 rows, read from the runs files the page loads. *)
+let recorded_rows () : Canary_overview_results.row list =
+  let page_dir = Stdlib.Filename.dirname Canary_overview_assets.docs_path in
+  List.concat_map all_file_names ~f:(fun f ->
+      let path = Stdlib.Filename.concat page_dir f in
+      if not (Stdlib.Sys.file_exists path) then []
+      else
+        let text = Stdio.In_channel.read_all path in
+        match (String.index text '{', String.rindex text '}') with
+        | Some a, Some b -> (
+            match Yojson.Basic.from_string (String.sub text ~pos:a ~len:(b - a + 1)) with
+            | `Assoc kv -> (
+                match List.Assoc.find kv "views" ~equal:String.equal with
+                | Some (`List vs) ->
+                    List.filter_map vs ~f:(function
+                      | `Assoc v ->
+                          Option.bind (List.Assoc.find v "row" ~equal:String.equal)
+                            ~f:Canary_overview_results.row_of_json
+                      | _ -> None)
+                | _ -> [])
+            | _ -> []
+            | exception _ -> [])
+        | _ -> [])

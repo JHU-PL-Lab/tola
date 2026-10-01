@@ -22,72 +22,13 @@ let css () = Canary_overview_assets.read "page.css"
 let script () = Canary_overview_assets.script "page.js"
 
 (* ── §1.2, the result table: a row per chain and machine, the frames of
-   {!Canary_frames} as its columns, every cell a word a view carries ── *)
-
-let layer_word : T.layer -> string = function
-  | T.L_pm -> "pm"
-  | T.L_package -> "pkg"
-  | T.L_artifact -> "art"
-  | T.L_program -> "prog"
-
-(** The column model as the table's script reads it: each node's label and
-    layer, and each frame's columns — a piece with the layer it makes, a
-    check with the layer of its site's product — and what each blame word
-    means. *)
-let frames_json () : string =
-  let module Fr = Canary_frames in
-  let layer_of_node n =
-    Option.value_map (T.node_by_id n) ~default:"art" ~f:(fun nd -> layer_word nd.T.nd_layer)
-  in
-  let layer_of_edge id =
-    Option.value_map (List.find T.edges ~f:(fun e -> String.equal e.T.eg_id id)) ~default:"art"
-      ~f:(fun e -> layer_of_node e.T.eg_to)
-  in
-  let strs l = `List (List.map l ~f:(fun s -> `String s)) in
-  let column = function
-    | Fr.Node n -> `Assoc [ ("k", `String "n"); ("id", `String n) ]
-    | Fr.Piece { edges; label } ->
-        `Assoc
-          [ ("k", `String "p"); ("label", `String label); ("edges", strs edges);
-            ("layer", `String (layer_of_edge (List.hd_exn edges))) ]
-    | Fr.Check { slug; code; site; stage } ->
-        `Assoc
-          [ ("k", `String "c"); ("slug", `String slug); ("code", `String code);
-            ("site", `String site);
-            ("stage", `String (Canary_agreement_common.string_of_stage stage));
-            ("layer", `String (layer_of_edge site)) ]
-  in
-  `Assoc
-    [ ( "nodes",
-        `Assoc
-          (List.map T.nodes ~f:(fun nd ->
-               ( nd.T.nd_id,
-                 `Assoc
-                   [ ("label", `String nd.T.nd_label); ("layer", `String (layer_word nd.T.nd_layer)) ] ))) );
-      ( "frames",
-        `List
-          (List.map Fr.frames ~f:(fun fr ->
-               `Assoc
-                 [ ("side", `String (Fr.string_of_side fr.Fr.fr_side));
-                   ("side_label", `String (Fr.label_of_side fr.Fr.fr_side));
-                   ("label", `String fr.Fr.fr_label);
-                   ("cols", `List (List.map fr.Fr.fr_columns ~f:column)) ])) );
-      ( "blames",
-        `Assoc (List.map Canary_matrix.blame_gloss ~f:(fun (w, g) -> (w, `String g))) );
-      ( "outcomes",
-        `Assoc
-          (List.map Canary_matrix.outcome_marks ~f:(fun o ->
-               ( o.Canary_matrix.om_label,
-                 `List [ `String o.Canary_matrix.om_mark; `String o.Canary_matrix.om_look ] )))
-      ) ]
-  |> Yojson.Basic.to_string
-  |> String.substr_replace_all ~pattern:"</" ~with_:"<\\/"
+   {!Canary_frames} as its columns ({!Canary_overview_results}) ── *)
 
 (** §1.2's stylesheet, [canary/overview/results.css]. *)
 let results_css () = Canary_overview_assets.read "results.css"
 
-(** §1.2's script, [canary/overview/results.js]: it lays out the words
-    {!Canary_overview_runs} computed, under the column model above. *)
+(** §1.2's script, [canary/overview/results.js]: it lays out the rows each
+    runs file carries, by column. *)
 let results_script () = Canary_overview_assets.script "results.js"
 
 (** One script tag per machine's runs file, loaded before the scripts
@@ -117,9 +58,10 @@ let render (projects : (string * Canary_project_run.project_run) list)
       ("chain_key", Canary_overview_looks.key_html Canary_overview_looks.Chain_key);
       ("join_panel", P.join_panel join);
       ("node_legend", P.node_legend ());
-      ("frames_json", frames_json ());
-      (* results.js fills it, keeping the caption *)
-      ("results_table", Canary_overview_exhibits.table ~cls:"rt" "tab-results" ^ "</table>");
+      ("results_key", Canary_overview_results.legend ());
+      (* its rows come with the runs files: the script lays them out *)
+      ("results_table", Canary_overview_results.table ());
+      ("results_columns", Canary_overview_results.columns_json ());
       ("agreement_overview", overview);
       ("sites", Int.to_string (List.length T.claim_sites));
       ("sites_checked", sites T.implemented);

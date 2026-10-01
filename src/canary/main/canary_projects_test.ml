@@ -1301,15 +1301,18 @@ let template_pin : Canary_project_test.pure_test =
         && String.is_prefix page ~prefix:"<!DOCTYPE html>")
   }
 
-(* THE RESULT TABLE JOINS THE PAGE (2026-09-28, user: one page, prototype
-   A; design/overview.md §6.4 step 3). §1.2 lays the runs files' views out
-   over [Canary_frames]' columns and computes nothing. Held:
+(* THE RESULT TABLE IS THE COLUMN MODEL (2026-09-28; its cells computed in
+   OCaml since 2026-09-30). A row's cells are computed when its machine
+   writes its runs file and filed by column; §1.2's script lays them out
+   and computes nothing. Held:
 
-   - the page embeds the column model exactly: parsed back, its frames,
-     labels and columns are [Canary_frames.frames], in order;
-   - §1.2 is there, its script runs after the runs files load, and the
-     links run both ways — a row's name draws its chain in §1
-     ([window.canaryDraw]), a drawn run links back to its row;
+   - one key per [Canary_frames] column, in order, each unique; the page
+     carries the header and the keys, the frames in order;
+   - §1.2 is there, its script runs after the runs files load, lays rows
+     out by key, and holds no mark or rule; the links run both ways — a
+     row's name draws its chain in §1 ([window.canaryDraw]), a drawn run
+     links back to its row;
+   - every recorded row has a cell for every column, and only those;
    - every view's check outcome is the worst the world's log recorded for
      that claim in that language, or [n/a] where the chain's mechanism
      cannot carry it;
@@ -1328,45 +1331,50 @@ let results_table_pin : Canary_project_test.pure_test =
         let page =
           Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
         in
-        let opening = {|<script type="application/json" id="framesdata">|} in
-        let embedded =
-          Option.bind (String.substr_index page ~pattern:opening) ~f:(fun i ->
-              let from = i + String.length opening in
-              Option.map (String.substr_index page ~pos:from ~pattern:"</script>") ~f:(fun j ->
-                  String.sub page ~pos:from ~len:(j - from)
-                  |> String.substr_replace_all ~pattern:"<\\/" ~with_:"</"))
-        in
-        let get j k = match j with `Assoc kv -> List.Assoc.find kv k ~equal:String.equal | _ -> None in
+        let module Rs = Canary_overview_results in
+        (* the columns, one per frame column in order, each filed once *)
+        let keys = Rs.keys () in
         let model_ok =
-          match Option.map embedded ~f:Yojson.Basic.from_string with
-          | exception _ -> false
-          | None -> false
-          | Some j -> (
-              match get j "frames" with
-              | Some (`List fs) when List.length fs = List.length Fr.frames ->
-                  List.for_all2_exn fs Fr.frames ~f:(fun fj fr ->
-                      Poly.equal (get fj "label") (Some (`String fr.Fr.fr_label))
-                      &&
-                      match get fj "cols" with
-                      | Some (`List cs) when List.length cs = List.length fr.Fr.fr_columns ->
-                          List.for_all2_exn cs fr.Fr.fr_columns ~f:(fun cj col ->
-                              match col with
-                              | Fr.Node n -> Poly.equal (get cj "id") (Some (`String n))
-                              | Fr.Piece { label; _ } ->
-                                  Poly.equal (get cj "label") (Some (`String label))
-                              | Fr.Check { slug; _ } ->
-                                  Poly.equal (get cj "slug") (Some (`String slug)))
-                      | _ -> false)
-              | _ -> false)
+          List.length keys = List.sum (module Int) Fr.frames ~f:(fun fr -> List.length fr.Fr.fr_columns)
+          && List.length (List.dedup_and_sort keys ~compare:String.compare) = List.length keys
+          && List.equal String.equal keys
+               (List.concat_map Fr.frames ~f:(fun fr ->
+                    List.map fr.Fr.fr_columns ~f:(fun c -> fr.Fr.fr_label ^ "|" ^ match c with
+                      | Fr.Node n -> "n|" ^ n
+                      | Fr.Piece { label; _ } -> "p|" ^ label
+                      | Fr.Check { slug; site; stage; _ } ->
+                          String.concat ~sep:"|"
+                            [ "c"; slug; Canary_agreement_common.string_of_stage stage; site ])))
+          (* the page carries the header and the keys; the frames in order *)
+          && String.is_substring page ~substring:(Rs.thead ())
+          && String.is_substring page ~substring:(Rs.columns_json ())
+          && (let at =
+                List.map Fr.frames ~f:(fun fr ->
+                    String.substr_index page
+                      ~pattern:(Printf.sprintf {|<th class="rt-fr" colspan="%d">%s</th>|}
+                                  (List.length fr.Fr.fr_columns)
+                                  (Canary_overview_assets.esc fr.Fr.fr_label)))
+              in
+              List.for_all at ~f:Option.is_some
+              &&
+              let ps = List.filter_map at ~f:Fn.id in
+              List.for_all2_exn (List.drop_last_exn ps) (List.tl_exn ps) ~f:(fun a b -> a < b))
         in
+        (* the script lays rows out by key after the runs files load, and
+           computes nothing *)
+        let script = Canary_overview_assets.read "results.js" in
         let section_ok =
           String.is_substring page ~substring:{|<h3 id="results">1.2 |}
           && String.is_substring page ~substring:"window.canaryDraw="
           && String.is_substring page ~substring:"'#row-'+v.key"
+          && List.for_all [ "C.keys"; "w.row"; "C.missing" ] ~f:(fun s ->
+                 String.is_substring script ~substring:s)
+          && List.for_all [ "absent"; "rt-ok"; "outcomes"; "blames"; "FR." ] ~f:(fun s ->
+                 not (String.is_substring script ~substring:s))
           &&
           match
             ( String.substr_index page ~pattern:"overview_runs.js",
-              String.substr_index page ~pattern:"getElementById('framesdata')" )
+              String.substr_index page ~pattern:"getElementById('rtcols')" )
           with
           | Some runs, Some table -> runs < table
           | _ -> false
@@ -1405,7 +1413,14 @@ let results_table_pin : Canary_project_test.pure_test =
                       (not (in_lang v l)) || (not (checked slug))
                       || List.Assoc.mem v.R.vw_outcomes slug ~equal:String.equal))
         in
-        model_ok && section_ok && outcomes_ok && none_left_out)
+        (* every recorded row has a cell for every column, and only those *)
+        let rows_ok =
+          List.for_all views ~f:(fun v ->
+              List.equal String.equal
+                (List.map (R.row_of_view ~machine:"pin" v).Rs.rw_cells ~f:fst)
+                keys)
+        in
+        model_ok && section_ok && outcomes_ok && none_left_out && rows_ok)
   }
 
 (* THE RECORD READS WHAT A RUN REALIZED (2026-09-28, design/overview.md
@@ -2763,10 +2778,28 @@ let exhibits_export_pin : Canary_project_test.pure_test =
                  List.mem [ "amp"; "lt"; "gt"; "quot"; "apos" ] n ~equal:String.equal
                  || String.is_prefix n ~prefix:"#")
         in
+        (* §1.2's rows come with the runs files: the page's script lays
+           them out when the page is read, the export when it writes *)
+        let body = {|<tbody id="rtbody">|} in
+        let without_rows s =
+          match (String.substr_index s ~pattern:body, String.substr_index s ~pattern:"</tbody>") with
+          | Some a, Some b -> String.prefix s (a + String.length body) ^ String.drop_prefix s b
+          | _ -> s
+        in
+        let rows_ok =
+          match file_of (E.find "tab-results") with
+          | Some c ->
+              List.length (String.substr_index_all c ~may_overlap:false ~pattern:{|<tr id="row-|})
+              = List.length (Canary_overview_runs.recorded_rows ())
+          | None -> false
+        in
         let matches e content =
           match e.E.ex_kind with
           | E.Table ->
-              Option.equal String.equal (E.bare_table e.E.ex_id page) (Some (String.strip content))
+              let same = if String.equal e.E.ex_id "tab-results" then without_rows else Fn.id in
+              Option.equal String.equal
+                (Option.map (E.bare_table e.E.ex_id page) ~f:same)
+                (Some (same (String.strip content)))
           | E.Figure -> (
               match drawing e.E.ex_id with
               | Some d -> String.is_suffix content ~suffix:d && stands_alone content
@@ -2793,17 +2826,85 @@ let exhibits_export_pin : Canary_project_test.pure_test =
               | Error _ -> false)
           | [] -> false
         in
-        accounted && chosen
+        accounted && chosen && rows_ok
         && List.for_all E.exhibits ~f:(fun e ->
                match file_of e with Some c -> matches e c && unnumbered c | None -> true))
+  }
+
+(* §1.2'S CELLS KEEP THEIR RULES (2026-09-30), now that they are computed
+   once, in [Canary_overview_results.cells]: a frame no step realized a
+   piece of is hatched; a piece shows its first recorded edge; a node's
+   first cell shows its name and count, and a later one, where it is
+   consumed, repeats the name; every state a recorded piece shows has a
+   mark. *)
+let result_cells_pin : Canary_project_test.pure_test =
+  { name = "overview.result_cells_keep_their_rules";
+    check =
+      (fun () ->
+        let module Rs = Canary_overview_results in
+        let module Fr = Canary_frames in
+        let facts ?(names = []) ?(counts = []) edges =
+          { Rs.f_edges = edges; f_gone = []; f_names = names; f_nodes = []; f_counts = counts;
+            f_outcomes = []; f_blames = [] }
+        in
+        let all_ran = List.map Canary_topology.edges ~f:(fun e -> (e.Canary_topology.eg_id, "ran")) in
+        let first_recorded =
+          match
+            List.find_map Rs.columns ~f:(fun (_, c, k) ->
+                match c with Fr.Piece { edges = e1 :: e2 :: _; _ } -> Some (e1, e2, k) | _ -> None)
+          with
+          | None -> false
+          | Some (e1, e2, k) ->
+              let shows f mark =
+                Option.exists (List.Assoc.find (Rs.cells f) k ~equal:String.equal)
+                  ~f:(String.is_suffix ~suffix:(">" ^ mark ^ "</td>"))
+              in
+              shows (facts [ (e1, "absent"); (e2, "ran") ]) "✓"
+              && shows (facts [ (e1, "xfail"); (e2, "ran") ]) "xf"
+        in
+        let hatched =
+          List.for_all (Rs.cells (facts [])) ~f:(fun (_, td) ->
+              String.is_substring td ~substring:"rt-off")
+        in
+        let node_once =
+          let node_keys n =
+            List.filter_map Rs.columns ~f:(fun (_, c, k) ->
+                match c with Fr.Node m when String.equal m n -> Some k | _ -> None)
+          in
+          match
+            List.find_map Canary_topology.nodes ~f:(fun nd ->
+                match node_keys nd.Canary_topology.nd_id with
+                | k1 :: (_ :: _ as later) -> Some (nd.Canary_topology.nd_id, k1, later)
+                | _ -> None)
+          with
+          | None -> false
+          | Some (n, k1, later) ->
+              let cells =
+                Rs.cells
+                  (facts ~names:[ (n, ("libx", "recorded")) ] ~counts:[ (n, "3 exports") ] all_ran)
+              in
+              let td k = Option.value (List.Assoc.find cells k ~equal:String.equal) ~default:"" in
+              String.is_substring (td k1) ~substring:{|libx <span class="rt-x">3 exports</span>|}
+              && List.for_all later ~f:(fun k ->
+                     String.is_substring (td k) ~substring:"rt-rep"
+                     && not (String.is_substring (td k) ~substring:"rt-x"))
+        in
+        let marked =
+          List.for_all (Canary_overview_runs.views (Canary_matrix.matrix_of Canary_registry.all_projects))
+            ~f:(fun v ->
+              List.for_all (Canary_overview_runs.row_of_view ~machine:"pin" v).Rs.rw_cells
+                ~f:(fun (_, td) -> not (String.is_suffix td ~suffix:">?</td>")))
+        in
+        first_recorded && hatched && node_once && marked)
   }
 
 (* ONE SPELLING OF A MARK (2026-09-30). The record and the result table
    used to map outcomes to marks separately, and disagreed: an evaluator
    error was ✗ in one and err in the other, and a stale log line showed
    as n/a — the mark of a mechanism that cannot carry the claim. Held:
-   every label a log records has an entry, the page's script spells no
-   mark of its own, and §2 shows the key. *)
+   every label a log records has an entry, a check cell shows its
+   outcome's mark and look, the page's script spells no mark of its own,
+   and §2 shows the key. *)
 let outcome_marks_pin : Canary_project_test.pure_test =
   { name = "overview.outcome_marks_are_one_list";
     check =
@@ -2822,10 +2923,35 @@ let outcome_marks_pin : Canary_project_test.pure_test =
         let overview =
           Canary_agreement_overview.render (M.matrix_of Canary_registry.all_projects)
         in
+        (* a check cell shows its outcome's mark and look: every frame
+           recorded, one claim decided *)
+        let module Rs = Canary_overview_results in
+        let cell_shows (o : M.outcome_mark) =
+          match
+            List.find_map Rs.columns ~f:(fun (_, c, _) ->
+                match c with Canary_frames.Check { slug; _ } -> Some slug | _ -> None)
+          with
+          | None -> false
+          | Some slug ->
+              let f =
+                { Rs.f_edges =
+                    List.map Canary_topology.edges ~f:(fun e -> (e.Canary_topology.eg_id, "ran"));
+                  f_gone = [];
+                  f_names = [];
+                  f_nodes = [];
+                  f_counts = [];
+                  f_outcomes = [ (slug, o.M.om_label) ];
+                  f_blames = [] }
+              in
+              List.exists (Rs.cells f) ~f:(fun (k, td) ->
+                  String.is_substring k ~substring:("|c|" ^ slug ^ "|")
+                  && String.is_substring td ~substring:(Printf.sprintf {|class="rt-c %s"|} o.M.om_look)
+                  && String.is_suffix td ~suffix:(">" ^ Canary_overview_assets.esc o.M.om_mark ^ "</td>"))
+        in
         List.for_all recorded ~f:(List.mem labels ~equal:String.equal)
         && List.length (List.dedup_and_sort labels ~compare:String.compare)
            = List.length labels
-        && String.is_substring script ~substring:"FR.outcomes"
+        && List.for_all M.outcome_marks ~f:cell_shows
         && List.for_all M.outcome_marks ~f:(fun o ->
                (* the word marks are the outcomes' alone; ✓ and ✗ are
                   shared with the step states by design *)
@@ -8763,13 +8889,24 @@ let agreement_counts_pin : Canary_project_test.pure_test =
                              | _ -> false))
             in
             (* and §1.2 shows each cell's blame, glossed from the one list *)
-            let page =
-              Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
-            in
             let tooltip =
-              String.is_substring page ~substring:"b=(v.blames||{})[c.slug]"
-              && List.for_all M.blame_gloss ~f:(fun (w, g) ->
-                     String.is_substring page ~substring:(Printf.sprintf "\"%s\":\"%s\"" w g))
+              let glossed w =
+                Canary_overview_assets.esc
+                  (Printf.sprintf "blame: %s (%s)" w
+                     (Option.value (List.Assoc.find M.blame_gloss w ~equal:String.equal) ~default:""))
+              in
+              let shown =
+                List.concat_map views ~f:(fun v ->
+                    let cells = (R.row_of_view ~machine:"pin" v).Canary_overview_results.rw_cells in
+                    List.map v.R.vw_blames ~f:(fun (slug, w) ->
+                        ( List.filter cells ~f:(fun (k, td) ->
+                              String.is_substring k ~substring:("|c|" ^ slug ^ "|")
+                              && not (String.is_substring td ~substring:"rt-off")),
+                          w )))
+              in
+              List.exists shown ~f:(fun (cs, _) -> not (List.is_empty cs))
+              && List.for_all shown ~f:(fun (cs, w) ->
+                     List.for_all cs ~f:(fun (_, td) -> String.is_substring td ~substring:(glossed w)))
             in
             decided_agree && blames_agree && witness && exported && tooltip) }
 
@@ -9633,6 +9770,7 @@ let base_tests : Canary_project_test.pure_test list =
       exhibits_pin;
       exhibits_export_pin;
       choice_resolved_pin;
+      result_cells_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;

@@ -43,8 +43,9 @@ let sections : section list =
       ~about:"what canary models between two package managers, with a recorded run drawn on it";
     s "§1.1" "What each node is" "nodes" [ "node_legend" ]
       [ "Canary_overview_panel"; "Canary_topology" ];
-    s "§1.2" "The results, one row per chain" "results" [ "frames_json"; "results_table" ]
-      [ "Canary_frames"; "Canary_overview_runs" ];
+    s "§1.2" "The results, one row per chain" "results"
+      [ "results_key"; "results_table"; "results_columns" ]
+      [ "Canary_frames"; "Canary_overview_results"; "Canary_overview_runs" ];
     s "§2" "The agreements" "overview" [ "agreement_overview" ]
       [ "Canary_agreement_overview" ]
       ~about:"where each rule ran, where it is checked, and what the runs decided";

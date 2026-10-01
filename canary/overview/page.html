@@ -140,17 +140,12 @@ checks on that — by side, then flow (<code>canary checks --frames</code>). An
 artifact appears again, in grey, where it is consumed; a frame the chain does
 not have is hatched. A row's name draws it in §1, and a drawn run links back to
 its row.</p>
-<p class="rt-key"><span class="rt-ok">✓</span> ran · <span class="rt-warm">✓</span> warm ·
-<span class="rt-bad">✗</span> failed or violated · <span class="rt-xf">xf</span> expected
-failure · ⊘ blocked · · not recorded · — not in this run · ⌂ inside a package
-manager's action · ∈ included with the language · ~ someone else's relation · <span class="rt-gap">no-evid no-decl
-no-ref none</span> a check that could not decide · n/a the mechanism cannot carry
-it · <i>italic</i> declared, not recorded</p>
+<p class="rt-key">{{results_key}}</p>
 <div class="rt-wrap">{{results_table}}</div>
 <p class="mechnote" id="rtnone" hidden>No run is recorded on this page yet —
 <code>canary overview</code> writes each machine's runs to
 <code>overview_runs.js</code> beside it.</p>
-<script type="application/json" id="framesdata">{{frames_json}}</script>
+<script type="application/json" id="rtcols">{{results_columns}}</script>
 
 <h2 id="overview">2. The agreements</h2>
 <p>Every agreement, where its rule RAN and where it is CHECKED, over the

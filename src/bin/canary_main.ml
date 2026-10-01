@@ -1679,15 +1679,15 @@ let overview_cmd =
       Canary_overview_page.write Canary_registry.all_specs ~overview
         ~generated_at:now;
       Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
-      Fmt.pr "wrote %s/ (its figures and tables, each on its own)@."
-        (Canary_overview_export.write Canary_registry.all_specs ~overview);
       Fmt.pr "wrote %s/{%s} (pointers to its §1.2)@."
         Canary_overview_page.pointer_dir
         (String.concat "," Canary_overview_page.pointer_files);
-      (* the recorded worlds, beside the page and never inside it
-         (status.md §2.7 phase C) — the tracked copy only when this
-         machine is rendering itself *)
-      Fmt.pr "wrote %s@." (Canary_overview_runs.write m ~generated_at:now)
+      (* the recorded worlds, beside the page and never inside it — the
+         tracked copy only when this machine is rendering itself; written
+         before the exhibits, whose §1.2 reads every machine's *)
+      Fmt.pr "wrote %s@." (Canary_overview_runs.write m ~generated_at:now);
+      Fmt.pr "wrote %s/ (its figures and tables, each on its own)@."
+        (Canary_overview_export.write Canary_registry.all_specs ~overview)
     end
   in
   Cmd.v

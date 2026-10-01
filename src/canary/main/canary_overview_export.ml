@@ -13,8 +13,8 @@ module E = Canary_overview_exhibits
 let dir () =
   if Canary_store.platform_is_overridden () then "_out/canary/exhibits" else E.export_dir
 
-(** The exhibits the export does not make yet, and why. *)
-let not_exported = [ ("tab-results", "the page's script fills it from the runs files") ]
+(** The exhibits the export does not make, and why. *)
+let not_exported : (string * string) list = []
 
 (** The exhibits a choice of chain draws. *)
 let drawn_by_choice = [ "fig-chain"; "tab-lines" ]
@@ -136,6 +136,9 @@ let files ?choice ?(views = []) (projects : (string * Canary_project_run.project
   let table_source = function
     | "tab-subjects" -> Some (Canary_overview_flow.table ())
     | "tab-lines" -> Some (Dr.lines_table d)
+    (* every machine's rows, from the runs files the page loads *)
+    | "tab-results" ->
+        Some (Canary_overview_results.table ~rows:(Canary_overview_runs.recorded_rows ()) ())
     | "tab-nodes" -> Some (Canary_overview_panel.node_legend ())
     | "tab-outcomes" | "tab-agreements" | "tab-sittings" -> Some overview
     | "tab-census" -> Some (Tb.claim_sites_table ())
