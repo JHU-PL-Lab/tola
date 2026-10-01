@@ -667,25 +667,17 @@ let has_fixture (id : agreement_id) : bool =
    effect is a table you can read rather than an idea, and "filling it"
    is a concrete list of [Declared] cells.
 
-   Reading the marks:
-   - [Wired]        ✓ fires here, is evaluated, and ships a counterexample;
-   - [Declared]     ~ fires here and is evaluated, NO fixture yet — the
-                      fill list;
-   - [Planned]      ⊘ fires here and has no evaluator (reports
-                      not_implemented);
-   - [Inapplicable] ∅ fires here but this mechanism offers no such claim;
-   - [Off]          × switched off in the registry;
-   - [Empty]        · does not fire here. *)
+   The statuses:
+   - [Wired]        fires here, is evaluated, and ships a counterexample;
+   - [Declared]     fires here and is evaluated, NO fixture yet — the
+                    fill list;
+   - [Planned]      fires here and has no evaluator (reports
+                    not_implemented);
+   - [Inapplicable] fires here but this mechanism offers no such claim;
+   - [Off]          switched off in the registry;
+   - [Empty]        does not fire here. *)
 
 type cell_status = Wired | Declared | Planned | Inapplicable_cell | Off | Empty
-
-let mark_of_status = function
-  | Wired -> "✓"
-  | Declared -> "~"
-  | Planned -> "⊘"
-  | Inapplicable_cell -> "∅"
-  | Off -> "×"
-  | Empty -> "·"
 
 (** The table's columns: THE action catalogue, not a copy of it.
     Actions with no cell wired yet still appear — the empty columns ARE
@@ -729,33 +721,6 @@ let firing_table ?(mechanism = Canary_mechanism.Cstubs)
       ( r,
         List.map (firing_columns lang) ~f:(fun a ->
             (a, cell_status_of r ~mechanism ~lang ~world a)) ))
-
-(** Render the firing table as text (the CLI view). *)
-let pp_firing_table ?(mechanism = Canary_mechanism.Cstubs)
-    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () : string =
-  let m = firing_table ~mechanism ~lang ~provision () in
-  let cols = firing_columns lang in
-  let head =
-    Printf.sprintf "%-28s | " "agreement"
-    ^ String.concat ~sep:" | "
-        (List.map cols ~f:Canary_basic.string_of_action)
-  in
-  let body =
-    List.map m ~f:(fun (r, cells) ->
-        Printf.sprintf "%-28s | %s" r.ag_slug
-          (String.concat ~sep:" | "
-             (List.map cells ~f:(fun (a, st) ->
-                  let w = String.length (Canary_basic.string_of_action a) in
-                  let mk = mark_of_status st in
-                  mk ^ String.make (max 0 (w - 1)) ' '))))
-  in
-  String.concat ~sep:"\n"
-    (head :: body
-    @ [ "";
-        "✓ evaluated + counterexample   ~ evaluated, no counterexample   \
-         ⊘ planned";
-        "∅ mechanism offers no such claim   × off in registry   · does not \
-         fire here" ])
 
 (** A row's implementation status, DERIVED from its methods rather than
     declared. [Partly] is the state the old single [status] field could
@@ -817,12 +782,6 @@ type recovery_mark =
   | Rooted  (** the tool ran here; the information was lost here *)
   | Detected  (** a method fires here, reading what survived *)
   | Nothing_here
-
-let recovery_mark_char = function
-  | Rooted_and_detected -> "◉"
-  | Rooted -> "R"
-  | Detected -> "D"
-  | Nothing_here -> "·"
 
 (** Where an agreement is ROOTED, as an action of THIS graph — or [None]
     when [rt_action] is prose standing in for a link that ran in a world
@@ -1644,18 +1603,25 @@ let row_lag (row : overview_row) : int option =
              List.fold rs ~init:best ~f:(fun best rt ->
                  Int.min best (abs (d - rt)))))
 
-let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
+let pp_agreement_overview ?(provision = Canary_store.Built)
+    ~(columns : string list * (overview_row -> string list)) () : string =
   let rows = overview_rows ~provision () in
-  let cols = overview_columns () in
+  (* the caller's columns: each one's label, and a row's cell in each *)
+  let labels, cells_of = columns in
+  let width s = String.length s - String.count s ~f:(fun c -> Char.to_int c land 0xC0 = 0x80) in
+  let widths =
+    List.mapi labels ~f:(fun i l ->
+        List.fold rows ~init:(width l) ~f:(fun w row ->
+            max w (Option.value_map (List.nth (cells_of row) i) ~default:0 ~f:width)))
+  in
+  let laid cells = String.concat ~sep:" | " (List.map2_exn widths cells ~f:pad_display) in
   let head =
     Printf.sprintf "%-4s %-32s %-14s %-36s %-7s %-14s %-7s | %s | " "code"
       "agreement" "kind" "implemented at" "lang" "mech" "object"
       (String.concat ~sep:" "
          (List.map overview_artifact_columns ~f:(fun k ->
               pad_display 3 (artifact_col_label k))))
-    ^ String.concat ~sep:" | "
-        (List.map cols ~f:Canary_basic.string_of_action)
-    ^ " | lag | status"
+    ^ laid labels ^ " | lag | status"
   in
   let body =
     List.map rows ~f:(fun row ->
@@ -1673,10 +1639,7 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
                   pad_display 3
                     (if List.mem row.ov_reads k ~equal:Poly.equal then "▣"
                      else "·"))))
-          (String.concat ~sep:" | "
-             (List.map row.ov_cells ~f:(fun (a, mk) ->
-                  let w = String.length (Canary_basic.string_of_action a) in
-                  pad_display w (recovery_mark_char mk))))
+          (laid (cells_of row))
           (match row_lag row with Some d -> Int.to_string d | None -> "-")
           (row_status_label row))
   in
@@ -1731,8 +1694,8 @@ let pp_agreement_overview ?(provision = Canary_store.Built) () : string =
          a strict subset;"
      :: "           `none` in lang and mech = no mechanism carries this \
          at all."
-     :: "lag        action columns from the root to the nearest firing. \
-         NOT the distance"
+     :: "lag        actions, in the catalogue's order, from the root to the \
+         nearest firing. NOT the distance"
      :: "           between the two SIDES of a comparison, which is a \
          different measure."
      (* `kind` is the one column with no prior vocabulary, so it gets

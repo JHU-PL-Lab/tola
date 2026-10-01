@@ -325,8 +325,10 @@ order.
 
 **B. Ready, and adds no action.**
 
-- `canary checks --firing` still prints the old action columns, and
-  §1.2's looks are not in `visual_hints` (§5).
+- §1.2's looks are not in `visual_hints` (§5): a table cell is a new
+  element kind, and a decision comes first — ✓ is both a piece's "ran"
+  and a check's "holds", and the vocabulary pin forbids two looks that can
+  show together from looking alike.
 - The ten action families with no edge have no frame, so their steps
   have no column, and a failure there would show nowhere in §1.2.
 - The log: typed fields on its events; each inspection's summary logged
@@ -590,6 +592,7 @@ copy is named) closed the rest.
 | `overview.result_cells_keep_their_rules` | a frame no step realized is hatched; a piece shows its first recorded edge; a node's first cell shows its name and count, a later one repeats the name; every recorded piece's state has a mark |
 | `overview.one_escaper` | every module that writes the page escapes with the one escaper, which escapes quotes |
 | `basic.action_names_read_back` | every action's name reads back as that action, no two share one, and a binding source's fetch reads (it once failed `canary view` on zarith) |
+| `checks.firing_is_over_the_frames` | `canary checks --firing` prints §2 over the page's frames, in order and not one column per action, each column lined up under its label |
 | `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; each check cell's tooltip glosses its blame |
 | `overview.agreements_count_every_machine` | §2 counts every machine's runs file, the rows §1.2 shows: one made-up file per machine, each deciding the same claim, counts once per machine |
 | `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |

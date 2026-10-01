@@ -883,20 +883,11 @@ let checks_cmd =
           (Canary_status.projects_with_runs ~root:"_out")
     | _, false, true -> Fmt.pr "%s@." (Canary_agreement.pp_catalogue ())
     | _, true, _ ->
-        (* Appendix A.2 tells the reader to read this from the code
-           rather than from a transcribed table; this is where. *)
-        Fmt.pr "%s@." (Canary_agreement.pp_firing_table ());
-        (* THE SAME GRID, ROOTED (2026-09-17, user). The firing table
-           says where a check is DETECTED; this one puts the action
-           whose rule was LOST on the same row, so the distance between
-           them is visual rather than a column to look up. *)
-        (* THE VERDICT FIRST (2026-09-21, user asked where the harness's
-           checking result was). The audit and the saturation grid print
-           their detail below; this says in one line whether the table
-           passed its own laws, so a reader does not have to scroll past
-           the data to find out. *)
-        Fmt.pr "@.%s@." (Canary_agreement.overview_verdict ());
-        Fmt.pr "@.%s@." (Canary_agreement.pp_agreement_overview ());
+        (* the verdict first, then §2 over the page's frames: where each
+           rule ran (R) and where its check fires (D) *)
+        Fmt.pr "%s@." (Canary_agreement.overview_verdict ());
+        Fmt.pr "@.%s@."
+          (Canary_agreement.pp_agreement_overview ~columns:Canary_frames.text_columns ());
         (* THE CANDIDATES, in their own table (2026-09-17, user): they
            have no methods, so every column the overview derives would
            be blank. Name, kind, and what is in the way. *)

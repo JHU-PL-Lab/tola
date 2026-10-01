@@ -2874,6 +2874,42 @@ let every_machine_pin : Canary_project_test.pure_test =
                  ~substring:(Printf.sprintf "%d ✓" machines))
   }
 
+(* THE TERMINAL'S §2 IS OVER THE FRAMES (2026-10-01): [canary checks
+   --firing] prints the agreement overview with the page's frames as its
+   columns ({!Canary_frames.text_columns}), not one per action, each
+   column lined up under its label. *)
+let firing_frames_pin : Canary_project_test.pure_test =
+  { name = "checks.firing_is_over_the_frames";
+    check =
+      (fun () ->
+        let labels, _ = Canary_frames.text_columns in
+        let text =
+          Canary_agreement.pp_agreement_overview ~columns:Canary_frames.text_columns ()
+        in
+        let table =
+          List.filter (String.split_lines text) ~f:(fun l -> String.is_substring l ~substring:" | ")
+        in
+        (* where each column separator falls, in characters *)
+        let seps l =
+          List.map (String.substr_index_all l ~may_overlap:false ~pattern:" | ") ~f:(fun i ->
+              String.count (String.prefix l i) ~f:(fun c -> Char.to_int c land 0xC0 <> 0x80))
+        in
+        let n = List.length labels + 2 in
+        match table with
+        | head :: (_ :: _ as rows) ->
+            let at =
+              List.map labels ~f:(fun l -> String.substr_index head ~pattern:(" " ^ l ^ " "))
+            in
+            List.length labels = List.length Canary_frames.frames
+            && List.for_all at ~f:Option.is_some
+            && (let ps = List.filter_map at ~f:Fn.id in
+                List.for_all2_exn (List.drop_last_exn ps) (List.tl_exn ps) ~f:(fun a b -> a < b))
+            && (not (String.is_substring head ~substring:"fetch_binding_source"))
+            && List.for_all rows ~f:(fun r ->
+                   List.equal Int.equal (List.take (seps r) n) (List.take (seps head) n))
+        | _ -> false)
+  }
+
 (* EVERY ACTION'S NAME READS BACK (2026-10-01). [action_of_string] kept
    its own list of spellings and missed a binding source's fetch, so
    [canary view] failed on zarith, whose run state names one. It looks the
@@ -9868,6 +9904,7 @@ let base_tests : Canary_project_test.pure_test list =
       one_escaper_pin;
       every_machine_pin;
       action_names_pin;
+      firing_frames_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;

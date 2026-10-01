@@ -415,3 +415,15 @@ let pp_frame (fr : frame) : string =
     (String.concat ~sep:" " (List.map fr.fr_columns ~f:string_of_column))
 
 let pp () : string = String.concat ~sep:"\n" (List.map frames ~f:pp_frame)
+
+(** The frames as a terminal table's columns: each frame's label, and a
+    row's marks in it ({!row_marks}), each once, in the frame's order. *)
+let text_columns : string list * (A.overview_row -> string list) =
+  ( List.map frames ~f:(fun fr -> fr.fr_label),
+    fun row ->
+      List.map (row_marks row) ~f:(fun marks ->
+          let once =
+            List.fold marks ~init:[] ~f:(fun acc m ->
+                if String.is_empty m || List.mem acc m ~equal:String.equal then acc else acc @ [ m ])
+          in
+          if List.is_empty once then "·" else String.concat ~sep:" " once) )
