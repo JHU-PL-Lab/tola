@@ -6,8 +6,8 @@ layout keeps and where each line under a node label comes from are all
 on the page. This document holds what the page cannot: the code behind
 each part (§1), how a run reaches it (§2), the bridges and placeholders a
 recorded run is drawn with (§3), where each value comes from (§4), the
-two lists that hold the drawing (§5) and the plan (§6). The pins are on
-the page: its §0.4 lists each with the claim it holds, and a pin whose
+two lists that hold the drawing (§5) and the plan (§6). The tests are on
+the page: its §0.4 lists each with the claim it holds, and a test whose
 design is explained here names the section in its comment. Read the page
 first.
 

@@ -118,7 +118,7 @@ let standalone ?(scope = "") (svg : string) : string =
 (** Every exhibit the export writes, in page order: its file name and its
     content. [overview] is §2, which holds three of the tables. With a
     [choice], only the exhibits it draws, drawn for it from [views]. *)
-let files ?choice ?(views = []) ?(pins = [])
+let files ?choice ?(views = []) ?(tests = [])
     (projects : (string * Canary_project_run.project_run) list) ~(overview : string) :
     (string * string) list =
   let module Tb = Canary_overview_tables in
@@ -136,7 +136,7 @@ let files ?choice ?(views = []) ?(pins = [])
   in
   let table_source = function
     | "tab-subjects" -> Some (Canary_overview_flow.table ())
-    | "tab-pins" -> Some (Canary_overview_pins.table pins)
+    | "tab-tests" -> Some (Canary_overview_tests.table tests)
     | "tab-lines" -> Some (Dr.lines_table d)
     (* every machine's rows, from the runs files the page loads *)
     | "tab-results" ->
@@ -162,7 +162,7 @@ let files ?choice ?(views = []) ?(pins = [])
             ~f:(fun c -> (E.file_name e, c ^ "\n")))
 
 (** Write the exhibits into [dir]; the directory written. *)
-let write ?dir:(d = dir ()) ?choice ?views ?pins
+let write ?dir:(d = dir ()) ?choice ?views ?tests
     (projects : (string * Canary_project_run.project_run) list) ~(overview : string) : string =
   let rec mkdir_p p =
     if not (Stdlib.Sys.file_exists p) then begin
@@ -171,7 +171,7 @@ let write ?dir:(d = dir ()) ?choice ?views ?pins
     end
   in
   mkdir_p d;
-  List.iter (files ?choice ?views ?pins projects ~overview) ~f:(fun (name, content) ->
+  List.iter (files ?choice ?views ?tests projects ~overview) ~f:(fun (name, content) ->
       Stdlib.Out_channel.with_open_bin (Stdlib.Filename.concat d name) (fun oc ->
           Stdlib.Out_channel.output_string oc content));
   d

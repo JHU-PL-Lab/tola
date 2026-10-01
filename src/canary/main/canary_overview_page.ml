@@ -41,9 +41,9 @@ let runs_script () =
 
 (* ── the page ── *)
 
-(** The page: [canary/overview/page.html] with its slots filled. [pins]
-    are the test files and their pins, for §0.4. *)
-let render ?(pins = []) (projects : (string * Canary_project_run.project_run) list)
+(** The page: [canary/overview/page.html] with its slots filled. [tests]
+    are the test files and their tests, for §0.4. *)
+let render ?(tests = []) (projects : (string * Canary_project_run.project_run) list)
     ~(overview : string) ~(generated_at : string) : string =
   let module P = Canary_overview_panel in
   let module Tb = Canary_overview_tables in
@@ -79,8 +79,8 @@ let render ?(pins = []) (projects : (string * Canary_project_run.project_run) li
       ("flow_figure", Canary_overview_flow.figure ());
       ("flow_key", Canary_overview_looks.key_html Canary_overview_looks.Flow_key);
       ("flow_table", Canary_overview_flow.table ());
-      ("pins_table", Canary_overview_pins.table pins);
-      ("pins_lists", Canary_overview_pins.lists pins);
+      ("tests_table", Canary_overview_tests.table tests);
+      ("tests_lists", Canary_overview_tests.lists tests);
       ("generated_at", esc generated_at);
       (* the runs files load before the scripts that draw them *)
       ("scripts", runs_script () ^ script () ^ results_script ()) ]
@@ -102,9 +102,9 @@ let pointer_html =
 </body></html>
 |}
 
-let write ?pins (projects : (string * Canary_project_run.project_run) list)
+let write ?tests (projects : (string * Canary_project_run.project_run) list)
     ~(overview : string) ~(generated_at : string) : unit =
-  let html = render ?pins projects ~overview ~generated_at in
+  let html = render ?tests projects ~overview ~generated_at in
   Stdio.Out_channel.write_all docs_path ~data:html;
   Canary_step_model.ensure_dir pointer_dir;
   List.iter pointer_files ~f:(fun f ->

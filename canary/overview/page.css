@@ -203,13 +203,13 @@ caption b,figcaption b{color:var(--fg)}
 code.exfile{font-size:.8rem;color:var(--fg);border:1px solid var(--line);border-radius:4px;
 padding:0 .3rem;white-space:nowrap}
 details.exlist ul{padding-left:1.2rem;margin:.3rem 0}
-table.pintab th:first-child{white-space:nowrap}
-table.pintab td:nth-child(3){text-align:right}
-details.pins{margin:.3rem 0}
-details.pins summary{cursor:pointer}
-details.pins dl{margin:.4rem 0 .6rem 1.2rem}
-details.pins dt{margin-top:.35rem}
-details.pins dd{margin:0 0 0 1.2rem}
-.pinbox{color:var(--mut);font-size:.85rem}
+table.testtab th:first-child{white-space:nowrap}
+table.testtab td:nth-child(3){text-align:right}
+details.tests{margin:.3rem 0}
+details.tests summary{cursor:pointer}
+details.tests dl{margin:.4rem 0 .6rem 1.2rem}
+details.tests dt{margin-top:.35rem}
+details.tests dd{margin:0 0 0 1.2rem}
+.testbox{color:var(--mut);font-size:.85rem}
 @media(max-width:700px){body{font-size:14px}h1{font-size:1.4rem}
 table{font-size:.8rem}}

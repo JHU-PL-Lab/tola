@@ -1614,9 +1614,9 @@ let overview_cmd =
       Fmt.epr "canary overview: a choice of chain draws only with --exhibits DIR@.";
       Stdlib.exit 2
     end;
-    let pins = Canary_tests.pin_files () in
+    let tests = Canary_tests.test_files () in
     if flow then
-      print_string (Canary_overview_flow.text () ^ Canary_overview_pins.text pins)
+      print_string (Canary_overview_flow.text () ^ Canary_overview_tests.text tests)
     else if Option.is_some exhibits then begin
       let m = m () in
       (* §2 counts what §1.2 shows: every machine's runs file, as written *)
@@ -1625,7 +1625,7 @@ let overview_cmd =
       in
       if not chosen then
         Fmt.pr "wrote %s/ (the page's figures and tables)@."
-          (Canary_overview_export.write ?dir:exhibits ~pins Canary_registry.all_specs ~overview)
+          (Canary_overview_export.write ?dir:exhibits ~tests Canary_registry.all_specs ~overview)
       else
         let module Dr = Canary_overview_draw in
         let join = Canary_overview_join.of_projects Canary_registry.all_specs in
@@ -1636,7 +1636,7 @@ let overview_cmd =
             Stdlib.exit 2
         | Ok choice ->
             Fmt.pr "wrote %s/ (Figure 2 and the lines table: %s)@."
-              (Canary_overview_export.write ?dir:exhibits ~choice ~views ~pins
+              (Canary_overview_export.write ?dir:exhibits ~choice ~views ~tests
                  Canary_registry.all_specs ~overview)
               (Dr.describe choice)
     end
@@ -1679,14 +1679,14 @@ let overview_cmd =
       let overview =
         Canary_agreement_overview.render (Canary_overview_runs.recorded_chains ())
       in
-      Canary_overview_page.write ~pins Canary_registry.all_specs ~overview
+      Canary_overview_page.write ~tests Canary_registry.all_specs ~overview
         ~generated_at:now;
       Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
       Fmt.pr "wrote %s/{%s} (pointers to its §1.2)@."
         Canary_overview_page.pointer_dir
         (String.concat "," Canary_overview_page.pointer_files);
       Fmt.pr "wrote %s/ (its figures and tables, each on its own)@."
-        (Canary_overview_export.write ~pins Canary_registry.all_specs ~overview)
+        (Canary_overview_export.write ~tests Canary_registry.all_specs ~overview)
     end
   in
   Cmd.v

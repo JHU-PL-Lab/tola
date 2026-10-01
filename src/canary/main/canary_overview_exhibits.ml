@@ -17,7 +17,7 @@ let exhibits : exhibit list =
   let t id title = { ex_id = id; ex_kind = Table; ex_title = title } in
   [ f "fig-flow" "How this page is made: from canary's code and a run to each section";
     t "tab-subjects" "Each subject's code layer and running layer, and where the page shows them";
-    t "tab-pins" "The pins: each test file, its pins, and the boxes of Figure 1 they hold";
+    t "tab-tests" "The tests: each test file, its tests, and the boxes of Figure 1 they hold";
     f "fig-chain"
       "A chain, layer by layer: package managers, packages, artifacts and programs, with the \
        actions between them";

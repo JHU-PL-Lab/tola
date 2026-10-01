@@ -23,10 +23,10 @@ last rendered.</p>
 <h3 id="flow">0.2 How this page is made</h3>
 <p>Two things reach this page: what canary knows, from its code, and what
 a run of a project recorded. The figure is the path each takes, with the
-command that runs each stage. A filled dot marks a box the harness holds
-and a hollow one a box nothing holds; a struck AI marks a file agents do
-not read whole. Hover a box for what it stands for, a dot for its pins,
-and a mark for what agents query instead; a section links to itself.
+command that runs each stage. A filled dot marks a box tests hold and a
+hollow one a box no test holds; a struck AI marks a file agents do not
+read whole. Hover a box for what it stands for, a dot for its tests, and a
+mark for what agents query instead; a section links to itself.
 The same code also writes each figure and table on its own, without its
 caption, for a manuscript to embed: the box at the bottom left.
 <code>canary overview --flow</code> prints all of §0.</p>
@@ -34,7 +34,7 @@ caption, for a manuscript to embed: the box at the bottom left.
 <div class="key">
 {{flow_key}}
 </div>
-<p>Written by hand for the page, and held to the code by pins: the
+<p>Written by hand for the page, and held to the code by tests: the
 chain's nodes, its edges and the edges each claim sits on
 (<code>canary_topology.ml</code>); one position per node of §1's diagram
 and per box of this figure; the cases §1's cooperation notes quote; and
@@ -50,19 +50,19 @@ layer is what a run of a project records. Each shows in its own places on
 this page.</p>
 {{flow_table}}
 
-<h3 id="pins">0.4 The pins</h3>
-<p>A pin is a test that holds one claim about canary's code, a run, or this
-page, and fails when the claim stops holding; <code>make canary-test</code>
-runs them all. Each is written in the file of its subject and registered in
-that file's list, which <code>tests.every_written_pin_runs</code> checks, and
-each is falsified once before it is trusted: broken on purpose, to see it
-fail. A filled dot in Figure 1 links here; the boxes each pin holds are named
-beside it. Listed are the pins <code>canary project-test</code> runs; the
-framework's own, which <code>canary artifact-test</code> and
-<code>canary pm-test</code> run, hold canary's tools to the formats it
-reads.</p>
-{{pins_table}}
-{{pins_lists}}
+<h3 id="tests">0.4 The tests</h3>
+<p>A test holds one claim about what canary's code computes, for a run or
+for this page, and fails when the claim stops holding; <code>make
+canary-test</code> runs them all. Each is written in the file of its
+subject, registered in that file's list and states its claim in one
+sentence, and each is falsified once before it is trusted: broken on
+purpose, to see it fail. A filled dot in Figure 1 links here; the boxes
+each test holds are named beside it. Listed are the tests <code>canary
+project-test</code> runs; the framework's own, which <code>canary
+artifact-test</code> and <code>canary pm-test</code> run, hold canary's
+tools to the formats it reads.</p>
+{{tests_table}}
+{{tests_lists}}
 
 <h2 id="layers">1. A chain, layer by layer</h2>
 <p>Nodes are what exists. An edge points from components to a component

@@ -35,8 +35,8 @@ let sections : section list =
       [ "Canary_overview_flow"; "Canary_overview_looks" ];
     s "§0.3" "Each subject, layer by layer" "subjects" [ "flow_table" ]
       [ "Canary_overview_flow" ];
-    s "§0.4" "The pins" "pins" [ "pins_table"; "pins_lists" ]
-      [ "Canary_overview_pins"; "Canary_tests" ];
+    s "§0.4" "The tests" "tests" [ "tests_table"; "tests_lists" ]
+      [ "Canary_overview_tests"; "Canary_tests" ];
     s "§1" "A chain, layer by layer" "layers"
       [ "missing_steps"; "chain_key"; "join_panel" ]
       [ "Canary_overview_diagram"; "Canary_overview_looks"; "Canary_overview_panel";
@@ -127,9 +127,9 @@ let terms : (string * string) list =
     ( "frame",
       "a column group of §1.2 and §2: one action as §1 draws it — what it consumes, its \
        pieces, what it produces, and the checks on each" );
-    ( "pin",
-      "a test that holds one claim about canary's code, a run or this page, and fails when \
-       the claim stops holding; §0.4 lists those canary project-test runs" ) ]
+    ( "test",
+      "a check that holds one claim about what canary's code computes, for a run or for this \
+       page, and fails when the claim stops holding; §0.4 lists those canary project-test runs" ) ]
 
 let terms_html () : string =
   {|<dl class="terms">|}
@@ -221,7 +221,7 @@ type box = {
   bx_h : int;
   bx_lines : line list;
   bx_title : string;  (** the modules or files it stands for *)
-  bx_held : string list;  (** the pins, or make targets, that hold it *)
+  bx_held : string list;  (** the tests, or make targets, that hold it *)
   bx_agents : string;  (** what agents query instead of reading it whole; "" when they read it *)
 }
 
@@ -453,18 +453,18 @@ let bracket_svg (g : group) : string =
 let line_height = function Main _ -> 18 | Sub _ -> 16 | Pass _ -> 24 | Link _ -> 22
 let line_rise = function Main _ -> 13 | Sub _ -> 11 | Pass _ -> 17 | Link _ -> 16
 
-(** The harness's mark, top left: filled where pins hold the box, and then
+(** The tests' mark, top left: filled where tests hold the box, and then
     a link to §0.4, which lists them. *)
 let held_svg (b : box) : string =
   let cls, says =
-    if List.is_empty b.bx_held then ("unheld", "held by no pin")
+    if List.is_empty b.bx_held then ("unheld", "held by no test")
     else ("held", "held by " ^ String.concat ~sep:", " b.bx_held)
   in
   let dot =
     Printf.sprintf {|<circle class="fdot %s" cx="%d" cy="%d" r="4.5"><title>%s</title></circle>|}
       cls (b.bx_x + 10) (b.bx_y + 10) (esc says)
   in
-  if List.is_empty b.bx_held then dot else {|<a href="#pins">|} ^ dot ^ "</a>"
+  if List.is_empty b.bx_held then dot else {|<a href="#tests">|} ^ dot ^ "</a>"
 
 (** The agents' mark, bottom right: a struck AI where agents do not read
     the box whole. *)
@@ -604,7 +604,7 @@ let text () : string =
         (Printf.sprintf "  %s%s%s\n    held by: %s%s\n" bx.bx_name
            (if List.is_empty words then "" else " — " ^ String.concat ~sep:" · " words)
            (if String.is_empty bx.bx_title then "" else "  [" ^ bx.bx_title ^ "]")
-           (if List.is_empty bx.bx_held then "no pin" else String.concat ~sep:", " bx.bx_held)
+           (if List.is_empty bx.bx_held then "no test" else String.concat ~sep:", " bx.bx_held)
            (if String.is_empty bx.bx_agents then ""
             else "\n    agents do not read it whole; they query " ^ bx.bx_agents)));
   add "  arrows:\n";
