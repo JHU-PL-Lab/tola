@@ -6,8 +6,10 @@ layout keeps and where each line under a node label comes from are all
 on the page. This document holds what the page cannot: the code behind
 each part (§1), how a run reaches it (§2), the bridges and placeholders a
 recorded run is drawn with (§3), where each value comes from (§4), the
-two lists that hold the drawing (§5), the plan (§6) and the pins (§7).
-Read the page first.
+two lists that hold the drawing (§5) and the plan (§6). The pins are on
+the page: its §0.4 lists each with the claim it holds, and a pin whose
+design is explained here names the section in its comment. Read the page
+first.
 
 The history — how each piece landed, the user's words at each step, and
 every pin with the breaks that turned it red — is
@@ -565,53 +567,3 @@ find them. What they left open is in the list at the top of §6: B, and
 A2 for zarith's hatched cell. The fixes of 2026-09-29 (§2 and the badges
 count §1.2's cells, sqlite's stdlib binding reads `included`, the staged
 copy is named) closed the rest.
-
-## 7. The pins
-
-| pin | holds |
-| --- | --- |
-| `matrix.record_export_is_the_matrix` | the record's cells equal the matrix's, typed and dated |
-| `matrix.record_carries_every_step` | each world's steps are exactly the runner's, typed as the builder typed them |
-| `matrix.record_joins_edges_and_claims` | the record's edges and claims recomputed from its steps |
-| `matrix.record_carries_each_worlds_chain` | each world's chain per language: sides, cooperation, what it lacks, its agreements |
-| `topology.graph_matches_the_registry` | every placed agreement and edge exists; every annotation well formed |
-| `topology.every_step_has_a_place` | every realized step has an edge, or a typed reason it has none; the bindings included with their language are listed |
-| `topology.joins_are_distinguished` | the five kinds of join stay five, each held to the project that is its specimen |
-| `overview.package_band_is_one_cooperation` | the band rules reproduce every hand-drawn case |
-| `overview.chain_choices_draw_one_chain` | the choices, the packages in canary, their names, terms and cooperations |
-| `overview.recorded_runs_are_an_overlay` | the runs file parses; every view names only template edges and nodes, with known words |
-| `overview.recorded_views_are_named` | recorded names over declared ones, and the ratchet of names that agree with the drawings |
-| `overview.overlay_words_rank_worst_first` | the order in which several steps' states merge on one edge |
-| `overview.bridge_record_is_read` | the reader of the bridge record, on a fixture |
-| `steps.gate_is_read_after_its_bridge_runs` | the gate fires at the probe, reads the file the bridge step writes, and the probe waits for that step |
-| `frames.derive_the_confirmed_layout` | the tables' column model is the confirmed layout; every action edge in one piece, every checked agreement at each of its sites |
-| `overview.one_reader_per_inspection` | one reader of an artifact's inspection; the cell, the name and the count render it; a library's node is the copy its step looked at |
-| `overview.template_slots_are_filled` | the page's template is filled exactly: a slot with no value, a value with no slot or an unclosed slot fails |
-| `overview.staged_copy_is_named` | an installed world's staged copy is named and counted from its own inspection, and the build tree's copy from its own |
-| `overview.results_table_is_the_column_model` | one key per frame column, in order; the page carries the header and the keys, and its script lays rows out by key and holds no mark or rule; every recorded row has a cell for every column; its links run both ways; every outcome is the log's, and none is left out |
-| `overview.result_cells_keep_their_rules` | a frame no step realized is hatched; a piece shows its first recorded edge; a node's first cell shows its name and count, a later one repeats the name; every recorded piece's state has a mark |
-| `overview.one_escaper` | every module that writes the page escapes with the one escaper, which escapes quotes |
-| `basic.action_names_read_back` | every action's name reads back as that action, no two share one, and a binding source's fetch reads (it once failed `canary view` on zarith) |
-| `checks.firing_is_over_the_frames` | `canary checks --firing` prints §2 over the page's frames, in order and not one column per action, each column lined up under its label |
-| `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; each check cell's tooltip glosses its blame |
-| `overview.agreements_count_every_machine` | §2 counts every machine's runs file, the rows §1.2 shows: one made-up file per machine, each deciding the same claim, counts once per machine |
-| `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |
-| `matrix.page_titles_and_agreement_overview` | the agreement overview's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
-| `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |
-| `overview.chain_absence_is_never_recorded` | what a chain lacks is never drawn, and never recorded as touched |
-| `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
-| `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |
-| `overview.agreements_sit_on_the_chain` | every agreement has one claim site; the table's `sits on` is it; the grouping lists each once; no run decided an agreement without an evaluator |
-| `overview.every_drawn_line_has_a_source` | every line under a node label has one source, carried with it for every choice, package and recorded world; the script finds none by a route of its own; a render read found by swapping the machine's answers (§4) |
-| `overview.choice_is_resolved_once` | a choice's band is its own or the nearest (native side's package manager let go first), with a note naming what was let go; a recorded world's names come first; the page opens in the export's drawing; the script holds none of these rules (§1) |
-| `overview.edge_marks_clear_the_boxes` | no edge under a source it does not join; no label or badge hidden |
-| `overview.visual_vocabulary_is_one_list` | the looks: one list, held to the stylesheet (§5) |
-| `overview.layout_rules_hold` | the places: every rule holds, every named pin exists (§5) |
-| `overview.flow_is_the_page` | the page's §0: every template slot belongs to one section, every heading reads as the outline lists it and in its order, every module it names has a source file, every pin a box names exists, the figure's boxes do not overlap and every arrow is straight (§1) |
-| `overview.exhibits_are_captioned` | each figure and table appears once, in list order, captioned with its number and title and listed in §0; every table and drawing on the page is one of them (§1) |
-| `overview.exhibits_are_exported` | every exhibit is written on its own or named as not written, with why; a written table is the page's without its caption; a written figure ends with the page's drawing and stands alone (its size and namespace, every colour it uses defined, no dark mode, no entity XML lacks); nothing written carries the page's numbers; a choice of chain writes only Figure 2 and the lines table; the captions name exactly the files written (§1) |
-| `overview.tables_list_what_canary_covers` | the page's §3 tables list exactly what canary has drivers and projects for |
-| `overview.outcome_marks_are_one_list` | one spelling of an outcome's mark: every label a log records has an entry, a check cell shows its outcome's mark and look, the page's script spells no word mark, §2 shows the key |
-| `overview.agreement_laws_are_listed` | §2 lists every law of `Canary_agreement.row_rules` |
-| `overview.mechanisms_list_their_claims` | §3.2 lists, per mechanism, exactly the claims pass 2's applicability carries |
-| `overview.sections_numbered_in_order` | the page's sections are numbered 1 to n |

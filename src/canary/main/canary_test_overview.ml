@@ -1133,7 +1133,7 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
    one hint or to the base look, every hint is applied and explained, and
    no two hints that can show on one kind of element look alike. Only a
    hint's own rules count, which is why the muted term's rule states its
-   italics. *)
+   italics. See design/overview.md §5. *)
 let visual_vocabulary_pin : Canary_project_test.pure_test =
   { name = "overview.visual_vocabulary_is_one_list";
     holds = "The overview's visual vocabulary is one list of hints.";
@@ -1341,7 +1341,8 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
    so a new part of the page takes a place in the outline; each heading
    reads as the outline lists it, in order; everything the data names
    exists; and the figure's boxes fit the canvas without overlapping,
-   every arrow straight between ends that face each other. *)
+   every arrow straight between ends that face each other. See
+   design/overview.md §1. *)
 let flow_pin : Canary_project_test.pure_test =
   { name = "overview.flow_is_the_page";
     holds = "The outline, figure and table of §0 hold to what exists in the page and the code.";
@@ -1433,7 +1434,7 @@ let flow_pin : Canary_project_test.pure_test =
 
 (* Each exhibit appears once, in list order, captioned with its label and
    title, and §0 lists it; every table on the page, and every drawing (an
-   svg with role="img"), is one of them. *)
+   svg with role="img"), is one of them. See design/overview.md §1. *)
 let exhibits_pin : Canary_project_test.pure_test =
   { name = "overview.exhibits_are_captioned";
     holds = "Every figure and table is numbered and titled, so the page and the manuscript cite one by its id.";
@@ -1513,7 +1514,7 @@ let exhibits_pin : Canary_project_test.pure_test =
    go first, then the language side's), and the note names what was let
    go; a recorded world's names come before its package's; the page opens
    in the drawing the export draws; and the page's script holds only the
-   lookups. *)
+   lookups. See design/overview.md §1. *)
 let choice_resolved_pin : Canary_project_test.pure_test =
   { name = "overview.choice_is_resolved_once";
     holds = "What a choice on the page draws is resolved once, in OCaml.";
@@ -1599,7 +1600,7 @@ let choice_resolved_pin : Canary_project_test.pure_test =
    ends with the page's drawing and stands alone (its size, its
    namespace, every colour it uses defined, no dark mode, no entity XML
    lacks); and a choice of chain writes only Figure 2 and the lines
-   table. *)
+   table. See design/overview.md §1. *)
 let exhibits_export_pin : Canary_project_test.pure_test =
   { name = "overview.exhibits_are_exported";
     holds = "The export writes each of the page's exhibits as the page shows it, without its number, or names it as not written, with why.";

@@ -34,7 +34,8 @@ let to_pin_file ((subject, path, ts) : file) : Canary_overview_pins.file =
    why and whose it is; a rule checked by a pin names a pin that exists,
    so the list cannot point at a renamed check. Defined after
    [base_tests] for that reason. Another drawing is held to the same
-   rules by handing them its own positions ([layout_view]). *)
+   rules by handing them its own positions ([layout_view]). See
+   design/overview.md §5. *)
 let layout_rules_pin : Canary_project_test.pure_test =
   { name = "overview.layout_rules_hold";
     holds = "The drawing keeps the layout's rules, and every rule a pin checks names a registered pin.";
