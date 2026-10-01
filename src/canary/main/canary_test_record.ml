@@ -4,20 +4,13 @@
 open Base
 open Canary_test_fixtures
 
-(* THE RECORD READS WHAT A RUN REALIZED (2026-09-28, design/overview.md
-   §6.4 step 6). The runner writes each world's realized steps as a
-   manifest ([Canary_manifest]); the record reads it and re-derives from
-   today's code only where no run wrote one. Held:
-
-   - the codec is total: every action the type has, every kind of
-     location, both kinds of bridge and every placeholder a package
-     manager's catalogue names come back as they went in;
-   - every world of every active project round-trips: its realized steps,
-     written and read back, are the same entries;
-   - THE RECORD PREFERS THE MANIFEST. In a fixture tree, one zarith world
-     gets a manifest with a step left out: its row shows exactly the
-     manifest's steps and says [run]; the other world, with none, is
-     re-derived and says [code]. *)
+(* The record reads what a run realized: each world's steps as the runner
+   wrote them in a manifest ([Canary_manifest]), re-derived from code only
+   where no run wrote one (design/overview.md §6.4 step 6). Held: the codec
+   round-trips every action, location kind, bridge kind and package-manager
+   placeholder; every world of every active project round-trips; and in a
+   fixture tree, a zarith world whose manifest drops a step shows the
+   manifest's steps and says [run], while the other world says [code]. *)
 let manifest_pin : Canary_project_test.pure_test =
   { name = "manifest.records_what_a_run_realized";
     check =
@@ -89,17 +82,11 @@ let manifest_pin : Canary_project_test.pure_test =
         codec_total && worlds_roundtrip && prefers_the_manifest)
   }
 
-(* THE RECORD CARRIES EACH WORLD'S CHAIN (2026-09-23, status.md §2.7):
-   per binding language, the mechanism, both sides and the cooperation —
-   so a reader of the run need not re-derive them. Held over the real
-   registry:
-
-   - one chain per binding language of the row's project, in order;
-   - each is the WORLD's (its cooperation is [coop_of_world] for that
-     row's assignment) with pass 2's mechanism;
-   - exported as such;
-   - exercised both ways: zarith's rows carry a bridged chain and an
-     artifact-centric one. *)
+(* The record carries each world's chain, so a reader of the run need not
+   re-derive it: one per binding language of the row's project, in order,
+   with the world's cooperation ([coop_of_world]) and pass 2's mechanism,
+   and exported as such. zarith's rows exercise both kinds: a bridged
+   chain and an artifact-centric one. *)
 let record_chains_pin : Canary_project_test.pure_test =
   { name = "matrix.record_carries_each_worlds_chain";
     check =
@@ -157,11 +144,10 @@ let record_chains_pin : Canary_project_test.pure_test =
                 List.map r.M.chains ~f:(fun c -> c.M.ch_coop)
               else [])
         in
-        (* THE WRAPPER DECLARATION SAYS WHAT THE STEPS DO: a world publishes
-           its binding exactly where a pack step exists. The package band
-           reads the declaration (it is drawn without deriving steps); this
-           is what keeps it the same answer. Exercised: zarith's built
-           world publishes, its fetched world does not. *)
+        (* a world publishes its binding exactly where a pack step exists:
+           the package band reads the declaration without deriving steps,
+           so the two must agree. Both answers occur (zarith's built world
+           publishes, its fetched world does not). *)
         let publishing =
           List.concat_map m.M.rows ~f:(fun (r : M.row) ->
               match Canary_overview_runs.assignment_of_row r with
@@ -177,11 +163,10 @@ let record_chains_pin : Canary_project_test.pure_test =
                       in
                       if Bool.equal declared stepped then Some declared else None))
         in
-        (* WHAT EACH CHAIN LACKS, AND WHICH CLAIMS APPLY TO IT: the world's
-           own answer ([world_gone]), and a claim applies where one of its
-           edges survives — exported as such. Exercised: zarith's bridged
-           chain carries the bridge's claims, its artifact-only chain has
-           no bridge and none of them *)
+        (* what each chain lacks is the world's answer ([world_gone]), and
+           a claim applies where one of its edges survives; both are
+           exported. zarith's bridged chain carries the bridge's claims;
+           its artifact-only chain lacks the bridge and all of them. *)
         let bridge_claims =
           [ "gate_admits_the_world"; "declared_gate_matches_package";
             "gate_bounds_the_library"; "depext_names_the_provided_package" ]
@@ -247,39 +232,12 @@ let record_chains_pin : Canary_project_test.pure_test =
         && List.mem publishing (Some false) ~equal:(Option.equal Bool.equal))
   }
 
-(* BLAME IS A STATIC SCAN, AND IT HAS TO BE RIGHT TO BE WORTH COUNTING
-   (2026-09-15, user: "before we fix that, can we attribute it as one
-   thing to blame in the table, so we can see how eager we need to fix
-   it").
-
-   A check column exists only where the claim CAN be decided, so a
-   non-verdict cell in one is a defect and the blame says whose. The
-   number is meant to be a work queue, which means a wrong blame is
-   worse than no blame — it either hides work or invents it. Both
-   failure modes happened while this was being written, and both are
-   pinned:
-
-   1. EVERY PROJECT WAS VERSION-BLIND-FREE, because the first cut keyed
-      version points on [build_id.id] — which is [""] for an unpinned
-      placement ([Canary_basic.good]). sqlite's Built@Stable and
-      Built@Dev collapsed to one point and nothing was ever flagged.
-      Pinned on the pair that distinguishes: sqlite's lib genuinely
-      moves (3.43.2 built, 3.46.1 built, apt's), zarith's genuinely does
-      not (apt already ships GMP's newest — a permanently thin axis, and
-      a single-valued declaration is CORRECT there).
-
-   2. TEN PERMANENT ROWS ON THE WORK QUEUE, because [inconclusive] was
-      blamed [declaration] whatever the comparison was. A DECLARATION
-      comparison that reaches it found the declaration empty — a spec
-      gap. A PEER comparison that reaches it read both artifacts and
-      neither carried anything of this kind: sqlite's libsqlite3 has no
-      symbol versioning, so [required_versions_exported] has nothing to
-      compare and never will. That is [vacuous], and it is the one blame
-      that asks for nothing.
-
-   Also pinned: every word [blame_of] can produce is glossed. The gloss
-   is what the key table and the terminal legend print, so an unglossed
-   word would reach a reader as a bare noun. *)
+(* Blame is a static scan, and a wrong blame hides work or invents it. A
+   check column exists only where its claim can be decided, so a
+   non-verdict cell is a defect and the blame says whose. An inconclusive
+   declaration comparison found the declaration empty, a spec gap; an
+   inconclusive peer comparison found nothing of its kind in either
+   artifact, which is [vacuous], the one blame that asks for nothing. *)
 let blame_attribution_pin : Canary_project_test.pure_test =
   { name = "matrix.blame_is_static_and_glossed";
     check =
@@ -295,10 +253,11 @@ let blame_attribution_pin : Canary_project_test.pure_test =
                 (Canary_project_run.scenarios_of pr)
                 Canary_basic.Lib
         in
-        (* (1) a moving axis is seen as moving, a thin one as thin *)
+        (* a moving axis is seen as moving (sqlite's lib), a thin one as
+           thin (zarith's: apt already ships GMP's newest) *)
         let sqlite_moves = points "sqlite" > 1 in
         let zarith_is_thin = points "zarith" = 1 in
-        (* (2) inconclusive splits on the reference kind *)
+        (* inconclusive splits on the reference kind *)
         let peer_is_vacuous =
           Poly.equal
             (Canary_matrix.blame_of ~outcome:"inconclusive"
@@ -311,7 +270,7 @@ let blame_attribution_pin : Canary_project_test.pure_test =
                ~is_declaration:true ~version_blind:false)
             (Some "declaration")
         in
-        (* a VIOLATION is a finding, not a defect — unless the
+        (* a violation is a finding, not a defect, unless the
            declaration it contradicts cannot follow the version *)
         let plain_violation_is_a_finding =
           Poly.equal
@@ -333,7 +292,8 @@ let blame_attribution_pin : Canary_project_test.pure_test =
                     (Canary_matrix.blame_of ~outcome:"holds"
                        ~is_declaration:d ~version_blind:v)))
         in
-        (* (3) nothing reaches a reader unglossed *)
+        (* every blame word is glossed, or it would reach a reader as a
+           bare noun *)
         let all_glossed =
           List.for_all
             [ "holds"; "violated"; "error"; "inconclusive"; "unavailable";
@@ -354,25 +314,19 @@ let blame_attribution_pin : Canary_project_test.pure_test =
         && plain_violation_is_a_finding && blind_violation_is_suspect
         && holds_blames_nothing && all_glossed) }
 
-(* THE MACHINE ROOTS ARE ENTRY CONFIG (2026-08-26, user: "this can be
-   almost hardcoded in the entry side once as the config value choice for
-   two of my machines. It shouldn't be hardcoded any more").
-
-   [distro_base] used to BE the two absolute paths. It is now a lookup
-   into a table the entry declares, which is only possible because
-   nothing resolves a root while modules initialize — the property (3)
-   below is what makes the whole arrangement work, and it is the one that
-   will silently regress: the natural way to write a project declaration
-   is to call [libdir_of pb (detect_distro ())] in it, which puts an
-   absolute path in a top-level [let] and re-freezes the paths at load. *)
+(* The machine roots are entry config: [distro_base] looks them up in a
+   table the entry declares. That works only if nothing resolves a root
+   while modules initialize, the property most likely to regress: calling
+   [libdir_of pb (detect_distro ())] in a project declaration puts an
+   absolute path in a top-level [let]. *)
 let machine_roots_pin : Canary_project_test.pure_test =
   { name = "machine_roots.declared_at_entry";
     check =
       (fun () ->
         let saved = !Canary_store.machine_roots in
         let restore () = Canary_store.machine_roots := saved in
-        (* (1) the lookup answers for BOTH machines — the cross-render
-           needs the other one, which no $HOME could supply *)
+        (* the lookup answers for both machines: the cross-render needs
+           the other one, which no $HOME could supply *)
         Canary_store.set_machine_roots
           [ (Canary_store.Wsl, "/w"); (Canary_store.MacOS_local, "/m") ];
         let resolves =
@@ -380,8 +334,8 @@ let machine_roots_pin : Canary_project_test.pure_test =
           && String.equal (Canary_store.distro_base Canary_store.MacOS_local) "/m"
           && String.equal (Canary_store.contrib_root Canary_store.Wsl) "/w/contrib"
         in
-        (* (2) undeclared is a FAILURE, not a guess — a fabricated root
-           would send a build somewhere real and wrong *)
+        (* undeclared is a failure, not a guess: a fabricated root would
+           send a build somewhere real and wrong *)
         Canary_store.machine_roots := [];
         let refuses =
           try
@@ -389,20 +343,10 @@ let machine_roots_pin : Canary_project_test.pure_test =
             false
           with _ -> true
         in
-        (* (3) A DECLARATION NEEDS NO ROOT. Built with the table empty:
-           if any part of stating what a project HAS reaches for a machine
-           path, this raises — which is exactly what happened at module
-           init before the paths were made relative. zlib is the witness
-           because it declares a prebuilt (a Vendored lib whose libdir is
-           the tempting place to resolve).
-
-           How the regression actually shows up, measured by putting
-           [libdir_of pb (detect_distro ())] back into the artifact table:
-           for a spec that is a top-level [let] the binary dies at
-           STARTUP, before any test runs, with [distro_base]'s message
-           naming the fix — louder than a red pin. This claim covers the
-           case that death does not: a root reached for on a path that
-           module init happens not to take. *)
+        (* a declaration needs no root, built here with the table empty.
+           A root resolved at module init kills the binary at startup;
+           this covers paths init does not take. zlib is the witness: its
+           prebuilt lib's libdir is the tempting place to resolve. *)
         let declares_without_roots =
           try
             let pr = Canary_opam_binding.run Canary_project_zlib.decl in
@@ -412,14 +356,9 @@ let machine_roots_pin : Canary_project_test.pure_test =
         restore ();
         resolves && refuses && declares_without_roots) }
 
-(* THE RUN RECORD IS THE SESSION (2026-08-26, user: "the config and driver
-   side is like a session, and no hardcoded is necessary").
-
-   [run_info.json] said `"opam_switch": "default"` on a run whose every
-   actions.log line said `opam_switch (canary)`, and reported the distro
-   from a private fourth [uname] that no override could reach. A record
-   that re-probes the box is describing a different session than the one
-   it belongs to. Pins that [detect_env] READS the two session values. *)
+(* The run record is the session: [detect_env] reads the selected opam
+   switch and platform rather than re-probing the box, since a record
+   that re-probes describes a different session than its own. *)
 let run_info_session_pin : Canary_project_test.pure_test =
   { name = "run_info.records_the_session";
     check =
@@ -430,8 +369,8 @@ let run_info_session_pin : Canary_project_test.pure_test =
           Canary_store.opam_switch := saved_sw;
           Canary_store.platform_override := saved_pl
         in
-        (* a session this machine is NOT: an overridden platform and a
-           named switch. Both must survive into the record. *)
+        (* a session this machine is not: an overridden platform and a
+           named switch, both of which must reach the record *)
         Canary_store.opam_switch := Some "canary";
         Canary_store.set_platform Canary_store.MacOS_local;
         let distro, _pm, switch, _ocaml = Canary_run_info.detect_env () in
@@ -440,33 +379,24 @@ let run_info_session_pin : Canary_project_test.pure_test =
             (Canary_store.string_of_platform Canary_store.MacOS_local)
           && String.equal switch "canary"
         in
-        (* and the ambient selection renders as such rather than as
-           whatever `opam switch show` happens to print *)
+        (* the ambient selection renders as such, not as whatever
+           `opam switch show` prints *)
         Canary_store.opam_switch := None;
         let _, _, ambient, _ = Canary_run_info.detect_env () in
         restore ();
         ok && String.equal ambient "(ambient)") }
 
-(* The result table's registry shape (2026-08-17): 23 rows = Σ of every
-   project's enumerated scenarios (sqlite 3, z3 7, llvm 5, tiny-full 1,
-   zarith 3, cairo 1, libffi 1, ssl 2); the column union carries the
-   install + probe actions. The web identity: the pre-10549 row's ref
-   links the REMOTE COMMIT (the regression case's own repo record) and
-   its build_lib cell carries the provision choice B:d. Hermetic — no
-   run data (marks are pinned separately by matrix.marks_from_log). *)
-(* The ROW order (2026-08-18, user): within a project, rows group by
-   the source REF (the declared repo family order), then the C lib
-   (built before fetched), then each binding. Checked on z3's 7
-   scenarios under the declared ref order [4.15.2, latest, arbipher,
-   pre-10549]: per ref the dev chain (lib built) precedes the
-   all-fetched world (lib fetched). *)
+(* Within a project, rows group by the source ref (the declared repo
+   family order), then the C lib (built before fetched), then each
+   binding. Checked on z3 under its declared ref order [4.15.2, latest,
+   arbipher, pre-10549]. *)
 let matrix_row_order_pin : Canary_project_test.pure_test =
   { name = "matrix.row_order";
     check =
       (fun () ->
-        (* z3's SPEC, not its registry entry (2026-08-21): row ordering is
-           a property of the enumeration, which exists whether or not the
-           project is currently in the run set *)
+        (* z3's spec, not its registry entry: row order is a property of
+           the enumeration, which exists whether or not z3 is in the run
+           set *)
         let z3 = Canary_project_z3.z3_run (Canary_basic.detect_distro ()) in
         let sorted =
           List.stable_sort (Canary_project_run.scenarios_of z3)
@@ -487,12 +417,12 @@ let matrix_row_order_pin : Canary_project_test.pure_test =
               in
               (src_id, lib_prov))
         in
-        (* 2026-08-19, the mismatch matrix: per dev ref FIVE rows — the
-           built lib under each binding (dev baseline, then BACKWARD), the
-           staged lib under each binding, and the released lib under the
-           built binding (FORWARD, sorting last because a Fetched lib is
-           last in the lib key). The both-released baseline leads, on the
-           stable ref, and is ref-independent. *)
+        (* per dev ref five rows: the built lib under each binding (dev
+           baseline, then backward), the staged lib under each binding,
+           and the released lib under the built binding (forward, last
+           because a fetched lib sorts last in the lib key). The
+           ref-independent both-released baseline leads, on the stable
+           ref. *)
         let per_ref r =
           [ (r, Canary_artifact.Built); (r, Canary_artifact.Built);
             (r, Canary_artifact.Installed); (r, Canary_artifact.Installed);
@@ -502,12 +432,10 @@ let matrix_row_order_pin : Canary_project_test.pure_test =
           (("4.15.2", Canary_artifact.Fetched)
           :: (per_ref "latest" @ per_ref "arbipher" @ per_ref "pre-10549"))) }
 
-(* The GLOBAL row index (2026-08-18, user): every row carries its
-   ordinal (#N, fast pointing in the rendered order) + a stable code
-   (the digest of the row's identity — the historical pointer). Pure
-   display: the index never feeds a cache key or scenario identity.
-   Pin: ordinals are 1..N unique; codes are deterministic across two
-   matrix_of calls and unique across rows. *)
+(* Every row carries an ordinal (#N in the rendered order) and a stable
+   code (a digest of its identity), both display only: neither feeds a
+   cache key or scenario identity. Held: ordinals are 1..N, codes are the
+   same across two [matrix_of] calls and unique across rows. *)
 let matrix_row_index_pin : Canary_project_test.pure_test =
   { name = "matrix.row_index";
     check =
@@ -523,7 +451,6 @@ let matrix_row_index_pin : Canary_project_test.pure_test =
           Poly.equal (List.dedup_and_sort indexes ~compare:Int.compare)
             indexes
         in
-        (* sorted = [1..n] → consecutive, 1-based *)
         let consecutive =
           Poly.equal (List.sort indexes ~compare:Int.compare)
             (List.init n ~f:(fun i -> i + 1))
@@ -549,13 +476,10 @@ let matrix_row_index_pin : Canary_project_test.pure_test =
         uniq && consecutive && stable && codes_uniq
         && List.for_all codes ~f:(fun (_, _, c) -> String.length c = 6)) }
 
-(* The CELL STAGE progression (2026-08-19, user): in a staged world the
-   build step names the tree it BUILT and only install/probe name the
-   staged face, so a row reads left-to-right as the artifact's
-   progression. Before, every cell carried the world's provision and all
-   three read [lib I:s] — the row said "installed" three times and never
-   said a build happened. Derived over every registry project that
-   enumerates an Installed lib. *)
+(* In a staged world the build cell names the tree it built, and only the
+   install and probe cells name the staged face, so a row reads left to
+   right as the artifact's progression. Held over every registry project
+   that enumerates an Installed lib. *)
 let matrix_cell_stage_pin : Canary_project_test.pure_test =
   { name = "matrix.cell_stage_progression";
     check =
@@ -584,8 +508,7 @@ let matrix_cell_stage_pin : Canary_project_test.pure_test =
                       )
                   else None))
         in
-        (* the staged worlds must EXIST — else every for_all below is
-           vacuous and the pin would pass on a lost axis *)
+        (* the staged worlds must exist, or every check below is vacuous *)
         (not (List.is_empty staged_rows))
         && List.for_all staged_rows ~f:(fun (proj, scen) ->
                match
@@ -608,18 +531,12 @@ let matrix_cell_stage_pin : Canary_project_test.pure_test =
                       | Some c -> String.is_prefix c ~prefix:"lib I:"
                       | None -> true))) }
 
-(* The SETTING block (2026-08-19, user: "move all the provider ahead …
-   more clear to readers on which is the setting for this row"): the
-   leading columns are one per artifact KIND, and a row's setting cells
-   ARE its assignment — so the row identifies its world without the old
-   single `ref` column (which named a different artifact's source per
-   project and could not tell z3's build-tree world from its staged one).
-   Pinned: (a) one column per kind, no duplicates — the mechanism rides
-   the artifact id, so deduping by id would double `ocaml`/`py`;
-   (b) a cell exists exactly when the project declares that kind;
-   (c) the block DISTINGUISHES worlds — no two rows of a project share
-   their full setting tuple, which is the property the ref column
-   lacked. *)
+(* The setting block leads each row with one column per artifact kind,
+   and a row's setting cells are its assignment, so they identify its
+   world. Held: (a) one column per kind, no duplicates (the mechanism
+   rides the artifact id, so deduping by id would double `ocaml`/`py`);
+   (b) a cell exists exactly when the project declares that kind; (c) no
+   two rows of a project share their setting tuple. *)
 let matrix_setting_block_pin : Canary_project_test.pure_test =
   { name = "matrix.setting_block_identifies_world";
     check =
@@ -651,7 +568,7 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
                         Bool.equal (Option.is_some s)
                           (List.mem want label ~equal:String.equal))))
         in
-        (* (c) the block is an IDENTITY: distinct worlds, distinct tuples *)
+        (* (c) distinct worlds, distinct tuples *)
         let identifies =
           List.for_all Canary_registry.all_projects ~f:(fun (name, _) ->
               let tuples =
@@ -671,32 +588,15 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
         in
         (not (List.is_empty labels)) && no_dups && declared_ok && identifies) }
 
-(* THE PAGE CARRIES THE GRID, AND THE SAME ONE (2026-09-17, user:
-   "can you land the second table in the `make view` and give each
-   table a title name").
-
-   [matrix.html] now renders three tables, and the middle one is the
-   recovery grid — the same value `canary checks --firing` prints. Two
-   renderings of one table is how they drift, so this counts cells: the
-   HTML must carry exactly one per (agreement × action column), and the
-   R / D / R+D tallies must match what [overview_rows] computes.
-
-   It also pins the TITLES, because the reason the page was hard to read
-   was that three tables sat under one heading and a reader could not
-   tell the template from the record. A table without a name is the
-   defect this fixes, so the names are part of the contract. *)
+(* The overview page carries the agreement table, and the same one
+   [overview_rows] computes: its cells are counted against the rows'
+   marks, since two renderings of one table drift. The page names its
+   tables, and the old result page is only a pointer to it, so neither
+   table can decay into a copy on both. *)
 let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
   { name = "matrix.page_titles_and_agreement_overview";
     check =
       (fun () ->
-        (* THE OVERVIEW MOVED (2026-09-23, user), and this pin caught it
-           — which is what it is for. It reads the METHODOLOGY page now,
-           because the table describes the shape of the checking and that
-           page is where shape lives; the result matrix keeps only
-           verdicts and a link.
-
-           Both files are asserted, so the split cannot silently become a
-           duplication: the overview must be on exactly one of them. *)
         let path = "docs/canary/overview.html" in
         let matrix_path = "docs/canary/projects/matrix.html" in
         if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
@@ -725,9 +625,8 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
           in
           let open Canary_agreement in
           let rows = overview_rows () in
-          (* THE FRAME COLUMNS since 2026-09-28 (design/overview.md §6.4
-             step 4): §2 shares §1.2's header, and its marks are
-             [Canary_frames.row_marks] *)
+          (* §2 shares §1.2's frame columns (design/overview.md §6.4 step
+             4), and its marks are [Canary_frames.row_marks] *)
           let width =
             List.sum (module Int) Canary_frames.frames ~f:(fun fr ->
                 List.length fr.Canary_frames.fr_columns)
@@ -744,110 +643,74 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
                 then own = List.length (Canary_frames.sites_of slug)
                 else own = 0)
           in
-          (* every table on the page is named. TWO since 2026-09-17:
-             the check key was absorbed into the overview, because its
-             columns were five of its columns and two of its tooltips. *)
+          (* the agreement table is named, and the check key it absorbed
+             is gone *)
           String.is_substring h ~substring:{|<h2 id="overview">2. The agreements</h2>|}
           && not (String.is_substring h ~substring:"The check key")
-          (* ONE PAGE since 2026-09-28 (user; design/overview.md §6.4 step
-             5): the result table is §1.2 of this page, and the old
-             result page's address is a pointer landing there — it holds
-             neither table, so nothing can decay into a copy on both *)
+          (* one page (design/overview.md §6.4 step 5): the result table
+             is §1.2 here, and the old result page's address is a pointer
+             to it that holds neither table *)
           && (not (matrix_has "Agreement overview"))
           && (not (matrix_has "<table"))
           && matrix_has "overview.html#results"
           && String.is_substring h ~substring:{|<h3 id="results">|}
-          (* one ACTION cell per (row × action column) and one TARGET
-             cell per (row × artifact column) — both in the `g` family,
-             so the total counts them together *)
+          (* one `g` cell per (row × frame column) *)
           && count "class=\"g " = List.length rows * width
           && count "class=\"g rd\"" = tally "R+D"
           && count "class=\"g rr\"" = tally "R"
           && count "class=\"g dd\"" = tally "D"
-          (* the TARGET marks — the nodes each row reads, in its site's frames *)
+          (* the target marks: the nodes each row reads, in its site's frames *)
           && count "class=\"g tgt\"" = tally "▣"
           && count "class=\"g own\"" = tally "◆"
           && own_ok
-          (* the absorbed columns: fmt per row, and the short code that
-             WAS the key's first column *)
+          (* the format column, absorbed from the key, one cell per row *)
           && count "class=\"mk\"" >= List.length rows
-          (* WHERE THE CODE IS, one cell per row — and the RED ones are
-             exactly the agreements with no evaluator (2026-09-17). The
-             count is what makes the colour mean something: if a landed
-             agreement ever rendered red the number would move, and a
-             red cell that is not a real hole is worse than no column.
-             Cross-checked against the registry rather than a literal,
-             so implementing one of the three moves both sides. *)
+          (* where the code is, one cell per row *)
           && count "class=\"impl" = List.length rows
-          (* A RED cell is one of OUR rows with no evaluator. An
-             external row names a tool, so it is never red however
-             unimplemented the claim it answers is — the colour means
-             "nobody has written this", and somebody has. *)
+          (* a red cell is one of our rows with no evaluator, counted from
+             the registry; an external row names a tool, so it is never
+             red *)
           && count "class=\"impl none\""
              = List.count rows ~f:(fun (row : overview_row) ->
                    Option.is_none row.ov_external
                    && Option.is_none (snd (impl_of row.ov_agreement)))
-          (* THE EXISTING TOOLS, one row per (tool × claim it answers)
-             (2026-09-21, user: "even a tool is mainly for one agreement
-             claim, I also wish to have it as a row"). The count is the
-             list's, so adding a checker shows up here rather than
-             silently rendering nothing. *)
+          (* the existing tools, one row per (tool × claim it answers),
+             counted from the list so a new checker cannot silently render
+             nothing *)
           && count "class=\"impl ext\"" = List.length external_checkers
           && count "class=\"extrow\"" = List.length external_checkers
-          (* LANG and MECH, one cell each per row, full terms rather
-             than the letter marks they replaced (2026-09-17, user:
-             "single letters in mech is not reader-friendly").
-
-             AN EMPTY CELL IS MEANINGFUL HERE — it says the axis does
-             not narrow the claim — so the pin counts the cells that
-             are BLANK and matches them against the labels, rather than
-             only looking for text. A renderer that dropped the column
-             entirely would otherwise pass by writing nothing. *)
+          (* lang and mech, one cell each per row, in full terms *)
           && count "class=\"lm\"" = 2 * List.length rows
           && String.is_substring h ~substring:">cstubs<"
           && String.is_substring h ~substring:">ocaml<"
-          (* WHERE THE CLAIM COMES FROM, one cell per row (2026-09-17).
-             `kind` has its OWN class rather than sharing `lm`'s: three
-             cells under one class silently broke the count above, which
-             is how the column arrived. Both kinds in use are asserted
-             by name, so a registry that stopped distinguishing them —
-             every method declared `Declared_facts`, say — fails here
-             rather than rendering a constant column. *)
+          (* where the claim comes from, one cell per row, in its own
+             class so the `lm` count above stays two per row *)
           && count "class=\"kind\"" = List.length rows
           (* the two kinds most of the catalogue is, asserted by name so
-             a registry that stopped distinguishing them — every claim
-             declared one kind — fails here rather than rendering a
-             constant column. They were `declaration` and `peer` until
-             2026-09-17, when the vocabulary moved from naming the
-             SECOND PARTY to naming the RELATION. *)
+             a registry that stopped distinguishing them fails here
+             rather than rendering a constant column *)
           && String.is_substring h ~substring:">admissibility<"
           && String.is_substring h ~substring:">promise<"
-          (* THE HARNESS REPORTS ON THE PAGE (2026-09-21, user asked
-             where its checking result was). The row audit and the
-             saturation grid printed only in the terminal, so the view
-             the table is actually read in never said whether it had
-             been checked at all. The verdict must be there, and it must
-             be the SAME string the audit computes — a page claiming
-             "every row obeys them" beside a failing audit would be
-             worse than no line. *)
+          (* the page carries the row audit's verdict, the same string
+             the audit computes *)
           && String.is_substring h ~substring:"class=\"verdict"
           && String.is_substring h ~substring:(Canary_agreement.overview_verdict ())
-          (* and the kind glossary sits ABOVE the data that uses it —
-             the whole point of prepending it *)
+          (* the kind glossary sits above the rows that use it *)
           && (match
                 ( String.substr_index h ~pattern:"class=\"kinds\"",
                   String.substr_index h ~pattern:"class=\"kc\"" )
               with
               | Some glossary, Some first_row -> glossary < first_row
               | _ -> false)
-          (* the blank count reads the ROW's labels, not the claim's —
-             an external row's axes are the TOOL's, and counting the
-             claim's here is the same mistake the renderer made *)
+          (* an empty lang or mech cell means the axis does not narrow the
+             row, so the blanks are counted too, from the row's labels:
+             an external row's axes are the tool's, not the claim's *)
           && count "class=\"lm\"></td>"
              = List.count rows ~f:(fun (row : overview_row) ->
                    String.is_empty (row_lang_label row))
                + List.count rows ~f:(fun (row : overview_row) ->
                      String.is_empty (row_mech_label row))
+          (* every agreement's short code is a cell *)
           && List.for_all agreement_registry ~f:(fun r ->
                  String.is_substring h
                    ~substring:
@@ -855,18 +718,13 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
                      ^ Canary_agreement_common.short_code_of_slug r.ag_slug
                      ^ "</td>"))) }
 
-(* THE CHECK CELL (2026-09-14): the three things it must get right,
-   each of which it got wrong at least once while being written.
-
-   (a) the DENOMINATOR counts what the registry slots at that point,
-   not what the log mentioned — a cell that counted only what ran would
-   read 2/2 and look like full coverage;
-   (b) a VIOLATION at one firing site outranks a pass at another, so a
-   finding cannot be lost to a later [unavailable];
-   (c) an undecided outcome that WAS evaluated ([not_applicable]) is
-   distinguishable from one that was never evaluated at all — those
-   ranked equal at first, and the fold silently kept its own initial
-   value for every rank-0 outcome. *)
+(* A check cell is one claim's worst outcome over its methods and firing
+   sites. Held: (a) the cell is that claim's own outcome, not a count;
+   (b) a violation at one firing site outranks a pass at another, so a
+   finding cannot be lost, and it dates the cell; (c) an outcome
+   evaluated but undecided ([not_applicable]) is distinguishable from one
+   never evaluated; (d) a violation implicates the artifacts its evidence
+   named, and nothing else does. *)
 let matrix_check_cell_pin : Canary_project_test.pure_test =
   { name = "matrix.check_cell_merges_worst";
     check =
@@ -885,11 +743,8 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
           Canary_agreement_common.uniform_world ~lang:Canary_lang.OCaml
             ~mechanism:Canary_mechanism.Cstubs Canary_store.Built
         in
-        (* the analysed spec this cell is read against: one OCaml
-           cstubs binding, nothing declared. A literal rather than a
-           registry project, because the pin is about the MERGE and a
-           real project would make its inputs depend on that project's
-           declarations. *)
+        (* one OCaml cstubs binding, nothing declared: a literal, so the
+           merge's inputs do not depend on a real project's declarations *)
         let an : Canary_project_analysis.t =
           { an_project = "pin";
             an_spec = { Canary_artifact.ps_universe = [] };
@@ -920,37 +775,27 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
             "required_symbols_exported"
         in
         let silent, silent_impl = cell [] "required_symbols_exported" in
-        (* (a) one cell, one claim — its own outcome, not a count *)
+        (* (a) one cell, one claim *)
         String.equal good.Canary_matrix.mark "✓"
         && String.equal silent.Canary_matrix.mark "·"
-        (* (b) the violation wins over a pass at another firing site —
-           and the cell's WHEN is the violation's, not the pass's
-           (2026-09-23: the record carries a timestamp per cell, and a
-           [when] taken from the losing observation would date a finding
-           by a line that found nothing) *)
+        (* (b) the violation wins, and the cell's time is the
+           violation's: a time from the losing observation would date a
+           finding by a line that found nothing *)
         && String.equal bad.Canary_matrix.mark "✗"
         && Poly.equal bad.Canary_matrix.recorded
              (Canary_matrix.R_check (Some "violated"))
         && Poly.equal bad.Canary_matrix.at (Some "t-violated")
         && Poly.equal silent.Canary_matrix.recorded (Canary_matrix.R_check None)
         && Option.is_none silent.Canary_matrix.at
-        (* (c) evaluated-but-undecided is not silence: not_applicable
-           reads as itself, never as "not evaluated". STRENGTHENED
-           2026-09-15 — it used to be true only of the tooltip, because
-           the MARK was the same dot as silence and the distinction was
-           one hover away. The mark carries it now: [stale] for a cell
-           whose log predates the registry, [·] for one no run has
-           touched. If those two ever collapse back to one glyph this
-           goes red, which is the whole point of the pair below. *)
+        (* (c) the mark carries the difference: [stale] for a cell whose
+           log predates the registry, [·] for one no run has touched *)
         && String.equal na.Canary_matrix.mark "stale"
         && Option.value_map na.Canary_matrix.detail ~default:false ~f:(fun d ->
                String.is_substring d ~substring:"not_applicable")
         && Option.value_map silent.Canary_matrix.detail ~default:false
              ~f:(fun d -> String.is_substring d ~substring:"not evaluated")
-        (* (d) a VIOLATION implicates the artifacts its evidence named,
-           and nothing else does. required_symbols_exported is a PEER
-           comparison — the stub and the library — so it implicates two
-           artifacts and blames neither. *)
+        (* (d) required_symbols_exported compares the stub with the
+           library, so its violation implicates both and blames neither *)
         && List.is_empty silent_impl
         && List.is_empty na_impl
         && Poly.equal
@@ -960,17 +805,10 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
         && List.for_all bad_impl ~f:(fun (_, slug) ->
                String.equal slug "required_symbols_exported")) }
 
-(* THE KEY EXPLAINS EVERY CODE THE TABLE USES (2026-09-14, user asked
-   what harness keeps the page's key and the generated catalogue in
-   step). Sharing [Canary_agreement.summary_rows] is the mechanism;
-   this is the check. A check column is headed by a code and NOTHING
-   else names it, so a column whose code has no key row is unreadable —
-   and the failure is silent, because the table still renders.
-
-   It pins the direction that can actually break: every code in use is
-   explained. The reverse — a key row for a code no column uses — is
-   fine and expected, since the key lists what the registry can decide
-   while the columns list what this project's chain reaches. *)
+(* Every check column's short code has a row in the key
+   ([Canary_agreement.summary_rows]). Only that direction can break: the
+   key lists what the registry can decide and the columns what the
+   chains reach, so a key row no column uses is expected. *)
 let matrix_key_covers_codes_pin : Canary_project_test.pure_test =
   { name = "matrix.key_explains_every_check_column";
     check =
@@ -985,30 +823,13 @@ let matrix_key_covers_codes_pin : Canary_project_test.pure_test =
             | Some (_, code) -> List.mem known code ~equal:String.equal
             | None -> false)) }
 
-(* THE RUN RECORD (2026-09-23, status.md §2.7 phase A). The record
-   (`canary overview --json`) is what the overview draws recorded runs from, so two
-   things must hold, and this pins both against a log it writes itself.
-
-   (1) THE RECORD READS THE LOG. Every step state the log can express
-       reaches its cell TYPED — ran, warm, blocked, unrecorded, and each
-       verdict — with the timestamp of the line that won, including when
-       a re-run replaced an earlier verdict. A claim's outcome is dated
-       by a line that reported it. And the row carries the platform the
-       RUN logged: the fixture's platform is the one this machine is
-       NOT, so a record that answered with the renderer's platform fails
-       here on either machine — §2.7 finding 2's rule, that a record
-       carries what the run saw, applied to the platform.
-   (2) THE EXPORT IS THE MATRIX. The exact text the command prints
-       ([json_export]) parses, and decoding it gives back every column
-       and every cell — the mark AND the typed value it renders — with
-       none added or lost. The decoder is written against the field
-       names, independently of the encoder, so a renamed or dropped
-       field fails here rather than in the page that reads it.
-
-   zarith supplies the SHAPE — its real scenarios, chains and check
-   columns — and the fixture deals the states out over them, so the pin
-   follows the project when its chain changes and cannot pass vacuously
-   on a checkout that has never run anything. *)
+(* The run record (`canary overview --json`) is what the overview draws
+   recorded runs from. Over a log the fixture deals across zarith's real
+   scenarios: (1) the record reads the log, each step state typed and
+   dated by the line that won, each row with the platform the run logged
+   (the fixture's is the one this machine is not); (2) the export is the
+   matrix: the printed JSON, decoded by field name independently of the
+   encoder, gives back every column and cell. *)
 let record_export_pin : Canary_project_test.pure_test =
   { name = "matrix.record_export_is_the_matrix";
     check =
@@ -1057,7 +878,7 @@ let record_export_pin : Canary_project_test.pure_test =
                          line tag "agreement_outcome"
                            (Some "api_names_present/watchlist_vs_user_surface: holds")
                          :: !outcome_stamps);
-                    (* an inspection on disk, so an ARTIFACT cell exists *)
+                    (* an inspection on disk, so an artifact cell exists *)
                     write
                       (Printf.sprintf "%s/canary/projects/%s/%s/%s" root project
                          (Canary_basic.step_dir_of_tag tag)
@@ -1070,8 +891,8 @@ let record_export_pin : Canary_project_test.pure_test =
                     Int.incr dealt;
                     if List.exists lines ~f:(fun (e, _) -> String.equal e "platform")
                     then Hashtbl.set logged_platform ~key:scenario ~data:();
-                    (* the WHEN the cell must carry: the stamp of the
-                       script's last line, which is always its verdict *)
+                    (* the cell's time: the stamp of the script's last
+                       line, which is always its verdict *)
                     let last =
                       List.fold lines ~init:None ~f:(fun _ (event, detail) ->
                           Some (line tag event detail))
@@ -1084,7 +905,7 @@ let record_export_pin : Canary_project_test.pure_test =
                   List.filter_map r.M.cells ~f:(fun (tag, c) ->
                       Option.map c ~f:(fun c -> (r, tag, c))))
             in
-            (* (1) THE RECORD READS THE LOG *)
+            (* (1) the record reads the log *)
             let reads_the_log =
               List.for_all m.M.rows ~f:(fun (r : M.row) ->
                   Poly.equal r.M.recorded_on
@@ -1120,7 +941,7 @@ let record_export_pin : Canary_project_test.pure_test =
               && List.exists m.M.rows ~f:(fun (r : M.row) ->
                      not (List.is_empty r.M.recorded_on))
             in
-            (* (2) THE EXPORT IS THE MATRIX *)
+            (* (2) the export is the matrix *)
             let export_is_the_matrix =
               match Yojson.Basic.from_string (M.json_export m) with
               | exception _ -> false
@@ -1228,25 +1049,13 @@ let record_export_pin : Canary_project_test.pure_test =
             in
             reads_the_log && covers && export_is_the_matrix) }
 
-(* EVERY STEP OF A WORLD IS IN THE RECORD (2026-09-23, status.md §2.7
-   phase B1). The cells hold one entry per action, while the overview
-   joins STEPS onto its edges, and a world has more of them: a lib probe
-   per location, a package-linked consumer beside the artifact-linked one,
-   an inspection after each artifact. Pinned over a log the fixture
-   writes, for zarith — whose one probe tag is two different consumer
-   programs — and sqlite, whose library is probed at several locations.
-
-   (1) EXACTLY THE WORLD'S STEPS: each row lists the realize pass's
-       steps, in its order. Not the log's tags — a tag no current step
-       has (the fixture writes one) is history, not a step.
-   (2) TYPED AS THE BUILDER TYPED THEM. A probe carries its location and
-       nothing else does; an inspection names a step of the same world
-       that performs the same action; a probe's tag is the one the
-       builder derives from its location, canonical when it is alone.
-       And, for zarith, the fact the join rests on: the fetched binding's
-       probe is [Pm (Lang_pm opam)], the built binding's [Build_tree].
-   (3) IN THE STATE ITS OWN LOG LINE SAYS, dated by that line.
-   (4) EXPORTED AS SUCH: the printed JSON decodes to the same steps. *)
+(* Every step of a world is in the record, not one entry per action: the
+   overview joins steps onto its edges, and a world has more of them.
+   Over a fixture log for zarith (one probe tag, two consumer programs)
+   and sqlite (a library probed at several locations), each row (1) lists
+   exactly the world's steps in order, never a log tag no step has;
+   (2) types them as the builder did; (3) gives each the state and time
+   of its own log line; (4) exports them unchanged. *)
 let record_steps_pin : Canary_project_test.pure_test =
   { name = "matrix.record_carries_every_step";
     check =
@@ -1266,13 +1075,9 @@ let record_steps_pin : Canary_project_test.pure_test =
         &&
         let root = "_out/canary/test/steps-fixture" in
         let scripts = F.scripts ~platform:(F.elsewhere ()) in
-        (* the steps per world AS THE RUNNER DERIVES THEM — its own call,
-           [steps_of] over the scenario's real context, keyed the way the
-           rows are. Not [display_steps_of]: the first version of this pin
-           compared the record against the very function the record is
-           built from, and so could not catch the gap that function had
-           (it skipped the declared facts, and every fetched binding lost
-           its stub inspection). [~warn:false] only silences a print. *)
+        (* the steps as the runner derives them ([steps_of] over the
+           scenario's real context), not [display_steps_of], which the
+           record itself uses. [~warn:false] only silences a print. *)
         let worlds =
           List.concat_map projects ~f:(fun (project, pr) ->
               List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
@@ -1374,12 +1179,14 @@ let record_steps_pin : Canary_project_test.pure_test =
                              | _ -> false)))
         in
         (* the bridge field is carried, not vacuously absent: zarith's
-           fetched world drives conf-gmp (status.md §2.7 E) *)
+           fetched world drives conf-gmp *)
         let bridge_carried =
           List.exists m.M.rows ~f:(fun (r : M.row) ->
               List.exists r.M.steps ~f:(fun w -> Option.is_some w.M.ws_bridge))
         in
-        (* the fact the join rests on: one tag, two consumer programs *)
+        (* the fact the join rests on: one tag, two consumer programs,
+           probed through opam when the binding is fetched and in the
+           build tree when it is built; both occur *)
         let consumer_of (a : Canary_artifact.assignment) (r : M.row) =
           ( List.find_map a ~f:(fun (id, (pl : Canary_artifact.placement)) ->
                 match Canary_artifact.kind_of id with
@@ -1450,8 +1257,8 @@ let record_steps_pin : Canary_project_test.pure_test =
                             && Poly.equal (F.str js "at") w.M.ws_at
                             && Poly.equal (F.str js "detail") w.M.ws_detail))
         in
-        (* and not vacuously: every state, an inspection, both kinds of
-           consumer location, and a library probed at two locations *)
+        (* and not vacuously: every state, an inspection, and a library
+           probed at two locations *)
         let all_steps = List.concat_map m.M.rows ~f:(fun r -> r.M.steps) in
         let covers =
           List.for_all scripts ~f:(fun (_, st) ->
@@ -1466,18 +1273,13 @@ let record_steps_pin : Canary_project_test.pure_test =
         exact_and_typed && linking_typed && states_ok && exported && covers
         && bridge_carried) }
 
-(* THE JOIN'S RESULT IS IN THE RECORD (2026-09-23, status.md §2.7 phase
-   B2). Each row carries the edges its world realizes, with the steps that
-   realize them, and each placed claim with its outcomes — so the overlay
-   draws and computes nothing. Over the real registry:
-
-   (1) the row's edges ARE its steps' places, grouped by edge in the
-       graph's order — recomputed here from the steps, so the two views
-       cannot drift;
-   (2) a claim listed is one the graph places, each column is a check
-       column of that very agreement, its outcome is that cell's, and no
-       such column of the row is left out;
-   (3) the printed JSON decodes to both, unchanged. *)
+(* The join's result is in the record, so the overlay draws and computes
+   nothing: each row carries the edges its world realizes, with the steps
+   that realize them, and each placed claim with its outcomes. Held over
+   the real registry: the edges are recomputed here from the steps'
+   places, in the graph's order; a listed claim is one the graph places,
+   with its check columns and their cells' outcomes, none left out; the
+   printed JSON decodes to both. *)
 let record_join_pin : Canary_project_test.pure_test =
   { name = "matrix.record_joins_edges_and_claims";
     check =
@@ -1575,6 +1377,11 @@ let record_join_pin : Canary_project_test.pure_test =
         && List.exists m.M.rows ~f:(fun (r : M.row) -> not (List.is_empty r.M.claims)))
   }
 
+(* The result table's registry shape, hermetic (no run data; marks are
+   pinned by matrix.marks_from_log): one row per enumerated scenario,
+   counted per active project, and the canonical column order. Also z3's
+   web identity: the pre-10549 row's ref links the remote commit, and its
+   build_lib cell carries the provision B:d. *)
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -1594,11 +1401,9 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
           |> List.map ~f:Canary_basic.string_of_action
         in
         let m = Canary_matrix.matrix_of Canary_registry.all_projects in
-        (* the z3 row-shape assertions below read a matrix built over z3's
-           SPEC (2026-08-21), so muting z3 out of the run set does not
-           silently delete four checks about how its rows render. The
-           COUNTS above stay over the active registry — that is what a
-           run will actually produce. *)
+        (* z3's rows are read from a matrix over its spec, so muting z3
+           does not delete these checks; the counts above stay over the
+           active registry, which is what a run produces *)
         let mz3 =
           Canary_matrix.matrix_of
             [ ("z3", Canary_project_z3.z3_run (Canary_basic.detect_distro ())) ]
@@ -1613,19 +1418,15 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
               String.equal r.Canary_matrix.scenario
                 "source-fetched-arbipher_lib-built-dev_ocaml_binding-built-dev_python_binding-fetched")
         in
-        (* z3's ONE all-fetched world (2026-08-19): the source follows the
-           lib's channel, so the Fetched lib pairs only with the stable
-           repo — the pre-10549/latest/arbipher fetched rows it used to
-           name were phantoms (same lib, same binding, unread source). *)
+        (* z3's one all-fetched world: the source follows the lib's
+           channel, so a fetched lib pairs only with the stable repo *)
         let stable_fetched_row =
           List.find mz3.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
                 "source-fetched-4.15.2_lib-fetched_ocaml_binding-fetched-4.16.0_python_binding-fetched")
         in
-        (* the staged twin of the pre-fix ref: the row exists, its
-           install_lib cell names the INSTALLED lib, and the Built twin
-           above carries no install_lib cell (the exclusivity, read off
-           the rendered matrix rather than the action list) *)
+        (* the staged twin of the pre-fix ref: its install_lib cell names
+           the installed lib, and the built twin has no install_lib cell *)
         let pre_10549_installed_row =
           List.find mz3.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
@@ -1653,7 +1454,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                    String.equal url
                      "https://github.com/Z3Prover/z3/commit/bc4585e0b"
                | None -> false)
-              (* the label carries the identity AND the version the
+              (* the label carries the identity and the version the
                  built lib inherits *)
               && String.equal r.Canary_matrix.ref_label
                    "pre-10549 (bc4585e0b)"
@@ -1664,19 +1465,18 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                   | Some (Some c) ->
                       String.equal c.Canary_matrix.provision "lib B:d"
                   | _ -> false)
-              (* the fork's label is its IDENTITY (arbipher), not the
-                 literal HEAD it shares with latest — the two HEAD-ref
-                 chains must not render as identical rows *)
+              (* the fork's label is its identity (arbipher), not the HEAD
+                 it shares with latest, so the two HEAD chains render as
+                 distinct rows *)
               && (match arbipher_row with
                   | Some ar ->
                       String.equal ar.Canary_matrix.ref_label
                         "arbipher (HEAD)"
                   | None -> false)
-              (* the all-fetched world names its providers + versions:
-                 the lib is the SYSTEM PM's package (the live dpkg
-                 version — the pin asserts the static prefix only, the
-                 version is machine-dependent), the binding is the
-                 opam package at its store pin *)
+              (* the all-fetched world names its providers and versions:
+                 the lib is the system PM's package (only the prefix is
+                 asserted; the version is the machine's), the binding
+                 the opam package at its store pin *)
               && (match stable_fetched_row with
                   | Some fr -> (
                       match
@@ -1684,13 +1484,9 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           ~equal:String.equal
                       with
                       | Some (Some c) ->
-                          (* the system PM's own name (2026-08-26): the
-                             cell renders whichever PM this machine has,
-                             so a literal "apt" made a correct macOS
-                             render ("lib brew z3.…") read as drift. The
-                             SHAPE is what this pin is about — the cell
-                             names the pm and the package — not which
-                             pm the machine happens to run. *)
+                          (* the cell names whichever system PM this
+                             machine has; the pin holds the shape, not
+                             the PM *)
                           let pm =
                             Canary_store.string_of_pm
                               (Canary_store.detect_pm ())
@@ -1709,32 +1505,17 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           | _ -> false)
                   | None -> false)
         in
-        (* 38 (2026-08-19): sqlite 10 + z3 16 + llvm 3 + tiny-full 1 +
-           zarith 2 + cairo 2 + libffi 2 + ssl 2 — cairo and libffi gained
-           their VENDORED prebuilt point (the lib pair's latest, downloaded
-           from conda-forge), on top of the channel pairs (sqlite +5,
-           z3 +9) and the unread-source collapse (llvm −2, zarith −1).
-           +2 on 2026-08-20: zlib lands with BOTH lib points at once
-           (apt Fetched 1.3 + conda-forge Vendored 1.3.2), the first
-           project whose 2×2 lib axis needed no build; +2 the same day for
-           zstd, the same shape over a gate that really bounds the lib. *)
-        (* PER-PROJECT expected counts, and the total DERIVED from whichever
-           projects are active (2026-08-21). The single `= 42` this
-           replaces had two problems: muting any project failed it for a
-           reason unrelated to drift, and it could not say WHICH project
-           moved. Summing a declared table catches both — a changed count
-           anywhere fails, and the failure names the project. Every
-           catalogued project needs a row here, so adding one to the
-           registry without stating its expected shape also fails. *)
+        (* expected rows per project, the total derived from the active
+           ones, so a failure names the project that moved; every
+           catalogued project needs a row here *)
         let expected =
           [ ("sqlite", 10); ("z3", 16); ("llvm", 3); ("tiny-full", 1);
             ("zarith", 2); ("cairo", 2); ("libffi", 2); ("zlib", 2);
             ("zstd", 2); ("ssl", 2);
-            (* torch's 2 are the binding's two PACKAGING points at one
-               upstream version — the stock package (a declared build
-               xfail: it does not build with dune 3.23.1) and the
-               canary-local patched one. Not a channel pair; the lib axis
-               is the one still to grow (2026-08-30 landing). *)
+            (* torch's two are the binding's two packagings at one
+               upstream version, the stock package (a declared build
+               xfail) and the canary-local patched one: not a channel
+               pair *)
             ("torch", 2) ]
         in
         let catalogued_ok =
@@ -1760,27 +1541,14 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         && List.mem columns "install_lib" ~equal:String.equal
         && List.mem columns "probe_binding_ocaml" ~equal:String.equal
         && web_identity_ok && staged_cells_ok
-        (* the CANONICAL column order (ratchet, 2026-08-18): the
-           native/lib group, then per language a same-shaped block
-           (binding build/fetch/pack/probe + its app) — probe_app_ocaml
-           sits INSIDE the ocaml block, not at the end.
-
-           CHECK SLOTS joined it 2026-09-14: [_pre] immediately before
-           its action, then what the action MADE, then the verdicts on
-           it — so one action's columns read in the order they mean:
-           what it needs, the run, the result, the verdict on the
-           result. The artifact precedes the post-checks because a
-           verdict printed left of the thing it judges reads
-           backwards. Both derived sets come from the registry — [_pre]
-           and [_post] from [ag_slot], [_out] from the evidence paths
-           the methods name — so a new agreement can add a column here
-           and fail this ratchet, which is the point.
-
-           An [_out] column appears only where the action PRODUCES
-           something (no probe does) and some agreement reads evidence
-           at that action's own tag. That is why probe_lib has none
-           despite writing an inspection, and why pack_binding_ocaml
-           has none despite producing an artifact. *)
+        (* the canonical column order, a ratchet over columns the
+           registry derives: the lib group, then one same-shaped block
+           per language (binding build, fetch, pack, probe, then its
+           app). Per action: its pre-checks, the action, what it made,
+           then the post-checks, a verdict after what it judges. An
+           artifact column needs an action that produces something and an
+           agreement reading evidence at its tag, so no probe has one,
+           nor pack_binding_ocaml. *)
         && String.equal
              (String.concat ~sep:"," m.Canary_matrix.columns)
              (String.concat ~sep:","
@@ -1788,35 +1556,27 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                   "build_headers"; "build_lib"; "build_lib=lib";
                   (* dse/dve/smd = declared_symbols_exported,
                      declared_versions_exported,
-                     soname_matches_declaration. The code IS the column
+                     soname_matches_declaration. The code is the column
                      name; [agreements.short_codes_are_unique] keeps it
                      from meaning two things. *)
                   "build_lib_post:dse"; "build_lib_post:dve";
                   "build_lib_post:smd"; "install_lib"; "install_lib=lib";
                   "install_lib_post:sip"; "fetch_lib"; "probe_lib";
-                  (* the off-tree binding-source fetch (2026-08-19): the
-                     column appears now that zarith declares its binding's
-                     repo as [Binding_source ocaml], and the order key puts
-                     it at the FRONT of the ocaml block *)
+                  (* the off-tree binding-source fetch (zarith declares
+                     its binding's repo as [Binding_source ocaml]) leads
+                     the ocaml block *)
                   "fetch_binding_source_ocaml";
-                  (* OCAML CSTUBS GAINED THREE COLUMNS on 2026-09-15 —
-                     dp, rve, smr. They were absent because a [.a]
-                     archive records no NEEDED and no symbol versions,
-                     which is true of the archive and the wrong
-                     artifact to have been asking about: the consumer
-                     that runs is the executable the probe links, and
-                     it records both. The two language blocks now
-                     differ only in [sa], because cstubs spells its
-                     boundary as [external] declarations a scanner can
-                     read and a cext does not. *)
+                  (* cstubs has dp, rve and smr because they read the
+                     executable the probe links, which records NEEDED
+                     and symbol versions; the [.a] archive records
+                     neither *)
                   "build_binding_ocaml_pre:dp"; "build_binding_ocaml_pre:rse";
                   "build_binding_ocaml_pre:rve"; "build_binding_ocaml_pre:sa";
                   "build_binding_ocaml_pre:smr";
                   "build_binding_ocaml"; "build_binding_ocaml=ocaml";
-                  (* gate_admits_the_world (2026-09-27): a requirement
-                     the install depends on, so it reads in front of the
-                     fetch. OCaml only — pip defines no bridge, so the
-                     python block has no such column *)
+                  (* gate_admits_the_world: a requirement the install
+                     depends on, so it reads in front of the fetch. OCaml
+                     only: pip defines no bridge *)
                   "fetch_binding_ocaml_pre:gatw";
                   "fetch_binding_ocaml"; "fetch_binding_ocaml=ocaml";
                   "pack_binding_ocaml"; "probe_binding_ocaml_pre:anp";
@@ -1825,45 +1585,33 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                   "probe_binding_ocaml_pre:rve";
                   "probe_binding_ocaml_pre:sa";
                   "probe_binding_ocaml_pre:smr"; "probe_binding_ocaml";
-                  (* NOT build_app_ocaml_pre: no registry project
-                     declares [build_app], so [api_names_present]'s
-                     first candidate is absent from every chain and it
-                     falls through to the probe — which is the
-                     candidate list doing its job. *)
-                  (* no [_post] column on any binding: all three
-                     claims that slot there — behavior_matches and the
-                     repacking pair — are planned, and a column of
-                     dots forever is worse than no column *)
+                  (* no build_app_ocaml_pre: no registry project declares
+                     [build_app], so [api_names_present] falls through to
+                     its next candidate, the probe *)
+                  (* no post-check column on any binding: the three
+                     claims that slot there (behavior_matches and the
+                     repacking pair) are planned, and a planned claim
+                     gets no column *)
                   "probe_app_ocaml";
-                  (* fetch_binding_python appeared 2026-09-12 when sqlite
-                     declared a DUMMY install for CPython's stdlib
-                     sqlite3 — the step that stands for a binding the
-                     interpreter already provides, so the derivation has
-                     somewhere to look for its surface inspection. The
-                     order key puts it in the python block beside its
-                     OCaml twin. *)
-                  (* no [sa] in the PYTHON block: signatures_agree
-                     reports that no signature extractor exists for a
-                     language other than OCaml's stub surface, which is
-                     a canary gap worth naming — see landing.md's
-                     order. It is stated once by
-                     `checks <p> --observed`, not as a column of
-                     permanent dots. *)
+                  (* no [sa] in the python block: a cext has no
+                     [external] declarations to scan and no other
+                     signature extractor exists; `checks <p> --observed`
+                     states the gap once *)
                   "build_binding_python_pre:dp";
                   "build_binding_python_pre:rse";
                   "build_binding_python_pre:rve";
                   "build_binding_python_pre:smr"; "build_binding_python";
+                  (* fetch_binding_python is sqlite's dummy install for
+                     CPython's stdlib sqlite3, which gives the derivation
+                     somewhere to look for its surface inspection *)
                   "build_binding_python=py"; "fetch_binding_python";
                   "fetch_binding_python=py"; "probe_binding_python_pre:anp";
                   "probe_binding_python_pre:dp";
                   "probe_binding_python_pre:rse";
                   "probe_binding_python_pre:rve";
                   "probe_binding_python_pre:smr"; "probe_binding_python" ])
-        (* the OFF-TREE binding-source slot (2026-08-18, user): the
-           order key places fetch_binding_source at the FRONT of its
-           language's block — the column appears once a project wires
-           the fetch (the zarith migration is the natural first
-           consumer) *)
+        (* the order key places fetch_binding_source at the front of its
+           language's block, after the lib group *)
         && Canary_matrix.compare_column
              (Canary_basic.Fetch
                 (Canary_basic.Binding_source Canary_lang.OCaml))

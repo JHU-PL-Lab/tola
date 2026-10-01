@@ -8,16 +8,12 @@ let base_tests : Canary_project_test.pure_test list =
   Canary_test_projects.tests @ Canary_test_overview.tests @ Canary_test_record.tests
   @ Canary_test_pipeline.tests @ Canary_test_env.tests
 
-(* THE LAYOUT KEEPS ITS RULES (2026-09-27, user: "a collection of my human
-   words or learned rules … so that if we switch to another GUI framework
-   e.g. mermaid, we are still aware of the rules on how to migrate them").
-   [Canary_overview_looks.layout_rules] states each rule in words, with
-   why and whose it is. This holds the drawing to it: every rule checked
+(* The drawing keeps the layout's rules. [Canary_overview_looks.layout_rules]
+   states each rule in words, with why and whose it is; every rule checked
    over places holds over this layout's, and every rule checked by a pin
-   names a pin that exists — so the list cannot point at a check that
-   was renamed away. Defined after [base_tests] for that reason. A
-   future drawing can be held to the same places-rules by handing them
-   its own positions ([layout_view]). *)
+   names a pin that exists, so the list cannot point at a renamed check.
+   Defined after [base_tests] for that reason. Another drawing is held to
+   the same rules by handing them its own positions ([layout_view]). *)
 let layout_rules_pin : Canary_project_test.pure_test =
   { name = "overview.layout_rules_hold";
     check =
@@ -39,11 +35,10 @@ let layout_rules_pin : Canary_project_test.pure_test =
              ~substring:{|id="jrules"|})
   }
 
-(* EVERY PIN WRITTEN RUNS. A pin left out of its subject's [tests]
-   compiles and never runs, which reads as coverage. Every pin record in
-   the test sources whose name is a literal is registered; both ways of
-   opening such a record are found somewhere, so the scan cannot pass by
-   finding nothing. *)
+(* Every pin written runs: every pin record in the test sources whose
+   name is a literal is registered, since a pin left out of its subject's
+   [tests] compiles and never runs. Both ways of opening such a record
+   must be found somewhere, so the scan cannot pass by finding nothing. *)
 let written_pins_run_pin : Canary_project_test.pure_test =
   { name = "tests.every_written_pin_runs";
     check =

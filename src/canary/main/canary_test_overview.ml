@@ -4,17 +4,11 @@
 open Base
 open Canary_test_fixtures
 
-(* THE FIVE JOINS STAY FIVE (2026-09-22). [Canary_topology]'s first cut
-   had one value — an empty bridge list — standing for four different
-   situations, and the terminal view made all four read as "no bridge".
-   This pin holds the distinction that fixed it, because the collapse is
-   invisible in the output once it happens: an unreachable declaration
-   and a deliberate absence render identically unless something asserts
-   they do not.
-
-   Each clause names a project that is the SPECIMEN of its constructor,
-   so a project changing its declaration fails here rather than quietly
-   moving rows. *)
+(* [Canary_topology.join_of] keeps its joins distinct. Collapsed, an
+   unreachable declaration and a deliberate absence would render alike,
+   so each clause names the project that is the specimen of its
+   constructor, and a project changing its declaration fails here rather
+   than quietly moving rows. *)
 let topology_joins_pin : Canary_project_test.pure_test =
   { name = "topology.joins_are_distinguished";
     check =
@@ -40,24 +34,18 @@ let topology_joins_pin : Canary_project_test.pure_test =
         in
         (* zarith declares conf-gmp and routes it *)
         is_bridged (join "zarith" Canary_lang.OCaml)
-        (* z3's opam package builds libz3 — the bridge is absorbed, not
-           absent, and the native side is therefore opam's own *)
+        (* z3's opam package builds libz3: the bridge is absorbed, not
+           absent *)
         && is_absorbed (join "z3" Canary_lang.OCaml)
         && is_absorbed (join "z3" Canary_lang.Python)
-        (* sqlite's Python side is CPython's stdlib: a declaration EXISTS
-           and states that no package manager is in between. This is the
-           clause that fails if the two [None]s are conflated again *)
+        (* sqlite's Python side is CPython's stdlib: a declaration exists
+           and says no package manager is in between *)
         && is_no_pm (join "sqlite" Canary_lang.Python)
         (* ...while sqlite's OCaml side does declare a conf package *)
         && is_bridged (join "sqlite" Canary_lang.OCaml)
-        (* ⚠ project/issues.md §2's GATE half, closed DELIBERATELY on
-           2026-09-24 (user: every package canary runs carries a
-           cooperation, knowable before any run). These four declare their
-           gate on the template's record and leave pr_binding_decls empty;
-           the template now routes the gate alone ([pr_pm_gates]), so they
-           are bridged — conf-cairo, conf-libffi, conf-zlib, conf-zstd. A
-           project that routes nothing is still Undeclared, which keeps
-           that constructor honest now no registry project exhibits it *)
+        (* these four leave pr_binding_decls empty and are bridged by the
+           gate the template routes ([pr_pm_gates]); no registry project
+           is Undeclared, so an un-routed copy of cairo exercises it *)
         && List.for_all
              [ "cairo"; "libffi"; "zlib"; "zstd" ]
              ~f:(fun p -> is_bridged (join p Canary_lang.OCaml))
@@ -83,20 +71,11 @@ let topology_joins_pin : Canary_project_test.pure_test =
         && List.length absorbed = 3)
   }
 
-(* THE LAYERED GRAPH DOES NOT DRIFT FROM THE REGISTRY (2026-09-22).
-   [Canary_topology.claim_sites] is hand-written — it says which edge each
-   claim sits on — and the page draws a badge per claim site. Two ways it
-   rots silently: a renamed agreement leaves a claim site pointing at
-   nothing, and a renamed edge leaves one pointing nowhere. Neither is
-   visible on the page, which would carry on drawing a count.
-
-   It also holds the ACTION coverage, because the point of the diagram is
-   that it has every step: an action in the graph with no edge naming it
-   is a hole in the model. (Until 2026-09-23 this sentence was all it
-   did: the body checked claims, edges and nodes, and nothing about
-   actions, because an edge's action was a string. It is typed now — an
-   action FAMILY, a claim, or information — and the clauses at the end
-   hold the coverage for real.) *)
+(* The layered graph agrees with the registry and the action catalogue.
+   [Canary_topology.claim_sites] is hand-written, and a renamed agreement
+   or edge would leave a claim site pointing at nothing while the page
+   carried on drawing a count. An action with no edge is a hole in the
+   model, so those actions are listed. *)
 let topology_graph_pin : Canary_project_test.pure_test =
   { name = "topology.graph_matches_the_registry";
     check =
@@ -116,18 +95,15 @@ let topology_graph_pin : Canary_project_test.pure_test =
         && List.for_all T.edges ~f:(fun e ->
                List.for_all (e.T.eg_to :: e.T.eg_from) ~f:(fun n ->
                    Option.is_some (T.node_by_id n)))
-        (* the multi-edge structure is EXERCISED, not merely available:
-           the declaration-facing lib claims sit on both producers of the
-           library node, which is what stopped `realize_sys` reading as
-           an edge nothing checks *)
+        (* the multi-edge structure is in use: the declaration-facing lib
+           claims sit on both producers of the library node *)
         && List.exists T.claim_sites ~f:(fun p -> List.length p.T.cs_edges > 1)
-        (* the bare-relation census excludes observations, so probe_lib —
-           which records evidence rather than relating two parties — does
-           not inflate it *)
+        (* the bare-relation census excludes observations such as
+           probe_lib, which records evidence rather than relating two
+           parties *)
         && List.for_all (T.bare_edges ()) ~f:(fun e -> not e.T.eg_observation)
-        (* EACH ANNOTATION IS WELL-FORMED (2026-09-23): an action family
-           the catalogue actually runs, a claim the registry or the
-           candidate list knows *)
+        (* each annotation is well formed: an action family the catalogue
+           runs, a claim the registry or the candidate list knows *)
         && List.for_all T.edges ~f:(fun e ->
                match e.T.eg_annotation with
                | T.Action f ->
@@ -135,17 +111,15 @@ let topology_graph_pin : Canary_project_test.pure_test =
                      ~equal:Canary_action_family.equal
                | T.Agreement slug -> List.mem known slug ~equal:String.equal
                | T.Info s -> not (String.is_empty s))
-        (* and all three kinds are in use — the user's point was that an
-           edge may carry any of them, so a graph that stopped using one
-           would quietly be the old action-or-nothing shape again *)
+        (* and all three kinds are in use *)
         && List.exists T.edges ~f:(fun e ->
                match e.T.eg_annotation with T.Action _ -> true | _ -> false)
         && List.exists T.edges ~f:(fun e ->
                match e.T.eg_annotation with T.Agreement _ -> true | _ -> false)
         && List.exists T.edges ~f:(fun e ->
                match e.T.eg_annotation with T.Info _ -> true | _ -> false)
-        (* A FAMILY IS ITS ACTIONS' NAME WITH THE LANGUAGE DROPPED — one
-           spelling, checked over the whole catalogue *)
+        (* a family is its actions' name with the language dropped, over
+           the whole catalogue *)
         && List.for_all
              (Canary_basic.store_actions ~langs:Canary_lang.[ OCaml; Python ])
              ~f:(fun a ->
@@ -157,10 +131,8 @@ let topology_graph_pin : Canary_project_test.pure_test =
                || List.exists Canary_lang.[ OCaml; Python ] ~f:(fun l ->
                       String.equal name
                         (fam ^ "_" ^ Canary_lang.string_of_lang l)))
-        (* THE ACTIONS WITH NO EDGE, LISTED (status.md §2.6 step 1). The
-           page computes this list; pinning its value makes a change to it
-           a decision — an edge added for a source fetch, or an action
-           the catalogue grows — rather than a silent re-render *)
+        (* the action families with no edge, listed, so a change to this
+           list is a decision rather than a silent re-render *)
         && List.equal String.equal
              (List.map (T.families_without_edge ())
                 ~f:Canary_action_family.to_string)
@@ -169,44 +141,20 @@ let topology_graph_pin : Canary_project_test.pure_test =
                "pack_lib"; "pack_app" ])
   }
 
-(* EVERY STEP HAS A PLACE ON THE GRAPH, OR A LISTED REASON (2026-09-23,
-   status.md §2.7 phase B2). The join from recorded steps onto the
-   overview's edges, checked over every world of every active project as
-   the RUNNER derives it — no log is read, so this holds on a checkout that
-   has never run anything:
-
-   - no step falls through the rule ([Unexpected]);
-   - an edge a step realizes exists, and an inspection is evidence for a
-     step of its own world that performs the same action;
-   - the steps the page cannot place are LISTED, as (action family,
-     reason) — each is a page error or a model gap, so a new one must
-     fail here rather than render as a quiet grey;
-   - so are the bindings INCLUDED WITH THEIR LANGUAGE, whose dummy fetch
-     marks the relations the language's own build and install made
-     (2026-09-29): sqlite's Python binding, the one case, which until
-     then was the listed gap [fetch_binding dummy];
-   - every action edge on the page is realized by some world, so the
-     page draws nothing canary never does.
-
-   ⚠ One listed gap is a DECLARATION bug, not a model gap: the
-   opam-binding template's vendored-library world keeps its lib probe at
-   [Pm (Sys_pm _)] while the command probes the prebuilt copy (cairo,
-   libffi, zlib, zstd), so those four read as observing an unused system
-   copy. [Canary_store.location] has no constructor for a supplied copy;
-   the fix is a decision (status.md §2.7). When it lands, the
-   [unused_system_copy] entry stays — sqlite's [probe_lib_apt] is the
-   legitimate case — and this comment goes. *)
+(* Every step has a place on the graph or a listed reason, over every
+   world of every active project as the runner derives it, so no log is
+   read. The steps the page cannot place, and the bindings included with
+   their language, are listed: a new one fails here rather than rendering
+   as a quiet grey. Every action edge is realized by some world. *)
 let every_step_placed_pin : Canary_project_test.pure_test =
   { name = "topology.every_step_has_a_place";
     check =
       (fun () ->
         let module T = Canary_topology in
         let module SM = Canary_step_model in
-        (* THE WITHHELD [depends] NEEDS A PROJECT WITH NO KNOWN GATE, and
-           since 2026-09-24 no active project is one — the template routes
-           its four projects' gates. An un-routed copy of cairo keeps that
-           branch exercised; its gaps are cairo's, so the listed set does
-           not move *)
+        (* the withheld [depends] needs a project with no known gate, and
+           no active project is one: an un-routed copy of cairo exercises
+           it, and its gaps are cairo's, so the listed set does not move *)
         let ungated =
           List.filter_map Canary_registry.all_projects ~f:(fun (name, pr) ->
               if String.equal name "cairo" then
@@ -244,7 +192,7 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                   match p with
                   | T.On ids -> (not (List.is_empty ids)) && List.for_all ids ~f:edge_exists
                   (* a placeholder marks edges that exist, and only a step
-                     that IS a placeholder is placed this way *)
+                     that is a placeholder is placed this way *)
                   | T.Placeholder_for ids ->
                       Option.is_some s.SM.placeholder
                       && (not (List.is_empty ids))
@@ -270,8 +218,8 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                   | T.Unplaced (T.Unexpected _) -> false
                   | T.Unplaced _ -> true))
         in
-        (* THE LISTED GAPS — by action family, so a second language does
-           not add a row *)
+        (* the listed gaps, by action family, so a second language adds
+           no row *)
         let gaps =
           List.filter_map all ~f:(fun (s, p) ->
               match p with
@@ -279,6 +227,12 @@ let every_step_placed_pin : Canary_project_test.pure_test =
               | T.On _ | T.Evidence_for _ | T.Placeholder_for _ | T.Included_for _ -> None)
           |> List.dedup_and_sort ~compare:String.compare
         in
+        (* [probe_lib unused_system_copy] is sqlite's [probe_lib_apt], and
+           also a declaration bug: the opam-binding template's
+           vendored-library world (cairo, libffi, zlib, zstd) keeps its lib
+           probe at [Pm (Sys_pm _)] while the command probes the prebuilt
+           copy; [Canary_store.location] has no constructor for a supplied
+           copy *)
         let listed =
           [ "configure no_edge";
             "fetch_binding_source no_edge"; "fetch_lib lib_from_language_pm";
@@ -286,7 +240,7 @@ let every_step_placed_pin : Canary_project_test.pure_test =
             "probe_lib staged_copy"; "probe_lib unused_system_copy";
             "scan_sources no_edge" ]
         in
-        (* every ACTION edge is realized somewhere *)
+        (* every action edge is realized somewhere *)
         let realized =
           List.concat_map all ~f:(fun (_, p) ->
               match p with
@@ -299,8 +253,6 @@ let every_step_placed_pin : Canary_project_test.pure_test =
               | T.Action _ -> List.mem realized e.T.eg_id ~equal:String.equal
               | T.Agreement _ | T.Info _ -> true)
         in
-        (* and the narrowings are EXERCISED, not merely written: both
-           consumer programs, and [depends] both present and withheld *)
         let fetch_binding_places =
           List.filter_map all ~f:(fun ((s : SM.step), p) ->
               match (s.SM.action, s.SM.bridge, p) with
@@ -308,20 +260,14 @@ let every_step_placed_pin : Canary_project_test.pure_test =
                   Some ids
               | _ -> None)
         in
-        (* THE BRIDGE'S CHECK IS ITS OWN STEP'S (status.md §2.7 E): a step
-           driving a bridge sits on [conf_probe] and nothing else, and no
-           install does — opam dispatches the check only when it installs
-           the bridge, so an install's state says nothing about it *)
         let bridge_places =
           List.filter_map all ~f:(fun ((s : SM.step), p) ->
               match (s.SM.bridge, p) with Some _, p -> Some p | None, _ -> None)
         in
-        (* THE BINDINGS INCLUDED WITH THEIR LANGUAGE, by project and
+        (* the bindings included with their language, by project and
            action family, with the relations each stands on: sqlite's
            CPython stdlib binding, whose chain (a C extension) has no stub
-           build of its own. A second case is added here deliberately
-           (user, 2026-09-29: "we can visit it later when similar cases
-           appear") *)
+           build of its own. A second case is added deliberately *)
         let included =
           List.concat_map placed ~f:(fun (name, _, places) ->
               List.filter_map places ~f:(fun ((s : SM.step), p) ->
@@ -335,12 +281,17 @@ let every_step_placed_pin : Canary_project_test.pure_test =
              [ ("sqlite fetch_binding", [ "install_lang"; "install_surf"; "link_mod" ]) ]
         && List.equal String.equal gaps listed
         && action_edges_realized
+        (* the narrowings are exercised: both consumer programs, and
+           [depends] both present and withheld *)
         && List.mem realized "run" ~equal:String.equal
         && List.mem realized "run_packaged" ~equal:String.equal
         && List.exists fetch_binding_places ~f:(fun ids ->
                List.mem ids "depends" ~equal:String.equal)
         && List.exists fetch_binding_places ~f:(fun ids ->
                not (List.mem ids "depends" ~equal:String.equal))
+        (* a bridge's check is its own step's: a step driving a bridge sits
+           on [conf_probe] and nothing else, and no install does, since
+           opam dispatches the check only when it installs the bridge *)
         && List.for_all fetch_binding_places ~f:(fun ids ->
                not (List.mem ids "conf_probe" ~equal:String.equal))
         && (not (List.is_empty bridge_places))
@@ -349,25 +300,12 @@ let every_step_placed_pin : Canary_project_test.pure_test =
              | _ -> false))
   }
 
-(* THE COLUMN MODEL IS THE CONFIRMED LAYOUT (2026-09-28, user: "A and the
-   rest looks good", design/overview.md §6.4). [Canary_frames] derives the
-   result table's and the agreement overview's shared header from the
-   overview's graph and the registry; this holds the derivation to the
-   layout the user confirmed, line by line, and to the properties that
-   make it the diagram's:
-
-   - every action edge of the graph is in exactly one piece of one frame;
-   - no node repeats within a frame (it repeats ACROSS frames, where it is
-     consumed again — that is the point);
-   - every agreement with an evaluator has a check column at each of its
-     site edges, in the frame of that edge, and no other check columns.
-
-   Four places the derivation differs from the prototype as shown, each
-   because the diagram says so: the capability file is not in the fetch's
-   frame (the packager ships it — someone else's relation, not a piece of
-   ours); the headers built from source are their own frame
-   (build_headers is its own action); checks sit in code order; and the
-   two probes carry their consumer programs as products. *)
+(* [Canary_frames] derives the confirmed layout, line by line: the header
+   the result table and the agreement overview share. Every action edge
+   is in exactly one piece of one frame; no node repeats within a frame
+   (it repeats across frames, where it is consumed again); and every
+   agreement with an evaluator has a check column at each of its site
+   edges, in that edge's frame, and no other. See design/overview.md §6.4. *)
 let frames_pin : Canary_project_test.pure_test =
   { name = "frames.derive_the_confirmed_layout";
     check =
@@ -442,18 +380,12 @@ let frames_pin : Canary_project_test.pure_test =
         lines_ok && edges_once && nodes_once && in_own_frame && every_site)
   }
 
-(* ONE READER PER INSPECTION (2026-09-28, design/overview.md §6.4 step 2).
-   The result table's artifact cells and the overview's node names parsed
-   the same inspection files in two modules, and agreed only because each
-   was written carefully. [Canary_matrix.reading_of_inspection] reads an
-   inspection once; the table's cell, the diagram's name and the result
-   table's count are renderings of that reading. Held two ways:
-
-   - [Canary_overview_runs] dispatches on no artifact kind of its own —
-     its code names none of them, only the bridge record's, which
-     describes packages rather than an artifact;
-   - on fixtures, each kind's reading renders the cell, the name and the
-     count the pages have always shown. *)
+(* [Canary_matrix.reading_of_inspection] is the one reader of an
+   inspection: the table's cell, the diagram's name and the count render
+   its reading. [Canary_overview_runs] names no artifact kind of its own
+   (only the bridge record's, which describes packages), and on fixtures
+   each kind renders its cell, name and count. See design/overview.md
+   §6.4. *)
 let one_reader_pin : Canary_project_test.pure_test =
   { name = "overview.one_reader_per_inspection";
     check =
@@ -501,10 +433,9 @@ let one_reader_pin : Canary_project_test.pure_test =
         && Poly.equal (node ~location:Canary_store.Staged ()) (Some "staged_sys"))
   }
 
-(* THE PAGE IS A TEMPLATE (2026-09-29): its prose is
-   [canary/overview/page.html], whose [{{slot}}]s [render] fills. A slot
-   with no value, a value with no slot, or an unclosed slot fails the
-   fill. *)
+(* The page is a template: its prose is [canary/overview/page.html], whose
+   [{{slot}}]s [render] fills. A slot with no value, a value with no slot,
+   or an unclosed slot fails the fill. *)
 let template_pin : Canary_project_test.pure_test =
   { name = "overview.template_slots_are_filled";
     check =
@@ -523,26 +454,9 @@ let template_pin : Canary_project_test.pure_test =
         && String.is_prefix page ~prefix:"<!DOCTYPE html>")
   }
 
-(* THE RESULT TABLE IS THE COLUMN MODEL (2026-09-28; its cells computed in
-   OCaml since 2026-09-30). A row's cells are computed when its machine
-   writes its runs file and filed by column; §1.2's script lays them out
-   and computes nothing. Held:
-
-   - one key per [Canary_frames] column, in order, each unique; the page
-     carries the header and the keys, the frames in order;
-   - §1.2 is there, its script runs after the runs files load, lays rows
-     out by key, and holds no mark or rule; the links run both ways — a
-     row's name draws its chain in §1 ([window.canaryDraw]), a drawn run
-     links back to its row;
-   - every recorded row has a cell for every column, and only those;
-   - every view's check outcome is the worst the world's log recorded for
-     that claim in that language, or [n/a] where the chain's mechanism
-     cannot carry it;
-   - NO LOGGED VERDICT IS LEFT OUT: every outcome the log holds for a
-     checked claim in a view's language is in that view. This is the
-     reason the table reads the site and not the slot — zarith's
-     fetched-library worlds decide the library's declaration checks at
-     probe_lib and have no build_lib slot to show them in. *)
+(* The result table is the column model: a row's cells are computed when
+   its machine writes its runs file and filed by column, and §1.2's script
+   lays them out and computes nothing. *)
 let results_table_pin : Canary_project_test.pure_test =
   { name = "overview.results_table_is_the_column_model";
     check =
@@ -582,8 +496,9 @@ let results_table_pin : Canary_project_test.pure_test =
               let ps = List.filter_map at ~f:Fn.id in
               List.for_all2_exn (List.drop_last_exn ps) (List.tl_exn ps) ~f:(fun a b -> a < b))
         in
-        (* the script lays rows out by key after the runs files load, and
-           computes nothing *)
+        (* §1.2's script lays rows out by key after the runs files load,
+           and computes nothing; a row's name draws its chain in §1
+           ([window.canaryDraw]) and a drawn run links back to its row *)
         let script = Canary_overview_assets.read "results.js" in
         let section_ok =
           String.is_substring page ~substring:{|<h3 id="results">1.2 |}
@@ -611,6 +526,9 @@ let results_table_pin : Canary_project_test.pure_test =
         let checked slug =
           List.exists Fr.checked_rows ~f:(fun r -> String.equal r.Canary_agreement.ag_slug slug)
         in
+        (* a view's check outcome is the worst its world's log recorded for
+           that claim in that language, or [n/a] where the chain's
+           mechanism cannot carry it *)
         let outcomes_ok =
           List.for_all views ~f:(fun v ->
               match row_of v with
@@ -626,6 +544,10 @@ let results_table_pin : Canary_project_test.pure_test =
                       List.mem logged o ~equal:String.equal
                       && List.for_all logged ~f:(fun x -> M.outcome_rank x <= M.outcome_rank o)))
         in
+        (* no logged verdict is left out: the table reads the site, not the
+           slot, because zarith's fetched-library worlds decide the
+           library's declaration checks at probe_lib and have no build_lib
+           slot to show them in *)
         let none_left_out =
           List.for_all views ~f:(fun v ->
               match row_of v with
@@ -645,33 +567,12 @@ let results_table_pin : Canary_project_test.pure_test =
         model_ok && section_ok && outcomes_ok && none_left_out && rows_ok)
   }
 
-(* A RECORDED RUN IS AN OVERLAY ON THE TEMPLATE (2026-09-23, status.md
-   §2.7 phase C). The overview draws a recorded world by applying words —
-   a state per edge, an outcome per badge, a sublabel per node — computed
-   here and shipped in a per-machine file beside the page. This pins the
-   seam the plan names ("every edge id the overlay names exists in the
-   template") and everything the script trusts:
-
-   - the file is the script's shape: the push prefix, then JSON;
-   - every view names EVERY template edge and nothing else, each with a
-     known word, and only template nodes; a badge only where the graph
-     places a claim; an unplaced step only if the world has it;
-   - each hand-drawn case with a counterpart resolves to a view of that
-     project in that language;
-   - the drawn facts are the ones the cases are about — the conf world's
-     consumer is the package-linked one, torch's world has no system
-     side, the built world builds its library and still resolves the
-     bridge, and sqlite's PYTHON view is not painted by its OCaml fetch
-     but reads its stdlib binding's relations as [included];
-   - EVERY VIEW NAMES THE PACKAGE IT REALIZES — one of §1's packages in
-     canary — which is how choosing a package finds its recorded worlds
-     since §2.1 went into §1 (2026-09-24);
-   - §1's panel carries the template (a [data-edge] per edge and a
-     [data-node] per node), a placeholder slot on every edge, the
-     recorded-world selector and the run's key; the page loads a script
-     tag per machine's file BEFORE the script that draws from it, and
-     holds no run state of its own;
-   - a [--platform] render writes outside [docs/]. *)
+(* A recorded run is an overlay on the template: a word per edge, badge
+   and node, computed here and shipped in a per-machine runs file beside
+   the page. Everything the page's script trusts is held: the file's shape,
+   every view naming exactly the template's edges and only its nodes, each
+   hand-drawn case with a counterpart resolving to a view that shows the
+   facts it is about, and the page holding no run state of its own. *)
 let overview_overlay_pin : Canary_project_test.pure_test =
   { name = "overview.recorded_runs_are_an_overlay";
     check =
@@ -679,8 +580,7 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         let module M = Canary_matrix in
         let module T = Canary_topology in
         let module R = Canary_overview_runs in
-        (* the JSON readers [Record_fixture] also has — that module is
-           defined further down this file, after the record pins *)
+        (* the JSON readers [Record_fixture] also has *)
         let module F = struct
           let field j k =
             match j with
@@ -721,7 +621,8 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         in
         (* each hand-drawn case's recorded world, by view id *)
         let cases = R.case_views (R.views m) in
-        (* every view names one of §1's packages *)
+        (* every view names the package it realizes, one of §1's, which is
+           how choosing a package finds its recorded worlds *)
         let packages =
           List.map (Canary_overview_join.of_projects Canary_registry.all_specs).Canary_overview_join.jn_cases
             ~f:(fun c -> c.Canary_overview_join.cs_id)
@@ -758,9 +659,9 @@ let overview_overlay_pin : Canary_project_test.pure_test =
                         Option.is_some (T.node_by_id n))
                  && List.for_all (assoc_keys v "badges") ~f:(fun e ->
                         not (List.is_empty (T.claim_sites_on e)))
-                 (* an OBSERVATION is about a template edge, and an edge
+                 (* an observation is about a template edge, and an edge
                     reads [observed] only where it is someone else's rule
-                    AND the view recorded something there (phase E) *)
+                    and the view recorded something there *)
                  && List.for_all (assoc_keys v "observed") ~f:(fun e ->
                         List.mem edge_ids e ~equal:String.equal)
                  && List.for_all edges ~f:(fun (id, w) ->
@@ -775,7 +676,7 @@ let overview_overlay_pin : Canary_project_test.pure_test =
                                    | T.Action _ | T.Agreement _ -> false)
                         (* [inside] only on an action edge a placeholder
                            stands for: a package manager established it,
-                           unseen (2026-09-23) *)
+                           unseen *)
                         | `String "inside" ->
                             List.mem (assoc_keys v "placeholders") id ~equal:String.equal
                             && List.exists T.edges ~f:(fun e ->
@@ -836,14 +737,19 @@ let overview_overlay_pin : Canary_project_test.pure_test =
           | Some w -> not (List.mem [ "absent"; "not_ours"; "claim" ] w ~equal:String.equal)
           | None -> false
         in
+        (* the facts the cases are about: the conf world's consumer is the
+           package-linked one, torch's unified world has no system side,
+           the built world builds its library and still resolves the
+           bridge, and sqlite's Python view is not painted by its OCaml
+           fetch *)
         let facts_ok =
           drawn "conf" "run_packaged" && is "conf" "run" "absent"
-          (* the conf world drives its bridge, so its check is DRAWN — a
+          (* the conf world drives its bridge, so its check is drawn: a
              step realizes it whether or not that step has run yet *)
           && drawn "conf" "conf_probe"
-          (* and the conf world FETCHES its binding, so opam compiled the
-             stub and linked the module inside its install: those relations
-             happened, unseen — placeholders, not absences *)
+          (* and the conf world fetches its binding, so opam compiled the
+             stub and linked the module inside its install: placeholders,
+             not absences *)
           && is "conf" "build_stub" "inside" && is "conf" "link_mod" "inside"
           && List.for_all T.edges ~f:(fun e ->
                  match e.T.eg_annotation with
@@ -886,50 +792,31 @@ let overview_overlay_pin : Canary_project_test.pure_test =
           && List.for_all T.nodes ~f:(fun n ->
                  String.is_substring section
                    ~substring:(Printf.sprintf {|data-node="%s"|} n.T.nd_id))
-          (* the recorded run's controls and key live in §1's panel now *)
+          (* the recorded run's controls and key are in §1's panel *)
           && List.for_all [ {|id="jworld"|}; {|id="jrec"|}; {|id="jnorec"|}; {|class="key reckey"|} ]
                ~f:(fun s -> String.is_substring section ~substring:s)
+          (* each machine's runs file loads before the script that draws
+             from it *)
           && List.for_all R.all_file_names ~f:(fun f ->
                  before (Printf.sprintf {|<script src="%s">|} f) "THE CHAIN, CHOSEN")
           (* no run state in the page: the views live only in the file *)
           && not (String.is_substring page ~substring:"CANARY_RUNS.push")
-          (* a placeholder slot on the template, hidden by CLASS — SVG does
-             not honour the [hidden] attribute, and the first cut drew a
-             marker on every edge *)
+          (* a placeholder slot on every edge, hidden by class: SVG does
+             not honour the [hidden] attribute *)
           && List.length (String.substr_index_all section ~may_overlap:false ~pattern:{|class="phm"|})
              >= List.length edge_ids
           && String.is_substring page ~substring:".phm{display:none}"
           && not (String.is_substring section ~substring:{|class="phm" hidden|})
         in
         file_ok && views_ok && views_name_packages && cases_ok && facts_ok && page_ok
+        (* a [--platform] render writes outside [docs/] *)
         && String.is_prefix (R.target ~hypothetical:true) ~prefix:"_out/"
         && String.is_prefix (R.target ~hypothetical:false) ~prefix:"docs/canary/")
   }
 
-(* A RECORDED WORLD IS NAMED, AND SET BESIDE ITS CASE (2026-09-23,
-   status.md §2.7 phase D). Each view names the nodes of its world — from
-   what the run recorded, else from what the project declares — and the
-   page sets those names beside the hand-drawn case's. The plan's method
-   is to keep the hand-written version as the check until the derivation
-   agrees with it, so this pins:
-
-   - every name is on a template node, non-empty, and says where it came
-     from; every dimmed node is a template node;
-   - what a case HIDES, its recorded counterpart dims, and what a case
-     GREYS, its counterpart does not realize — the shape agrees;
-   - THE AGREEMENTS, as a ratchet: the (case, node) pairs where the
-     derived name equals the hand-drawn one today. Each is a place the
-     derivation reproduces the drawing; a pair may be added when a
-     drawing is corrected or a derivation improves, and must not quietly
-     fall out. The system package names are the Linux ones in the
-     drawings, so those two pairs are held only on Linux.
-
-   Every pinned value reads the same on a checkout that has never run:
-   where a name is recorded, its declared fallback is the same string. *)
-
-(* the hand-drawn cases — no longer drawn on the page (2026-09-24), kept
-   in the page module as the oracle these pins hold the derivations to —
-   in the shape the pins read *)
+(* the hand-drawn cases, [Canary_overview_cases.hand_cases], which the
+   page does not draw: the oracle these pins hold the derivations to, in
+   the shape the pins read *)
 let hand_cases_json () : Yojson.Basic.t =
   let strs l = `List (List.map l ~f:(fun s -> `String s)) in
   `Assoc
@@ -943,6 +830,12 @@ let hand_cases_json () : Yojson.Basic.t =
                ("hidden", strs c.Canary_overview_cases.ca_hidden);
                ("dead", strs c.Canary_overview_cases.ca_dead) ] )))
 
+(* A recorded view names the nodes of its world, from what the run
+   recorded or else what the project declares, and keeps the shape of its
+   hand-drawn case: what the case hides, the view dims; what the case
+   greys, the view does not realize. Each pinned name reads the same on a
+   checkout that has never run: its declared fallback is the recorded
+   string. *)
 let recorded_names_pin : Canary_project_test.pure_test =
   { name = "overview.recorded_views_are_named";
     check =
@@ -965,7 +858,7 @@ let recorded_names_pin : Canary_project_test.pure_test =
                   && List.mem [ "recorded"; "declared" ] from ~equal:String.equal)
               && List.for_all v.R.vw_dim ~f:(List.mem node_ids ~equal:String.equal))
         in
-        (* the hand-drawn cases — the oracle, no longer drawn *)
+        (* the hand-drawn cases: the oracle *)
         let hand = Some (hand_cases_json ()) in
         let field j k =
           match j with
@@ -1002,11 +895,10 @@ let recorded_names_pin : Canary_project_test.pure_test =
               | _ -> false)
           | _ -> false
         in
-        (* A DECLARATION NAMES ONLY WHAT THE WORLD USES (2026-09-23, the
-           bypass bug): where a view's binding is not fetched, the upstream
-           gate names no bridge, and the package node is unnamed or the
-           package the world publishes. Exercised, not vacuous: zarith's
-           built world names zarith-no-conf and no bridge. *)
+        (* a declaration names only what the world uses: where a view's
+           binding is not fetched, no bridge is named, and the package node
+           is unnamed or the package the world publishes. Not vacuous:
+           zarith's built world names zarith-no-conf and no bridge *)
         let binding_not_fetched (v : R.view) =
           match
             List.find m.M.rows ~f:(fun (r : M.row) ->
@@ -1044,6 +936,10 @@ let recorded_names_pin : Canary_project_test.pure_test =
                       (List.Assoc.find v.R.vw_names "pkg_lang" ~equal:String.equal)
                       (Some ("zarith-no-conf", "declared")))
         in
+        (* the ratchet: the (case, node) pairs whose derived name equals the
+           drawn one. A pair may be added but must not quietly fall out.
+           The drawings' system names are Linux's, so those pairs are held
+           only on Linux *)
         let on_linux = Poly.equal (Canary_store.platform ()) Canary_store.Wsl in
         let ratchet =
           [ ("conf", [ "bridge"; "hdr_sys"; "lib_sys"; "pm_lang"; "pkg_lang";
@@ -1059,10 +955,10 @@ let recorded_names_pin : Canary_project_test.pure_test =
                List.for_all nodes ~f:(agrees key)))
   }
 
-(* THE WORDS ARE WORST-FIRST (2026-09-23, phase C). When several steps
-   realize one edge, the edge shows the worst; a badge is green only when
-   every claim on its edge holds. Pinned as values, because a reordering
-   would quietly repaint the overlay. *)
+(* The overlay's words rank worst first: an edge several steps realize
+   shows the worst, and a badge holds only when every claim on its edge
+   holds. Pinned as values, because a reordering would quietly repaint the
+   overlay. *)
 let overlay_words_pin : Canary_project_test.pure_test =
   { name = "overview.overlay_words_rank_worst_first";
     check =
@@ -1083,20 +979,11 @@ let overlay_words_pin : Canary_project_test.pure_test =
         && String.equal (R.outcome_word None) "unevaluated")
   }
 
-(* A BRIDGE RECORD IS READ AS WHAT IT SAYS (2026-09-23, status.md §2.7
-   E). The overview turns a bridge step's record into three node names,
-   their sublabels, and one sentence per edge around the bridge — the
-   only evidence canary has about the relations it does not perform. Pinned
-   on a FIXTURE in the record's own shape: the framework test holds the
-   script to writing every field in [Canary_bridge_driver.record_fields],
-   and this holds the reader on a record with exactly those fields, so the
-   two halves meet at one list rather than at a run.
-
-   - the check's three outcomes read as three different sentences, and
-     "not dispatched" never contains "holds";
-   - a binding package whose depends does NOT name the bridge says so;
-   - every node named is a template node and every edge observed a
-     template edge. *)
+(* A bridge step's record is read as what it says: three node names, their
+   sublabels, and one sentence per edge around the bridge. The fixture
+   carries the fields of [Canary_bridge_driver.record_fields], which the
+   framework test holds the script to writing, so writer and reader meet
+   at one list rather than at a run. *)
 let bridge_record_pin : Canary_project_test.pure_test =
   { name = "overview.bridge_record_is_read";
     check =
@@ -1166,24 +1053,12 @@ let bridge_record_pin : Canary_project_test.pure_test =
             | None -> false))
   }
 
-(* A PLACEHOLDER CLAIM IS DRAWN AS ONE (2026-09-23, user: "we can have
-   placeholder registry … and use special node to show not-implemented
-   yet"). The bridge's claims are placeholders in the registry — candidates,
-   named and with no evaluator — on the edges where a bridge states them;
-   and an edge whose claims are ALL placeholders gets a hollow badge, while
-   an edge with an implemented claim keeps the filled one. Held over every
-   edge of the page, so a claim that lands flips its badge and this says
-   so — which it did on 2026-09-27, when [gate_admits_the_world] got an
-   evaluator and [conf_probe] its first filled badge.
-
-   TWO BADGES SINCE 2026-09-24 (user, on the numbers on the edges): a
-   filled one for the agreements canary checks on the relation for the
-   chain drawn, a hollow one for those only named. Held over every edge of
-   the default drawing against the REGISTRY, read here directly rather
-   than through [Canary_topology.implemented]: a filled badge only where
-   an agreement on the edge has an evaluator — the hand-written flag this
-   replaced drew [pack] and [run] filled with none — and a hollow one only
-   where an agreement on it has none. *)
+(* A placeholder claim is drawn as one. An edge with claims has two
+   badges: a filled one, shown only where an agreement on the edge has an
+   evaluator, and a hollow one, shown only where an agreement on it has
+   none. Held over every edge against the registry, read directly rather
+   than through [Canary_topology.implemented], so a claim that lands flips
+   its badge and this says so. *)
 let placeholder_badges_pin : Canary_project_test.pure_test =
   { name = "overview.placeholders_are_drawn_as_such";
     check =
@@ -1193,7 +1068,7 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
           Canary_overview_page.render Canary_registry.all_specs ~overview:""
             ~generated_at:"pin"
         in
-        (* §1's diagram draws every edge — a choice hides one by class — so
+        (* §1's diagram draws every edge (a choice hides one by class), so
            its group is the one read *)
         let template =
           match String.substr_index page ~pattern:{|<div class="join" id="join">|} with
@@ -1219,9 +1094,9 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
         in
         let bridge_edges = [ "depends"; "conf_probe"; "depext"; "discover" ] in
         let shown g cls = String.is_substring g ~substring:(Printf.sprintf {|class="cbadge %s"|} cls) in
-        (* every bridge edge carries a claim; the gate on conf_probe is the
-           one checked (E2, 2026-09-27), and every other one is still a
-           candidate — named, with no evaluator *)
+        (* every bridge edge carries a claim; the gate on conf_probe is
+           checked, and every other one is a candidate, named with no
+           evaluator *)
         List.for_all bridge_edges ~f:(fun id ->
             (not (List.is_empty (T.claim_sites_on id)))
             && List.for_all (T.claim_sites_on id) ~f:(fun p ->
@@ -1250,38 +1125,19 @@ let placeholder_badges_pin : Canary_project_test.pure_test =
            the registry's answer, whatever route computes it *)
         && List.for_all T.claim_sites ~f:(fun cs ->
                Bool.equal (T.implemented cs) (evaluated cs.T.cs_claim))
-        (* the two the retired flag got wrong, by name *)
+        (* [pack] and [run] show only the hollow badge *)
         && List.for_all [ "pack"; "run" ] ~f:(fun id ->
                match group_of id with
                | Some g -> (not (shown g "chk")) && shown g "cand"
                | None -> false))
   }
 
-(* THE VISUAL VOCABULARY IS ONE LIST (2026-09-24, user: "shall we keep all
-   our visual hints in a place, so we can always check for them all and
-   you won't be forget the old ones, and we can detect if there are
-   conflicts"). [Canary_overview_looks.visual_hints] is that place; this
-   holds it to the stylesheet and to the page:
-
-   - every rule of the stylesheet for §1's diagram and §0.2's figure belongs
-     to exactly one hint or to the base look, and every rule a hint names
-     exists — a new style cannot
-     land without saying what it means, and an old one cannot linger;
-   - every hint's classes are applied by the page, in its markup or its
-     script (a state class as the script's prefix plus one of its words);
-   - every hint is explained — a key entry with a sample and words, words
-     the drawing says itself, or a stated reason it needs none — both keys
-     are on the page, no two entries share a sample, and every sample the
-     stylesheet styles belongs to an entry;
-   - NO TWO HINTS LOOK ALIKE where both can show on one kind of element.
-     Colour, dash, width, opacity, slant, weight and display are compared
-     the way a reader sees them: a 1.8px and a 2px line are one width, a
-     dash of 1 and one of 2 are both dots. Only a hint's own rules count,
-     so a look it would inherit is not seen — which is why the muted
-     term's rule states its italics.
-
-   Its first run failed on the recorded run's "never logged" and "inside a
-   package manager's action", drawn in the same grey dots. *)
+(* [Canary_overview_looks.visual_hints] is the one list of the overview's
+   visual vocabulary. Every stylesheet rule for §1's diagram and §0.2's
+   figure belongs to exactly one hint or to the base look, every hint is
+   applied and explained, and no two hints that can show on one kind of
+   element look alike. Only a hint's own rules count, which is why the
+   muted term's rule states its italics. *)
 let visual_vocabulary_pin : Canary_project_test.pure_test =
   { name = "overview.visual_vocabulary_is_one_list";
     check =
@@ -1413,7 +1269,8 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
                           List.mem (words (String.sub s ~pos:from ~len:(j - from))) c
                             ~equal:String.equal)))
         in
-        (* THE LOOK, bucketed the way a reader sees it *)
+        (* the look, bucketed the way a reader sees it: a 1.8px and a 2px
+           line are one width, a dash of 1 and one of 2 are both dots *)
         let number s =
           Float.of_string_opt (String.strip (String.chop_suffix_if_exists s ~suffix:"px"))
         in
@@ -1482,20 +1339,12 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
         && samples_unique && samples_used && distinct_looks)
   }
 
-(* §0 IS THE PAGE'S OUTLINE (2026-09-29, user: the outline, the terms, a
-   figure of how the page is made marking what the harness holds and what
-   agents do not read, and a table of each subject's code and running
-   layers). Holds its data to what exists:
-
-   - every slot of page.html belongs to exactly one section, or to the page
-     as a whole, so a new part of the page takes a place in the outline;
-   - every section's heading reads as the outline lists it, in the
-     outline's order, and every section the table or the figure names is
-     listed;
-   - every module the data names has a source file, and every pin or make
-     target a box names as holding it exists;
-   - the figure's boxes sit inside the canvas without overlapping, and
-     every arrow runs straight between two ends that face each other. *)
+(* §0's outline, figure and table ([Canary_overview_flow]) hold to what
+   exists. Every slot of page.html belongs to exactly one section or to
+   the page, so a new part of the page takes a place in the outline; each
+   heading reads as the outline lists it, in order; everything the data
+   names exists; and the figure's boxes fit the canvas without
+   overlapping, every arrow straight between ends that face each other. *)
 let flow_pin : Canary_project_test.pure_test =
   { name = "overview.flow_is_the_page";
     check =
@@ -1584,11 +1433,11 @@ let flow_pin : Canary_project_test.pure_test =
         slots_ok && anchors_ok && sections_ok && modules_ok && held_ok && geometry_ok)
   }
 
-(* EVERY FIGURE AND TABLE IS NUMBERED AND TITLED (2026-09-30), so the page
-   and the manuscript cite one by its id. Held: each exhibit appears once,
-   in list order, captioned with its label and title, and §0 lists it;
-   every table the page is rendered with, and every drawing (an svg with
-   role="img"), is one of them. *)
+(* Every figure and table is numbered and titled, so the page and the
+   manuscript cite one by its id. Each exhibit appears once, in list
+   order, captioned with its label and title, and §0 lists it; every table
+   on the page, and every drawing (an svg with role="img"), is one of
+   them. *)
 let exhibits_pin : Canary_project_test.pure_test =
   { name = "overview.exhibits_are_captioned";
     check =
@@ -1662,13 +1511,12 @@ let exhibits_pin : Canary_project_test.pure_test =
         && ordered && tables_ok && drawings_ok)
   }
 
-(* A CHOICE IS RESOLVED ONCE, IN OCAML (2026-09-30): the band a choice of
-   the four buttons draws is its own where some chain has it, else the
-   nearest — the native side's package manager let go first, then the
-   language side's — and the note names what was let go; a recorded
-   world's names come before its package's; the page opens in the
-   drawing the export draws; and the page's script holds none of these
-   rules, only the lookups. *)
+(* A choice is resolved once, in OCaml. The band a choice of the four
+   buttons draws is its own where some chain has it, else the nearest (the
+   native side's package manager let go first, then the language side's),
+   and the note names what was let go; a recorded world's names come
+   before its package's; the page opens in the drawing the export draws;
+   and the page's script holds only the lookups. *)
 let choice_resolved_pin : Canary_project_test.pure_test =
   { name = "overview.choice_is_resolved_once";
     check =
@@ -1705,8 +1553,8 @@ let choice_resolved_pin : Canary_project_test.pure_test =
               && (List.Assoc.mem j.J.jn_bands key ~equal:String.equal
                  || not (List.is_empty dropped)))
         in
-        (* no chain canary has today tells the two orders apart, so a
-           made-up pair of bands does: the native side's manager goes first *)
+        (* no chain canary has tells the two orders apart, so a made-up
+           pair of bands does: the native side's manager goes first *)
         let native_first =
           match (j.J.jn_bands, J.pms J.Native, J.pms J.Language) with
           | (_, b) :: _, ps :: _, pl :: _ ->
@@ -1749,13 +1597,12 @@ let choice_resolved_pin : Canary_project_test.pure_test =
         && script_ok)
   }
 
-(* THE EXPORT IS THE PAGE'S EXHIBITS (2026-09-30): every exhibit is
-   written or named as not written, with why; a written table is the
-   page's without its caption; a written figure ends with the page's
-   drawing and stands alone — its size, its namespace, every colour it
-   uses defined, no dark mode, no entity XML lacks; nothing written
-   carries the page's numbers; a choice of chain writes only Figure 2 and
-   the lines table; the captions name exactly the files written. *)
+(* The export is the page's exhibits: each is written or named as not
+   written, with why; a written table is the page's without its caption; a
+   written figure ends with the page's drawing and stands alone (its size,
+   its namespace, every colour it uses defined, no dark mode, no entity
+   XML lacks); nothing written carries the page's numbers; and a choice of
+   chain writes only Figure 2 and the lines table. *)
 let exhibits_export_pin : Canary_project_test.pure_test =
   { name = "overview.exhibits_are_exported";
     check =
@@ -1869,10 +1716,9 @@ let exhibits_export_pin : Canary_project_test.pure_test =
                match file_of e with Some c -> matches e c && unnumbered c | None -> true))
   }
 
-(* §2 COUNTS WHAT §1.2 SHOWS: EVERY MACHINE'S (2026-10-01). §1.2 lays out
-   the rows of every runs file the page loads, and §2 counts the same
-   views. Held over one made-up runs file per machine, each deciding the
-   same claim: §2 counts it once per machine. *)
+(* §2 counts every machine's views, as §1.2 lays out the rows of every
+   runs file the page loads. Held over one made-up runs file per machine,
+   each deciding the same claim: §2 counts it once per machine. *)
 let every_machine_pin : Canary_project_test.pure_test =
   { name = "overview.agreements_count_every_machine";
     check =
@@ -1904,10 +1750,9 @@ let every_machine_pin : Canary_project_test.pure_test =
                  ~substring:(Printf.sprintf "%d ✓" machines))
   }
 
-(* THE TERMINAL'S §2 IS OVER THE FRAMES (2026-10-01): [canary checks
-   --firing] prints the agreement overview with the page's frames as its
-   columns ({!Canary_frames.text_columns}), not one per action, each
-   column lined up under its label. *)
+(* [canary checks --firing] prints the agreement overview with the page's
+   frames as its columns ({!Canary_frames.text_columns}), not one per
+   action, each column lined up under its label. *)
 let firing_frames_pin : Canary_project_test.pure_test =
   { name = "checks.firing_is_over_the_frames";
     check =
@@ -1940,10 +1785,8 @@ let firing_frames_pin : Canary_project_test.pure_test =
         | _ -> false)
   }
 
-(* ONE ESCAPER FOR THE PAGE (2026-10-01): §2 kept one of its own that left
-   quotes alone, and wrote ten attributes with it. Every module that
-   writes the page escapes with [Canary_overview_assets.esc], which
-   escapes quotes. *)
+(* Every module that writes the page escapes with
+   [Canary_overview_assets.esc], which escapes quotes. *)
 let one_escaper_pin : Canary_project_test.pure_test =
   { name = "overview.one_escaper";
     check =
@@ -1969,12 +1812,11 @@ let one_escaper_pin : Canary_project_test.pure_test =
         && String.is_substring (Canary_overview_assets.esc {|a"b|}) ~substring:"&quot;")
   }
 
-(* §1.2'S CELLS KEEP THEIR RULES (2026-09-30), now that they are computed
-   once, in [Canary_overview_results.cells]: a frame no step realized a
-   piece of is hatched; a piece shows its first recorded edge; a node's
-   first cell shows its name and count, and a later one, where it is
-   consumed, repeats the name; every state a recorded piece shows has a
-   mark. *)
+(* §1.2's cells, computed once in [Canary_overview_results.cells], keep
+   their rules: a frame no step realized a piece of is hatched; a piece
+   shows its first recorded edge; a node's first cell shows its name and
+   count, and a later one, where it is consumed, repeats the name; every
+   state a recorded piece shows has a mark. *)
 let result_cells_pin : Canary_project_test.pure_test =
   { name = "overview.result_cells_keep_their_rules";
     check =
@@ -2036,11 +1878,8 @@ let result_cells_pin : Canary_project_test.pure_test =
         first_recorded && hatched && node_once && marked)
   }
 
-(* ONE SPELLING OF A MARK (2026-09-30). The record and the result table
-   used to map outcomes to marks separately, and disagreed: an evaluator
-   error was ✗ in one and err in the other, and a stale log line showed
-   as n/a — the mark of a mechanism that cannot carry the claim. Held:
-   every label a log records has an entry, a check cell shows its
+(* [Canary_matrix.outcome_marks] is the one spelling of an outcome's
+   mark: every label a log records has one entry, a check cell shows its
    outcome's mark and look, the page's script spells no mark of its own,
    and §2 shows the key. *)
 let outcome_marks_pin : Canary_project_test.pure_test =
@@ -2099,8 +1938,8 @@ let outcome_marks_pin : Canary_project_test.pure_test =
                     ~substring:(Printf.sprintf "<td><code>%s</code></td>" o.M.om_label)))
   }
 
-(* THE PAGE STATES THE ROW LAWS (2026-09-30): §2 lists every law of
-   [Canary_agreement.row_rules] beside the verdict that counts them. *)
+(* §2 lists every law of [Canary_agreement.row_rules] beside the verdict
+   that counts them. *)
 let agreement_laws_pin : Canary_project_test.pure_test =
   { name = "overview.agreement_laws_are_listed";
     check =
@@ -2118,8 +1957,8 @@ let agreement_laws_pin : Canary_project_test.pure_test =
                  ~substring:(Canary_overview_assets.esc r.Canary_agreement.rr_says)))
   }
 
-(* A MECHANISM'S CLAIMS ARE PASS 2'S (2026-09-30): §3.2 lists, per
-   mechanism, exactly the registered claims its applicability carries. *)
+(* A mechanism's claims are pass 2's: §3.2 lists, per mechanism, exactly
+   the registered claims its applicability carries. *)
 let mechanism_claims_pin : Canary_project_test.pure_test =
   { name = "overview.mechanisms_list_their_claims";
     check =
@@ -2148,23 +1987,12 @@ let mechanism_claims_pin : Canary_project_test.pure_test =
                   (List.sort (Canary_overview_tables.carried_by i) ~compare:String.compare)))
   }
 
-(* EVERY AGREEMENT SITS SOMEWHERE ON THE CHAIN, AND EVERY VIEW SAYS WHERE
-   (2026-09-27, user: the agreement table predates the layered diagram;
-   categorize every agreement by the diagram, deriving first — "when all
-   are set, the diagram, the table, and the running logs are also
-   synced"). Pinned:
-
-   - every registry agreement and every candidate has exactly ONE claim
-     site, so the diagram, the table and the candidate list name the same
-     agreements;
-   - the derivation's specimens: what reaches across the sides, what
-     stays on one side's own chain, what runs end to end — so a change to
-     the rule that decides reach shows up as a named disagreement;
-   - the agreement table's "sits on" cell for each registry agreement is
-     exactly its claim site's edges;
-   - the grouping under it lists each placed agreement once, its counts
-     add up, and the logs agree with the registry: no agreement a run
-     decided lacks an evaluator. *)
+(* Every agreement sits somewhere on the chain, and every view says where.
+   Each registry agreement and candidate has exactly one claim site; the
+   specimens cover each reach, so a change to the rule that decides reach
+   shows up as a named disagreement; the agreement table's "sits on" cell
+   is the claim site's edges; and no agreement a run decided lacks an
+   evaluator. *)
 let agreements_sit_pin : Canary_project_test.pure_test =
   { name = "overview.agreements_sit_on_the_chain";
     check =
@@ -2235,27 +2063,12 @@ let agreements_sit_pin : Canary_project_test.pure_test =
              ~substring:"where the agreements sit on the chain")
   }
 
-(* NO EDGE MARK HIDES UNDER A BOX, AND NO EDGE RUNS UNDER A SOURCE
-   (2026-09-24, user: "the source is not in the package which usually
-   contains the library or module, so it's acturally above the edge").
-   Nodes are drawn after edges, so a box masks whatever runs under it. For
-   a line that is by design — a straight segment may pass behind a node
-   on its way — but a label or a badge under a box is lost, and a
-   package's edge running under a SOURCE drew the source as package
-   content. Held over the template, where every edge is drawn:
-
-   - no edge segment passes under a source's box unless the source is one
-     of its ends;
-   - no label (its extent estimated from its characters) and no badge
-     slot that some mechanism can show lies under any box, under another
-     edge's label or badge, or under a band's label.
-
-   Measured against the layout before the sources moved, the line and
-   mark clauses failed twenty-four times: six edges under a source (five
-   of them between a package and its own content), the rest labels and
-   badges behind the headers, the stub, the staged copy or a source, or on
-   each other — [install_lang] and [pack] join the same two nodes, so
-   their marks shared one midpoint. *)
+(* No edge mark hides under a box, and no edge runs under a source. Nodes
+   are drawn after edges, so a box masks what runs under it: a straight
+   line may pass behind a node, but a label or badge under a box is lost,
+   and an edge under a source would draw the source as package content.
+   Held over the template, where every edge is drawn, with each label's
+   extent estimated from its characters. *)
 let edge_marks_pin : Canary_project_test.pure_test =
   { name = "overview.edge_marks_clear_the_boxes";
     check =
@@ -2330,21 +2143,12 @@ let edge_marks_pin : Canary_project_test.pure_test =
                           b0 < px && px < b2 && b1 < py && py < b3)))))
   }
 
-(* WHAT A BADGE COUNTS IS WHAT APPLIES, AND A RECORDED COLOUR COMES FROM
-   EXACTLY THAT (2026-09-24, user, on the numbers on the edges: one
-   number counted every agreement on the edge for every mechanism, and a
-   recorded run coloured it from fewer). Pinned:
-
-   - §1's filled count per mechanism is pass 2's answer, asked
-     independently: the agreements on the edge that
-     [Canary_project_analysis.carried_slugs] lists for that mechanism;
-   - a recorded view counts the same list as §1 does for its chain's
-     mechanism — two computations, one answer;
-   - a view colours an edge exactly where it counts a checked agreement,
-     and every agreement it names on an edge is placed there;
-   - the page names each counted agreement from [agreements], which lists
-     every claim site with every edge it sits on;
-   - the script recounts from those lists. *)
+(* What a badge counts is what applies, and a recorded colour comes from
+   exactly that. §1's filled count per mechanism is pass 2's answer, asked
+   independently: the agreements on the edge that
+   [Canary_project_analysis.carried_slugs] lists for it. A recorded view
+   counts the same list for its chain's mechanism, and the page's script
+   recounts from those lists. *)
 let badge_counts_pin : Canary_project_test.pure_test =
   { name = "overview.badges_count_what_applies";
     check =
@@ -2404,9 +2208,7 @@ let badge_counts_pin : Canary_project_test.pure_test =
                          List.for_all v.R.vw_edge_claims ~f:(fun (e, xs) ->
                              Poly.equal (List.Assoc.find from_join e ~equal:String.equal) (Some xs))
                          (* the same list exactly, less the edges this chain
-                            lacks and the ones this world does not realize —
-                            a badge on an unrealized edge was a built
-                            world's red badge on the fetched package's edge *)
+                            lacks and the ones this world does not realize *)
                          && List.for_all from_join ~f:(fun (e, _) ->
                                 Bool.equal
                                   (List.Assoc.mem v.R.vw_edge_claims e ~equal:String.equal)
@@ -2448,22 +2250,11 @@ let badge_counts_pin : Canary_project_test.pure_test =
         per_mechanism_ok && views_ok && agreements_ok && page_ok)
   }
 
-(* THE THREE TABLES LIST WHAT CANARY COVERS, AND A CHAIN IS TWO PACKAGE
-   MANAGERS, ONE MECHANISM AND ONE COOPERATION (2026-09-23, user: "the
-   whole chain needs two rows (two pm) from the PM-solo table, and one
-   binding table … a pm-solo table, pm-coop table which canary covers").
-
-   - the PM-solo table has a row for exactly the package managers canary
-     has a driver for, every one a project's provider uses, and each row's
-     scope and store are READ from that driver;
-   - the binding table is the mechanism catalogue, row for row;
-   - every topology of every catalogued project is a cooperation kind the
-     catalogue describes — [info_of_coop] is total over them — and the
-     instance's name agrees with its kind's, except where the instance
-     says why in its own words;
-   - the page draws a cooperation row only for a kind something
-     instantiates, lists the others as not yet covered, and draws one chain
-     per instance, each naming a catalogued mechanism. *)
+(* The three tables list what canary covers, and a chain is two package
+   managers, one mechanism and one cooperation. The PM-solo table has a
+   row for exactly the package managers canary has a driver for, its
+   scope and store read from that driver; the binding table is the
+   mechanism catalogue; and the page draws one chain per instance. *)
 let coverage_tables_pin : Canary_project_test.pure_test =
   { name = "overview.tables_list_what_canary_covers";
     check =
@@ -2496,12 +2287,12 @@ let coverage_tables_pin : Canary_project_test.pure_test =
           && List.for_all Canary_store.[ Apt; Brew; Pip ] ~f:(fun pm ->
                  List.is_empty (Canary_bridge.kinds_of_pm pm))
         in
-        (* per WORLD (2026-09-23): the cooperation a world realizes, both
-           sides from its own placements *)
+        (* per world: the cooperation a world realizes, both sides from its
+           own placements *)
         let topos = List.concat_map projects ~f:T.topologies_of_worlds in
-        (* and the worlds that differ from their project read differently:
-           zarith's built world bypasses conf-gmp, llvm's dev worlds build
-           both sides — while their fetched worlds are still bridged *)
+        (* and worlds that differ from their project read differently:
+           zarith's built world bypasses conf-gmp and llvm's dev worlds
+           build both sides, while their fetched worlds are bridged *)
         let kinds_of name =
           List.filter_map topos ~f:(fun ((t : T.t), (i : T.instance)) ->
               if String.equal i.T.in_project name then Some (T.coop_of t) else None)
@@ -2512,6 +2303,9 @@ let coverage_tables_pin : Canary_project_test.pure_test =
           && List.mem (kinds_of "llvm") T.Co_conf ~equal:Poly.equal
           && List.mem (kinds_of "llvm") T.Co_local ~equal:Poly.equal
         in
+        (* every world's topology is a catalogued cooperation kind
+           ([info_of_coop] is total over them), named as its kind except
+           where its join says why in its own words *)
         let coop_ok =
           List.for_all topos ~f:(fun ((t : T.t), _) ->
               match Option.try_with (fun () -> T.info_of_coop (T.coop_of t)) with
@@ -2581,25 +2375,12 @@ let coverage_tables_pin : Canary_project_test.pure_test =
         pm_solo_ok && coop_ok && per_world_ok && page_ok)
   }
 
-(* THE PACKAGE BAND IS ONE COOPERATION (2026-09-23, status.md §2.7; user:
-   draw the package-manager part per cooperation, the way the artifact
-   part is drawn per mechanism). The band's rules are ONE function of a
+(* The package band is one cooperation: its rules are one function of a
    topology ([Canary_topology.band_hidden]), and a kind's band is what
-   none of its worlds has. Held three ways:
-
-   - THE RULES REPRODUCE THE DRAWINGS: for every hand-drawn case, the
-     band of the world standing for it hides exactly the band nodes the
-     drawing hides, and greys no edge the drawing does not grey. The
-     wheel's world is read from the catalogue, since z3 is muted. This is
-     what caught the first draft, which dropped the binding source of
-     every fetched binding — opam compiles that source inside its install,
-     and the conf case draws it;
-   - the kinds' bands say what the kinds mean: conf keeps its bridge and
-     its capability file, unified and absorbed have no system side, no
-     package manager between has neither bridge nor capability file,
-     gated-local greys the system payload, local has no bridge.
-
-   How the page lets a reader choose them is
+   none of its worlds has. For each hand-drawn case, its world's band
+   hides exactly the band nodes the drawing hides and greys no edge it
+   does not (the wheel's world comes from the catalogue, since z3 is
+   muted). How the page lets a reader choose a band is held by
    [overview.chain_choices_draw_one_chain]. *)
 let package_band_pin : Canary_project_test.pure_test =
   { name = "overview.package_band_is_one_cooperation";
@@ -2648,7 +2429,7 @@ let package_band_pin : Canary_project_test.pure_test =
                       && List.for_all (T.band_dead t)
                            ~f:(List.mem (strings (field c "dead")) ~equal:String.equal)
                       (* and the case illustrates the cooperation its world
-                         has — §1 shows its notes with that cooperation *)
+                         has, since §1 shows its notes with it *)
                       && List.exists Canary_overview_cases.hand_cases
                            ~f:(fun (h : Canary_overview_cases.case) ->
                              String.equal h.Canary_overview_cases.ca_key key
@@ -2669,6 +2450,7 @@ let package_band_pin : Canary_project_test.pure_test =
         in
         let facts =
           keeps T.Co_conf "bridge" && keeps T.Co_conf "cap" && hides T.Co_conf "src_sys"
+          (* opam compiles the binding source inside its install *)
           && keeps T.Co_conf "src_lang"
           && hides T.Co_unified "pm_sys" && hides T.Co_unified "pkg_sys"
           && hides T.Co_absorbed "pm_sys" && hides T.Co_absorbed "bridge"
@@ -2681,33 +2463,12 @@ let package_band_pin : Canary_project_test.pure_test =
         Option.is_some hand && reproduces && facts)
   }
 
-(* THE CHAIN IS CHOSEN FROM ITS PARTS (2026-09-24, status.md §2.7; user:
-   "can we also make the pm itself as the choice? … If we click a binding
-   mechanism, the dependent pms are also shown as clicked. if we click a
-   concrete package case, the pms and binding-mechanism it uses are also
-   shown as clicked … if clicking a concrete package, we also show the
-   native package name in the next line"). What each choice draws is data
-   ([Canary_overview_join]); the page's script only looks it up, so the
-   data is what is held:
-
-   - the concrete chains ARE §3.4's rows — one list, each row linking to
-     its chain — and each is its own worlds: pass 2's mechanism, its
-     topology's cooperation, the band over those worlds, and its
-     project's declared names on template nodes. zarith's fetched chain
-     names conf-gmp and lights the platform's system PM and opam; its
-     built chain names no bridge;
-   - a mechanism depends on the package manager that ships its language's
-     bindings: opam for cstubs and dynlink, pip for cext, ctypes and cffi;
-   - NARROWING BY PACKAGE MANAGER IS REAL: absorbed over pip has no
-     binding source and absorbed over every world does — the wheel the
-     question came from — and a choice no chain has is no band at all;
-     the all-worlds band of each kind is the cooperation bar's;
-   - every chain is picked out by the four choices it lights;
-   - the page: ONE diagram with a name slot on every node, a button per
-     package manager on its own side, per mechanism, per drawable
-     cooperation (none for a kind that is not one), per concrete chain;
-     the embedded data is this module's; the page opens drawn in the
-     default choice. *)
+(* The chain is chosen from its parts. What each choice draws is data
+   ([Canary_overview_join]) that the page's script only looks up, so the
+   data is held: the concrete chains are §3.4's rows, each its own worlds;
+   a mechanism depends on the package manager that ships its language's
+   bindings; every chain is picked out by the four choices it lights; and
+   the page opens drawn in the default choice. *)
 let chain_choices_pin : Canary_project_test.pure_test =
   { name = "overview.chain_choices_draw_one_chain";
     check =
@@ -2743,6 +2504,9 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && Poly.equal i.T.bi_topology.T.tp_lang c.J.cs_topology.T.tp_lang
           && Poly.equal i.T.bi_topology.T.tp_sys c.J.cs_topology.T.tp_sys
         in
+        (* each chain is its own worlds: pass 2's mechanism, its topology's
+           cooperation, the band over those worlds, and its project's
+           declared names on template nodes *)
         let cases_are_their_worlds =
           List.for_all j.J.jn_cases ~f:(fun c ->
               let mine = List.filter j.J.jn_instances ~f:(own c) in
@@ -2758,6 +2522,8 @@ let chain_choices_pin : Canary_project_test.pure_test =
         let sys_pm = Canary_store.system_pm_of_platform (Canary_store.platform ()) in
         let sys = Canary_store.string_of_pm sys_pm in
         let case id = List.find j.J.jn_cases ~f:(fun c -> String.equal c.J.cs_id id) in
+        (* zarith's fetched chain names conf-gmp and lights the platform's
+           system PM and opam; its built chain names no bridge *)
         let names_ok =
           match (case ("zarith-ocaml-opam-" ^ sys), case ("zarith-ocaml-built-" ^ sys)) with
           | Some fetched, Some built ->
@@ -2780,6 +2546,10 @@ let chain_choices_pin : Canary_project_test.pure_test =
         let hides key n =
           Option.exists (band_at key) ~f:(fun b -> List.mem b.T.cb_hidden n ~equal:String.equal)
         in
+        (* narrowing by package manager is real: absorbed over pip has no
+           binding source while absorbed over every world does, a choice no
+           chain has is no band at all, and each kind's all-worlds band is
+           the cooperation bar's *)
         let narrows =
           hides "absorbed|*|pip" "src_lang"
           && Option.is_some (band_at "absorbed|*|*")
@@ -2851,11 +2621,10 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all ids ~f:(fun id ->
                  String.is_substring page ~substring:(Printf.sprintf {|href="#chain=%s"|} id))
         in
-        (* THE SECOND ROUND (2026-09-24, user): the mechanisms grouped by
-           language, so the two OCaml ones sit together; each cooperation
-           labelled with its package managers; the concrete row named
-           "package in canary"; and the package nodes each other button is
-           about *)
+        (* the mechanisms grouped by language, the two OCaml ones together;
+           each cooperation labelled with its package managers; the
+           concrete row named "package in canary"; and the package nodes
+           each other button is about *)
         let in_order g =
           let tag = Printf.sprintf {|data-g="%s" data-v="|} g in
           List.map (String.substr_index_all panel ~may_overlap:false ~pattern:tag) ~f:(fun i ->
@@ -2902,8 +2671,8 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all [ "ps"; "pl"; "m"; "k" ] ~f:(fun g ->
                  List.for_all (in_order g) ~f:(fun v -> Option.is_some (rel (g ^ "|" ^ v))))
         in
-        (* §2 and §2.1 left the page, their notes merged into §1: one
-           diagram, and each hand-drawn case's prose with its cooperation *)
+        (* one diagram, with no separate recorded-run or cases section, and
+           each hand-drawn case's prose in §1 with its cooperation *)
         let merged =
           List.length (String.substr_index_all page ~may_overlap:false ~pattern:{|class="diagram"|}) = 1
           && (not (String.is_substring page ~substring:{|id="recwrap"|}))
@@ -2911,11 +2680,11 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all Canary_overview_cases.hand_cases ~f:(fun (c : Canary_overview_cases.case) ->
                  has (Canary_overview_assets.esc c.Canary_overview_cases.ca_title))
         in
-        (* THE THIRD ROUND (2026-09-24, user): the package layer's two
-           in-between nodes say the package managers' TERMS — the
-           capability file a manager ships (§3.1's column), the kinds
-           of bridge a cooperation's chains join through (§3.3's) — and
-           every bridge's term is one its manager defines *)
+        (* the package layer's two in-between nodes say the package
+           managers' terms: the capability file a manager ships (§3.1's
+           column) and the kinds of bridge a cooperation's chains join
+           through (§3.3's); every bridge's term is one its manager
+           defines *)
         let bridges_of key = List.Assoc.find j.J.jn_bridges key ~equal:String.equal in
         let terms_ok =
           Poly.equal (bridges_of "conf|*|*") (Some [ "conf-* package" ])
@@ -2930,20 +2699,10 @@ let chain_choices_pin : Canary_project_test.pure_test =
           && List.for_all [ "<b>.pc file</b>"; "<b>conf-* package</b>"; "<b>depext field</b>" ]
                ~f:(fun s -> String.is_substring page ~substring:s)
         in
-        (* the layout's own rules — layered rows, a package's line, the
-           sources beside it, the bridge with the language side — moved to
-           [Canary_overview_looks.layout_rules] on 2026-09-27, where they are
-           stated in words and held by overview.layout_rules_hold *)
-        (* EVERY PACKAGE IN CANARY CARRIES A COOPERATION, KNOWN BEFORE ANY
-           RUN (2026-09-24, user: "when we click any button for
-           package_in_canary, it shall also show one cooperation button in
-           clicked"). Each package's cooperation is derived from
-           declarations alone — its world's two placements and its
-           binding package's declared gate — so this holds on a checkout
-           that has never run: every package's kind has a cooperation
-           button, and the page lights it. Where a project states its gate
-           twice (zarith: its binding declaration, and the template's
-           routed gate), the two agree *)
+        (* every package in canary carries a cooperation, derived from
+           declarations alone (its world's two placements and its binding
+           package's declared gate), so this holds on a checkout that has
+           never run: every package's kind has a cooperation button *)
         let every_package_cooperates =
           List.for_all j.J.jn_cases ~f:(fun c ->
               let k = T.coop_of c.J.cs_topology in
@@ -2951,6 +2710,8 @@ let chain_choices_pin : Canary_project_test.pure_test =
               && List.exists j.J.jn_kinds ~f:(fun b -> Poly.equal b.T.cb_kind k)
               && button "k" (T.code_of_coop k))
         in
+        (* where a project states its gate twice (zarith: its binding
+           declaration and the template's routed gate), the two agree *)
         let gates_agree =
           List.for_all projects ~f:(fun (_, pr) ->
               List.for_all pr.Canary_project_run.pr_pm_gates ~f:(fun (lang, g) ->
@@ -2966,27 +2727,11 @@ let chain_choices_pin : Canary_project_test.pure_test =
         && every_package_cooperates && gates_agree)
   }
 
-(* WHAT A CHAIN LACKS IS NEVER RECORDED (2026-09-23, status.md §2.7). The
-   overview stops drawing what a world's chain does not have — its
-   mechanism's artifact band joined with its cooperation's package band —
-   and a claim sitting only there stops applying. That is a STRUCTURAL
-   statement made without reading the run, so the run is what checks it,
-   over every recorded view:
-
-   - a node the chain lacks is never touched: it is dimmed, and no
-     recording names it;
-   - an edge the chain lacks is never realized, observed or placeheld, and
-     carries no badge;
-   - no claim a run DECIDED (holds or violated) is dropped as not applying;
-   - exercised both ways on zarith: its bridged view keeps the bridge,
-     counts the gate as checked on conf_probe and lists the bridge's
-     other claims as placeholders; its artifact-only view has no bridge
-     and none of them; and the page hides by class.
-
-   It caught the rules twice before they landed: llvm's built worlds stage
-   the library the first draft said had no staged copy, and torch's opam
-   build was placed on a discovery edge whose chain has no capability
-   file. *)
+(* What a chain lacks is never recorded. The overview stops drawing what a
+   world's chain does not have (its mechanism's artifact band joined with
+   its cooperation's package band), and a claim sitting only there stops
+   applying. That is decided without reading the run, so every recorded
+   view checks it, and no claim a run decided is dropped as not applying. *)
 let chain_absence_pin : Canary_project_test.pure_test =
   { name = "overview.chain_absence_is_never_recorded";
     check =
@@ -3012,7 +2757,7 @@ let chain_absence_pin : Canary_project_test.pure_test =
                 && (not (List.Assoc.mem v.R.vw_observed id ~equal:String.equal))
                 && not (List.Assoc.mem v.R.vw_badges id ~equal:String.equal))
         in
-        (* the claims a run decided, per view, read from the row — before
+        (* the claims a run decided, per view, read from the row, before
            the view kept only those that apply *)
         let col_in_lang lang label =
           match
@@ -3037,8 +2782,8 @@ let chain_absence_pin : Canary_project_test.pure_test =
                   in
                   (not decided) || List.Assoc.mem v.R.vw_claims slug ~equal:String.equal)
         in
-        (* the bridge's claims: the gate is CHECKED since E2 (2026-09-27),
-           the other three are still candidates *)
+        (* the bridge's claims: the gate is checked, the other three are
+           candidates *)
         let bridge_candidates =
           [ "declared_gate_matches_package"; "gate_bounds_the_library";
             "depext_names_the_provided_package" ]
@@ -3055,6 +2800,9 @@ let chain_absence_pin : Canary_project_test.pure_test =
               String.equal v.R.vw_project "zarith"
               && Option.exists v.R.vw_chain ~f:(fun c -> Poly.equal c.M.ch_coop k))
         in
+        (* exercised both ways on zarith: its bridged view keeps the bridge,
+           checks the gate on conf_probe and lists the other bridge claims
+           as candidates; its artifact-only view has none of them *)
         let exercised =
           match (zarith T.Co_conf, zarith T.Co_artifacts) with
           | Some bridged, Some bare ->
@@ -3073,6 +2821,7 @@ let chain_absence_pin : Canary_project_test.pure_test =
         let page =
           Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
         in
+        (* the page hides what a chain lacks by class *)
         let page_ok =
           String.is_substring page ~substring:".join .gone{display:none}"
           && String.is_substring page ~substring:"g.classList.toggle('gone'"
@@ -3082,30 +2831,11 @@ let chain_absence_pin : Canary_project_test.pure_test =
         && List.exists views ~f:(fun v -> not (List.is_empty v.R.vw_gone)))
   }
 
-(* EVERY LINE UNDER A NODE LABEL SAYS WHERE IT CAME FROM (2026-09-24,
-   user: "Can I confirm all the data in diagrams, for both generic and the
-   real-packages, are coming from either code or logs? … you can show the
-   relavent code path in some place in the page. you can demonstrate
-   one"). The workflow demonstrated is the lines §1 writes under its node
-   labels — a package's declared names, a recorded run's names and
-   placements, the package managers' terms. Each carries a source computed
-   with the value, and the page lists them under the diagram. Pinned:
-
-   - a recorded view's names and placements have one source each; a name
-     the run RECORDED cites a file the run wrote, and the file exists; a
-     DECLARED one cites code;
-   - THE RENDER FLAG IS OBSERVED, NOT RE-DERIVED: the answers the
-     rendering machine gave are replaced by a sentinel and everything is
-     recomputed; a placement is flagged [render] exactly where the
-     sentinel shows up in its text. The memo is cleared after, so no
-     later pin sees the sentinel;
-   - a §1 package's names are all declarations, one source each;
-   - the generic lines' sources are all code, and the page has the list
-     and looks each source up by the route its value took.
-
-   What is not traced yet — a recorded run's states and badges, the band
-   rules, the script's own rules, §1.2's cells — is listed in
-   doc/canary/design/overview.md §4. *)
+(* Every line §1 writes under a node label carries a source computed with
+   its value, and the page lists them under the diagram. A recorded name
+   cites a file the run wrote, which exists; a declared name, a §1
+   package's names and the generic lines cite code. What is not traced
+   yet is listed in doc/canary/design/overview.md §4. *)
 let drawn_line_sources_pin : Canary_project_test.pure_test =
   { name = "overview.every_drawn_line_has_a_source";
     check =
@@ -3132,7 +2862,9 @@ let drawn_line_sources_pin : Canary_project_test.pure_test =
         Hashtbl.clear M.sys_pkg_versions;
         let views = R.views (M.matrix_of Canary_registry.all_projects) in
         let asked = Hashtbl.keys M.sys_pkg_versions in
-        (* the rendering machine answers something else, everywhere *)
+        (* the rendering machine answers a sentinel everywhere, and a
+           placement is flagged [render] exactly where it shows; the memo
+           is cleared after, so no later pin sees it *)
         let sentinel = "9.9.9sentinel" in
         List.iter asked ~f:(fun k -> Hashtbl.set M.sys_pkg_versions ~key:k ~data:sentinel);
         let views' = R.views (M.matrix_of Canary_registry.all_projects) in
@@ -3184,12 +2916,9 @@ let drawn_line_sources_pin : Canary_project_test.pure_test =
         && cases_ok && sources_ok && page_ok)
   }
 
-(* THE OVERVIEW PAGE'S SECTIONS ARE NUMBERED 0..n (2026-09-23; §0, the
-   outline, since 2026-09-29). The page
-   template numbers its sections by hand, and moving the agreement table
-   in produced two sections called "3." — found by reading the page, not
-   by any check. Reordering sections is now a thing the user asks for, so
-   the numbering needs a guard rather than care. *)
+(* The overview page's sections are numbered 0..n in order. The page
+   template numbers them by hand, so reordering sections needs this
+   guard. *)
 let overview_sections_pin : Canary_project_test.pure_test =
   { name = "overview.sections_numbered_in_order";
     check =
@@ -3227,44 +2956,13 @@ let overview_sections_pin : Canary_project_test.pure_test =
           && List.equal Int.equal nums (List.init (List.length nums) ~f:Fn.id))
   }
 
-(* THE CHECKING INDEX IS ASKED IN EACH ACTION'S OWN LANGUAGE
-   (2026-09-15).
-
-   [canary checks <project>] used to compute the WHOLE index with "the
-   project's first declared binding". So sqlite's index was OCaml
-   throughout and reported that nothing fires at [probe_binding_python]
-   — while the same project's result table carried five Python check
-   columns and its own run log decided [api_names_present] on that very
-   step six times. Three views of one project, two answers, and the
-   wrong one understated coverage, which is the direction nobody
-   notices.
-
-   Two properties, and each was a separate defect:
-
-   1. an action that NAMES a language carries the agreements that fire
-      for THAT language. Pinned on the concrete fact that made it
-      visible — sqlite's Python probe carries [api_names_present], which
-      is landed there and has the log to prove it. Revert the per-action
-      language and this cell goes empty;
-   2. no cell claims an agreement the language cannot carry. The index
-      skipped the applicability filter the result table already applied,
-      so it listed [signatures_agree] at a Python probe, where the
-      mechanism declares its types as values and there are no stub
-      signatures to read — a cell that could never say anything, counted
-      as coverage.
-
-   NOT pinned: that the index and the result table's check columns name
-   the same cells. They do not, and the difference is by design rather
-   than by drift — a column comes from the agreement's SLOT resolved
-   against the chain (world-blind: the claim BELONGS at that action),
-   an index cell from the method's FIRING in an actual world. llvm
-   derives an [install_lib] step, no llvm world is [Installed], so
-   [staged_interface_preserved] slots there and fires nowhere, and
-   llvm's run record carries an [install_lib_post:sip] column that no
-   llvm world can fill. That is a real observation about the result
-   table and it is written down in issues rather than pinned here —
-   pinning a containment that is false would only teach the next person
-   to weaken it. *)
+(* The checking index asks each action in its own language: an action that
+   names a language carries the agreements that fire for that language,
+   and no cell claims one its mechanism cannot carry. The index and the
+   result table's check columns are not held to the same cells: a column
+   is the agreement's slot (world-blind), an index cell its firing in a
+   world, so [staged_interface_preserved] slots at llvm's [install_lib]
+   and fires nowhere, since no llvm world is [Installed]. *)
 let check_index_language_pin : Canary_project_test.pure_test =
   { name = "checks.index_speaks_each_action_language";
     check =
@@ -3280,7 +2978,7 @@ let check_index_language_pin : Canary_project_test.pure_test =
                    ~f:(fun (a : Canary_check_index.added) ->
                      (e.Canary_check_index.en_action, a)))
         in
-        (* (1) sqlite's Python probe carries the agreement that is
+        (* sqlite's Python probe carries [api_names_present], which is
            landed there *)
         let sqlite_python_anp =
           match List.Assoc.find Canary_registry.all_projects "sqlite"
@@ -3292,8 +2990,8 @@ let check_index_language_pin : Canary_project_test.pure_test =
                   && String.equal a.Canary_check_index.ad_slug
                        "api_names_present")
         in
-        (* (2) no cell claims what its language cannot carry — asked of
-           every project, since the filter is generic *)
+        (* no cell claims what its language cannot carry, asked of every
+           project since the filter is generic *)
         let no_unsuited_cell =
           List.for_all Canary_registry.all_projects ~f:(fun (_, pr) ->
               let declared = Canary_pipeline.declared_api_of pr in
@@ -3315,29 +3013,12 @@ let check_index_language_pin : Canary_project_test.pure_test =
         in
         sqlite_python_anp && no_unsuited_cell) }
 
-(* ONE APPLICABILITY ANSWER, AND IT IS PASS 2's (2026-09-16).
-
-   [checks.index_speaks_each_action_language] above pins one INSTANCE of
-   the class — the index must not claim what a language cannot carry.
-   This pins the class's cause: both views used to build their own
-   [(mechanism, declared)] pair on the way into [suits_here], and the
-   result table's was the LANGUAGE DEFAULT while the index's was the
-   project's DECLARATION. Wherever those differ the two views answer
-   different questions, and nothing said which was right.
-
-   z3 is where they differ, and it is why this pin names a project.
-   z3 declares its Python binding as Ctypes; Python's default is Cext;
-   and applicability genuinely turns on the difference — Ctypes compiles
-   no stub archive, so [required_symbols_exported] has nothing to read,
-   while Cext's extension module does. So:
-
-     pass 2 (declaration) says NOT carried
-     the language default says carried
-
-   and the pin asserts the first. Nothing in today's OUTPUT moves either
-   way, because no z3 world derives a Python step and z3 is muted — this
-   is the divergence caught BEFORE it fired, which is the only time it
-   is cheap. *)
+(* Applicability is pass 2's one answer, read from the project's
+   declaration rather than the language default. z3 is where the two
+   differ: it declares its Python binding as Ctypes, which compiles no
+   stub archive, so [required_symbols_exported] is not carried, while
+   Python's default, Cext, would carry it. z3 is muted and derives no
+   Python step, so this holds the divergence before it fires. *)
 let applicability_reads_declaration_pin : Canary_project_test.pure_test =
   { name = "checks.applicability_reads_the_declaration";
     check =
@@ -3358,8 +3039,7 @@ let applicability_reads_declaration_pin : Canary_project_test.pure_test =
             let by_declaration =
               Canary_project_analysis.carries an ~lang:Canary_lang.Python slug
             in
-            (* what the language default would have said — the answer the
-               result table used to compute for itself *)
+            (* what the language default would say *)
             let by_default =
               List.mem
                 (Canary_project_analysis.carried_slugs
@@ -3371,20 +3051,12 @@ let applicability_reads_declaration_pin : Canary_project_test.pure_test =
             in
             declared_is_ctypes && (not by_declaration) && by_default) }
 
-(* §2 COUNTS WHAT §1.2 SHOWS (2026-09-28, design/overview.md §6.4). The
-   agreement overview's `decided` and `blame` count §1.2's cells — one per
-   chain, a world in one binding language — which §1.2's rows are drawn
-   from. They used to count the record's SLOT columns, which a
-   fetched-library world lacks for the checks it decides at its probe:
-   that day §2 said 4 ✓ · 4 ✗ for declared_symbols_exported where §1.2
-   showed 14 ✓ · 8 ✗, and 8 ✓ against 22 ✓ for
-   soname_matches_declaration. (A cell whose frame the chain lacks is
-   counted here and hatched there; §6.4 lists them.)
-
-   Over the chain-cell fixture, where the old count saw nothing of the
-   library's checks. Every §2 row of every checked agreement is parsed
-   back and held to the views the runs file is written from; the witness
-   clause keeps the comparison from passing on two empty sides. *)
+(* §2 counts what §1.2 shows: `decided` and `blame` count §1.2's cells,
+   one per chain (a world in one binding language). Over the chain-cell
+   fixture, every §2 row of every checked agreement is parsed back and
+   held to the views; the witness clause keeps the comparison from passing
+   on two empty sides. A cell whose frame the chain lacks is counted in §2
+   and hatched in §1.2 (design/overview.md §6.4). *)
 let agreement_counts_pin : Canary_project_test.pure_test =
   { name = "overview.agreement_counts_are_the_tables";
     check =
@@ -3532,19 +3204,11 @@ let agreement_counts_pin : Canary_project_test.pure_test =
             in
             decided_agree && blames_agree && witness && exported && tooltip) }
 
-(* §1'S BADGES COLOUR FROM §1.2'S CELLS (2026-09-29, design/overview.md
-   §6.4). A badge's word is [badge_word] over the checked agreements on
-   its edge, each in the word of its chain's cell, [unevaluated] where no
-   run decided anything. The badges read the record's slot columns until
-   then, so in the fetched-library worlds of sqlite, zarith and zlib the
-   realize_sys badge read unevaluated beside the library checks §1.2
-   showed decided.
-
-   Held over every view, the chain-cell fixture's and this machine's
-   recorded ones. The witness is the fixture's realize_sys badge, which
-   the slot columns left unevaluated: partial, from
-   declared_symbols_exported holding, soname_matches_declaration
-   undeclared and declared_versions_exported unevaluated. *)
+(* §1's badges colour from §1.2's cells: a badge's word is [badge_word]
+   over the checked agreements on its edge, each in the word of its
+   chain's cell, [unevaluated] where no run decided anything. Held over
+   the chain-cell fixture's views and this machine's recorded ones. See
+   design/overview.md §6.4. *)
 let badge_words_pin : Canary_project_test.pure_test =
   { name = "overview.badges_colour_from_the_cells";
     check =
@@ -3583,21 +3247,19 @@ let badge_words_pin : Canary_project_test.pure_test =
             List.for_all (views @ recorded) ~f:(fun v ->
                 from_cells v && unevaluated_only_where_counted v)
             && List.length views = List.length (Canary_project_run.scenarios_of pr)
+            (* the witness: the fixture's realize_sys badge is partial, from
+               declared_symbols_exported holding, soname_matches_declaration
+               undeclared and declared_versions_exported unevaluated *)
             && List.for_all views ~f:(fun v ->
                    Poly.equal (List.Assoc.find v.R.vw_badges "realize_sys" ~equal:String.equal)
                      (Some "partial"))) }
 
-(* THE STAGED COPY IS NAMED (2026-09-29, design/overview.md §6.4). An
-   installed world inspects two copies of its library, the build tree's
-   after build_lib and the staged one at probe_lib_staged, and the page
-   read only the first: the staged copy's node had no name and no count
-   while staged_interface_preserved held on it. The reader takes where the
-   step looked, so the staged probe's inspection names staged_sys, and the
-   build tree's still names lib_sys.
-
-   Over a fixture tree in sqlite's shape, with no log: each installed
-   world's two copies carry distinct names, so neither can stand for the
-   other. *)
+(* The staged copy is named. An installed world inspects two copies of its
+   library, the build tree's after build_lib and the staged one at
+   probe_lib_staged; the reader takes where the step looked, so the two
+   carry distinct names (lib_sys, staged_sys) and neither can stand for
+   the other. Held over a fixture tree in sqlite's shape, with no log. See
+   design/overview.md §6.4. *)
 let staged_copy_pin : Canary_project_test.pure_test =
   { name = "overview.staged_copy_is_named";
     check =

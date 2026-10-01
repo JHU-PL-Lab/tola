@@ -2,12 +2,12 @@
 
 open Base
 
-(* THE FIXTURE THE RECORD PINS WRITE (2026-09-23, status.md §2.7): a run
-   log in the runner's own line shape ([Canary_step_model.create_logger]),
-   stamped from a counter so every line's time is distinct and known; one
-   script per step state the log can express; and the reading of a state
-   back out of the JSON, by field name and independently of the encoder.
-   Shared, so the pins cannot come to disagree about what a state is. *)
+(* The fixture the record pins write: a run log in the runner's own line
+   shape ([Canary_step_model.create_logger]), stamped from a counter so
+   every line's time is distinct and known; one script per step state the
+   log can express; and a state read back out of the JSON by field name,
+   independently of the encoder. Shared, so the pins agree on what a state
+   is. *)
 module Record_fixture = struct
   module S = Canary_status
 
@@ -25,14 +25,14 @@ module Record_fixture = struct
     Stdlib.output_string oc text;
     Stdlib.close_out oc
 
-  (* the platform this machine is NOT: a record that answered with the
+  (* the platform this machine is not: a record that answered with the
      renderer's platform fails on either machine *)
   let elsewhere () =
     if String.equal (Canary_matrix.platform_label ()) "wsl_ubuntu" then
       "macos_local"
     else "wsl_ubuntu"
 
-  (* ONE SCRIPT PER STATE the log can express: the lines the runner
+  (* one script per state the log can express: the lines the runner
      writes for it, and the state they must read as. Every script's last
      line is its verdict. *)
   let scripts ~platform : ((string * string option) list * S.step_state) list
@@ -53,7 +53,7 @@ module Record_fixture = struct
       ( [ ("check_pre", Some "FAIL"); ("blocked", Some "precondition failed") ],
         S.Blocked );
       ([], S.Unrecorded);
-      (* a RE-RUN: the last verdict wins, and so does its time *)
+      (* a re-run: the last verdict wins, and so does its time *)
       ( [ ("platform", Some platform);
           ("failed", Some "postcondition failed");
           ("platform", Some platform); ("done", None) ],
@@ -81,7 +81,7 @@ module Record_fixture = struct
     stamp
 
   (* one script for [tag]: the stamp of its verdict line, which is the
-     WHEN the record must report — [None] when it writes nothing *)
+     time the record must report; [None] when it writes nothing *)
   let play (log : log) ~tag ((lines, _) : (string * string option) list * _) =
     List.fold lines ~init:None ~f:(fun _ (event, detail) ->
         Some (line log tag event detail))
@@ -128,12 +128,12 @@ module Record_fixture = struct
     | _ -> None
 end
 
-(* THE CHAIN-CELL FIXTURE (2026-09-28): a log in zarith's shape, which the
-   pins holding §2's counts and §1's badges to §1.2's cells read. Both of
-   zarith's worlds fetch the library, so neither has the build_lib slot
-   the library's declaration checks are read at, and the log decides them
-   at probe_lib, where only a chain's cells see them; beside them, one
-   binding check decided and one not. *)
+(* The chain-cell fixture: a log in zarith's shape, read by the pins that
+   hold §2's counts and §1's badges to §1.2's cells. Both of zarith's
+   worlds fetch the library, so neither has the build_lib slot the
+   library's declaration checks are read at; the log decides them at
+   probe_lib, where only a chain's cells see them. Beside them, one
+   binding check is decided and one is not. *)
 let chain_cell_fixture () :
     (Canary_project_run.project_run * Canary_matrix.t * Canary_overview_runs.view list) option =
   let project = "zarith" in
