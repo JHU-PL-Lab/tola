@@ -38,7 +38,8 @@ let sections : section list =
     s "§1" "A chain, layer by layer" "layers"
       [ "missing_steps"; "chain_key"; "join_panel" ]
       [ "Canary_overview_diagram"; "Canary_overview_looks"; "Canary_overview_panel";
-        "Canary_overview_cases"; "Canary_overview_join"; "Canary_overview_runs" ]
+        "Canary_overview_cases"; "Canary_overview_join"; "Canary_overview_draw";
+        "Canary_overview_runs" ]
       ~about:"what canary models between two package managers, with a recorded run drawn on it";
     s "§1.1" "What each node is" "nodes" [ "node_legend" ]
       [ "Canary_overview_panel"; "Canary_topology" ];

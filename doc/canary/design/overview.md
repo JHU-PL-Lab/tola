@@ -35,9 +35,15 @@ not say:
 - `Canary_overview_assets` reads `canary/overview/` from the repository
   root. Artifact-test's `overview.scripts_parse` runs `node --check` on
   the scripts.
-- The page's script looks answers up in the embedded data and the runs
-  files and decides nothing of its own, except in the five places §4
-  lists.
+- What a choice draws is computed once, in OCaml: `Canary_overview_join`
+  resolves the band, the lines under the node labels and their sources,
+  and `Canary_overview_draw` turns a choice (the four buttons, or a
+  package and one of its recorded worlds) into each edge's and node's
+  look. The page opens in that drawing, the export draws any choice with
+  it, and the page's script only looks the answers up. What the script
+  keeps is the buttons' state: a chosen package stays chosen while the
+  four choices agree with it, and clicking a package manager off
+  outlines nothing.
 - Each figure and table has an id (`fig-…`, `tab-…`) and a numbered
   caption, from one list in page order (`Canary_overview_exhibits`). A
   number follows from the order and moves when an exhibit is added; the
@@ -48,9 +54,13 @@ not say:
   elsewhere). The generators that make the page make them, so nothing is
   read back from the page. A figure is a standalone SVG carrying the
   page's light-theme rules that reach it; a table is an HTML fragment
-  that the embedding document styles. §1's diagram is written in the
-  default choice. The two tables the page's script fills (the lines under
-  the node labels, and §1.2's results) are not written yet.
+  that the embedding document styles. Figure 2 and the lines table are
+  written for the page's opening choice; with `--chain ID [--world W]`,
+  or `--mechanism`, `--coop`, `--native` and `--lang`, `--exhibits DIR`
+  writes those two for the chain the buttons would draw. A recorded world
+  is one of this machine's until the export reads every machine's runs
+  files, as §1.2's results table will need; that table is not written
+  yet.
 
 ## 2. How a run reaches the page
 
@@ -203,14 +213,7 @@ the version it fetched. Recording it at the fetch (§6.1 item 2,
 2. the badges, from the log's `agreement_outcome` lines;
 3. the band rules (`band_hidden`, `band_dead`), which return node ids
    without saying which clause removed a node;
-4. the five rules still in the page's script — `nearest()` lets go of
-   the native side's package manager first when no chain has the choice;
-   `pick('m')` chooses a mechanism's only dependent package manager; a
-   chosen package stays chosen only while all four choices agree with it;
-   clicking a package manager off outlines nothing; `srcOf` repeats the
-   route each value was looked up by. Each can move into
-   `Canary_overview_join` as data;
-5. §1.2's cells, which read the same views: names and counts from the
+4. §1.2's cells, which read the same views: names and counts from the
    recorded inspections, piece states from the edges, outcomes from the
    logged verdicts.
 
@@ -584,13 +587,14 @@ copy is named) closed the rest.
 | `overview.placeholders_are_drawn_as_such` | filled and hollow badges against the registry's evaluators |
 | `overview.badges_count_what_applies` | a badge counts pass 2's answer for the drawn mechanism; a run colours exactly what it counts |
 | `overview.agreements_sit_on_the_chain` | every agreement has one claim site; the table's `sits on` is it; the grouping lists each once; no run decided an agreement without an evaluator |
-| `overview.every_drawn_line_has_a_source` | every line under a node label has one source; a render read found by swapping the machine's answers (§4) |
+| `overview.every_drawn_line_has_a_source` | every line under a node label has one source, carried with it for every choice, package and recorded world; the script finds none by a route of its own; a render read found by swapping the machine's answers (§4) |
+| `overview.choice_is_resolved_once` | a choice's band is its own or the nearest (native side's package manager let go first), with a note naming what was let go; a recorded world's names come first; the page opens in the export's drawing; the script holds none of these rules (§1) |
 | `overview.edge_marks_clear_the_boxes` | no edge under a source it does not join; no label or badge hidden |
 | `overview.visual_vocabulary_is_one_list` | the looks: one list, held to the stylesheet (§5) |
 | `overview.layout_rules_hold` | the places: every rule holds, every named pin exists (§5) |
 | `overview.flow_is_the_page` | the page's §0: every template slot belongs to one section, every heading reads as the outline lists it and in its order, every module it names has a source file, every pin a box names exists, the figure's boxes do not overlap and every arrow is straight (§1) |
 | `overview.exhibits_are_captioned` | each figure and table appears once, in list order, captioned with its number and title and listed in §0; every table and drawing on the page is one of them (§1) |
-| `overview.exhibits_are_exported` | every exhibit is written on its own or named as not written, with why; a written table is the page's without its caption; a written figure ends with the page's drawing and stands alone (its size and namespace, every colour it uses defined, no dark mode, no entity XML lacks); nothing written carries the page's numbers (§1) |
+| `overview.exhibits_are_exported` | every exhibit is written on its own or named as not written, with why; a written table is the page's without its caption; a written figure ends with the page's drawing and stands alone (its size and namespace, every colour it uses defined, no dark mode, no entity XML lacks); nothing written carries the page's numbers; a choice of chain writes only Figure 2 and the lines table (§1) |
 | `overview.tables_list_what_canary_covers` | the page's §3 tables list exactly what canary has drivers and projects for |
 | `overview.outcome_marks_are_one_list` | one spelling of an outcome's mark: every label a log records has an entry, the page's script spells no word mark, §2 shows the key |
 | `overview.agreement_laws_are_listed` | §2 lists every law of `Canary_agreement.row_rules` |

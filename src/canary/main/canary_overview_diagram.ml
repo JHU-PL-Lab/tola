@@ -89,12 +89,22 @@ let band_label ~y ~label =
   Printf.sprintf {|<text class="bandlabel" x="%d" y="%d">%s</text>|} (canvas_w / 2) (y + 20)
     (esc label)
 
+(** A monospace line squeezed to [w] where it would overrun it: a glyph's
+    advance is about 0.6 of the font's size. The page's script measures
+    and squeezes again. *)
+let squeeze ~(size : float) ~(w : int) (s : string) : string =
+  let chars = String.count s ~f:(fun c -> Char.to_int c land 0xC0 <> 0x80) in
+  if Float.(of_int chars * 0.6 * size > of_int w) then
+    Printf.sprintf {| textLength="%d" lengthAdjust="spacingAndGlyphs"|} w
+  else ""
+
 (** A node. Nodes are drawn after the edges, so the boxes mask the lines
     that run under them and every edge can be a straight segment. A
     declaration is a ◇ badge on the node it is about. [data-node] is the
     handle the page's script finds the node by; a case slot holds the
-    lines a chosen chain writes under the label. *)
-let node_svg ?(extra = "") ?(case_slot = false) (n : T.node) =
+    lines a chosen chain writes under the label — [line], with its
+    classes, and a recorded run's [place] under it. *)
+let node_svg ?(extra = "") ?(case_slot = false) ?line ?place (n : T.node) =
   let p = pos_of n.T.nd_id in
   let w = box_w_of n.T.nd_id in
   let x = p.px - (w / 2) and y = p.py - (box_h / 2) in
@@ -115,12 +125,14 @@ let node_svg ?(extra = "") ?(case_slot = false) (n : T.node) =
           (esc what)
           (x + w - 10) (y + 10) (x + w - 10) (y + 14)
   in
+  let placed = Option.is_some place and lined = Option.is_some line in
   let main =
     Printf.sprintf
       {|<g class="%s" data-node="%s"><title>%s</title>
 <rect x="%d" y="%d" width="%d" height="%d" rx="7"/>
 <text class="nlabel" x="%d" y="%d"%s>%s</text>%s|}
-      cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y w box_h p.px (p.py + 5)
+      cls (esc n.T.nd_id) (esc n.T.nd_gloss) x y w box_h p.px
+      (if placed then p.py - 7 else if lined then p.py - 2 else p.py + 5)
       (if case_slot then
          Printf.sprintf {| data-y0="%d" data-y1="%d" data-y2="%d"|} (p.py + 5) (p.py - 2)
            (p.py - 7)
@@ -130,9 +142,18 @@ let node_svg ?(extra = "") ?(case_slot = false) (n : T.node) =
   (* the name, and under it the run's placement: a third line *)
   let slot =
     if case_slot then
+      let text, classes = Option.value line ~default:("", []) in
+      let place = Option.value place ~default:"" in
       Printf.sprintf
-        {|<text class="ncase" x="%d" y="%d" data-y1="%d" data-y2="%d"></text><text class="nplace" x="%d" y="%d"></text>|}
-        p.px (p.py + 14) (p.py + 14) (p.py + 7) p.px (p.py + 19)
+        {|<text class="%s" x="%d" y="%d" data-y1="%d" data-y2="%d"%s>%s</text><text class="nplace" x="%d" y="%d"%s>%s</text>|}
+        (String.concat ~sep:" " ("ncase" :: classes))
+        p.px
+        (if placed then p.py + 7 else p.py + 14)
+        (p.py + 14) (p.py + 7)
+        (squeeze ~size:11.5 ~w:(w - 12) text)
+        (esc text) p.px (p.py + 19)
+        (squeeze ~size:10. ~w:(w - 12) place)
+        (esc place)
     else ""
   in
   main ^ slot ^ "</g>"
@@ -159,8 +180,9 @@ let annotation_title = function
     one those only named; the page's script recounts both per chain. An
     edge with none placed is bare. [ph_slot] adds the hidden placeholder
     marker a recorded run shows where a package manager did something the
-    run does not record. *)
-let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) (e : T.edge) =
+    run does not record; [marker] shows it, with its classes and what it
+    stands for. *)
+let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e : T.edge) =
   let dst = pos_of e.eg_to in
   let placed = not (List.is_empty (T.claim_sites_on e.T.eg_id)) in
   let cls =
@@ -206,9 +228,11 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) (e : T.edge)
              if not ph_slot then ""
              else
                (* hidden by class: SVG does not honour [hidden] *)
+               let classes, says = Option.value marker ~default:([], "") in
                Printf.sprintf
-                 {|<g class="phm"><title></title><rect x="%d" y="%d" width="22" height="16" rx="3"/><text x="%d" y="%d">…</text></g>|}
-                 (mx - 57) (my - 8) (mx - 46) (my + 4)
+                 {|<g class="%s"><title>%s</title><rect x="%d" y="%d" width="22" height="16" rx="3"/><text x="%d" y="%d">…</text></g>|}
+                 (String.concat ~sep:" " ("phm" :: classes))
+                 (esc says) (mx - 57) (my - 8) (mx - 46) (my + 4)
            in
            Printf.sprintf
              {|<g class="%s" data-edge="%s"><title>%s — %s</title>
@@ -223,16 +247,20 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) (e : T.edge)
 
 (** The one layout: every node and edge drawn once. [classes] adds classes
     to an element by id, which the page's script and stylesheet use to
-    hide, grey or outline it; [counts] is what an edge's two badges count
-    before the script recounts them. A caption names each side over its
-    column. *)
+    hide, grey or outline it; [counts] is what an edge's two badges count;
+    [lines], [places] and [markers] are what a chosen chain writes under a
+    node and a recorded run marks on an edge. A caption names each side
+    over its column. *)
 let diagram ?(ph_slots = false) ?(case_slots = false)
     ?(classes = fun (_ : string) -> ([] : string list))
     ?(counts =
       fun id ->
         let ps = T.claim_sites_on id in
         let checked = List.count ps ~f:T.implemented in
-        (checked, List.length ps - checked)) () : string =
+        (checked, List.length ps - checked))
+    ?(lines = fun (_ : string) -> (None : (string * string list) option))
+    ?(places = fun (_ : string) -> (None : string option))
+    ?(markers = fun (_ : string) -> (None : (string list * string) option)) () : string =
   let extra id = String.concat (List.map (classes id) ~f:(fun c -> " " ^ c)) in
   let bands =
     String.concat (List.map bands_def ~f:(fun (y, h, _, cls) -> band_rect ~y ~h ~cls))
@@ -248,12 +276,14 @@ let diagram ?(ph_slots = false) ?(case_slots = false)
   let es =
     String.concat
       (List.map T.edges ~f:(fun e ->
-           edge_svg ~extra:(extra e.T.eg_id) ~counts:(counts e.T.eg_id) ~ph_slot:ph_slots e))
+           edge_svg ~extra:(extra e.T.eg_id) ~counts:(counts e.T.eg_id) ~ph_slot:ph_slots
+             ?marker:(markers e.T.eg_id) e))
   in
   let ns =
     String.concat
       (List.map T.nodes ~f:(fun n ->
-           node_svg ~extra:(extra n.T.nd_id) ~case_slot:case_slots n))
+           node_svg ~extra:(extra n.T.nd_id) ~case_slot:case_slots ?line:(lines n.T.nd_id)
+             ?place:(places n.T.nd_id) n))
   in
   Printf.sprintf
     {|<svg viewBox="0 0 %d %d" class="diagram" role="img">

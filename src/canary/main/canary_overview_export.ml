@@ -13,11 +13,11 @@ module E = Canary_overview_exhibits
 let dir () =
   if Canary_store.platform_is_overridden () then "_out/canary/exhibits" else E.export_dir
 
-(** The exhibits the page's script fills, which the export does not make
-    yet, and why. *)
-let not_exported =
-  [ ("tab-lines", "the page's script fills it for the chain chosen");
-    ("tab-results", "the page's script fills it from the runs files") ]
+(** The exhibits the export does not make yet, and why. *)
+let not_exported = [ ("tab-results", "the page's script fills it from the runs files") ]
+
+(** The exhibits a choice of chain draws. *)
+let drawn_by_choice = [ "fig-chain"; "tab-lines" ]
 
 (* ── the page's styles, for a drawing on its own ── *)
 
@@ -116,18 +116,26 @@ let standalone ?(scope = "") (svg : string) : string =
 (* ── the files ── *)
 
 (** Every exhibit the export writes, in page order: its file name and its
-    content. [overview] is §2, which holds three of the tables. *)
-let files (projects : (string * Canary_project_run.project_run) list) ~(overview : string) :
-    (string * string) list =
+    content. [overview] is §2, which holds three of the tables. With a
+    [choice], only the exhibits it draws, drawn for it from [views]. *)
+let files ?choice ?(views = []) (projects : (string * Canary_project_run.project_run) list)
+    ~(overview : string) : (string * string) list =
   let module Tb = Canary_overview_tables in
+  let module Dr = Canary_overview_draw in
   let join = Canary_overview_join.of_projects projects in
+  let d = Dr.drawing join ~views (Option.value choice ~default:(Dr.opening join)) in
   let figure = function
     | "fig-flow" -> Some (standalone (Canary_overview_flow.svg ()))
-    | "fig-chain" -> Some (standalone ~scope:"join" (Canary_overview_panel.chain_svg join))
+    | "fig-chain" ->
+        Some
+          (standalone
+             ~scope:(if Option.is_some d.Dr.dr_view then "join rec" else "join")
+             (Dr.svg d))
     | _ -> None
   in
   let table_source = function
     | "tab-subjects" -> Some (Canary_overview_flow.table ())
+    | "tab-lines" -> Some (Dr.lines_table d)
     | "tab-nodes" -> Some (Canary_overview_panel.node_legend ())
     | "tab-outcomes" | "tab-agreements" | "tab-sittings" -> Some overview
     | "tab-census" -> Some (Tb.claim_sites_table ())
@@ -137,7 +145,10 @@ let files (projects : (string * Canary_project_run.project_run) list) ~(overview
     | "tab-chains" -> Some (Tb.chains_table join)
     | _ -> None
   in
-  List.filter_map E.exhibits ~f:(fun e ->
+  let wanted e =
+    Option.is_none choice || List.mem drawn_by_choice e.E.ex_id ~equal:String.equal
+  in
+  List.filter_map (List.filter E.exhibits ~f:wanted) ~f:(fun e ->
       match e.E.ex_kind with
       | E.Figure -> Option.map (figure e.E.ex_id) ~f:(fun c -> (e.E.ex_id ^ ".svg", c))
       | E.Table ->
@@ -145,9 +156,9 @@ let files (projects : (string * Canary_project_run.project_run) list) ~(overview
             (Option.bind (table_source e.E.ex_id) ~f:(E.bare_table e.E.ex_id))
             ~f:(fun c -> (e.E.ex_id ^ ".html", c ^ "\n")))
 
-(** Write every exhibit into [dir]; the directory written. *)
-let write ?dir:(d = dir ()) (projects : (string * Canary_project_run.project_run) list)
-    ~(overview : string) : string =
+(** Write the exhibits into [dir]; the directory written. *)
+let write ?dir:(d = dir ()) ?choice ?views
+    (projects : (string * Canary_project_run.project_run) list) ~(overview : string) : string =
   let rec mkdir_p p =
     if not (Stdlib.Sys.file_exists p) then begin
       mkdir_p (Stdlib.Filename.dirname p);
@@ -155,7 +166,7 @@ let write ?dir:(d = dir ()) (projects : (string * Canary_project_run.project_run
     end
   in
   mkdir_p d;
-  List.iter (files projects ~overview) ~f:(fun (name, content) ->
+  List.iter (files ?choice ?views projects ~overview) ~f:(fun (name, content) ->
       Stdlib.Out_channel.with_open_bin (Stdlib.Filename.concat d name) (fun oc ->
           Stdlib.Out_channel.output_string oc content));
   d

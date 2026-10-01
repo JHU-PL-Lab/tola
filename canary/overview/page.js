@@ -32,49 +32,19 @@ if(jbox&&J){
     el.innerHTML=items.length?'<p class="mechnote"><strong>'+head+'</strong></p><ul class="unpl">'
       +items.join('')+'</ul>':''; };
   var key=function(){ return S.k+'|'+(S.ps||'*')+'|'+(S.pl||'*'); };
-  // the band for the choice — or, where no chain has it, the nearest one
-  // some chain has: the native side's package manager is let go first,
-  // then the language side's; [drop] names what was let go
-  var nearest=function(){
-    var tries=[[S.ps,S.pl],[null,S.pl],[S.ps,null],[null,null]];
-    for(var i=0;i<tries.length;i++){
-      var ps=tries[i][0], pl=tries[i][1], b=J.bands[S.k+'|'+(ps||'*')+'|'+(pl||'*')];
-      if(b) return {band:b, drop:[S.ps&&!ps?S.ps:null, S.pl&&!pl?S.pl:null].filter(Boolean),
-                    kept:[ps,pl].filter(Boolean)};
-    }
-    return {band:null, drop:[], kept:[]};
-  };
   var draw=function(){
-    var c=S.c&&caseOf(S.c), v=c&&S.v?VIEWS[S.v]:null, near=c?null:nearest(),
-        band=c||(near&&near.band)||{gone:[],dead:[]},
-        gone=v?(v.gone||[]):((J.mechanisms[S.m]||{}).gone||[]).concat(band.gone||[]),
-        dead=v?[]:(band.dead||[]), names={},
+    // every answer below is computed in canary_overview_draw.ml and
+    // looked up here: a recorded world's own, else its package's, else
+    // the four buttons' choice
+    var c=S.c&&caseOf(S.c), v=c&&S.v?VIEWS[S.v]:null, ch=c?{}:(J.choices[key()]||{}),
+        mech=J.mechanisms[S.m]||{},
+        band=c||(ch.band?J.bands[ch.band]:null)||{gone:[],dead:[]},
+        gone=v?(v.gone||[]):(mech.gone||[]).concat(band.gone||[]),
+        dead=v?[]:(band.dead||[]), lines=(c?c.lines:ch.lines)||{},
         related=(!c&&S.hl&&J.related[S.hl])||[];
-    // a package names every node its project declares; a package manager
-    // chosen alone names its own node; a recorded run's own names win, and
-    // say they are recorded
-    if(c) names=c.names; else { if(S.ps) names.pm_sys=S.ps; if(S.pl) names.pm_lang=S.pl; }
-    var named=function(id){
-      if(v&&v.names&&v.names[id]) return v.names[id];
-      return names[id]?{label:names[id], from:'declared'}:null; };
-    // THE PACKAGE MANAGERS' TERMS for the package layer's two in-between
-    // nodes, wherever no name is known: the capability file the native
-    // side's package manager ships (§3.1), and the kinds of bridge the
-    // chains join through (§3.3) — or, where no chain has the choice,
-    // those the language side's package manager defines
-    var terms={}, pt=J.pm_terms[(c?c.ps:S.ps)||J.sys_pm],
-        br=c?(c.bridge||[]):((near&&near.band&&near.band.bridge)||[]), brPm=false;
-    if(pt&&pt.cap) terms.cap=pt.cap;
-    if(!br.length&&!c&&S.pl&&J.pm_terms[S.pl]){ br=J.pm_terms[S.pl].bridges||[]; brPm=true; }
-    if(br.length) terms.bridge=br.join(' · ');
-    // WHERE EACH LINE CAME FROM (2026-09-24): the source computed with the
-    // value, looked up by the same route the value was — a recorded run's
-    // name, a package's declaration, the choice itself, or a term
-    var srcOf=function(id, n){
-      if(n) return (v&&v.names&&v.names[id]) ? (v.name_sources||{})[id]
-        : c ? (c.names_src||{})[id] : J.sources.pm_choice;
-      return id==='cap' ? J.sources.cap_term
-        : id==='bridge' ? (brPm?J.sources.bridge_term_pm:J.sources.bridge_term) : null; };
+    // the line under a node: a recorded name first, then the package's or
+    // the choice's, each with its source
+    var lineOf=function(id){ return (v&&v.lines&&v.lines[id])||lines[id]||null; };
     var prov=[];
     jbox.classList.toggle('rec', !!v);
     jbox.querySelectorAll('[data-edge]').forEach(function(g){
@@ -90,8 +60,8 @@ if(jbox&&J){
       // THE BADGES (2026-09-24): the agreements on this edge that apply to
       // the chain drawn — a recorded run's own list, else its mechanism's —
       // filled for the checked ones, hollow for the placeholders
-      var cl=((v?v.edge_claims:(J.mechanisms[S.m]||{}).claims)||{})[e]||[],
-          nc=cl.filter(function(x){ return x[1]==='checked'; }).length, np=cl.length-nc,
+      var cl=((v?v.edge_claims:mech.claims)||{})[e]||[],
+          cn=((v?v.edge_counts:mech.counts)||{})[e]||[0,0], nc=cn[0], np=cn[1],
           bc=g.querySelector('.cbadge.chk'), tc=g.querySelector('.cnum.chk'),
           bp=g.querySelector('.cbadge.cand'), tp=g.querySelector('.cnum.cand');
       if(bc&&tc&&bp&&tp){
@@ -113,16 +83,15 @@ if(jbox&&J){
         if(mt) mt.textContent=ph?ph.map(function(x){ return x.text; }).join('\n'):''; } });
     jbox.querySelectorAll('[data-node]').forEach(function(g){
       var id=g.getAttribute('data-node'), l=g.querySelector('.nlabel'),
-          s=g.querySelector('.ncase'), pe=g.querySelector('.nplace'), n=named(id),
-          term=n?'':(terms[id]||''), line=n?n.label:term,
-          place=v&&v.nodes?(v.nodes[id]||''):'';
+          s=g.querySelector('.ncase'), pe=g.querySelector('.nplace'), n=lineOf(id),
+          line=n?n.text:'', place=v&&v.nodes?(v.nodes[id]||''):'';
       g.classList.toggle('gone', gone.indexOf(id)>=0);
       g.classList.toggle('dim', !!v && (v.dim||[]).indexOf(id)>=0);
       // the package nodes the last clicked button is about
       g.classList.toggle('related', related.indexOf(id)>=0);
       if(s){ s.textContent=line;
         s.classList.toggle('rec-name', !!n && n.from==='recorded');
-        s.classList.toggle('term', !!term);
+        s.classList.toggle('term', !!n && n.kind==='term');
         s.setAttribute('y', place?s.dataset.y2:s.dataset.y1); }
       if(pe) pe.textContent=place;
       // squeezed to the node's own box, which is narrower for a source
@@ -130,7 +99,7 @@ if(jbox&&J){
       fit(s, bw); fit(pe, bw);
       if(l&&l.dataset.y0) l.setAttribute('y', place?l.dataset.y2:(line?l.dataset.y1:l.dataset.y0));
       var lab=l?l.textContent:id;
-      if(line) prov.push([lab, n?'name':'term', line, srcOf(id,n)]);
+      if(line) prov.push([lab, n.kind, line, n.src]);
       if(place) prov.push([lab, 'placement', place, (v.place_sources||{})[id]]); });
     // the list under the diagram: every line above, with its source
     var pb=document.getElementById('jprovbody'), psum=document.getElementById('jprovsum');
@@ -165,14 +134,8 @@ if(jbox&&J){
         if(!seen[w]){ seen[w]=1; who.push(w); } });
       runs.innerHTML=who.length?'<strong>Canary runs this chain:</strong> '+jesc(who.sort().join(', '))+' (§3.4).'
         :'No chain canary runs has this choice.'; }
-    if(miss){
-      var k=J.kinds[S.k]||{}, why='';
-      if(!c&&k.unbanded) why='⚠ '+jesc(k.label||S.k)+' has no band of its own: '+jesc(k.unbanded)+'.';
-      else if(!c&&near&&near.drop.length)
-        why='Canary runs no '+jesc(k.label||S.k)+' chain with '+jesc(near.drop.join(' or '))
-          +' — the band is drawn from its chains'
-          +(near.kept.length?' with '+jesc(near.kept.join(' and ')):'')+'.';
-      miss.innerHTML=why; miss.hidden=!why; }
+    // why the band drawn is not the choice's own
+    if(miss){ var why=ch.note||''; miss.textContent=why; miss.hidden=!why; }
     // THE RECORDED RUN (merged from the retired §2.1): which world is
     // drawn, and everything it recorded or could not
     var worlds=c?(BYCASE[c.id]||[]):[], bar=document.getElementById('jrecbar'),
@@ -220,7 +183,7 @@ if(jbox&&J){
       up.map(function(tg){ return '<li><code>'+jesc(tg)+'</code> — '+jesc(v.unplaced[tg])+'</li>'; }));
   };
   var pick=function(g,val){
-    if(g==='m'){ S.m=val; var d=(J.mechanisms[val]||{}).pms||[]; if(d.length===1) S.pl=d[0]; }
+    if(g==='m'){ S.m=val; var d=(J.mechanisms[val]||{}).pl; if(d) S.pl=d; }
     else if(g==='ps'){ S.ps=(S.ps===val?null:val); }
     else if(g==='pl'){ S.pl=(S.pl===val?null:val); }
     else if(g==='k'){ S.k=val; S.c=null; }

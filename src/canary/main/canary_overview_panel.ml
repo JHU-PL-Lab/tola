@@ -70,29 +70,9 @@ let runs_label (j : Canary_overview_join.t) (ids : string list) : string =
   |> List.dedup_and_sort ~compare:String.compare
   |> String.concat ~sep:", "
 
-(** §1's diagram in the default choice: the page's opening drawing, and
-    the export's. *)
-let chain_svg (j : Canary_overview_join.t) : string =
-  let module J = Canary_overview_join in
-  let m0, _, _ = J.default_choice j in
-  let gone0, dead0 = J.default_drawing j in
-  let classes id =
-    (if List.mem gone0 id ~equal:String.equal then [ "gone" ] else [])
-    @ if List.mem dead0 id ~equal:String.equal then [ "jdead" ] else []
-  in
-  D.diagram ~classes ~case_slots:true ~ph_slots:true
-    ~counts:(fun id ->
-      (* the default drawing's badges, as the script would count them *)
-      let claims =
-        Option.value ~default:[]
-          (Option.bind
-             (List.find (J.variants ()) ~f:(fun v ->
-                  String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m0))
-             ~f:(fun v -> List.Assoc.find (J.mechanism_claims v) id ~equal:String.equal))
-      in
-      let checked = List.count claims ~f:(fun (_, st) -> Poly.equal st T.Checked) in
-      (checked, List.length claims - checked))
-    ()
+(** The page's opening drawing. *)
+let opening (j : Canary_overview_join.t) =
+  Canary_overview_draw.(drawing j ~views:[] (opening j))
 
 (** The panel and the one diagram it draws. *)
 let join_panel (j : Canary_overview_join.t) =
@@ -272,8 +252,7 @@ this machine — <code>canary overview</code> writes what each machine ran to
 <p class="mechnote" id="jruns">%s</p>
 <p class="mechnote" id="jmiss" hidden></p>%s
 <details class="jprov" id="jprov"><summary id="jprovsum">Where the lines under the node labels come from</summary>
-%s<thead><tr><th>node</th><th>line</th><th>shown</th><th>source — and the code that read it</th></tr></thead>
-<tbody id="jprovbody"></tbody></table>
+%s
 <p class="mechnote">Every line written under a node label, with where it was read:
 <span class="src code">code</span> a declaration or a rule in canary's source;
 <span class="src run">run</span> a file a recorded run wrote;
@@ -281,8 +260,8 @@ this machine — <code>canary overview</code> writes what each machine ran to
 neither, and flagged wherever it appears. Each is computed with its value in
 <code>Canary_overview_runs</code> and <code>Canary_overview_join</code>; the
 page only looks it up. Only these lines are traced so far; what is not yet —
-a recorded run's edge states and badges, the band rules, the script's own
-rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
+a recorded run's edge states and badges, the band rules and §1.2's cells —
+is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
 %s
 <div id="jrec" hidden>
 <div class="key reckey">
@@ -298,7 +277,7 @@ rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</co
     (row "binding mechanism" m_buttons)
     (row "cooperation" k_buttons)
     (row "package in canary" c_buttons)
-    (E.figure "fig-chain" (chain_svg j))
+    (E.figure "fig-chain" (Canary_overview_draw.svg (opening j)))
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with
      | [] -> ""
@@ -306,7 +285,7 @@ rules and §1.2's cells — is listed in <code>doc/canary/design/overview.md</co
          Printf.sprintf
            {|<p class="mechnote">No cooperation button: %s. Their packages are among the concrete ones, drawn with what canary cannot read left in (§3.3).</p>|}
            (esc (String.concat ~sep:"; " us)))
-    (E.table ~cls:"cmp" "tab-lines")
+    (Canary_overview_draw.lines_table (opening j))
     (* the layout's rules, as a redraw must keep them *)
     (Printf.sprintf
        {|<details class="jprov" id="jrules"><summary>How this diagram is laid out — %d rules a redraw in any framework must keep</summary><ol class="lrules">%s</ol><p class="mechnote">Each is held against these places by <code>overview.layout_rules_hold</code>, or by the pin it names; the looks are the keys'.</p></details>|}

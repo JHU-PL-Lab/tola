@@ -278,6 +278,158 @@ let related (j : t) : (string * string list) list =
           List.filter package_nodes ~f:(fun n ->
               not (List.mem b.T.cb_hidden n ~equal:String.equal)) ))
 
+(* ── a choice, resolved ─────────────────────────────────────────────── *)
+
+(** The package manager a mechanism's button chooses with it: the one the
+    mechanism depends on, where there is exactly one. *)
+let mechanism_pm (j : t) (m : Canary_mechanism.mechanism) : string option =
+  match dependent_pms j.jn_cases m with
+  | [ p ] -> Some (Canary_store.string_of_pm p)
+  | _ -> None
+
+let variant_named (m : string) : T.artifact_variant option =
+  List.find (variants ()) ~f:(fun v ->
+      String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m)
+
+(** Where a line comes from when the choice itself, or a package
+    manager's term, is the answer. *)
+let src_pm_choice =
+  Canary_overview_runs.from_code
+    "the package manager chosen, by a click or by the page's default: one of those canary has a driver for, on the side its scope puts it"
+    "Canary_overview_join.pms; the default, default_choice"
+
+let src_cap_term =
+  Canary_overview_runs.from_code
+    "what the native side's package manager calls its capability file (this platform's, while none is chosen)"
+    "Canary_pm_solo.table (ps_capability)"
+
+let src_bridge_term =
+  Canary_overview_runs.from_code "the kinds of bridge the gates of the chains drawn name"
+    "Canary_topology.bridge_terms → Canary_bridge.kind_term"
+
+let src_bridge_term_pm =
+  Canary_overview_runs.from_code "the kinds of bridge the language side's package manager defines"
+    "Canary_bridge.kinds_defined"
+
+let pm_named (s : string) : Canary_store.package_manager option =
+  List.find_map Canary_pm_solo.table ~f:(fun r ->
+      let pm = r.Canary_pm_solo.ps_pm in
+      if String.equal (Canary_store.string_of_pm pm) s then Some pm else None)
+
+(** THE PACKAGE MANAGERS' TERMS for the package layer's two in-between
+    nodes, where no name is known: the capability file the native side's
+    package manager ships (this platform's while none is chosen), and the
+    kinds of bridge the chains drawn join through — or, while no package
+    is chosen and they name none, those the language side's package
+    manager defines. *)
+let terms ~(native : string option) ~(lang : string option) ~(bridges : string list)
+    ~(package : bool) : (string * Canary_overview_runs.line) list =
+  let module R = Canary_overview_runs in
+  let sys = Canary_store.system_pm_of_platform (Canary_store.platform ()) in
+  let native_pm = Option.value (Option.bind native ~f:pm_named) ~default:sys in
+  let cap =
+    Option.map
+      (Option.filter (Canary_pm_solo.capability_of native_pm) ~f:(fun c ->
+           not (String.is_empty c)))
+      ~f:(fun c -> ("cap", R.term_line c src_cap_term))
+  in
+  let bridge =
+    match bridges with
+    | _ :: _ -> Some ("bridge", R.term_line (String.concat ~sep:" · " bridges) src_bridge_term)
+    | [] when not package -> (
+        match
+          Option.map (Option.bind lang ~f:pm_named) ~f:(fun p ->
+              List.map (Canary_bridge.kinds_defined p) ~f:fst)
+        with
+        | Some (_ :: _ as bs) ->
+            Some ("bridge", R.term_line (String.concat ~sep:" · " bs) src_bridge_term_pm)
+        | _ -> None)
+    | [] -> None
+  in
+  List.filter_opt [ cap; bridge ]
+
+(** Names first; a term only where no name is. *)
+let named_then_terms names terms =
+  names
+  @ List.filter terms ~f:(fun (n, _) -> not (List.Assoc.mem names n ~equal:String.equal))
+
+(** The lines a package writes under the node labels: what its project
+    declares each node is, then the terms. *)
+let case_lines (c : case) : (string * Canary_overview_runs.line) list =
+  let native, lang = case_pms c in
+  let pm = Option.map ~f:Canary_store.string_of_pm in
+  named_then_terms
+    (List.map c.cs_names ~f:(fun (n, l) ->
+         ( n,
+           Canary_overview_runs.name_line
+             ?src:(List.Assoc.find c.cs_name_sources n ~equal:String.equal)
+             l )))
+    (terms ~native:(pm native) ~lang:(pm lang) ~bridges:c.cs_bridges ~package:true)
+
+(** A choice of the four buttons, resolved. *)
+type resolved = {
+  rv_band : string option;
+      (** the band drawn: the choice's own, or the nearest some chain has *)
+  rv_lines : (string * Canary_overview_runs.line) list;
+  rv_note : string;  (** why the band drawn is not the choice's own; empty when it is *)
+}
+
+(** THE BAND FOR A CHOICE — or, where no chain has it, the nearest one
+    some chain has: the native side's package manager is let go first,
+    then the language side's, and the note says what was let go. *)
+let resolve (j : t) ~(k : string) ~(native : string option) ~(lang : string option) : resolved =
+  let key ps pl =
+    String.concat ~sep:"|" [ k; Option.value ps ~default:"*"; Option.value pl ~default:"*" ]
+  in
+  let found =
+    List.find
+      [ (native, lang); (None, lang); (native, None); (None, None) ]
+      ~f:(fun (ps, pl) -> List.Assoc.mem j.jn_bands (key ps pl) ~equal:String.equal)
+  in
+  let band = Option.map found ~f:(fun (ps, pl) -> key ps pl) in
+  let dropped =
+    match found with
+    | Some (ps, pl) ->
+        List.filter_opt
+          [ (if Option.is_none ps then native else None); (if Option.is_none pl then lang else None) ]
+    | None -> []
+  in
+  let kept = match found with Some (ps, pl) -> List.filter_opt [ ps; pl ] | None -> [] in
+  let info = List.find T.coop_catalogue ~f:(fun i -> String.equal (T.code_of_coop i.T.co_kind) k) in
+  let label = match info with Some i -> i.T.co_label | None -> k in
+  let note =
+    match Option.bind info ~f:(fun i -> T.no_band_because i.T.co_kind) with
+    | Some why -> Printf.sprintf "⚠ %s has no band of its own: %s." label why
+    | None when not (List.is_empty dropped) ->
+        Printf.sprintf "Canary runs no %s chain with %s — the band is drawn from its chains%s."
+          label
+          (String.concat ~sep:" or " dropped)
+          (if List.is_empty kept then "" else " with " ^ String.concat ~sep:" and " kept)
+    | None -> ""
+  in
+  let chosen n = Option.map ~f:(fun p -> (n, Canary_overview_runs.name_line ~src:src_pm_choice p)) in
+  { rv_band = band;
+    rv_lines =
+      named_then_terms
+        (List.filter_opt [ chosen "pm_sys" native; chosen "pm_lang" lang ])
+        (terms ~native ~lang
+           ~bridges:
+             (Option.value ~default:[]
+                (Option.bind band ~f:(List.Assoc.find j.jn_bridges ~equal:String.equal)))
+           ~package:false);
+    rv_note = note }
+
+(** Every choice of the four buttons, by the key the page's script looks
+    it up by. *)
+let choice_keys (j : t) : (string * (string * string option * string option)) list =
+  let pm = Canary_store.string_of_pm in
+  List.concat_map j.jn_kinds ~f:(fun b ->
+      let k = T.code_of_coop b.T.cb_kind in
+      List.concat_map (None :: List.map (pms Native) ~f:(fun p -> Some (pm p))) ~f:(fun ps ->
+          List.map (None :: List.map (pms Language) ~f:(fun p -> Some (pm p))) ~f:(fun pl ->
+              ( String.concat ~sep:"|" [ k; Option.value ps ~default:"*"; Option.value pl ~default:"*" ],
+                (k, ps, pl) ))))
+
 (** The state the panel opens in: the first mechanism, with the package
     manager it depends on, and the first cooperation. *)
 let default_choice (j : t) : string * string * string option =
@@ -287,28 +439,18 @@ let default_choice (j : t) : string * string * string option =
     | [] -> Canary_mechanism.Cstubs
   in
   let k = match j.jn_kinds with b :: _ -> T.code_of_coop b.T.cb_kind | [] -> "" in
-  let pl =
-    match dependent_pms j.jn_cases m with
-    | [ p ] -> Some (Canary_store.string_of_pm p)
-    | _ -> None
-  in
-  (Canary_mechanism.string_of_mechanism m, k, pl)
+  (Canary_mechanism.string_of_mechanism m, k, mechanism_pm j m)
 
-(** What the default choice leaves out and greys — drawn into the page, so
-    it opens right before any script runs. *)
+(** What the default choice leaves out and greys. *)
 let default_drawing (j : t) : string list * string list =
   let m, k, pl = default_choice j in
   let m_gone =
-    List.find_map (variants ()) ~f:(fun v ->
-        if String.equal (Canary_mechanism.string_of_mechanism v.T.av_mechanism) m then
-          Some (T.with_edges v.T.av_hidden)
-        else None)
-    |> Option.value ~default:[]
+    Option.value_map (variant_named m) ~default:[] ~f:(fun v -> T.with_edges v.T.av_hidden)
   in
-  let band =
-    List.Assoc.find j.jn_bands (k ^ "|*|" ^ Option.value pl ~default:"*") ~equal:String.equal
-  in
-  match band with
+  match
+    Option.bind (resolve j ~k ~native:None ~lang:pl).rv_band
+      ~f:(List.Assoc.find j.jn_bands ~equal:String.equal)
+  with
   | None -> (m_gone, [])
   | Some b -> (m_gone @ T.with_edges b.T.cb_hidden, b.T.cb_dead)
 
@@ -330,14 +472,20 @@ let json (j : t) : Yojson.Basic.t =
                ( Canary_mechanism.string_of_mechanism v.T.av_mechanism,
                  `Assoc
                    [ ("gone", strs (T.with_edges v.T.av_hidden));
-                     ( "pms",
-                       strs
-                         (List.map (dependent_pms j.jn_cases v.T.av_mechanism)
-                            ~f:Canary_store.string_of_pm) );
-                     (* what each drawn edge's badges count for it *)
+                     (* the package manager its button chooses with it *)
+                     ( "pl",
+                       match mechanism_pm j v.T.av_mechanism with
+                       | None -> `Null
+                       | Some p -> `String p );
+                     (* the agreements on each drawn edge, and what its
+                        badges count *)
                      ( "claims",
-                       Canary_overview_runs.json_of_edge_claims (mechanism_claims v) ) ] )))
-      );
+                       Canary_overview_runs.json_of_edge_claims (mechanism_claims v) );
+                     ( "counts",
+                       `Assoc
+                         (List.map (mechanism_claims v) ~f:(fun (e, cl) ->
+                              let a, b = Canary_overview_runs.badge_counts cl in
+                              (e, `List [ `Int a; `Int b ]))) ) ] ))) );
       (* EVERY PLACED AGREEMENT, for an edge's hover: its code, and every
          edge it sits on — an agreement on several edges is counted on
          each, and says so *)
@@ -348,17 +496,6 @@ let json (j : t) : Yojson.Basic.t =
                  `Assoc
                    [ ("code", `String (Canary_agreement_common.short_code_of_slug cs.T.cs_claim));
                      ("edges", strs cs.T.cs_edges) ] ))) );
-      ( "kinds",
-        `Assoc
-          (List.map T.coop_catalogue ~f:(fun i ->
-               ( T.code_of_coop i.T.co_kind,
-                 `Assoc
-                   [ ("name", `String i.T.co_name);
-                     ("label", `String i.T.co_label);
-                     ( "unbanded",
-                       match T.no_band_because i.T.co_kind with
-                       | None -> `Null
-                       | Some why -> `String why ) ] ))) );
       ( "bands",
         `Assoc
           (List.map j.jn_bands ~f:(fun (key, b) ->
@@ -366,31 +503,19 @@ let json (j : t) : Yojson.Basic.t =
                  `Assoc
                    [ ("gone", strs (T.with_edges b.T.cb_hidden));
                      ("dead", strs b.T.cb_dead);
-                     ("n", `Int b.T.cb_worlds);
-                     ( "bridge",
-                       strs
-                         (Option.value ~default:[]
-                            (List.Assoc.find j.jn_bridges key ~equal:String.equal)) ) ] )))
-      );
-      (* THE PACKAGE MANAGERS' TERMS for the package layer's two
-         in-between nodes (user, 2026-09-24): the capability file a
-         manager's package ships, from the PM-solo table, and the bridge
-         kinds it defines, from [Canary_bridge] *)
-      ( "pm_terms",
+                     ("n", `Int b.T.cb_worlds) ] ))) );
+      (* EVERY CHOICE OF THE FOUR BUTTONS, resolved: the band drawn, the
+         lines under the node labels with their sources, and why the band
+         is not the choice's own *)
+      ( "choices",
         `Assoc
-          (List.map Canary_pm_solo.table ~f:(fun r ->
-               let pm = r.Canary_pm_solo.ps_pm in
-               ( Canary_store.string_of_pm pm,
+          (List.map (choice_keys j) ~f:(fun (key, (k, native, lang)) ->
+               let r = resolve j ~k ~native ~lang in
+               ( key,
                  `Assoc
-                   [ ("cap", `String r.Canary_pm_solo.ps_capability);
-                     ("bridges", strs (List.map (Canary_bridge.kinds_defined pm) ~f:fst)) ] )))
-      );
-      (* whose capability file the native side shows while no system
-         package manager is chosen: this platform's *)
-      ( "sys_pm",
-        `String
-          (Canary_store.string_of_pm
-             (Canary_store.system_pm_of_platform (Canary_store.platform ()))) );
+                   [ ("band", match r.rv_band with None -> `Null | Some b -> `String b);
+                     ("lines", Canary_overview_runs.json_of_lines r.rv_lines);
+                     ("note", `String r.rv_note) ] ))) );
       ( "cases",
         `List
           (List.map j.jn_cases ~f:(fun c ->
@@ -405,31 +530,6 @@ let json (j : t) : Yojson.Basic.t =
                    ("pl", pm_json lang);
                    ("gone", strs (T.with_edges c.cs_band.T.cb_hidden));
                    ("dead", strs c.cs_band.T.cb_dead);
-                   ("bridge", strs c.cs_bridges);
-                   ( "names",
-                     `Assoc (List.map c.cs_names ~f:(fun (n, l) -> (n, `String l))) );
-                   ( "names_src",
-                     `Assoc
-                       (List.map c.cs_name_sources ~f:(fun (n, s) ->
-                            (n, Canary_overview_runs.json_of_source s))) ) ])) );
-      (* WHERE THE GENERIC CHOICES' LINES COME FROM (2026-09-24) — every
-         value the script writes under a node while no package is chosen.
-         A chosen package's names carry their own ([names_src]), and a
-         recorded run's theirs ([name_sources], [place_sources]) *)
-      ( "sources",
-        let src what at = Canary_overview_runs.(json_of_source (from_code what at)) in
-        `Assoc
-          [ ( "pm_choice",
-              src "the package manager chosen, by a click or by the page's default: one of those canary has a driver for, on the side its scope puts it"
-                "Canary_overview_join.pms; the default, default_choice" );
-            ( "cap_term",
-              src "what the native side's package manager calls its capability file (this platform's, while none is chosen)"
-                "Canary_pm_solo.table (ps_capability)" );
-            ( "bridge_term",
-              src "the kinds of bridge the gates of the chains drawn name"
-                "Canary_topology.bridge_terms → Canary_bridge.kind_term" );
-            ( "bridge_term_pm",
-              src "the kinds of bridge the language side's package manager defines"
-                "Canary_bridge.kinds_defined" ) ] );
+                   ("lines", Canary_overview_runs.json_of_lines (case_lines c)) ])) );
       ("runs", `Assoc (List.map j.jn_runs ~f:(fun (key, ids) -> (key, strs ids))));
       ("related", `Assoc (List.map (related j) ~f:(fun (key, ns) -> (key, strs ns)))) ]

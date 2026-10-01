@@ -2615,12 +2615,100 @@ let exhibits_pin : Canary_project_test.pure_test =
         && ordered && tables_ok && drawings_ok)
   }
 
+(* A CHOICE IS RESOLVED ONCE, IN OCAML (2026-09-30): the band a choice of
+   the four buttons draws is its own where some chain has it, else the
+   nearest — the native side's package manager let go first, then the
+   language side's — and the note names what was let go; a recorded
+   world's names come before its package's; the page opens in the
+   drawing the export draws; and the page's script holds none of these
+   rules, only the lookups. *)
+let choice_resolved_pin : Canary_project_test.pure_test =
+  { name = "overview.choice_is_resolved_once";
+    check =
+      (fun () ->
+        let module J = Canary_overview_join in
+        let module Dr = Canary_overview_draw in
+        let module R = Canary_overview_runs in
+        let j = J.of_projects Canary_registry.all_specs in
+        let has_band ps pl k =
+          List.Assoc.mem j.J.jn_bands
+            (String.concat ~sep:"|" [ k; Option.value ps ~default:"*"; Option.value pl ~default:"*" ])
+            ~equal:String.equal
+        in
+        let resolved_ok =
+          List.for_all (J.choice_keys j) ~f:(fun (key, (k, ps, pl)) ->
+              let r = J.resolve j ~k ~native:ps ~lang:pl in
+              let expect =
+                List.find [ (ps, pl); (None, pl); (ps, None); (None, None) ] ~f:(fun (a, b) ->
+                    has_band a b k)
+              in
+              let dropped =
+                match expect with
+                | Some (a, b) ->
+                    List.filter_opt
+                      [ (if Option.is_none a then ps else None); (if Option.is_none b then pl else None) ]
+                | None -> []
+              in
+              Option.equal String.equal r.J.rv_band
+                (Option.map expect ~f:(fun (a, b) ->
+                     String.concat ~sep:"|"
+                       [ k; Option.value a ~default:"*"; Option.value b ~default:"*" ]))
+              && Bool.equal (String.is_empty r.J.rv_note) (List.is_empty dropped)
+              && List.for_all dropped ~f:(fun p -> String.is_substring r.J.rv_note ~substring:p)
+              && (List.Assoc.mem j.J.jn_bands key ~equal:String.equal
+                 || not (List.is_empty dropped)))
+        in
+        (* no chain canary has today tells the two orders apart, so a
+           made-up pair of bands does: the native side's manager goes first *)
+        let native_first =
+          match (j.J.jn_bands, J.pms J.Native, J.pms J.Language) with
+          | (_, b) :: _, ps :: _, pl :: _ ->
+              let ps = Canary_store.string_of_pm ps and pl = Canary_store.string_of_pm pl in
+              let j' = { j with J.jn_bands = [ ("k|*|" ^ pl, b); ("k|" ^ ps ^ "|*", b) ] } in
+              let r = J.resolve j' ~k:"k" ~native:(Some ps) ~lang:(Some pl) in
+              Option.equal String.equal r.J.rv_band (Some ("k|*|" ^ pl))
+              && String.is_substring r.J.rv_note ~substring:("chain with " ^ ps ^ " —")
+              && String.is_substring r.J.rv_note ~substring:("chains with " ^ pl ^ ".")
+          | _ -> false
+        in
+        let views =
+          Dr.keyed_views (R.views (Canary_matrix.matrix_of Canary_registry.all_projects))
+        in
+        let recorded_first =
+          List.for_all views ~f:(fun (key, v) ->
+              let d =
+                Dr.drawing j ~views
+                  { (Dr.opening j) with Dr.ch_package = Some v.R.vw_case; ch_world = Some key }
+              in
+              List.for_all (R.view_lines v) ~f:(fun (n, l) ->
+                  Option.exists (List.Assoc.find d.Dr.dr_lines n ~equal:String.equal) ~f:(fun x ->
+                      String.equal x.R.ln_text l.R.ln_text
+                      && Bool.equal x.R.ln_recorded l.R.ln_recorded)))
+        in
+        let opening_ok =
+          let d = Dr.drawing j ~views:[] (Dr.opening j) in
+          let gone, dead = J.default_drawing j in
+          List.equal String.equal d.Dr.dr_gone gone && List.equal String.equal d.Dr.dr_dead dead
+        in
+        let script = Canary_overview_assets.read "page.js" in
+        let script_ok =
+          List.for_all [ "J.choices"; "edge_counts"; "mech.counts"; "v.lines" ] ~f:(fun s ->
+              String.is_substring script ~substring:s)
+          && List.for_all
+               [ "nearest"; "pm_terms"; "sys_pm"; "J.sources"; "J.kinds"; ".pms"; "'checked'" ]
+               ~f:(fun s -> not (String.is_substring script ~substring:s))
+        in
+        (not (List.is_empty views)) && resolved_ok && native_first && recorded_first && opening_ok
+        && script_ok)
+  }
+
 (* THE EXPORT IS THE PAGE'S EXHIBITS (2026-09-30): every exhibit is
    written or named as not written, with why; a written table is the
    page's without its caption; a written figure ends with the page's
    drawing and stands alone — its size, its namespace, every colour it
    uses defined, no dark mode, no entity XML lacks; nothing written
-   carries the page's numbers. *)
+   carries the page's numbers; a choice of chain writes only Figure 2 and
+   the lines table. *)
 let exhibits_export_pin : Canary_project_test.pure_test =
   { name = "overview.exhibits_are_exported";
     check =
@@ -2689,7 +2777,23 @@ let exhibits_export_pin : Canary_project_test.pure_test =
             (List.exists [ "<caption"; "<figcaption"; "<b>Figure "; "<b>Table " ] ~f:(fun p ->
                  String.is_substring content ~substring:p))
         in
-        accounted
+        (* a choice of chain writes only what it draws *)
+        let chosen =
+          let j = Canary_overview_join.of_projects Canary_registry.all_specs in
+          match j.Canary_overview_join.jn_cases with
+          | c :: _ -> (
+              match
+                Canary_overview_draw.choose j ~views:[] ~package:c.Canary_overview_join.cs_id ()
+              with
+              | Ok choice ->
+                  List.equal String.equal
+                    (List.map (X.files ~choice Canary_registry.all_specs ~overview) ~f:fst)
+                    (List.map X.drawn_by_choice ~f:(fun id ->
+                         id ^ if String.is_prefix id ~prefix:"fig-" then ".svg" else ".html"))
+              | Error _ -> false)
+          | [] -> false
+        in
+        accounted && chosen
         && List.for_all E.exhibits ~f:(fun e ->
                match file_of e with Some c -> matches e c && unnumbered c | None -> true))
   }
@@ -3462,7 +3566,7 @@ let chain_choices_pin : Canary_project_test.pure_test =
         let page_ok =
           (not (String.is_empty panel))
           && count {|class="diagram"|} = 1
-          && count {|class="ncase"|} = List.length T.nodes
+          && count {|class="ncase|} = List.length T.nodes
           && List.for_all (J.pms J.Native) ~f:(fun p -> button "ps" (Canary_store.string_of_pm p))
           && List.for_all (J.pms J.Language) ~f:(fun p -> button "pl" (Canary_store.string_of_pm p))
           && List.for_all Canary_mechanism.mechanism_catalogue ~f:(fun i ->
@@ -3943,28 +4047,28 @@ let drawn_line_sources_pin : Canary_project_test.pure_test =
                  List.equal String.equal (keys c.J.cs_names) (keys c.J.cs_name_sources)
                  && List.for_all c.J.cs_name_sources ~f:(fun (_, s) -> is_kind R.Code s))
         in
-        let field k = function
-          | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
-          | _ -> None
-        in
+        (* every line a choice or a package writes carries its source,
+           computed with it; a recorded world's names carry theirs *)
+        let from_code (_, (l : R.line)) = Option.exists l.R.ln_src ~f:(is_kind R.Code) in
         let sources_ok =
-          match field "sources" (J.json j) with
-          | Some (`Assoc ss) ->
-              List.equal String.equal (keys ss)
-                [ "bridge_term"; "bridge_term_pm"; "cap_term"; "pm_choice" ]
-              && List.for_all ss ~f:(fun (_, s) ->
-                     Poly.equal (field "kind" s) (Some (`String "code")))
-          | _ -> false
+          List.for_all (J.choice_keys j) ~f:(fun (_, (k, native, lang)) ->
+              List.for_all (J.resolve j ~k ~native ~lang).J.rv_lines ~f:from_code)
+          && List.for_all j.J.jn_cases ~f:(fun c -> List.for_all (J.case_lines c) ~f:from_code)
+          && List.for_all views ~f:(fun v ->
+                 List.for_all (R.view_lines v) ~f:(fun (_, l) -> Option.is_some l.R.ln_src))
         in
         let page =
           Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin"
         in
+        (* the page's script reads each source from the line it shows, and
+           finds none by a route of its own *)
         let page_ok =
           List.for_all
-            [ {|id="jprov"|}; {|id="jprovbody"|}; {|id="jprovsum"|}; "v.name_sources";
-              "v.place_sources"; "c.names_src"; "J.sources.pm_choice"; "J.sources.cap_term";
-              "J.sources.bridge_term_pm"; "J.sources.bridge_term" ]
+            [ {|id="jprov"|}; {|id="jprovbody"|}; {|id="jprovsum"|}; "v.lines"; "n.src";
+              "v.place_sources" ]
             ~f:(fun s -> String.is_substring page ~substring:s)
+          && List.for_all [ "J.sources"; "names_src"; "name_sources"; "pm_terms" ] ~f:(fun s ->
+                 not (String.is_substring page ~substring:s))
         in
         (not (List.is_empty views)) && List.for_all views ~f:view_ok
         && (not (List.is_empty asked)) && rendered
@@ -9528,6 +9632,7 @@ let base_tests : Canary_project_test.pure_test list =
       flow_pin;
       exhibits_pin;
       exhibits_export_pin;
+      choice_resolved_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;

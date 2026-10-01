@@ -1593,13 +1593,56 @@ let overview_cmd =
              without the page's caption, into $(docv) (the page writes them \
              to doc/canary/research/exhibits/).")
   in
-  let run project json flow exhibits () =
+  let choice_opt name what =
+    Arg.(
+      value
+      & opt (some string) None
+      & info [ name ] ~docv:(String.uppercase_ascii name)
+          ~doc:
+            (what
+           ^ ". With --exhibits, draws Figure 2 and the lines table for the chain \
+              the page's buttons would draw, and writes only those two."))
+  in
+  let chain = choice_opt "chain" "A package in canary, by its id (§3.4's rows link to it)" in
+  let world =
+    choice_opt "world"
+      "One of a package's recorded worlds, by the page's key (<id>@<machine>) or its id; \
+       none for the package as declared (default: its first)"
+  in
+  let mechanism = choice_opt "mechanism" "A binding mechanism (cstubs, cext, …)" in
+  let coop = choice_opt "coop" "A cooperation, by its code (conf, absorbed, …)" in
+  let native = choice_opt "native" "The native side's package manager, or none" in
+  let lang = choice_opt "lang" "The language side's package manager, or none" in
+  let run project json flow exhibits chain world mechanism coop native lang () =
     let m () = Canary_matrix.matrix_of Canary_registry.all_projects in
+    let chosen =
+      List.exists Option.is_some [ chain; world; mechanism; coop; native; lang ]
+    in
+    if chosen && Option.is_none exhibits then begin
+      Fmt.epr "canary overview: a choice of chain draws only with --exhibits DIR@.";
+      Stdlib.exit 2
+    end;
     if flow then print_string (Canary_overview_flow.text ())
-    else if Option.is_some exhibits then
-      Fmt.pr "wrote %s/ (the page's figures and tables)@."
-        (Canary_overview_export.write ?dir:exhibits Canary_registry.all_specs
-           ~overview:(Canary_agreement_overview.render (m ())))
+    else if Option.is_some exhibits then begin
+      let m = m () in
+      let overview = Canary_agreement_overview.render m in
+      if not chosen then
+        Fmt.pr "wrote %s/ (the page's figures and tables)@."
+          (Canary_overview_export.write ?dir:exhibits Canary_registry.all_specs ~overview)
+      else
+        let module Dr = Canary_overview_draw in
+        let join = Canary_overview_join.of_projects Canary_registry.all_specs in
+        let views = Dr.keyed_views (Canary_overview_runs.views m) in
+        match Dr.choose join ~views ?package:chain ?world ?mechanism ?coop ?native ?lang () with
+        | Error e ->
+            Fmt.epr "canary overview: %s@." e;
+            Stdlib.exit 2
+        | Ok choice ->
+            Fmt.pr "wrote %s/ (Figure 2 and the lines table: %s)@."
+              (Canary_overview_export.write ?dir:exhibits ~choice ~views Canary_registry.all_specs
+                 ~overview)
+              (Dr.describe choice)
+    end
     else if json then begin
       let projects =
         match project with
@@ -1661,7 +1704,9 @@ let overview_cmd =
           its figures and tables on its own (doc/canary/research/exhibits/). \
           With --json, prints the run record instead and writes nothing; \
           with --flow, prints §0, how the page is made. Runs nothing.")
-    Term.(const run $ project $ json $ flow $ exhibits $ const ())
+    Term.(
+      const run $ project $ json $ flow $ exhibits $ chain $ world $ mechanism $ coop $ native
+      $ lang $ const ())
 
 let tiny_scenarios_list_cmd =
   Cmd.v

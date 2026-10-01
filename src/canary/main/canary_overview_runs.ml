@@ -50,6 +50,36 @@ let json_of_source (s : source) : Yojson.Basic.t =
       ("what", `String s.src_what);
       ("at", `String s.src_at) ]
 
+(** A line written under a node label: a name, or a package manager's
+    term where no name is known, with its source. *)
+type line = {
+  ln_text : string;
+  ln_term : bool;
+  ln_recorded : bool;  (** a name a run recorded, not a declaration *)
+  ln_src : source option;
+}
+
+let name_line ?(recorded = false) ?src text =
+  { ln_text = text; ln_term = false; ln_recorded = recorded; ln_src = src }
+
+let term_line text src = { ln_text = text; ln_term = true; ln_recorded = false; ln_src = Some src }
+
+let json_of_line (l : line) : Yojson.Basic.t =
+  `Assoc
+    [ ("text", `String l.ln_text);
+      ("kind", `String (if l.ln_term then "term" else "name"));
+      ("from", `String (if l.ln_term then "" else if l.ln_recorded then "recorded" else "declared"));
+      ("src", match l.ln_src with Some s -> json_of_source s | None -> `Null) ]
+
+let json_of_lines (ls : (string * line) list) : Yojson.Basic.t =
+  `Assoc (List.map ls ~f:(fun (n, l) -> (n, json_of_line l)))
+
+(** What an edge's two badges count: the agreements on it canary checks,
+    then those only named. *)
+let badge_counts (claims : (string * T.claim_state) list) : int * int =
+  let checked = List.count claims ~f:(fun (_, st) -> Poly.equal st T.Checked) in
+  (checked, List.length claims - checked)
+
 (** One recorded world seen through one binding language. A world with
     two bindings is two chains on this layout, which is why the "no
     package manager between them" case is sqlite's PYTHON side. *)
@@ -958,6 +988,15 @@ let json_of_edge_claims (xs : (string * (string * T.claim_state) list) list) :
              (List.map cl ~f:(fun (slug, st) ->
                   `List [ `String slug; `String (T.string_of_claim_state st) ])) )))
 
+(** The names a recorded world writes under the node labels, each with
+    its source. *)
+let view_lines (v : view) : (string * line) list =
+  List.map v.vw_names ~f:(fun (n, (label, from)) ->
+      ( n,
+        name_line ~recorded:(String.equal from "recorded")
+          ?src:(List.Assoc.find v.vw_name_sources n ~equal:String.equal)
+          label ))
+
 let json_of_view (v : view) : Yojson.Basic.t =
   let pairs kvs = `Assoc (List.map kvs ~f:(fun (k, s) -> (k, `String s))) in
   `Assoc
@@ -973,8 +1012,13 @@ let json_of_view (v : view) : Yojson.Basic.t =
     @ [ ("edges", pairs v.vw_edges);
         ("claims", pairs v.vw_claims);
         ("badges", pairs v.vw_badges);
-        (* what each drawn edge's two badges count here *)
+        (* the agreements on each drawn edge, and what its two badges count *)
         ("edge_claims", json_of_edge_claims v.vw_edge_claims);
+        ( "edge_counts",
+          `Assoc
+            (List.map v.vw_edge_claims ~f:(fun (e, cl) ->
+                 let a, b = badge_counts cl in
+                 (e, `List [ `Int a; `Int b ]))) );
         ("nodes", pairs v.vw_nodes);
         ("unplaced", pairs v.vw_unplaced);
         ( "names",
@@ -982,9 +1026,8 @@ let json_of_view (v : view) : Yojson.Basic.t =
             (List.map v.vw_names ~f:(fun (n, (label, from)) ->
                  (n, `Assoc [ ("label", `String label); ("from", `String from) ]))) );
         ("dim", `List (List.map v.vw_dim ~f:(fun n -> `String n)));
-        (* where each name and each placement line came from *)
-        ( "name_sources",
-          `Assoc (List.map v.vw_name_sources ~f:(fun (n, s) -> (n, json_of_source s))) );
+        (* each name with its source, and where each placement line came from *)
+        ("lines", json_of_lines (view_lines v));
         ( "place_sources",
           `Assoc (List.map v.vw_place_sources ~f:(fun (n, s) -> (n, json_of_source s))) );
         ("gone", `List (List.map v.vw_gone ~f:(fun n -> `String n)));

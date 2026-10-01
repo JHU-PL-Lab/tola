@@ -1,7 +1,7 @@
 (window.CANARY_RUNS = window.CANARY_RUNS || []).push(
 {
   "machine": "wsl_ubuntu",
-  "generated": "2026-09-29 03:26",
+  "generated": "2026-09-30 19:05",
   "views": [
     {
       "id": "be0605-ocaml",
@@ -10,7 +10,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:15.522", "2026-09-29 03:26:16.403" ],
+      "span": [ "2026-09-30 18:36:36.712", "2026-09-30 18:36:37.725" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -86,6 +86,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:s",
@@ -111,61 +124,116 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -264,7 +332,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:15.522", "2026-09-29 03:26:16.427" ],
+      "span": [ "2026-09-30 18:36:36.712", "2026-09-30 18:36:37.750" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -326,6 +394,14 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:s",
@@ -351,56 +427,106 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -473,7 +599,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:25.072", "2026-09-29 03:26:25.959" ],
+      "span": [ "2026-09-30 18:36:47.164", "2026-09-30 18:36:48.070" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -549,6 +675,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:s",
@@ -574,61 +713,116 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -727,7 +921,7 @@
       "scenario": "source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:25.072", "2026-09-29 03:26:25.983" ],
+      "span": [ "2026-09-30 18:36:47.164", "2026-09-30 18:36:48.099" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -789,6 +983,14 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:s",
@@ -814,56 +1016,106 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -936,7 +1188,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:17.203", "2026-09-29 03:26:18.126" ],
+      "span": [ "2026-09-30 18:36:38.569", "2026-09-30 18:36:39.523" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1018,6 +1270,20 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:s",
@@ -1043,66 +1309,126 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -1206,7 +1532,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:17.203", "2026-09-29 03:26:18.150" ],
+      "span": [ "2026-09-30 18:36:38.569", "2026-09-30 18:36:39.552" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1274,6 +1600,15 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:s",
@@ -1301,61 +1636,116 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -1429,7 +1819,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:26.788", "2026-09-29 03:26:27.708" ],
+      "span": [ "2026-09-30 18:36:48.900", "2026-09-30 18:36:49.821" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1511,6 +1901,20 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:s",
@@ -1536,66 +1940,126 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -1699,7 +2163,7 @@
       "scenario": "source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:26.788", "2026-09-29 03:26:27.731" ],
+      "span": [ "2026-09-30 18:36:48.900", "2026-09-30 18:36:49.846" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1767,6 +2231,15 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:s",
@@ -1794,61 +2267,116 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-stable_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -1922,7 +2450,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:08.783", "2026-09-29 03:26:14.543" ],
+      "span": [ "2026-09-30 18:36:29.545", "2026-09-30 18:36:36.379" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -1998,6 +2526,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:d",
@@ -2023,61 +2564,116 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -2175,7 +2771,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:08.783", "2026-09-29 03:26:14.566" ],
+      "span": [ "2026-09-30 18:36:29.545", "2026-09-30 18:36:36.408" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2237,6 +2833,14 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:d",
@@ -2262,56 +2866,106 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -2383,7 +3037,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:18.163", "2026-09-29 03:26:24.082" ],
+      "span": [ "2026-09-30 18:36:39.567", "2026-09-30 18:36:46.132" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2459,6 +3113,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:d",
@@ -2484,61 +3151,116 @@
       "dim": [
         "pm_sys", "pkg_sys", "staged_sys", "cap", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -2636,7 +3358,7 @@
       "scenario": "source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:18.163", "2026-09-29 03:26:24.105" ],
+      "span": [ "2026-09-30 18:36:39.567", "2026-09-30 18:36:46.163" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2698,6 +3420,14 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "B:d",
@@ -2723,56 +3453,106 @@
         "pm_sys", "pkg_sys", "hdr_sys", "staged_sys", "cap", "bridge",
         "pm_lang", "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-built-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -2844,7 +3624,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:14.578", "2026-09-29 03:26:15.486" ],
+      "span": [ "2026-09-30 18:36:36.422", "2026-09-30 18:36:37.504" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -2926,6 +3706,20 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:d",
@@ -2951,66 +3745,126 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -3113,7 +3967,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:14.578", "2026-09-29 03:26:15.509" ],
+      "span": [ "2026-09-30 18:36:36.422", "2026-09-30 18:36:37.017" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3181,6 +4035,15 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:d",
@@ -3208,61 +4071,116 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -3335,7 +4253,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:24.118", "2026-09-29 03:26:25.034" ],
+      "span": [ "2026-09-30 18:36:46.177", "2026-09-30 18:36:47.128" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3417,6 +4335,20 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:d",
@@ -3442,66 +4374,126 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "pm_sys", "pkg_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -3604,7 +4596,7 @@
       "scenario": "source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:24.118", "2026-09-29 03:26:25.059" ],
+      "span": [ "2026-09-30 18:36:46.177", "2026-09-30 18:36:47.151" ],
       "edges": {
         "resolve_sys": "absent",
         "realize_sys": "absent",
@@ -3672,6 +4664,15 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "I:d",
@@ -3699,61 +4700,116 @@
         "pm_sys", "pkg_sys", "hdr_sys", "cap", "bridge", "pm_lang",
         "src_lang", "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/build_lib/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "staged_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib_staged/inspect_source-fetched_lib-installed-dev_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -3826,7 +4882,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:16.438", "2026-09-29 03:26:17.168" ],
+      "span": [ "2026-09-30 18:36:37.762", "2026-09-30 18:36:38.532" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -3900,6 +4956,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt sqlite3.3.45.1",
@@ -3920,61 +4989,116 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -4077,7 +5201,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:16.438", "2026-09-29 03:26:17.191" ],
+      "span": [ "2026-09-30 18:36:37.762", "2026-09-30 18:36:38.557" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4137,6 +5261,14 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt sqlite3.3.45.1",
@@ -4159,56 +5291,106 @@
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.1.0_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -4285,7 +5467,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "ocaml",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:25.995", "2026-09-29 03:26:26.750" ],
+      "span": [ "2026-09-30 18:36:48.113", "2026-09-30 18:36:48.862" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4359,6 +5541,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt sqlite3.3.45.1",
@@ -4379,61 +5574,116 @@
         "surf_lang": { "label": "sqlite3.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -4536,7 +5786,7 @@
       "scenario": "source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched",
       "lang": "python",
       "recorded_on": [ "wsl_ubuntu" ],
-      "span": [ "2026-09-29 03:26:25.995", "2026-09-29 03:26:26.774" ],
+      "span": [ "2026-09-30 18:36:48.113", "2026-09-30 18:36:48.887" ],
       "edges": {
         "resolve_sys": "warm",
         "realize_sys": "warm",
@@ -4596,6 +5846,14 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt sqlite3.3.45.1",
@@ -4618,56 +5876,106 @@
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "src_lang",
         "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "sqlite3 (210 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/fetch_binding/python/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libsqlite3.so.0",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/sqlite/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-5.4.1_python_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "pip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "_sqlite3*.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "sqlite3/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -4817,6 +6125,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 19",
         "lib_sys": "apt llvm-19-dev.19",
@@ -4836,56 +6157,106 @@
         "surf_lang": { "label": "llvm.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm-19-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "lib_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.soname",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libLLVM.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.soname",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "Core.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm-project.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-llvm-shared {= 19}",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libllvm.a",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -5044,6 +6415,13 @@
           [ "denotation_stable_across_worlds", "placeholder" ]
         ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run": [ 0, 5 ]
+      },
       "nodes": { "src_sys": "F latest", "lib_sys": "B:d", "mod_lang": "B:d" },
       "unplaced": {
         "fetch_source": "no edge for this action on the page",
@@ -5065,46 +6443,86 @@
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
       ],
-      "name_sources": {
+      "lines": {
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm-19-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "lib_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.soname",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libLLVM.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.soname",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "Core.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm-project.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libllvm.a",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -5232,6 +6650,13 @@
           [ "denotation_stable_across_worlds", "placeholder" ]
         ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "stage": [ 1, 1 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run": [ 0, 5 ]
+      },
       "nodes": {
         "src_sys": "F arbipher",
         "lib_sys": "B:d",
@@ -5257,46 +6682,86 @@
         "pm_sys", "pkg_sys", "cap", "bridge", "pm_lang", "pkg_lang",
         "surf_lang", "consumer_package"
       ],
-      "name_sources": {
+      "lines": {
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm-19-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "lib_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.soname",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libLLVM.so",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.soname",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "Core.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm-project.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libllvm.a",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "llvm.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -5418,6 +6883,12 @@
           [ "denotation_stable_across_worlds", "placeholder" ]
         ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run": [ 0, 5 ]
+      },
       "nodes": { "src_sys": "V:s", "lib_sys": "V:s", "mod_lang": "V:s" },
       "unplaced": {
         "configure": "no edge for this action on the page",
@@ -5433,26 +6904,46 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/tiny-full/build_lib/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libtiny.so.1",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/tiny-full/build_lib/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/tiny-full/build_binding/ocaml/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libtiny_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/tiny-full/build_binding/ocaml/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "tiny.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "tiny.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -5569,6 +7060,12 @@
           [ "denotation_stable_across_worlds", "placeholder" ]
         ]
       },
+      "edge_counts": {
+        "build_lib": [ 3, 3 ],
+        "build_stub": [ 0, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run": [ 0, 5 ]
+      },
       "nodes": { "src_sys": "V:s", "lib_sys": "V:s", "mod_lang": "V:s" },
       "unplaced": {
         "configure": "no edge for this action on the page",
@@ -5588,31 +7085,56 @@
         "pm_sys", "pkg_sys", "staged_sys", "cap", "bridge", "pm_lang",
         "pkg_lang", "surf_lang", "consumer_package"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/tiny-full/build_lib/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libtiny.so.1",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/tiny-full/build_lib/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/tiny-full/build_binding/python/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "_native.cpython-314-x86_64-linux-gnu.so",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/tiny-full/build_binding/python/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/tiny-full/probe_binding/python/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "tiny_cext (3 names)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/tiny-full/probe_binding/python/inspect_source-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_python_binding-vendored-stable_app-vendored-stable_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "tiny.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "tiny_cext/__init__.py",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -5741,6 +7263,15 @@
         ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "discover": [ 0, 1 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "pack": [ 0, 2 ],
+        "run": [ 0, 5 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "lib_sys": "apt libgmp-dev.2:6.3.0+dfsg",
         "src_lang": "F master",
@@ -5765,56 +7296,106 @@
         "src_sys", "staged_sys", "cap", "bridge", "pm_lang", "surf_lang",
         "consumer_package"
       ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/build_binding/ocaml/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "zarith (4 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/build_binding/ocaml/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/pack_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libzarith.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/pack_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libgmp.so.10",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libgmp-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "gmp.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the wrapper package this world publishes (pr_wrapper_pkgs)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zarith-no-conf",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the wrapper package this world publishes (pr_wrapper_pkgs)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_lang": {
-          "kind": "code",
-          "what": "the binding source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "Zarith.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zarith.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -5974,6 +7555,20 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "conf_probe": [ 1, 1 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "lib_sys": "apt libgmp-dev.2:6.3.0+dfsg",
         "src_lang": "F 1.14",
@@ -5998,66 +7593,126 @@
         "surf_lang": { "label": "zarith.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/fetch_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "zarith (4 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/fetch_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/fetch_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libzarith.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/fetch_binding/ocaml/inspect_stub_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "bridge": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/fetch_binding/ocaml_bridge/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "conf-gmp",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/fetch_binding/ocaml_bridge/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "cap": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/fetch_binding/ocaml_bridge/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "gmp.pc",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/fetch_binding/ocaml_bridge/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pkg_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/fetch_binding/ocaml_bridge/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libgmp-dev",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/fetch_binding/ocaml_bridge/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libgmp.so.10",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "gmp.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zarith",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_lang": {
-          "kind": "code",
-          "what": "the binding source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "Zarith.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zarith.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -6255,6 +7910,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 1.18.0",
         "lib_sys": "V:d",
@@ -6278,51 +7946,96 @@
         "pkg_lang": { "label": "cairo2", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "cairo2 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_stub_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libcairo_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_stub_source-fetched-1.18.0_lib-vendored-dev_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libcairo2-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "cairo.h, cairo-ft.h, cairo-pdf.h, cairo-ps.h, cairo-svg.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "cairo.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-cairo",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "cairo2",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -6493,6 +8206,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 1.18.0",
         "lib_sys": "apt libcairo2-dev.1.18.0",
@@ -6515,56 +8241,106 @@
         "pkg_lang": { "label": "cairo2", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "cairo2 (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_stub_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libcairo_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/cairo/fetch_binding/ocaml/inspect_stub_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/cairo/probe_lib/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libcairo.so.2",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/cairo/probe_lib/inspect_source-fetched-1.18.0_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libcairo2-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "cairo.h, cairo-ft.h, cairo-pdf.h, cairo-ps.h, cairo-svg.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "cairo.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-cairo",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "cairo2",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -6734,6 +8510,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 3.8.0",
         "lib_sys": "V:d",
@@ -6760,51 +8549,96 @@
         "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "ctypes-foreign (9 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_stub_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libctypes_foreign_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_stub_source-fetched-3.8.0_lib-vendored-dev_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libffi-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ffi.h, ffitarget.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libffi.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-libffi",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ctypes-foreign",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -6972,6 +8806,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 3.8.0",
         "lib_sys": "apt libffi-dev.3.4.6",
@@ -6997,56 +8844,106 @@
         "pkg_lang": { "label": "ctypes-foreign", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "ctypes-foreign (9 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_stub_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libctypes_foreign_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/libffi/fetch_binding/ocaml/inspect_stub_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/libffi/probe_lib/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libffi.so.8",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/libffi/probe_lib/inspect_source-fetched-3.8.0_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libffi-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ffi.h, ffitarget.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libffi.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-libffi",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ctypes-foreign",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -7213,6 +9110,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 1.3.1",
         "lib_sys": "V:d",
@@ -7233,51 +9143,96 @@
         "pkg_lang": { "label": "camlzip", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/zlib/fetch_binding/ocaml/inspect_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "zip (3 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zlib/fetch_binding/ocaml/inspect_source-fetched-1.3.1_lib-vendored-dev_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zlib1g-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "lib_sys": {
-          "kind": "code",
-          "what": "the declared C API's soname",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libz.so.1",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's soname",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zlib.h, zconf.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zlib.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-zlib",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "camlzip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -7454,6 +9409,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 1.3.1",
         "lib_sys": "apt zlib1g-dev.1:1.3.dfsg",
@@ -7472,51 +9440,96 @@
         "pkg_lang": { "label": "camlzip", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/zlib/fetch_binding/ocaml/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "zip (3 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zlib/fetch_binding/ocaml/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/zlib/probe_lib/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libz.so.1",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zlib/probe_lib/inspect_source-fetched-1.3.1_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zlib1g-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zlib.h, zconf.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zlib.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-zlib",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "camlzip",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -7692,6 +9705,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 1.5.7",
         "lib_sys": "V:d",
@@ -7711,46 +9737,86 @@
         "pkg_lang": { "label": "zstd", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libzstd-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "lib_sys": {
-          "kind": "code",
-          "what": "the declared C API's soname",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libzstd.so.1",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's soname",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zstd.h, zstd_errors.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zstd.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-zstd",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zstd",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -7911,6 +9977,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F 1.5.7",
         "lib_sys": "apt libzstd-dev.1.5.5+dfsg2",
@@ -7929,51 +10008,96 @@
         "pkg_lang": { "label": "zstd", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "mod_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/zstd/probe_binding/ocaml/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "zstd (1 modules)",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zstd/probe_binding/ocaml/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/zstd/probe_lib/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libzstd.so.1",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/zstd/probe_lib/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libzstd-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the declared C API's headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zstd.h, zstd_errors.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the declared C API's headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zstd.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-zstd",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the package gate the project routes (pr_pm_gates, read by Canary_topology.join_of)",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "zstd",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -8133,6 +10257,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt libssl-dev.3.0.13",
@@ -8154,56 +10291,106 @@
         "surf_lang": { "label": "ssl.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/ssl/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libssl_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/ssl/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libssl.so.3",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libssl-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ssl.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "openssl.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-libssl",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ssl",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ssl.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -8377,6 +10564,19 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "realize_sys": [ 3, 1 ],
+        "depext": [ 0, 1 ],
+        "depends": [ 0, 2 ],
+        "discover": [ 0, 1 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "src_sys": "F",
         "lib_sys": "apt libssl-dev.3.0.13",
@@ -8398,56 +10598,106 @@
         "surf_lang": { "label": "ssl.mli", "from": "declared" }
       },
       "dim": [ "src_sys", "staged_sys", "cap", "consumer_artifact" ],
-      "name_sources": {
+      "lines": {
         "stub_lang": {
-          "kind": "run",
-          "what": "_out/canary/projects/ssl/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libssl_stubs.a",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/ssl/fetch_binding/ocaml/inspect_stub_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libssl.so.3",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "pm_sys": {
-          "kind": "code",
-          "what": "the library row's provider is a system package: this platform's",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "apt",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider is a system package: this platform's",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_sys": {
-          "kind": "code",
-          "what": "the library row's provider (Sys_pkg), named for this platform",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libssl-dev",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library row's provider (Sys_pkg), named for this platform",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ssl.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_sys": {
-          "kind": "code",
-          "what": "the library source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "openssl.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the library source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "conf-libssl",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ssl",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "ssl.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -8606,6 +10856,16 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "depends": [ 0, 2 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "lib_sys": "opam libtorch.2.1.2",
         "src_lang": "F",
@@ -8633,46 +10893,86 @@
         "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap",
         "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/torch/probe_lib/inspect_lib-fetched-2.1.2_ocaml_binding-fetched-v0.17.0_binding_source_ocaml-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libtorch_cpu.so",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/torch/probe_lib/inspect_lib-fetched-2.1.2_ocaml_binding-fetched-v0.17.0_binding_source_ocaml-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "depext: libtorch >= 2.1.0 & < 2.2.0",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_lang": {
-          "kind": "code",
-          "what": "the binding source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libtorch_core_stubs.a",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
@@ -8810,6 +11110,16 @@
         "run_packaged": [ [ "package_resolution_suffices", "placeholder" ] ],
         "same_program": [ [ "package_resolution_suffices", "placeholder" ] ]
       },
+      "edge_counts": {
+        "depends": [ 0, 2 ],
+        "resolve_lang": [ 0, 1 ],
+        "install_lang": [ 0, 1 ],
+        "install_surf": [ 1, 0 ],
+        "build_stub": [ 1, 1 ],
+        "link_mod": [ 4, 1 ],
+        "run_packaged": [ 0, 1 ],
+        "same_program": [ 0, 1 ]
+      },
       "nodes": {
         "lib_sys": "opam libtorch.2.1.2",
         "src_lang": "F",
@@ -8837,46 +11147,86 @@
         "pm_sys", "pkg_sys", "src_sys", "staged_sys", "cap",
         "consumer_artifact"
       ],
-      "name_sources": {
+      "lines": {
         "lib_sys": {
-          "kind": "run",
-          "what": "_out/canary/projects/torch/probe_lib/inspect_lib-fetched-2.1.2_ocaml_binding-fetched-v0.17.0-canary1_binding_source_ocaml-fetched.json",
-          "at": "Canary_overview_runs.named_by_inspection"
+          "text": "libtorch_cpu.so",
+          "kind": "name",
+          "from": "recorded",
+          "src": {
+            "kind": "run",
+            "what": "_out/canary/projects/torch/probe_lib/inspect_lib-fetched-2.1.2_ocaml_binding-fetched-v0.17.0-canary1_binding_source_ocaml-fetched.json",
+            "at": "Canary_overview_runs.named_by_inspection"
+          }
         },
         "hdr_sys": {
-          "kind": "code",
-          "what": "the binding declaration's native.headers",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch.h",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's native.headers",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "bridge": {
-          "kind": "code",
-          "what": "the binding declaration's pm_gate",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "depext: libtorch >= 2.1.0 & < 2.2.0",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's pm_gate",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pm_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package manager",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "opam",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package manager",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "pkg_lang": {
-          "kind": "code",
-          "what": "the binding row's provider (Lang_pkg): its package",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding row's provider (Lang_pkg): its package",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "src_lang": {
-          "kind": "code",
-          "what": "the binding source's repo record",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch.git",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding source's repo record",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "stub_lang": {
-          "kind": "code",
-          "what": "the binding declaration's coupling",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "libtorch_core_stubs.a",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's coupling",
+            "at": "Canary_overview_runs.declared_names"
+          }
         },
         "surf_lang": {
-          "kind": "code",
-          "what": "the binding declaration's surface_path",
-          "at": "Canary_overview_runs.declared_names"
+          "text": "torch.mli",
+          "kind": "name",
+          "from": "declared",
+          "src": {
+            "kind": "code",
+            "what": "the binding declaration's surface_path",
+            "at": "Canary_overview_runs.declared_names"
+          }
         }
       },
       "place_sources": {
