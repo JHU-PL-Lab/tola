@@ -2836,6 +2836,35 @@ let exhibits_export_pin : Canary_project_test.pure_test =
                match file_of e with Some c -> matches e c && unnumbered c | None -> true))
   }
 
+(* ONE ESCAPER FOR THE PAGE (2026-10-01): §2 kept one of its own that left
+   quotes alone, and wrote ten attributes with it. Every module that
+   writes the page escapes with [Canary_overview_assets.esc], which
+   escapes quotes. *)
+let one_escaper_pin : Canary_project_test.pure_test =
+  { name = "overview.one_escaper";
+    check =
+      (fun () ->
+        let dir = "src/canary/main" in
+        let writers =
+          Stdlib.Sys.readdir dir |> Array.to_list
+          |> List.filter ~f:(fun f ->
+                 String.is_suffix f ~suffix:".ml"
+                 && (String.is_prefix f ~prefix:"canary_overview_"
+                    || String.equal f "canary_agreement_overview.ml")
+                 && not (String.equal f "canary_overview_assets.ml"))
+        in
+        List.length writers > 5
+        && List.for_all writers ~f:(fun f ->
+               let src =
+                 Stdlib.In_channel.with_open_bin (Stdlib.Filename.concat dir f)
+                   Stdlib.In_channel.input_all
+               in
+               List.for_all (String.substr_index_all src ~may_overlap:false ~pattern:"let esc")
+                 ~f:(fun i ->
+                   String.is_substring_at src ~pos:i ~substring:"let esc = Canary_overview_assets.esc"))
+        && String.is_substring (Canary_overview_assets.esc {|a"b|}) ~substring:"&quot;")
+  }
+
 (* §1.2'S CELLS KEEP THEIR RULES (2026-09-30), now that they are computed
    once, in [Canary_overview_results.cells]: a frame no step realized a
    piece of is hatched; a piece shows its first recorded edge; a node's
@@ -9776,6 +9805,7 @@ let base_tests : Canary_project_test.pure_test list =
       exhibits_export_pin;
       choice_resolved_pin;
       result_cells_pin;
+      one_escaper_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;

@@ -92,13 +92,7 @@ let pp_sittings (m : M.t) : string =
 (** §2 as HTML: the verdict line, the legend, the kind glossary, the table
     and the grouping. *)
 let render (m : M.t) : string =
-  (* escapes the three markup characters, as this table always has *)
-  let esc s =
-    s
-    |> String.substr_replace_all ~pattern:"&" ~with_:"&amp;"
-    |> String.substr_replace_all ~pattern:"<" ~with_:"&lt;"
-    |> String.substr_replace_all ~pattern:">" ~with_:"&gt;"
-  in
+  let esc = Canary_overview_assets.esc in
   (* one cell per chain, the cells §1.2's rows are drawn from *)
   let cells_of slug =
     List.concat_map m.M.rows ~f:(fun (rr : M.row) ->

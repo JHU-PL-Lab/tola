@@ -271,6 +271,14 @@ became §2.2, the tables §3, and the asides say only current usage. The
 figure shows the diagrams held by no pin, and the table the package
 managers' running layer thin, which is group C below.
 
+**Done 2026-09-30: the figures and tables, and the scripts' rules.**
+Each figure and table has an id and a numbered caption naming its export
+file, and `canary overview` writes each on its own for the manuscript
+(§1). What a choice draws and §1.2's cells are computed once, in OCaml
+(`Canary_overview_draw`, `Canary_overview_results`): the page's scripts
+look the drawing up and lay the cells out, and keep only the buttons'
+state.
+
 The list is grouped by what an item needs before it can start. Its first
 open question is the order. The plan of 2026-09-28 was the rest of phase
 E, then §6.2's derivations; but phase E's end state needs §6.2 step 3,
@@ -331,15 +339,14 @@ order.
   Widening that function is a change of its own, because the catalogue
   backticks an action name only when it parses.
 - §6.2 step 2, edges from the catalogue, and step 4, one typed triple.
-- A pin that the page's scripts parse, and one over §1.2 as rendered
-  (user, 2026-09-29). No pin runs the page's JavaScript, so a syntax
-  error, or a rule in the script that hides a cell, passes them all; the
-  hidden cells of 2026-09-28 were found by running §1.2's script under
-  node by hand. It needs node, a new tool assumption, so it belongs in
-  artifact-test.
-- The script's decisions move into the data (user, 2026-09-29): the five
-  rules §4 lists, and §1.2's hatching of a frame the chain lacks. Then
-  checking the views' JSON is checking what a reader sees.
+- No pin runs the page's scripts; `overview.scripts_parse` only parses
+  them. Since 2026-09-30 they hold no rule, so what runs unpinned is the
+  lookup of §1's drawing and the layout of §1.2's cells. A pin would need
+  node, a new tool assumption, in artifact-test.
+- The exported figures carry no key, since the keys are HTML beside the
+  drawing; and Figure 2 draws only this machine's recorded worlds, since
+  another machine's needs its views read back from its runs file, where
+  Table 4 needs only their rows.
 
 **C. Adds an action or a step: held** (user, 2026-09-29: "Let me/us be
 more patient on modification needing to add new actions"). Each gets a
@@ -587,6 +594,7 @@ copy is named) closed the rest.
 | `overview.staged_copy_is_named` | an installed world's staged copy is named and counted from its own inspection, and the build tree's copy from its own |
 | `overview.results_table_is_the_column_model` | one key per frame column, in order; the page carries the header and the keys, and its script lays rows out by key and holds no mark or rule; every recorded row has a cell for every column; its links run both ways; every outcome is the log's, and none is left out |
 | `overview.result_cells_keep_their_rules` | a frame no step realized is hatched; a piece shows its first recorded edge; a node's first cell shows its name and count, a later one repeats the name; every recorded piece's state has a mark |
+| `overview.one_escaper` | every module that writes the page escapes with the one escaper, which escapes quotes |
 | `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; each check cell's tooltip glosses its blame |
 | `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |
 | `matrix.page_titles_and_agreement_overview` | the agreement overview's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |

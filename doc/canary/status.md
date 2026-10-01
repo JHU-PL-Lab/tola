@@ -67,7 +67,7 @@ The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 202 project + 120 artifact + 17 PM = 339** (2026-09-30). `make canary-test`
+**Tests: 203 project + 120 artifact + 17 PM = 340** (2026-10-01). `make canary-test`
 after every edit under `src/canary/`; `make canary-post-check` before
 committing.
 
@@ -388,9 +388,10 @@ The overview task keeps its status in one place,
 [`design/overview.md`](design/overview.md) §6 (user, 2026-09-29): a list
 grouped by what each item needs, with decisions first, then work that
 adds no action, work that adds an action (held), and what is parked.
-Where it stands on 2026-09-29: the page is the one results page; phases A
+Where it stands on 2026-10-01: the page is the one results page; phases A
 to D, E1 and E2 are done; the result table has joined the page, and §2's
-counts and §1's badges read §1.2's cells.
+counts and §1's badges read §1.2's cells; each figure and table is
+exported for the manuscript; and the page's scripts hold no rule.
 
 The history, with the user's words and every falsified pin, is
 [`worklog/worklog_2026_09.md`](worklog/worklog_2026_09.md), under the
