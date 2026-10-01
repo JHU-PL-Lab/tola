@@ -52,9 +52,16 @@ let number (e : exhibit) : int =
 let label (e : exhibit) : string =
   (match e.ex_kind with Figure -> "Figure " | Table -> "Table ") ^ Int.to_string (number e)
 
-(** What a caption says: its label, then its title. *)
+(** The file the export writes the exhibit to. *)
+let file_name (e : exhibit) : string =
+  e.ex_id ^ match e.ex_kind with Figure -> ".svg" | Table -> ".html"
+
+(** What a caption says: its label, its title, and the file to embed. *)
 let caption_text (e : exhibit) : string =
-  Printf.sprintf "<b>%s.</b> %s" (esc (label e)) (esc e.ex_title)
+  Printf.sprintf {|<b>%s.</b> %s <code class="exfile" title="%s">%s</code>|} (esc (label e))
+    (esc e.ex_title)
+    (esc (export_dir ^ "/" ^ file_name e))
+    (esc (file_name e))
 
 (** A table's opening tag, with its id and its caption. *)
 let table ?cls (id : string) : string =

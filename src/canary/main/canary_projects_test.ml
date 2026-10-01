@@ -2723,7 +2723,7 @@ let choice_resolved_pin : Canary_project_test.pure_test =
    drawing and stands alone — its size, its namespace, every colour it
    uses defined, no dark mode, no entity XML lacks; nothing written
    carries the page's numbers; a choice of chain writes only Figure 2 and
-   the lines table. *)
+   the lines table; the captions name exactly the files written. *)
 let exhibits_export_pin : Canary_project_test.pure_test =
   { name = "overview.exhibits_are_exported";
     check =
@@ -2737,10 +2737,16 @@ let exhibits_export_pin : Canary_project_test.pure_test =
           Canary_overview_page.render Canary_registry.all_specs ~overview ~generated_at:"pin"
         in
         let files = X.files Canary_registry.all_specs ~overview in
-        let file_of e =
-          List.Assoc.find files
-            (e.E.ex_id ^ match e.E.ex_kind with E.Figure -> ".svg" | E.Table -> ".html")
-            ~equal:String.equal
+        let file_of e = List.Assoc.find files (E.file_name e) ~equal:String.equal in
+        (* the captions name exactly the files the export writes *)
+        let named =
+          let pat = {|<code class="exfile" title="|} in
+          List.filter_map (String.substr_index_all page ~may_overlap:false ~pattern:pat) ~f:(fun i ->
+              Option.bind (String.index_from page (i + String.length pat) '>') ~f:(fun o ->
+                  Option.map (String.index_from page o '<') ~f:(fun c ->
+                      String.sub page ~pos:(o + 1) ~len:(c - o - 1))))
+          |> List.dedup_and_sort ~compare:String.compare
+          |> List.equal String.equal (List.sort (List.map files ~f:fst) ~compare:String.compare)
         in
         let accounted =
           List.for_all E.exhibits ~f:(fun e ->
@@ -2821,12 +2827,11 @@ let exhibits_export_pin : Canary_project_test.pure_test =
               | Ok choice ->
                   List.equal String.equal
                     (List.map (X.files ~choice Canary_registry.all_specs ~overview) ~f:fst)
-                    (List.map X.drawn_by_choice ~f:(fun id ->
-                         id ^ if String.is_prefix id ~prefix:"fig-" then ".svg" else ".html"))
+                    (List.map X.drawn_by_choice ~f:(fun id -> E.file_name (E.find id)))
               | Error _ -> false)
           | [] -> false
         in
-        accounted && chosen && rows_ok
+        accounted && chosen && rows_ok && named
         && List.for_all E.exhibits ~f:(fun e ->
                match file_of e with Some c -> matches e c && unnumbered c | None -> true))
   }

@@ -153,11 +153,11 @@ let files ?choice ?(views = []) (projects : (string * Canary_project_run.project
   in
   List.filter_map (List.filter E.exhibits ~f:wanted) ~f:(fun e ->
       match e.E.ex_kind with
-      | E.Figure -> Option.map (figure e.E.ex_id) ~f:(fun c -> (e.E.ex_id ^ ".svg", c))
+      | E.Figure -> Option.map (figure e.E.ex_id) ~f:(fun c -> (E.file_name e, c))
       | E.Table ->
           Option.map
             (Option.bind (table_source e.E.ex_id) ~f:(E.bare_table e.E.ex_id))
-            ~f:(fun c -> (e.E.ex_id ^ ".html", c ^ "\n")))
+            ~f:(fun c -> (E.file_name e, c ^ "\n")))
 
 (** Write the exhibits into [dir]; the directory written. *)
 let write ?dir:(d = dir ()) ?choice ?views
