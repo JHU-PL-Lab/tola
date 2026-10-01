@@ -3,7 +3,8 @@
     rule ran (R), where it is checked (D) and its own column (◆) — with how
     often recorded runs decided it and whose defect the rest are; then the
     agreements grouped by where they sit on the chain. [decided] and
-    [blame] count §1.2's cells ({!Canary_matrix.row.checks}), so this
+    [blame] count the chains they are given: on the page, every machine's,
+    the rows §1.2 shows ({!Canary_overview_runs.recorded_chains}); so this
     section alone depends on recorded runs. *)
 
 open Base
@@ -23,20 +24,26 @@ type sitting_group = {
   sg_members : sitting_member list;
 }
 
+(** The cells this section counts: per chain, each checked claim's cell. *)
+type chains = (string * M.chain_check) list list
+
+(** One machine's record, as chains. *)
+let chains_of (m : M.t) : chains = List.concat_map m.M.rows ~f:(fun r -> List.map r.M.checks ~f:snd)
+
 (** The agreements some recorded run decided — held or violated in some
-    cell of §1.2, wherever the check sits. *)
-let decided_slugs (m : M.t) : string list =
-  List.concat_map m.M.rows ~f:(fun r ->
-      List.concat_map r.M.checks ~f:(fun (_, cells) ->
-          List.filter_map cells ~f:(fun (slug, c) ->
-              match c.M.chk_outcome with "holds" | "violated" -> Some slug | _ -> None)))
+    chain's cell, wherever the check sits. *)
+let decided_slugs (cs : chains) : string list =
+  List.concat_map cs
+    ~f:
+      (List.filter_map ~f:(fun (slug, c) ->
+           match c.M.chk_outcome with "holds" | "violated" -> Some slug | _ -> None))
   |> List.dedup_and_sort ~compare:String.compare
 
 (** Every agreement the diagram places, registered and candidate, grouped
     by where its claim site sits ({!Canary_topology.sitting_of}). *)
-let sitting_groups (m : M.t) : sitting_group list =
+let sitting_groups (cs : chains) : sitting_group list =
   let module T = Canary_topology in
-  let decided = decided_slugs m in
+  let decided = decided_slugs cs in
   let reach_rank = function
     | T.Own_side T.S_sys -> 0
     | T.Own_side T.S_lang -> 1
@@ -68,9 +75,9 @@ let sitting_mark (sm : sitting_member) : string =
   if sm.sm_decided then "✓" else if sm.sm_checked then "·" else "?"
 
 (** The grouping, for the terminal. *)
-let pp_sittings (m : M.t) : string =
+let pp_sittings (cs : chains) : string =
   let module T = Canary_topology in
-  let groups = sitting_groups m in
+  let groups = sitting_groups cs in
   let line (g : sitting_group) =
     Printf.sprintf "  %-18s %-24s %2d %3d %3d   %s" (T.string_of_reach g.sg_reach)
       (T.string_of_layers g.sg_layers) (List.length g.sg_members)
@@ -91,13 +98,11 @@ let pp_sittings (m : M.t) : string =
 
 (** §2 as HTML: the verdict line, the legend, the kind glossary, the table
     and the grouping. *)
-let render (m : M.t) : string =
+let render (cs : chains) : string =
   let esc = Canary_overview_assets.esc in
-  (* one cell per chain, the cells §1.2's rows are drawn from *)
+  (* one cell per chain *)
   let cells_of slug =
-    List.concat_map m.M.rows ~f:(fun (rr : M.row) ->
-        List.filter_map rr.M.checks ~f:(fun (_, cells) ->
-            List.Assoc.find cells slug ~equal:String.equal))
+    List.filter_map cs ~f:(fun cells -> List.Assoc.find cells slug ~equal:String.equal)
   in
   let tally slug =
     let cells = cells_of slug in
@@ -142,7 +147,7 @@ let render (m : M.t) : string =
        <th>layers</th><th>placed</th><th>checked</th><th>decided</th>\
        <th>agreements</th></tr></thead><tbody>"
     ^ String.concat ~sep:""
-        (List.map (sitting_groups m) ~f:(fun g ->
+        (List.map (sitting_groups cs) ~f:(fun g ->
              Printf.sprintf
                "<tr><td>%s</td><td>%s</td><td class=\"n\">%d</td><td \
                 class=\"n\">%d</td><td class=\"n\">%d</td><td>%s</td></tr>"

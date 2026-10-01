@@ -32,7 +32,9 @@ not say:
   `#joindata` (`Canary_overview_join`) and §1.2's column keys as
   `#rtcols` (`Canary_overview_results`, over `Canary_frames`). A run
   reaches the page only through the runs files beside it, except for §2's
-  counts.
+  counts, which are counted over every machine's runs file when the page
+  is rendered (`Canary_overview_runs.recorded_chains`), so §2 counts the
+  rows §1.2 shows. Figure 1 still draws them from this machine's record.
 - §1.2's cells are computed once, in OCaml, when a machine writes its runs
   file: `Canary_overview_results.cells` turns a recorded world into a row
   filed by column key, and the runs file carries it. The header is drawn
@@ -325,9 +327,6 @@ order.
 
 - `canary checks --firing` still prints the old action columns, and
   §1.2's looks are not in `visual_hints` (§5).
-- §2 is counted from this machine's record, while §1.2 shows every
-  machine's runs file; the two differ once a second machine's rows are on
-  the page.
 - The ten action families with no edge have no frame, so their steps
   have no column, and a failure there would show nowhere in §1.2.
 - The log: typed fields on its events; each inspection's summary logged
@@ -596,6 +595,7 @@ copy is named) closed the rest.
 | `overview.result_cells_keep_their_rules` | a frame no step realized is hatched; a piece shows its first recorded edge; a node's first cell shows its name and count, a later one repeats the name; every recorded piece's state has a mark |
 | `overview.one_escaper` | every module that writes the page escapes with the one escaper, which escapes quotes |
 | `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; each check cell's tooltip glosses its blame |
+| `overview.agreements_count_every_machine` | §2 counts every machine's runs file, the rows §1.2 shows: one made-up file per machine, each deciding the same claim, counts once per machine |
 | `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |
 | `matrix.page_titles_and_agreement_overview` | the agreement overview's cells are `Canary_frames.row_marks`, with ◆ at each checked claim's sites and none for a planned one; the retired result page's address holds a pointer to §1.2, not a table |
 | `manifest.records_what_a_run_realized` | the manifest's codec is total; every world round-trips; the record prefers a run's manifest to re-deriving |

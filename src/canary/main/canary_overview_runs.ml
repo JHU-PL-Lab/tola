@@ -1105,11 +1105,12 @@ let write (m : M.t) ~(generated_at : string) : string =
   Stdio.Out_channel.write_all path ~data:(payload m ~generated_at);
   path
 
-(** Every machine's §1.2 rows, read from the runs files the page loads. *)
-let recorded_rows () : Canary_overview_results.row list =
-  let page_dir = Stdlib.Filename.dirname Canary_overview_assets.docs_path in
+(** Every view in the runs files the page loads, every machine's: beside
+    the page, or in [dir]. *)
+let recorded_views ?(dir = Stdlib.Filename.dirname Canary_overview_assets.docs_path) () :
+    (string * Yojson.Basic.t) list list =
   List.concat_map all_file_names ~f:(fun f ->
-      let path = Stdlib.Filename.concat page_dir f in
+      let path = Stdlib.Filename.concat dir f in
       if not (Stdlib.Sys.file_exists path) then []
       else
         let text = Stdio.In_channel.read_all path in
@@ -1118,13 +1119,26 @@ let recorded_rows () : Canary_overview_results.row list =
             match Yojson.Basic.from_string (String.sub text ~pos:a ~len:(b - a + 1)) with
             | `Assoc kv -> (
                 match List.Assoc.find kv "views" ~equal:String.equal with
-                | Some (`List vs) ->
-                    List.filter_map vs ~f:(function
-                      | `Assoc v ->
-                          Option.bind (List.Assoc.find v "row" ~equal:String.equal)
-                            ~f:Canary_overview_results.row_of_json
-                      | _ -> None)
+                | Some (`List vs) -> List.filter_map vs ~f:(function `Assoc v -> Some v | _ -> None)
                 | _ -> [])
             | _ -> []
             | exception _ -> [])
         | _ -> [])
+
+(** Every machine's §1.2 rows. *)
+let recorded_rows ?dir () : Canary_overview_results.row list =
+  List.filter_map (recorded_views ?dir ()) ~f:(fun v ->
+      Option.bind (List.Assoc.find v "row" ~equal:String.equal) ~f:Canary_overview_results.row_of_json)
+
+(** Every machine's chains, as §2 counts them: per view, each checked
+    claim's outcome and blame — the cells of §1.2's rows. *)
+let recorded_chains ?dir () : (string * M.chain_check) list list =
+  List.map (recorded_views ?dir ()) ~f:(fun v ->
+      let words k =
+        match List.Assoc.find v k ~equal:String.equal with
+        | Some (`Assoc kv) -> List.filter_map kv ~f:(function s, `String x -> Some (s, x) | _ -> None)
+        | _ -> []
+      in
+      let blames = words "blames" in
+      List.map (words "outcomes") ~f:(fun (slug, o) ->
+          (slug, { M.chk_outcome = o; chk_blame = List.Assoc.find blames slug ~equal:String.equal })))

@@ -2483,7 +2483,8 @@ let flow_pin : Canary_project_test.pure_test =
           Canary_overview_page.render Canary_registry.all_specs
             ~overview:
               (Canary_agreement_overview.render
-                 (Canary_matrix.matrix_of Canary_registry.all_projects))
+                 (Canary_agreement_overview.chains_of
+                    (Canary_matrix.matrix_of Canary_registry.all_projects)))
             ~generated_at:"pin"
         in
         (* each heading, as the outline lists it, at increasing places *)
@@ -2567,7 +2568,8 @@ let exhibits_pin : Canary_project_test.pure_test =
           Canary_overview_page.render Canary_registry.all_specs
             ~overview:
               (Canary_agreement_overview.render
-                 (Canary_matrix.matrix_of Canary_registry.all_projects))
+                 (Canary_agreement_overview.chains_of
+                    (Canary_matrix.matrix_of Canary_registry.all_projects)))
             ~generated_at:"pin"
         in
         let all pattern = String.substr_index_all page ~may_overlap:false ~pattern in
@@ -2731,7 +2733,8 @@ let exhibits_export_pin : Canary_project_test.pure_test =
         let module E = Canary_overview_exhibits in
         let module X = Canary_overview_export in
         let overview =
-          Canary_agreement_overview.render (Canary_matrix.matrix_of Canary_registry.all_projects)
+          Canary_agreement_overview.(
+            render (chains_of (Canary_matrix.matrix_of Canary_registry.all_projects)))
         in
         let page =
           Canary_overview_page.render Canary_registry.all_specs ~overview ~generated_at:"pin"
@@ -2834,6 +2837,41 @@ let exhibits_export_pin : Canary_project_test.pure_test =
         accounted && chosen && rows_ok && named
         && List.for_all E.exhibits ~f:(fun e ->
                match file_of e with Some c -> matches e c && unnumbered c | None -> true))
+  }
+
+(* §2 COUNTS WHAT §1.2 SHOWS: EVERY MACHINE'S (2026-10-01). §1.2 lays out
+   the rows of every runs file the page loads, and §2 counts the same
+   views. Held over one made-up runs file per machine, each deciding the
+   same claim: §2 counts it once per machine. *)
+let every_machine_pin : Canary_project_test.pure_test =
+  { name = "overview.agreements_count_every_machine";
+    check =
+      (fun () ->
+        let module R = Canary_overview_runs in
+        let dir = "_out/canary/test/every_machine" in
+        Canary_step_model.ensure_dir dir;
+        match Canary_frames.checked_rows with
+        | [] -> false
+        | r :: _ ->
+            let slug = r.Canary_agreement.ag_slug in
+            List.iter R.all_file_names ~f:(fun f ->
+                let view =
+                  `Assoc
+                    [ ("outcomes", `Assoc [ (slug, `String "holds") ]);
+                      ("blames", `Assoc []) ]
+                in
+                Stdio.Out_channel.write_all (Stdlib.Filename.concat dir f)
+                  ~data:
+                    (R.prefix
+                    ^ Yojson.Basic.to_string (`Assoc [ ("machine", `String f); ("views", `List [ view ]) ])
+                    ^ R.suffix));
+            let machines = List.length R.all_file_names in
+            let chains = R.recorded_chains ~dir () in
+            machines > 1
+            && List.length chains = machines
+            && String.is_substring
+                 (Canary_agreement_overview.render chains)
+                 ~substring:(Printf.sprintf "%d ✓" machines))
   }
 
 (* ONE ESCAPER FOR THE PAGE (2026-10-01): §2 kept one of its own that left
@@ -2955,7 +2993,7 @@ let outcome_marks_pin : Canary_project_test.pure_test =
         in
         let script = Canary_overview_assets.read "results.js" in
         let overview =
-          Canary_agreement_overview.render (M.matrix_of Canary_registry.all_projects)
+          Canary_agreement_overview.(render (chains_of (M.matrix_of Canary_registry.all_projects)))
         in
         (* a check cell shows its outcome's mark and look: every frame
            recorded, one claim decided *)
@@ -3002,7 +3040,8 @@ let agreement_laws_pin : Canary_project_test.pure_test =
     check =
       (fun () ->
         let overview =
-          Canary_agreement_overview.render (Canary_matrix.matrix_of Canary_registry.all_projects)
+          Canary_agreement_overview.(
+            render (chains_of (Canary_matrix.matrix_of Canary_registry.all_projects)))
         in
         (not (List.is_empty Canary_agreement.row_rules))
         && String.is_substring overview
@@ -3091,7 +3130,7 @@ let agreements_sit_pin : Canary_project_test.pure_test =
         in
         let module AO = Canary_agreement_overview in
         let m = M.matrix_of Canary_registry.all_projects in
-        let overview = AO.render m in
+        let overview = AO.render (AO.chains_of m) in
         (* the first cell after a row's slug that carries the site *)
         let site_cell slug =
           match String.substr_index overview ~pattern:(Printf.sprintf "<td>%s</td>" slug) with
@@ -3112,7 +3151,7 @@ let agreements_sit_pin : Canary_project_test.pure_test =
               | Some cell, Some st -> String.equal cell (String.concat ~sep:", " st.T.st_edges)
               | _ -> false)
         in
-        let groups = AO.sitting_groups m in
+        let groups = AO.sitting_groups (AO.chains_of m) in
         let members = List.concat_map groups ~f:(fun g -> g.AO.sg_members) in
         let grouping_ok =
           List.length members = List.length T.claim_sites
@@ -3126,7 +3165,8 @@ let agreements_sit_pin : Canary_project_test.pure_test =
           && List.for_all members ~f:(fun sm -> (not sm.AO.sm_decided) || sm.AO.sm_checked)
         in
         once && specimens && table_ok && grouping_ok
-        && String.is_substring (AO.pp_sittings m) ~substring:"where the agreements sit on the chain")
+        && String.is_substring (AO.pp_sittings (AO.chains_of m))
+             ~substring:"where the agreements sit on the chain")
   }
 
 (* NO EDGE MARK HIDES UNDER A BOX, AND NO EDGE RUNS UNDER A SOURCE
@@ -8807,7 +8847,7 @@ let agreement_counts_pin : Canary_project_test.pure_test =
         match chain_cell_fixture () with
         | None -> false
         | Some (pr, m, views) ->
-            let overview = Canary_agreement_overview.render m in
+            let overview = Canary_agreement_overview.(render (chains_of m)) in
             (* the text of a cell, its tags dropped *)
             let text s =
               let b = Buffer.create (String.length s) in
@@ -9806,6 +9846,7 @@ let base_tests : Canary_project_test.pure_test list =
       choice_resolved_pin;
       result_cells_pin;
       one_escaper_pin;
+      every_machine_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;

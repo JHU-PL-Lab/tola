@@ -902,11 +902,12 @@ let checks_cmd =
            be blank. Name, kind, and what is in the way. *)
         Fmt.pr "@.%s@." (Canary_agreement.pp_candidate_table ());
         (* WHERE EVERY AGREEMENT SITS ON THE CHAIN (2026-09-27, user),
-           candidates included — with how many some recorded run decided,
-           read from the same logs as the result table *)
+           candidates included — with how many this machine's recorded
+           runs decided *)
         Fmt.pr "@.%s@."
           (Canary_agreement_overview.pp_sittings
-             (Canary_matrix.matrix_of Canary_registry.all_projects));
+             (Canary_agreement_overview.chains_of
+                (Canary_matrix.matrix_of Canary_registry.all_projects)));
         (* THE SAME TOOLS THE `_ext` ROWS NAME, TRANSPOSED (2026-09-21,
            user: "It's also a good way to understand their roles"). The
            table reads by claim; this reads by tool, and carries what
@@ -1625,7 +1626,10 @@ let overview_cmd =
     if flow then print_string (Canary_overview_flow.text ())
     else if Option.is_some exhibits then begin
       let m = m () in
-      let overview = Canary_agreement_overview.render m in
+      (* §2 counts what §1.2 shows: every machine's runs file, as written *)
+      let overview =
+        Canary_agreement_overview.render (Canary_overview_runs.recorded_chains ())
+      in
       if not chosen then
         Fmt.pr "wrote %s/ (the page's figures and tables)@."
           (Canary_overview_export.write ?dir:exhibits Canary_registry.all_specs ~overview)
@@ -1675,17 +1679,19 @@ let overview_cmd =
           (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
       in
       let m = m () in
-      let overview = Canary_agreement_overview.render m in
+      (* the recorded worlds, beside the page and never inside it — the
+         tracked copy only when this machine is rendering itself; written
+         first, since §2 and the exported §1.2 read every machine's *)
+      Fmt.pr "wrote %s@." (Canary_overview_runs.write m ~generated_at:now);
+      let overview =
+        Canary_agreement_overview.render (Canary_overview_runs.recorded_chains ())
+      in
       Canary_overview_page.write Canary_registry.all_specs ~overview
         ~generated_at:now;
       Fmt.pr "wrote %s@." Canary_overview_page.docs_path;
       Fmt.pr "wrote %s/{%s} (pointers to its §1.2)@."
         Canary_overview_page.pointer_dir
         (String.concat "," Canary_overview_page.pointer_files);
-      (* the recorded worlds, beside the page and never inside it — the
-         tracked copy only when this machine is rendering itself; written
-         before the exhibits, whose §1.2 reads every machine's *)
-      Fmt.pr "wrote %s@." (Canary_overview_runs.write m ~generated_at:now);
       Fmt.pr "wrote %s/ (its figures and tables, each on its own)@."
         (Canary_overview_export.write Canary_registry.all_specs ~overview)
     end
