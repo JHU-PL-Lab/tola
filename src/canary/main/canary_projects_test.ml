@@ -9800,46 +9800,8 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            > 0) }
 
 let base_tests : Canary_project_test.pure_test list =
-  Canary_test_projects.tests
-  @ [ topology_joins_pin;
-      topology_graph_pin;
-      overview_sections_pin;
-      every_step_placed_pin;
-      frames_pin;
-      one_reader_pin;
-      template_pin;
-      results_table_pin;
-      agreement_counts_pin;
-      badge_words_pin;
-      staged_copy_pin;
-      overview_overlay_pin;
-      recorded_names_pin;
-      overlay_words_pin;
-      bridge_record_pin;
-      placeholder_badges_pin;
-      coverage_tables_pin;
-      package_band_pin;
-      chain_choices_pin;
-      chain_absence_pin;
-      drawn_line_sources_pin;
-      badge_counts_pin;
-      agreements_sit_pin;
-      edge_marks_pin;
-      visual_vocabulary_pin;
-      flow_pin;
-      exhibits_pin;
-      exhibits_export_pin;
-      choice_resolved_pin;
-      result_cells_pin;
-      one_escaper_pin;
-      every_machine_pin;
-      firing_frames_pin;
-      outcome_marks_pin;
-      agreement_laws_pin;
-      mechanism_claims_pin;
-      check_index_language_pin;
-      applicability_reads_declaration_pin ]
-  @ Canary_test_record.tests @ Canary_test_pipeline.tests @ Canary_test_env.tests
+  Canary_test_projects.tests @ Canary_test_overview.tests @ Canary_test_record.tests
+  @ Canary_test_pipeline.tests @ Canary_test_env.tests
 
 (* THE LAYOUT KEEPS ITS RULES (2026-09-27, user: "a collection of my human
    words or learned rules … so that if we switch to another GUI framework
