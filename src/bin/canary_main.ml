@@ -1341,7 +1341,7 @@ let project_test_cmd =
           PM/build.")
     (term_of (fun () ->
          let ok =
-           Canary_project_test.run_tests ~extra:Canary_projects_test.tests ()
+           Canary_project_test.run_tests ~extra:Canary_tests.tests ()
          in
          if not ok then Stdlib.exit 1))
 

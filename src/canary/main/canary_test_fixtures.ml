@@ -158,3 +158,14 @@ let chain_cell_fixture () :
       F.save log ~root ~project;
       let m = Canary_matrix.matrix_of ~root [ (project, pr) ] in
       (pr, m, Canary_overview_runs.views ~root m))
+
+(* The files the project-test suite's pins are written in: canary_lib's
+   own, and one per subject here. *)
+let test_sources () : string list =
+  let dir = "src/canary/main" in
+  "src/canary/test/canary_project_test.ml"
+  :: (Stdlib.Sys.readdir dir |> Array.to_list
+     |> List.filter ~f:(fun f ->
+            String.is_prefix f ~prefix:"canary_test_" && String.is_suffix f ~suffix:".ml")
+     |> List.sort ~compare:String.compare
+     |> List.map ~f:(fun f -> dir ^ "/" ^ f))

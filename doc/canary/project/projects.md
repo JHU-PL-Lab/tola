@@ -50,7 +50,7 @@ the FORWARD (new binding, old lib) and BACKWARD (new lib, old binding)
 cells. Most projects have one axis and are therefore *half* a 2×2.
 
 Scenario counts are pinned by `matrix.registry_shape`
-(`canary_projects_test.ml`) — a changed count anywhere fails the pin and
+(`canary_test_record.ml`) — a changed count anywhere fails the pin and
 the failure names the project, so this table cannot drift silently.
 
 | project | lib axis | binding axis | scen. | 2×2 status | local / CI |

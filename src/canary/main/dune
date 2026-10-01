@@ -12,7 +12,7 @@
 ; DATATYPE; the concrete instantiation (registry list, CI) lives in
 ; canary_project and is INJECTED here (Canary_batch.run takes the
 ; project list as an argument). The layer test suite
-; (canary_projects_test.ml) lives here too — it pins the whole
+; (canary_tests.ml, joining canary_test_<subject>.ml) lives here too — it pins the whole
 ; project-definition layer, which is why this library may reference
 ; concrete projects in TEST code only.
 (include_subdirs no)

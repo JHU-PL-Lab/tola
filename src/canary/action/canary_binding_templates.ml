@@ -17,7 +17,7 @@
 
     No behavior change: for tiny the emitted strings are byte-equal
     to the former hand-written literals (pinned by
-    [tiny_binding_realization_pin] in canary_projects_test.ml). *)
+    [tiny_binding_realization_pin] in canary_test_projects.ml). *)
 
 open Base
 

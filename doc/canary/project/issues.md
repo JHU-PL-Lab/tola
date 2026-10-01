@@ -236,7 +236,7 @@ and a Built lib follows its source), which is exactly the case
 Dev is a `-DTINY_DEV` build **flag** rather than a source version.
 
 **Not an unnoticed break — a pinned one.** `("tiny-full", 1)` and
-`~want_count:1` in `canary_projects_test.ml` both encode 1, so the pins
+`~want_count:1` in `canary_test_projects.ml` both encode 1, so the pins
 were moved to match rather than firing. Worth treating as the more
 interesting half of the finding: the ratchet recorded the new number
 instead of contesting it.

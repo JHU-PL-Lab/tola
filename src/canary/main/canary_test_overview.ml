@@ -1530,8 +1530,9 @@ let flow_pin : Canary_project_test.pure_test =
         let tests_src =
           String.concat
             (List.map
-               [ "src/canary/main/canary_projects_test.ml"; "src/canary/test/canary_project_test.ml";
-                 "src/canary/test/canary_artifact_test.ml"; "src/canary/test/canary_pm_test.ml" ]
+               (Canary_test_fixtures.test_sources ()
+               @ [ "src/canary/main/canary_tests.ml"; "src/canary/test/canary_artifact_test.ml";
+                   "src/canary/test/canary_pm_test.ml" ])
                ~f:(fun p -> Stdlib.In_channel.with_open_bin p Stdlib.In_channel.input_all))
         in
         let makefile = Stdlib.In_channel.with_open_bin "Makefile" Stdlib.In_channel.input_all in

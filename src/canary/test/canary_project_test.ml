@@ -3870,7 +3870,7 @@ let all_tests : pure_test list =
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the
    canary_project library ON TOP of it). `canary project-test` passes
-   the project-spec pin tests ([Canary_projects_test.tests]) through here. *)
+   the project-spec pin tests ([Canary_tests.tests]) through here. *)
 let run_tests ?(extra : pure_test list = []) () : bool =
   let all_tests = all_tests @ extra in
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

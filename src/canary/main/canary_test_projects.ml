@@ -2382,6 +2382,7 @@ let tests : Canary_project_test.pure_test list =
       forward_cell_expectation_pin;
       publish_wired_pin;
       tiny_binding_realization_pin;
+      binding_decl_pin;
       binding_decls_on_project_run_pin;
       sqlite_binding_decls_pin;
       z3_llvm_binding_decls_pin;
