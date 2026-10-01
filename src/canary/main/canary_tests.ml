@@ -30,32 +30,42 @@ let to_test_file ((subject, path, ts) : file) : Canary_overview_tests.file =
           { Canary_overview_tests.ts_name = t.Canary_project_test.name;
             ts_holds = t.Canary_project_test.holds }) }
 
-(* [Canary_overview_looks.layout_rules] states each rule in words, with
-   why and whose it is; a rule checked by a test names a test that exists,
-   so the list cannot point at a renamed check. Defined after
-   [base_tests] for that reason. Another drawing is held to the same
-   rules by handing them its own positions ([layout_view]). See
-   design/overview.md §5. *)
+(* [Canary_overview_looks.layout_rules] states each rule in words. Another
+   drawing is held to the same rules by handing them its own positions
+   ([layout_view]). See design/overview.md §5. *)
 let layout_rules_pin : Canary_project_test.pure_test =
   { name = "overview.layout_rules_hold";
-    holds = "The drawing keeps the layout's rules, and every rule a test checks names a registered test.";
+    holds = "Every layout rule checked over places holds over this drawing's positions, and the page shows the list of rules.";
     check =
       (fun () ->
         let module P = Canary_overview_looks in
         (not (List.is_empty P.layout_rules))
         && List.for_all P.layout_rules ~f:(fun r ->
-               (not (String.is_empty r.P.lr_says))
-               && (not (String.is_empty r.P.lr_why))
-               &&
                match r.P.lr_check with
                | P.Places holds -> holds P.this_layout
-               | P.Pinned_by name ->
-                   List.exists base_tests ~f:(fun t ->
-                       String.equal t.Canary_project_test.name name))
+               | P.Pinned_by _ -> true)
         (* the page shows the list *)
         && String.is_substring
              (Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin")
              ~substring:{|id="jrules"|})
+  }
+
+(* A rule a test holds names it, so the list cannot point at a renamed
+   check; defined after [base_tests] for that reason. *)
+let layout_rules_explained_pin : Canary_project_test.pure_test =
+  { name = "harness.layout_rules_are_explained";
+    holds = "Every layout rule says what it holds and why, and every rule a test holds names a registered test.";
+    check =
+      (fun () ->
+        let module P = Canary_overview_looks in
+        List.for_all P.layout_rules ~f:(fun r ->
+            (not (String.is_empty r.P.lr_says))
+            && (not (String.is_empty r.P.lr_why))
+            &&
+            match r.P.lr_check with
+            | P.Places _ -> true
+            | P.Pinned_by name ->
+                List.exists base_tests ~f:(fun t -> String.equal t.Canary_project_test.name name)))
   }
 
 (* A test left out of its subject's [tests] compiles and never runs. The
@@ -106,7 +116,8 @@ let written_pins_run_pin : Canary_project_test.pure_test =
 
 (* The suite's own tests read the whole list and are on it, hence [rec]. *)
 let rec suite : Canary_project_test.pure_test list =
-  [ layout_rules_pin; written_pins_run_pin; holds_said_pin; tests_listed_pin ]
+  [ layout_rules_pin; layout_rules_explained_pin; written_pins_run_pin; holds_said_pin;
+    tests_listed_pin ]
 
 and files () : file list =
   (lib_file :: subject_files) @ [ ("the suite itself", "src/canary/main/canary_tests.ml", suite) ]
@@ -133,12 +144,10 @@ and holds_said_pin : Canary_project_test.pure_test =
   }
 
 (* Each file's block holds exactly its own tests, each with its claim
-   after its name; the table counts them; and every name Figure 1 holds a
-   box by is a test on the list, a test of the framework suites
-   (artifact-test, pm-test, which §0.4 does not list) or a make target. *)
+   after its name, and the table counts them. *)
 and tests_listed_pin : Canary_project_test.pure_test =
   { name = "overview.tests_lists_every_test";
-    holds = "§0.4 lists every test project-test runs once, under its file and with its claim, and each test Figure 1 names is listed there or is a framework test.";
+    holds = "§0.4 lists every test project-test runs once, under its file and with its claim, and its table counts each file's tests.";
     check =
       (fun () ->
         let module O = Canary_overview_tests in
@@ -167,21 +176,7 @@ and tests_listed_pin : Canary_project_test.pure_test =
                   (Printf.sprintf "<td><code>%s</code></td><td>%d</td>" (esc f.O.tf_path)
                      (List.length f.O.tf_tests)))
         in
-        let names = List.concat_map fs ~f:(fun f -> List.map f.O.tf_tests ~f:(fun t -> t.O.ts_name)) in
-        let framework =
-          String.concat
-            (List.map
-               [ "src/canary/test/canary_artifact_test.ml"; "src/canary/test/canary_pm_test.ml" ]
-               ~f:(fun p -> Stdlib.In_channel.with_open_bin p Stdlib.In_channel.input_all))
-        in
-        let figure_ok =
-          List.for_all Canary_overview_flow.boxes ~f:(fun b ->
-              List.for_all b.Canary_overview_flow.bx_held ~f:(fun h ->
-                  String.is_prefix h ~prefix:"make "
-                  || List.mem names h ~equal:String.equal
-                  || String.is_substring framework ~substring:(Printf.sprintf {|"%s"|} h)))
-        in
-        listed && counted && figure_ok)
+        listed && counted)
   }
 
 (** Every file's tests, for the overview page's §0.4. *)

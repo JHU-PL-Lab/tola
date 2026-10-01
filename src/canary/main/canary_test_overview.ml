@@ -1339,13 +1339,13 @@ let visual_vocabulary_pin : Canary_project_test.pure_test =
 (* §0's outline, figure and table are [Canary_overview_flow]'s data.
    Every slot of page.html belongs to exactly one section or to the page,
    so a new part of the page takes a place in the outline; each heading
-   reads as the outline lists it, in order; everything the data names
-   exists; and the figure's boxes fit the canvas without overlapping,
+   reads as the outline lists it, in order; every section the data links
+   to exists; and the figure's boxes fit the canvas without overlapping,
    every arrow straight between ends that face each other. See
    design/overview.md §1. *)
 let flow_pin : Canary_project_test.pure_test =
   { name = "overview.flow_is_the_page";
-    holds = "The outline, figure and table of §0 hold to what exists in the page and the code.";
+    holds = "Every template slot of §0 belongs to one section, each heading reads as the outline lists it, and Figure 1's boxes fit without overlapping.";
     check =
       (fun () ->
         let module F = Canary_overview_flow in
@@ -1375,22 +1375,6 @@ let flow_pin : Canary_project_test.pure_test =
           && (let ps = List.filter_map at ~f:Fn.id in
               List.for_all2_exn (List.drop_last_exn ps) (List.tl_exn ps) ~f:(fun a b -> a < b))
         in
-        let tests_src =
-          String.concat
-            (List.map
-               (Canary_test_fixtures.test_sources ()
-               @ [ "src/canary/main/canary_tests.ml"; "src/canary/test/canary_artifact_test.ml";
-                   "src/canary/test/canary_pm_test.ml" ])
-               ~f:(fun p -> Stdlib.In_channel.with_open_bin p Stdlib.In_channel.input_all))
-        in
-        let makefile = Stdlib.In_channel.with_open_bin "Makefile" Stdlib.In_channel.input_all in
-        let held_ok =
-          List.for_all F.boxes ~f:(fun b ->
-              List.for_all b.F.bx_held ~f:(fun h ->
-                  match String.chop_prefix h ~prefix:"make " with
-                  | Some target -> String.is_substring makefile ~substring:("\n" ^ target ^ ":")
-                  | None -> String.is_substring tests_src ~substring:(Printf.sprintf {|"%s"|} h)))
-        in
         let named =
           List.concat_map F.subjects ~f:(fun s ->
               List.concat_map [ s.F.sj_code; s.F.sj_run ] ~f:(fun l ->
@@ -1399,19 +1383,6 @@ let flow_pin : Canary_project_test.pure_test =
                 List.filter_map b.F.bx_lines ~f:(function F.Link (n, _) -> Some n | _ -> None))
         in
         let sections_ok = List.for_all named ~f:(fun n -> Option.is_some (F.section_of n)) in
-        let modules =
-          List.concat_map F.sections ~f:(fun s -> s.F.sc_code)
-          @ List.concat_map F.subjects ~f:(fun s ->
-                List.filter s.F.sj_code.F.ly_from ~f:(String.is_prefix ~prefix:"Canary_"))
-        in
-        let has_source m =
-          List.exists
-            [ "base"; "agreement"; "tool"; "action"; "backend"; "project"; "main"; "test" ]
-            ~f:(fun d ->
-              Stdlib.Sys.file_exists
-                (Printf.sprintf "src/canary/%s/%s.ml" d (String.lowercase m)))
-        in
-        let modules_ok = List.for_all modules ~f:has_source in
         let inside b =
           b.F.bx_x >= 0 && b.F.bx_y >= 0
           && b.F.bx_x + b.F.bx_w <= F.canvas_w
@@ -1429,7 +1400,46 @@ let flow_pin : Canary_project_test.pure_test =
                  List.for_all F.boxes ~f:(fun b -> String.equal a.F.bx_id b.F.bx_id || apart a b))
           && List.for_all F.arrows ~f:(fun a -> Option.is_some (F.route a))
         in
-        slots_ok && anchors_ok && sections_ok && modules_ok && held_ok && geometry_ok)
+        slots_ok && anchors_ok && sections_ok && geometry_ok)
+  }
+
+(* The names §0 gives are real. Figure 1's boxes name tests, so a name
+   must be written in a test source, not a harness one. *)
+let flow_names_pin : Canary_project_test.pure_test =
+  { name = "harness.flow_names_exist";
+    holds = "Every test a box of Figure 1 names is written in the test sources, every make target it names is in the Makefile, and every module §0 names has a source file.";
+    check =
+      (fun () ->
+        let module F = Canary_overview_flow in
+        let tests_src =
+          String.concat
+            (List.map
+               (Canary_test_fixtures.test_sources ()
+               @ [ "src/canary/main/canary_tests.ml"; "src/canary/test/canary_artifact_test.ml";
+                   "src/canary/test/canary_pm_test.ml" ])
+               ~f:(fun p -> Stdlib.In_channel.with_open_bin p Stdlib.In_channel.input_all))
+        in
+        let makefile = Stdlib.In_channel.with_open_bin "Makefile" Stdlib.In_channel.input_all in
+        let held_ok =
+          List.for_all F.boxes ~f:(fun b ->
+              List.for_all b.F.bx_held ~f:(fun h ->
+                  match String.chop_prefix h ~prefix:"make " with
+                  | Some target -> String.is_substring makefile ~substring:("\n" ^ target ^ ":")
+                  | None -> String.is_substring tests_src ~substring:(Printf.sprintf {|"%s"|} h)))
+        in
+        let modules =
+          List.concat_map F.sections ~f:(fun s -> s.F.sc_code)
+          @ List.concat_map F.subjects ~f:(fun s ->
+                List.filter s.F.sj_code.F.ly_from ~f:(String.is_prefix ~prefix:"Canary_"))
+        in
+        let has_source m =
+          List.exists
+            [ "base"; "agreement"; "tool"; "action"; "backend"; "project"; "main"; "test" ]
+            ~f:(fun d ->
+              Stdlib.Sys.file_exists
+                (Printf.sprintf "src/canary/%s/%s.ml" d (String.lowercase m)))
+        in
+        held_ok && List.for_all modules ~f:has_source)
   }
 
 (* Each exhibit appears once, in list order, captioned with its label and
@@ -3306,6 +3316,7 @@ let tests : Canary_project_test.pure_test list =
     overlay_words_pin; bridge_record_pin; placeholder_badges_pin; coverage_tables_pin;
     package_band_pin; chain_choices_pin; chain_absence_pin; drawn_line_sources_pin;
     badge_counts_pin; agreements_sit_pin; edge_marks_pin; visual_vocabulary_pin; flow_pin;
+    flow_names_pin;
     exhibits_pin; exhibits_export_pin; choice_resolved_pin; result_cells_pin;
     one_escaper_pin; every_machine_pin; firing_frames_pin; outcome_marks_pin;
     agreement_laws_pin; mechanism_claims_pin; check_index_language_pin;
