@@ -99,10 +99,10 @@ the world, not the run, so the next run of that world replaces it
 **The record reads what a run realized.** The runner writes each world's
 steps to its manifest (`Canary_manifest`), and `matrix_of` reads it,
 re-deriving from today's code only for a world no run recorded; each row
-says which in `steps_from`. The manifest decodes an action against every
-action the type has (`Canary_manifest.all_actions`), because
-`action_of_string` does not read them all. A run through
-`run_project_multi` (ssl) writes no manifest yet.
+says which in `steps_from`. An action's name is read back against every
+action the type has (`Canary_basic.all_actions`, through
+`action_of_string`). A run through `run_project_multi` (ssl) writes no
+manifest yet.
 
 **A row of §1.2 is a chain on a machine**, because a chain — one world in
 one binding language — is what §1 draws, so sqlite's ten worlds are
@@ -332,11 +332,6 @@ order.
 - The log: typed fields on its events; each inspection's summary logged
   once, since a later run of a world replaces its files (§2); a manifest
   for the multi-variant runner (ssl).
-- `canary view`, the only way left to regenerate a run's diagrams, fails
-  on zarith: its saved `run_state.json` holds
-  `fetch_binding_source_ocaml`, which `action_of_string` cannot read.
-  Widening that function is a change of its own, because the catalogue
-  backticks an action name only when it parses.
 - §6.2 step 2, edges from the catalogue, and step 4, one typed triple.
 - No pin runs the page's scripts; `overview.scripts_parse` only parses
   them. Since 2026-09-30 they hold no rule, so what runs unpinned is the
@@ -594,6 +589,7 @@ copy is named) closed the rest.
 | `overview.results_table_is_the_column_model` | one key per frame column, in order; the page carries the header and the keys, and its script lays rows out by key and holds no mark or rule; every recorded row has a cell for every column; its links run both ways; every outcome is the log's, and none is left out |
 | `overview.result_cells_keep_their_rules` | a frame no step realized is hatched; a piece shows its first recorded edge; a node's first cell shows its name and count, a later one repeats the name; every recorded piece's state has a mark |
 | `overview.one_escaper` | every module that writes the page escapes with the one escaper, which escapes quotes |
+| `basic.action_names_read_back` | every action's name reads back as that action, no two share one, and a binding source's fetch reads (it once failed `canary view` on zarith) |
 | `overview.agreement_counts_are_the_tables` | §2's `decided` and `blame` are §1.2's cells counted, including a verdict where no slot is; the record carries the cells; each check cell's tooltip glosses its blame |
 | `overview.agreements_count_every_machine` | §2 counts every machine's runs file, the rows §1.2 shows: one made-up file per machine, each deciding the same claim, counts once per machine |
 | `overview.badges_colour_from_the_cells` | a badge's word comes from its edge's checked agreements in the words of their §1.2 cells, including a verdict where no slot is |

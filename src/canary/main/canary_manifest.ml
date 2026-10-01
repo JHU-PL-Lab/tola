@@ -42,29 +42,11 @@ let of_step (s : Canary_step_model.step) : entry =
 
 (* ── the codecs ── *)
 
-let langs = Canary_lang.[ Cpp; OCaml; Python; Rust; CSharp; Java ]
+let langs = Canary_lang.all
 let pms = Canary_store.[ Apt; Brew; Opam; Pip; Unsupported ]
-
-(** EVERY ACTION THERE IS, enumerated from the type — what an action's
-    spelling is decoded against, so the codec is total over the type rather
-    than over the spellings one parser learned ([Canary_basic.action_of_string]
-    does not read a binding source's fetch). *)
-let all_actions : Canary_basic.action list =
-  let open Canary_basic in
-  let kinds =
-    [ Source; Headers; Lib; App ]
-    @ List.concat_map langs ~f:(fun l -> [ Binding l; Binding_source l ])
-  in
-  [ Configure; Scan_sources; Build_headers; Build_lib; Install_lib; Probe_lib ]
-  @ List.concat_map kinds ~f:(fun k -> [ Fetch k; Publish k ])
-  @ List.concat_map langs ~f:(fun l ->
-        [ Build_binding l; Probe_binding l; Build_app { lang = l }; Probe_app { lang = l } ])
 
 let find_by (f : 'a -> string) (xs : 'a list) (s : string) : 'a option =
   List.find xs ~f:(fun x -> String.equal (f x) s)
-
-let action_of_name : string -> Canary_basic.action option =
-  find_by Canary_basic.string_of_action all_actions
 
 let field j k = match j with `Assoc kv -> List.Assoc.find kv k ~equal:String.equal | _ -> None
 let str j k = match field j k with Some (`String s) -> Some s | _ -> None
@@ -158,7 +140,7 @@ let entry_of_json (j : Yojson.Basic.t) : entry option =
   let string = function `String x -> Some x | _ -> None in
   match
     ( str j "tag",
-      Option.bind (str j "action") ~f:action_of_name,
+      Option.bind (str j "action") ~f:Canary_basic.action_of_string,
       optional "location" location_of_json,
       optional "inspects" string,
       optional "dummy" string,

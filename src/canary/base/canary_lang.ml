@@ -20,3 +20,10 @@ let string_of_lang = function
 let display_of_lang = function
   | Cpp -> "C++" | OCaml -> "OCaml"
   | Python -> "Python" | Rust -> "Rust" | CSharp -> "C#" | Java -> "Java"
+
+(** Every language, in the type's order. *)
+let all : lang list = [ Cpp; OCaml; Python; Rust; CSharp; Java ]
+
+(* a new language fails this match first, here beside [all] *)
+let _all_is_every_lang : lang -> unit = function
+  | Cpp | OCaml | Python | Rust | CSharp | Java -> ()

@@ -516,37 +516,31 @@ let compare_column (x : action) (y : action) : int =
   let k a = (column_group a, column_stage a) in
   Stdlib.compare (k x) (k y)
 
-let action_of_string s =
-  let module A = Canary_lang in
-  let lang_of_str = function
-    | "ocaml"  -> Some A.OCaml  | "python" -> Some A.Python
-    | "cpp"    -> Some A.Cpp    | "rust"   -> Some A.Rust
-    | "csharp" -> Some A.CSharp | "java"   -> Some A.Java
-    | _ -> None
+(** Every action there is, enumerated from the type: what an action's name
+    is read back against. *)
+let all_actions : action list =
+  let langs = Canary_lang.all in
+  let kinds =
+    [ Source; Headers; Lib; App ] @ List.concat_map langs ~f:(fun l -> [ Binding l; Binding_source l ])
   in
-  let try_binding prefix wrap =
-    Option.bind (String.chop_prefix s ~prefix) ~f:(fun l ->
-        Option.map (lang_of_str l) ~f:wrap)
-  in
-  match s with
-  | "configure"     -> Some Configure
-  | "scan_sources"  -> Some Scan_sources
-  | "build_headers" -> Some Build_headers
-  | "build_lib"     -> Some Build_lib
-  | "install_lib"   -> Some Install_lib
-  | "fetch_source"  -> Some (Fetch Source)
-  | "fetch_headers" -> Some (Fetch Headers)
-  | "fetch_lib"     -> Some (Fetch Lib)
-  | "fetch_app"     -> Some (Fetch App)
-  | "pack_lib"      -> Some (Publish Lib)
-  | "probe_lib"     -> Some Probe_lib
-  | _ ->
-      try_binding "build_binding_" (fun l -> Build_binding l)
-      |> Option.first_some (try_binding "build_app_" (fun l -> Build_app { lang = l }))
-      |> Option.first_some (try_binding "fetch_binding_" (fun l -> Fetch (Binding l)))
-      |> Option.first_some (try_binding "pack_binding_" (fun l -> Publish (Binding l)))
-      |> Option.first_some (try_binding "probe_binding_" (fun l -> Probe_binding l))
-      |> Option.first_some (try_binding "probe_app_" (fun l -> Probe_app { lang = l }))
+  [ Configure; Scan_sources; Build_headers; Build_lib; Install_lib; Probe_lib ]
+  @ List.concat_map kinds ~f:(fun k -> [ Fetch k; Publish k ])
+  @ List.concat_map langs ~f:(fun l ->
+        [ Build_binding l; Probe_binding l; Build_app { lang = l }; Probe_app { lang = l } ])
+
+(* a new action or artifact kind fails these matches first, here beside
+   [all_actions] *)
+let _all_actions_is_every_action : action -> unit = function
+  | Configure | Scan_sources | Build_headers | Build_lib | Install_lib | Probe_lib | Fetch _
+  | Publish _ | Build_binding _ | Probe_binding _ | Build_app _ | Probe_app _ ->
+      ()
+
+let _all_actions_is_every_kind : artifact_kind -> unit = function
+  | Source | Headers | Lib | App | Binding _ | Binding_source _ -> ()
+
+(** An action's name read back: the action {!string_of_action} names so. *)
+let action_of_string (s : string) : action option =
+  List.find all_actions ~f:(fun a -> String.equal (string_of_action a) s)
 
 (* ── Output Layout v3 helpers (inlined from canary_output_path.ml on
    2026-06-01, Phase 10c) ──────────────────────────────────────────────

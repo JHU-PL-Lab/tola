@@ -1451,7 +1451,7 @@ let manifest_pin : Canary_project_test.pure_test =
         in
         let e0 = bare Canary_basic.Probe_lib in
         let codec_total =
-          List.for_all Mf.all_actions ~f:(fun a -> roundtrip (bare a))
+          List.for_all Canary_basic.all_actions ~f:(fun a -> roundtrip (bare a))
           && List.for_all
                Canary_store.
                  [ Build_tree; Staged; Pm (Sys_pm { pm = Apt });
@@ -2872,6 +2872,26 @@ let every_machine_pin : Canary_project_test.pure_test =
             && String.is_substring
                  (Canary_agreement_overview.render chains)
                  ~substring:(Printf.sprintf "%d ✓" machines))
+  }
+
+(* EVERY ACTION'S NAME READS BACK (2026-10-01). [action_of_string] kept
+   its own list of spellings and missed a binding source's fetch, so
+   [canary view] failed on zarith, whose run state names one. It looks the
+   name up in [all_actions]: every action reads back as itself, no two
+   share a name, and that fetch reads. *)
+let action_names_pin : Canary_project_test.pure_test =
+  { name = "basic.action_names_read_back";
+    check =
+      (fun () ->
+        let module B = Canary_basic in
+        let names = List.map B.all_actions ~f:B.string_of_action in
+        List.for_all B.all_actions ~f:(fun a ->
+            Option.equal Poly.equal (B.action_of_string (B.string_of_action a)) (Some a))
+        && List.length (List.dedup_and_sort names ~compare:String.compare) = List.length names
+        && Option.equal Poly.equal
+             (B.action_of_string "fetch_binding_source_ocaml")
+             (Some (B.Fetch (B.Binding_source Canary_lang.OCaml)))
+        && Option.is_none (B.action_of_string "fetch_binding_ocaml_extra"))
   }
 
 (* ONE ESCAPER FOR THE PAGE (2026-10-01): §2 kept one of its own that left
@@ -9847,6 +9867,7 @@ let base_tests : Canary_project_test.pure_test list =
       result_cells_pin;
       one_escaper_pin;
       every_machine_pin;
+      action_names_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;
