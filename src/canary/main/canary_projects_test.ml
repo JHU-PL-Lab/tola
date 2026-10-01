@@ -9820,7 +9820,6 @@ let base_tests : Canary_project_test.pure_test list =
       spec_check_every_project_pin;
       spec_check_ratchet_pin;
       pair_counts_points_pin;
-      canary_switch_pin;
       batch_tier_pin;
       shadow_policy_ladder_pin;
       repo_model_pin;
@@ -9829,7 +9828,6 @@ let base_tests : Canary_project_test.pure_test list =
       repo_axes_pin;
       forward_cell_expectation_pin;
       publish_wired_pin;
-      opam_template_render_pin;
       tiny_binding_realization_pin;
       binding_decls_on_project_run_pin;
       sqlite_binding_decls_pin;
@@ -9908,8 +9906,6 @@ let base_tests : Canary_project_test.pure_test list =
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;
-      platform_single_source_pin;
-      strict_mode_pin;
       check_index_language_pin;
       applicability_reads_declaration_pin;
       touches_join_pin;
@@ -9918,10 +9914,9 @@ let base_tests : Canary_project_test.pure_test list =
       dep_dirs_pin;
       run_info_session_pin;
       machine_roots_pin;
-      platform_enumeration_pin;
       demand_prune_pin;
-      source_refresh_scope_pin;
-      gh_derived_polarity_pin ]
+      source_refresh_scope_pin ]
+  @ Canary_test_env.tests
 
 (* THE LAYOUT KEEPS ITS RULES (2026-09-27, user: "a collection of my human
    words or learned rules … so that if we switch to another GUI framework
