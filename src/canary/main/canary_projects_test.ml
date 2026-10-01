@@ -9834,8 +9834,6 @@ let base_tests : Canary_project_test.pure_test list =
       zarith_binding_decls_pin;
       z3_regression_pre_10549_pin;
       z3_installed_probe_consumes_prefix;
-      matrix_row_order_pin;
-      matrix_row_index_pin;
       (* the GENERAL factory, instantiated per project that declares an
          Installed universe: sqlite (one ref group) and z3 (one group per
          declared repo) — the same derived invariants over both shapes *)
@@ -9846,15 +9844,6 @@ let base_tests : Canary_project_test.pure_test list =
       z3_install_prefix_isolated_pin;
       z3_env_guard_paths_pin;
       z3_cross_cell_world_asserts_pin;
-      matrix_cell_stage_pin;
-      matrix_setting_block_pin;
-      matrix_registry_shape_pin;
-      matrix_check_cell_pin;
-      matrix_page_has_the_grid_pin;
-      matrix_key_covers_codes_pin;
-      record_export_pin;
-      record_steps_pin;
-      record_join_pin;
       every_step_placed_pin;
       frames_pin;
       one_reader_pin;
@@ -9863,7 +9852,6 @@ let base_tests : Canary_project_test.pure_test list =
       agreement_counts_pin;
       badge_words_pin;
       staged_copy_pin;
-      manifest_pin;
       overview_overlay_pin;
       recorded_names_pin;
       overlay_words_pin;
@@ -9872,7 +9860,6 @@ let base_tests : Canary_project_test.pure_test list =
       coverage_tables_pin;
       package_band_pin;
       chain_choices_pin;
-      record_chains_pin;
       chain_absence_pin;
       drawn_line_sources_pin;
       badge_counts_pin;
@@ -9891,11 +9878,8 @@ let base_tests : Canary_project_test.pure_test list =
       agreement_laws_pin;
       mechanism_claims_pin;
       check_index_language_pin;
-      applicability_reads_declaration_pin;
-      blame_attribution_pin;
-      run_info_session_pin;
-      machine_roots_pin ]
-  @ Canary_test_pipeline.tests @ Canary_test_env.tests
+      applicability_reads_declaration_pin ]
+  @ Canary_test_record.tests @ Canary_test_pipeline.tests @ Canary_test_env.tests
 
 (* THE LAYOUT KEEPS ITS RULES (2026-09-27, user: "a collection of my human
    words or learned rules … so that if we switch to another GUI framework
