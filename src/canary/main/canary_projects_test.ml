@@ -9813,7 +9813,7 @@ let base_tests : Canary_project_test.pure_test list =
       vendored_prebuilt_pin;
       z3_mismatch_matrix_pin;
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
-      sqlite_runtime_edges_pin; providing_arrow_pin;
+      sqlite_runtime_edges_pin;
       tiny1_bridge;
       integration_smoke;
       registry_pin;
@@ -9821,7 +9821,6 @@ let base_tests : Canary_project_test.pure_test list =
       spec_check_ratchet_pin;
       pair_counts_points_pin;
       batch_tier_pin;
-      shadow_policy_ladder_pin;
       repo_model_pin;
       local_fork_pin;
       repo_contents_pin;
@@ -9842,34 +9841,21 @@ let base_tests : Canary_project_test.pure_test list =
          declared repo) — the same derived invariants over both shapes *)
       provider_rows_pin ~prefix:"sqlite" Canary_project_sqlite.sqlite_run;
       sqlite_staged_probe_paths_pin;
-      vendored_world_probe_pin;
       provider_rows_pin ~prefix:"z3"
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
       z3_install_prefix_isolated_pin;
       z3_env_guard_paths_pin;
-      world_assertion_vocabulary_pin;
-      pipeline_ctx_pin;
-      pipeline_total_pin;
-      select_post_filter_pin;
-      select_subset_pin;
-      select_default_is_identity_pin;
-      two_constructions_agree_pin;
-      json_per_pass_pin;
-      run_order_groups_state_pin;
       z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
       matrix_registry_shape_pin;
       matrix_check_cell_pin;
       matrix_page_has_the_grid_pin;
-      one_mechanism_per_language_pin;
       matrix_key_covers_codes_pin;
       record_export_pin;
       record_steps_pin;
       record_join_pin;
       every_step_placed_pin;
-      bridge_step_pin;
-      gate_after_bridge_pin;
       frames_pin;
       one_reader_pin;
       template_pin;
@@ -9878,7 +9864,6 @@ let base_tests : Canary_project_test.pure_test list =
       badge_words_pin;
       staged_copy_pin;
       manifest_pin;
-      placeholder_steps_pin;
       overview_overlay_pin;
       recorded_names_pin;
       overlay_words_pin;
@@ -9901,22 +9886,16 @@ let base_tests : Canary_project_test.pure_test list =
       result_cells_pin;
       one_escaper_pin;
       every_machine_pin;
-      action_names_pin;
       firing_frames_pin;
       outcome_marks_pin;
       agreement_laws_pin;
       mechanism_claims_pin;
       check_index_language_pin;
       applicability_reads_declaration_pin;
-      touches_join_pin;
       blame_attribution_pin;
-      inspect_clash_pin;
-      dep_dirs_pin;
       run_info_session_pin;
-      machine_roots_pin;
-      demand_prune_pin;
-      source_refresh_scope_pin ]
-  @ Canary_test_env.tests
+      machine_roots_pin ]
+  @ Canary_test_pipeline.tests @ Canary_test_env.tests
 
 (* THE LAYOUT KEEPS ITS RULES (2026-09-27, user: "a collection of my human
    words or learned rules … so that if we switch to another GUI framework
