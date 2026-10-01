@@ -9800,50 +9800,10 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            > 0) }
 
 let base_tests : Canary_project_test.pure_test list =
-  z3_pins @ llvm_pins
-  @ [ z3_lowering_derived; llvm_lowering_derived;
-      derived_evidence_matches_projects;
-      (* z3's binding no longer follows the lib (2026-08-19) — the
-         mismatch-matrix pin below asserts the opposite claim for it;
-         llvm still follows, so the lockstep pin still applies there *)
-      pm_gate_pin;
-      topology_joins_pin;
+  Canary_test_projects.tests
+  @ [ topology_joins_pin;
       topology_graph_pin;
       overview_sections_pin;
-      vendored_prebuilt_pin;
-      z3_mismatch_matrix_pin;
-      binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
-      sqlite_runtime_edges_pin;
-      tiny1_bridge;
-      integration_smoke;
-      registry_pin;
-      spec_check_every_project_pin;
-      spec_check_ratchet_pin;
-      pair_counts_points_pin;
-      batch_tier_pin;
-      repo_model_pin;
-      local_fork_pin;
-      repo_contents_pin;
-      repo_axes_pin;
-      forward_cell_expectation_pin;
-      publish_wired_pin;
-      tiny_binding_realization_pin;
-      binding_decls_on_project_run_pin;
-      sqlite_binding_decls_pin;
-      z3_llvm_binding_decls_pin;
-      zarith_binding_decls_pin;
-      z3_regression_pre_10549_pin;
-      z3_installed_probe_consumes_prefix;
-      (* the GENERAL factory, instantiated per project that declares an
-         Installed universe: sqlite (one ref group) and z3 (one group per
-         declared repo) — the same derived invariants over both shapes *)
-      provider_rows_pin ~prefix:"sqlite" Canary_project_sqlite.sqlite_run;
-      sqlite_staged_probe_paths_pin;
-      provider_rows_pin ~prefix:"z3"
-        (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
-      z3_install_prefix_isolated_pin;
-      z3_env_guard_paths_pin;
-      z3_cross_cell_world_asserts_pin;
       every_step_placed_pin;
       frames_pin;
       one_reader_pin;
