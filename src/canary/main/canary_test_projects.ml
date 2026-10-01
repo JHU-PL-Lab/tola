@@ -5,26 +5,6 @@ open Base
 module B = Canary_basic
 module EN = Canary_enumerate
 
-(* ── coarse fixtures (2026-08-25) ──
-   A row now declares an ORIGIN per provision, not a bare provision. The
-   fixtures below test the AXIS shape — how many worlds a universe
-   produces, which chains apply — and have no realization to speak of, so
-   they need a placeholder origin. [ax] fabricates one, and its name says
-   it is about the axis; a real project must state where the artifact
-   actually comes from. *)
-let ax (pv : Canary_store.provision) :
-    Canary_store_config.provision_spec =
-  match pv with
-  | Canary_store.Absent -> Canary_store_config.Absent
-  | Canary_store.Fetched ->
-      Canary_store_config.Fetched
-        (Canary_store_config.Sys_pkg
-           (Canary_store.mk_system_package_spec ~linux_pkg:"fixture"
-              ~macos_pkg:"fixture" ()))
-  | Canary_store.Built -> Canary_store_config.Built_from Canary_artifact.a_source
-  | Canary_store.Installed -> Canary_store_config.Installed
-  | Canary_store.Vendored -> Canary_store_config.Vendored_at "/fixture"
-
 let py_cext = Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Cext
 let py_ctypes =
   Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Ctypes
