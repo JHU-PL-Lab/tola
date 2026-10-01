@@ -3,16 +3,17 @@
 
 open Base
 
-(* Canary runs in its own opam switch, since it installs packages and
-   flips pins as it runs: (1) the shipped default is the machine's
+(* Canary has its own switch because it installs packages and flips pins
+   as it runs. Held: (1) the shipped default is the machine's
    ([default_opam_switch]), which is [canary] or ambient; (2) selecting
-   no switch adds nothing to the shell, and selecting
-   one exports OPAMSWITCH; (3) the switch is part of the step
-   fingerprint, so a verdict earned in one switch is never served in
-   another; (4) the framework tests and (5) OCaml-side shell-outs run
-   under the same prologue as steps. *)
+   no switch adds nothing to the shell, and selecting one exports
+   OPAMSWITCH; (3) the switch is part of the step fingerprint, so a
+   verdict earned in one switch is never served in another; (4) the
+   framework tests and (5) OCaml-side shell-outs run under the same
+   prologue as steps. *)
 let canary_switch_pin : Canary_project_test.pure_test =
   { name = "switch.selection";
+    holds = "A step's shell prologue exports the selected opam switch, framework tests and store queries run in it, and a step's fingerprint depends on it.";
     check =
       (fun () ->
         let saved = !Canary_store.opam_switch in
@@ -77,14 +78,15 @@ let canary_switch_pin : Canary_project_test.pure_test =
         && (not (String.equal f_canary f_default))
         && (not (String.equal f_canary f_ambient))) }
 
-(* The platform is one value. Under each platform in turn: (1) every
-   consumer reports it, override included; (2) the system PM is derived
-   from it, so brew on Linux cannot be represented; (3) the loader
-   variable and the nm flag move with it; (4) it is part of the step
-   fingerprint, so a verdict earned on one platform is never served to
-   the other; (5) the default switch is a function of it. *)
+(* Under each platform in turn: (1) every consumer reports it, override
+   included; (2) the system PM is derived from it, so brew on Linux
+   cannot be represented; (3) the loader variable and the nm flag move
+   with it; (4) it is part of the step fingerprint, so a verdict earned
+   on one platform is never served to the other; (5) the default switch
+   is a function of it. *)
 let platform_single_source_pin : Canary_project_test.pure_test =
   { name = "platform.single_source";
+    holds = "The platform is one value that every consumer reads, and the system package manager, loader variable, nm flag and step fingerprint follow it.";
     check =
       (fun () ->
         let saved = !Canary_store.platform_override in
@@ -139,16 +141,16 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         mac && wsl && mapping_ok
         && not (String.equal f_mac f_wsl)) }
 
-(* Strict mode is a flag of the invocation: (1) it is off by default,
-   since a violated agreement at a passing step is a finding about
-   artifacts, not a broken step; (2) the permissive digest equals the
-   digest spelled out longhand, with no strict input, so permissive
-   markers stay warm; (3) strict mode changes the digest, so a
-   permissive marker is never served to a strict run. Not pinned here:
-   that a violation fails the step, which needs a real project's log and
-   a deliberate break, not a synthetic [agreement_ctx]. *)
+(* Strict mode is a flag of the invocation. Held: (1) strict mode is off
+   by default, since a violated agreement at a passing step is a finding
+   about artifacts, not a broken step; (2) the permissive digest equals
+   the digest spelled out longhand, with no strict input, so permissive
+   markers stay warm; (3) strict mode changes the digest. Not pinned
+   here: that a violation fails the step, which needs a real project's
+   log and a deliberate break, not a synthetic [agreement_ctx]. *)
 let strict_mode_pin : Canary_project_test.pure_test =
   { name = "strict.acceptance_policy";
+    holds = "Strict mode is off by default, adds nothing to a permissive step's fingerprint, and changes it when on, so no permissive verdict serves a strict run.";
     check =
       (fun () ->
         let saved = Canary_agreement_common.strict_mode () in
@@ -188,14 +190,13 @@ let strict_mode_pin : Canary_project_test.pure_test =
         && String.equal f_lax expected_lax
         && not (String.equal f_lax f_strict)) }
 
-(* The GH rendering agrees with the expectation's polarity. A derived
-   expectation ([Expect_compat_derived]) with no prediction means the
-   artifact is good and the step must succeed, so it renders as a plain
-   step; the oracle ([Expect_compat_failure]) always expects a failure
-   and renders a verify; a plain success never does. An expected
-   failure's verify greps the log the step writes. *)
+(* A derived expectation ([Expect_compat_derived]) with no prediction
+   means the artifact is good and the step must succeed, so it renders as
+   a plain step; the oracle ([Expect_compat_failure]) always expects a
+   failure and renders a verify; a plain success never does. *)
 let gh_derived_polarity_pin : Canary_project_test.pure_test =
   { name = "gh.derived_expectation_polarity";
+    holds = "A step's GitHub Actions rendering adds a verify step only where the step expects a failure, and that verify greps the step's own log.";
     check =
       (fun () ->
         let step_with exp : Canary_step_model.step =
@@ -237,14 +238,14 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
               ~substring:(Canary_basic.variant_file ~variant_key:"v" "probe.log")
             && not (String.is_substring with_strings ~substring:"/probe.log\""))) }
 
-(* The enumeration is platform-agnostic (doc/canary/design/platform.md
-   §2b): for every catalogued project, declare, enumerate, select and
-   order encode the same under WSL and macOS, and so do the specs rebuilt
-   under each platform. It compares the world set and its order, not the
-   realization data a declaration carries: a [Vendored_at] origin string
-   is realize's to resolve, and realize may know the platform. *)
+(* Design: doc/canary/design/platform.md §2b. The specs rebuilt under
+   each platform are compared too. It compares the world set and its
+   order, not the realization data a declaration carries: a [Vendored_at]
+   origin string is realize's to resolve, and realize may know the
+   platform. *)
 let platform_enumeration_pin : Canary_project_test.pure_test =
   { name = "platform.enumeration_is_agnostic";
+    holds = "Declaring, enumerating, selecting and ordering every catalogued project's worlds give the same result under WSL and macOS.";
     check =
       (fun () ->
         let saved = !Canary_store.platform_override in
@@ -319,6 +320,7 @@ let platform_enumeration_pin : Canary_project_test.pure_test =
 
 let opam_template_render_pin : Canary_project_test.pure_test =
   { name = "tool.opam_template_render";
+    holds = "Rendering zarith's wrapper declaration reproduces the committed zarith-no-conf opam template byte for byte.";
     check =
       (fun () ->
         let committed =

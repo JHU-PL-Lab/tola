@@ -5,14 +5,13 @@ open Base
 module B = Canary_basic
 module EN = Canary_enumerate
 
-(* The providing arrow, provider → action → artifact, with fetch and
-   build the same shape, holds over the sqlite, z3, llvm and tiny-full
-   artifact tables: the providing action agrees with the provider's
-   provision ([Fetched] ⇒ [Fetch kind]; [Built] ⇒ the kind's build
-   action; [Vendored] and [Absent] ⇒ none, as no action of the run
-   produces them), and [provision_of_actions] reads the provision back. *)
+(* The providing arrow is provider → action → artifact, with fetch and
+   build the same shape: [Fetched] ⇒ [Fetch kind]; [Built] ⇒ the kind's
+   build action; [Vendored] and [Absent] ⇒ none, as no action of the run
+   produces them. [provision_of_actions] reads the provision back. *)
 let providing_arrow_pin : Canary_project_test.pure_test =
   { name = "arrow.providing_action_total_and_consistent";
+    holds = "In the sqlite, z3, llvm and tiny-full tables, each provider's action is the one its provision implies, and an action reads back as its provision.";
     check = (fun () ->
       let tables =
         Canary_project_sqlite.sqlite_artifacts
@@ -76,15 +75,14 @@ let providing_arrow_pin : Canary_project_test.pure_test =
                  | _ -> false)
              | None -> true)) }
 
-(* A bridge step drives the bridge its project declares, in every world
-   of every active project: it carries the install's action, depends on
-   that install and selects no agreements; its bridge is the one the
-   package gate names ([Canary_bridge.of_gate]); and it exists only where
-   the binding is fetched (zarith's zarith-no-conf world builds its
-   binding and has none). The rollout list names the (project, bridge)
+(* A bridge step carries the install's action, depends on that install
+   and selects no agreements; its bridge is the one the package gate
+   names ([Canary_bridge.of_gate]); zarith's zarith-no-conf world builds
+   its binding and has none. The rollout list names the (project, bridge)
    pairs that have a step; extending it is deliberate. *)
 let bridge_step_pin : Canary_project_test.pure_test =
   { name = "steps.bridge_step_drives_the_declared_bridge";
+    holds = "In every world of every active project, a bridge step drives the bridge its project declares, and exists only where the binding is fetched.";
     check =
       (fun () ->
         let module SM = Canary_step_model in
@@ -145,15 +143,14 @@ let bridge_step_pin : Canary_project_test.pure_test =
         && List.equal String.equal rollout [ "zarith conf-gmp" ])
   }
 
-(* The gate is read after its bridge runs, in every world of every
-   active project: each bridge step is tagged [bridge_record_tag], the
-   name the bridge family reads the record under; the gate fires exactly
-   at the language's probe and reads the file the bridge step writes; and
-   every probe of the language depends on the bridge step, so a cold run
-   never reads the last run's record. Some bridge step must exist, or the
-   check is vacuous. *)
+(* In every world of every active project: each bridge step is tagged
+   [bridge_record_tag], the name the bridge family reads the record
+   under, and every probe of the language depends on the bridge step, so
+   a cold run never reads the last run's record. Some bridge step must
+   exist, or the check is vacuous. *)
 let gate_after_bridge_pin : Canary_project_test.pure_test =
   { name = "steps.gate_is_read_after_its_bridge_runs";
+    holds = "The package gate is read after its bridge runs, at the language's probe, from the record that bridge step writes.";
     check =
       (fun () ->
         let module SM = Canary_step_model in
@@ -203,16 +200,15 @@ let gate_after_bridge_pin : Canary_project_test.pure_test =
         ok && !checked > 0)
   }
 
-(* A placeholder step stands for what a package manager does unseen, in
-   every world of every active project: it is an entry of its package
-   manager's catalogue ([Canary_pm_action.inside_install]), depends only
-   on a real fetch of the same action (never a dummy, which installs
-   nothing), is named <fetch>_<pm>_<key> and selects no agreements; its
-   command writes the marker and says what it stands for. Both reasons
-   occur, and zarith's fetched world has the three opam pieces and the
-   system package manager's one. *)
+(* Held in every world of every active project. The catalogue is
+   [Canary_pm_action.inside_install]; the fetch is never a dummy, which
+   installs nothing; a placeholder is named <fetch>_<pm>_<key> and selects
+   no agreements; its command writes the marker and says what it stands
+   for. Both reasons occur, and zarith's fetched world has the three opam
+   pieces and the system package manager's one. *)
 let placeholder_steps_pin : Canary_project_test.pure_test =
   { name = "steps.placeholders_stand_for_what_pms_do";
+    holds = "Every placeholder step is an entry in its package manager's catalogue of unseen work, and depends only on a real fetch of the same action.";
     check =
       (fun () ->
         let module SM = Canary_step_model in
@@ -303,11 +299,11 @@ let placeholder_steps_pin : Canary_project_test.pure_test =
         && command_ok)
   }
 
-(* Every action's name reads back: [action_of_string] looks the name up
-   in [all_actions], so every action reads back as itself, no two share a
-   name, a binding source's fetch reads, and an unknown name does not. *)
+(* [action_of_string] looks the name up in [all_actions]; a binding
+   source's fetch reads, and an unknown name does not. *)
 let action_names_pin : Canary_project_test.pure_test =
   { name = "basic.action_names_read_back";
+    holds = "Every action's name reads back as that action, no two actions share a name, and an unknown name reads as no action.";
     check =
       (fun () ->
         let module B = Canary_basic in
@@ -321,14 +317,15 @@ let action_names_pin : Canary_project_test.pure_test =
         && Option.is_none (B.action_of_string "fetch_binding_ocaml_extra"))
   }
 
-(* One mechanism per language. A log line and a matrix column name the
-   language, not the mechanism, so two mechanisms for one language make
-   their outcomes ambiguous ([an_mechanisms] keeps the first). tiny-full
-   declares Cext and Ctypes for Python on purpose and is the named
-   exception; adding a project to the list needs a reason. *)
+(* A log line and a matrix column name the language, not the mechanism,
+   so two mechanisms for one language make their outcomes ambiguous
+   ([an_mechanisms] keeps the first). tiny-full declares Cext and Ctypes
+   for Python on purpose and is the named exception; adding a project to
+   the list needs a reason. *)
 let mechanism_collision_known : string list = [ "tiny-full" ]
 let one_mechanism_per_language_pin : Canary_project_test.pure_test =
   { name = "analysis.one_mechanism_per_language";
+    holds = "Every active project except tiny-full declares at most one binding mechanism per language.";
     check =
       (fun () ->
         let bad =
@@ -366,12 +363,12 @@ let one_mechanism_per_language_pin : Canary_project_test.pure_test =
                 b);
         List.is_empty bad) }
 
-(* The run-policy ladder maps onto the enumeration: Full is the
-   enumeration default (no policy override), Thin the Subset [Stable]
-   version level. Shadowing is unconditional, so the ladder only subsets
+(* Full adds no policy override, and Thin is the Subset [Stable] version
+   level. Shadowing is unconditional, so the ladder only subsets
    versions. *)
 let shadow_policy_ladder_pin : Canary_project_test.pure_test =
   { name = "shadow.policy_ladder";
+    holds = "The full run policy is the enumeration's default, the thin one keeps only stable versions, and narrowing refs leaves every other axis full.";
     check =
       (fun () ->
         let module EN = Canary_enumerate in
@@ -402,15 +399,15 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
                   policy = Canary_project_run.Full;
                   refs = EN.Refs [ "latest" ] })) }
 
-(* A template's summary beats an explicit override. A [Native_lib_probe]
-   writes its inspection inside the probe command and declares it in
-   [template_summaries]; an explicit [inspect] for the same action would
-   be a second step writing the same file, so the step builder drops it
-   with a message. The template wins because its answer is derived from
-   the world. The same spec with and without the declaration differs by
-   that one step. *)
+(* A [Native_lib_probe] writes its inspection inside the probe command and
+   declares it in [template_summaries]; an explicit [inspect] for the same
+   action would be a second step writing the same file, so the step
+   builder drops it with a message. The template wins because its answer
+   is derived from the world. The same spec with and without the
+   declaration differs by that one step. *)
 let inspect_clash_pin : Canary_project_test.pure_test =
   { name = "steps.template_summary_beats_override";
+    holds = "When a probe template declares its own summary, the step builder drops the explicit inspect step for that action and nothing else.";
     check =
       (fun () ->
         let module SB = Canary_step_builder in
@@ -453,14 +450,14 @@ let inspect_clash_pin : Canary_project_test.pure_test =
         in
         attached && dropped && same_otherwise) }
 
-(* A step's [dep_dirs] correspond to its [deps]: one non-empty directory
-   per dep, in order, equal to the dep step's own [output_dir] when that
-   step is in the list. [dep_dirs] is the precondition as data
+(* A dep whose step is not in the list is held only to a non-empty
+   directory. [dep_dirs] is the precondition as data
    (doc/canary/design/action_model.md §§4-5). It witnesses the rebind in
    [derive_steps] only where some step depends on a step with an
    [output_tag], whose [output_dir] differs from its tag's directory. *)
 let dep_dirs_pin : Canary_project_test.pure_test =
   { name = "steps.dep_dirs_correspond_to_deps";
+    holds = "A step has one non-empty directory per dependency, in order, each the output directory of that dependency's step.";
     check =
       (fun () ->
         let module SM = Canary_step_model in
@@ -505,15 +502,14 @@ let dep_dirs_pin : Canary_project_test.pure_test =
             saw_a_dep corresponds;
         saw_a_dep && corresponds) }
 
-(* The action × declaration join ([an_touches]) holds three claims for
-   every catalogued project: (a) it is total: every declared artifact is
-   touched by some action, so a declared kind the catalogue does not know
-   fails here; (b) a probe produces nothing ([produced_at] is empty for
-   every [Probe_*]), so a probe is never where an artifact's evidence is
-   first recorded; (c) a lib has more than one producer: build_lib,
+(* The action × declaration join is [an_touches]: (a) it is total, so a
+   declared kind the catalogue does not know fails here; (b) a probe is
+   never where an artifact's evidence is first recorded ([produced_at] is
+   empty for every [Probe_*]); (c) a lib's producers are build_lib,
    fetch_lib or install_lib, by the world's provision. *)
 let touches_join_pin : Canary_project_test.pure_test =
   { name = "analysis.touches_joins_actions_to_declarations";
+    holds = "For every catalogued project, every declared artifact is touched by some action, no probe produces anything, and a lib has more than one producer.";
     check =
       (fun () ->
         let module A = Canary_project_analysis in
@@ -552,14 +548,13 @@ let touches_join_pin : Canary_project_test.pure_test =
             in
             total && probes_produce_nothing && lib_has_producers)) }
 
-(* A shared source checkout is refreshed once per run and ensured per
-   world: [worktree_ensure_cmd] runs the remote half (clone, fetch)
-   inside a guard stamped with [$CANARY_RUN_ID] and writes the world's
-   marker after it, outside. A shape check, not a timing one: move
-   either across the guard and a world re-fetches or never records its
-   own evidence. *)
+(* [worktree_ensure_cmd] runs the remote half (clone, fetch) inside the
+   guard stamped with [$CANARY_RUN_ID] and writes the world's marker
+   outside it. A shape check, not a timing one: move either across the
+   guard and a world re-fetches or never records its own evidence. *)
 let source_refresh_scope_pin : Canary_project_test.pure_test =
   { name = "source.refresh_is_run_scoped";
+    holds = "A shared source checkout's refresh sits inside a guard stamped with the run id, and each world writes its marker after that guard.";
     check =
       (fun () ->
         let cmd =
@@ -583,14 +578,14 @@ let source_refresh_scope_pin : Canary_project_test.pure_test =
             && String.is_substring cmd ~substring:"if [ ! -e \"$SENTINEL\" ]"
         | _ -> false) }
 
-(* A world realizes only the fetches it demands
-   (doc/canary/design/enumeration/stage6_realize_steps.md §3b):
+(* See doc/canary/design/enumeration/stage6_realize_steps.md §3b.
    [drop_unread_fetches] keeps a fetch when some step in the world
    consumes what it produces, by the typed catalogue
    ([consumes_of_action]), not by [step.deps]. Checked as a pair, since
    pruning everything passes cairo and pruning nothing passes sqlite. *)
 let demand_prune_pin : Canary_project_test.pure_test =
   { name = "derive.steps_are_demanded";
+    holds = "A world realizes only the fetches its steps consume, so cairo's all-fetched world fetches no source while sqlite's built worlds do.";
     check =
       (fun () ->
         let tags_of pr a =
@@ -627,14 +622,13 @@ let demand_prune_pin : Canary_project_test.pure_test =
         in
         cairo_ok && sqlite_ok) }
 
-(* Scenario names are born safe, for every world of every catalogued
-   project: [ctx_of] takes its workspace from [scenario_dir_of] and its
-   project name as <project>/<basename>, and no basename holds a
-   character that needs escaping in a path or a ':'-separated env var.
-   Both strings reach output paths and env vars, so drift would relocate
-   a scenario and orphan its cache markers. *)
+(* For every world of every catalogued project, [ctx_of] takes its
+   workspace from [scenario_dir_of] and its project name as
+   <project>/<basename>. Both strings reach output paths and env vars, so
+   drift would relocate a scenario and orphan its cache markers. *)
 let pipeline_ctx_pin : Canary_project_test.pure_test =
   { name = "pipeline.scenario_names_are_born_safe";
+    holds = "Every world's scenario name needs no escaping in a path or a colon-separated variable, and its run context uses that name unchanged.";
     check =
       (fun () ->
         let unsafe c =
@@ -664,15 +658,15 @@ let pipeline_ctx_pin : Canary_project_test.pure_test =
                     name base;
                 agrees && born_safe))) }
 
-(* Selection is a post-filter: restricting each artifact's version
-   universe before the product ([run_config]'s [resolve_versions]) gives
-   the same worlds as filtering the product after it ([select]). One of
-   the constraints after the product, [shadow_filter], is
+(* Selection is a post-filter: the restriction before the product is
+   [run_config]'s [resolve_versions], the filter after it [select]. One
+   of the constraints after the product, [shadow_filter], is
    cross-assignment, so this is checked, not assumed. Thin differs from
    full only in the version level, so it pins the whole equivalence.
-   Checked over every catalogued project, muted ones included. *)
+   Muted projects are included. *)
 let select_post_filter_pin : Canary_project_test.pure_test =
   { name = "select.thin_post_filter_equals_universe_restriction";
+    holds = "For every catalogued project, restricting versions before the product gives the same thin worlds as selecting from the product after it.";
     check =
       (fun () ->
         let module EN = Canary_enumerate in
@@ -702,13 +696,12 @@ let select_post_filter_pin : Canary_project_test.pure_test =
                 (List.length restricted) (List.length post_filtered);
             ok)) }
 
-(* Each pass encodes on its own: for every catalogued project, the
-   declare, enumerate and order encodings name their pass and the
-   project, and the enumerate encoding's assignment keys are the pass's
-   own, so the encoder cannot drift from the pass. Realize is left out:
-   encoding it applies [pr_runner_spec], which is not pure. *)
+(* Held for every catalogued project, so the encoder cannot drift from
+   the pass. Realize is left out: encoding it applies [pr_runner_spec],
+   which is not pure. *)
 let json_per_pass_pin : Canary_project_test.pure_test =
   { name = "emit.each_pass_encodes_independently";
+    holds = "The declare, enumerate and order encodings name their pass and project, and the enumerate one lists exactly the worlds the pass computed.";
     check =
       (fun () ->
         let field name = function
@@ -751,14 +744,14 @@ let json_per_pass_pin : Canary_project_test.pure_test =
                 self_describing faithful;
             self_describing && faithful)) }
 
-(* The two enumerations agree: [enumerate_product] (product then filter,
-   mutation-aware) and [enumerate_follows_tree] (a root/child walk over
-   [ax_follows], positive-only) compute the same worlds for every
-   catalogued project, compared on canonical assignment keys. It is the
-   evidence for deleting one of them, and keeps them from drifting apart
-   until then. *)
+(* [enumerate_product] is product then filter, mutation-aware;
+   [enumerate_follows_tree] a root/child walk over [ax_follows],
+   positive-only. They are compared on canonical assignment keys. It is
+   the evidence for deleting one of them, and keeps them from drifting
+   apart until then. *)
 let two_constructions_agree_pin : Canary_project_test.pure_test =
   { name = "enumerate.two_constructions_agree";
+    holds = "The two enumerations, product then filter and a walk of the follows tree, compute the same worlds for every catalogued project.";
     check =
       (fun () ->
         let module EN = Canary_enumerate in
@@ -792,11 +785,12 @@ let two_constructions_agree_pin : Canary_project_test.pure_test =
             end;
             ok)) }
 
-(* The default run selects every world: select under the full policy
-   returns enumerate's worlds unchanged. A default that narrowed would
-   shrink every run while every count still matched. *)
+(* Select under the full policy returns enumerate's worlds unchanged. A
+   default that narrowed would shrink every run while every count still
+   matched. *)
 let select_default_is_identity_pin : Canary_project_test.pure_test =
   { name = "select.full_policy_selects_everything";
+    holds = "For every catalogued project, the default run selects every world the enumeration produces.";
     check =
       (fun () ->
         let module EN = Canary_enumerate in
@@ -813,10 +807,9 @@ let select_default_is_identity_pin : Canary_project_test.pure_test =
                 (List.length all) (List.length default);
             ok)) }
 
-(* Selection only removes: for every catalogued project, the thin
-   selection is a subset of the enumerated worlds. *)
 let select_subset_pin : Canary_project_test.pure_test =
   { name = "select.is_a_subset_of_stage2";
+    holds = "For every catalogued project, the thin selection is a subset of the enumerated worlds, so selection only removes.";
     check =
       (fun () ->
         let module EN = Canary_enumerate in
@@ -843,12 +836,12 @@ let select_subset_pin : Canary_project_test.pure_test =
             if not ok then Fmt.pr "  select: %s invented a world@." name;
             ok)) }
 
-(* Declare, select and order are total over the catalogue, muted projects
-   included: the spec has one universe entry per declared row (a silent
-   drop in [project_spec_of_rows] would shrink every later pass), the
-   default run has a world, and order keeps every one. *)
+(* Declare, select and order are total, muted projects included. A
+   silent drop in [project_spec_of_rows] would shrink every later
+   pass. *)
 let pipeline_total_pin : Canary_project_test.pure_test =
   { name = "pipeline.stages_total_over_catalogue";
+    holds = "For every catalogued project, the spec has one entry per declared row, the default run has a world, and ordering keeps every world.";
     check =
       (fun () ->
         List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
@@ -866,14 +859,13 @@ let pipeline_total_pin : Canary_project_test.pure_test =
                 name rows declared enumerated ordered;
             ok)) }
 
-(* Run order groups scenarios by store state
-   (doc/canary/design/enumeration/stage5_order_worlds.md §3). An opam
+(* See doc/canary/design/enumeration/stage5_order_worlds.md §3. An opam
    switch holds one version of a package, so a pinned placement locks
-   that store's state. Ordering keeps the same scenarios (a sort: none
-   added, dropped or duplicated) and gives each store-state key one
-   contiguous run. *)
+   that store's state. Ordering is a sort: none added, dropped or
+   duplicated. *)
 let run_order_groups_state_pin : Canary_project_test.pure_test =
   { name = "run_order.groups_by_store_state";
+    holds = "For every catalogued project, run order keeps the same scenarios and gives each store state one contiguous run.";
     check =
       (fun () ->
         let grouped_ok pr =
@@ -914,13 +906,12 @@ let run_order_groups_state_pin : Canary_project_test.pure_test =
         && List.for_all projects ~f:same_set
         && List.for_all projects ~f:grouped_ok) }
 
-(* World assertions have one vocabulary, [Canary_world]: the same claim
-   renders the same shell wherever it is declared, a pre-command guard
-   can abort (it names `exit 1`), a post-hoc claim is grepped from the
-   log rather than appended after the command's own exit, and every
-   assertion carries a reason. *)
+(* The vocabulary is [Canary_world]. A pre-command guard names `exit 1`,
+   and a post-hoc claim is grepped from the log rather than appended
+   after the command's own exit. *)
 let world_assertion_vocabulary_pin : Canary_project_test.pure_test =
   { name = "world.one_vocabulary";
+    holds = "Every world assertion renders one shell wherever it is declared, can abort before the command or grep the log after it, and carries a reason.";
     check =
       (fun () ->
         let module W = Canary_world in
@@ -981,14 +972,14 @@ let world_assertion_vocabulary_pin : Canary_project_test.pure_test =
         in
         same_shape && builder_agrees && split_ok && post_ok && reasons_ok) }
 
-(* A Vendored world's probe names its world. For each listed
-   opam-binding project with a prebuilt: (1) a Vendored world's OCaml
-   probe carries the prebuilt's libdir; (2) no other world's does, so the
-   pair is two worlds; (3) with [probe_names_lib], the Vendored probe
-   also greps for that libdir, since pointing the loader is not checking
-   that it obeyed. *)
+(* For each listed opam-binding project with a prebuilt: (1) a Vendored
+   world's OCaml probe carries the prebuilt's libdir; (2) no other
+   world's does, so the pair is two worlds; (3) with [probe_names_lib],
+   the Vendored probe also greps for that libdir, since pointing the
+   loader is not checking that it obeyed. *)
 let vendored_world_probe_pin : Canary_project_test.pure_test =
   { name = "vendored.probe_names_the_world";
+    holds = "In each listed opam-binding project with a prebuilt, only the vendored world's OCaml probe names the prebuilt's library directory.";
     check =
       (fun () ->
         let distro = Canary_basic.detect_distro () in

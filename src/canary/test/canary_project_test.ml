@@ -38,7 +38,9 @@ module B = Canary_basic
 module L = Canary_lang
 module Mech = Canary_mechanism
 
-type pure_test = { name : string; check : unit -> bool }
+(* A pin: its name, the claim it holds in one sentence (the overview
+   page lists it), and the check. *)
+type pure_test = { name : string; holds : string; check : unit -> bool }
 
 let run_pure_test (t : pure_test) = try t.check () with _ -> false
 
@@ -76,16 +78,16 @@ let catalogue_tests : pure_test list =
   List.map catalogue ~f:(fun (a, exp_c, exp_p) ->
     { name =
         Printf.sprintf "consumes_produces.%s" (B.string_of_action a);
+      holds = "The action consumes and produces exactly the artifact kinds written down for it.";
       check = (fun () ->
         same_kinds (A.consumes_of_action a) exp_c
         && same_kinds (A.produces_of_action a) exp_p) })
 
-(* Invariant detection relies on: probes produce nothing, so for
-   every Probe_* action consumes_of_action = artifacts_of_action
-   (the legacy flat view). Locks the equivalence that lets detection
-   reuse the existing artifact derivation at probe sites. *)
+(* Locks the equivalence that lets detection reuse the existing
+   artifact derivation at probe sites. *)
 let probe_invariant : pure_test =
   { name = "probe_invariant.consumes_eq_artifacts";
+    holds = "A probe action produces nothing, and what it consumes is exactly what artifacts_of_action lists for it.";
     check = (fun () ->
       let probes =
         B.[ Probe_lib; Probe_binding ocaml; Probe_app { lang = ocaml };
@@ -101,6 +103,7 @@ let probe_invariant : pure_test =
    of artifacts detection would inspect. *)
 let inventory_test : pure_test =
   { name = "inventory.sqlite_like";
+    holds = "A sqlite-like project's actions consume, in order of first use, the source, the lib, the OCaml binding source and the OCaml binding.";
     check = (fun () ->
       let actions =
         B.[ Fetch Source; Build_lib; Fetch Lib;
@@ -120,12 +123,12 @@ let inventory_test : pure_test =
 module SC = Canary_store_config
 module SB = Canary_step_builder
 
-(* S3: a Derived Fetch_lib step resolves (via command_of_step ~store_config)
-   to exactly what the runner helper emits — the compatibility guarantee
-   (old Raw closure == Derived slot). command_of_step uses detect_pm ()
-   internally, so we compare against the same detect_pm-based helper call. *)
+(* The compatibility guarantee (old Raw closure == Derived slot).
+   command_of_step uses detect_pm () internally, so we compare against
+   the same detect_pm-based helper call. *)
 let derive_fetch_lib_test : pure_test =
   { name = "derive.fetch_lib_matches_helper";
+    holds = "A derived fetch_lib step resolves to the command the runner helper emits, which names the library's package for this platform's package manager.";
     check = (fun () ->
       let sys : Canary_store.system_package_spec =
         { linux_pkg = "libsqlite3-dev"; macos_pkg = "sqlite";
@@ -156,9 +159,9 @@ let derive_fetch_lib_test : pure_test =
       String.equal derived direct
       && String.is_substring derived ~substring:expected_pkg) }
 
-(* surface_of_api keeps the watchlists and drops the provenance. *)
 let surface_split_test : pure_test =
   { name = "surface.split_keeps_checks_drops_provenance";
+    holds = "The surface derived from an API keeps its stable symbols, soname and binding watchlists, and drops its provenance.";
     check = (fun () ->
       let module Api = Canary_artifact in
       let native : Api.native_api =
@@ -185,11 +188,11 @@ let surface_split_test : pure_test =
             && List.equal String.equal bs.module_watchlist [ "Sqlite3" ]
           | _ -> false)) }
 
-(* S2: command_of_step (Raw f) is f — the identity that makes wrapping
-   every existing closure as Raw behavior-preserving. Raw ignores the
-   store_config. *)
+(* The identity that makes wrapping every existing closure as Raw
+   behavior-preserving. Raw ignores the store_config. *)
 let s2_raw_identity_test : pure_test =
   { name = "s2.command_of_step_raw_identity";
+    holds = "A Raw step's command is its closure, unchanged by command_of_step.";
     check = (fun () ->
       let f ~output_dir ~variant_key = output_dir ^ ":" ^ variant_key in
       let g =
@@ -197,10 +200,9 @@ let s2_raw_identity_test : pure_test =
       in
       String.equal (g ~output_dir:"O" ~variant_key:"V") "O:V") }
 
-(* S5a: the trivial detector classifies a step by its raw outcome,
-   independent of any expectation/contract. *)
 let detect_simple_test : pure_test =
   { name = "detect.simple_finding";
+    holds = "The simple detector classifies a step by its raw outcome alone: whether the command failed and whether its output is present.";
     check = (fun () ->
       let ok = Canary_detect.simple_finding ~tag:"t" ~cmd_ok:true ~output_present:true in
       let bad = Canary_detect.simple_finding ~tag:"t" ~cmd_ok:false ~output_present:false in
@@ -212,6 +214,7 @@ let detect_simple_test : pure_test =
    stage must still be Covered (the realization merge — tiny's case). *)
 let coverage_test : pure_test =
   { name = "coverage.logical_and_three_way";
+    holds = "Each stage is marked covered, disabled or unspecified, and Probe_app alone, without Probe_binding, covers the run_app stage.";
     check = (fun () ->
       let module CV = Canary_scenario_coverage in
       let covered =
@@ -236,6 +239,7 @@ let coverage_test : pure_test =
    produced. Locks the static defaults + the discipline map. *)
 let mechanism_test : pure_test =
   { name = "mechanism.static_defaults_and_discipline";
+    holds = "OCaml defaults to cstubs and Python to cext, both static C ABI; ctypes and dynlink are dynamic FFI; Rust has no mechanism yet.";
     check = (fun () ->
       let module M = Canary_mechanism in
       Poly.equal (M.default_mechanism_of_lang L.OCaml) (Some M.Cstubs)
@@ -253,6 +257,7 @@ let mechanism_test : pure_test =
    projections. Pins the shape of each projection + the dependency filter. *)
 let enumerate_test : pure_test =
   { name = "enumerate.two_projections_and_filter";
+    holds = "The tiny projection is all built, a positive plus one point per mutation; the general one is mutation-free; no world provides a binding without its lib.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let artifacts = EN.[ a_source; a_lib; a_binding ocaml Mech.Cstubs ] in
@@ -304,6 +309,7 @@ let enumerate_test : pure_test =
    general are two configs; a mixed Subset config sits between them. *)
 let config_level_test : pure_test =
   { name = "enumerate.config_levels";
+    holds = "The tiny and general slices are two configs of one enumeration, and a Subset level keeps only the chosen provisions and mutations.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let artifacts = EN.[ a_source; a_lib; a_binding ocaml Mech.Cstubs ] in
@@ -346,10 +352,9 @@ let config_level_test : pure_test =
       && List.count mixed ~f:(fun p -> List.is_empty p.EN.mutations) = 1
       && wrappers_agree) }
 
-(* §4.2.2 version axis: per-slot version enables cross-slot mismatch, and
-   the source-primary filter keeps a Built lib's version = its source's. *)
 let version_axis_test : pure_test =
   { name = "enumerate.version_axis";
+    holds = "Versions are chosen per artifact, so a dev lib with a stable binding occurs, and a built lib always has its source's version.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       (* two fetched artifacts, two versions each → the mismatch lib@Dev /
@@ -391,6 +396,7 @@ let version_axis_test : pure_test =
    also emit Built source / Built binding. *)
 let per_artifact_provisions_test : pure_test =
   { name = "enumerate.per_artifact_provisions";
+    holds = "Provisions are per artifact: when only the lib may be built, worlds fetch or build the lib while the source and binding are always fetched.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -422,6 +428,7 @@ let per_artifact_provisions_test : pure_test =
    lib@Dev / binding@Stable survives while binding@Dev never appears. *)
 let per_artifact_versions_test : pure_test =
   { name = "enumerate.per_artifact_versions";
+    holds = "Versions are per artifact: the lib ranges over both channels while the binding stays dev-only, so a stable lib with a dev binding occurs.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -445,11 +452,9 @@ let per_artifact_versions_test : pure_test =
       && List.exists pts ~f:(fun p ->
              Canary_basic.equal_version (EN.version_of p.EN.assignment Canary_artifact.a_lib) (Canary_basic.good B.Stable))) }
 
-(* A2: point→assignment fold — the mutation folds into the target artifact's
-   version quality=Bad tag; other artifacts stay Good; a positive point is
-   unchanged. *)
 let point_fold_test : pure_test =
   { name = "enumerate.point_to_assignment_fold";
+    holds = "Folding a point into an assignment marks only the mutated artifact's version bad, tagged with the mutation; a positive point stays all good.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -490,6 +495,7 @@ let point_fold_test : pure_test =
    convergence changing sqlite: the binding-over-built-lib scenario appears. *)
 let project_spec_test : pure_test =
   { name = "enumerate.project_spec_sqlite_shape";
+    holds = "A declared spec with a fetched-or-built lib and a fetched binding enumerates two worlds, and the built-lib world still carries the binding.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -509,13 +515,11 @@ let project_spec_test : pure_test =
              EN.equal_provision (lib_is a) EN.Built
              && EN.equal_provision (EN.provision_of a a_oc) EN.Fetched)) }
 
-(* PER-PROVISION versions — the version universe depends on HOW the artifact
-   is provided (the faithful-combination refinement): a Fetched lib is
-   version-ambient (one representative), only the Built lib ranges over
-   channels. The sqlite shape: exactly 3 worlds (F@S, B@S, B@D) — no
-   Fetched@Dev that would only dedup away downstream, and no Dev binding. *)
+(* The sqlite shape: exactly 3 worlds (F@S, B@S, B@D) — no Fetched@Dev
+   that would only dedup away downstream, and no Dev binding. *)
 let per_provision_versions_test : pure_test =
   { name = "enumerate.per_provision_versions";
+    holds = "Versions depend on provision: a fetched lib gives one world and a built lib one per channel, so the sqlite shape has exactly three worlds.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -542,11 +546,9 @@ let per_provision_versions_test : pure_test =
       && List.count asgs ~f:(fun a ->
              EN.equal_provision (lib_pl a).Canary_artifact.provision EN.Fetched) = 1) }
 
-(* THIN as a CONFIG level, not a filter: version [Subset [Stable]] on the tiny
-   shape (lib {Vendored,Built}, Vendored Stable-only, Built {Stable,Dev})
-   narrows 3 worlds → 2; the Full policy keeps all 3 with no Vendored@Dev. *)
 let thin_config_level_test : pure_test =
   { name = "enumerate.thin_is_version_subset";
+    holds = "Thin is the version level Subset Stable: it narrows the tiny shape from three worlds to the two stable ones, and full keeps dev only on the built lib.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -584,8 +586,7 @@ let thin_config_level_test : pure_test =
                  | B.Stable -> true
                  | B.Dev -> false))) }
 
-(* SHADOW policy (2026-08-17, active plan 3): a prebuilt lib shadows a
-   Built one for the SAME cell — the firing condition is identity-bearing:
+(* The shadow's firing condition is identity-bearing:
    the Built side's version id is SOURCE-PRIMARY (the source's pin), both
    ids must be non-empty and equal, and the channels must match. Same cell
    (Fetched@1.0.0 + Built@Stable over a 1.0.0-pinned source) drops the
@@ -596,6 +597,7 @@ let thin_config_level_test : pure_test =
    pin's). *)
 let shadow_policy_drops_same_cell_built_test : pure_test =
   { name = "enumerate.shadow_policy_drops_same_cell_built";
+    holds = "A prebuilt lib shadows a built one of the same version and channel, dropping the built world, while libs from different cells both remain.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -647,12 +649,11 @@ let shadow_policy_drops_same_cell_built_test : pure_test =
       (* different cells: no shadowing — both worlds live *)
       && List.length diff_shadowed = 2) }
 
-(* REFS subset (2026-08-17, the z3 #10549 regression case): [Refs ids]
-   keeps the source-repo worlds whose pinned id is selected — the
-   [--refs latest,pre-10549] pair. Unpinned/absent sources pass through
-   (the filter selects on repo PIN identity; inert elsewhere). *)
+(* Unpinned/absent sources pass through (the filter selects on repo PIN
+   identity; inert elsewhere). *)
 let refs_subset_test : pure_test =
   { name = "enumerate.refs_subset";
+    holds = "Selecting refs keeps only the worlds whose source is pinned to a selected ref, and worlds with an unpinned or absent source pass through.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -734,13 +735,9 @@ let refs_subset_test : pure_test =
             sourceless
           |> List.length = 1)) }
 
-(* The mechanism CATALOGUE (base/canary_mechanism.ml, 2026-08-05): total
-   over the mechanism constructors; stored discipline == the derived one
-   (the catalogue cannot drift from the vocabulary); each language's
-   default mechanism is catalogued as wired; every entry names at least
-   one artifact form and one checking point. *)
 let mechanism_catalogue_test : pure_test =
   { name = "mechanism.catalogue_total_and_consistent";
+    holds = "Every mechanism has a catalogue entry with the discipline the vocabulary derives and a checking point, and each language's default mechanism is wired.";
     check = (fun () ->
       let all =
         Mech.[ Cstubs; Cext; Ctypes; Cffi; Dynlink ]
@@ -797,12 +794,11 @@ let mechanism_catalogue_test : pure_test =
    restores the old [source_fetch_cmd] behavior — a declared local
    checkout makes fetch a [test -d], no clone (the waste item in
    status_project.md). *)
-(* The Cmake_install assert_staged primitive (2026-08-17, the z3
-   #10549 regression): each prefix-relative path becomes a [test -f]
-   with the "OCAML INSTALL MISSING" signature — ALSO written into
-   install_fail.log (output_contains_any reads files, not stderr). *)
+(* The line is written to install_fail.log because output_contains_any
+   reads files, not stderr. *)
 let cmake_install_assert_staged_pin : pure_test =
   { name = "templates.cmake_install_assert_staged";
+    holds = "Each path a cmake install must stage becomes a file test under the prefix, and a missing one writes an OCAML INSTALL MISSING line to install_fail.log.";
     check = (fun () ->
       let spec =
         Canary_action_templates.realize_template
@@ -823,6 +819,7 @@ let cmake_install_assert_staged_pin : pure_test =
 
 let source_fetch_local_pin : pure_test =
   { name = "templates.source_fetch_local_skips_clone";
+    holds = "A source fetch with a declared local checkout only tests that the directory exists and never clones, while one without it clones.";
     check = (fun () ->
       let mk ?local () =
         let spec =
@@ -851,6 +848,7 @@ let source_fetch_local_pin : pure_test =
    both cannot read a stub summary as a surface. *)
 let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_covers_both_conventions";
+    holds = "Each agreement's derived evidence paths offer both the framework's and tiny's file names where they differ, and the planned repack_complete reads nothing.";
     check = (fun () ->
       let module CC = Canary_agreement_common in
       let template = Canary_agreement.inputs_of_agreement in
@@ -917,12 +915,12 @@ let inputs_template_pin : pure_test =
       (* planned — no evaluator, and nothing to read *)
       && List.is_empty (template CC.Repack_complete L.OCaml)) }
 
-(* M2 step 3 pin (2026-08-12): a spec whose ONLY binding is Dynamic_ffi
-   (ctypes) gets NO build_binding chain — the enumeration derives the
-   stage set from the mechanism key, not from a hardcoded lang guard.
-   A spec with a static binding (cext) keeps the build chain. *)
+(* The enumeration derives the stage set from the mechanism key, not
+   from a hardcoded lang guard. A spec with a static binding (cext)
+   keeps the build chain. *)
 let mechanism_chain_shape_pin : pure_test =
   { name = "mechanism.dynamic_binding_has_no_build_chain";
+    holds = "A spec whose only binding is dynamic admits no build_binding chain, one with a static binding does, and both still yield scenarios.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let dynamic_spec =
@@ -962,12 +960,9 @@ let mechanism_chain_shape_pin : pure_test =
       List.length (EN.patterns_of dynamic_spec) > 0
       && List.length (EN.patterns_of static_spec) > 0) }
 
-(* Subset INTERSECTS the universe (found via z3 + thin, A5 phase 2): on a
-   z3-shaped spec (lib Fetched@Stable | Built@Dev — Built has NO Stable),
-   version Subset [Stable] must NOT fabricate a Built@Stable world; the Built
-   provision simply contributes nothing and only the fetch chain remains. *)
 let subset_intersects_universe_test : pure_test =
   { name = "enumerate.subset_intersects_universe";
+    holds = "A version subset never invents versions: asking a z3-shaped spec for stable keeps only the fetched lib's world, with no built stable world.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let spec : Canary_artifact.project_spec =
@@ -995,6 +990,7 @@ let subset_intersects_universe_test : pure_test =
    pairs and is [] for a positive scenario. *)
 let dispatch_reads_test : pure_test =
   { name = "enumerate.dispatch_coordinate_reads";
+    holds = "The dispatch reads give each artifact's placed channel and each bad-quality artifact with its tag, and no bad placements for a positive world.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -1014,11 +1010,10 @@ let dispatch_reads_test : pure_test =
           | [ (id, "Bs.4") ] -> Canary_artifact.equal_artifact_info id Canary_artifact.a_lib
           | _ -> false)) }
 
-(* Mismatch direction (named from the CONSUMER's position): consumer@Dev over
-   provider@Stable = Forward; consumer@Stable over provider@Dev = Backward;
-   same channel or absent = None. *)
+(* The direction is named from the CONSUMER's position. *)
 let mismatch_direction_test : pure_test =
   { name = "enumerate.mismatch_direction";
+    holds = "A dev consumer over a stable provider is a forward mismatch, a stable consumer over a dev provider a backward one, and anything else is none.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
@@ -1035,12 +1030,11 @@ let mismatch_direction_test : pure_test =
               ~provider:Canary_artifact.a_lib)
            None) }
 
-(* Seam (dynamic_enumeration.md): a flat assignment's build edges read off the
-   ACTION catalogue agree with the graph's built_from — Built lib←Source, Built
-   binding←Lib; a Fetched artifact has no edge. Injects
-   Canary_action.consumes_of_action, proving the two representations are one. *)
+(* Injects Canary_action.consumes_of_action, proving the two
+   representations are one. *)
 let built_from_test : pure_test =
   { name = "enumerate.built_from_of_assignment";
+    holds = "Build edges read off the action catalogue match the graph's built_from: a built lib comes from its source, a built binding from its lib, a fetched artifact from nothing.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let module CA = Canary_action in
@@ -1063,12 +1057,12 @@ let built_from_test : pure_test =
       && one_edge a_oc Canary_artifact.a_lib                (* Built binding ← Lib *)
       && List.is_empty (edges Canary_artifact.a_source)) }  (* Fetched source: no edge *)
 
-(* M3: node_of_assignment lifts a flat chain assignment to the artifact_node
-   graph with the full catalogue-derived chain — binding ← lib ← source. (Note:
-   make_action_graph under-records this — its Build_lib node omits built_from=
-   source, treating source as an implicit root; the seam is the complete view.) *)
+(* (Note: make_action_graph under-records the chain — its Build_lib node
+   omits built_from= source, treating source as an implicit root; the seam
+   is the complete view.) *)
 let node_of_assignment_test : pure_test =
   { name = "action.node_of_assignment_chain";
+    holds = "Lifting an assignment to the node graph links a built binding to its lib and the lib to its source, and the action graph's lib comes from the source too.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let module CA = Canary_action in
@@ -1107,14 +1101,14 @@ let node_of_assignment_test : pure_test =
       in
       seam_chain && mag_lib_from_source) }
 
-(* Stage-3 v1: [close_deps] resolves an App's runtime_dep by its dep_mode.
-   [Independent] over run-versions {Stable,Dev} on a build@Stable assignment
+(* [Independent] over run-versions {Stable,Dev} on a build@Stable assignment
    BRANCHES into two graphs — one running against lib@Stable (matched), one
    against lib@Dev (the deploy mismatch) — while the build chain (app←binding←
    lib@Stable) is fixed. [Lockstep] collapses to one graph; an App-less
    assignment reduces to [node_of_assignment] (flat projects unchanged). *)
 let close_deps_test : pure_test =
   { name = "action.close_deps_deploy_mismatch";
+    holds = "An app's runtime lib follows its dependency mode: independent branches into stable and dev runs over a stable build chain, while lockstep or no app gives one graph.";
     check = (fun () ->
       let module EN = Canary_enumerate in
       let module CA = Canary_action in
@@ -1177,11 +1171,11 @@ let close_deps_test : pure_test =
       in
       indep && lock && degenerate) }
 
-(* Flavor 2 deploy-mismatch: binding with Independent runtime paired with
-   a different-version lib produces rp_deploy=true. Pin that
-   runtime_pairings_of surfaces it correctly. *)
+(* Flavor 2 deploy-mismatch. Pin that runtime_pairings_of surfaces it
+   correctly. *)
 let deploy_mismatch_test : pure_test =
   { name = "enumerate.deploy_mismatch";
+    holds = "A binding with an independent runtime, placed with a lib of another version, is reported by runtime_pairings_of as a deploy mismatch.";
     check = (fun () ->
       let open Canary_artifact in let open Canary_project_spec in let open Canary_enumerate in
       let module B = Canary_basic in
@@ -1215,13 +1209,13 @@ let deploy_mismatch_test : pure_test =
       in
       ok_count && ok_deploy) }
 
-(* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
-   from the bindings table + (action, loc) ALONE — no per-scenario [violates].
-   For a c1-OCaml binding it must produce Expect_compat_failure carrying c1's
-   inputs at the OCaml probe (canary discovers c1, nobody tells it), and
-   Expect_success at a non-firing action. *)
+(* For a c1-OCaml binding [lower_expectation_agnostic] must produce
+   Expect_compat_failure carrying c1's inputs at the OCaml probe (canary
+   discovers c1, nobody tells it), and Expect_success at a non-firing
+   action. *)
 let agnostic_expectation_test : pure_test =
   { name = "scenario.lower_expectation_agnostic_symbols";
+    holds = "From the bindings table alone, the OCaml probe expects a derived compat failure carrying the agreement's inputs, and build_lib expects success.";
     check = (fun () ->
       let module CS = Canary_scenario in
       let module CC = Canary_agreement_common in
@@ -1250,8 +1244,7 @@ let agnostic_expectation_test : pure_test =
       in
       derived_c1 && build_ok) }
 
-(* Stage-4 v1: [execution_plan] flattens the applicable DAG into the run's walk
-   order. Invariants: (1) it is a valid topological order — kinds never decrease,
+(* Invariants: (1) the plan is a valid topological order — kinds never decrease,
    so every built_from/runtime_dep (always a lower kind) precedes its consumer;
    (2) [producing_action_of_node] inverts the provision — a Built node has a
    Build_* edge, a Fetched node a Fetch edge, a Vendored node NO edge (an initial
@@ -1260,6 +1253,7 @@ let agnostic_expectation_test : pure_test =
    initial nodes appear in one plan. *)
 let execution_plan_test : pure_test =
   { name = "action.execution_plan_topo_and_edges";
+    holds = "The execution plan visits artifacts in dependency order, and each node's producing action matches its provision: build if built, fetch if fetched, none if vendored.";
     check = (fun () ->
       let module CA = Canary_action in
       let g =
@@ -1313,16 +1307,15 @@ let execution_plan_test : pure_test =
       topo_ok && edges_ok && has_built_lib && has_initial) }
 
 (* ── Tool-routing RATCHET (user, 2026-08-05) ──
-   Shell verbs that have (or should get) a named primitive in
-   `src/canary/tool` must not spread as raw strings through the project
-   specs — that is exactly the code scattering TODO #18 fights. The
-   baseline below freezes TODAY's per-file line counts; a count ABOVE
-   baseline fails the suite (route the new use through a tool/ primitive
-   instead); a count below baseline means cleanup happened — lower the
-   baseline in the same commit. Comments count too (crude by design: a
-   ratchet, not a parser). *)
+   Raw verbs spreading through the specs are exactly the code scattering
+   TODO #18 fights. The baseline below freezes TODAY's per-file line
+   counts; a count ABOVE baseline fails the suite (route the new use
+   through a tool/ primitive instead); a count below baseline means
+   cleanup happened — lower the baseline in the same commit. Comments
+   count too (crude by design: a ratchet, not a parser). *)
 let tool_routing_ratchet_test : pure_test =
   { name = "harness.tool_routing_ratchet";
+    holds = "No project spec file has more lines with a raw shell verb that should go through a tool primitive than its frozen baseline allows.";
     check = (fun () ->
       let dir = "src/canary/project" in
       let lines_with ~needle path =
@@ -1440,6 +1433,7 @@ let tool_routing_ratchet_test : pure_test =
    [not_implemented] exists to prevent). *)
 let agreement_registry_complete_pin : pure_test =
   { name = "agreements.registry_complete";
+    holds = "Every agreement id has exactly one row stating its claim and expectation, every method has an evaluator or says why not, and fault tags match the catalogue.";
     check =
       (fun () ->
         let module CR = Canary_agreement in
@@ -1596,6 +1590,7 @@ let agreement_registry_complete_pin : pure_test =
 
 let agreement_registry_firing_pin : pure_test =
   { name = "agreements.firing_defaults";
+    holds = "Declaration checks fire at build_lib, or probe_lib when the lib is fetched; binding checks fire at the binding's build and probe, or only its probe, never at build_lib.";
     check =
       (fun () ->
         let module CR = Canary_agreement in
@@ -1718,11 +1713,8 @@ let agreement_registry_firing_pin : pure_test =
          applicable_under Canary_mechanism.Cstubs
          && not (applicable_under Canary_mechanism.Dynlink))) }
 
-(* The counterexamples execute AHEAD of any project run — every
-   fixture's synthetic evidence goes through the METHOD the registry
-   would run, and must reach the stated OUTCOME with the stated
-   diagnostics. A new agreement lands with its counterexample; a
-   changed evaluator breaks the pin.
+(* A new agreement lands with its counterexample; a changed evaluator
+   breaks the pin.
 
    2026-09-12: fixtures now assert an outcome LABEL as well as the
    substrings, which is what lets a "requirements met" case and an
@@ -1766,6 +1758,7 @@ let agreement_fixture_tests : pure_test list =
              (C.string_of_agreement_id b))
   in
   [ { name = "agreements.fixtures_execute";
+      holds = "Without any project run, every agreement fixture reaches its stated outcome and diagnostics through the method the registry holds for it.";
       check = (fun () -> List.for_all CR.agreement_fixtures ~f:execute) };
     (* the visible coverage set: EVERY agreement with an evaluator.
        Absent, with their reason: behavior_matches,
@@ -1778,14 +1771,14 @@ let agreement_fixture_tests : pure_test list =
        another agreement — the reader would have no way to tell. The
        code is DERIVED from the slug, so this is the price of not
        having to declare it. *)
-    (* THE RECOVERS COLUMN NAMES AN ACTION (2026-09-14, user: "the cell
-       must be an action"). It held prose for six of the thirteen —
+    (* The recovers column held prose for six of the thirteen —
        "the link that built the binding", "the link, then every load" —
        which is true and unusable as a column: half the cells named a
        step and half described one, so it could not be sorted or
        matched against `canary paths`. The qualification lives in
        [rt_artifact] now, which is prose by nature. *)
     { name = "agreements.rooting_names_an_action";
+      holds = "Every agreement's rooting names an action that parses, or names none and is then unrooted.";
       check = (fun () ->
           List.for_all CR.agreement_registry ~f:(fun r ->
               let rt = r.CR.ag.C.ag_rooted_in in
@@ -1794,6 +1787,7 @@ let agreement_fixture_tests : pure_test list =
                 not (C.is_rooted rt)
               else Option.is_some (Canary_basic.action_of_string rt.C.rt_action))) };
     { name = "agreements.short_codes_are_unique";
+      holds = "Every agreement has a non-empty short code and no two agreements share one.";
       check = (fun () ->
           let codes =
             List.map CR.agreement_registry ~f:(fun r ->
@@ -1804,6 +1798,7 @@ let agreement_fixture_tests : pure_test list =
                (List.dedup_and_sort codes ~compare:String.compare)
              = List.length codes) };
     { name = "agreements.fixtures_complete";
+      holds = "An agreement has a fixture exactly when it has an evaluator.";
       check = (fun () ->
           Poly.equal covered
             C.[ Api_names_present; Declared_symbols_exported;
@@ -1818,12 +1813,9 @@ let agreement_fixture_tests : pure_test list =
                    (C.has_evaluator r.CR.ag)
                    (CR.has_fixture r.CR.ag_id))) } ]
 
-(* The matrix's mark extraction (2026-08-17, the result table): a
-   synthetic actions.log (variant_start-scoped verdict events) drives
-   [Canary_status.project_matrix] — per-scenario × per-tag marks with
-   last-verdict-wins and the xfail contract suffix. *)
 let matrix_marks_from_log_pin : pure_test =
   { name = "matrix.marks_from_log";
+    holds = "Per scenario and step, the matrix keeps the last verdict in the actions log, and marks a confirmed expected failure as xfail with its agreement.";
     check = (fun () ->
       let root = "_out/canary/test" in
       (* [log_path] is root/canary/projects/<p>/-run/actions.log *)
@@ -1875,6 +1867,7 @@ let matrix_marks_from_log_pin : pure_test =
    is skipped rather than parsed into a row. *)
 let matrix_agreements_from_log_pin : pure_test =
   { name = "matrix.agreements_from_log";
+    holds = "Agreement outcomes are read from the actions log per scenario, the last per step and agreement winning, skipping lines that name no agreement.";
     check = (fun () ->
       let root = "_out/canary/test" in
       let run_dir = root ^ "/canary/projects/agmt-fixture/-run" in
@@ -1918,12 +1911,11 @@ let matrix_agreements_from_log_pin : pure_test =
               | _ -> false)
       | _ -> false) }
 
-(* The warm-mask fix's fingerprint (2026-08-17): a verdict marker is
-   trusted for a warm skip only when its recorded spec fingerprint
-   matches the CURRENT step. A cmd change (the spec) flips the match;
-   an old-format marker (no digest line) never matches. *)
+(* A cmd change (the spec) flips the match; an old-format marker (no
+   digest line) never matches. *)
 let marker_stale_on_spec_change_pin : pure_test =
   { name = "runner.marker_stale_on_spec_change";
+    holds = "A verdict marker serves a warm skip only while its fingerprint matches the step; a changed command or expectation makes it stale, as does an old format.";
     check = (fun () ->
       let out = "_out/canary/test" in
       let mk_step cmd_s =
@@ -2004,15 +1996,14 @@ let marker_stale_on_spec_change_pin : pure_test =
       old_format && fresh && stable && drifted && expectation_drifted
       && epoch_ok) }
 
-(* The pinned-ref freshness check_post (2026-08-17, the warm-mask
-   fix's residual class): a pinned Source_fetch carries a check_post
-   that verifies the checkout is AT the declared ref (offline
-   rev-parse); HEAD refs keep the default. The hermetic check runs the
-   closure against a non-repo fixture — it FAILS CLOSED (the gate
-   would drop the marker and re-fetch), which is the wiring the pin
-   guards; the rev-parse semantics are git's. *)
+(* The check_post verifies the checkout is AT the declared ref (offline
+   rev-parse). The hermetic check runs the closure against a non-repo
+   fixture — it FAILS CLOSED (the gate would drop the marker and
+   re-fetch), which is the wiring the pin guards; the rev-parse
+   semantics are git's. *)
 let source_fetch_pinned_ref_check_post_pin : pure_test =
   { name = "templates.source_fetch_pinned_ref_check_post";
+    holds = "A source fetch pinned to a ref gets its own postcondition, which fails closed outside a checkout, while a fetch of HEAD keeps the default.";
     check = (fun () ->
       let mk ~ref_ () =
         let spec =
@@ -2033,12 +2024,12 @@ let source_fetch_pinned_ref_check_post_pin : pure_test =
        | None -> false)
       && Option.is_none head) }
 
-(* The OFF-TREE binding source vocabulary (2026-08-18, user): a
-   binding may live in a different repo than the lib (zarith vs the
-   system gmp) — its own artifact kind + fetch action, leading the
-   per-language block in the canonical column order. *)
+(* A binding may live in a different repo than the lib (zarith vs the
+   system gmp). The binding source's fetch action leads the per-language
+   block in the canonical column order. *)
 let binding_source_vocabulary_pin : pure_test =
   { name = "vocab.binding_source_off_tree";
+    holds = "A binding source is its own artifact kind, with no mechanism and its own fetch action in the catalogue.";
     check = (fun () ->
       String.equal
         (B.string_of_action (B.Fetch (B.Binding_source L.OCaml)))
@@ -2065,8 +2056,7 @@ let binding_source_vocabulary_pin : pure_test =
              Poly.equal s.B.as_action
                (B.Fetch (B.Binding_source L.OCaml)))) }
 
-(* The lib name is OPTIONAL, and the [None] case must stay invisible.
-   2026-08-25: [A_lib] gained a [string option] payload so a project can
+(* 2026-08-25: [A_lib] gained a [string option] payload so a project can
    one day declare two C libs (multi_lib.md §3a step 1). Every project
    today passes [None] via [a_lib], and the whole point of the widening
    is that this changes NOTHING observable — ids feed scenario dirs,
@@ -2080,6 +2070,7 @@ let binding_source_vocabulary_pin : pure_test =
    would collapse them into one placement. *)
 let lib_name_optional_pin : pure_test =
   { name = "vocab.lib_name_optional";
+    holds = "An unnamed lib still prints as plain lib, a named one adds a dash and its name, and libs with different names, or none, are different artifacts.";
     check = (fun () ->
       let unnamed = Canary_artifact.a_lib in
       let gmp = Canary_artifact.a_lib_named "gmp" in
@@ -2133,6 +2124,7 @@ let agreement_bridge_pins : pure_test list =
     else None
   in
   [ { name = "agreements.slugs_unique_and_named";
+      holds = "Agreement slugs are unique, lowercase with underscores and no digits, and every agreement states a claim, an expectation and a doc section.";
       check =
         (fun () ->
           let slugs = List.map CR.all_agreements ~f:(fun e -> e.CR.e_slug) in
@@ -2152,6 +2144,7 @@ let agreement_bridge_pins : pure_test list =
                  && String.for_all s ~f:(fun ch ->
                         Char.is_lowercase ch || Char.equal ch '_'))) };
     { name = "agreements.every_agreement_has_an_entry";
+      holds = "The registry has as many rows as there are agreement ids, at least three agreements are proposed, and the full list is the rows plus the proposals.";
       check =
         (fun () ->
           (* STRUCTURAL, not a magic number (2026-09-12, user: "the
@@ -2166,8 +2159,7 @@ let agreement_bridge_pins : pure_test list =
           && List.length CR.all_agreements
              = List.length CR.agreement_registry
                + List.length CR.proposed_agreements) };
-    (* Every CODE IDENTIFIER the doc names must EXIST (2026-09-03).
-       The two pins below check the doc's § anchors, which is why six
+    (* The two pins below check the doc's § anchors, which is why six
        commits of renaming left them green while the doc went on naming
        canary_agreement_run.ml (retired), contract_registry (the
        registry's old name), ag_role (a field removed with the legacy
@@ -2179,6 +2171,7 @@ let agreement_bridge_pins : pure_test list =
        doc correct on their strength. And it skips fenced blocks, where
        the doc quotes shell and OCaml that is not required to exist. *)
     { name = "agreements.doc_names_live_code";
+      holds = "Every file, module and snake_case name quoted in the agreement docs outside code blocks is defined in src, unless listed as the docs' own vocabulary.";
       check =
         (fun () ->
           (* BOTH halves: a code name may be introduced in either, and
@@ -2332,10 +2325,10 @@ let agreement_bridge_pins : pure_test list =
                 "    doc names code that has no definition: %s@."
                 (String.concat ~sep:", " bad);
             List.is_empty bad) };
-    (* every PROSE cross-reference resolves too — the gap §10a named.
-       Lines mentioning another .md are skipped (their § belongs to that
+    (* Lines mentioning another .md are skipped (their § belongs to that
        document, not this one). *)
     { name = "agreements.doc_cross_refs_resolve";
+      holds = "Every section reference in an agreement doc resolves to a heading in that doc, except on lines that name another document.";
       check =
         (fun () ->
           (* PER FILE: headings are a property of one document, so a §
@@ -2430,6 +2423,7 @@ let agreement_bridge_pins : pure_test list =
        overview lacks, as components.md §3.4's static-provider table does.
        That one is a reading job. *)
     { name = "agreements.pinned_docs_exist";
+      holds = "Every document the pins read exists, so none of those pins can pass on a missing input.";
       check =
         (fun () ->
           match Sys_unix.file_exists "doc/canary/design/agreement" with
@@ -2469,10 +2463,7 @@ let agreement_bridge_pins : pure_test list =
        project produces its evidence), and it may not. Requiring a
        reason there would force a line saying "nothing", which is what
        [None] already says. *)
-    (* THE OVERVIEW AGREES WITH THE ROOTING TABLE, AND EXPANDS HONESTLY
-       (2026-09-17).
-
-       Two views of one fact — the catalogue says where an agreement is
+    (* Two views of one fact — the catalogue says where an agreement is
        rooted in prose, the overview marks it as a cell — so they can
        disagree, and the way they would is silent: an `rt_action` that
        stops parsing as an action just stops drawing an R, and the row
@@ -2488,6 +2479,7 @@ let agreement_bridge_pins : pure_test list =
            than one row. If that stopped being true the grouping would
            be doing nothing and the column could collapse again. *)
     { name = "agreements.overview_matches_rooting";
+      holds = "Each overview row marks one root exactly when its agreement's rooting names an action, every agreement has a row, and some agreement has several.";
       check =
         (fun () ->
           let rows = CR.overview_rows () in
@@ -2515,11 +2507,7 @@ let agreement_bridge_pins : pure_test list =
             List.length rows > List.length CR.agreement_registry
           in
           per_row_ok && covers_every && expands) };
-    (* THE ROWS OBEY THEIR OWN LAWS (2026-09-17, user: "I wish we can
-       make a harness somewhere so you can check on your own … we can
-       write it down and revise it continuously").
-
-       The laws are DATA, in `Canary_agreement.row_rules`, so this pin
+    (* The laws are DATA, in `Canary_agreement.row_rules`, so this pin
        is four lines and never needs editing again: a rule added there
        is enforced here the moment it exists. That is the property the
        user asked for — a list you revise, not a test you rewrite.
@@ -2528,6 +2516,7 @@ let agreement_bridge_pins : pure_test list =
        with any violation, so the harness is readable as well as
        enforced. The pin is the half that fails a build. *)
     { name = "agreements.rows_obey_their_own_laws";
+      holds = "Every overview row obeys every rule listed in row_rules, and at least four rules are listed.";
       check =
         (fun () ->
           let bad = CR.audit_rows () in
@@ -2537,11 +2526,7 @@ let agreement_bridge_pins : pure_test list =
           (* and the laws must be doing something: an empty rule list
              would pass over any table at all *)
           List.is_empty bad && List.length CR.row_rules >= 4) };
-    (* NO PART OF THE MODELLED WORLD IS UNWATCHED (2026-09-17, user:
-       "can we also let the harness to ensure the row saturation (no
-       missing check even it's not implement)").
-
-       The row laws ask whether a row is self-consistent; this asks the
+    (* The row laws ask whether a row is self-consistent; this asks the
        question no row can, because the overview is organised BY CLAIM
        and an absence has no row to appear in. The world is the product
        of two declared axes — the catalogue's five mechanisms and the
@@ -2559,6 +2544,7 @@ let agreement_bridge_pins : pure_test list =
        it, which is the moment the gap is cheapest to see. The grid size
        is asserted too, so an empty catalogue cannot pass. *)
     { name = "agreements.every_mechanism_format_cell_is_watched";
+      holds = "Every catalogued mechanism, under every object format, is covered by at least one claim, implemented or not.";
       check =
         (fun () ->
           let holes = CR.saturation_holes () in
@@ -2572,10 +2558,7 @@ let agreement_bridge_pins : pure_test list =
           && List.length (CR.saturation_grid ()) >= 5
           && List.for_all (CR.saturation_grid ()) ~f:(fun (_, cells) ->
                  List.length cells >= 2)) };
-    (* THE KIND IS A REAL PARTITION (2026-09-17, user: "I don't like the
-       term `declaration` … `peer` is also not clear").
-
-       `ag_kind` replaced a column derived from `m_reference`, which
+    (* `ag_kind` replaced a column derived from `m_reference`, which
        named the SECOND PARTY rather than the relation and so put "the
        library exports what we said" and "the app's names are on the
        binding's surface" in one bucket. A taxonomy is only worth the
@@ -2592,6 +2575,7 @@ let agreement_bridge_pins : pure_test list =
            the table makes in its last line, and if it ever became false
            the line would be a lie rather than a finding. *)
     { name = "agreements.kind_partitions_the_catalogue";
+      holds = "At least three agreement kinds are in use, admissibility and promise among them, and some kind is held only by proposed agreements.";
       check =
         (fun () ->
           let k r =
@@ -2624,10 +2608,7 @@ let agreement_bridge_pins : pure_test list =
               (String.concat ~sep:"," used)
               (String.concat ~sep:"," only_candidate);
           ok) };
-    (* ONE CLAIM'S ROWS ARE ADJACENT (2026-09-17, user: "then we will
-       group the same agreement").
-
-       The grouping is not a cosmetic sort — it is what makes the
+    (* The grouping is not a cosmetic sort — it is what makes the
        repeated `code` column readable. A code appearing twice means one
        claim with two patterns, and that only reads correctly if the two
        are next to each other; scattered, the same repetition looks like
@@ -2647,6 +2628,7 @@ let agreement_bridge_pins : pure_test list =
        dynlink at its probe), so the run test is over the pair, not over
        the slug alone. *)
     { name = "agreements.overview_groups_a_claims_patterns";
+      holds = "An agreement's overview rows that fire at the same action, in whatever language, sit together, and some agreement has several such rows.";
       check =
         (fun () ->
           let rows = CR.overview_rows () in
@@ -2675,10 +2657,7 @@ let agreement_bridge_pins : pure_test list =
           (* and the grouping must be doing something: at least one
              claim really does have several adjacent rows *)
           ok && List.length rows > List.length distinct) };
-    (* THE ROOT SPEAKS THE ROW'S LANGUAGE (2026-09-17, user: "the R for
-       python is on build_binding_ocaml cell").
-
-       `ag_rooted_in.rt_action` is one string and has to pick a spelling,
+    (* `ag_rooted_in.rt_action` is one string and has to pick a spelling,
        so `required_symbols_exported` says `build_binding_ocaml`. That is
        right for the cstubs row and wrong for the cext row, which marked
        its `R` in the OCaml column and measured `lag` from there — 7,
@@ -2694,6 +2673,7 @@ let agreement_bridge_pins : pure_test list =
            not a fact about evidence travelling. A bound of 2 would have
            caught it and will catch a regression. *)
     { name = "agreements.rooting_speaks_the_rows_language";
+      holds = "No overview row is rooted at another language's action, and no row's root sits more than two actions from its nearest detection.";
       check =
         (fun () ->
           let bad =
@@ -2741,9 +2721,7 @@ let agreement_bridge_pins : pure_test list =
           if not (List.is_empty bad) then
             List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
           List.is_empty bad) };
-    (* THE FORMAT DIMENSION IS REAL, NOT DECORATIVE (2026-09-17).
-
-       `ag_formats` is a third reason a claim can be inapplicable, and
+    (* `ag_formats` is a third reason a claim can be inapplicable, and
        the risk with a defaulted field is that it defaults everywhere
        and says nothing. Two claims:
 
@@ -2761,6 +2739,7 @@ let agreement_bridge_pins : pure_test list =
        value today, and pretending otherwise is what a vacuous pin
        does. *)
     { name = "agreements.formats_restrict_the_version_claims";
+      holds = "Exactly the two symbol-version agreements are ELF-only, and every other agreement covers both object formats.";
       check =
         (fun () ->
           let elf_only =
@@ -2781,10 +2760,7 @@ let agreement_bridge_pins : pure_test list =
           List.equal String.equal elf_only
             [ "declared_versions_exported"; "required_versions_exported" ]
           && all_both) };
-    (* A CLAIM RANGES OVER THE SAME NUMBER OF ARTIFACTS, WHATEVER
-       CARRIES IT (2026-09-17).
-
-       What is left of `agreements.theory_target_groups_match_the_table`,
+    (* What is left of `agreements.theory_target_groups_match_the_table`,
        which also compared `theory.md` §5.11's transcribed membership
        lists against the ▣ counts. The overview is the up-to-date truth
        now, so the transcription was deleted and the half of the pin
@@ -2801,6 +2777,7 @@ let agreement_bridge_pins : pure_test list =
        question, would need a finer cell before anyone wrote another
        sentence about it. *)
     { name = "agreements.target_count_is_a_property_of_the_claim";
+      holds = "Each agreement reads the same number of artifacts in every overview row, whatever mechanism carries it.";
       check =
         (fun () ->
           let rows = CR.overview_rows () in
@@ -2827,9 +2804,7 @@ let agreement_bridge_pins : pure_test list =
           if not (List.is_empty bad) then
             List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
           List.is_empty bad) };
-    (* THE MODEL AND THE REGISTRY NAME THE SAME EXCLUSIONS (2026-09-17).
-
-       `prop_frame` says why a proposal has no row; the agreement
+    (* `prop_frame` says why a proposal has no row; the agreement
        README's §8 and §8.1 (theory.md's §7 and §7.1 until the
        2026-09-30 merge) say the same thing in prose, and they were
        written months apart. If one grows an exclusion the other does not, the
@@ -2842,6 +2817,7 @@ let agreement_bridge_pins : pure_test list =
        must carry the matching constructor. Either half alone lets the
        two drift apart in one direction. *)
     { name = "agreements.theory_names_the_frame_exclusions";
+      holds = "The proposals the registry excludes, as outside the frame or as not agreements, are exactly those the agreement README names in its matching exclusion section.";
       check =
         (fun () ->
           match read_doc model_doc with
@@ -2904,6 +2880,7 @@ let agreement_bridge_pins : pure_test list =
                 List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
               List.is_empty bad) };
     { name = "agreements.planned_says_what_it_waits_on";
+      holds = "Every agreement with no evaluator states, in a non-empty reason, what it is waiting on.";
       check =
         (fun () ->
           let bad =
@@ -2924,8 +2901,8 @@ let agreement_bridge_pins : pure_test list =
               "    planned agreement(s) with no ag_waiting_on: %s@."
               (String.concat ~sep:", " bad);
           List.is_empty bad) };
-    (* the harness proper: the doc anchors resolve *)
     { name = "agreements.doc_anchors_exist";
+      holds = "Every agreement's doc anchor names a section heading that exists in the components doc.";
       check =
         (fun () ->
           (* components.md ALONE: an [ag_doc] anchor names the section
@@ -3005,16 +2982,14 @@ let agreement_families () : (string * string) list =
          String.is_substring code ~substring:"let checks"
          && not (String.is_substring code ~substring:"let composes"))
 
-(* Every family reads the same way top to bottom (2026-09-02, user:
-   "we can make the file or the module more uniform"): what it is
-   ABOUT, then the EVIDENCE it reads, then the CHECKS, then the
-   DESCRIPTIONS it hands the registry. Five modules had four different
-   orders before this. The pin states the two boundaries that carry the
-   meaning — [checks] before any description, and no evidence or type
-   declared after the descriptions start — rather than the exact
-   banners, so the shape is enforced without freezing the prose. *)
+(* Five modules had four different orders before this pin. The pin
+   states the two boundaries that carry the meaning — [checks] before
+   any description, and no evidence or type declared after the
+   descriptions start — rather than the exact banners, so the shape is
+   enforced without freezing the prose. *)
 let agreement_module_shape_pin : pure_test =
   { name = "agreements.families_share_one_shape";
+    holds = "Each of the at least five agreement families declares its agreements before the checks list gathering them, and no type or loader after them.";
     check =
       (fun () ->
         match Sys_unix.file_exists agreement_dir with
@@ -3042,11 +3017,7 @@ let agreement_module_shape_pin : pure_test =
                        && not (String.is_substring tail ~substring:"\nlet load_")
                    | _ -> false)) }
 
-(* THE METADATA IS CODE TOO, AND FINDABLE (2026-09-17, user: "instead of
-   just mark the `implemented at`, we shall also track that the metadata
-   of an agreement should also be in the code").
-
-   `implemented at` tracks the EVALUATOR — the function that compares
+(* `implemented at` tracks the EVALUATOR — the function that compares
    evidence. It says nothing about where the agreement's metadata lives:
    its kind, subject, claim, rooting, slot, fault tag and method list.
    That metadata is code as much as the evaluator is, and a reader who
@@ -3069,6 +3040,7 @@ let agreement_module_shape_pin : pure_test =
    every one of the thirteen already carries it. *)
 let agreement_metadata_pin : pure_test =
   { name = "agreements.metadata_is_declared_under_its_slug";
+    holds = "Every agreement is declared as a value named after its slug and typed agreement, in the family file its registry row points to.";
     check =
       (fun () ->
         let module CR = Canary_agreement in
@@ -3098,12 +3070,7 @@ let agreement_metadata_pin : pure_test =
               List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
             List.is_empty bad) }
 
-(* WHERE THE CODE IS, KEPT TRUE (2026-09-17, user: "does we use the same
-   file (canary/agreement) to hold the agreement … pinpoint the file and
-   the most important function (use red cell if such a function doesn't
-   exist yet)").
-
-   The overview's `implemented at` column is half derived and half
+(* The overview's `implemented at` column is half derived and half
    written down, and only the derived half is safe. The FILE comes from
    the gathering list, so it cannot drift. The FUNCTION is a string on
    the method, because an OCaml closure carries neither its own name nor
@@ -3122,6 +3089,7 @@ let agreement_metadata_pin : pure_test =
        ones are the whole point of the colour. *)
 let agreement_impl_pin : pure_test =
   { name = "agreements.impl_functions_exist";
+    holds = "Every evaluator function an agreement names is defined in its family file, and every agreement with an evaluator names its function.";
     check =
       (fun () ->
         let module CR = Canary_agreement in
@@ -3181,6 +3149,7 @@ let agreement_impl_pin : pure_test =
 
 let agreement_tiers_pin : pure_test =
   { name = "agreements.families_do_not_reach_sideways";
+    holds = "No agreement family names another family in its code, and a composing module names only the families it declares it composes.";
     check =
       (fun () ->
         let dir = agreement_dir in
@@ -3225,8 +3194,7 @@ let agreement_tiers_pin : pure_test =
                        || List.mem Canary_agreement_composed.composes other
                             ~equal:String.equal))) }
 
-(* A SURFACE FACT is stated once, by whoever owns it (2026-09-03).
-   The families state CLAIMS, which are neither language- nor
+(* The families state CLAIMS, which are neither language- nor
    mechanism-specific: c2 says the same sentence for OCaml and for
    Python and only the surface differs. So a family that spells one of
    these paths has taken a fact that is not its own.
@@ -3242,6 +3210,7 @@ let agreement_tiers_pin : pure_test =
    module as they land. *)
 let surface_facts_pin : pure_test =
   { name = "agreements.surface_facts_live_with_their_owner";
+    holds = "No agreement family spells an evidence file name owned by a language or mechanism module, such as inspect_mli.";
     check =
       (fun () ->
         match Sys_unix.file_exists agreement_dir with
@@ -3279,6 +3248,7 @@ let surface_facts_pin : pure_test =
    families' declarations IS the registry's domain. *)
 let check_module_pattern_pin : pure_test =
   { name = "agreements.families_declare_the_catalogue";
+    holds = "The families together declare every agreement id exactly once, each family declares some, and every agreement states a claim, an expectation and methods.";
     check =
       (fun () ->
         let module C = Canary_agreement_common in
@@ -3316,13 +3286,12 @@ let check_module_pattern_pin : pure_test =
                  Canary_agreement_identity.soname_matches_requirement.C.ag_says))
         && String.equal (C.string_of_subject C.Action_outcome) "action-outcome") }
 
-(* Facts in, checks out (2026-09-02): a project declares its language,
-   its mechanism and how the artifact was provisioned; the registry says
-   which agreements that implies and what each reads. Pinned because it
-   is the direction inputs_of_agreement had backwards — no project
-   should ever name an agreement id. *)
+(* Facts in, checks out. Pinned because it is the direction
+   inputs_of_agreement had backwards — no project should ever name an
+   agreement id. *)
 let agreements_for_pin : pure_test =
   { name = "agreements.facts_in_checks_out";
+    holds = "The registry selects agreements from a world's facts alone: build_lib checks only when the lib is built, build_binding checks only when the binding is.";
     check =
       (fun () ->
         let module R = Canary_agreement in
@@ -3412,6 +3381,7 @@ let agreements_for_pin : pure_test =
      4. an applicable agreement with no evaluator → not_implemented *)
 let agreement_action_path_pin : pure_test =
   { name = "agreements.action_path_reports_outcomes";
+    holds = "Run through the runner, a probe step logs each agreement as holds, violated naming the symbol, unavailable or not implemented, and a violation alone does not fail it.";
     check = (fun () ->
       let root = "_out/canary/test" in
       let write path body =
@@ -3575,6 +3545,7 @@ let agreement_action_path_pin : pure_test =
    and `confirmed` where the step's own output shows it. *)
 let agreement_acceptance_pin : pure_test =
   { name = "agreements.one_record_serves_reporting_and_acceptance";
+    holds = "One evaluation decides both report and acceptance: a predicted failure that occurs is confirmed, one that does not fails the step, and a violation outranks a hold.";
     check = (fun () ->
       let root = "_out/canary/test" in
       let write path body =
@@ -3783,6 +3754,7 @@ let agreement_acceptance_pin : pure_test =
    step so `canary checks --dummies` can enumerate them. *)
 let dummy_action_pin : pure_test =
   { name = "steps.dummy_action_holds_a_place";
+    holds = "A dummy step's command writes its marker and states its reason, and only the base step is marked dummy, not the inspector it hosts.";
     check = (fun () ->
       let module SB = Canary_step_builder in
       let why = "the interpreter already provides this binding" in

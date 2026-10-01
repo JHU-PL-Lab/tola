@@ -8,14 +8,14 @@ let base_tests : Canary_project_test.pure_test list =
   Canary_test_projects.tests @ Canary_test_overview.tests @ Canary_test_record.tests
   @ Canary_test_pipeline.tests @ Canary_test_env.tests
 
-(* The drawing keeps the layout's rules. [Canary_overview_looks.layout_rules]
-   states each rule in words, with why and whose it is; every rule checked
-   over places holds over this layout's, and every rule checked by a pin
-   names a pin that exists, so the list cannot point at a renamed check.
-   Defined after [base_tests] for that reason. Another drawing is held to
-   the same rules by handing them its own positions ([layout_view]). *)
+(* [Canary_overview_looks.layout_rules] states each rule in words, with
+   why and whose it is; a rule checked by a pin names a pin that exists,
+   so the list cannot point at a renamed check. Defined after
+   [base_tests] for that reason. Another drawing is held to the same
+   rules by handing them its own positions ([layout_view]). *)
 let layout_rules_pin : Canary_project_test.pure_test =
   { name = "overview.layout_rules_hold";
+    holds = "The drawing keeps the layout's rules, and every rule a pin checks names a registered pin.";
     check =
       (fun () ->
         let module P = Canary_overview_looks in
@@ -35,12 +35,13 @@ let layout_rules_pin : Canary_project_test.pure_test =
              ~substring:{|id="jrules"|})
   }
 
-(* Every pin written runs: every pin record in the test sources whose
-   name is a literal is registered, since a pin left out of its subject's
-   [tests] compiles and never runs. Both ways of opening such a record
-   must be found somewhere, so the scan cannot pass by finding nothing. *)
+(* A pin left out of its subject's [tests] compiles and never runs. The
+   scan reads every pin record whose name is a literal; both ways of
+   opening such a record must be found somewhere, so it cannot pass by
+   finding nothing. *)
 let written_pins_run_pin : Canary_project_test.pure_test =
   { name = "tests.every_written_pin_runs";
+    holds = "Every pin written in the test sources is registered, so it runs.";
     check =
       (fun () ->
         let registered =
@@ -57,10 +58,10 @@ let written_pins_run_pin : Canary_project_test.pure_test =
                       (String.sub src ~pos:(stop + 1)
                          ~len:(Int.min 64 (String.length src - stop - 1)))
                   in
+                  let next = String.lstrip (String.drop_prefix after 1) in
                   if
                     String.is_prefix after ~prefix:";"
-                    && String.is_prefix (String.lstrip (String.drop_prefix after 1))
-                         ~prefix:"check"
+                    && (String.is_prefix next ~prefix:"holds" || String.is_prefix next ~prefix:"check")
                   then Some (String.sub src ~pos:from ~len:(stop - from))
                   else None))
         in
@@ -80,5 +81,26 @@ let written_pins_run_pin : Canary_project_test.pure_test =
         List.for_all found ~f:(Fn.non List.is_empty) && List.is_empty unrun)
   }
 
+(* The sentence is what the page lists for the pin, so it is one line,
+   ends as a sentence and fits a table cell. *)
+let holds_said_pin : Canary_project_test.pure_test =
+  { name = "tests.every_pin_says_what_it_holds";
+    holds = "Every pin states the claim it holds in one sentence.";
+    check =
+      (fun () ->
+        let bad =
+          List.filter
+            (Canary_project_test.all_tests @ base_tests @ [ layout_rules_pin; written_pins_run_pin ])
+            ~f:(fun t ->
+              let h = t.Canary_project_test.holds in
+              String.is_empty h || String.contains h '\n'
+              || (not (String.is_suffix h ~suffix:"."))
+              || String.length h > 200)
+        in
+        List.iter bad ~f:(fun t ->
+            Fmt.pr "    %s holds %S@." t.Canary_project_test.name t.Canary_project_test.holds);
+        List.is_empty bad)
+  }
+
 let tests : Canary_project_test.pure_test list =
-  base_tests @ [ layout_rules_pin; written_pins_run_pin ]
+  base_tests @ [ layout_rules_pin; written_pins_run_pin; holds_said_pin ]
