@@ -50,6 +50,20 @@ layer is what a run of a project records. Each shows in its own places on
 this page.</p>
 {{flow_table}}
 
+<h3 id="pins">0.4 The pins</h3>
+<p>A pin is a test that holds one claim about canary's code, a run, or this
+page, and fails when the claim stops holding; <code>make canary-test</code>
+runs them all. Each is written in the file of its subject and registered in
+that file's list, which <code>tests.every_written_pin_runs</code> checks, and
+each is falsified once before it is trusted: broken on purpose, to see it
+fail. A filled dot in Figure 1 links here; the boxes each pin holds are named
+beside it. Listed are the pins <code>canary project-test</code> runs; the
+framework's own, which <code>canary artifact-test</code> and
+<code>canary pm-test</code> run, hold canary's tools to the formats it
+reads.</p>
+{{pins_table}}
+{{pins_lists}}
+
 <h2 id="layers">1. A chain, layer by layer</h2>
 <p>Nodes are what exists. An edge points from components to a component
 and carries one annotation. Most carry the <strong>action</strong> of ours

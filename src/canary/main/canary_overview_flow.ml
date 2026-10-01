@@ -35,6 +35,8 @@ let sections : section list =
       [ "Canary_overview_flow"; "Canary_overview_looks" ];
     s "§0.3" "Each subject, layer by layer" "subjects" [ "flow_table" ]
       [ "Canary_overview_flow" ];
+    s "§0.4" "The pins" "pins" [ "pins_table"; "pins_lists" ]
+      [ "Canary_overview_pins"; "Canary_tests" ];
     s "§1" "A chain, layer by layer" "layers"
       [ "missing_steps"; "chain_key"; "join_panel" ]
       [ "Canary_overview_diagram"; "Canary_overview_looks"; "Canary_overview_panel";
@@ -124,7 +126,10 @@ let terms : (string * string) list =
       "what a package says it offers — a .pc or META file — owned by the package that ships it" );
     ( "frame",
       "a column group of §1.2 and §2: one action as §1 draws it — what it consumes, its \
-       pieces, what it produces, and the checks on each" ) ]
+       pieces, what it produces, and the checks on each" );
+    ( "pin",
+      "a test that holds one claim about canary's code, a run or this page, and fails when \
+       the claim stops holding; §0.4 lists those canary project-test runs" ) ]
 
 let terms_html () : string =
   {|<dl class="terms">|}
@@ -448,14 +453,18 @@ let bracket_svg (g : group) : string =
 let line_height = function Main _ -> 18 | Sub _ -> 16 | Pass _ -> 24 | Link _ -> 22
 let line_rise = function Main _ -> 13 | Sub _ -> 11 | Pass _ -> 17 | Link _ -> 16
 
-(** The harness's mark, top left: filled where pins hold the box. *)
+(** The harness's mark, top left: filled where pins hold the box, and then
+    a link to §0.4, which lists them. *)
 let held_svg (b : box) : string =
   let cls, says =
     if List.is_empty b.bx_held then ("unheld", "held by no pin")
     else ("held", "held by " ^ String.concat ~sep:", " b.bx_held)
   in
-  Printf.sprintf {|<circle class="fdot %s" cx="%d" cy="%d" r="4.5"><title>%s</title></circle>|} cls
-    (b.bx_x + 10) (b.bx_y + 10) (esc says)
+  let dot =
+    Printf.sprintf {|<circle class="fdot %s" cx="%d" cy="%d" r="4.5"><title>%s</title></circle>|}
+      cls (b.bx_x + 10) (b.bx_y + 10) (esc says)
+  in
+  if List.is_empty b.bx_held then dot else {|<a href="#pins">|} ^ dot ^ "</a>"
 
 (** The agents' mark, bottom right: a struck AI where agents do not read
     the box whole. *)
