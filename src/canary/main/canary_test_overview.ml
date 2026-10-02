@@ -1382,6 +1382,26 @@ let flow_test : Canary_project_test.pure_test =
         slots_ok && anchors_ok && sections_ok && geometry_ok)
   }
 
+(* Figure 1 draws information flow: steps write files, and files are read,
+   so an arrow into a file leaves a step. *)
+let flow_files_written_test : Canary_project_test.pure_test =
+  { name = "overview.flow_files_are_written_by_steps";
+    holds = "In Figure 1 every arrow into a file leaves a step, so no file is drawn as making another.";
+    check =
+      (fun () ->
+        let module F = Canary_overview_flow in
+        let kind id = Option.map (F.box_by_id id) ~f:(fun b -> b.F.bx_kind) in
+        let into_files =
+          List.filter F.arrows ~f:(fun a -> Poly.equal (kind a.F.ar_to) (Some F.File))
+        in
+        let bad =
+          List.filter into_files ~f:(fun a -> not (Poly.equal (kind a.F.ar_from) (Some F.Step)))
+        in
+        List.iter bad ~f:(fun a ->
+            Fmt.pr "    %s -> %s: a file not written by a step@." a.F.ar_from a.F.ar_to);
+        (not (List.is_empty into_files)) && List.is_empty bad)
+  }
+
 (* Each exhibit appears once, in list order, captioned with its label and
    title, and §0 lists it; every table on the page, and every drawing (an
    svg with role="img"), is one of them. See design/overview.md §1. *)
@@ -3227,7 +3247,7 @@ let tests : Canary_project_test.pure_test list =
     overlay_words_test; bridge_record_test; placeholder_badges_test; coverage_tables_test;
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;
     badge_counts_test; agreements_sit_test; edge_marks_test; visual_vocabulary_test; flow_test;
-    exhibits_test; exhibits_export_test; choice_resolved_test; result_cells_test;
+    flow_files_written_test; exhibits_test; exhibits_export_test; choice_resolved_test; result_cells_test;
     every_machine_test; firing_frames_test; outcome_marks_test;
     agreement_laws_test; mechanism_claims_test; check_index_language_test;
     applicability_reads_declaration_test ]

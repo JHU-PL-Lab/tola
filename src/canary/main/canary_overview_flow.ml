@@ -231,7 +231,7 @@ type group = { gr_id : string; gr_name : string; gr_boxes : string list }
 type arrow = { ar_from : string; ar_to : string; ar_note : string }
 
 let canvas_w = 1000
-let canvas_h = 856
+let canvas_h = 800
 let left_x = 20
 let left_w = 170
 let mid_x = 300
@@ -289,7 +289,7 @@ let boxes : box list =
         [ Main s.sj_name ] (code_held s.sj_name)
         ~title:(String.concat ~sep:" · " s.sj_code.ly_from))
   @ List.mapi page_inputs ~f:(fun i (id, words, title, held) ->
-        box ("page:" ^ id) words Hand left_x (590 + (42 * i)) left_w 34 [ Main words ] held
+        box ("page:" ^ id) words Hand left_x (622 + (42 * i)) left_w 34 [ Main words ] held
           ~title)
   @ [ box "passes" "the six passes" Step mid_x 46 mid_w 168
         (List.map passes ~f:(fun (p, ir) -> Pass (p, ir)))
@@ -319,13 +319,18 @@ let boxes : box list =
         [ "matrix.record_export_is_the_matrix"; "matrix.record_carries_every_step";
           "matrix.record_joins_edges_and_claims" ]
         ~title:"Canary_matrix.matrix_of";
-      box "runs" (base (List.hd_exn runs_files)) File right_x 454 right_w 48
+      box "runs" (base (List.hd_exn runs_files)) File mid_x 536 mid_w 44
         [ Main (base (List.hd_exn runs_files)); Sub "one per machine" ]
         [ "overview.recorded_runs_are_an_overlay"; "overview.badges_colour_from_the_cells";
           "overview.every_drawn_line_has_a_source" ]
         ~title:(String.concat ~sep:" · " runs_files ^ ", written by Canary_overview_runs")
         ~agents:"canary overview --json";
-      box "html" (base Canary_overview_assets.docs_path) File 330 605 270 46
+      box "draw" "draw" Step mid_x 616 mid_w 52
+        [ Main "draw each figure and table,"; Main "for the page and on its own" ]
+        [ "overview.exhibits_are_exported"; "overview.flow_files_are_written_by_steps" ]
+        ~title:
+          "Canary_overview_page.render · Canary_overview_export.write: the same functions draw both";
+      box "html" (base Canary_overview_assets.docs_path) File 480 704 150 46
         [ Main (base Canary_overview_assets.docs_path) ]
         [ "overview.template_slots_are_filled"; "overview.agreement_counts_are_the_tables";
           "overview.sections_numbered_in_order" ]
@@ -333,20 +338,21 @@ let boxes : box list =
           (Canary_overview_assets.docs_path
          ^ ": canary/overview/page.html, filled by Canary_overview_page.render")
         ~agents:"canary overview --flow";
-      box "sections" "the page's sections" Sections mid_x 712 mid_w 126
+      box "sections" "the page's sections" Sections right_x 664 right_w 126
         [ Link ("§1", "§1 the chain, layer by layer"); Link ("§1.2", "§1.2 the results' columns");
           Link ("§2", "§2 the agreements"); Link ("§2.2", "§2.2 every edge's claims");
           Link ("§3", "§3 the model's tables") ]
         [ "overview.flow_is_the_page" ];
-      box "run_sections" "a run's sections" Sections right_x 712 right_w 58
+      box "run_sections" "a run's sections" Sections right_x 528 right_w 58
         [ Link ("§1", "§1 a chain's run"); Link ("§1.2", "§1.2 the results' rows") ]
         [ "overview.results_table_is_the_column_model"; "overview.recorded_views_are_named" ];
-      box "exhibits" "exhibits" File left_x 770 260 46
-        [ Main "each figure and table, on its own"; Sub "fig-*.svg · tab-*.html" ]
+      box "exhibits" "exhibits" File 250 704 210 46
+        [ Main "exhibits/"; Sub "fig-*.svg · tab-*.html" ]
         [ "overview.exhibits_are_exported" ]
         ~title:
           (Canary_overview_exhibits.export_dir
-         ^ ": for a manuscript to embed, written by Canary_overview_export") ]
+         ^ ": for a manuscript to embed; --chain and --world draw Figure 2 for one recorded \
+            run, from the record") ]
 
 let groups : group list =
   [ { gr_id = "code"; gr_name = "the code";
@@ -358,14 +364,15 @@ let arrows : arrow list =
   let a ?(note = "") from to_ = { ar_from = from; ar_to = to_; ar_note = note } in
   [ a "code" "passes"; a "passes" "run"; a "passes" "ci"; a "run" "diagrams"; a "run" "out";
     a "out" "record"; a "record" "runs" ~note:"a view per chain";
-    a "record" "html" ~note:"§2's counts"; a "code" "page" ~note:"and draws the page";
-    a "page" "html"; a "page" "exhibits"; a "html" "sections"; a "runs" "run_sections" ]
+    a "runs" "draw" ~note:"every machine's"; a "runs" "run_sections" ~note:"the page's script";
+    a "code" "page" ~note:"and draws the page"; a "page" "draw"; a "draw" "exhibits";
+    a "draw" "html"; a "html" "sections" ]
 
 (** The stage names beside the figure. *)
 let lanes : (int * int * string) list =
   [ (left_x, 34, "in the code"); (mid_x, 34, "canary action ‹project›");
     (mid_x + mid_w + 14, 371, "in " ^ root ^ "/"); (mid_x, 440, "make view");
-    (left_x, 578, "the page") ]
+    (left_x, 606, "the page"); (250, 696, "the manuscript") ]
 
 let box_by_id id = List.find boxes ~f:(fun b -> String.equal b.bx_id id)
 let group_by_id id = List.find groups ~f:(fun g -> String.equal g.gr_id id)
