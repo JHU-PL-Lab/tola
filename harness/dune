@@ -1,0 +1,9 @@
+; The agents' harness: checks of the repository's own text, run with
+; `make harness`. It reads canary's registry and its lists of tests, so it
+; links canary's libraries; canary itself never runs it.
+
+(executable
+ (name harness)
+ (libraries canary_lib canary_project canary_main base stdio fmt)
+ (preprocess
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show)))

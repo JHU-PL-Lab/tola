@@ -35,6 +35,12 @@ canary-test:
 	@echo "=== pm-test (shell) ==="
 	@$(CANARY) pm-test 2>&1 | tail -2
 
+# The agents' harness: the repository's own text against the code and its
+# stated rules. Not canary's; agents run it before committing.
+.PHONY: harness
+harness:
+	@eval $$(opam env) && dune exec harness/harness.exe
+
 # Heavy integration tests — run less frequently, verify full pipeline.
 canary-sqlite:
 	$(CANARY) action sqlite

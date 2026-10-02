@@ -50,98 +50,12 @@ let layout_rules_pin : Canary_project_test.pure_test =
              ~substring:{|id="jrules"|})
   }
 
-(* A rule a test holds names it, so the list cannot point at a renamed
-   check; defined after [base_tests] for that reason. *)
-let layout_rules_explained_pin : Canary_project_test.pure_test =
-  { name = "harness.layout_rules_are_explained";
-    holds = "Every layout rule says what it holds and why, and every rule a test holds names a registered test.";
-    check =
-      (fun () ->
-        let module P = Canary_overview_looks in
-        List.for_all P.layout_rules ~f:(fun r ->
-            (not (String.is_empty r.P.lr_says))
-            && (not (String.is_empty r.P.lr_why))
-            &&
-            match r.P.lr_check with
-            | P.Places _ -> true
-            | P.Pinned_by name ->
-                List.exists base_tests ~f:(fun t -> String.equal t.Canary_project_test.name name)))
-  }
-
-(* A test left out of its subject's [tests] compiles and never runs. The
-   scan reads every test record whose name is a literal; both ways of
-   opening such a record must be found somewhere, so it cannot pass by
-   finding nothing. *)
-let written_pins_run_pin : Canary_project_test.pure_test =
-  { name = "tests.every_written_pin_runs";
-    holds = "Every test written in the test sources is registered, so it runs.";
-    check =
-      (fun () ->
-        let registered =
-          List.map (Canary_project_test.all_tests @ base_tests) ~f:(fun t ->
-              t.Canary_project_test.name)
-        in
-        let written opening src =
-          List.filter_map (String.substr_index_all src ~may_overlap:false ~pattern:opening)
-            ~f:(fun i ->
-              let from = i + String.length opening in
-              Option.bind (String.index_from src from '"') ~f:(fun stop ->
-                  let after =
-                    String.lstrip
-                      (String.sub src ~pos:(stop + 1)
-                         ~len:(Int.min 64 (String.length src - stop - 1)))
-                  in
-                  let next = String.lstrip (String.drop_prefix after 1) in
-                  if
-                    String.is_prefix after ~prefix:";"
-                    && (String.is_prefix next ~prefix:"holds" || String.is_prefix next ~prefix:"check")
-                  then Some (String.sub src ~pos:from ~len:(stop - from))
-                  else None))
-        in
-        let sources =
-          List.map (Canary_test_fixtures.test_sources ()) ~f:(fun p ->
-              Stdlib.In_channel.with_open_bin p Stdlib.In_channel.input_all)
-        in
-        let found =
-          List.map [ {|{ name = "|}; {|{ Canary_project_test.name = "|} ] ~f:(fun opening ->
-              List.concat_map sources ~f:(written opening))
-        in
-        let unrun =
-          List.filter (List.concat found) ~f:(fun n ->
-              not (List.mem registered n ~equal:String.equal))
-        in
-        List.iter unrun ~f:(Fmt.pr "    written, never run: %s@.");
-        List.for_all found ~f:(Fn.non List.is_empty) && List.is_empty unrun)
-  }
-
 (* The suite's own tests read the whole list and are on it, hence [rec]. *)
 let rec suite : Canary_project_test.pure_test list =
-  [ layout_rules_pin; layout_rules_explained_pin; written_pins_run_pin; holds_said_pin;
-    tests_listed_pin ]
+  [ layout_rules_pin; tests_listed_pin ]
 
 and files () : file list =
   (lib_file :: subject_files) @ [ ("the suite itself", "src/canary/main/canary_tests.ml", suite) ]
-
-(* The sentence is what the page lists for the test, so it is one line,
-   ends as a sentence and fits a table cell. *)
-and holds_said_pin : Canary_project_test.pure_test =
-  { name = "tests.every_pin_says_what_it_holds";
-    holds = "Every test states the claim it holds in one sentence.";
-    check =
-      (fun () ->
-        let bad =
-          List.filter
-            (List.concat_map (files ()) ~f:(fun (_, _, ts) -> ts))
-            ~f:(fun t ->
-              let h = t.Canary_project_test.holds in
-              String.is_empty h || String.contains h '\n'
-              || (not (String.is_suffix h ~suffix:"."))
-              || String.length h > 200)
-        in
-        List.iter bad ~f:(fun t ->
-            Fmt.pr "    %s holds %S@." t.Canary_project_test.name t.Canary_project_test.holds);
-        List.is_empty bad)
-  }
 
 (* Each file's block holds exactly its own tests, each with its claim
    after its name, and the table counts them. *)

@@ -382,23 +382,14 @@ let frames_pin : Canary_project_test.pure_test =
   }
 
 (* The one reader of an inspection is
-   [Canary_matrix.reading_of_inspection]. [Canary_overview_runs] names no
-   artifact kind of its own (only the bridge record's, which describes
-   packages), and on fixtures each kind renders its cell, name and count.
-   See design/overview.md §6.4. *)
+   [Canary_matrix.reading_of_inspection]; on fixtures each kind renders
+   its cell, name and count. See design/overview.md §6.4. *)
 let one_reader_pin : Canary_project_test.pure_test =
   { name = "overview.one_reader_per_inspection";
-    holds = "An inspection has one reader, whose reading the table's cell, the diagram's name and the count all render.";
+    holds = "Each kind of inspection reads, through Canary_matrix's reader, into its table cell, its node name and its count.";
     check =
       (fun () ->
         let module M = Canary_matrix in
-        let code =
-          Canary_project_test.code_without_comments "src/canary/main/canary_overview_runs.ml"
-        in
-        let parses_none =
-          List.for_all [ {|"native"|}; {|"c_stub"|}; {|"ocaml"|}; {|"ocaml_mli"|}; {|"python"|} ]
-            ~f:(fun k -> not (String.is_substring code ~substring:k))
-        in
         let read s = M.reading_of_inspection (Yojson.Basic.from_string s) in
         let renders s ~cell ~name ~count =
           match read s with
@@ -408,8 +399,7 @@ let one_reader_pin : Canary_project_test.pure_test =
               && Poly.equal (M.name_text_of_reading r) name
               && Poly.equal (M.count_text_of_reading r) count
         in
-        parses_none
-        && renders
+        renders
              {|{"kind":"native","path":"/usr/lib/x86_64-linux-gnu/libgmp.so",
                 "elf":{"soname":"libgmp.so.10"},"counts":{"total":620}}|}
              ~cell:(Some "so.10 620") ~name:(Some "libgmp.so.10") ~count:(Some "620 exports")
@@ -1403,45 +1393,6 @@ let flow_pin : Canary_project_test.pure_test =
         slots_ok && anchors_ok && sections_ok && geometry_ok)
   }
 
-(* The names §0 gives are real. Figure 1's boxes name tests, so a name
-   must be written in a test source, not a harness one. *)
-let flow_names_pin : Canary_project_test.pure_test =
-  { name = "harness.flow_names_exist";
-    holds = "Every test a box of Figure 1 names is written in the test sources, every make target it names is in the Makefile, and every module §0 names has a source file.";
-    check =
-      (fun () ->
-        let module F = Canary_overview_flow in
-        let tests_src =
-          String.concat
-            (List.map
-               (Canary_test_fixtures.test_sources ()
-               @ [ "src/canary/main/canary_tests.ml"; "src/canary/test/canary_artifact_test.ml";
-                   "src/canary/test/canary_pm_test.ml" ])
-               ~f:(fun p -> Stdlib.In_channel.with_open_bin p Stdlib.In_channel.input_all))
-        in
-        let makefile = Stdlib.In_channel.with_open_bin "Makefile" Stdlib.In_channel.input_all in
-        let held_ok =
-          List.for_all F.boxes ~f:(fun b ->
-              List.for_all b.F.bx_held ~f:(fun h ->
-                  match String.chop_prefix h ~prefix:"make " with
-                  | Some target -> String.is_substring makefile ~substring:("\n" ^ target ^ ":")
-                  | None -> String.is_substring tests_src ~substring:(Printf.sprintf {|"%s"|} h)))
-        in
-        let modules =
-          List.concat_map F.sections ~f:(fun s -> s.F.sc_code)
-          @ List.concat_map F.subjects ~f:(fun s ->
-                List.filter s.F.sj_code.F.ly_from ~f:(String.is_prefix ~prefix:"Canary_"))
-        in
-        let has_source m =
-          List.exists
-            [ "base"; "agreement"; "tool"; "action"; "backend"; "project"; "main"; "test" ]
-            ~f:(fun d ->
-              Stdlib.Sys.file_exists
-                (Printf.sprintf "src/canary/%s/%s.ml" d (String.lowercase m)))
-        in
-        held_ok && List.for_all modules ~f:has_source)
-  }
-
 (* Each exhibit appears once, in list order, captioned with its label and
    title, and §0 lists it; every table on the page, and every drawing (an
    svg with role="img"), is one of them. See design/overview.md §1. *)
@@ -1791,32 +1742,6 @@ let firing_frames_pin : Canary_project_test.pure_test =
             && List.for_all rows ~f:(fun r ->
                    List.equal Int.equal (List.take (seps r) n) (List.take (seps head) n))
         | _ -> false)
-  }
-
-let one_escaper_pin : Canary_project_test.pure_test =
-  { name = "overview.one_escaper";
-    holds = "Every overview module that defines esc binds it to the one shared escaper, which escapes quotes.";
-    check =
-      (fun () ->
-        let dir = "src/canary/main" in
-        let writers =
-          Stdlib.Sys.readdir dir |> Array.to_list
-          |> List.filter ~f:(fun f ->
-                 String.is_suffix f ~suffix:".ml"
-                 && (String.is_prefix f ~prefix:"canary_overview_"
-                    || String.equal f "canary_agreement_overview.ml")
-                 && not (String.equal f "canary_overview_assets.ml"))
-        in
-        List.length writers > 5
-        && List.for_all writers ~f:(fun f ->
-               let src =
-                 Stdlib.In_channel.with_open_bin (Stdlib.Filename.concat dir f)
-                   Stdlib.In_channel.input_all
-               in
-               List.for_all (String.substr_index_all src ~may_overlap:false ~pattern:"let esc")
-                 ~f:(fun i ->
-                   String.is_substring_at src ~pos:i ~substring:"let esc = Canary_overview_assets.esc"))
-        && String.is_substring (Canary_overview_assets.esc {|a"b|}) ~substring:"&quot;")
   }
 
 (* §1.2's cells are computed once, in [Canary_overview_results.cells]. A
@@ -3316,8 +3241,7 @@ let tests : Canary_project_test.pure_test list =
     overlay_words_pin; bridge_record_pin; placeholder_badges_pin; coverage_tables_pin;
     package_band_pin; chain_choices_pin; chain_absence_pin; drawn_line_sources_pin;
     badge_counts_pin; agreements_sit_pin; edge_marks_pin; visual_vocabulary_pin; flow_pin;
-    flow_names_pin;
     exhibits_pin; exhibits_export_pin; choice_resolved_pin; result_cells_pin;
-    one_escaper_pin; every_machine_pin; firing_frames_pin; outcome_marks_pin;
+    every_machine_pin; firing_frames_pin; outcome_marks_pin;
     agreement_laws_pin; mechanism_claims_pin; check_index_language_pin;
     applicability_reads_declaration_pin ]
