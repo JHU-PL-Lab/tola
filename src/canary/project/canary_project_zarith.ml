@@ -1,7 +1,9 @@
-(* Project: zarith — Pattern A (system libgmp + opam zarith binding).
-   25 reverse deps in opam (most-used Pattern A; classic A-shape benchmark).
-   Spec is a thin declaration over canary_pattern_a; the real shape is in
-   canary_pattern_a.runner_spec. *)
+(* Project: zarith — the system's libgmp under the opam zarith binding,
+   through the opam-binding template.
+   25 reverse deps in opam (the most-used binding over a system C library
+   via `conf-*`; the classic benchmark of that shape).
+   Spec is a thin declaration over [Canary_opam_binding]; the real shape
+   is in [Canary_opam_binding.runner_spec]. *)
 
 (* The C API declaration (2026-08-13, spec-check fulfillment): the native
    surface is GMP (system libgmp-dev — headers come from the -dev package,
@@ -131,7 +133,7 @@ let gmp_source_master : Canary_artifact_source.source_repo =
 
 (* The wrapper decl (2026-08-17, active plan 2): renders the committed
    canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam.in
-   byte-equal (pinned in the layer tests) — the pattern's Publish step
+   byte-equal (tested by the layer tests) — the pattern's Publish step
    installs this package over the scenario's worktree. *)
 let zarith_wrapper_decl : Canary_opam_template.wrapper_decl = {
   pkg = "zarith-no-conf";
@@ -250,7 +252,7 @@ let zarith_binding_decls : Canary_binding_decl.binding_decl list =
       (* one source: the gate declared on [decl] above *)
       pm_gate = Some decl.Canary_opam_binding.pm_gate } ]
 
-(* Registry entry: Pattern A's typed artifact table + the template's
+(* Registry entry: the opam-binding template's typed artifact table + its
    runner_spec (C1: TWO scenarios — source@release-1.14 and source@master,
    each over the stable lib + binding, Fetched). *)
 let zarith_run : Canary_project_run.project_run =

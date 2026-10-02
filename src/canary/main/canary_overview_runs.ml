@@ -5,7 +5,7 @@
     is drawn on it by giving each edge a state, each claim badge an
     outcome and a few nodes a sublabel. Nothing is drawn here. This
     computes, per recorded world and binding language, the words the
-    page's script applies — so every rule stays in OCaml, where the pins
+    page's script applies — so every rule stays in OCaml, where the tests
     can hold it — and writes them to a per-machine file beside the page.
 
     A FILE, NOT THE PAGE. [overview_runs.js] adds to a global that the
@@ -251,7 +251,7 @@ let jstrs j k =
    relations it does not perform: the depext table, the packager's file,
    pkg-config's answer. Those edges read [not_ours] in a world that
    recorded nothing and [observed] in one that did, with what was seen.
-   Pure over the record, so a fixture pins every sentence. *)
+   Pure over the record, so every sentence is tested on a fixture. *)
 
 let first_capability (j : Yojson.Basic.t) : Yojson.Basic.t option =
   match jfield j "capability" with Some (`List (c :: _)) -> Some c | _ -> None
@@ -930,8 +930,8 @@ let views ?root (m : M.t) : view list =
    THE COMPARISON LEFT THE PAGE on 2026-09-24 (user: §1 draws the generic
    chain and the concrete ones, so §2's drawings and §2.1's recorded
    copies of them went, their notes merged into §1). The hand-drawn cases
-   stay as DATA — the oracle the pins hold the derivations to — and this
-   mapping is how those pins find the world each case stands for. *)
+   stay as DATA — the oracle the tests hold the derivations to — and this
+   mapping is how those tests find the world each case stands for. *)
 
 let provision_of_kind (a : Canary_artifact.assignment)
     (k : Canary_basic.artifact_kind) : Canary_store.provision option =

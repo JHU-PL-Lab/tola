@@ -4,7 +4,7 @@
    canary/templates/opam-local-repo/ differ only in the build body
    (cmake+ninja / cmake / configure+make) + metadata; the skeleton is
    common. The rendered files stay COMMITTED (the repo remains
-   standalone-usable); the pin [tool.opam_template_render] asserts the
+   standalone-usable); the test [tool.opam_template_render] asserts the
    renderer reproduces zarith-no-conf's committed file byte-equal —
    the M2 byte-equal discipline. z3.dev's working .tpl flow migrates
    to this renderer later (the playbook's refactor plan,

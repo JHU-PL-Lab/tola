@@ -16,7 +16,7 @@
 open Base
 open Canary_agreement_common
 
-(** The families this composes — DECLARED, so the layering pin can tell
+(** The families this composes — DECLARED, so the layering harness check can tell
     a composition from a family that reached sideways by accident. A
     module that publishes [checks] and no [composes] is a family, and
     families may not name each other; this one says what it is. *)

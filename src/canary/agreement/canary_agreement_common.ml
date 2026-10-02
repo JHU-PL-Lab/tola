@@ -4,8 +4,8 @@
     declares the common types; each [canary_agreement_<topic>] is one concrete
     family that uses those types to describe ITSELF; and
     [Canary_agreement] lists the families and derives the views
-    others read. A family refers only to this module — pinned by
-    [agreements.families_do_not_reach_sideways].
+    others read. A family refers only to this module — checked by the
+    harness check [agreements.families_do_not_reach_sideways].
 
     {1 What an agreement is for: recovering agreement after information loss}
 
@@ -954,7 +954,8 @@ let string_of_agreement_id = function
   | Repack_complete -> "repack_complete"
 
 (** Every id, in catalogue order. Total by construction — a new
-    agreement that is not added here fails [agreements.ids_are_total]. *)
+    agreement that is not added here fails
+    [agreements.families_declare_the_catalogue]. *)
 let all_agreement_ids =
   [ Declared_symbols_exported; Required_symbols_exported; Api_names_present;
     Behavior_matches; Soname_matches_declaration; Soname_matches_requirement;
@@ -1262,7 +1263,7 @@ type rooting = {
           but a column has to pick, and picking consistently is what
           lets the two columns be read together.
 
-          Pinned by [agreements.rooting_names_an_action]. *)
+          Tested by [agreements.rooting_names_an_action]. *)
   rt_tool : string;      (** what enforced it when it ran *)
   rt_artifact : string;
       (** what the rule is about — and where the action alone would
@@ -1336,10 +1337,10 @@ let string_of_slot ((a, s) : Canary_basic.action * stage) : string =
 
     DERIVED, not declared, so it cannot drift from the name. The risk
     of deriving is collision, which is why
-    [agreements.short_codes_are_unique] pins it: two agreements sharing
+    [agreements.short_codes_are_unique] tests it: two agreements sharing
     a code would make one column silently stand for the other, and the
     thirteen happen to be distinct. A future name that collides fails
-    the pin rather than the reader. *)
+    the test rather than the reader. *)
 let short_code_of_slug (slug : string) : string =
   String.split slug ~on:'_'
   |> List.filter_map ~f:(fun w ->
@@ -1443,7 +1444,7 @@ type agreement = {
 
 (** Build a method. [eval] omitted ⇒ planned, and [planned] is then
     required to say why (an empty reason is a programming error the
-    registry pin catches). *)
+    registry test catches). *)
 let always_applicable _ _ _ = Applicable
 
 let checking_method ~name ~kind ~reference ?(applicable = always_applicable)

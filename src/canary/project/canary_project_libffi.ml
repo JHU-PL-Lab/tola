@@ -1,4 +1,5 @@
-(* Project: libffi — Pattern A (system libffi + opam ctypes-foreign binding).
+(* Project: libffi — the system's libffi under the opam ctypes-foreign
+   binding, through the opam-binding template ([Canary_opam_binding]).
    First project on the Dynamic_ffi mechanism (ctypes resolves and calls C
    functions at RUNTIME via libffi) — zarith/cairo/ssl are all Static_c_abi.
    Positive-only (Level A): the binding compiles and a dynamic call
@@ -137,6 +138,6 @@ let decl : Canary_opam_binding.t =
 
 let runner_spec = Canary_opam_binding.runner_spec decl
 
-(* Registry entry: Pattern A's typed artifact table + the template's
+(* Registry entry: the opam-binding template's typed artifact table + its
    runner_spec (single scenario: source + lib + binding Fetched@Stable). *)
 let libffi_run : Canary_project_run.project_run = Canary_opam_binding.run decl

@@ -4,7 +4,7 @@
     per-language modules). Four families read it — symbols, api_surface,
     identity, types — so it has to sit below all of them, and it
     publishes no [checks], which is exactly what the family-detection
-    rule keys on. Nothing about the pins changes to accommodate it.
+    rule keys on. Nothing about the harness checks changes to accommodate it.
 
     THE SPLIT IT MAKES. A family states a CLAIM; this states the
     EVIDENCE that claim reads when the consumer is OCaml. The two vary

@@ -370,7 +370,8 @@ let required_symbols_exported : agreement =
         ();
     (* PRE: the link can only succeed if the lib defines them. Falls
        through to the probe where the binding is fetched rather than
-       built, which is every Pattern A project and sqlite. *)
+       built, which is every project on the opam-binding template, and
+       sqlite. *)
     ag_slot = before_binding;
     ag_fault_tag = "sym_missing";
     ag_methods =
@@ -445,7 +446,7 @@ let required_symbols_exported : agreement =
           () ] }
 
 (** Every agreement this family owns. The registry gathers these; the
-    module pattern pin keys on the binding's presence. *)
+    module pattern test keys on the binding's presence. *)
 let checks : (agreement_id * agreement) list =
   [ (Declared_symbols_exported, declared_symbols_exported);
     (Required_symbols_exported, required_symbols_exported) ]

@@ -48,7 +48,7 @@ open Canary_agreement_common
 
 (** Every agreement every family declares. A family publishes
     [checks : (agreement_id * agreement) list]; this concatenates them,
-    and [agreements.ids_are_total] pins that the union covers
+    and [agreements.families_declare_the_catalogue] tests that the union covers
     [all_agreement_ids] exactly once each. *)
 (* The gathering, BY MODULE (2026-09-17). It used to be one flat
    [List.concat] of seven [checks] lists, which threw away the only fact
@@ -113,8 +113,8 @@ type agreement_row = {
   ag_doc : string;
       (** the anchor in doc/canary/design/agreement/components.md —
           where an agreement's RATIONALE lives, as against
-          [catalogue.md] which says what it is. Pinned by
-          [agreements.doc_anchors_exist], so the numbering over there is
+          [catalogue.md] which says what it is. Checked by the harness
+          check [agreements.doc_anchors_exist], so the numbering over there is
           load-bearing. The registry's to give: a fact about the
           DOCUMENT, not about the agreement.
 
@@ -154,8 +154,8 @@ type agreement_row = {
 
           It is NOT the landed/not split. That is a fact about run
           LOGS, and the catalogue is generated from code alone — if it
-          read logs it would change whenever anything ran and its pin
-          would fail. `canary checks --landing` is the live answer;
+          read logs it would change whenever anything ran and its harness
+          check would fail. `canary checks --landing` is the live answer;
           this says what is in the way. *)
   ag_enabled : bool;
       (** switched on for this build. NOT an implementation status —
@@ -650,7 +650,7 @@ let agreements_for ~(mechanism : Canary_mechanism.mechanism)
    Each family ships its own (on the method that owns them); this is
    the flat view the layer tests iterate. They execute hermetically —
    no project run — so a new agreement lands WITH its counterexample
-   and a changed evaluator breaks the pin. *)
+   and a changed evaluator breaks the test. *)
 
 let agreement_fixtures : (agreement_id * checking_method * fixture) list =
   List.concat_map agreement_registry ~f:(fun r ->
@@ -1782,7 +1782,7 @@ let fill_list ?(mechanism = Canary_mechanism.Cstubs)
 
    These carry no methods — there is nothing to select or evaluate —
    so they are a separate list that [all_agreements] unions with the
-   implemented rows for display and pinning. *)
+   implemented rows for display and testing. *)
 
 (** WHY A PROPOSAL HAS NO ROW IN THE AGREEMENT OVERVIEW (2026-09-17,
     user: "I am thinking if we can group the agreement out-of-table in
@@ -1797,7 +1797,7 @@ let fill_list ?(mechanism = Canary_mechanism.Cstubs)
     documents.
 
     So the reason is DATA now, and the grouping is generated from it.
-    Pinned against the theory doc by
+    Checked against the theory doc by the harness check
     [agreements.theory_names_the_frame_exclusions] — the model and the
     registry must name the same exclusions, or one of them is lying. *)
 type frame_fit =
@@ -2167,7 +2167,7 @@ let proposed_agreements : proposed list =
          (components.md §5.6)";
       prop_frame = In_frame } ]
 
-(* ── the unified view — one list to print, cite and pin ──────────── *)
+(* ── the unified view — one list to print, cite and test ─────────── *)
 
 type entry = {
   e_slug : string;
@@ -2724,8 +2724,9 @@ let pp_todo_table_md () : string =
 
    A rule belongs here when it relates two cells of ONE row. Facts about
    a single cell (does this function exist, is this doc anchor real) are
-   ordinary pins; facts across rows (is a claim's target count stable)
-   are too. This list is for "these two columns must agree". *)
+   ordinary harness checks; facts across rows (is a claim's target count
+   stable) are ordinary tests. This list is for "these two columns must
+   agree". *)
 
 type row_rule = {
   rr_name : string;
@@ -3108,8 +3109,9 @@ let pp_row_audit () : string =
     List.iter bad ~f:(fun (n, c) -> add "  [%s] %s\n" n c));
   add
     "\nA law relates two CELLS of one row. Single-cell facts (does this \n\
-     function exist, does this anchor resolve) are ordinary pins; so are \n\
-     facts across rows. Add one to `row_rules` and it is enforced.\n";
+     function exist, does this anchor resolve) are ordinary harness checks, \n\
+     and facts across rows ordinary tests. Add one to `row_rules` and it is \n\
+     enforced.\n";
   Buffer.contents b
 
 (** THE CANDIDATE TABLE (2026-09-17, user: "I didn't see the rows for

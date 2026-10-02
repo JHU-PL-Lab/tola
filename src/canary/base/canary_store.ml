@@ -346,7 +346,7 @@ let detect_pm () = system_pm_of_platform (platform ())
    machine" — [distro_base] is a per-machine home — so the default
    follows it: the WSL box has the dedicated [canary] switch built for it
    and keeps it; the mac has no such switch and runs in whatever is
-   ambient. The three properties the mechanism was pinned on are
+   ambient. The three properties the mechanism was tested on are
    untouched — an explicit [--switch=NAME] / [CANARY_SWITCH] still wins,
    the switch is still in the step fingerprint, and the run header still
    names it, so the per-machine difference is VISIBLE rather than
@@ -368,12 +368,12 @@ let detect_pm () = system_pm_of_platform (platform ())
    what platform to render is a fact about the request.
 
    Stated honestly: that distinction is not OBSERVABLE today, so no test
-   pins it. The lazy is forced by [opam_switch] below, at module
+   checks it. The lazy is forced by [opam_switch] below, at module
    initialization — before the CLI has parsed anything — so [platform ()]
    would return the detected value anyway and memoize it. The two spell
    the same answer, and only one of them stays right if this is ever
    forced later. [default_switch_of] is the falsifiable half: the mapping
-   itself, pinned in [platform.single_source]. *)
+   itself, tested in [platform.single_source]. *)
 let default_switch_of : distro -> string option = function
   | MacOS_local -> None (* no dedicated switch there — run ambient *)
   | Wsl -> Some "canary"

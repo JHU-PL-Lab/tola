@@ -53,7 +53,7 @@ let all_projects : (string * Canary_project_run.project_run) list =
     doc/canary/design/enumeration/stage5_order_worlds.md §3).
 
     Muting must not be able to hide drift, so the catalogue exists
-    separately: pins assert that the active names are a SUBSET of this
+    separately: tests assert that the active names are a SUBSET of this
     list (an unknown name is still an error) and that every project named
     here still has a well-formed spec, active or not. What muting
     suppresses is running it, not checking it. *)

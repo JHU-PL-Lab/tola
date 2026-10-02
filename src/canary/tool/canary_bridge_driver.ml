@@ -58,7 +58,7 @@ let sys_pm_queries (pm : Canary_store.package_manager) : (string * string) optio
 (** THE QUESTIONS a bridge record asks, each a shell command, with [{}]
     where a name or a path goes. {!record_cmd} fills them from the
     package managers' drivers; a framework test fills them with fixtures,
-    which is how the script is pinned without depending on what a machine
+    which is how the script is tested without depending on what a machine
     has installed. *)
 type questions = {
   q_installed : string;  (** the bridge's installed version *)

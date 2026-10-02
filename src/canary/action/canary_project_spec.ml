@@ -20,7 +20,7 @@ open Canary_artifact
     provisions — sqlite's lib declared [Sys_pkg libsqlite3-dev] beside a
     universe of {Fetched, Built, Installed}, where the package explains
     only the Fetched case. Keeping them consistent needed a rule ("the
-    provider's provision is a BASELINE") and a per-project pin.
+    provider's provision is a BASELINE") and a per-project test.
 
     Now [~universe] carries a {!Canary_store_config.provision_spec} per
     entry, each stating its own origin, and everything else is DERIVED

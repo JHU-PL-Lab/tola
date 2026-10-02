@@ -66,7 +66,7 @@ let of_action : Canary_basic.action -> t = function
   | Canary_basic.Probe_app _ -> Probe_app
 
 (** The action's own spelling ({!Canary_basic.string_of_action}) with the
-    language suffix dropped — pinned against it, so the two cannot come
+    language suffix dropped — tested against it, so the two cannot come
     to spell one action two ways. *)
 let to_string : t -> string = function
   | Configure -> "configure"

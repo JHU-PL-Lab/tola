@@ -288,7 +288,7 @@ is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
     (Canary_overview_draw.lines_table (opening j))
     (* the layout's rules, as a redraw must keep them *)
     (Printf.sprintf
-       {|<details class="jprov" id="jrules"><summary>How this diagram is laid out — %d rules a redraw in any framework must keep</summary><ol class="lrules">%s</ol><p class="mechnote">Each is held against these places by <code>overview.layout_rules_hold</code>, or by the pin it names; the looks are the keys'.</p></details>|}
+       {|<details class="jprov" id="jrules"><summary>How this diagram is laid out — %d rules a redraw in any framework must keep</summary><ol class="lrules">%s</ol><p class="mechnote">Each is held against these places by <code>overview.layout_rules_hold</code>, or by the test it names; the looks are the keys'.</p></details>|}
        (List.length L.layout_rules)
        (String.concat
           (List.map L.layout_rules ~f:(fun r ->

@@ -984,7 +984,7 @@ let check_api_consistency (spec : runner_spec) =
    [consumes_of_action] / [produces_of_action] are the typed catalogue —
    [Fetch Source] produces [Source]; [Configure], [Scan_sources],
    [Build_headers] and [Build_lib] consume it — and that relation is
-   declared and pinned ([consumes_produces.*] in [canary project-test]).
+   declared and tested ([consumes_produces.*] in [canary project-test]).
 
    WHY NOT the general version. The first cut classified every step as an
    "obligation" or not and closed over [step.deps] in both directions. It

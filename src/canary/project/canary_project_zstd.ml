@@ -1,4 +1,5 @@
-(* Project: zstd — Pattern A (system libzstd + the opam `zstd` binding).
+(* Project: zstd — the system's libzstd under the opam `zstd` binding,
+   through the opam-binding template ([Canary_opam_binding]).
 
    WHY, AND WHY SECOND (2026-08-20). The conf-* survey ranked it #2
    behind zlib (surveys/conf_packages.md §G5): the same declaration-only

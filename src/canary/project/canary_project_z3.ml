@@ -515,7 +515,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
      user), keyed on the ref's IDENTITY id. Why per-ref matters beyond
      tidiness: a SHARED prefix let the fork's staged OCaml package satisfy
      the pre-10549 world's staged probe, which would have silenced the
-     #10549 xfail. Pinned: [z3.install_prefix_isolated]. *)
+     #10549 xfail. Tested by [z3.install_prefix_isolated]. *)
   let shared =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
         ar_template = Fetch_lib { linux_pkg = "libz3-dev"; macos_pkg = "z3" } };

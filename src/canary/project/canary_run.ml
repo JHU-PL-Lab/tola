@@ -62,7 +62,8 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"sqlite"
           (no_source (Canary_project_sqlite.sqlite_ci_spec ~workspace:"sqlite_ci"))) };
-    (* zarith: classic Pattern A — apt libgmp-dev + opam zarith binding *)
+    (* zarith: the opam-binding template's classic case — apt libgmp-dev +
+       opam zarith binding *)
     { id = "zarith";
       name = "zarith — fetch + probe";
       project = "zarith";
@@ -71,8 +72,9 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"zarith"
           (no_source Canary_project_zarith.runner_spec)) };
-    (* ssl: Pattern A second datapoint — apt libssl-dev + opam ssl binding;
-       libssl/libcrypto symbol watchlist surfaces OpenSSL 1.x→3.x drift. *)
+    (* ssl: the opam-binding template's second datapoint — apt libssl-dev +
+       opam ssl binding; libssl/libcrypto symbol watchlist surfaces
+       OpenSSL 1.x→3.x drift. *)
     { id = "ssl";
       name = "ssl — fetch + probe";
       project = "ssl";
@@ -81,7 +83,8 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"ssl"
           (no_source Canary_project_ssl.ci_spec)) };
-    (* cairo: Pattern A graphics — apt libcairo2-dev + opam cairo2 binding.
+    (* cairo: a graphics lib through the opam-binding template — apt
+       libcairo2-dev + opam cairo2 binding.
        First new project on the post-redesign machinery (Derived fetch_lib). *)
     { id = "cairo";
       name = "cairo — fetch + probe";
@@ -91,7 +94,8 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"cairo"
           (no_source Canary_project_cairo.runner_spec)) };
-    (* libffi: Pattern A — apt libffi-dev + opam ctypes-foreign binding.
+    (* libffi: through the opam-binding template — apt libffi-dev + opam
+       ctypes-foreign binding.
        First Dynamic_ffi project (ctypes resolves C calls at runtime). *)
     { id = "libffi";
       name = "libffi — fetch + probe";

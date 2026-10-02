@@ -1382,7 +1382,7 @@ let canary_expected_of (entry : scenario_spec) : canary_expected =
 
    Fault tags: the AGREEMENT'S own tag, read from the registry rather
    than restated here (2026-09-12). It was a second copy of the same
-   table, and the registry pin checks that table, so a drift between
+   table, and the registry test checks that table, so a drift between
    the two would have been green on both sides. *)
 
 (** Concise fault tag for an agreement — the registry's [ag_fault_tag]. *)
@@ -2191,8 +2191,8 @@ let make_base_runner_spec
   (* ── binding realization (M2 step 4, step 3) ── the four binding
      fields below derive from the typed declarations above via
      [Canary_binding_templates]: decl facts become commands, the stores
-     stay ctx. Pinned byte-equal to the former hand-written literals
-     ([tiny_binding_realization_pin]). *)
+     stay ctx. Tested to be byte-equal to the former hand-written literals
+     ([tiny_binding_realization_test]). *)
   let decl_of mech =
     List.find tiny_binding_decls ~f:(fun (d : Canary_binding_decl.binding_decl) ->
       Poly.equal d.mechanism mech)

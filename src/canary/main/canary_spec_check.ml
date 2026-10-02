@@ -17,9 +17,9 @@
    - tiny-full declares its api_source on [project_run.pr_api_source]
      (its source row is Vendored, not repo-carried) and is exempt from the
      reporting-oriented checks (in-tree witness).
-   (The 2026-08-13 fulfillment round closed the others: pattern-A gained
-   typed rows via [Canary_opam_binding.artifacts]; sqlite wired a source row +
-   api_source; ssl declared the openssl repo.)
+   (The 2026-08-13 fulfillment round closed the others: the opam-binding
+   template's projects gained typed rows via [Canary_opam_binding.artifacts];
+   sqlite wired a source row + api_source; ssl declared the openssl repo.)
 
    Severity: Error = severe (blocks the report workflow — cannot run many
    tests / cannot fix / cannot report); Warn = nice-to-have missing. *)
@@ -59,7 +59,8 @@ let summary (r : report) : string =
 
 (* tiny-full: the in-tree witness — exempt from the reporting-oriented
    checks (github remote, opam package). Name-based: a provider-shape
-   heuristic would wrongly exempt pattern-A projects (no providers at all). *)
+   heuristic would wrongly exempt the opam-binding template's projects (no
+   providers at all). *)
 let is_in_tree_witness (pr : Canary_project_run.project_run) : bool =
   String.equal pr.pr_name "tiny-full"
 

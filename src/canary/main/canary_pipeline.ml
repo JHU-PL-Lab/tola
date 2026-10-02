@@ -93,7 +93,7 @@ let worlds (pr : project_run) : Canary_artifact.assignment list =
      implementations — [enumerate] (via [enumerate_product]) and
      [enumerate_follows_tree] (via [patterns_of], which is what
      [scenarios_of] and therefore the RUNNER use). Building [worlds] on
-     the other one made this function a third opinion; the pin
+     the other one made this function a third opinion; the test
      [select.full_policy_selects_everything] caught it immediately.
 
      They agree on content. What differs is the ORDER of the pairs

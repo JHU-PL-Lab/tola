@@ -1,10 +1,12 @@
-(* Project: cairo — Pattern A (system libcairo + opam cairo2 binding).
+(* Project: cairo — the system's libcairo under the opam cairo2 binding,
+   through the opam-binding template.
    4 reverse deps in opam; conf-cairo → cairo2 is the canonical graphics
-   Pattern A. Spec is a thin declaration over canary_pattern_a; the real
-   shape is in canary_pattern_a.runner_spec.
+   binding over a system C library via `conf-*`. Spec is a thin
+   declaration over [Canary_opam_binding]; the real shape is in
+   [Canary_opam_binding.runner_spec].
 
    First new-from-survey project onboarded on the post-redesign machinery
-   (store_config / Derived fetch_lib via pattern_a). Positive-only
+   (store_config / Derived fetch_lib via [Canary_opam_binding]). Positive-only
    (Level A): the binding compiles + a trivial draw round-trips.
 
    freetype is a cairo depopt (glyph rendering); skipped — the core
@@ -129,6 +131,6 @@ let decl : Canary_opam_binding.t = {
 
 let runner_spec = Canary_opam_binding.runner_spec decl
 
-(* Registry entry: Pattern A's typed artifact table + the template's
+(* Registry entry: the opam-binding template's typed artifact table + its
    runner_spec (single scenario: source + lib + binding Fetched@Stable). *)
 let cairo_run : Canary_project_run.project_run = Canary_opam_binding.run decl

@@ -686,7 +686,7 @@ let selection_of_policy (p : 'm policy) : selection =
     before a run narrows it. Pairs with {!select}: for the policies that
     actually reach {!enumerate},
     [enumerate ~policy = select (selection_of_policy policy) ∘
-     enumerate ~policy:(unselected policy)]. Pinned by
+     enumerate ~policy:(unselected policy)]. Tested by
     [select.thin_post_filter_equals_universe_restriction]. *)
 let unselected (p : 'm policy) : 'm policy =
   { p with config = { p.config with version = Full; refs = All_refs } }
@@ -736,8 +736,8 @@ let enumerate_product ~(tag : 'm -> string) ~(policy : 'm policy)
   assignments |> shadow_filter
 
 (** STAGE 2 then 2.5: the worlds, then the selection a run asked for.
-    Split 2026-08-24 (stage 2 Attribution); the composition is pinned
-    equal to the old single pass by
+    Split 2026-08-24 (stage 2 Attribution); the composition is tested
+    to equal the old single pass by
     [select.thin_post_filter_equals_universe_restriction]. *)
 let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
     assignment list =

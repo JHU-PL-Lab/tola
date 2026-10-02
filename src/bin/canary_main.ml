@@ -996,7 +996,7 @@ let spec_check_cmd =
        CHECKING command and muting a project removes it from the RUN set,
        not from the audit — the same rule [spec_check.ratchet_current]
        already states and `emit` already follows. Before this, `spec-check
-       z3` answered "usage:" while the pin happily audited z3, so the
+       z3` answered "usage:" while the test happily audited z3, so the
        project with the richest matrix was the one a human could not
        dump. *)
     match proj with
@@ -1337,7 +1337,7 @@ let project_test_cmd =
     (Cmd.info "project-test"
        ~doc:
          "Test project-definition layers (action consumes/produces, detection \
-          inventory) + live project-spec pins (z3) — pure, hermetic, no \
+          inventory) + live project-spec tests (z3) — pure, hermetic, no \
           PM/build.")
     (term_of (fun () ->
          let ok =

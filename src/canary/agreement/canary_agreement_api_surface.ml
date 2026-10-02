@@ -66,7 +66,7 @@ let api_names_diagnostics o = List.concat_map (findings_of_outcome o) ~f:name_va
 
 (* ── the repacking relation ── *)
 
-(** Result type for the name-based repacking helper. It pins the
+(** Result type for the name-based repacking helper. It checks the
     stub-facing layer against the user-facing one within a single
     binding — every user-facing name should correspond to a stub-facing
     name (modulo declared renames), and vice versa. *)

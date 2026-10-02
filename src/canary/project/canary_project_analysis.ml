@@ -17,7 +17,7 @@
     Python probe reported that nothing fires there while the result
     table carried five Python check columns and the run log had decided
     [api_names_present] on that step twelve times. Three views of one
-    project, two answers. A pin now stops that instance. One value stops
+    project, two answers. A test now stops that instance. One value stops
     the class, which is what this is for.
 
     WHAT BELONGS HERE, and the rule is sharp: a fact that needs no

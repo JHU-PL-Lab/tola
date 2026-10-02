@@ -94,7 +94,7 @@ type provider =
     where the package explains only the Fetched case. The Built one comes
     from source and the Installed one from the Built one, and neither has
     anything to do with apt. That forced a special rule — "the provider's
-    provision is a BASELINE, not the whole truth" — plus a pin per
+    provision is a BASELINE, not the whole truth" — plus a test per
     project to stop the two declarations drifting.
 
     Here each admissible provision states its own origin, so there is
@@ -210,8 +210,9 @@ let provision_of_provider : provider -> Canary_store.provision = function
     outside the run entirely (an initial node in the graph view).
 
     Dual of [Canary_enumerate.provision_of_actions] (which reads the
-    provision back off a variant's action set); the projects-test pins the
-    two consistent through [provision_of_provider] so they cannot drift. *)
+    provision back off a variant's action set); the projects-test tests
+    that the two are consistent through [provision_of_provider] so they
+    cannot drift. *)
 let providing_action_of ~(provision : Canary_store.provision)
     (k : Canary_basic.artifact_kind) (p : provider) : Canary_basic.action option =
   match p with

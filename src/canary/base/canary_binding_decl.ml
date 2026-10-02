@@ -142,11 +142,12 @@ type pm_dep_gate =
           a wrapper package that drops the conf dependency. *)
   | Pinned_depext of { depext : string; bound : string }
       (** the package declares its own depext with a version bound (no
-          conf indirection) — Pattern B, e.g. torch's libtorch range. *)
+          conf indirection) — the survey's Pattern B
+          (doc/canary/surveys/opam.md §2), e.g. torch's libtorch range. *)
   | Package_builds_lib
-      (** the opam package builds the C lib itself (Pattern C — opam
-          [z3]). There is no pairing to force: the lib IS the package's
-          build output. *)
+      (** the opam package builds the C lib itself, as opam [z3] does (the
+          survey's Pattern C, doc/canary/surveys/opam.md §2). There is no
+          pairing to force: the lib IS the package's build output. *)
   | Bundled of string
       (** the package ships a prebuilt lib inside it (the z3-solver
           wheel, llvmlite). Same: no pairing to force. *)

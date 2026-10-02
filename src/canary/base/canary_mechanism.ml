@@ -132,8 +132,8 @@ let mechanism_of_lang_exn (l : Canary_lang.lang) : mechanism =
 open Base
 
 (** Structured per-mechanism facts. [discipline] is stored AND derivable
-    ([discipline_of_mechanism]) — the project-test pins them equal so the
-    catalogue cannot drift from the vocabulary. *)
+    ([discipline_of_mechanism]) — the project-test tests that they are
+    equal so the catalogue cannot drift from the vocabulary. *)
 type mechanism_info = {
   mi_mechanism : mechanism;
   mi_lang : Canary_lang.lang;
@@ -256,7 +256,7 @@ let mechanism_catalogue : mechanism_info list =
       mi_exposes_typed_stub = false };
   ]
 
-(** Catalogue lookup — total over the [mechanism] constructors (pinned by
+(** Catalogue lookup — total over the [mechanism] constructors (tested by
     the project-test, together with discipline consistency). *)
 let info_of_mechanism (m : mechanism) : mechanism_info =
   match
@@ -264,8 +264,8 @@ let info_of_mechanism (m : mechanism) : mechanism_info =
   with
   | Some i -> i
   | None ->
-      (* unreachable while the totality pin holds *)
-      (* unreachable while the totality pin holds; the decidable fields
+      (* unreachable while the totality test holds *)
+      (* unreachable while the totality test holds; the decidable fields
          answer NO so an uncatalogued mechanism claims nothing *)
       { mi_mechanism = m; mi_lang = Canary_lang.OCaml;
         mi_discipline = discipline_of_mechanism m;

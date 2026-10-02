@@ -16,8 +16,8 @@
     the facts/analysis split).
 
     No behavior change: for tiny the emitted strings are byte-equal
-    to the former hand-written literals (pinned by
-    [tiny_binding_realization_pin] in canary_test_projects.ml). *)
+    to the former hand-written literals (tested by
+    [tiny_binding_realization_test] in canary_test_projects.ml). *)
 
 open Base
 

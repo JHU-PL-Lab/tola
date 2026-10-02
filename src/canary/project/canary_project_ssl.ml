@@ -3,7 +3,8 @@
    STORE PINS on 2026-08-12 (the `Multi` registry hack retired — ssl is a
    plain [project_run] like every other project).
 
-   2 binding versions × 2 apps on a fast Pattern-A lib (no source build):
+   2 binding versions × 2 apps on a fast lib from the system package
+   manager (no source build):
 
                     ssl 0.6.0        ssl 0.7.0
      app_core       ✓ success        ✓ success      (core TLS-context API, both)
@@ -106,7 +107,8 @@ let libssl_spec : Canary_store.system_package_spec =
     version_tag = None; locator_hint = None;
     behavior = Canary_store.Stateful_global }
 
-(* Native-lib symbol probe, folded from the retired pattern_a ssl. *)
+(* Native-lib symbol probe, folded from ssl's retired declaration on the
+   opam-binding template ([Canary_opam_binding]). *)
 let ssl_lib_locator : Canary_opam_binding.lib_locator =
   { linux_glob = "/usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.*";
     brew_pkg = "openssl@3";
@@ -293,7 +295,8 @@ let realize (a : Canary_artifact.assignment) : SB.runner_spec =
       | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml) ->
           Some (SB.pin_check_post ~pkg:"ssl" ~pin ~marker:"binding.ok")
       | _ -> None);
-    (* Native-lib symbol probe (folded from pattern_a ssl). *)
+    (* Native-lib symbol probe (folded from ssl's retired declaration on
+       the opam-binding template). *)
     probe_lib =
       [ (Canary_store.Pm (Canary_store.Sys_pm { pm = pm () }),
          fun ~output_dir ~variant_key ->
@@ -403,7 +406,8 @@ let mk_variant ~version ~vkey ~(app : app) : string * SB.runner_spec =
       (* Binding version dimension: install the pinned ssl version. *)
       fetch_binding =
         [ (Canary_lang.OCaml, SB.Raw (SB.fetch_binding_cmd opam_spec)) ];
-      (* Native-lib symbol probe (folded from pattern_a ssl). *)
+      (* Native-lib symbol probe (folded from ssl's retired declaration
+         on the opam-binding template). *)
       probe_lib =
         [ (Canary_store.Pm (Canary_store.Sys_pm { pm = pm () }),
            fun ~output_dir ~variant_key ->

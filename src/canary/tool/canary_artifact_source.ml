@@ -78,8 +78,9 @@ type source_repo = {
    tree shared across variants). When we start source-building variants,
    [build_dir] should incorporate the version/variant tag ("../build/<tag>")
    so each variant's compile output is isolated. Only matters for
-   source-built projects (z3/llvm); Pattern-A projects (sqlite/ssl/cairo/…)
-   use opam binaries and never build a native lib. *)
+   source-built projects (z3/llvm); projects with a system lib and an opam
+   binding (sqlite/ssl/cairo/…) use opam binaries and never build a native
+   lib. *)
 let mk_locals ?(build_dir = "../build") rel_path =
   List.map Canary_store.all_distros ~f:(fun distro ->
       { distro; rel_path; build_dir })

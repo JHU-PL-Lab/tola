@@ -2070,7 +2070,7 @@ let bare_edges () : edge list =
       (not e.eg_observation) && List.is_empty (claim_sites_on e.eg_id))
 
 (** ⚠ Claims named in [claim_sites] that no registry row backs. Held at
-    zero by a pin: this list is hand-written, so a renamed agreement
+    zero by a test: this list is hand-written, so a renamed agreement
     would otherwise leave a claim site pointing at nothing and the page
     would keep drawing a badge for a claim that no longer exists. *)
 let unknown_claim_sites ~(known : string list) : string list =

@@ -1,4 +1,5 @@
-(* Project: zlib — Pattern A (system zlib + opam camlzip binding).
+(* Project: zlib — the system's zlib under the opam camlzip binding,
+   through the opam-binding template ([Canary_opam_binding]).
 
    WHY THIS PROJECT, AND WHY FIRST (2026-08-20). The conf-* survey's
    sampling (surveys/conf_packages.md §G5) ranked it #1 of the unlanded
@@ -186,7 +187,7 @@ let decl : Canary_opam_binding.t =
 
 let runner_spec = Canary_opam_binding.runner_spec decl
 
-(* Registry entry: Pattern A's typed artifact table + the template's
+(* Registry entry: the opam-binding template's typed artifact table + its
    runner_spec. Two scenarios — the lib's Fetched@Stable (apt 1.3) and
    Vendored@Dev (conda-forge 1.3.2) points against the opam binding. *)
 let zlib_run : Canary_project_run.project_run = Canary_opam_binding.run decl

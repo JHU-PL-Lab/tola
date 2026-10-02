@@ -1,5 +1,5 @@
 (** The five hand-drawn cases, one per cooperation: the prose §1 shows with
-    the cooperation it illustrates, and the oracle the pins hold the
+    the cooperation it illustrates, and the oracle the tests hold the
     derivations to — each case's names, the nodes it leaves out and the
     edges it greys ([overview.package_band_is_one_cooperation],
     [overview.recorded_views_are_named]). *)

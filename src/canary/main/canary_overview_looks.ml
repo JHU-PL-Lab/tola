@@ -1,6 +1,6 @@
 (** The two checked lists that hold §1's drawing: [layout_rules], where
     things are placed, and [visual_hints], how they look. The page renders
-    its keys and its layout notes from them, and pins hold them to the
+    its keys and its layout notes from them, and tests hold them to the
     drawing and the stylesheet. *)
 
 open Base
@@ -331,15 +331,15 @@ let visual_hints : visual_hint list =
     hint "flow.hand" Flow_box [ "hand" ] [ ".fbox.hand rect" ] Always Flow_key
       ~sample:
         {|<svg width="30" height="18" viewBox="0 0 30 18"><g class="fbox hand"><rect x="1" y="1" width="28" height="16" rx="3"/></g></svg>|}
-      ~says:"written for the page, and held to the code by pins";
+      ~says:"written for the page, and held to the code by tests";
     hint "flow.held" Flow_mark [ "fdot"; "held" ] [ ".fdot.held" ] Always Flow_key
       ~sample:
         {|<svg width="14" height="14" viewBox="0 0 14 14"><circle class="fdot held" cx="7" cy="7" r="4.5"/></svg>|}
-      ~says:"held by pins — hover a dot for which";
+      ~says:"held by tests — hover a dot for which; it links to §0.4";
     hint "flow.unheld" Flow_mark [ "unheld" ] [ ".fdot.unheld" ] Always Flow_key
       ~sample:
         {|<svg width="14" height="14" viewBox="0 0 14 14"><circle class="fdot unheld" cx="7" cy="7" r="4.5"/></svg>|}
-      ~says:"held by no pin";
+      ~says:"held by no test";
     hint "flow.agents" Flow_mark [ "fagent" ] [ ".fagent text"; ".fagent path" ] Always Flow_key
       ~sample:
         {|<svg width="22" height="14" viewBox="0 0 22 14"><g class="fagent"><text x="4" y="11">AI</text><path d="M2 10L19 2"/></g></svg>|}

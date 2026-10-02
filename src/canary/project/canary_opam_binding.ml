@@ -1,14 +1,12 @@
 open Canary_basic
 open Canary_toolchain
 
-(* ── The ocaml/opam binding pattern ──
-   Renamed from "Pattern A" (Canary_pattern_a) 2026-08-17: the old name
-   read like a project name; this is THE binding PATTERN — an OCaml/opam
-   binding over a system C library via the `conf-*` virtual package.
-   Examples: zarith via conf-gmp, ssl via conf-libssl, cairo2 via
-   conf-cairo, etc.
+(* ── The opam-binding template ──
+   An OCaml/opam binding over a system C library via the `conf-*`
+   virtual package. Examples: zarith via conf-gmp, ssl via conf-libssl,
+   cairo2 via conf-cairo.
 
-   Layer note: this is the PROJECT layer's opam-side pattern (project
+   Layer note: this is the PROJECT layer's opam-side template (project
    declarations + realizations). The TOOL layer's opam PM driver is
    [Canary_pm_opam] (src/canary/tool/) — opam as a package manager
    (presence checks, install commands). Distinct concerns, distinct
@@ -62,7 +60,7 @@ type t = {
      scenario materializes ITS channel's worktree. *)
   sources : Canary_artifact_source.source_repo list;
   (* WHOSE source [sources] is (2026-08-19, user: "a ref is used to mark a
-     source who provides a lib or a binding"). Pattern A projects differ:
+     source who provides a lib or a binding"). This template's projects differ:
      cairo/libffi declare the C LIB's repo (cairo/cairo.git,
      libffi/libffi.git), while zarith declares the OCaml BINDING's repo
      (ocaml/Zarith.git — its C lib is apt libgmp). Both used to land in
@@ -177,7 +175,7 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
      the staged-probe lie the Installed axis had to fix). *)
   (* A FUNCTION, not a value (2026-08-26): the [Some pb] branch reads a
      machine root, and [runner_spec] is a top-level [let] in every
-     Pattern-A spec — as a value this resolved paths at MODULE INIT,
+     spec on this template — as a value this resolved paths at MODULE INIT,
      before the entry could declare the machines. Both call sites are
      already [fun ~output_dir ~variant_key ->] closures, so deferring
      costs nothing and moves the resolution to where the command is
@@ -283,9 +281,9 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
          asks for a binding's surface at the step that PROVISIONS it
          ([binding_evidence_tag]: `fetch_binding_ocaml` for a fetched
          binding, `build_binding_ocaml` for a built one), so all four
-         Pattern A projects wrote the right file in the wrong place and
-         [api_names_present] reported `unavailable` on every one of
-         them — eight cells of the result table's `no-evid`.
+         of this template's projects wrote the right file in the wrong
+         place and [api_names_present] reported `unavailable` on every
+         one of them — eight cells of the result table's `no-evid`.
 
          This is the same one-line relocation sqlite took in 2026-09-12,
          and it is the third instance of the class: the producer picks a

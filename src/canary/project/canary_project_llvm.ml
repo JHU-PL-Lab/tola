@@ -557,7 +557,7 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
                (2026-09-15): it made the same comparison
                [required_symbols_exported] makes, in a second
                implementation that recorded nothing, and it carried its
-               own unpinned copy of the macOS nm handling — without the
+               own untested copy of the macOS nm handling — without the
                underscore stripping [inspect_native.py] has, so on
                Mach-O both symbol sets came back empty and it passed
                vacuously. The stub summary at [build_binding_ocaml]

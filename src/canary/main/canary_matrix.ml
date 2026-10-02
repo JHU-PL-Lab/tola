@@ -1469,7 +1469,7 @@ let chain_checks ~(an : Canary_project_analysis.t)
       ))
 
 (* [?root] is where the run logs are read from — the default is the one
-   every run writes. A pin passes a fixture tree, which is how the record
+   every run writes. A test passes a fixture tree, which is how the record
    export is checked against a log whose every line it wrote itself. *)
 let matrix_of ?(root = "_out")
     (projects : (string * Canary_project_run.project_run) list) : t =
@@ -2073,6 +2073,6 @@ let to_json (m : t) : Yojson.Basic.t =
 (** THE RECORD AS PRINTED — what [canary overview --json] writes to stdout,
     and ALL it writes (§2.7 finding 1: the page notice used to follow it,
     and the output did not parse). A function rather than a line in the
-    command so a pin can parse exactly the text a consumer receives. *)
+    command so a test can parse exactly the text a consumer receives. *)
 let json_export (m : t) : string =
   Yojson.Basic.pretty_to_string (to_json m) ^ "\n"
