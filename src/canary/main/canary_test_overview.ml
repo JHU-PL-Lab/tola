@@ -569,18 +569,7 @@ let overview_overlay_pin : Canary_project_test.pure_test =
         let module M = Canary_matrix in
         let module T = Canary_topology in
         let module R = Canary_overview_runs in
-        (* the JSON readers [Record_fixture] also has *)
-        let module F = struct
-          let field j k =
-            match j with
-            | `Assoc kv -> List.Assoc.find kv k ~equal:String.equal
-            | _ -> None
-
-          let str j k =
-            match field j k with Some (`String s) -> Some s | _ -> None
-
-          let items j k = match field j k with Some (`List xs) -> xs | _ -> []
-        end in
+        let module F = Record_fixture in
         let m = M.matrix_of Canary_registry.all_projects in
         let text = R.payload m ~generated_at:"pin" in
         let words =
@@ -2851,12 +2840,9 @@ let overview_sections_pin : Canary_project_test.pure_test =
     holds = "The overview page's sections are numbered in order, from 0.";
     check =
       (fun () ->
-        let path = "docs/canary/overview.html" in
-        if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
-        else
-          let h =
-            Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
-          in
+        let h =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"test"
+        in
           (* every "<h2 ...>N. " in document order *)
           let nums =
             let rec go i acc =

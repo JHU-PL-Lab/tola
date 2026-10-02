@@ -696,12 +696,13 @@ let select_post_filter_pin : Canary_project_test.pure_test =
                 (List.length restricted) (List.length post_filtered);
             ok)) }
 
-(* Held for every catalogued project, so the encoder cannot drift from
-   the pass. Realize is left out: encoding it applies [pr_runner_spec],
-   which is not pure. *)
+(* Held for every catalogued project, so an encoder cannot drift from its
+   pass. Select is encoded as [canary emit --stage select] does. Realize
+   is left out: encoding it applies [pr_runner_spec], which is not
+   pure. *)
 let json_per_pass_pin : Canary_project_test.pure_test =
   { name = "emit.each_pass_encodes_independently";
-    holds = "The declare, enumerate and order encodings name their pass and project, and the enumerate one lists exactly the worlds the pass computed.";
+    holds = "The declare, analyse, enumerate, select and order encodings name their pass and project, and carry the chains and worlds their pass computed.";
     check =
       (fun () ->
         let field name = function
@@ -711,18 +712,25 @@ let json_per_pass_pin : Canary_project_test.pure_test =
         let str name j =
           match field name j with Some (`String s) -> Some s | _ -> None
         in
-        let keys j =
-          match field "assignments" j with
+        let keys ?(under = "assignments") j =
+          match field under j with
           | Some (`List xs) ->
               List.filter_map xs ~f:(fun x ->
                   match str "key" x with Some k -> Some k | None -> None)
           | _ -> []
         in
+        let length_of under j =
+          match field under j with Some (`List xs) -> List.length xs | _ -> -1
+        in
+        let strings asgs = List.map asgs ~f:Canary_enumerate.string_of_assignment in
         List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+            let worlds = Canary_pipeline.worlds pr in
             let declare = Canary_pipeline.json_declare pr in
-            let enumerate =
-              Canary_pipeline.json_assignments ~pass:"enumerate" pr
-                (Canary_pipeline.worlds pr)
+            let analyse = Canary_pipeline.json_analyse pr in
+            let enumerate = Canary_pipeline.json_assignments ~pass:"enumerate" pr worlds in
+            let select =
+              Canary_pipeline.json_assignments ~pass:"select" ~of_total:(List.length worlds) pr
+                (Canary_pipeline.enumerated pr)
             in
             let order = Canary_pipeline.json_order pr in
             let named j want =
@@ -730,14 +738,18 @@ let json_per_pass_pin : Canary_project_test.pure_test =
               && Poly.equal (str "pass" j) (Some want)
             in
             let self_describing =
-              named declare "declare" && named enumerate "enumerate"
-              && named order "order"
+              named declare "declare" && named analyse "analyse" && named enumerate "enumerate"
+              && named select "select" && named order "order"
             in
-            (* the encoding is the pass, not a re-derivation *)
+            (* each encoding is its pass, not a re-derivation *)
             let faithful =
-              List.equal String.equal (keys enumerate)
-                (List.map (Canary_pipeline.worlds pr)
-                   ~f:Canary_enumerate.string_of_assignment)
+              List.equal String.equal (keys enumerate) (strings worlds)
+              && List.equal String.equal (keys select) (strings (Canary_pipeline.enumerated pr))
+              && Poly.equal (field "of_total" select) (Some (`Int (List.length worlds)))
+              && List.equal String.equal (keys ~under:"scenarios" order)
+                   (strings (Canary_pipeline.ordered pr))
+              && length_of "chains" analyse
+                 = List.length (Canary_pipeline.analysed_of pr).Canary_project_analysis.an_chains
             in
             if not (self_describing && faithful) then
               Fmt.pr "  emit.json: %s self=%b faithful=%b@." name
@@ -972,14 +984,16 @@ let world_assertion_vocabulary_pin : Canary_project_test.pure_test =
         in
         same_shape && builder_agrees && split_ok && post_ok && reasons_ok) }
 
-(* For each listed opam-binding project with a prebuilt: (1) a Vendored
-   world's OCaml probe carries the prebuilt's libdir; (2) no other
-   world's does, so the pair is two worlds; (3) with [probe_names_lib],
-   the Vendored probe also greps for that libdir, since pointing the
-   loader is not checking that it obeyed. *)
+(* For each opam-binding project with a prebuilt: (1) a Vendored world's
+   OCaml probe carries the prebuilt's libdir; (2) no other world's does,
+   so the pair is two worlds; (3) with [probe_names_lib], the Vendored
+   probe also greps for that libdir, since pointing the loader is not
+   checking that it obeyed. The declarations are listed by hand, so the
+   list must be every catalogued project whose lib has a downloaded
+   prebuilt (a Vendored origin at a machine root). *)
 let vendored_world_probe_pin : Canary_project_test.pure_test =
   { name = "vendored.probe_names_the_world";
-    holds = "In each listed opam-binding project with a prebuilt, only the vendored world's OCaml probe names the prebuilt's library directory.";
+    holds = "In every project whose lib has a downloaded prebuilt, only the vendored world's OCaml probe names the prebuilt's library directory.";
     check =
       (fun () ->
         let distro = Canary_basic.detect_distro () in
@@ -990,6 +1004,26 @@ let vendored_world_probe_pin : Canary_project_test.pure_test =
              Canary_project_libffi.libffi_run);
             ("zstd", Canary_project_zstd.decl, Canary_project_zstd.zstd_run) ]
         in
+        let with_prebuilt =
+          List.filter_map Canary_registry.all_specs ~f:(fun (name, pr) ->
+              Option.some_if
+                (List.exists pr.Canary_project_run.pr_artifacts
+                   ~f:(fun (row : Canary_project_spec.artifact_row) ->
+                     Poly.equal row.Canary_project_spec.ar_artifact Canary_artifact.a_lib
+                     && List.exists row.Canary_project_spec.ar_universe ~f:(fun (origin, _) ->
+                            match origin with
+                            | Canary_store_config.Vendored_at p ->
+                                String.is_prefix p ~prefix:"<machine>/"
+                            | _ -> false)))
+                name)
+        in
+        let listed_ok =
+          List.equal String.equal
+            (List.sort with_prebuilt ~compare:String.compare)
+            (List.sort (List.map decls ~f:(fun (n, _, _) -> n)) ~compare:String.compare)
+        in
+        if not listed_ok then
+          Fmt.pr "    projects with a prebuilt: %s@." (String.concat ~sep:", " with_prebuilt);
         let probe_cmd_of pr a =
           let spec =
             pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/ws" ()
@@ -1026,7 +1060,7 @@ let vendored_world_probe_pin : Canary_project_test.pure_test =
         in
         (* the Vendored worlds must exist, or every check above is
            vacuous *)
-        ok && !checked >= 4) }
+        listed_ok && ok && !checked >= 4) }
 
 let tests : Canary_project_test.pure_test list =
   [ providing_arrow_pin; shadow_policy_ladder_pin; vendored_world_probe_pin;

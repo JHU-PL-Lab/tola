@@ -389,13 +389,58 @@ let run_info_session_pin : Canary_project_test.pure_test =
         ok && String.equal ambient "(ambient)") }
 
 (* The ref order is the declared repo family order, and each binding
-   sorts after the lib. Checked on z3 under its declared ref order
-   [4.15.2, latest, arbipher, pre-10549]. *)
+   sorts after the lib. Held over every catalogued project, and exactly
+   on z3 under its declared ref order [4.15.2, latest, arbipher,
+   pre-10549]. *)
 let matrix_row_order_pin : Canary_project_test.pure_test =
   { name = "matrix.row_order";
-    holds = "z3's rows group by source ref in its declared order, then by how the C lib is provided: built, then staged, then fetched.";
+    holds = "In every project, rows follow the declared order of source refs and a fetched lib sorts after the built and staged ones; z3's rows are exactly its declared sequence.";
     check =
       (fun () ->
+        let sorted_rows pr =
+          List.stable_sort (Canary_project_run.scenarios_of pr) ~compare:(fun x y ->
+              Stdlib.compare (Canary_matrix.row_key pr x) (Canary_matrix.row_key pr y))
+        in
+        let src a = (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.id in
+        let fetched_lib a =
+          match Canary_enumerate.placement_of a Canary_artifact.a_lib with
+          | Some pl -> Poly.equal pl.Canary_artifact.provision Canary_artifact.Fetched
+          | None -> false
+        in
+        (* per project: the declared ref ranks, and the sorted rows *)
+        let projects =
+          List.map Canary_registry.all_specs ~f:(fun (_, pr) ->
+              let spec = Canary_project_spec.project_spec_of_rows pr.Canary_project_run.pr_artifacts in
+              let pins =
+                Canary_artifact.ps_versions_of spec Canary_artifact.a_source Canary_artifact.Fetched
+              in
+              let rank id =
+                match List.findi pins ~f:(fun _ (b : Canary_basic.build_id) -> String.equal b.Canary_basic.id id) with
+                | Some (i, _) -> i
+                | None -> List.length pins
+              in
+              (rank, sorted_rows pr))
+        in
+        let rec ordered rank = function
+          | x :: (y :: _ as rest) ->
+              (rank (src x) < rank (src y)
+              || (rank (src x) = rank (src y) && ((not (fetched_lib x)) || fetched_lib y)))
+              && ordered rank rest
+          | _ -> true
+        in
+        let general_ok = List.for_all projects ~f:(fun (rank, rows) -> ordered rank rows) in
+        (* not vacuous: some project's rows span refs, and some ref holds
+           a fetched lib beside a built or staged one *)
+        let exercised =
+          List.exists projects ~f:(fun (rank, rows) ->
+              List.length (List.dedup_and_sort (List.map rows ~f:(fun a -> rank (src a))) ~compare:Int.compare) > 1)
+          && List.exists projects ~f:(fun (_, rows) ->
+                 List.exists rows ~f:fetched_lib
+                 && List.exists rows ~f:(fun a ->
+                        (not (fetched_lib a)) && Option.is_some (Canary_enumerate.placement_of a Canary_artifact.a_lib)))
+        in
+        general_ok && exercised
+        &&
         (* z3's spec, not its registry entry: row order is a property of
            the enumeration, which exists whether or not z3 is in the run
            set *)
@@ -598,22 +643,18 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
     holds = "The overview page's agreement table carries as many marks of each kind as the registry's rows, and the old result page is only a pointer to it.";
     check =
       (fun () ->
-        let path = "docs/canary/overview.html" in
-        let matrix_path = "docs/canary/projects/matrix.html" in
-        if not (Stdlib.Sys.file_exists path) then true (* not generated yet *)
-        else
-          let h =
-            Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
-          in
-          let matrix_has sub =
-            (not (Stdlib.Sys.file_exists matrix_path))
-            ||
-            let mh =
-              Stdlib.In_channel.with_open_text matrix_path
-                Stdlib.In_channel.input_all
-            in
-            String.is_substring mh ~substring:sub
-          in
+        (* the page as the code renders it now, with §2's table *)
+        let h =
+          Canary_overview_page.render Canary_registry.all_specs
+            ~overview:
+              (Canary_agreement_overview.render
+                 (Canary_agreement_overview.chains_of
+                    (Canary_matrix.matrix_of Canary_registry.all_projects)))
+            ~generated_at:"test"
+        in
+        let matrix_has sub =
+          String.is_substring Canary_overview_page.pointer_html ~substring:sub
+        in
           let count sub =
             let n = String.length sub and len = String.length h in
             let rec go i acc =
@@ -1505,19 +1546,10 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           | _ -> false)
                   | None -> false)
         in
-        (* expected rows per project, the total derived from the active
-           ones, so a failure names the project that moved; every
-           catalogued project needs a row here *)
-        let expected =
-          [ ("sqlite", 10); ("z3", 16); ("llvm", 3); ("tiny-full", 1);
-            ("zarith", 2); ("cairo", 2); ("libffi", 2); ("zlib", 2);
-            ("zstd", 2); ("ssl", 2);
-            (* torch's two are the binding's two packagings at one
-               upstream version, the stock package (a declared build
-               xfail) and the canary-local patched one: not a channel
-               pair *)
-            ("torch", 2) ]
-        in
+        (* expected rows per project, from the one count table, the total
+           derived from the active ones, so a failure names the project
+           that moved *)
+        let expected = world_counts in
         let catalogued_ok =
           List.for_all Canary_registry.catalogue ~f:(fun n ->
               List.Assoc.mem expected n ~equal:String.equal)

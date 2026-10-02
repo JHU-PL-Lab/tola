@@ -676,30 +676,24 @@ let binding_follows_chain_pin ~prefix ~(spec : Canary_artifact.project_spec) :
                       (Canary_enumerate.channel_of a ocaml)
                       (Canary_enumerate.channel_of a lib)))))) }
 
-(* Counted by [scenarios_of]. Pure: no builds, no package manager. *)
-let integration_smoke : Canary_project_test.pure_test =
-  { Canary_project_test.name = "integration.smoke";
-    holds = "sqlite, z3, llvm and tiny-full enumerate 10, 16, 3 and 1 worlds respectively.";
+(* Counted by [scenarios_of] over the catalogue, against the count table
+   the result table's check reads too ([Canary_test_fixtures.world_counts]).
+   Pure: no builds, no package manager. *)
+let world_counts_test : Canary_project_test.pure_test =
+  { Canary_project_test.name = "enumerate.world_counts";
+    holds = "Every catalogued project, muted ones included, enumerates exactly the number of worlds the shared count table gives it.";
     check = (fun () ->
-      let check ~name ~want_count run =
-        let asgs = Canary_project_run.scenarios_of run in
-        let n = List.length asgs in
-        if n <> want_count then
-          Fmt.pr "  %s: want %d scenarios, got %d@." name want_count n;
-        n = want_count
-      in
-      (* the lib's 5 placements × 2 opam pins *)
-      let ok1 = check ~name:"sqlite" ~want_count:10
-          Canary_project_sqlite.sqlite_run in
-      (* see z3_pins *)
-      let ok2 = check ~name:"z3" ~want_count:16
-          (Canary_project_z3.z3_run (Canary_basic.detect_distro ())) in
-      (* 2 dev chains and one both-released baseline *)
-      let ok3 = check ~name:"llvm" ~want_count:3
-          (Canary_project_llvm.llvm_run (Canary_basic.detect_distro ())) in
-      let ok4 = check ~name:"tiny-full" ~want_count:1
-          Canary_project_tiny.tiny_full_run in
-      ok1 && ok2 && ok3 && ok4) }
+      let counts = Canary_test_fixtures.world_counts in
+      List.for_all Canary_registry.catalogue ~f:(fun n ->
+          List.Assoc.mem counts n ~equal:String.equal)
+      && List.for_all Canary_registry.all_specs ~f:(fun (name, pr) ->
+             let n = List.length (Canary_project_run.scenarios_of pr) in
+             match List.Assoc.find counts name ~equal:String.equal with
+             | Some want when want = n -> true
+             | want ->
+                 Fmt.pr "  %s: want %s worlds, got %d@." name
+                   (Option.value_map want ~default:"no count" ~f:Int.to_string) n;
+                 false)) }
 
 let registry_pin : Canary_project_test.pure_test =
   { name = "registry.entries_enumerate";
@@ -2009,7 +2003,7 @@ let tests : Canary_project_test.pure_test list =
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
       sqlite_runtime_edges_pin;
       tiny1_bridge;
-      integration_smoke;
+      world_counts_test;
       registry_pin;
       spec_check_every_project_pin;
       spec_check_ratchet_pin;

@@ -49,6 +49,11 @@ let run_pure_test (t : pure_test) = try t.check () with _ -> false
 let kinds_to_s (ks : B.artifact_kind list) : string =
   String.concat ~sep:";" (List.map ks ~f:B.string_of_artifact_kind)
 
+(* the kinds as a test's sentence names them *)
+let kinds_words (ks : B.artifact_kind list) : string =
+  if List.is_empty ks then "nothing"
+  else String.concat ~sep:", " (List.map ks ~f:B.string_of_artifact_kind)
+
 let same_kinds (a : B.artifact_kind list) (b : B.artifact_kind list) : bool =
   List.equal Poly.equal a b
 
@@ -78,7 +83,9 @@ let catalogue_tests : pure_test list =
   List.map catalogue ~f:(fun (a, exp_c, exp_p) ->
     { name =
         Printf.sprintf "consumes_produces.%s" (B.string_of_action a);
-      holds = "The action consumes and produces exactly the artifact kinds written down for it.";
+      holds =
+        Printf.sprintf "%s consumes %s and produces %s." (B.string_of_action a)
+          (kinds_words exp_c) (kinds_words exp_p);
       check = (fun () ->
         same_kinds (A.consumes_of_action a) exp_c
         && same_kinds (A.produces_of_action a) exp_p) })
@@ -737,7 +744,7 @@ let refs_subset_test : pure_test =
 
 let mechanism_catalogue_test : pure_test =
   { name = "mechanism.catalogue_total_and_consistent";
-    holds = "Every mechanism has a catalogue entry with the discipline the vocabulary derives and a checking point, and each language's default mechanism is wired.";
+    holds = "Every mechanism has a catalogue entry with the discipline the vocabulary derives, its lib coupling and a checking point, and each language's default mechanism is wired and of that language.";
     check = (fun () ->
       let all =
         Mech.[ Cstubs; Cext; Ctypes; Cffi; Dynlink ]
@@ -746,11 +753,13 @@ let mechanism_catalogue_test : pure_test =
           let i = Canary_mechanism.info_of_mechanism m in
           Poly.equal i.Canary_mechanism.mi_mechanism m
           && Poly.equal i.Canary_mechanism.mi_discipline (Mech.discipline_of_mechanism m)
-          && (not (List.is_empty i.Canary_mechanism.mi_check_points))
+          && (not (String.is_empty i.Canary_mechanism.mi_lib_coupling))
           && not (List.is_empty i.Canary_mechanism.mi_check_points))
       && List.for_all [ L.OCaml; L.Python ] ~f:(fun l ->
              match Mech.default_mechanism_of_lang l with
-             | Some m -> (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_wired
+             | Some m ->
+                 let i = Canary_mechanism.info_of_mechanism m in
+                 i.Canary_mechanism.mi_wired && Poly.equal i.Canary_mechanism.mi_lang l
              | None -> false)
       (* THE DECIDABLE FIELDS ARE CONSISTENT (2026-09-14). Two
          implications the agreement layer relies on, and a mechanism

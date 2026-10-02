@@ -159,6 +159,14 @@ let chain_cell_fixture () :
       let m = Canary_matrix.matrix_of ~root [ (project, pr) ] in
       (pr, m, Canary_overview_runs.views ~root m))
 
+(* The worlds each catalogued project enumerates, muted ones included;
+   every catalogued project needs a row. torch's two are the binding's
+   two packagings at one upstream version, the stock package (a declared
+   build xfail) and the canary-local patched one: not a channel pair. *)
+let world_counts : (string * int) list =
+  [ ("sqlite", 10); ("z3", 16); ("llvm", 3); ("tiny-full", 1); ("zarith", 2); ("cairo", 2);
+    ("libffi", 2); ("zlib", 2); ("zstd", 2); ("ssl", 2); ("torch", 2) ]
+
 (* The files the project-test suite's pins are written in: canary_lib's
    own, and one per subject here. *)
 let test_sources () : string list =
