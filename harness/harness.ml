@@ -8,12 +8,10 @@ open Base
 open Canary_project_test
 open Canary_tests
 
-(* The agreement layer's source, with comments removed — nesting
-   tracked rather than guessed per line, because prose may name a
-   sibling module while code may not. Shared by the two checks that read
-   these files. *)
 let agreement_dir = "src/canary/agreement"
 
+(* A source file without its comments, nested ones included. The checks
+   read code only, because a comment may name what the code may not. *)
 let code_without_comments path =
   let s = Stdio.In_channel.read_all path in
   let buf = Buffer.create (String.length s) in
@@ -35,10 +33,10 @@ let code_without_comments path =
   done;
   Buffer.contents buf
 
-(** The families, as (module name, comment-free source). A FAMILY is a
-    module that publishes [checks] and declares no [composes] — a
-    PROPERTY, not a filename convention, so renaming the files cannot
-    empty the checks that read this (2026-09-02). *)
+(** The agreement families, as (module name, comment-free source). A
+    family is a module that publishes [checks] and declares no
+    [composes]: a property, not a filename convention, so renaming the
+    files cannot empty the checks that read this. *)
 let agreement_families () : (string * string) list =
   Sys_unix.readdir agreement_dir |> Array.to_list
   |> List.filter ~f:(String.is_suffix ~suffix:".ml")
@@ -49,13 +47,10 @@ let agreement_families () : (string * string) list =
          String.is_substring code ~substring:"let checks"
          && not (String.is_substring code ~substring:"let composes"))
 
-(* ── Tool-routing RATCHET (user, 2026-08-05) ──
-   Raw verbs spreading through the specs are exactly the code scattering
-   TODO #18 fights. The baseline below freezes TODAY's per-file line
-   counts; a count ABOVE baseline fails the suite (route the new use
-   through a tool/ primitive instead); a count below baseline means
-   cleanup happened — lower the baseline in the same commit. Comments
-   count too (crude by design: a ratchet, not a parser). *)
+(* A count above the baseline: route the new use through a tool/
+   primitive. A count below it: lower the baseline in the same commit,
+   since the check fails only above. Comments count too; this is a
+   ratchet, not a parser. *)
 let tool_routing_ratchet_check : pure_test =
   { name = "harness.tool_routing_ratchet";
     holds = "No project spec file has more lines with a raw shell verb that should go through a tool primitive than its frozen baseline allows.";
@@ -73,73 +68,36 @@ let tool_routing_ratchet_check : pure_test =
               loop 0)
         with _ -> 0
       in
-      (* verb → per-file baseline (absent file = 0 allowed) *)
-      (* Burn-down log: sqlite's gcc/curl/unzip/nm went to ZERO 2026-08-05
-         (routed via curl_unzip_cmd / cc_shared_lib_cmd /
-         native_lib_probe_cmd). Next candidates: llvm's pip-install chain
-         (needs a pip_install_any primitive with the uv fallback) and the
-         opam-install raws (A9-step-2 territory). *)
+      (* verb -> per-file baseline; an unlisted file allows 0 *)
       let baseline =
         [ ("cmake ",
-           [ (* +1 vs the old 6 = the C2 cmake-source COMMENT (the
-                realize-time probe misdiagnosis); the shell goes through
-                cmake_configure_cmd *)
+           [ (* llvm: comments *)
              ("canary_project_llvm.ml", 7); ("canary_tiny_scenario.ml", 4);
-             (* 7 -> 8 (2026-08-19): both extras are COMMENTS — cmake's
-                default generator, and the install-prefix isolation note
-                naming the staging verb. The shell goes through
-                cmake_configure_cmd / cmake_install_cmd.
-                8 -> 7 (2026-09-15): the file has been at 7 for a while
-                and nobody lowered it — the ratchet only fails ABOVE
-                baseline, so drift in this direction is silent. Tightened
-                on the way past. *)
+             (* z3: comments and the CI spec's [no_cmake] filter *)
              ("canary_project_z3.ml", 7); ("canary_run.ml", 1) ]);
           ("ninja ",
-           [ (* one COMMENT mention (the -G Ninja note above).
-                1 -> 2 (2026-09-15): a second COMMENT, on the
-                published-package probe, saying that the local recipe
-                skips cmake+ninja when canary already built the binding
-                — which is why probing the package costs a compile and
-                not a second z3 build. Evidence, not shell. *)
+           [ (* comments: the -G Ninja note and the published-package probe *)
              ("canary_project_z3.ml", 2);
-             (* one COMMENT mention (the ninja LLVM dylib note, 2026-08-13) *)
+             (* a comment: the ninja LLVM dylib note *)
              ("canary_project_llvm.ml", 1) ]);
           ("gcc ", []);
           ("curl ", []);
-          (* "unzip -" (flag form): the bare word also appears in the tool
-             primitive's NAME (curl_unzip_cmd), which is exactly the
-             routing we want — only raw invocations should count. *)
+          (* the flag form: the bare word is also in the primitive's name,
+             curl_unzip_cmd, and only raw invocations count *)
           ("unzip -", []);
           ("pip install", [ ("canary_project_llvm.ml", 3) ]);
           ("opam install",
            [ ("canary_opam_binding.ml", 1);
-             (* all 3 occurrences are COMMENTS describing the routed verb —
-                the shell goes through [SB.fetch_binding_cmd] *)
+             (* comments naming the routed verb *)
              ("canary_project_ssl.ml", 3);
-             ("canary_project_llvm.ml", 1);
-             (* 3 -> 2 (2026-08-17): the conf-* refactor removed one
-                mention — the shell goes through [SB.fetch_binding_cmd].
-                2 -> 3 (2026-09-15): a COMMENT naming the publish this
-                world runs, on the probe that finally consumes the
-                package it makes. Quoting the command is the point of
-                that comment — it says WHICH package the probe is
-                asking ocamlfind for — and the shell still goes through
-                [SB.fetch_binding_cmd] / the pack row. *)
+             (* two comments and the publish row's own command *)
              ("canary_project_z3.ml", 3);
-             (* all 5 are COMMENTS quoting the opam commands that were
-                MEASURED while landing torch (the dry-runs that establish
-                the one-point binding axis and the solver-enforced gate) —
-                evidence, not shell. The lib fetch goes through
-                [Canary_pm_opam.install_cmd], the binding through
-                [SB.fetch_binding_cmd]. *)
+             (* the opam commands measured while landing torch, quoted in
+                comments and the lib row's rationale: evidence, not shell *)
              ("canary_project_torch.ml", 5) ]);
-          ("nm -D",
-           [ ("canary_tiny_workspace.ml", 2);
-             ("canary_tiny_scenario.ml", 1) ]);
+          ("nm -D", [ ("canary_tiny_workspace.ml", 2) ]);
           ("git clone", []);
-          (* one COMMENT mention (the gmp 6.2.1 Tarball remote, C2.5) —
-             the fetch goes through the Tar remote machinery *)
-          ("tar ", [ ("canary_project_zarith.ml", 1) ]) ]
+          ("tar ", []) ]
       in
       match Stdlib.Sys.readdir dir with
       | exception _ -> false
@@ -163,11 +121,10 @@ let tool_routing_ratchet_check : pure_test =
                     end));
           !ok) }
 
-(* Five modules had four different orders before this check. The check
-   states the two boundaries that carry the meaning — [checks] before
-   any description, and no evidence or type declared after the
-   descriptions start — rather than the exact banners, so the shape is
-   enforced without freezing the prose. *)
+(* Two boundaries are checked, not the section banners, so the shape
+   holds without freezing the prose: the agreement declarations precede
+   [let checks], which names them, and no type or evidence loader
+   follows the first declaration. *)
 let agreement_module_shape_check : pure_test =
   { name = "agreements.families_share_one_shape";
     holds = "Each of the at least five agreement families declares its agreements before the checks list gathering them, and no type or loader after them.";
@@ -184,41 +141,17 @@ let agreement_module_shape_check : pure_test =
                        String.substr_index code ~pattern:": agreement =" )
                    with
                    | Some at_checks, Some at_desc ->
-                       (* the agreements' declarations come FIRST and the
-                          [checks] list that gathers them LAST — the
-                          order flipped on 2026-09-12, because a family
-                          now publishes [(agreement_id * agreement) list]
-                          and cannot name a value it has not defined *)
                        at_desc < at_checks
                        &&
-                       (* … and no evidence or type is declared after the
-                          agreements start *)
                        let tail = String.subo code ~pos:at_desc in
                        (not (String.is_substring tail ~substring:"\ntype "))
                        && not (String.is_substring tail ~substring:"\nlet load_")
                    | _ -> false)) }
 
-(* `implemented at` tracks the EVALUATOR — the function that compares
-   evidence. It says nothing about where the agreement's metadata lives:
-   its kind, subject, claim, rooting, slot, fault tag and method list.
-   That metadata is code as much as the evaluator is, and a reader who
-   wants to know why a row says `pairing` has to find the record.
-
-   It does NOT need a field, because it is already derivable: every
-   agreement is bound to a value named exactly its slug, in the family
-   file the gathering list names. `soname_matches_requirement` is
-   `let soname_matches_requirement : agreement =` in
-   `canary_agreement_identity.ml`. Deriving beats declaring — a field
-   would be a second place to get it wrong — but a derivation is only
-   safe while the convention holds, and nothing was enforcing it.
-
-   So this checks the convention rather than adding the field. It is what
-   lets the record print "declared at" and the overview's tooltip name
-   the declaration, both without storing anything.
-
-   The binding must be `: agreement` explicitly. That is not pedantry:
-   the type annotation is what makes the value greppable at all, and
-   every one of the thirteen already carries it. *)
+(* The record's "declared at" and the overview's tooltip derive where an
+   agreement is declared from this convention instead of storing it. The
+   [: agreement] annotation is required: it is what makes the value
+   findable as text. *)
 let agreement_metadata_check : pure_test =
   { name = "agreements.metadata_is_declared_under_its_slug";
     holds = "Every agreement is declared as a value named after its slug and typed agreement, in the family file its registry row points to.";
@@ -251,23 +184,9 @@ let agreement_metadata_check : pure_test =
               List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
             List.is_empty bad) }
 
-(* The overview's `implemented at` column is half derived and half
-   written down, and only the derived half is safe. The FILE comes from
-   the gathering list, so it cannot drift. The FUNCTION is a string on
-   the method, because an OCaml closure carries neither its own name nor
-   its file — and a string beside code is exactly the thing that rots.
-
-   So the check holds BOTH directions, and the second one is the one that
-   matters:
-
-   (a) a named function EXISTS in the file the gathering points at. A
-       rename that forgets the label turns the column into a lie that
-       still renders black;
-   (b) an agreement that HAS an evaluator NAMES it. Without this the
-       column fails the safe way — a landed agreement quietly rendering
-       a red "no evaluator yet" cell — and a red cell nobody believes is
-       worse than no column, because the three genuinely unimplemented
-       ones are the whole point of the colour. *)
+(* The names fill the overview's `implemented at` column. A name is a
+   string on its method, since an OCaml closure carries neither its own
+   name nor its file; the file comes from the gathering list. *)
 let agreement_impl_check : pure_test =
   { name = "agreements.impl_functions_exist";
     holds = "Every evaluator function an agreement names is defined in its family file, and every agreement with an evaluator names its function.";
@@ -296,7 +215,6 @@ let agreement_impl_check : pure_test =
                     List.exists ms ~f:(fun m ->
                         Option.is_some m.Canary_agreement_common.m_eval)
                   in
-                  (* (a) each named function is defined in that file *)
                   let missing =
                     List.filter_map named ~f:(fun fn ->
                         match source_of r.CR.ag_id with
@@ -313,7 +231,6 @@ let agreement_impl_check : pure_test =
                                 (Printf.sprintf "%s: no `let %s` in %s"
                                    r.CR.ag_slug fn (CR.family_file_of r.CR.ag_id)))
                   in
-                  (* (b) an implemented agreement says where it is *)
                   let unnamed =
                     if has_eval && List.is_empty named then
                       [ Printf.sprintf
@@ -328,18 +245,10 @@ let agreement_impl_check : pure_test =
               List.iter bad ~f:(fun b -> Fmt.pr "    %s@." b);
             List.is_empty bad) }
 
-(* The THREE TIERS of the agreement layer (2026-09-02, user): a common
-   module declares the types; each canary_agreement_<topic> is one concrete
-   family and refers only to that; the registry gathers them and
-   provides the matrix. The load-bearing half is the middle one — a
-   family must not reach sideways — so this reads the sources and
-   fails if one names another, which is how the tiers stay true after
-   the next check lands.
-
-   Two deliberate exceptions, both named here so that adding a third
-   requires saying why: canary_agreement_composed is not a family (it reads
-   other families' VERDICTS, which is the whole point of it), and a
-   module may MENTION a sibling in prose. *)
+(* The agreement layer's tiers are the common types, the families, and
+   the registry that gathers them. Each exception is named here with its
+   reason: canary_agreement_composed is not a family (it reads other
+   families' verdicts), and a module may name a sibling in a comment. *)
 let agreement_tiers_check : pure_test =
   { name = "agreements.families_do_not_reach_sideways";
     holds = "No agreement family names another family in its code, and a composing module names only the families it declares it composes.";
@@ -357,12 +266,7 @@ let agreement_tiers_check : pure_test =
                      ( String.capitalize base,
                        code_without_comments (dir ^ "/" ^ f) ))
             in
-            (* A FAMILY is a module that publishes [checks] and does not
-               declare what it [composes] — a PROPERTY, not a filename
-               convention (2026-09-02). The prefix used to be the
-               marker, which made renaming the files a way to empty this
-               check silently; keying on the property means the rename
-               cannot go dark. *)
+            (* the property [agreement_families] keys on *)
             let is_family (_, code) =
               String.is_substring code ~substring:"let checks"
               && not (String.is_substring code ~substring:"let composes")
@@ -370,13 +274,12 @@ let agreement_tiers_check : pure_test =
             let families = List.filter modules ~f:is_family in
             let family_names = List.map families ~f:fst in
             List.length families >= 5
-            (* a family names no other family in code *)
             && List.for_all families ~f:(fun (self, code) ->
                    List.for_all family_names ~f:(fun other ->
                        String.equal other self
                        || not (String.is_substring code ~substring:other)))
-            (* the composition names exactly what it declares it
-               composes, and it declares at least one *)
+            (* a composing module names only the families it composes,
+               and composes at least one *)
             && (not (List.is_empty Canary_agreement_composed.composes))
             && List.for_all
                  (List.filter modules ~f:(fun (_, code) ->
@@ -387,20 +290,11 @@ let agreement_tiers_check : pure_test =
                        || List.mem Canary_agreement_composed.composes other
                             ~equal:String.equal))) }
 
-(* The families state CLAIMS, which are neither language- nor
-   mechanism-specific: c2 says the same sentence for OCaml and for
-   Python and only the surface differs. So a family that spells one of
-   these paths has taken a fact that is not its own.
-
-   The literals, not the ADT constructors: a family legitimately
-   MATCHES on [Ocaml_mli] in its predict — that is reading evidence it
-   was handed. What it may not do is decide where that evidence lives.
-
-   The owner column is the point. [inspect_typed_binding_stub_ocaml]
-   reads like a language fact and is not one: [external] is how CSTUBS
-   spells the boundary, and an OCaml dynlink binding has none. Getting
-   that wrong is what this check is for. The list grows one entry per
-   module as they land. *)
+(* A family's claim holds for every language and mechanism; where its
+   evidence lives is the owner module's fact. Literals are checked, not
+   constructors: matching on [Ocaml_mli] reads evidence the family was
+   handed. The typed stub belongs to cstubs, not OCaml: [external] is how
+   cstubs spells the boundary, and an OCaml dynlink binding has none. *)
 let surface_facts_check : pure_test =
   { name = "agreements.surface_facts_live_with_their_owner";
     holds = "No agreement family spells an evidence file name owned by a language or mechanism module, such as inspect_mli.";
@@ -428,48 +322,30 @@ let surface_facts_check : pure_test =
               Fmt.pr "    %s@." (String.concat ~sep:" | " bad);
             List.is_empty bad) }
 
+(* The agreement docs agree with the code: the names they quote are
+   live, their § references resolve, every agreement's anchor exists,
+   every document a check reads exists, and the frame exclusions match
+   the registry. *)
 let agreement_doc_checks : pure_test list =
   let module CR = Canary_agreement in
-  (* TWO FILES since 2026-09-17, when `registry.md` split. [model.md] is
-     the model and the integration; [components.md] is the per-component
-     walk and the target of every [ag_doc] anchor. The checks that read
-     "the doc" now say which half they mean, because they mean
-     different halves: names may appear in either, § cross-references
-     resolve WITHIN a file, and the anchors resolve only in the walk. *)
-  (* THE MODEL MOVED TO README.md (2026-09-17), when `agreements.md`
-     was deleted and the overview became THE reference. These two checks
-     read a LIST, and `read_doc` answers [None] for a missing file, so
-     pointing at the deleted file did not fail them — it just stopped
-     them checking half of what they used to. `agreements.read_docs_exist`
-     is the guard that makes that loud next time. *)
-  (* two documents since 2026-09-30: the README took theory.md as its
-     §5–§8, components.md took mechanism.md as its §3.3–§3.6 *)
   let model_doc = "doc/canary/design/agreement/README.md" in
   let components_doc = "doc/canary/design/agreement/components.md" in
   let agreement_docs = [ model_doc; components_doc ] in
+  (* [None] for a missing file; agreements.read_docs_exist fails on that *)
   let read_doc p =
     if Stdlib.Sys.file_exists p then
       Some (Stdlib.In_channel.with_open_text p Stdlib.In_channel.input_all)
     else None
   in
-  [ (* The two checks below check the doc's § anchors, which is why six
-       commits of renaming left them green while the doc went on naming
-       canary_agreement_run.ml (retired), contract_registry (the
-       registry's old name), ag_role (a field removed with the legacy
-       axis) and predicted_*_v2 (renamed).
-
-       Two things it does NOT do, both deliberate. It checks for a
-       DEFINITION rather than a mention, because three source comments
-       still name Canary_agreement_run and a grep would have called the
-       doc correct on their strength. And it skips fenced blocks, where
-       the doc quotes shell and OCaml that is not required to exist. *)
+  [ (* A snake_case name must be defined in src, not merely mentioned,
+       since a comment in src may still name retired code. Fenced blocks
+       are skipped: the docs quote shell and OCaml there that need not
+       exist. *)
     { name = "agreements.doc_names_live_code";
       holds = "Every file, module and snake_case name quoted in the agreement docs outside code blocks is defined in src, unless listed as the docs' own vocabulary.";
       check =
         (fun () ->
-          (* BOTH halves: a code name may be introduced in either, and
-             the question — does this identifier exist in src? — does
-             not care which file said it *)
+          (* both docs as one text: which one quotes a name does not matter *)
           match List.filter_map agreement_docs ~f:read_doc with
           | [] -> true
           | texts ->
@@ -492,8 +368,7 @@ let agreement_doc_checks : pure_test list =
             in
             (* a definition or a literal, not a passing mention: [let x],
                [type x], a labelled argument, a string literal, or a
-               record field (whose colon may sit any number of spaces
-               away, which the first version of this got wrong) *)
+               record field, its colon any number of spaces away *)
             let defined_in body tok =
               List.exists
                 [ "let " ^ tok; "type " ^ tok; "~" ^ tok; "\"" ^ tok ^ "\"" ]
@@ -520,32 +395,15 @@ let agreement_doc_checks : pure_test list =
             let defined tok =
               List.exists sources ~f:(fun (_, body) -> defined_in body tok)
             in
-            (* Names from the THEORY or the world, not from our code:
-               two surface roles, two proposed artifacts, and an
-               ncurses symbol from the §5.3 finding. A new entry here
-               is a deliberate statement that the doc means something
-               other than a definition in src/. *)
+            (* Names the docs mean as theory or as the world's own, not as
+               src definitions: surface roles, proposed artifacts, an
+               ncurses symbol, object-format and loader names, and hook
+               moments ([<action>_post] composes an action with its post
+               hook, so no such [let] exists). *)
+            (* only snake_case names are checked, so only they need listing *)
             let doc_vocabulary =
-              [ "native_header"; "binding_header"; "app_direct";
-                "app_via_helper"; "cur_term";
-                (* ELF and Mach-O vocabulary (§6.3.4, 2026-09-09): these
-                   are the object formats' own names, not ours. The doc
-                   has to spell them to say what NEEDED is and how
-                   Mach-O differs. *)
-                "DT_NEEDED"; "DT_SONAME"; "DT_RPATH"; "DT_RUNPATH";
-                (* HOOK MOMENTS, not definitions (2026-09-17). The
-                   generated rooting table spells an action's post hook
-                   as `<action>_post`, which is a composed name: the
-                   action is a constructor and `_post` is the moment, so
-                   no `let build_lib_post` exists or should. They became
-                   visible when the catalogue was merged into
-                   `agreements.md` and this check began scanning generated
-                   content — new coverage, not a new defect. *)
-                "build_lib_post"; "install_lib_post";
-                "LC_LOAD_DYLIB"; "LC_ID_DYLIB"; "LC_RPATH";
-                "compatibility_version"; "@loader_path";
-                "@executable_path"; "LD_LIBRARY_PATH"; "--as-needed";
-                "/etc/ld.so.cache"; "dlopen" ]
+              [ "native_header"; "binding_header"; "app_direct"; "app_via_helper"; "cur_term";
+                "build_lib_post"; "install_lib_post"; "compatibility_version" ]
             in
             let backticked =
               let lines = String.split_lines text in
@@ -582,7 +440,7 @@ let agreement_doc_checks : pure_test list =
             in
             let bad =
               List.filter backticked ~f:(fun t ->
-                  (* metavariables and globs name a SHAPE, not a
+                  (* metavariables and globs name a shape, not a
                      definition: canary_agreement_<topic>.ml,
                      canary_pm_*.ml *)
                   if
@@ -618,17 +476,11 @@ let agreement_doc_checks : pure_test list =
                 "    doc names code that has no definition: %s@."
                 (String.concat ~sep:", " bad);
             List.is_empty bad) };
-    (* Lines mentioning another .md are skipped (their § belongs to that
-       document, not this one). *)
+    (* A line naming another .md cites that document's sections. *)
     { name = "agreements.doc_cross_refs_resolve";
       holds = "Every section reference in an agreement doc resolves to a heading in that doc, except on lines that name another document.";
       check =
         (fun () ->
-          (* PER FILE: headings are a property of one document, so a §
-             reference resolves within the file that wrote it. A line
-             naming another `.md` is exempt — that is how the split's
-             cross-file references (model.md → components.md §5.5) stay
-             legal. *)
           List.for_all agreement_docs ~f:(fun doc ->
           match read_doc doc with
           | None -> true
@@ -685,36 +537,11 @@ let agreement_doc_checks : pure_test list =
               Fmt.pr "    unresolved doc refs in %s: %s@." doc
                 (String.concat ~sep:", " (List.map bad ~f:(fun r -> "\xc2\xa7" ^ r)));
             List.is_empty bad)) };
-    (* A CHECK WHOSE INPUT VANISHED PASSES SILENTLY (2026-09-17).
-
-       This replaces `agreements.catalogue_doc_is_generated`, which
-       compared a generated region in `agreements.md` against the
-       registry. That file was deleted when the overview became THE
-       reference and the docs stopped carrying a catalogue — a good
-       change — and the check did not fail. It began with
-
-           if not (Sys.file_exists path) then true
-
-       which is the right answer for "not run from the repo root" and
-       the wrong one for "the document is gone", and nothing can tell
-       those apart from inside the check. Two more checks went quiet the
-       same way: `doc_names_live_code` and `doc_cross_refs_resolve` read
-       a LIST of docs through `read_doc`, which returns [None] for a
-       missing file, so they silently halved their coverage.
-
-       So the guard is one level up: every document a check reads must
-       EXIST. It fails loudly when a doc is renamed or deleted, which is
-       exactly the moment the checks that read it stop meaning anything —
-       and it is cheap, because the list is the checks' own. Removing a
-       doc is then a deliberate edit here rather than a silent loss.
-
-       Not checked, and worth saying: that the docs carry no hand
-       catalogue. `README.md` states the rule ("We do not maintain
-       another catalogue or status list in these docs") and it is not
-       mechanically checkable — a table listing agreements is forbidden
-       when it restates status and fine when it adds an axis the
-       overview lacks, as components.md §3.4's static-provider table does.
-       That one is a reading job. *)
+    (* A check that cannot find its document passes, as it must outside
+       the repo root, so a renamed or deleted document fails here
+       instead; removing one is a deliberate edit to this list. Not
+       checked: that the docs keep no hand-written catalogue, which is a
+       reading job. *)
     { name = "agreements.read_docs_exist";
       holds = "Every document the tests and harness checks read exists, so none of them can pass on a missing input.";
       check =
@@ -737,18 +564,10 @@ let agreement_doc_checks : pure_test list =
                    them now pass vacuously: %s@."
                   (String.concat ~sep:", " missing);
               List.is_empty missing) };
-    (* `prop_frame` says why a proposal has no row; the agreement
-       README's §8 and §8.1 (theory.md's §7 and §7.1 until the
-       2026-09-30 merge) say the same thing in prose, and they were
-       written months apart. If one grows an exclusion the other does not, the
-       catalogue's "Out of the table" grouping becomes a second opinion
-       rather than a rendering of the model — which is the whole defect
-       the grouping was added to fix.
-
-       Directional on purpose: a proposal classified as excluded must be
-       NAMED in the matching theory section, AND a proposal named there
-       must carry the matching constructor. Either half alone lets the
-       two drift apart in one direction. *)
+    (* [prop_frame] says in code why a proposal has no row, and the
+       agreement README's §8 and §8.1 say it in prose. The catalogue's
+       out-of-the-table section renders [prop_frame], so the two must not
+       drift. *)
     { name = "agreements.theory_names_the_frame_exclusions";
       holds = "The proposals the registry excludes, as outside the frame or as not agreements, are exactly those the agreement README names in its matching exclusion section.";
       check =
@@ -791,7 +610,7 @@ let agreement_doc_checks : pure_test list =
                                does not name it"
                               p.CR.prop_slug where ]
                     | None ->
-                        (* the converse: theory must not claim it *)
+                        (* the converse: the README must not name it *)
                         List.filter_map
                           [ (s7, "§8"); (s71, "§8.1") ]
                           ~f:(fun (sec, w) ->
@@ -803,7 +622,7 @@ let agreement_doc_checks : pure_test list =
                                    w p.CR.prop_slug)
                             else None))
               in
-              (* and the sections must exist at all *)
+              (* the sections must exist, so a renamed heading fails *)
               let bad =
                 match (s7, s71) with
                 | Some _, Some _ -> bad
@@ -816,11 +635,8 @@ let agreement_doc_checks : pure_test list =
       holds = "Every agreement's doc anchor names a section heading that exists in the components doc.";
       check =
         (fun () ->
-          (* components.md ALONE: an [ag_doc] anchor names the section
-             that explains why the agreement exists, and those sections
-             are the component walk. Pointing this at the model would
-             pass vacuously — the model has a §1 and a §2 and nothing
-             the anchors name. *)
+          (* components.md alone: an anchor names the component section
+             that explains why the agreement exists *)
           match read_doc components_doc with
           | None -> true (* not in a checkout *)
           | Some text ->
@@ -866,8 +682,8 @@ let one_escaper_check : Canary_project_test.pure_test =
         && String.is_substring (Canary_overview_assets.esc {|a"b|}) ~substring:"&quot;")
   }
 
-(* The names §0 gives are real. Figure 1's boxes name tests, so a name
-   must be written in a test source, not a harness one. *)
+(* Figure 1's boxes name tests, so a name written only in this file does
+   not count. *)
 let flow_names_check : Canary_project_test.pure_test =
   { name = "harness.flow_names_exist";
     holds = "Every test a box of Figure 1 names is written in the test sources, every make target it names is in the Makefile, and every module §0 names has a source file.";
@@ -905,8 +721,6 @@ let flow_names_check : Canary_project_test.pure_test =
         held_ok && List.for_all modules ~f:has_source)
   }
 
-(* A rule a test holds names it, so the list cannot point at a renamed
-   check; defined after [base_tests] for that reason. *)
 let layout_rules_explained_check : Canary_project_test.pure_test =
   { name = "harness.layout_rules_are_explained";
     holds = "Every layout rule says what it holds and why, and every rule a test holds names a registered test.";
@@ -923,8 +737,8 @@ let layout_rules_explained_check : Canary_project_test.pure_test =
                 List.exists base_tests ~f:(fun t -> String.equal t.Canary_project_test.name name)))
   }
 
-(* Only the bridge record's kind may appear there: it describes packages,
-   not artifacts. *)
+(* The bridge record's kind is the exception: it describes packages, not
+   artifacts. *)
 let runs_reads_no_kind_check : pure_test =
   { name = "harness.runs_module_reads_no_artifact_kind";
     holds = "Canary_overview_runs names no artifact kind of its own, so Canary_matrix stays the one reader of an inspection.";
@@ -945,10 +759,9 @@ let repo_checks : pure_test list =
    [rec]. *)
 let rec self_checks : pure_test list = [ registration_check; holds_said_check ]
 
-(* A test or harness check left out of its list compiles and never runs.
-   The scan reads every record whose name is a literal, in the test
-   sources and in this file; both ways of opening such a record must be
-   found somewhere, so it cannot pass by finding nothing. *)
+(* Reads every record whose name is a literal, in the test sources and
+   in this file. Both ways of opening such a record must be found, so the
+   check cannot pass by finding nothing. *)
 and registration_check : pure_test =
   { name = "harness.every_written_check_runs";
     holds = "Every test and harness check written in the sources is registered, so it runs.";
@@ -992,9 +805,8 @@ and registration_check : pure_test =
         List.for_all found ~f:(Fn.non List.is_empty) && List.is_empty unrun)
   }
 
-(* The sentence is what the page lists for a test, so it is one line,
-   ends as a sentence and fits a table cell; a harness check's reads the
-   same way. *)
+(* The page lists the sentence for each test, so it is one line, ends as
+   a sentence and fits a table cell; a harness check's follows suit. *)
 and holds_said_check : pure_test =
   { name = "harness.every_check_says_what_it_holds";
     holds = "Every test and harness check states the claim it holds in one sentence.";
