@@ -554,8 +554,9 @@ A new check:
   exists when that input can vanish, or it passes on nothing;
 - goes in its subject's file (`canary_test_<subject>.ml`, or
   `canary_project_test.ml` for canary_lib) when it checks what code
-  computes, and in `harness/harness.ml` when it reads the repository as
-  text.
+  computes, and in `harness/harness.ml`, in the group of what it reads,
+  when it reads the repository as text. `make harness` prints the groups
+  as the page's §0.4 prints the test files, each check with its verdict.
 
 ### Multi-version probe design
 

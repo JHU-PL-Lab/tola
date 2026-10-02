@@ -749,11 +749,17 @@ let runs_reads_no_kind_check : pure_test =
           ~f:(fun k -> not (String.is_substring code ~substring:k)))
   }
 
-let repo_checks : pure_test list =
-  [ tool_routing_ratchet_check; agreement_module_shape_check; agreement_metadata_check;
-    agreement_impl_check; agreement_tiers_check; surface_facts_check ]
-  @ agreement_doc_checks
-  @ [ one_escaper_check; flow_names_check; layout_rules_explained_check; runs_reads_no_kind_check ]
+(* The checks by what they read, as §0.4 groups the tests by file. *)
+let repo_groups : (string * pure_test list) list =
+  [ ("the project specs", [ tool_routing_ratchet_check ]);
+    ( "the agreement families",
+      [ agreement_module_shape_check; agreement_metadata_check; agreement_impl_check;
+        agreement_tiers_check; surface_facts_check ] );
+    ("the agreement docs", agreement_doc_checks);
+    ( "the overview page",
+      [ one_escaper_check; flow_names_check; layout_rules_explained_check; runs_reads_no_kind_check ] ) ]
+
+let repo_checks : pure_test list = List.concat_map repo_groups ~f:snd
 
 (* The checks on the lists themselves read the list they are on, hence
    [rec]. *)
@@ -826,11 +832,25 @@ and holds_said_check : pure_test =
         List.is_empty bad)
   }
 
-let checks : pure_test list = repo_checks @ self_checks
+let groups : (string * pure_test list) list =
+  repo_groups @ [ ("the checks themselves", self_checks) ]
 
+(* Prints the checks in §0.4's lines, each after its verdict and below
+   what it printed while it ran. *)
 let () =
-  let results = List.map checks ~f:(fun t -> (t, run_pure_test t)) in
-  List.iter results ~f:(fun (t, ok) -> Fmt.pr "[%s] %s@." (if ok then "PASS" else "FAIL") t.name);
-  let passed = List.count results ~f:snd in
+  let module O = Canary_overview_tests in
+  let line (t : pure_test) = { O.ts_name = t.name; ts_holds = t.holds } in
+  Fmt.pr "@.The harness checks@.";
+  let results =
+    List.concat_map groups ~f:(fun (subject, ts) ->
+        Fmt.pr "%s@?"
+          (O.text_file ~noun:"check"
+             { O.tf_subject = subject; tf_path = "harness/harness.ml"; tf_tests = List.map ts ~f:line });
+        List.map ts ~f:(fun t ->
+            let ok = run_pure_test t in
+            Fmt.pr "%s@?" (O.text_test ~mark:(if ok then "[PASS] " else "[FAIL] ") (line t));
+            ok))
+  in
+  let passed = List.count results ~f:Fn.id in
   Fmt.pr "Harness: %d/%d passed.@." passed (List.length results);
   if passed < List.length results then Stdlib.exit 1

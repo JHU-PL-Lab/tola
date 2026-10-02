@@ -55,11 +55,20 @@ let lists (files : file list) : string =
            (List.length f.tf_tests)
            (String.concat (List.map f.tf_tests ~f:test))))
 
-(** §0.4 as text, for [canary overview --flow]. *)
+(** A file's line in §0.4's text: its subject, its path, how many [noun]s
+    it holds. *)
+let text_file ?(noun = "test") (f : file) : string =
+  let n = List.length f.tf_tests in
+  Printf.sprintf "  %s: %s, %d %s%s\n" f.tf_subject f.tf_path n noun (if n = 1 then "" else "s")
+
+(** A test's line in §0.4's text, after its [mark] when it has one. *)
+let text_test ?(mark = "") (t : test) : string =
+  Printf.sprintf "    %s%s: %s\n" mark t.ts_name t.ts_holds
+
+(** §0.4 as text, for [canary overview --flow]. The harness lists its
+    checks in the same lines, each marked with its verdict. *)
 let text (files : file list) : string =
   "\nThe tests\n"
   ^ String.concat
       (List.map files ~f:(fun f ->
-           Printf.sprintf "  %s: %s, %d tests\n%s" f.tf_subject f.tf_path (List.length f.tf_tests)
-             (String.concat
-                (List.map f.tf_tests ~f:(fun t -> Printf.sprintf "    %s: %s\n" t.ts_name t.ts_holds)))))
+           text_file f ^ String.concat (List.map f.tf_tests ~f:(fun t -> text_test t))))
