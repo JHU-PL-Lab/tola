@@ -20,6 +20,7 @@
 - [Protect contrib/ build caches](feedback_protect_contrib_cache.md) — never rm -rf contrib/* (heavy z3/llvm builds)
 - [Patient with new actions](feedback_patient_with_new_actions.md) — a change adding an action/step is planned and held, not landed in the flow (2026-09-29)
 - [Concise comments](feedback_concise_comments.md) — comments state the concluded design briefly; reasoning in chat, history in worklog/commits (2026-09-29)
+- [Stage by file name](feedback_stage_by_name.md) — never `git add` a directory; the drafts under doc/canary/research/ stay unstaged (2026-10-01)
 
 ## User Preferences
 - "cc" means Claude Code (this CLI tool)
