@@ -445,7 +445,7 @@ reconciling with, not duplicating.
 | `doc/canary/research/draft.md`                 | **Manuscript-in-progress** (was `surface.md`, renamed 2026-08). Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM); backbone (rules / traces / worlds), PL notation, implementation slots. **Authoritative** for current framing. |
 | `doc/canary/research/surface_draft/`           | **Materials collection** (split 2026-06-04, surface_theory.md removed). Older drafts split across `main.md`, `surface.md`, `principle.md`, `implementation.md` (§2.7 pointers, may be stale), `package.md`, `versioning.md`, `notation.md`. Mine for content; not authoritative. |
 | `doc/canary/research/tiny.md`                  | Witness (current): minimal C lib + 3 bindings + 13-variant canary matrix + harness scenario table + findings |
-| `doc/canary/research/plan.md`                  | Paper venues + milestones + **§4 the delivery pipeline** (theory → checker → world → finding → merged PR; status + owner per stage) + the open roadmap. Rewritten 2026-08-26: POPL purged, roadmap steps 1-7 compressed to their open items |
+| `doc/canary/plan.md`                           | Paper venues + milestones + **§4 the delivery pipeline** (theory → checker → world → finding → merged PR; status + owner per stage) + the open roadmap. Rewritten 2026-08-26: POPL purged, roadmap steps 1-7 compressed to their open items |
 | `doc/canary/ops/install_targets.md`            | What `cmake --install` does per project — discovery patterns, rpath/layout coupling, failure modes (TODO #25/#40 both DONE) |
 | `doc/canary/ops/llvm_build.md`                 | The MANUAL LLVM build that seeds canary's build tree — same dir, different configure                   |
 | `doc/canary/backlog.md`                        | Lower-priority TODOs; api-compat group + new project spec group (see line below for current set)       |
@@ -924,11 +924,29 @@ and a project agent (`tola-m3`, branch `m3-agent`). Setup, 2026-08-14:
   dune-scan fix inherited only if the base commit is recent; the
   tool-routing ratchet baselines are shared — resolve at merge time.
 
+## Memory
+
+Working memory is explicit and lives in the repo: `.claude/memory/`, one
+note per file, indexed by `MEMORY.md`, which this import loads into every
+session:
+
+@.claude/memory/MEMORY.md
+
+What goes where: a rule about the code, the repo or its process goes in
+this file or the doc it belongs to. Memory holds what is about working
+with the user (preferences and corrections, with the reason behind them),
+the user's environment, and context the repo does not record (decisions
+in flight, ideas on hold). A fact lives in one place: a note that repeats
+this file or a doc is deleted, and a note that hardens into a rule moves
+here. The store under `~/.claude/projects/` is retired; its index points
+here.
+
 ## Handoff Workflow
 
-This file is the serialization layer for cross-machine continuity.
-Local memory and chat context are ephemeral; CLAUDE.md is the durable
-snapshot any fresh session on any machine can reconstruct from.
+This file is the serialization layer for cross-machine continuity. Chat
+context is ephemeral; CLAUDE.md and the working memory in
+`.claude/memory/` travel with the repo, the durable snapshot any fresh
+session on any machine can reconstruct from.
 
 **Latest pickup note:
 [`doc/canary/worklog/handoff_2026_08_26.md`](doc/canary/worklog/handoff_2026_08_26.md)**
@@ -951,16 +969,15 @@ Update CLAUDE.md for handoff. Include these sections:
 5. Gotchas — behavioral traps, things that wasted time, workarounds
    (include *why* for each)
 6. Feedback — corrections or preferences I gave you during our sessions
-   that should carry forward
+   that should carry forward: as notes in .claude/memory/, unless they
+   are rules about the code
 7. Conventions — shorthand, naming patterns, style preferences
-Check your memory files for gotchas and feedback material.
 Commit the result.
 ```
 
 **When starting on a new machine**, load context:
 
 ```
-Read CLAUDE.md and familiarize yourself with the project. Save any
-gotchas and feedback items to your local memory so they persist across
-conversations on this machine.
+Read CLAUDE.md and familiarize yourself with the project. The working
+memory in .claude/memory/ comes with the repo; nothing needs copying.
 ```

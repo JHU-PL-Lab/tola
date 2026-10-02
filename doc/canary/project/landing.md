@@ -288,6 +288,21 @@ artifact, and it exists for every library. A version string only exists
 if the binding exposes one — camlzip does not expose `zlibVersion()` at
 all, so zlib's world would have been unassertable by the version route.
 
+## 3d. A real project's build commands stay its own (rule, user 2026-08-15)
+
+A landed project's `runner_spec` runs the project's own build commands,
+as `Raw` steps, quirks included: z3's cmake target, llvm's META edits.
+Canary does not rewrite or normalize them; only a fork canary maintains
+may change them. What canary derives for every project is the checking:
+the binding facts the project declares — its C API, its native lib, how
+the binding couples to the lib, where its surface is read — choose which
+agreements apply and where they fire, however the project builds.
+
+Only tiny, canary's own witness, has its commands generated from those
+facts (`Canary_binding_templates`). Doing the same for a real project is
+deferred, and needs a discussion first: generalizing from one or two
+projects would put their quirks into the shared templates.
+
 ## 4. Landing lessons — the bug classes that bit us (keep re-reading)
 
 Recorded because they recur, and a new project with a similar shape will
