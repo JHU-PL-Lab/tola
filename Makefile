@@ -24,16 +24,18 @@ canary:
 	$(CANARY) run
 
 # ── Post-check tests: run after every session / before commit ──
-# Fast pure + shell tests — always safe, always run.
+# The model tests and the framework tests: fast, pure and shell, always
+# run. Each suite prints its summary (its last lines when it fails) and
+# keeps its full output in _out/canary/test/<suite>.out; the target fails
+# when any suite does.
+CANARY_TEST_SUITES = project-test artifact-test pm-test mutation-test cache-test
 canary-test:
-	@echo "=== project-test (pure) ==="
-	@$(CANARY) project-test 2>&1 | tail -3
-	@echo ""
-	@echo "=== artifact-test (pure + shell) ==="
-	@$(CANARY) artifact-test 2>&1 | tail -2
-	@echo ""
-	@echo "=== pm-test (shell) ==="
-	@$(CANARY) pm-test 2>&1 | tail -2
+	@mkdir -p _out/canary/test; fail=0; \
+	for s in $(CANARY_TEST_SUITES); do \
+	  log=_out/canary/test/$$s.out; echo "=== $$s ==="; \
+	  if $(CANARY) $$s > $$log 2>&1; then tail -1 $$log; \
+	  else fail=1; tail -15 $$log; fi; \
+	done; exit $$fail
 
 # The agents' harness: the repository's own text against the code and its
 # stated rules. Not canary's; agents run it before committing.
