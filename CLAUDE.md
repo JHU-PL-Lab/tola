@@ -38,7 +38,7 @@ dune exec src/bin/canary_main.exe -- mutation-test                           # a
 dune exec src/bin/canary_main.exe -- action zlib --switch=default  # OVERRIDE the switch (see below); --switch= means the AMBIENT one
 dune exec src/bin/canary_main.exe -- --platform=macos overview --json zlib  # RENDER AS the other platform (macos|wsl); see doc/canary/design/platform.md
 make canary                                                  # run canary via Makefile shorthand
-	make canary-test                                             # post-change verification (project-test + artifact-test + pm-test)
+	make canary-test                                             # post-change verification: the model and framework tests (project-test, artifact-test, pm-test, mutation-test, cache-test); fails if any suite fails
 
 **Canary runs in its OWN opam switch** (`canary`, created 2026-08-26, OCaml
 5.4.1 — the same compiler `default` runs, so package resolution matches the
@@ -105,9 +105,9 @@ right about a world the project built to be wrong. Flag lives at
 [`agreement/README.md`](doc/canary/design/agreement/README.md).
 
 **macOS status** (2026-08-26). Canary runs on macOS: `make canary-test`
-is 113 + 109 + 14 green there, `canary mutation-test` 46/46 (that suite is
-NOT in `make canary-test` — run it separately, it had never been run on
-mac and hid two failures). `spec` / `spec-check` / `result` / `emit` /
+was 113 + 109 + 14 green there, and `canary mutation-test` 46/46 once run
+by hand (it had never been run on mac and hid two failures; since
+2026-10-01 `make canary-test` runs it). `spec` / `spec-check` / `result` / `emit` /
 `prebuilt` all work; all four conda-forge prebuilts have osx-arm64
 archives at the same version + build number as linux-64. Four classes of
 Linux assumption were fixed and every one FAILED SILENTLY: `sed -i -E`
@@ -120,9 +120,9 @@ but `libtiny.so.1` is spelled out in ~40 declarations; and **z3**,
 deliberately. The to-do is `doc/canary/design/platform.md` §7.
 
 **Post-change verification.** After every edit that touches `src/canary/`, run
-`make canary-test`. This catches regressions in enumeration, compat theory,
-tool assumptions (nm/ocamlobjinfo/python3), and PM presence — pure and
-shell tests, about 20 s (the count is in `doc/canary/status.md` §1). The shared `Canary_runner.run_project_spec`
+`make canary-test`: the model tests and the framework tests (see *Four
+layers of checks* below), about 25 s, failing if any suite fails (the
+counts are in `doc/canary/status.md` §1). The shared `Canary_runner.run_project_spec`
 means both CLI and tests exercise the same pipeline. Before committing or
 ending a session, also run `make canary-post-check` (sqlite, the agreement
 round trip and the tiny1 bridge; about 40 s when warm) and `make harness`
@@ -526,29 +526,36 @@ runner-given dir. See `design/enumeration/stage0_naming.md` (Term ↔ code) for 
 (project → scenario ≡ variant → runner_spec → step → action) and
 `design/enumeration/stage6_realize_steps.md` §2 for what is data vs code.
 
-### Two testing axes
+### Four layers of checks
 
-Canary's test surface has two independent axes — both are kept alive because
-either can silently break first:
+Canary is checked in four layers. They fail for different reasons, so a
+green run of one says nothing about another:
 
-| Axis                | Subcommand                               | Fails when …                                                                                                                                         |
-| ------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Project tests**   | `canary action <project>`                | The project under test drifts (new Z3 renames a symbol, LLVM adds Opcode)                                                                            |
-| **Framework tests** | `canary artifact-test`, `canary pm-test` | Canary's own tool assumptions drift (`nm`/`ocamlobjinfo`/`ocamlfind`/`python3` change output format, `dir(sys)` loses an attr, shell pipe semantics) |
+| Layer | Command | Checks | Fails when … |
+| --- | --- | --- | --- |
+| **Framework tests** | `canary artifact-test`, `pm-test`, `mutation-test`, `cache-test` | canary's tools against fixed fixtures (sqlite3.so, fmt.cmxa, Python's `sys` and `sqlite3`) | a tool's output drifts: `nm` gains a column, `dir(sys)` loses an attribute, a shell pipe behaves differently |
+| **Model tests** | `canary project-test` | what canary's code computes: the action catalogue, the enumeration and its passes, the run record, the page | canary's code is wrong |
+| **Project runs** | `canary action <project>` | the projects, through canary's worlds and agreement checks; the page's §1.2 and §2 show the results | a project drifts (z3 renames a symbol, LLVM adds an opcode): a finding about the project, not a regression in canary; an expected one is declared as an xfail |
+| **Harness** | `make harness` | the repository's own text: docs against code, module shapes, ratchets, the test lists | something written has drifted from the code or from a stated rule; the fix may be in the doc, the rule or the code |
 
-A green project run is meaningless if `nm` silently started emitting an
-extra column and our parser discarded every symbol. Framework tests fix
-known-stable fixtures (sqlite3.so, fmt.cmxa, Python sys/sqlite3) that
-exercise every primitive canary depends on. Especially useful when
-expanding to macOS (different `nm` flags, Mach-O format, keg-only paths)
-or upgrading the OCaml / Python / distro runtime — framework tests
-diagnose environment drift early.
+`make canary-test` runs the first two layers; `make canary-post-check`
+runs one real project (sqlite), the agreement round trip and the tiny1
+bridge; agents run `make harness`. A green project run is meaningless if
+`nm` silently started emitting an extra column and the parser dropped
+every symbol: that is what the framework tests are for, especially on
+macOS (other `nm` flags, Mach-O, keg-only paths) and after a runtime
+upgrade. The counts are in `doc/canary/status.md` §1; the page's §0.4
+lists every model test with its claim.
 
-Current framework tests cover "command runs, rc matches, JSON parses"
-plus pure helper tests (compat helpers exercise `predicted_contains_any_v2`
-against synthetic Ocaml_mli / Python_attrs fixtures). Stronger
-content-shape invariants (e.g. `counts.total > 0` on libsqlite3.so,
-`modules ≥ 1` on fmt.cmxa) are a candidate hardening step.
+A new check:
+- ships with the increment it guards, and is **falsified once before it
+  is trusted**: break what it holds, watch it fail, restore;
+- states its claim in one sentence (`holds`), and asserts that its input
+  exists when that input can vanish, or it passes on nothing;
+- goes in its subject's file (`canary_test_<subject>.ml`, or
+  `canary_project_test.ml` for canary_lib) when it checks what code
+  computes, and in `harness/harness.ml` when it reads the repository as
+  text.
 
 ### Multi-version probe design
 

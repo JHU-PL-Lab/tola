@@ -270,6 +270,13 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
 No hurry — all items below are queued for when their forcing function arrives.
 
+- **Framework tests: assert content, not only shape.** Today they check
+  that a command runs, its exit code and that its JSON parses, plus pure
+  helper tests over synthetic fixtures. Stronger: content-shape
+  invariants on the real fixtures, such as `counts.total > 0` for
+  libsqlite3.so and `modules ≥ 1` for fmt.cmxa, so a parser that silently
+  drops everything fails here rather than in a project run.
+
 - **Global output/cache root env var** (user, 2026-08-13). `_out` is the
   literal string at ~10 bin-layer call sites (`canary_main.ml`
   `~root:"_out"`), and it carries real build caches worth keeping across
