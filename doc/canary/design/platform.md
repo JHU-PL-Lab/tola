@@ -121,7 +121,7 @@ entire point of running both.
 - Is it a **tool invocation**? Dispatch, in `base/` or `tool/`, as a
   named function with the two branches beside each other. Never inline
   `if is_macos` at the call site: the point of a named sibling is that
-  the two answers are read together and can be pinned.
+  the two answers are read together and can be tested.
 
 ## 3. Tool siblings — the status table
 
@@ -299,7 +299,7 @@ Ordered by what unblocks what. Items marked ⇢ have a home in
 
 4. **tiny's Mach-O naming port** ⇢. `libtiny.so.1` is spelled out in ~40
    declarations — scenario recipes, the workspace materializer, the c4
-   SONAME fixtures, the `Dlopen` coupling, several pins.
+   SONAME fixtures, the `Dlopen` coupling, several tests.
    `Canary_basic.shared_lib_name` knows both conventions and nothing
    calls it. Until it does, `canary tiny run` (the 22-scenario oracle)
    and tiny-full's vendored artifacts are Linux-only. The C library now
@@ -352,7 +352,7 @@ declare|enumerate|select|order --json` is **byte-identical** under
 `--platform=wsl` and `--platform=macos`. Forty comparisons, no
 differences.
 
-*Mechanically, as a pin.* `platform.enumeration_is_agnostic`
+*Mechanically, as a test.* `platform.enumeration_is_agnostic`
 (`canary project-test`) runs passes 1–5 over both platforms and compares,
 for every project in the CATALOGUE.
 
@@ -360,7 +360,7 @@ for every project in the CATALOGUE.
 
 1. *The invariant could hold because nothing reaches anything.* If the
    override never touched the pipeline, "identical" would be automatic.
-   So the pin also asserts that a realized command DOES change — sqlite's
+   So the test also asserts that a realized command DOES change — sqlite's
    step set carries `probe_lib_apt` on one platform and `probe_lib_brew`
    on the other. Surveyed once across the roster: **every project's
    realized commands differ** between the two platforms, which is pass 6
@@ -369,13 +369,13 @@ for every project in the CATALOGUE.
    `z3_run`/`llvm_run` a literal `Wsl`, and every `project_run` is built
    at module initialization — so a declaration that honoured the platform
    would bake in one answer and then compare equal to itself forever. The
-   pin therefore also REBUILDS the declaration under each platform
+   test therefore also REBUILDS the declaration under each platform
    (argument and ambient override) for the seven projects that expose a
    builder, which includes every prebuilt-bearing one. sqlite, tiny-full
    and ssl are eager values with no builder to call and are covered by
    the weaker check only — the one gap in the confirmation.
 
-**What the pin compares, exactly.** The world set and its order: which
+**What the test compares, exactly.** The world set and its order: which
 artifacts exist, at which provisions and versions, which a run selects,
 in what sequence. NOT the realization data hanging off a declaration —
 making a `Vendored_at` payload platform-dependent does not turn it red,

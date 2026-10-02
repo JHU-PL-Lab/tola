@@ -51,7 +51,7 @@ enumeration axis and deleted step 1 entirely:
   parameter (it no longer exists); nothing replaces it — read the lib's
   provision from the assignment if a realization needs to branch.
 
-Pins: `sqlite.provider_rows` + `z3.provider_rows` (the general factory,
+Tests: `sqlite.provider_rows` + `z3.provider_rows` (the general factory,
 derived per source-ref group), `sqlite.staged_probe_paths` +
 `z3.installed_probe_consumes_prefix` (the realizations),
 `z3.regression_pre_10549_expectation` (the declared xfails, quantified
@@ -133,7 +133,7 @@ check_post family.
 - [ ] The staged-parity checker (4 checks above; completeness derived
       from the declared surface instead of a hand list).
 - [x] **Per-world install prefixes — LANDED 2026-08-19.** z3's worlds no
-      longer share `z3-all/install`; each gets `install-<ref>`, pinned by
+      longer share `z3-all/install`; each gets `install-<ref>`, tested by
       `z3.install_prefix_isolated` (on RESOLVED paths — the bug spelled
       two prefixes differently while naming one directory). It turned out
       to be a correctness property, not hygiene: the shared prefix would
@@ -145,7 +145,7 @@ check_post family.
       user's "enough platform invariant which is often violated":
       versioned-symbol nm output, install_name, symlink-chain,
       exec-mode fixtures) — mirrors the existing ELF-symbol-versioning
-      gotcha pin.
+      gotcha test.
 - [ ] The future model stays recorded: installed-consumed as an
       ENUMERABLE provider so the binding-BUILD ranges over
       {build-tree, installed}; `Install_lib : Lib → Lib` stays staging

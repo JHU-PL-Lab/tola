@@ -57,7 +57,7 @@ pass 3's constraints enforce
 property of the action rather than as a filter over assignments, and the
 two must agree.
 
-`consumes_of_action` / `produces_of_action` are the live catalogue, pinned
+`consumes_of_action` / `produces_of_action` are the live catalogue, tested
 per action by `consumes_produces.<action>` (13 of them). Two things are
 still hand-written rather than read from it: `ax_follows` is declared on
 the artifact, and `build_deps_of` hardcodes lib → source. Deriving both
@@ -82,7 +82,7 @@ assignment's coordinates (`provision_of`, `channel_of`, `provided`,
 `bad_placements`), and `realize` holds the command templates. So the
 provision decides which commands exist — `Build_lib` fires when the lib is
 `Built`, `Fetch Lib` when it is `Fetched` — and nothing else in a project
-branches on a scenario. Pinned by `enumerate.dispatch_coordinate_reads`
+branches on a scenario. Tested by `enumerate.dispatch_coordinate_reads`
 and, per project, `z3.dispatch_reads_source_placement` /
 `llvm.dispatch_reads_source_placement`.
 
@@ -226,7 +226,7 @@ to `step.deps`, so the connectivity self-check is muted behind
 enforces its real deps); only the picture is wrong. Reconciling them into
 ONE relation is tracked in `../../status.md` §A.
 
-Pins on the graph side: `action.node_of_assignment_chain`,
+Tests on the graph side: `action.node_of_assignment_chain`,
 `action.close_deps_deploy_mismatch`,
 `action.execution_plan_topo_and_edges`.
 
@@ -236,7 +236,7 @@ Pins on the graph side: `action.node_of_assignment_chain`,
 which for a fetch is not always what the world NEEDS: cairo's all-`Fetched`
 world cloned a repository whose tree no later step read.
 `drop_unread_fetches` drops a `Fetch k` when no step in the world consumes
-`k`, asked of the typed catalogue (`consumes_of_action`, pinned by
+`k`, asked of the typed catalogue (`consumes_of_action`, tested by
 `consumes_produces.*`) rather than of `step.deps`.
 
 Only fetches, because a `Fetch` is the only action class with no inputs —
@@ -252,7 +252,7 @@ A declared source row stays declared — `spec-check` still reports it, and
 whether its ref resolves is a question about the DECLARATION, tracked
 with `spec-check --probe-pm` in [`../platform.md`](../platform.md) §7.
 
-Pinned by `derive.steps_are_demanded` as a pair: cairo's world must lose
+Tested by `derive.steps_are_demanded` as a pair: cairo's world must lose
 `fetch_source` while keeping its probes; every sqlite world with
 `build_lib` must keep it. Either half alone is satisfiable by a broken
 rule.
@@ -285,7 +285,7 @@ preserved rather than traded for speed; stale sentinels are swept before
 a new one is written. On CI the variable is unset and the workspace cold,
 so the remote half runs — what a fresh runner needs.
 
-Pinned by `source.refresh_is_run_scoped`, a SHAPE check: the clone must
+Tested by `source.refresh_is_run_scoped`, a SHAPE check: the clone must
 sit INSIDE the guard and the marker write OUTSIDE it. Swap either and a
 world re-fetches, or stops recording its own evidence.
 
@@ -364,7 +364,7 @@ run-lib differs from the consumer's build-lib, and `canary spec` annotates
 those scenarios. `Probe_app` is the terminal for a deploy scenario (it
 probes the app against any lib) where `Probe_binding` tests lockstep. Both
 chains are generated for one assignment and share a scenario under today's
-dedup; full branching awaits `close_deps` wiring. Pinned by
+dedup; full branching awaits `close_deps` wiring. Tested by
 `enumerate.deploy_mismatch` and `sqlite.runtime_edges_two_instance_slice`.
 
 ## 6. Pre-run ≡ post-run
@@ -448,9 +448,9 @@ building the spec. That is an arc, not a patch; deferred deliberately.
 
 ---
 
-## Pins guarding this stage
+## Tests guarding this stage
 
-| pin | asserts |
+| test | asserts |
 | --- | --- |
 | `consumes_produces.<action>` (13) | each action's declared inputs and output |
 | `probe_invariant.consumes_eq_artifacts` | a probe consumes exactly the artifacts it names |

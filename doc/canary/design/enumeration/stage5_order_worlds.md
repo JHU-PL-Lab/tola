@@ -56,7 +56,7 @@ was named:
 | singleton | who needs it | what went wrong without isolation |
 | --- | --- | --- |
 | **an opam switch** | any pinned lang-PM package | opam holds ONE version of a package per switch (a solver invariant). Scenario N's fetch re-pins; N+1 silently inherits it |
-| **an install prefix** | every `Installed` placement | z3's worlds shared `z3-all/install`, so the fork's staged package could answer the pre-10549 world's staged probe — and *silence a regression xfail*. Now `install-<ref>` per world; pin `z3.install_prefix_isolated` |
+| **an install prefix** | every `Installed` placement | z3's worlds shared `z3-all/install`, so the fork's staged package could answer the pre-10549 world's staged probe — and *silence a regression xfail*. Now `install-<ref>` per world; test `z3.install_prefix_isolated` |
 | **a build tree** | every `Built` placement | one `build/` shared across refs. Now `build-<ref>`. Related: a shared tree also goes STALE — ninja would not relink `dllz3ml.so` after the lib's SONAME bumped |
 | **a findlib namespace** | two packages exporting one module path | `zarith` and `zarith-no-conf` both install findlib `zarith`; only one can own the name |
 
@@ -108,7 +108,7 @@ Three things, and all three have bitten when missing:
    *spelled* differently (`…/z3/../build/../install` vs
    `…/z3-pre-10549/../build-pre-10549/../install`) while naming ONE
    directory. So the invariant is about resolved paths, not strings — the
-   pin normalizes `..` segments before comparing, because a string
+   test normalizes `..` segments before comparing, because a string
    comparison would have called them isolated and been decorative.
 
 ### What is general in the code, and what is not
@@ -132,7 +132,7 @@ The **mechanisms** are not:
 - `Canary_world.Opam_pin` is an opam-shaped constructor, where the general
   form is "this resource must be in this state, verified by this command";
 - `Canary_pm_opam.holds_pin_cmd` is an opam command;
-- the no-shared-write invariant is one project's hand-written pin
+- the no-shared-write invariant is one project's hand-written test
   (`z3.install_prefix_isolated`) rather than a check derived from the
   install rows.
 
@@ -145,7 +145,7 @@ realizations hanging off it.**
 > derived, not per-PM and not per-project.* Two concrete forms it could
 > take — a world assertion whose resource/state/verify triple is data
 > rather than a constructor per package manager, and a no-shared-write
-> check computed over the install rows of all worlds instead of pinned
+> check computed over the install rows of all worlds instead of tested
 > once for z3. Neither is scheduled; the value of writing it down is that
 > the gap is now a named property rather than a feeling.
 
@@ -194,15 +194,15 @@ Three properties worth keeping straight:
   factor, and an expensive one does not become acceptable — it just gets
   performed once instead of six times.
 
-Pinned by `run_order.groups_by_store_state` over every catalogued
+Tested by `run_order.groups_by_store_state` over every catalogued
 project, muted ones included, asserting both halves — the ordering is a
 permutation of the enumeration (a sort, not a policy), and each distinct
 key occupies one contiguous run. Falsified by dropping the sort and by
 making it drop a scenario.
 
-## Pins guarding this stage
+## Tests guarding this stage
 
-| pin | asserts |
+| test | asserts |
 | --- | --- |
 | `run_order.groups_by_store_state` | the run order is a permutation of the enumeration, and each store state occupies one contiguous run |
 | `matrix.registry_shape` | per-project scenario counts — so a change in identity or dedup cannot pass silently |

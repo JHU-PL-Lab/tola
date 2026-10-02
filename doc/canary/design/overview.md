@@ -12,7 +12,7 @@ design is explained here names the section in its comment. Read the page
 first.
 
 The history — how each piece landed, the user's words at each step, and
-every pin with the breaks that turned it red — is
+every test with the breaks that turned it red — is
 [`../worklog/worklog_2026_09.md`](../worklog/worklog_2026_09.md). It also
 keeps this document's former §6.4, the week the result table joined the
 page.
@@ -28,7 +28,7 @@ template, to the page's ids and to the source tree. What the page does
 not say:
 
 - §1's graph is `Canary_topology`'s `nodes`, `edges` and `claim_sites`,
-  written by hand. Pins hold them to the registry and to every step the
+  written by hand. Tests hold them to the registry and to every step the
   runner derives, and §6.2 derives them.
 - The page embeds two pieces of data its scripts read: §1's choices as
   `#joindata` (`Canary_overview_join`) and §1.2's column keys as
@@ -234,7 +234,7 @@ declaration, a rule, a file under `_out`, or a process the renderer runs.
 Make that function return the value with its source, from the same list:
 a second function that re-derives the source can disagree with the
 value. Carry the source in the data, look it up in the script by the
-value's own route, list it on the page, and pin it — every shown value
+value's own route, list it on the page, and test it — every shown value
 has a source, a run source names a file that exists, and a render read is
 found by changing the machine's answer. Break each clause once before
 trusting it.
@@ -247,9 +247,9 @@ keys (§1's two, §0.2's one) are rendered from it;
 stylesheet — every rule owned once, every hint applied and explained, and
 no two hints that can show together looking alike. `layout_rules` holds
 the places, each a sentence with its reason, checked over the nodes'
-places (`layout_view`) or by a named pin; `overview.layout_rules_hold`. A
+places (`layout_view`) or by a named test; `overview.layout_rules_hold`. A
 new look goes into the first list and a new placement rule into the
-second, or the pins fail. The coordinates in `layout` are one drawing of
+second, or the tests fail. The coordinates in `layout` are one drawing of
 the rules; a port to another framework keeps the rules, not the
 coordinates. §1.2's looks are not in `visual_hints` yet: its element kinds
 are the diagram's, and a table cell is a new kind.
@@ -272,7 +272,7 @@ outline's purpose"): the outline and the terms, generated from
 each section, marking what the harness holds and which files agents do
 not read whole; and each subject's code and running layers. §3's census
 became §2.2, the tables §3, and the asides say only current usage. The
-figure shows the diagrams held by no pin, and the table the package
+figure shows the diagrams held by no test, and the table the package
 managers' running layer thin, which is group C below.
 
 **Done 2026-09-30: the figures and tables, and the scripts' rules.**
@@ -329,7 +329,7 @@ order.
 
 - §1.2's looks are not in `visual_hints` (§5): a table cell is a new
   element kind, and a decision comes first — ✓ is both a piece's "ran"
-  and a check's "holds", and the vocabulary pin forbids two looks that can
+  and a check's "holds", and the vocabulary test forbids two looks that can
   show together from looking alike.
 - The ten action families with no edge have no frame, so their steps
   have no column, and a failure there would show nowhere in §1.2.
@@ -337,9 +337,9 @@ order.
   once, since a later run of a world replaces its files (§2); a manifest
   for the multi-variant runner (ssl).
 - §6.2 step 2, edges from the catalogue, and step 4, one typed triple.
-- No pin runs the page's scripts; `overview.scripts_parse` only parses
-  them. Since 2026-09-30 they hold no rule, so what runs unpinned is the
-  lookup of §1's drawing and the layout of §1.2's cells. A pin would need
+- No test runs the page's scripts; `overview.scripts_parse` only parses
+  them. Since 2026-09-30 they hold no rule, so what runs untested is the
+  lookup of §1's drawing and the layout of §1.2's cells. A test would need
   node, a new tool assumption, in artifact-test.
 - The exported figures carry no key, since the keys are HTML beside the
   drawing; and Figure 2 draws only this machine's recorded worlds, since
@@ -359,9 +359,9 @@ written plan before it is picked up.
   leaves `Canary_pm_action` in the same change. The library's placement
   text and `pkg_sys`'s line take the version from the record,
   `resolve_sys`'s tooltip says what apt chose, and
-  `Canary_matrix.sys_pkg_version` goes. Pins: the render clause of
+  `Canary_matrix.sys_pkg_version` goes. Tests: the render clause of
   `overview.every_drawn_line_has_a_source` flips to "nothing is asked of
-  the rendering machine"; a fixture pin for a world with a record and
+  the rendering machine"; a fixture test for a world with a record and
   one without; an artifact-test case on the command's output. Two
   choices are open, with a recommendation each: brew keeps its
   placeholder and a brew world shows no version, rather than
@@ -444,7 +444,7 @@ artifact kinds.
 The kind is not checked against the site at all. Among the eleven, every
 promise sits on one side and every admissibility claim but
 `api_names_present` across the two, but nothing says they must. Synced
-means reaching these, each with a pin:
+means reaching these, each with a test:
 
 - **The place belongs to the description.** Each site is derived from R
   and the targets, with the hand-written list kept as the oracle until

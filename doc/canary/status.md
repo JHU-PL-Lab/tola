@@ -63,7 +63,7 @@ the count moves whenever a law is added, so read it from `canary checks
 
 > `checked: 6 laws, every row obeys them · no unwatched mechanism × format cell`
 
-The verdict is pinned to the page and pinned to AGREE with what the
+The verdict is tested to appear on the page and tested to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
@@ -123,7 +123,7 @@ still-valid half is written twice, in `run_step` and `run_graph`.
 ⚠ **Before dispatching an agent at the ACTION MODEL** (the §9 plan in
 [`design/action_model.md`](design/action_model.md)): that document now
 carries, under §6, what the agreement layer READS from the action model
-— five couplings, the pin that catches each, and the acceptance gate for
+— five couplings, the test that catches each, and the acceptance gate for
 its step 5. Steps 5, 7 and 8 all touch code the agreement work depends
 on, and step 5 can turn every landed claim into a silent `unavailable`,
 which is not a test failure but a check that stopped checking.
@@ -165,7 +165,7 @@ Three places change — the fold, `landing_row`, and `pp_landing`'s
 
 **Do it BEFORE the mac's results arrive, not after.** The report does not
 fail when a macOS outcome lands in it; it silently widens a claim's
-scope, which is the same shape as the pins that went vacuous when
+scope, which is the same shape as the harness checks that went vacuous when
 `agreements.md` was deleted. There is nothing to un-report if it is in
 place first, and the change is cheap enough that waiting buys nothing.
 
@@ -254,10 +254,10 @@ mechanism declared in two places, one of them read).
 Restructured to four files on 2026-09-17 with the overview as the entry
 point, and to two on 2026-09-30: `README.md` (with theory.md as its
 §5–§8) and `components.md` (with mechanism.md as its §3.3–§3.6).
-The OCaml half of that change landed after it — three pins had gone
-silently vacuous when `agreements.md` was deleted, and
-`agreements.pinned_docs_exist` now fails when a document a pin reads
-disappears. **The user is doing the remaining cleanup by hand**
+The OCaml half of that change landed after it — three harness checks had
+gone silently vacuous when `agreements.md` was deleted, and
+`agreements.read_docs_exist` now fails when a document a test or harness
+check reads disappears. **The user is doing the remaining cleanup by hand**
 (2026-09-21); leave these files alone.
 
 ### 2.4 The kind vocabulary — `admissibility` landed, the rest open
@@ -393,7 +393,7 @@ to D, E1 and E2 are done; the result table has joined the page, and §2's
 counts and §1's badges read §1.2's cells; each figure and table is
 exported for the manuscript; and the page's scripts hold no rule.
 
-The history, with the user's words and every falsified pin, is
+The history, with the user's words and every falsified test, is
 [`worklog/worklog_2026_09.md`](worklog/worklog_2026_09.md), under the
 same headings this section had. Code comments cite it by those names:
 
@@ -427,7 +427,7 @@ hand-written per-project binding tables produce the same firings as the
 templated ones.
 
 Steps 1–3 are done (mechanism vocabulary reunited in `base/`, the input
-template, mechanism as a derivation axis — each pinned; details in
+template, mechanism as a derivation axis — each tested; details in
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md)). The rest:
 
 4. [ ] **Typed mechanism payload — the DECLARATION**
@@ -487,7 +487,7 @@ template, mechanism as a derivation axis — each pinned; details in
     [`design/action_model.md`](design/action_model.md) §§4–5 describe.
 12. [ ] **Attribution — from "which check failed" to "who is to blame"**
     (2026-09-03). What EXISTS: which claim confirmed a failure is
-    persisted in the verdict marker (pinned by
+    persisted in the verdict marker (tested by
     `compat.by_agreement_attribution`), and `mismatch_direction_of`
     computes Forward/Backward per scenario. What does NOT: any mapping
     from a failure to a responsible PARTY. `Canary_detect.finding` is
@@ -549,7 +549,7 @@ world). Not done:
   interprets checks exactly as commands, uniform warm-mask fingerprinting
   included. Payoff: the firing table becomes a property of the
   enumeration — every cell IS an action in the graph, and the coverage
-  pin becomes an enumeration invariant.
+  test becomes an enumeration invariant.
   **This is the same closure boundary as §2.1 and step 11**, and
   [`design/action_model.md`](design/action_model.md) records what is cheap
   (`check_post` is already file tests plus one shell command) versus what

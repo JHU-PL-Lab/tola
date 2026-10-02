@@ -142,7 +142,7 @@ identity belongs on the constructor.)
 - Costs: `a_lib` is referenced across `assignment_ok`, `source_is_read`,
   the matrix's setting block, the action catalogue's consumes/produces, the
   templates, `store_config`, and every project spec. Mechanical but wide —
-  the kind of change that wants its own arc and a pin per invariant it
+  the kind of change that wants its own arc and a test per invariant it
   touches.
 
 **(B) One enumerated lib + declared depexts** — the project's headline lib
@@ -186,8 +186,8 @@ diffed: byte-identical. That matters beyond tidiness — ids feed scenario
 dirs, dedup keys and run-cache markers, so a churned id silently
 invalidates every cached run and the re-run reads as a fresh pass.
 
-Pinned by `vocab.lib_name_optional`, falsified by printing the name
-unconditionally: the pin fails and the stage-2 dedup key moves from
+Tested by `vocab.lib_name_optional`, falsified by printing the name
+unconditionally: the test fails and the stage-2 dedup key moves from
 `lib=built@dev` to `lib-main=built@dev`, which is the invalidation vector
 made visible.
 

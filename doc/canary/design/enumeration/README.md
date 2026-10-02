@@ -4,7 +4,7 @@
 question, and what is deliberately somewhere else.
 
 **The dataflow itself is [`pipeline.md`](pipeline.md)** — four IRs, six
-passes, the pass table with each pass's code and pins, and the
+passes, the pass table with each pass's code and tests, and the
 invariants. That used to be this file's middle, which made the map and
 the thing it maps one document.
 
@@ -124,42 +124,42 @@ world) and pass 6 (build-vs-install parity is a check).
 
 ## The alignment rule
 
-[`pipeline.md`](pipeline.md)'s pass table names the pins for each pass.
+[`pipeline.md`](pipeline.md)'s pass table names the tests for each pass.
 Each one is a registered test — `canary project-test` prints them — so
 when you land a change to a pass, the fastest check is whether that
-pass's pins still exist and still pass.
+pass's tests still exist and still pass.
 
-**Pin names are not renumbered.** `select.is_a_subset_of_stage2` was
+**Test names are not renumbered.** `select.is_a_subset_of_stage2` was
 named when enumerate was pass 2 and still says `stage2`; the 2026-09-16
-renumbering left every pin name alone. A pin name is an identifier that
+renumbering left every test name alone. A test name is an identifier that
 appears in logs, in the pass table and in `canary project-test` output,
 and renaming it to track a doc's numbering would break the one thing the
 name is for — being greppable across history. Read a `stageN` inside a
-pin name as a historical label, not as a claim about today's table.
+test name as a historical label, not as a claim about today's table.
 
 **One citation had gone stale, and it is the case the removed check
 would have caught** (found 2026-09-17 by running the suite and diffing
-its pin names against every dotted name this directory cites). The pass
-table named `scenario.lower_expectation_agnostic_c1`; the pin is
+its test names against every dotted name this directory cites). The pass
+table named `scenario.lower_expectation_agnostic_c1`; the test is
 `..._symbols`, renamed when the `c1`..`c9` ids were retired on
 2026-09-12. One stale citation in seven stage docs over three weeks is a
 low rate — worth knowing when deciding whether backlog #48 earns its
 cost, and worth doing by hand after a rename until it does:
 
 ```sh
-canary project-test | grep -oE '^\[(PASS|FAIL)\] [a-z0-9_.]+' | awk '{print $2}' | sort > /tmp/pins
-grep -ohE '`[a-z][a-z0-9_]+\.[a-z0-9_]+`' doc/canary/design/**/*.md | tr -d '`' | sort -u | comm -23 - /tmp/pins
+canary project-test | grep -oE '^\[(PASS|FAIL)\] [a-z0-9_.]+' | awk '{print $2}' | sort > /tmp/tests
+grep -ohE '`[a-z][a-z0-9_]+\.[a-z0-9_]+`' doc/canary/design/**/*.md | tr -d '`' | sort -u | comm -23 - /tmp/tests
 ```
 
 **Not automated.** A check that failed the build when a doc cited a
-deleted pin was built and removed on 2026-08-23: it worked, but it was
-one narrow instance of a general problem (docs citing pins, docs citing
+deleted test was built and removed on 2026-08-23: it worked, but it was
+one narrow instance of a general problem (docs citing tests, docs citing
 source paths, comments citing docs, docs citing CLI verbs), wired to one
 directory with a hand-maintained exclusion list. The general form is
 backlog #48. Until it exists this is a convention, not a guarantee — and
-so is the converse, which no check would cover anyway: a pin can exist
+so is the converse, which no check would cover anyway: a test can exist
 while the prose around it describes something the code stopped doing.
 
 **What to be skeptical of.** Where a doc and the code disagree, the code
 is right and the doc is a bug. `canary project-test` is the arbiter — a
-claim with no pin behind it is the one to distrust first.
+claim with no test behind it is the one to distrust first.

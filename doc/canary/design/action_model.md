@@ -88,7 +88,7 @@ LISTS per kind**, not the first match —
 artifact of a kind, which is already wrong (tiny-full declares two apps
 and two Python bindings).
 
-Pinned by `analysis.touches_joins_actions_to_declarations`: the join is
+Tested by `analysis.touches_joins_actions_to_declarations`: the join is
 total over a project's declarations, a `Probe_*` produces nothing, and a
 lib has more than one producer — the fact the hook model stands on.
 
@@ -270,7 +270,7 @@ are three registers:
 Two constraints, both easy to lose:
 
 - **`--strict` stays RUN-WIDE.** It is the one switch that makes the two
-  views agree, it rides the step fingerprint, and it is pinned
+  views agree, it rides the step fingerprint, and it is tested
   (`strict.acceptance_policy`). Step 7 must not turn it into per-check
   configuration.
 - **A check's verdict stays boolean.** An agreement's is an `outcome`
@@ -279,7 +279,7 @@ Two constraints, both easy to lose:
   collapsing them into `false` is exactly what `unavailable_cause`
   undid. A named check has no need of `outcome`.
 
-### Five couplings, each with the pin that catches it
+### Five couplings, each with the test that catches it
 
 Run `make canary-test` after every step; it is five seconds and every
 one of these is in it.
@@ -402,10 +402,10 @@ steps keep their slots, so "step 5" means step 5 everywhere.
    `derive_steps` (which has the step list, so it can resolve an
    `output_tag`) and evaluated in the runner. The closure carried an
    address, not a decision. `load_run_state` no longer stubs it, and
-   `steps.dep_dirs_correspond_to_deps` pins it — the first pin this
+   `steps.dep_dirs_correspond_to_deps` tests it — the first test this
    predicate has had, because a closure can be called but not read.
    ⚠ Nothing currently depends on a step carrying an `output_tag`, so
-   the pin guards the correspondence now and the resolution once step 4
+   the test guards the correspondence now and the resolution once step 4
    gives the attached inspectors consumers.
 2. ~~**Split `pin_check_post`.**~~ **WITHDRAWN 2026-09-21** — §5's
    occasions table is why: the pin half is evaluated before a step is

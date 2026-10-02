@@ -263,8 +263,8 @@ lessons are these:
    has someone's attention on it; a landed project's count can drift for
    weeks — and which constraint removed the missing candidates stays an
    *inference*, which is this section's use case verbatim.
-3. **Count pins re-baseline; a structural claim does not.** The count in
-   question was pinned, at its wrong value. A count pin cannot separate
+3. **Count tests re-baseline; a structural claim does not.** The count in
+   question was tested, at its wrong value. A count test cannot separate
    "legitimately has N worlds" from "lost some and someone updated the
    number" — updating the number is how you make it pass. `kept +
    dropped = the product` has no number to quietly move.
@@ -288,11 +288,11 @@ Three parts, and only the second carries behavioural risk:
 
 ### Tests
 
-Structural, in the style of the pins the rest of the `emit` work shipped
+Structural, in the style of the tests the rest of the `emit` work shipped
 — a golden ledger would churn on every legitimate spec change and get
 blanket-regenerated.
 
-| pin | asserts |
+| test | asserts |
 | --- | --- |
 | `why.accounts_for_every_candidate` | kept + dropped = the product, per catalogued project. Nothing vanishes unexplained |
 | `why.reasons_are_known` | every drop names one of the six constraints — no "other" |

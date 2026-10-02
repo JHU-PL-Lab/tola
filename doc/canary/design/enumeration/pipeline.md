@@ -1,7 +1,7 @@
 # The pipeline — six passes, four IRs
 
 **Kind: reference.** THE dataflow: what each pass takes, what it hands
-on, where its code is, and which pins would fail if the doc and the code
+on, where its code is, and which tests would fail if the doc and the code
 drifted apart. Read it before changing how scenarios are produced.
 
 The map of this directory — which doc for which job, and what is
@@ -66,8 +66,8 @@ drift.
 reorders, and neither invents. That is what makes them cheap to reason
 about and why `select.is_a_subset_of_stage2` and
 `run_order.groups_by_store_state` can each state their whole contract in
-one line. (The first pin's name still says `stage2`; it was written when
-enumerate was pass 2. The pin NAMES are deliberately not renumbered —
+one line. (The first test's name still says `stage2`; it was written when
+enumerate was pass 2. The test NAMES are deliberately not renumbered —
 see *The alignment rule* below.)
 
 **Pass 2 does not lower, and it is still a pass.** `analysis` carries
@@ -157,13 +157,13 @@ caller that supplies faults is `tiny_policy` in
 project. So: two axes here, provision and version. The mutation is
 tiny-factory machinery that happens to ride the same product.
 
-## The six passes — doc, code, pins
+## The six passes — doc, code, tests
 
 One row per pass. Everything about a pass is reachable from its row: the
-doc that explains it, the code that is it, and the pins that would fail
+doc that explains it, the code that is it, and the tests that would fail
 if the two drifted apart.
 
-| #            | pass                      | what happens                                                                                                                                        | doc                                                                                                                     | code                                                                                                                                                                                    | pins                                                                                                                                                                                                                                                                                                                                                  |
+| #            | pass                      | what happens                                                                                                                                        | doc                                                                                                                     | code                                                                                                                                                                                    | tests                                                                                                                                                                                                                                                                                                                                                 |
 | ------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | —            | *vocabulary* (not a pass) | the types every pass reuses: `artifact_kind`, `provision`, `channel`, `version`, `build_id`, `artifact_info`, `placement`, `assignment`, `dep_mode` | [`stage0_naming.md`](stage0_naming.md) (the four senses of "scenario"), [`../ssot.md`](../ssot.md) (IDs)                | `base/canary_basic.ml`, `base/canary_store.ml`, `base/canary_artifact.ml`                                                                                                               | `vocab.binding_source_off_tree`, `vocab.lib_name_optional`, `surface.split_keeps_checks_drops_provenance`, `scenario.lower_expectation_agnostic_symbols`                                                                                                                                                                                                   |
 | 1            | **declare**               | a project states which artifacts exist, at which provisions and versions, and who provides each                                                     | [`stage1_declare_spec.md`](stage1_declare_spec.md)                                                                      | `action/canary_project_spec.ml` (`artifact_row`, `project_spec_of_rows`), `base/canary_artifact.ml` (`artifact_axes`), `tool/canary_store_config.ml` (`provision_spec`)                 | `enumerate.project_spec_sqlite_shape`, `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`, `enumerate.per_provision_versions`, `repo_model.axes_pins`, `repo_model.contents_invariant`, `spec.vendored_prebuilt_pair`, `spec.pm_dep_gate_groups`, `sqlite.provider_rows`, `z3.provider_rows`                                      |
@@ -289,7 +289,7 @@ them accumulated things that are not part of that model. The list was
 five; one is gone:
 
 - **two constructions** (`enumerate_product`, `enumerate_follows_tree`),
-  pinned equal since 2026-08-24, where one should survive;
+  tested equal since 2026-08-24, where one should survive;
 - **a mutation axis** no registry project uses, threaded through every
   signature that touches `enumerate`;
 - **a config with more knobs than uses** — `level × 3 axes ×

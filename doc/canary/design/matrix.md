@@ -214,7 +214,7 @@ one `ref` column labelled them identically; zarith names its BINDING's
 source in a column that says so (§5 of the data fix below); sqlite's
 `(ambient)` src cell is honest and the lib cell carries the identity.
 
-Pinned: `matrix.setting_block_identifies_world` — one column per kind
+Tested by: `matrix.setting_block_identifies_world` — one column per kind
 with no duplicates, a cell iff the project declares that kind, and no two
 rows of a project sharing their setting tuple (the property the `ref`
 column lacked).
@@ -284,7 +284,7 @@ Fetched pins.
 - **Cell stage progression** (user-chosen 2026-08-19): a cell names the
   stage the STEP leaves the artifact in, so a staged world reads
   `src F → lib B:s → lib I:s → lib I:s` instead of `lib I:s` three
-  times. Pin: `matrix.cell_stage_progression`.
+  times. Test: `matrix.cell_stage_progression`.
 - **Known display gap**: an Installed world's only lib probe is tagged
   `probe_lib_staged`, so the single `probe_lib` column renders `·` (not
   run) where `canary status` shows a pass. The fix is the location
@@ -309,12 +309,12 @@ five of them surfaced two bugs that had been latent for days — z3's
 `env_guard` pointing at a nonexistent path (it still *set* the variable,
 so nothing failed) and a `dllz3ml.so` linked against a soname the tree no
 longer produced. Both lived entirely inside the `·` region, and one was
-introduced by a change whose own pin passed.
+introduced by a change whose own test passed.
 
 **Enumeration coverage is not verification coverage.** The enumeration
 says which worlds EXIST; the matrix presents that as the set CHECKED.
-`matrix.registry_shape` pins 42 rows — a number about *enumeration* — and
-nothing pins how many have ever run, so the fraction can fall silently. A
+`matrix.registry_shape` tests for 42 rows — a number about *enumeration* — and
+nothing tests how many have ever run, so the fraction can fall silently. A
 row that has never run is a claim we are **not** making, and saying so is
 the honest version. Where it stands: 41 of 42 have run; the holdout is
 #28 (llvm `latest`), whose source declares no local tree, so running it
@@ -437,4 +437,4 @@ permanent rows on the work queue. `version` is the only blame that
 attaches to a **decided** cell: sqlite's four `dse ✗` are real
 violations of a declaration that cannot say "these two symbols exist
 from 3.44", so a reader counting findings has to be told which reds may
-be the spec's fault. Pinned by `matrix.blame_is_static_and_glossed`.
+be the spec's fault. Tested by `matrix.blame_is_static_and_glossed`.

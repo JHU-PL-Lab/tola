@@ -354,7 +354,7 @@ No hurry — all items below are queued for when their forcing function arrives.
     `source_repo`. z3/llvm `mk_runner_spec` takes explicit
     `~build_lib`/`~build_binding` bool parameters passed from
     `realize`; CI passes them directly. The
-    `build_flags_match_declared_provisions` pin retired.
+    `build_flags_match_declared_provisions` test retired.
     `cmake_build_binding` stays as a finer CI knob.
     The entry's original
     framing ("two store-selection conventions; promote `stores` to a
@@ -389,20 +389,20 @@ No hurry — all items below are queued for when their forcing function arrives.
 
     Built and then removed the same day: a pure test read
     `doc/canary/design/enumeration/*.md`, extracted backticked tokens
-    shaped like a pin name, and failed if one was not a registered test.
-    It worked — it caught two pin names invented from memory
+    shaped like a test name, and failed if one was not a registered test.
+    It worked — it caught two test names invented from memory
     (`vocab.artifact_ids`, `surface.split`) and one record field cited as
-    a pin (`source_repo.artifacts`) — but it was one narrow instance of a
+    a test (`source_repo.artifacts`) — but it was one narrow instance of a
     general problem, wired to one directory, with a hand-maintained
     exclusion list. Reverted so the general shape can be designed
     instead. Implementation reference:
     `git show 70c1cbb -- src/canary/main/canary_projects_test.ml`.
 
     The general problem: **a reference to a name that can be deleted goes
-    stale silently, and prose cannot notice.** Live instances beyond doc
-    pin citations —
+    stale silently, and prose cannot notice.** Live instances beyond test
+    citations in docs —
 
-    - **Docs → pins.** What the removed check did.
+    - **Docs → tests.** What the removed check did.
     - **Docs → source paths.** Already an ad-hoc shell sweep (it found
       four docs whose every `../../src/…` link was broken by depth, and
       `ssot.md` citing a module deleted in A6).
@@ -424,10 +424,10 @@ No hurry — all items below are queued for when their forcing function arrives.
       produces.
 
     Shape worth considering: ONE citation checker over a small typed
-    vocabulary of reference kinds (pin name, source path, doc path, CLI
+    vocabulary of reference kinds (test name, source path, doc path, CLI
     verb, project name), fed by a resolver per kind, run as part of
     `make canary-test` — rather than per-kind greps. The exclusion
-    problem (record fields and package names that look like pin names)
+    problem (record fields and package names that look like test names)
     is the part that needs real design: a marker convention at the
     citation site would beat a blacklist.
 
@@ -566,7 +566,7 @@ No hurry — all items below are queued for when their forcing function arrives.
       `artifacts_of_action` × the artifact declarations — is pass 2's
       `an_touches`, with `produced_at` (the hook's question) and
       `producers_of` (it backwards: where could this artifact's evidence
-      come from?). `canary emit <p> --stage analyse` prints it; pinned
+      come from?). `canary emit <p> --stage analyse` prints it; tested
       by `analysis.touches_joins_actions_to_declarations`. NOTHING
       CONSUMES IT YET, deliberately — see
       [`design/action_model.md`](design/action_model.md) §6 for the

@@ -3,7 +3,7 @@
 **Kind: proposal.** **Landed when** a placement resolves to its concrete
 location through ONE function, no project computes an install prefix
 itself, and "no two worlds write to the same place" is a derived check
-rather than one project's pin. The map is [`README.md`](README.md).
+rather than one project's test. The map is [`README.md`](README.md).
 
 > 2026-08-25, from the user's question after the stage-1 refactor: *"we
 > can have an action to install an artifact with a given path, and there
@@ -17,7 +17,7 @@ rather than one project's pin. The map is [`README.md`](README.md).
 
 The obvious answer to the question is `Installed of string`, by analogy
 with `Vendored_at of string`. It is wrong, and the reason is a bug the
-tree already has a pin for.
+tree already has a test for.
 
 `Vendored_at` carries a literal because a vendored artifact sits at one
 place **before any scenario exists** — a project fact. An install prefix
@@ -120,10 +120,10 @@ which is precisely what z3 computes by hand as
 ## 5. What it buys
 
 - **The prefix is looked up, not recomputed.** z3's bug class becomes
-  structurally impossible rather than pinned.
+  structurally impossible rather than tested.
 - **`z3.install_prefix_isolated` generalizes.** "No two worlds resolve an
   artifact to the same write location", derived over the registry,
-  replacing one project's hand-written pin. That is exactly the *general
+  replacing one project's hand-written test. That is exactly the *general
   form* [`../staged_parity.md`](../staged_parity.md) §4 asks for and has
   never had — and it is stage 5's *partition a place* principle
   ([`stage5_order_worlds.md`](stage5_order_worlds.md) §2) applied where it was first
@@ -142,13 +142,13 @@ which is precisely what z3 computes by hand as
 2. **Give `location` a `Vendored` case** and stop vendored probes
    borrowing `Build_tree`. This changes step TAGS, so it moves scenario
    dir names and orphans warm markers — do it deliberately, expect a cold
-   run, and check the tag pins first.
+   run, and check the tag tests first.
 3. **`location_of_provision`** — make the isomorphism a function, and
    have `derive_steps` read it instead of taking the location as a
    parallel argument.
 4. **`resolve`** in `Canary_pipeline`, beside `ctx_of`. Project-supplied
    path scheme; default a staged prefix from `Built_from`'s tree.
-5. **Generalize the isolation pin** and retire `z3.install_prefix_isolated`.
+5. **Generalize the isolation test** and retire `z3.install_prefix_isolated`.
 
 Steps 1 and 2 are independently useful; 3–5 are the arc.
 

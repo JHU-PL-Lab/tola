@@ -6,7 +6,7 @@ What exists, what each project covers, and what is queued next. Merged
 things about the same projects in two places.
 
 Siblings: [`status_project.md`](status_project.md) is THE to-do tracker
-for this layer (nothing here is a to-do); [`agreements.md`](agreements.md) is
+for this layer (nothing here is a to-do); [`landing.md`](landing.md) is
 how to land one; [`issues.md`](issues.md) is the open per-project
 worklist. Data behind the candidate picks: the
 [opam survey](../surveys/opam.md) and the measured
@@ -49,9 +49,12 @@ channel pair on BOTH the lib and the binding, giving two baselines plus
 the FORWARD (new binding, old lib) and BACKWARD (new lib, old binding)
 cells. Most projects have one axis and are therefore *half* a 2×2.
 
-Scenario counts are pinned by `matrix.registry_shape`
-(`canary_test_record.ml`) — a changed count anywhere fails the pin and
-the failure names the project, so this table cannot drift silently.
+Scenario counts are held in one count table, `world_counts`
+(`canary_test_fixtures.ml`), which two tests read: `enumerate.world_counts`
+(every catalogued project, muted ones included) and `matrix.registry_shape`
+(the result table's rows for the active ones). A changed count anywhere
+fails a test and the failure names the project, so the table below cannot
+drift silently.
 
 | project | lib axis | binding axis | scen. | 2×2 status | local / CI |
 | --- | --- | --- | ---: | --- | --- |
@@ -80,7 +83,7 @@ S5a detection runs on every executed step.
 `canary action @all` runs the active set under the default config, with
 `pr_tier` grouping the runs: `Heavy` (z3, llvm — source-built chains)
 goes THIN, bypassing the Dev builds; `Light` goes full. `--thin` forces
-thin everywhere; an explicit single-project run ignores the tier. Pinned
+thin everywhere; an explicit single-project run ignores the tier. Tested
 by `registry.batch_tiers`.
 
 **Per-project notes worth carrying:**
@@ -89,7 +92,7 @@ by `registry.batch_tiers`.
   `all_projects`): its opam package is `Package_builds_lib`, so every
   binding pin flip recompiles libz3 from source (~30 min a run). Muting
   suppresses *running*, not checking — `all_specs` still carries it and
-  every pin still reads it.
+  every test still reads it.
 - **sqlite's Built scenarios probe the BUILT lib** (soname symlink +
   `LD_LIBRARY_PATH` repoint) and assert the runtime version. Python's
   runtime sqlite is **Ambient** (uv's python statically bundles its own);

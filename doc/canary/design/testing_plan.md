@@ -1,6 +1,6 @@
 # Testing plan — general structure and algorithm behavior
 
-**Kind: proposal.** Entirely unstarted as of 2026-08-23 — none of the pins it names exist. **Landed when** `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table.
+**Kind: proposal.** Entirely unstarted as of 2026-08-23 — none of the tests it names exist. **Landed when** `canary pipeline-test` runs sqlite-thin through the real pipeline and asserts on the verdict table.
 
 > Written 2026-08-07; baseline refreshed 2026-08-23. Covers what to test
 > beyond the existing `project-test` (104 pure), `artifact-test` (109
@@ -14,7 +14,7 @@
 
 | Suite | What it covers | Gap |
 |---|---|---|
-| `project-test` (104) | Pure checks: consumes/produces, enumeration shapes, dispatch, provisions, pins, run order | No execution — doesn't run the pipeline |
+| `project-test` (104) | Pure checks: consumes/produces, enumeration shapes, dispatch, provisions, project-spec tests, run order | No execution — doesn't run the pipeline |
 | `artifact-test` | Tool primitives (nm, ocamlobjinfo, python import, mutation apply) | No project integration |
 | `pm-test` | PM presence checks | Narrow scope |
 | `make canary-post-check` | sqlite + the tiny1 bridge, run for real | Manual gate before commit; asserts nothing on the verdict table |
@@ -80,7 +80,7 @@ Extend `project-test` with:
 - `enumerate.all_fetched_dedup`: two Fetched artifacts at different channels
   produce 1 scenario, not 2
 - `enumerate.follows_prunes_mismatch`: with `ax_follows`, cross-channel pairs
-  are pruned (already covered by `binding_follows_chain` pins)
+  are pruned (already covered by `binding_follows_chain` tests)
 
 ## What stays manual
 

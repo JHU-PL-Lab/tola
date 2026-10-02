@@ -7,8 +7,8 @@
 > fixed lives in [`../worklog/`](../worklog/).
 >
 > Conventions for whoever picks these up: the project layer's rules are
-> in [`agreements.md`](agreements.md) and the repo CLAUDE.md — bottom-up
-> increments, every increment ships a pin (`canary project-test`), and
+> in [`landing.md`](landing.md) and the repo CLAUDE.md — bottom-up
+> increments, every increment ships a test (`canary project-test`), and
 > `make canary-test` after any edit under `src/canary/`. Live-verify with
 > `canary action <project>` before calling an issue closed, and move the
 > entry to the worklog rather than deleting it.
@@ -235,9 +235,9 @@ and a Built lib follows its source), which is exactly the case
 `tiny_full_general_spec`'s comment says should not arise because tiny's
 Dev is a `-DTINY_DEV` build **flag** rather than a source version.
 
-**Not an unnoticed break — a pinned one.** `("tiny-full", 1)` and
-`~want_count:1` in `canary_test_projects.ml` both encode 1, so the pins
-were moved to match rather than firing. Worth treating as the more
+**Not an unnoticed break — a tested one.** `("tiny-full", 1)` in the one
+count table (`world_counts` in `canary_test_fixtures.ml`) encodes 1, so
+the tests were moved to match rather than firing. Worth treating as the more
 interesting half of the finding: the ratchet recorded the new number
 instead of contesting it.
 
@@ -258,7 +258,7 @@ the gap, it does not choose which way to close it.
 **Pickable as:** decide whether tiny-full's general run is meant to carry
 the built-lib/dev-binding axes (the docs say yes, the code says no). If
 yes, move `tiny_full_general_spec`'s cells into `tiny_artifact_table`,
-resolve the `built@dev` pruning, re-pin the count, and delete
+resolve the `built@dev` pruning, update the count the tests hold, and delete
 `general_spec`. If no, delete `general_spec` and the unreachable
 `dispatch` cases and the mismatch-probe row, and correct CLAUDE.md.
 Either way `general_spec` goes.
@@ -402,7 +402,7 @@ it inflates a count, so it reads as more coverage rather than as an
 error. Two ways to fix: match on the exact variant-key field the
 filename encodes (`Canary_basic.variant_file` already builds it, so the
 reader can parse rather than search), or forbid prefix-related variant
-keys in the born-safe pin. The first is right; the second would ban a
+keys in the born-safe test. The first is right; the second would ban a
 legitimate naming (stock vs patched at one version).
 
 ### Open — tiny still spells its library for ONE object format, so the
@@ -425,7 +425,7 @@ cmake produces the same shape it does on Linux: `libtiny.1.0.dylib` ←
 **What is not.** `libtiny.so.1` is written out in ~40 places — tiny's
 scenario recipes, the workspace materializer, the `soname_matches_requirement`
 SONAME fixtures, the
-`Dlopen` coupling, several pins. `Canary_basic.shared_lib_name` exists
+`Dlopen` coupling, several tests. `Canary_basic.shared_lib_name` exists
 now and knows both conventions (ELF puts the version AFTER the
 extension, Mach-O BEFORE: `libtiny.so.1` vs `libtiny.1.dylib`), but
 nothing calls it yet. Until those declarations go through it:
@@ -649,7 +649,7 @@ made it absolute. The guard expanded to
 variable, so nothing failed loudly and the shadowing came straight back
 (`unknown C primitive 'n_solver_register_on_clause'` — the very error the
 guard was written for in 2026-08-13). Fixed by absolutising
-conditionally; pinned as `z3.env_guard_paths` (no `//` past the root, and
+conditionally; tested by `z3.env_guard_paths` (no `//` past the root, and
 the guard must still name the build tree), falsified by restoring the
 unconditional prefix.
 
@@ -766,7 +766,7 @@ runtime, so "which libffi answered" is the entire question).
 
 **Fix**: teach each example to print its resolved library — the same
 `/proc/self/maps` scan zlib uses, matching on `libcairo.so` /
-`libffi.so` — then flip the flag. The pin
+`libffi.so` — then flip the flag. The test
 `vendored.probe_names_the_world` already covers all three projects and
 will start enforcing the assert as soon as the flag turns true.
 

@@ -146,7 +146,7 @@ flat version worked and then didn't:
 - **Per-artifact.** Each artifact draws from its OWN universe. Real
   projects are heterogeneous — a lib at `{Fetched, Built}` × `{Stable,
   Dev}` beside a binding only at `Fetched@Stable`. A single global list
-  was a tiny-shaped simplification. Pins:
+  was a tiny-shaped simplification. Tests:
   `enumerate.per_artifact_provisions`, `enumerate.per_artifact_versions`.
 - **Version is per-PROVISION, not per-artifact.** An artifact's version
   universe depends on HOW it is provided: a `Fetched` lib is
@@ -154,7 +154,7 @@ flat version worked and then didn't:
   lib ranges over the versions canary can build, a `Vendored` one over
   the prepared variants. Without this the flat provision × version
   product over-generates — a `Vendored@Dev` world no prebuilt backs, or a
-  `Fetched@Dev` that only dedups away downstream. Pin:
+  `Fetched@Dev` that only dedups away downstream. Test:
   `enumerate.per_provision_versions`.
 
 `Installed` is a **separate world, not a view of `Built`** (2026-08-18,
@@ -241,7 +241,7 @@ Built artifact is built here and bundles nothing.
 > libsqlite3-dev` beside `{Fetched, Built, Installed}`, where the package
 > explains only the Fetched case. That needed a special rule ("the
 > provider's provision is a BASELINE, not the whole truth") and a
-> per-project pin to stop the two drifting. Both are gone: there is one
+> per-project test to stop the two drifting. Both are gone: there is one
 > declaration, the coarse axis is a projection of it, and
 > `<project>.providers_match_baseline_provisions` retired because the type
 > now does what it watched for.
@@ -273,7 +273,7 @@ drop the dev repos.
 `Z3Prover/z3` = [lib; binding OCaml; binding Python], `ocaml/Zarith` =
 [binding OCaml]. On-tree vs off-tree is then DERIVED, not declared: on-tree
 means the artifact's repo is shared with the project's others. An artifact
-must appear in its provider repo's contents — pinned by
+must appear in its provider repo's contents — tested by
 `repo_model.contents_invariant`.
 
 **What a repo provider needs on disk** (the decided lifecycle, 2026-08-15):
@@ -282,14 +282,14 @@ must appear in its provider repo's contents — pinned by
   modelled separately and may differ.
 - **One repository, a `git worktree` per tracked ref.** Shared objects, no
   in-place `git checkout` churn. So *stable* and *latest* are
-  **descriptive markers that can move**, not fixed identities. Pinned by
+  **descriptive markers that can move**, not fixed identities. Tested by
   `repo_model.worktree_paths`.
 - **Refresh is on demand.** Nothing chases nightlies.
 - **The layout is a setting.** `~/code/contrib/<project>-all/<repo-variant>`,
   held as data in the base layer.
 - **A fork needs no remote.** `None` is a local-only fork, which
   `spec-check` reports as a WARNING — we survey many projects and may
-  never find a bug worth pushing. Pin: `spec_check.local_fork_warns`.
+  never find a bug worth pushing. Test: `spec_check.local_fork_warns`.
 - **An inaccessible source does not break checking.** The enumeration and
   the artifact checks still detect and blame a wrong scenario.
 
@@ -408,7 +408,7 @@ artifact_row ~artifact:(a_binding Python Cext)
 
 Read it as: the lib has **five placements** (one fetched + two built +
 their two staged faces), the OCaml binding has **two** (its store pins),
-5 × 2 = 10, and the Python binding is ambient in every one. Pinned by
+5 × 2 = 10, and the Python binding is ambient in every one. Tested by
 `enumerate.project_spec_sqlite_shape` and `sqlite.provider_rows`.
 
 ### What else these four rows determine
@@ -495,15 +495,15 @@ Known limits, each with its own note:
   projects cannot declare pins — `../../project/issues.md`.
 - **A gate inside the binding's own build.** `pm_dep_gate` describes
   gates a package manager enforces; a version test a package runs in its
-  own `build:` (mlmpfr) has no representation. Pin for what IS
+  own `build:` (mlmpfr) has no representation. Test for what IS
   expressible: `spec.pm_dep_gate_groups`.
 - **A pinned version for an artifact the PM chooses.** A project that
   wants to pin a `Fetched` version overrides through its provider; for
   system packages (`Sys_pkg`) that is not wired.
 
-## Pins guarding this stage
+## Tests guarding this stage
 
-| pin                                           | asserts                                                                        |
+| test                                          | asserts                                                                        |
 | --------------------------------------------- | ------------------------------------------------------------------------------ |
 | `enumerate.project_spec_sqlite_shape`         | the worked example's rows produce the expected universe                        |
 | `enumerate.per_artifact_provisions`           | each artifact draws from its own provision universe                            |

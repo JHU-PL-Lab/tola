@@ -84,7 +84,7 @@ fetch chain.
 
 That argument is not self-evident here, because the product is followed
 by five constraints and one of them (`shadow_filter`) is
-CROSS-assignment. So it is a pin, not a paragraph:
+CROSS-assignment. So it is a test, not a paragraph:
 `select.thin_post_filter_equals_universe_restriction` runs both forms
 over every catalogued project. Two more guard the pass's shape —
 `select.is_a_subset_of_stage2` (selection only ever removes, so pass 3

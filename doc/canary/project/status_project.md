@@ -12,7 +12,7 @@
 > - [`projects.md`](projects.md): what EXISTS — the roster, per-project
 >   coverage and 2×2 status, landing history, candidates. Facts, not
 >   to-dos.
-> - [`agreements.md`](agreements.md): how to land one.
+> - [`landing.md`](landing.md): how to land one.
 > - Framework status is [`../status.md`](../status.md); anything FIXED
 >   is history and lives in [`../worklog/`](../worklog/).
 
@@ -35,7 +35,7 @@ D is a real arc.
 
 - [ ] **Run coverage and age, per project** (revisit §1) — rows run /
   rows enumerated, plus the oldest run timestamp, printed by `result` and
-  `status`. Turns `·` from decoration into accounted debt. Pin the ratio
+  `status`. Turns `·` from decoration into accounted debt. Test the ratio
   so it cannot fall silently. Today the number is 41/42 and a person has
   to reconstruct it.
 - [ ] **A post-`build_binding` soname assertion** (revisit §3, the cheap
@@ -93,7 +93,7 @@ recorded `cmd_fail (exit 1)` and the reason vanished with the scrollback.
 - [x] **A2. The cross cells ASSERT their world.** `z3_example` now prints
   `z3 resolved: <path>` from /proc/self/maps (the same convention zlib
   and zstd use), and the Built / Installed worlds assert their own libdir
-  through `Canary_world.Log_names`. Pinned as
+  through `Canary_world.Log_names`. Tested by
   `z3.cross_cells_assert_world`: the two worlds must name DIFFERENT
   directories and no asserted path may carry a `..` segment — the probe
   reports what the loader RESOLVED, so an unnormalised path never
@@ -163,7 +163,7 @@ is still baked into the action catalogue, so:
   green: lib `F:stable` (apt 1.3) and `V:dev` (conda-forge 1.3.2), the
   first project whose lib pair needed no build at all. The probe reads
   `/proc/self/maps` and prints which libz answered, and the vendored
-  world ASSERTS it (`probe_names_lib`) — pinned by
+  world ASSERTS it (`probe_names_lib`) — tested by
   `vendored.probe_names_the_world`, falsified two ways (drop the
   repoint; keep the repoint but drop the assert). Measured evidence the
   two worlds are really two: 15 vs 17 exported `deflate*` symbols.
@@ -196,7 +196,7 @@ is still baked into the action catalogue, so:
   packaging and never reaches the library — sundials remains the row that
   proves the finding. What is wrong is the *"Ready — a wide, real pair"*
   verdict that followed from it, and §3b step 3 of
-  [`agreements.md`](agreements.md) is exactly the step that catches it:
+  [`landing.md`](landing.md) is exactly the step that catches it:
 
   1. **sundialsml's own `./configure` reads the library version** —
      `SUNDIALS_PACKAGE_VERSION` (falling back to `SUNDIALS_VERSION`) out
@@ -257,7 +257,7 @@ is still baked into the action catalogue, so:
 - [ ] **D4. Named lib artifacts** (the multi-provider axis) — a project
   declares several C libs with their own universes. **Step 1 of 3 landed
   2026-08-25**: `A_lib of string option`, one file, every id byte-identical,
-  pinned by `vocab.lib_name_optional`. Two steps remain and BOTH need a
+  tested by `vocab.lib_name_optional`. Two steps remain and BOTH need a
   real second lib to exist, so they land WITH their first consumer rather
   than before it:
   - `rp_build : placement option` beside `rp_run`, so `rp_deploy` is
@@ -383,7 +383,7 @@ are chronicled in the worklog; this one is what remains:
    c1 stub↔lib check, tiny-full's precedent) instead of a raw FAIL.
    Steps: a pattern-level contract binding for the built-binding
    probe (forward cell only), the built-binding inspect summary the
-   c1 inputs resolve from, a pin that the expectation is
+   c1 inputs resolve from, a test that the expectation is
    Expect_compat_derived there and Expect_success elsewhere.
 
 **Design-stage** (the enumeration/config family — when dependency
@@ -400,7 +400,7 @@ directions):
   `../design/wrapper_packages.md` §3.)
 - [ ] **Repo-model leftovers** (inherited 2026-08-23 when `repo_model.md`
   was purged into `../design/enumeration/stage1_declare_spec.md` §4;
-  the declared model is built and pinned, these are the decisions it
+  the declared model is built and tested, these are the decisions it
   left open):
   - the fork's LABEL in output — repo name? owner? (`arbipher` today);
   - the config carrier for the contrib layout — a base-layer setting
@@ -447,7 +447,7 @@ directions):
 - [ ] **Reconcile the two stage-2 constructions** — `enumerate_product`
   (product-then-filter, mutation-aware, what the docs describe) and
   `enumerate_follows_tree` (a root/child walk over `ax_follows`,
-  positive-only, what the RUNNER uses). Since 2026-08-24 they are pinned
+  positive-only, what the RUNNER uses). Since 2026-08-24 they are tested
   to agree on every catalogued project
   (`enumerate.two_constructions_agree`), which is the evidence for
   deleting one — the question is which, and the mutation axis is why it
@@ -476,8 +476,8 @@ directions):
   admits 10 of 38). It cost a renumbering — declare(1), analyse(2),
   enumerate(3), select(4), order(5), realize(6) — which the user
   approved: *"a clean model for pass as well as action / project is more
-  worthy"*. Not done: pinning the count per project the way
-  `matrix.registry_shape` pins scenarios.
+  worthy"*. Not done: testing the count per project the way
+  `matrix.registry_shape` tests scenarios.
 - [ ] **Retire the mutation axis from the general signature** — the
   enumeration is polymorphic in a mutation that no registry project uses
   (`mutations = []` in both `full_policy` and `thin_policy`; the only
@@ -492,7 +492,7 @@ directions):
   passes and reads the CATALOGUE, so a muted project still dumps. That
   closes this item's premise: **the run order can now be looked
   at** (`emit --stage order` vs `--stage enumerate` shows the same
-  scenarios in the two orders), where before it was pin-verified and
+  scenarios in the two orders), where before it was test-verified and
   invisible.
 - [ ] **The `--why` half of `emit`** — which of the five constraints
   dropped a candidate. NOT landed; there is no `--why` flag. Still the
@@ -531,13 +531,13 @@ directions):
   answer the pre-10549 world's staged probe and silence the regression
   xfail. See the Fixed entry in §2. What remains here is the GENERAL
   form: no project's two worlds may share a staging area — a derived
-  check over the install rows rather than z3's hand pin, and the same
+  check over the install rows rather than z3's hand-written test, and the same
   question for any other write-shared location a realization names).
   Taxonomy + the checking principle in
   `doc/canary/design/staged_parity.md` (the cross-agent brief).
 - [ ] **Surface-drift expectations** — per-project drift bounds on the
   TOTAL surface (C + OCaml counts); `canary inspect-diff` exists.
-- [ ] **Pinned verdict-matrix regression** — pin the per-scenario
+- [ ] **Tested verdict-matrix regression** — test the per-scenario
   verdict matrix (the C2 5/5 was ad-hoc); markers should record the
   verified ref; a `--cold` audit flag; CI-nightly material. The `--cold`
   flag now has a CONCRETE citation (2026-08-17): the warm-mask fix's
@@ -549,7 +549,7 @@ directions):
   its own switch (`canary`, OCaml 5.4.1, seeded minimal: dune, ocamlfind,
   zarith, fmt). `--switch=NAME` / `--switch=` / `CANARY_SWITCH` override;
   the run header and `actions.log` both name it; it is part of the step
-  fingerprint so a verdict cannot cross switches. Pinned by
+  fingerprint so a verdict cannot cross switches. Tested by
   `switch.selection`, falsified by dropping the label from the digest.
   **This unblocks item E below** — a zstd binding-pin flip recompiling 157
   packages is acceptable in a switch nobody works in.

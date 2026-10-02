@@ -65,7 +65,7 @@ command templates.
 4. **The testing harness** (each step guards the previous):
    - `dune build` after every edit;
    - `make canary-test` (pure project-test + artifact-test + pm-test);
-     the `registry.entries_enumerate` pin fails if an entry's
+     the `registry.entries_enumerate` test fails if an entry's
      enumeration is empty or the name list drifts;
    - `canary spec-check <name>` — **the 2×2 bar, checked** (2026-08-25):
      `lib pair` and `binding pair` warn when an axis has fewer than two
@@ -74,7 +74,7 @@ command templates.
      first run: a thin axis is either a fact about the world (declare it
      in the row's `~rationale`, which the warn prints) or the landing is
      not done. Adding the project to `spec_check.ratchet_current`'s list
-     is part of landing it — zlib and zstd went four days unpinned;
+     is part of landing it — zlib and zstd went four days untested;
    - `canary action <name>` — first full run, read
      `_out/canary/projects/<name>/-run/actions.log` on failure;
    - `canary spec <name>` / `canary scenarios <name>` / `canary status
@@ -147,7 +147,7 @@ plan inside a measurement. In the order that avoids rework — each step's
 6. **Point the CONSUMER at the world's lib.** The probe must carry the
    world's libdir; otherwise the vendored world silently re-tests the
    system lib and passes for the wrong reason.
-7. **Pin it**: the enumeration count, and — the one with teeth — that the
+7. **Test it**: the enumeration count, and — the one with teeth — that the
    two worlds' realized commands NAME DIFFERENT FILES. cairo proves why:
    its two versions export identical symbol counts, so a silent fallback
    is invisible in the verdict.
@@ -279,7 +279,7 @@ So the rule for any Vendored lib axis:
    asserting.
 3. **Falsify it before trusting it** — twice, because there are two ways
    to be wrong: break the libdir (the repoint fails) and remove the assert
-   while keeping the repoint (the check silently stops checking). The pin
+   while keeping the repoint (the check silently stops checking). The test
    `vendored.probe_names_the_world` covers both and every registry project
    with a prebuilt.
 

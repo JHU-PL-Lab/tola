@@ -204,7 +204,7 @@ world's, and both passed *because they tested the same library*. cairo is
 the case that hides it best: its two versions export identical symbol
 counts (420/420), so nothing in the verdict could reveal it. Found by
 reading the emitted command. Now the world's libdir goes first on
-`LD_LIBRARY_PATH`, and the pin asserts both probes name the prebuilt in
+`LD_LIBRARY_PATH`, and the test asserts both probes name the prebuilt in
 the Vendored world and neither does in the Fetched one.
 
 **(b) The fix went into dead code first.** It was applied in
@@ -396,6 +396,6 @@ vendored:  zstd version: 1.5.7   zstd resolved: <prebuilt>/lib/libzstd.so.1.5.7
 
 Two independent witnesses that can disagree — a stale file at the
 expected path, or a header/library skew — and when they agree the world
-is pinned twice. zlib gets only the path, because camlzip exposes no
+is checked twice. zlib gets only the path, because camlzip exposes no
 `zlibVersion()`. When a binding offers a runtime version accessor, use
 it; when it does not, `/proc/self/maps` always works.

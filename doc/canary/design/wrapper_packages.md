@@ -126,7 +126,7 @@ enumeration filter, not a policy, and there is no way to turn it off:
   visible should declare it as a **distinct version** rather than ask a
   run flag to unhide it. The variant, the rung, the flags and
   `~force_audit` are all gone; `run_policy` is `Full | Thin`.
-- Pinned by `enumerate.shadow_policy_drops_same_cell_built` (the same
+- Tested by `enumerate.shadow_policy_drops_same_cell_built` (the same
   cell drops; different cells — the z3 shape — never shadow) and
   `shadow.policy_ladder` (which now asserts the Full/Thin ladder only).
 - zarith/z3/llvm today: unchanged (zarith's lib row is Fetched-only;
@@ -151,7 +151,7 @@ the build body (z3: cmake+ninja; llvm: cmake; zarith: configure+make);
 the skeleton is common: opam metadata, the `CANARY_*_SRC` url, the
 build/install/remove slots, the conf-free depends, the same-findlib
 conflict. LANDED shape: `Canary_opam_template` (tool/) renders the skeleton
-from a per-project `wrapper_decl` (the renderer pin asserts byte-
+from a per-project `wrapper_decl` (the renderer test asserts byte-
 equality with the committed file); the committed file is `opam.in`
 (the `.in` convention — opam indexes only `opam`; the pack primitive
 substs it with the `OPAMVAR_`-prefixed source var, the dir convention

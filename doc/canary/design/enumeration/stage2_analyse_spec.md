@@ -96,7 +96,7 @@ with the project's FIRST declared binding for every action, so sqlite's
 Python probe reported that nothing fires there, while the result table
 carried five Python check columns and the run log had decided
 `api_names_present` on that step twelve times. Three views of one
-project, two answers. `checks.index_speaks_each_action_language` pins
+project, two answers. `checks.index_speaks_each_action_language` tests
 that instance.
 
 **2026-09-16, the cause.** Both views built their own
@@ -113,7 +113,7 @@ No output moved when this was fixed, because no project's chain puts
 such a language in front of the result table today: llvm derives no
 Python step and z3 is muted. That is the point — it is the same
 divergence as the 2026-09-15 one, caught before it fired.
-`checks.applicability_reads_the_declaration` pins the direction at the
+`checks.applicability_reads_the_declaration` tests the direction at the
 one project where the two answers differ.
 
 ## 5. The join — actions × declarations
@@ -139,7 +139,7 @@ precondition the consumed side. Lists per kind rather than a first
 match, because tiny-full already declares two apps and two Python
 bindings and `A_lib of string option` was landed for a second lib.
 
-Pinned by `analysis.touches_joins_actions_to_declarations` (total over
+Tested by `analysis.touches_joins_actions_to_declarations` (total over
 the declarations; a `Probe_*` produces nothing; a lib has more than one
 producer). The model it serves is
 [`../action_model.md`](../action_model.md); what is NOT built on it yet
@@ -210,7 +210,7 @@ a compiled stub archive, unlike Python's ctypes), and it is a project
 question rather than a pipeline one. Tracked in
 [`../../project/issues.md`](../../project/issues.md) §1.
 
-## 9. Code and pins
+## 9. Code and tests
 
 | what | where |
 | --- | --- |
@@ -220,7 +220,7 @@ question rather than a pipeline one. Tracked in
 | the join | `project/canary_project_analysis.ml` — `touches_of`, `touches`, `produced_at`, `producers_of` |
 | the dump | `canary emit <p> --stage analyse [--json]` |
 
-Pins: `checks.applicability_reads_the_declaration` (pass 2's answer is
+Tests: `checks.applicability_reads_the_declaration` (pass 2's answer is
 the declaration's, not the language default's),
 `checks.index_speaks_each_action_language` (the 2026-09-15 instance),
 `analysis.touches_joins_actions_to_declarations` (the join is total, a

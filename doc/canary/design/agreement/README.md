@@ -80,9 +80,9 @@ The list is meant to grow: a rule added there is enforced without
 touching a test, and it is not copied here, so it cannot go stale.
 
 A law relates **two cells of one row**. Single-cell facts (does this
-function exist, does this anchor resolve) are ordinary pins, and so are
+function exist, does this anchor resolve) are ordinary harness checks, and
 facts across rows (is a claim's target count the same under every
-mechanism).
+mechanism) are ordinary tests.
 
 **Saturation — is anything unwatched?** The row laws ask whether a row
 is self-consistent. `canary checks --firing` also prints the question no

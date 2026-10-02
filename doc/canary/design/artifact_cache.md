@@ -163,7 +163,7 @@ where it is already implied:
 
 1. every make/copy/install command names the identity of what it produces
    (today: sqlite's `.built-<v>` / `.staged-<v>` stamps — generalize the
-   convention, then pin it);
+   convention, then test it);
 2. a step's fingerprint includes the identity of its INPUT artifacts, not
    only its own command text — that single change would have caught the
    stale-staging bug automatically;

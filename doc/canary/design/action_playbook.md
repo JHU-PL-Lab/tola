@@ -97,13 +97,13 @@ Two forks before the checklists:
    `node_of_assignment` all read it.
 4. **The dependent actions' consumes — the DAG EDGE**: a binding
    built from an off-tree source consumes it: `Build_binding l`
-   gains `Binding_source l`. Two consequences the pins caught:
+   gains `Binding_source l`. Two consequences the tests caught:
    - `chains_for` must branch BOTH ways for the new consume —
      WITHOUT the fetch (on-tree specs, the source rides the lib's)
      and WITH it (off-tree specs) — a mandatory consume would break
      every on-tree project's chains (the `mechanism.…` + `derive.Sc.2`
      failures were this).
-   - the derivation/inventory pins' expected kind lists shift
+   - the derivation/inventory tests' expected kind lists shift
      (`related_artifacts_of_actions`, `consumed_artifacts_of_actions`
      — ORDER matters: the consume precedes the produce in the union).
 5. **The runner slot + defaults** — the per-lang slot on
@@ -121,8 +121,8 @@ Two forks before the checklists:
    kind without a wildcard is a checklist item the compiler hands
    you; work through them (enumerate, scenario, store_config,
    tiny_scenario, project_run…).
-9. **The kind-ratchet pins** — the catalogue pin's expected
-   consumes/produces rows, the derivation pins' unions, the tiny
+9. **The kind-ratchet tests** — the catalogue test's expected
+   consumes/produces rows, the derivation tests' unions, the tiny
    synthesis counts (`recipe_of_derived_cell`'s Some/None totals —
    a new kind adds None cells until a parametric recipe exists).
 10. **The IDEMPOTENCY note** — a repo providing BOTH the source and
@@ -153,7 +153,7 @@ empty slot before adding a constructor.
 - `%{VAR}%` interpolation reads the **`OPAMVAR_`-prefixed** environment
   variable.
 
-**A rendered file that is committed needs a byte-equality pin.**
+**A rendered file that is committed needs a byte-equality test.**
 `Canary_opam_template` renders one skeleton with per-project build
 bodies; the rendered `opam.in` files stay in the tree, and
 `tool.opam_template_render` asserts the renderer still produces them. It

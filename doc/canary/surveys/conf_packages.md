@@ -709,7 +709,7 @@ keeping those in sync cost an edit in three files per landing.
    (§G1a) make a binding's bound meaningful. Without that distinction
    `combination_freedom_of` answers `Within_bound` for libffi, where the
    truth is `Any_version`. → landed as a `tracks_lib` field, with the
-   libffi declaration updated and a pin, falsified both ways.
+   libffi declaration updated and a test, falsified both ways.
 2. **`Self_check_in_build` is missing** (§G1b, mlmpfr). Recorded as an
    issue, not added: no live user until mlmpfr lands.
 3. **A version-bearing gate must name a version-carrying conf package.**
