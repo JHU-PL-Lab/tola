@@ -1,6 +1,6 @@
 (** §0 of the overview page: the outline, the terms the page uses, and how
     the page is made — a figure of the path from canary's code and its
-    runs to the page, marking what the harness holds and what agents do
+    runs to the page, marking what tests hold and what agents do
     not read, and a table of the same path for each subject canary
     models. The page's sections, with the template slots each is made of
     and the code behind it, are listed here too. [text] prints it all

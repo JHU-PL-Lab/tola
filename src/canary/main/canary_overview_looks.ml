@@ -155,7 +155,7 @@ type vh_element =
   | Marker  (** a mark on an edge or a node: placeholder, declaration *)
   | Button  (** a button of the panel *)
   | Flow_box  (** a box of §0.2's figure *)
-  | Flow_mark  (** a mark on a box of §0.2's figure: the harness's, the agents' *)
+  | Flow_mark  (** a mark on a box of §0.2's figure: the tests', the agents' *)
 
 (** Where a hint can show: in every drawing, only while no recorded run is
     drawn, or only while one is. *)

@@ -269,7 +269,7 @@ the worklog and the commits. The page opens with §0 (user: "an explicit
 workflow diagram in the page", then "how this page is made serves the
 outline's purpose"): the outline and the terms, generated from
 `Canary_overview_flow`; a figure of the path from the code and a run to
-each section, marking what the harness holds and which files agents do
+each section, marking what tests hold and which files agents do
 not read whole; and each subject's code and running layers. §3's census
 became §2.2, the tables §3, and the asides say only current usage. The
 figure shows the diagrams held by no test, and the table the package

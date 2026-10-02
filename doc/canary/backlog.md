@@ -321,19 +321,17 @@ No hurry — all items below are queued for when their forcing function arrives.
   artifact identity across enumeration/store/cache) stays
   `design/enumeration/stage1_declare_spec.md` §5 — not this
   item.
-- **Tool-routing ratchet burn-down** (guard shipped 2026-08-05, user
-  to-do: `harness.tool_routing_ratchet` in `project-test` freezes
-  per-file counts of raw shell verbs in `projects/` — cmake / ninja /
-  gcc / curl / unzip / pip install / opam install / nm -D / git clone /
-  tar; any NEW raw use fails: route it through a `src/canary/tool`
-  primitive). Remaining = shrink the baseline to zero — sqlite
-  `built_spec`'s raw gcc/curl/unzip + nm (§1c #5), llvm's pip/opam
-  raws — the cleanup half of TODO #18, natural with A9-step-2; lower
-  the baseline in the same commit as each cleanup. (sqlite burned to
-  ZERO 2026-08-05 via new `curl_unzip_cmd`/`cc_shared_lib_cmd` +
-  `native_lib_probe_cmd`; remaining: llvm pip chain — needs a
-  pip-install-any primitive with the uv fallback — and the opam-install
-  raws.)
+- **Tool-routing ratchet burn-down** (guard shipped 2026-08-05): the
+  harness check `harness.tool_routing_ratchet` (`make harness`)
+  freezes, per file in `src/canary/project/`, the count of lines naming
+  a raw shell verb (cmake, ninja, gcc, curl, unzip, pip install, opam
+  install, nm -D, git clone, tar). A new raw use fails: route it
+  through a `src/canary/tool` primitive. Two raw uses remain: llvm's
+  pip-install chain (needs a pip-install-any primitive with the uv
+  fallback) and the `opam install` of z3's publish row. Every other
+  line counted only mentions a verb, in a comment, a rationale or a CI
+  filter. Lower the baseline in the commit that removes a line; this is
+  the cleanup half of TODO #18, natural with A9-step-2.
 - Tri-view command (factory / tiny1 / tiny-full on the `Bs.N` key).
 - Factory comment sweep (resource → cached artifact in
   `canary_tiny_scenario.ml`, minding the legit `Vendored` *provision*).
