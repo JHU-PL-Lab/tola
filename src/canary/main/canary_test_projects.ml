@@ -1,4 +1,4 @@
-(** Pins on the projects: each spec's worlds, bindings and providers, the
+(** Tests on the projects: each spec's worlds, bindings and providers, the
     registry, the spec audit and the tiny factory. *)
 
 open Base
@@ -33,7 +33,7 @@ let enumerate_full (spec : Canary_artifact.project_spec) : Canary_artifact.assig
 
 (** A project's declared source artifact: [a_source] when its repos carry
     the C lib (cairo, libffi, z3, llvm), [a_binding_source lang] when they
-    carry a binding's source (zarith). Pins asking for the source's pinned
+    carry a binding's source (zarith). Tests asking for the source's pinned
     ref ask the project rather than assume [a_source]. *)
 let source_artifact_of (pr : Canary_project_run.project_run) :
     Canary_artifact.artifact_info =
@@ -44,21 +44,21 @@ let source_artifact_of (pr : Canary_project_run.project_run) :
          | _ -> false))
     ~default:Canary_artifact.a_source
 
-(* The pins for a project whose worlds come from a family of source repos
+(* The tests for a project whose worlds come from a family of source repos
    (z3, llvm): the enumerated world counts and the dispatch. [source_of]
    is the project's own [source_for_assignment]; [dispatch_is_dev] says
    whether a world builds from source, which is the built family (Built
    or Installed: an Installed world builds, then stages), the gate
    [realize_from_rows] puts on the build rows. [n_staged] counts the
    Installed worlds, [n_forward] the forward cells. *)
-let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
+let two_chain_tests ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     ~(artifacts : Canary_project_spec.artifact_row list)
     ~(source_of : Canary_artifact.assignment -> Canary_artifact_source.source_repo)
     ~(dispatch_is_dev : Canary_artifact.assignment -> bool)
     ?(n_worlds = 5) ?(n_dev = 2) ?(n_stable = 3) ?(n_staged = 0)
     ?(n_forward = 0) () : Canary_project_test.pure_test list =
   (* [artifacts] is unused, kept in the signature as the declared rows
-     for a pin that reads the declaration rather than the enumeration *)
+     for a test that reads the declaration rather than the enumeration *)
   ignore artifacts;
   let lib_prov a = Canary_enumerate.provision_of a Canary_artifact.a_lib in
   (* the build chain: a Built@Dev lib over any dev source ref *)
@@ -155,7 +155,7 @@ let built_family a =
   Canary_enumerate.equal_provision pv Canary_artifact.Built
   || Canary_enumerate.equal_provision pv Canary_artifact.Installed
 
-let z3_pins : Canary_project_test.pure_test list =
+let z3_tests : Canary_project_test.pure_test list =
   (* Sixteen worlds. The binding's channel is its own axis, so each of the
      three dev refs carries the (lib, binding) cells, with B = Built,
      I = Installed, F = Fetched. The both-released baseline is one world:
@@ -164,14 +164,14 @@ let z3_pins : Canary_project_test.pure_test list =
      + 3 refs × {(I,B), (I,F)} = 6 staged
      + 3 refs × {(F,B)}        = 3 forward
      + 1 both-released baseline           = 16 *)
-  two_chain_pins ~prefix:"z3" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_z3.z3_artifacts)
+  two_chain_tests ~prefix:"z3" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_z3.z3_artifacts)
     ~artifacts:Canary_project_z3.z3_artifacts
     ~source_of:Canary_project_z3.z3_source_for_assignment
     ~dispatch_is_dev:built_family
     ~n_worlds:16 ~n_dev:6 ~n_stable:1 ~n_staged:6 ~n_forward:3 ()
 
-let llvm_pins : Canary_project_test.pure_test list =
-  two_chain_pins ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts)
+let llvm_tests : Canary_project_test.pure_test list =
+  two_chain_tests ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts)
     ~artifacts:Canary_project_llvm.llvm_artifacts
     ~source_of:Canary_project_llvm.llvm_source_for_assignment
     ~dispatch_is_dev:built_family
@@ -329,7 +329,7 @@ let derived_evidence_matches_projects : Canary_project_test.pure_test =
    pairing per world. Ambient: no run placement, never a deploy pairing.
    The deploy pairings are the built-family worlds, where canary supplies
    the run lib under a fetched binding. *)
-let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
+let sqlite_runtime_edges_test : Canary_project_test.pure_test =
   { name = "sqlite.runtime_edges_two_instance_slice";
     holds = "In every sqlite world, Python's runtime edge is ambient and OCaml's runs on the world's lib, a deploy pairing in eight of the ten worlds.";
     check = (fun () ->
@@ -368,7 +368,7 @@ let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
    (cairo's two versions export identical symbol counts); (c) the lib row
    carries a rationale, also on zarith, which declares no prebuilt: a
    one-point axis says why. *)
-let vendored_prebuilt_pin : Canary_project_test.pure_test =
+let vendored_prebuilt_test : Canary_project_test.pure_test =
   { name = "spec.vendored_prebuilt_pair";
     holds = "libffi and cairo have a system-lib world and a downloaded-prebuilt world, and only the prebuilt world's probes read the prebuilt.";
     check =
@@ -380,7 +380,7 @@ let vendored_prebuilt_pin : Canary_project_test.pure_test =
           in
           List.fold spec.Canary_step_builder.probe_lib ~init:""
             ~f:(fun acc (_, f) ->
-              acc ^ f ~output_dir:"/tmp/pb" ~variant_key:"pin")
+              acc ^ f ~output_dir:"/tmp/pb" ~variant_key:"test")
         in
         let binding_probe_cmd pr a =
           let spec =
@@ -388,7 +388,7 @@ let vendored_prebuilt_pin : Canary_project_test.pure_test =
           in
           List.fold spec.Canary_step_builder.probe_binding ~init:""
             ~f:(fun acc (_, _, f) ->
-              acc ^ f ~output_dir:"/tmp/pb" ~variant_key:"pin")
+              acc ^ f ~output_dir:"/tmp/pb" ~variant_key:"test")
         in
         let pair_ok (pr : Canary_project_run.project_run) (pb : PB.t) =
           let asgs = Canary_project_run.scenarios_of pr in
@@ -447,7 +447,7 @@ let vendored_prebuilt_pin : Canary_project_test.pure_test =
    (b) each project's measured group, so a spec edit that reclassifies
    one fails here; (c) the combination freedom derived from each kind of
    gate. *)
-let pm_gate_pin : Canary_project_test.pure_test =
+let pm_gate_test : Canary_project_test.pure_test =
   { name = "spec.pm_dep_gate_groups";
     holds = "Every external project's binding, CPython extensions aside, has a package-manager gate, and each measured gate stays in its measured group.";
     check =
@@ -585,7 +585,7 @@ let pm_gate_pin : Canary_project_test.pure_test =
    both-released baseline exists once, since nothing is built there and
    the source ref is unread; (c) cross-channel pairs survive; (d) a built
    binding still matches its source's channel ({!binding_couples}). *)
-let z3_mismatch_matrix_pin : Canary_project_test.pure_test =
+let z3_mismatch_matrix_test : Canary_project_test.pure_test =
   { name = "z3.mismatch_matrix_cells";
     holds = "z3's binding channel is free of its lib's: every dev ref has a forward and a backward cell, and the both-released baseline exists once.";
     check =
@@ -652,7 +652,7 @@ let z3_mismatch_matrix_pin : Canary_project_test.pure_test =
 
 (* The binding row's [ax_follows:a_lib] couples the channels. Applied to
    llvm, whose binding follows its lib. *)
-let binding_follows_chain_pin ~prefix ~(spec : Canary_artifact.project_spec) :
+let binding_follows_chain_test ~prefix ~(spec : Canary_artifact.project_spec) :
     Canary_project_test.pure_test =
   { name = prefix ^ ".binding_follows_chain";
     holds = "The OCaml binding follows the lib: in every world that provides both, they have the same channel.";
@@ -695,7 +695,7 @@ let world_counts_test : Canary_project_test.pure_test =
                    (Option.value_map want ~default:"no count" ~f:Int.to_string) n;
                  false)) }
 
-let registry_pin : Canary_project_test.pure_test =
+let registry_test : Canary_project_test.pure_test =
   { name = "registry.entries_enumerate";
     holds = "Every registry entry is a catalogue name with at least one world; ssl has two, one per binding store pin, and zarith two, one per source repo.";
     check = (fun () ->
@@ -868,7 +868,7 @@ let tiny1_bridge : Canary_project_test.pure_test =
       let ok_part_c = List.is_empty mapping_gaps in
       ok_one && ok_all_vendored && ok_agnostic && ok_part_b && ok_part_c) }
 
-let binding_decl_pin : Canary_project_test.pure_test =
+let binding_decl_test : Canary_project_test.pure_test =
   { name = "tiny1.binding_decl_facts_match_handwritten";
     holds = "tiny's binding declarations state the facts of its hand-written build: the shared C API and native lib, each coupling and the inspected surface paths.";
     check = (fun () ->
@@ -924,7 +924,7 @@ let binding_decl_pin : Canary_project_test.pure_test =
    stores (source /WS, lib /WS/c/build, cext root /WS/python_cext). A
    change to the realization fails here, and the diff is the behaviour
    change. *)
-let tiny_binding_realization_pin : Canary_project_test.pure_test =
+let tiny_binding_realization_test : Canary_project_test.pure_test =
   { name = "tiny1.binding_realization_matches_handwritten";
     holds = "The binding realization emits exactly the commands captured from tiny's hand-written runner spec.";
     check = (fun () ->
@@ -995,7 +995,7 @@ let tiny_binding_realization_pin : Canary_project_test.pure_test =
         ]
         ~f:(fun (got, want) -> Poly.equal got want)) }
 
-let spec_check_every_project_pin : Canary_project_test.pure_test =
+let spec_check_every_project_test : Canary_project_test.pure_test =
   { name = "spec_check.every_project_reports";
     holds = "Every registry entry yields a well-formed spec-check report under its own name: twelve items, none with an empty id.";
     check =
@@ -1008,7 +1008,7 @@ let spec_check_every_project_pin : Canary_project_test.pure_test =
                    not (String.equal i.item_id "")))) }
 
 (* Closing a gap fails this until the list is updated. *)
-let spec_check_ratchet_pin : Canary_project_test.pure_test =
+let spec_check_ratchet_test : Canary_project_test.pure_test =
   let open Canary_spec_check in
   let ids sev r =
     List.filter_map r.items ~f:(fun i ->
@@ -1082,7 +1082,7 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
 
 (* z3 and llvm build from source; thin runs the stable worlds only,
    bypassing the dev builds. *)
-let batch_tier_pin : Canary_project_test.pure_test =
+let batch_tier_test : Canary_project_test.pure_test =
   { name = "registry.batch_tiers";
     holds = "z3 and llvm are Heavy and run thin in the batch, the cheap active projects are Light, and sqlite runs in full.";
     check =
@@ -1113,7 +1113,7 @@ let batch_tier_pin : Canary_project_test.pure_test =
 
 (* The worktree takes the official repo name; see
    doc/canary/design/enumeration/stage1_declare_spec.md. *)
-let repo_model_pin : Canary_project_test.pure_test =
+let repo_model_test : Canary_project_test.pure_test =
   { name = "repo_model.worktree_paths";
     holds = "A repo's main checkout lies under the contrib root, and a ref's worktree sits beside it, named by the repo name plus the ref with slashes as dashes.";
     check =
@@ -1148,7 +1148,7 @@ let repo_model_pin : Canary_project_test.pure_test =
 
 (* A fork need not be pushed. An official repo without a remote stays an
    error. *)
-let local_fork_pin : Canary_project_test.pure_test =
+let local_fork_test : Canary_project_test.pure_test =
   { name = "spec_check.local_fork_warns";
     holds = "A local-only fork, a labelled repo with no remote, is a spec-check warning rather than an error.";
     check =
@@ -1197,7 +1197,7 @@ let local_fork_pin : Canary_project_test.pure_test =
    channel count gets wrong; (b) the same row with one pin is not, which
    a check that ignores pins gets wrong; (c) a lib with two cells is a
    pair. *)
-let pair_counts_points_pin : Canary_project_test.pure_test =
+let pair_counts_points_test : Canary_project_test.pure_test =
   { name = "spec_check.pair_counts_points";
     holds = "The spec-check pairs count points, a provision and version after store-pin expansion, not universe cells or channels.";
     check =
@@ -1275,7 +1275,7 @@ let pair_counts_points_pin : Canary_project_test.pure_test =
         && Poly.equal (sev c "lib_pair") (Some Ok)
         && Poly.equal (sev c "binding_pair") (Some Warn)) }
 
-let repo_contents_pin : Canary_project_test.pure_test =
+let repo_contents_test : Canary_project_test.pure_test =
   { name = "repo_model.contents_invariant";
     holds = "In every active project, each non-source artifact provided by a repo appears among that repo's artifacts.";
     check =
@@ -1290,7 +1290,7 @@ let repo_contents_pin : Canary_project_test.pure_test =
 
 (* A [Repo_axes] family's repos become the source row's store pins, each
    world identity-bearing and keeping its repo's channel. *)
-let repo_axes_pin : Canary_project_test.pure_test =
+let repo_axes_test : Canary_project_test.pure_test =
   { name = "repo_model.axes_pins";
     holds = "Each of zarith's source repos gives a world of its own that fetches that repo's ref, and cairo's single repo is pinned to its ref too.";
     check =
@@ -1366,7 +1366,7 @@ let repo_axes_pin : Canary_project_test.pure_test =
 
 (* A break against the system lib is then a predicted finding, not a raw
    failure. Pure: the realization only builds closures. *)
-let forward_cell_expectation_pin : Canary_project_test.pure_test =
+let forward_cell_expectation_test : Canary_project_test.pure_test =
   { name = "repo_model.forward_cell_expectation";
     holds = "zarith's OCaml probe carries a derived compat expectation exactly in the forward cell, where the binding is built from master.";
     check =
@@ -1420,7 +1420,7 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
             | SM.Expect_compat_derived _ -> bind_built
             | _ -> not bind_built)) }
 
-let publish_wired_pin : Canary_project_test.pure_test =
+let publish_wired_test : Canary_project_test.pure_test =
   { name = "repo_model.publish_wired";
     holds = "zarith wires its wrapper Publish, a pack_binding entry and a pin-checked postcondition, exactly in the worlds whose binding is built.";
     check =
@@ -1449,7 +1449,7 @@ let publish_wired_pin : Canary_project_test.pure_test =
             in
             Bool.equal has_pack bind_built && Bool.equal pin_checked bind_built)) }
 
-let binding_decls_on_project_run_pin : Canary_project_test.pure_test =
+let binding_decls_on_project_run_test : Canary_project_test.pure_test =
   { name = "tiny1.binding_decls_on_project_run";
     holds = "tiny's project_run carries its three binding declarations, looked up by mechanism, and a non-binding artifact looks up none.";
     check =
@@ -1480,7 +1480,7 @@ let binding_decls_on_project_run_pin : Canary_project_test.pure_test =
         && Option.is_none (PR.binding_decl_of pr Canary_artifact.a_source)
         && List.length pr.pr_binding_decls = 3) }
 
-let sqlite_binding_decls_pin : Canary_project_test.pure_test =
+let sqlite_binding_decls_test : Canary_project_test.pure_test =
   { name = "sqlite.binding_decls_match_declared";
     holds = "sqlite's binding declarations match its declared spec: the native lib, the C API watchlist, each mechanism's coupling and the OCaml surface path.";
     check =
@@ -1513,7 +1513,7 @@ let sqlite_binding_decls_pin : Canary_project_test.pure_test =
 
 (* GMP's API spans mpz_, mpq_, mpf_ and mpn_, so the stub-required
    watchlist does the scoping. The c_api is that whole surface. *)
-let zarith_binding_decls_pin : Canary_project_test.pure_test =
+let zarith_binding_decls_test : Canary_project_test.pure_test =
   { name = "zarith.binding_decls_match_declared";
     holds = "zarith's binding declaration wraps the system GMP with an empty prefix and a C API of 42 functions.";
     check =
@@ -1543,7 +1543,7 @@ let zarith_binding_decls_pin : Canary_project_test.pure_test =
    signature, version_info naming the fix) at the pre-fix ref only, and
    the staged consumer's probe declares STAGED PACKAGE MISSING in that
    ref's Installed world only. *)
-let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
+let z3_regression_pre_10549_test : Canary_project_test.pure_test =
   { name = "z3.regression_pre_10549_expectation";
     holds = "Only z3's pre-fix ref expects the #10549 regression: install_lib fails to stage the OCaml package, and its staged probe finds the package missing.";
     check =
@@ -1616,7 +1616,7 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
 (* One directory for both would make the pair one world twice, and the
    probe reports the path the loader resolved, which an unnormalised
    spelling with `..` never matches. *)
-let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
+let z3_cross_cell_world_asserts_test : Canary_project_test.pure_test =
   { name = "z3.cross_cells_assert_world";
     holds = "z3's built and installed worlds assert different directories for the libz3 their probe loads, and no asserted path has a parent-directory segment.";
     check =
@@ -1654,7 +1654,7 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
    <build>/src/api/ml first on CAML_LD_LIBRARY_PATH, so z3's POST_BUILD
    self-check does not load the opam switch's stale dllz3ml.so. A prefix
    glued onto an absolute path shows as `//`. *)
-let z3_env_guard_paths_pin : Canary_project_test.pure_test =
+let z3_env_guard_paths_test : Canary_project_test.pure_test =
   { name = "z3.env_guard_paths";
     holds = "Every z3 source's env guard puts its build tree's src/api/ml on CAML_LD_LIBRARY_PATH, with no prefix glued onto an absolute path.";
     check =
@@ -1691,7 +1691,7 @@ let z3_env_guard_paths_pin : Canary_project_test.pure_test =
    another ref's staged probe, and the #10549 xfail would stop firing.
    Read off the rows' [Cmake_install] prefix field, not a parsed
    command. *)
-let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
+let z3_install_prefix_isolated_test : Canary_project_test.pure_test =
   { name = "z3.install_prefix_isolated";
     holds = "No two of z3's declared repos share an install prefix or a build dir, and each prefix is named after its ref.";
     check =
@@ -1756,7 +1756,7 @@ let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
 (* The staged package is <prefix>/lib/ocaml/z3 and <prefix>/lib/libz3.so,
    with the STAGED PACKAGE MISSING guard the declared expectation greps;
    the build tree is src/api/ml. This is the realization half
-   {!provider_rows_pin} cannot derive. *)
+   {!provider_rows_test} cannot derive. *)
 let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
   { name = "z3.installed_probe_consumes_prefix";
     holds = "With a built binding, z3's OCaml probe reads the staged package in installed worlds, and the build tree and no install prefix in built worlds.";
@@ -1770,7 +1770,7 @@ let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
           List.filter_map spec.Canary_step_builder.probe_binding
             ~f:(fun (l, _, f) ->
               if Poly.equal l Canary_lang.OCaml then
-                Some (f ~output_dir:"/tmp/inst" ~variant_key:"pin")
+                Some (f ~output_dir:"/tmp/inst" ~variant_key:"test")
               else None)
         in
         let raw_probe_of a =
@@ -1815,7 +1815,7 @@ let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
 
 (* The Python bindings are wheel-bundled, z3's stubs come from a .pre
    code-gen template, and the raw OCaml builds are cmake/ninja. *)
-let z3_llvm_binding_decls_pin : Canary_project_test.pure_test =
+let z3_llvm_binding_decls_test : Canary_project_test.pure_test =
   { name = "z3_llvm.binding_decls_honest";
     holds = "z3's and llvm's binding declarations match what they ship: Python ctypes loaded by dlopen, the OCaml stubs they build, and raw OCaml builds.";
     check =
@@ -1875,7 +1875,7 @@ let z3_llvm_binding_decls_pin : Canary_project_test.pure_test =
    has as many Installed rows as Built, or one that lost its staged row
    would still pass (b); (d) Install_lib fires exactly when the lib is
    Installed. *)
-let provider_rows_pin ~prefix (pr : Canary_project_run.project_run) :
+let provider_rows_test ~prefix (pr : Canary_project_run.project_run) :
     Canary_project_test.pure_test =
   { name = prefix ^ ".provider_rows";
     holds = "Built and installed lib worlds pair up per source ref, ordered build, install, then fetched, and install_lib runs in exactly the installed ones.";
@@ -1962,8 +1962,8 @@ let provider_rows_pin ~prefix (pr : Canary_project_run.project_run) :
         ok_pair_axis && ok_order && ok_gating) }
 
 (* The staged lib is <ws>/install/lib. This is the realization half
-   {!provider_rows_pin} cannot derive. *)
-let sqlite_staged_probe_paths_pin : Canary_project_test.pure_test =
+   {!provider_rows_test} cannot derive. *)
+let sqlite_staged_probe_paths_test : Canary_project_test.pure_test =
   { name = "sqlite.staged_probe_paths";
     holds = "sqlite's OCaml probe reads the staged lib in the installed worlds and the build tree in the built worlds.";
     check =
@@ -1977,7 +1977,7 @@ let sqlite_staged_probe_paths_pin : Canary_project_test.pure_test =
             List.find spec.Canary_step_builder.probe_binding
               ~f:(fun (l, _, _) -> Poly.equal l Canary_lang.OCaml)
           with
-          | Some (_, _, f) -> f ~output_dir:"/tmp/ws" ~variant_key:"pin"
+          | Some (_, _, f) -> f ~output_dir:"/tmp/ws" ~variant_key:"test"
           | None -> ""
         in
         List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
@@ -1993,42 +1993,42 @@ let sqlite_staged_probe_paths_pin : Canary_project_test.pure_test =
             | _ -> true)) }
 
 let tests : Canary_project_test.pure_test list =
-  z3_pins @ llvm_pins
+  z3_tests @ llvm_tests
   @ [ z3_lowering_derived; llvm_lowering_derived;
       derived_evidence_matches_projects;
-      pm_gate_pin;
-      vendored_prebuilt_pin;
-      z3_mismatch_matrix_pin;
+      pm_gate_test;
+      vendored_prebuilt_test;
+      z3_mismatch_matrix_test;
       (* llvm only: z3's binding does not follow its lib *)
-      binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
-      sqlite_runtime_edges_pin;
+      binding_follows_chain_test ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
+      sqlite_runtime_edges_test;
       tiny1_bridge;
       world_counts_test;
-      registry_pin;
-      spec_check_every_project_pin;
-      spec_check_ratchet_pin;
-      pair_counts_points_pin;
-      batch_tier_pin;
-      repo_model_pin;
-      local_fork_pin;
-      repo_contents_pin;
-      repo_axes_pin;
-      forward_cell_expectation_pin;
-      publish_wired_pin;
-      tiny_binding_realization_pin;
-      binding_decl_pin;
-      binding_decls_on_project_run_pin;
-      sqlite_binding_decls_pin;
-      z3_llvm_binding_decls_pin;
-      zarith_binding_decls_pin;
-      z3_regression_pre_10549_pin;
+      registry_test;
+      spec_check_every_project_test;
+      spec_check_ratchet_test;
+      pair_counts_points_test;
+      batch_tier_test;
+      repo_model_test;
+      local_fork_test;
+      repo_contents_test;
+      repo_axes_test;
+      forward_cell_expectation_test;
+      publish_wired_test;
+      tiny_binding_realization_test;
+      binding_decl_test;
+      binding_decls_on_project_run_test;
+      sqlite_binding_decls_test;
+      z3_llvm_binding_decls_test;
+      zarith_binding_decls_test;
+      z3_regression_pre_10549_test;
       z3_installed_probe_consumes_prefix;
       (* per project with an Installed universe: sqlite (one ref group)
          and z3 (one group per declared repo) *)
-      provider_rows_pin ~prefix:"sqlite" Canary_project_sqlite.sqlite_run;
-      sqlite_staged_probe_paths_pin;
-      provider_rows_pin ~prefix:"z3"
+      provider_rows_test ~prefix:"sqlite" Canary_project_sqlite.sqlite_run;
+      sqlite_staged_probe_paths_test;
+      provider_rows_test ~prefix:"z3"
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
-      z3_install_prefix_isolated_pin;
-      z3_env_guard_paths_pin;
-      z3_cross_cell_world_asserts_pin ]
+      z3_install_prefix_isolated_test;
+      z3_env_guard_paths_test;
+      z3_cross_cell_world_asserts_test ]

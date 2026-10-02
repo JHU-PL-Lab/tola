@@ -38,7 +38,7 @@ module B = Canary_basic
 module L = Canary_lang
 module Mech = Canary_mechanism
 
-(* A pin: its name, the claim it holds in one sentence (the overview
+(* A test: its name, the claim it holds in one sentence (the overview
    page lists it), and the check. *)
 type pure_test = { name : string; holds : string; check : unit -> bool }
 
@@ -261,7 +261,7 @@ let mechanism_test : pure_test =
       && not (Canary_mechanism.is_static_binding_lang L.Rust)) }
 
 (* §4.2 enumeration core: one product-then-filter engine, two orthogonal
-   projections. Pins the shape of each projection + the dependency filter. *)
+   projections. Tests the shape of each projection + the dependency filter. *)
 let enumerate_test : pure_test =
   { name = "enumerate.two_projections_and_filter";
     holds = "The tiny projection is all built, a positive plus one point per mutation; the general one is mutation-free; no world provides a binding without its lib.";
@@ -772,7 +772,7 @@ let mechanism_catalogue_test : pure_test =
            differs WITHIN Static_c_abi — cstubs spells its boundary as
            [external] declarations a scanner can read, a cext spells it
            in C that canary has no extractor for — so a predicate keyed
-           on discipline cannot answer it, and pinning the difference
+           on discipline cannot answer it, and testing the difference
            stops the catalogue quietly collapsing back into one bit.
 
          [mi_consumer_records_needed] no longer differs within a
@@ -795,17 +795,17 @@ let mechanism_catalogue_test : pure_test =
            (Canary_mechanism.info_of_mechanism Mech.Cext)
              .Canary_mechanism.mi_discipline) }
 
-(* M2 step 2 pin (2026-08-12): the contract×lang input template equals
+(* M2 step 2 test (2026-08-12): the contract×lang input template equals
    tiny's formerly hand-written rows — the refactor is provably
    no-behavior-change. The template IS the standard; a row added here
    must match the paths the inspect steps actually write. *)
-(* M1 typed-template pin (2026-08-14): [Source_fetch]'s [local] field
+(* M1 typed-template test (2026-08-14): [Source_fetch]'s [local] field
    restores the old [source_fetch_cmd] behavior — a declared local
    checkout makes fetch a [test -d], no clone (the waste item in
    status_project.md). *)
 (* The line is written to install_fail.log because output_contains_any
    reads files, not stderr. *)
-let cmake_install_assert_staged_pin : pure_test =
+let cmake_install_assert_staged_test : pure_test =
   { name = "templates.cmake_install_assert_staged";
     holds = "Each path a cmake install must stage becomes a file test under the prefix, and a missing one writes an OCAML INSTALL MISSING line to install_fail.log.";
     check = (fun () ->
@@ -826,7 +826,7 @@ let cmake_install_assert_staged_pin : pure_test =
           && String.is_substring cmd ~substring:"OUT/install_fail.log"
       | None -> false) }
 
-let source_fetch_local_pin : pure_test =
+let source_fetch_local_test : pure_test =
   { name = "templates.source_fetch_local_skips_clone";
     holds = "A source fetch with a declared local checkout only tests that the directory exists and never clones, while one without it clones.";
     check = (fun () ->
@@ -855,7 +855,7 @@ let source_fetch_local_pin : pure_test =
    inspect.json and tiny's inspect_mli.json / inspect_attrs.json) and
    the reader selects by the [kind] the inspector declared, so listing
    both cannot read a stub summary as a surface. *)
-let inputs_template_pin : pure_test =
+let inputs_template_test : pure_test =
   { name = "mechanism.inputs_template_covers_both_conventions";
     holds = "Each agreement's derived evidence paths offer both the framework's and tiny's file names where they differ, and the planned repack_complete reads nothing.";
     check = (fun () ->
@@ -927,7 +927,7 @@ let inputs_template_pin : pure_test =
 (* The enumeration derives the stage set from the mechanism key, not
    from a hardcoded lang guard. A spec with a static binding (cext)
    keeps the build chain. *)
-let mechanism_chain_shape_pin : pure_test =
+let mechanism_chain_shape_test : pure_test =
   { name = "mechanism.dynamic_binding_has_no_build_chain";
     holds = "A spec whose only binding is dynamic admits no build_binding chain, one with a static binding does, and both still yield scenarios.";
     check = (fun () ->
@@ -1180,7 +1180,7 @@ let close_deps_test : pure_test =
       in
       indep && lock && degenerate) }
 
-(* Flavor 2 deploy-mismatch. Pin that runtime_pairings_of surfaces it
+(* Flavor 2 deploy-mismatch. Test that runtime_pairings_of surfaces it
    correctly. *)
 let deploy_mismatch_test : pure_test =
   { name = "enumerate.deploy_mismatch";
@@ -1315,7 +1315,7 @@ let execution_plan_test : pure_test =
       in
       topo_ok && edges_ok && has_built_lib && has_initial) }
 
-(* The agreement registry — the producer's own pins. Every id has
+(* The agreement registry — the producer's own tests. Every id has
    exactly one row, every row's claim and reference expectation are
    stated, every method is either implemented or says why it is not,
    and the fault-tag mapping matches the scenario catalogue.
@@ -1326,7 +1326,7 @@ let execution_plan_test : pure_test =
    list), and the planned-method invariant (a method with no evaluator
    must carry a non-empty reason — a silent placeholder is exactly what
    [not_implemented] exists to prevent). *)
-let agreement_registry_complete_pin : pure_test =
+let agreement_registry_complete_test : pure_test =
   { name = "agreements.registry_complete";
     holds = "Every agreement id has exactly one row stating its claim and expectation, every method has an evaluator or says why not, and fault tags match the catalogue.";
     check =
@@ -1483,7 +1483,7 @@ let agreement_registry_complete_pin : pure_test =
         total_ok && rows_ok && methods_ok && tags_ok && axes_ok && basis_ok
         && wiring_ok && names_ok) }
 
-let agreement_registry_firing_pin : pure_test =
+let agreement_registry_firing_test : pure_test =
   { name = "agreements.firing_defaults";
     holds = "Declaration checks fire at build_lib, or probe_lib when the lib is fetched; binding checks fire at the binding's build and probe, or only its probe, never at build_lib.";
     check =
@@ -1609,7 +1609,7 @@ let agreement_registry_firing_pin : pure_test =
          && not (applicable_under Canary_mechanism.Dynlink))) }
 
 (* A new agreement lands with its counterexample; a changed evaluator
-   breaks the pin.
+   breaks the test.
 
    2026-09-12: fixtures now assert an outcome LABEL as well as the
    substrings, which is what lets a "requirements met" case and an
@@ -1708,7 +1708,7 @@ let agreement_fixture_tests : pure_test list =
                    (C.has_evaluator r.CR.ag)
                    (CR.has_fixture r.CR.ag_id))) } ]
 
-let matrix_marks_from_log_pin : pure_test =
+let matrix_marks_from_log_test : pure_test =
   { name = "matrix.marks_from_log";
     holds = "Per scenario and step, the matrix keeps the last verdict in the actions log, and marks a confirmed expected failure as xfail with its agreement.";
     check = (fun () ->
@@ -1755,12 +1755,12 @@ let matrix_marks_from_log_pin : pure_test =
 
 (* The AGREEMENT half of the same log (2026-09-14): the result table's
    check columns need (scenario, tag, agreement, outcome), and the two
-   existing readers each drop half of that. The fixture pins the three
+   existing readers each drop half of that. The fixture tests the three
    things that were easy to get wrong — the scenario scoping, the
    last-wins rule when one step re-evaluates, and that the
    "no agreement fires at this action" line (which names no agreement)
    is skipped rather than parsed into a row. *)
-let matrix_agreements_from_log_pin : pure_test =
+let matrix_agreements_from_log_test : pure_test =
   { name = "matrix.agreements_from_log";
     holds = "Agreement outcomes are read from the actions log per scenario, the last per step and agreement winning, skipping lines that name no agreement.";
     check = (fun () ->
@@ -1808,7 +1808,7 @@ let matrix_agreements_from_log_pin : pure_test =
 
 (* A cmd change (the spec) flips the match; an old-format marker (no
    digest line) never matches. *)
-let marker_stale_on_spec_change_pin : pure_test =
+let marker_stale_on_spec_change_test : pure_test =
   { name = "runner.marker_stale_on_spec_change";
     holds = "A verdict marker serves a warm skip only while its fingerprint matches the step; a changed command or expectation makes it stale, as does an old format.";
     check = (fun () ->
@@ -1894,9 +1894,9 @@ let marker_stale_on_spec_change_pin : pure_test =
 (* The check_post verifies the checkout is AT the declared ref (offline
    rev-parse). The hermetic check runs the closure against a non-repo
    fixture — it FAILS CLOSED (the gate would drop the marker and
-   re-fetch), which is the wiring the pin guards; the rev-parse
+   re-fetch), which is the wiring the test guards; the rev-parse
    semantics are git's. *)
-let source_fetch_pinned_ref_check_post_pin : pure_test =
+let source_fetch_pinned_ref_check_post_test : pure_test =
   { name = "templates.source_fetch_pinned_ref_check_post";
     holds = "A source fetch pinned to a ref gets its own postcondition, which fails closed outside a checkout, while a fetch of HEAD keeps the default.";
     check = (fun () ->
@@ -1922,7 +1922,7 @@ let source_fetch_pinned_ref_check_post_pin : pure_test =
 (* A binding may live in a different repo than the lib (zarith vs the
    system gmp). The binding source's fetch action leads the per-language
    block in the canonical column order. *)
-let binding_source_vocabulary_pin : pure_test =
+let binding_source_vocabulary_test : pure_test =
   { name = "vocab.binding_source_off_tree";
     holds = "A binding source is its own artifact kind, with no mechanism and its own fetch action in the catalogue.";
     check = (fun () ->
@@ -1963,7 +1963,7 @@ let binding_source_vocabulary_pin : pure_test =
    conjuncts fail. The last one is the forward guarantee — a NAMED lib
    must be a different artifact from the unnamed one, else declaring two
    would collapse them into one placement. *)
-let lib_name_optional_pin : pure_test =
+let lib_name_optional_test : pure_test =
   { name = "vocab.lib_name_optional";
     holds = "An unnamed lib still prints as plain lib, a named one adds a dash and its name, and libs with different names, or none, are different artifacts.";
     check = (fun () ->
@@ -1994,7 +1994,7 @@ let lib_name_optional_pin : pure_test =
    itself: every agreement's declared section must EXIST as a heading in
    agreement_registry.md. Doc/code drift is then a test failure rather
    than something noticed later. *)
-let agreement_bridge_pins : pure_test list =
+let agreement_bridge_tests : pure_test list =
   let module CR = Canary_agreement in
   [ { name = "agreements.slugs_unique_and_named";
       holds = "Agreement slugs are unique, lowercase with underscores and no digits, and every agreement states a claim, an expectation and a doc section.";
@@ -2038,7 +2038,7 @@ let agreement_bridge_pins : pure_test list =
        asserted that landing.md's table had a row per registered
        agreement. That table is generated into [catalogue.md] now, from
        the registry, so it covers every agreement BY CONSTRUCTION and
-       the old pin was asserting what the generator guarantees.
+       the old test was asserting what the generator guarantees.
 
        What the generator cannot guarantee is that a blocked row says
        what blocks it — [ag_waiting_on] is prose a human writes. An
@@ -2046,7 +2046,7 @@ let agreement_bridge_pins : pure_test list =
        carry one; otherwise "planned" is the whole story and the reader
        has to go read the family to find out why.
 
-       The converse is NOT pinned, deliberately: an agreement WITH an
+       The converse is NOT tested, deliberately: an agreement WITH an
        evaluator may still be blocked (signatures_agree has one and no
        project produces its evidence), and it may not. Requiring a
        reason there would force a line saying "nothing", which is what
@@ -2095,14 +2095,14 @@ let agreement_bridge_pins : pure_test list =
             List.length rows > List.length CR.agreement_registry
           in
           per_row_ok && covers_every && expands) };
-    (* The laws are DATA, in `Canary_agreement.row_rules`, so this pin
+    (* The laws are DATA, in `Canary_agreement.row_rules`, so this test
        is four lines and never needs editing again: a rule added there
        is enforced here the moment it exists. That is the property the
        user asked for — a list you revise, not a test you rewrite.
 
        `canary checks --firing` prints the same laws beside the table,
        with any violation, so the harness is readable as well as
-       enforced. The pin is the half that fails a build. *)
+       enforced. The test is the half that fails a build. *)
     { name = "agreements.rows_obey_their_own_laws";
       holds = "Every overview row obeys every rule listed in row_rules, and at least four rules are listed.";
       check =
@@ -2321,10 +2321,10 @@ let agreement_bridge_pins : pure_test list =
            is a claim about object formats and someone should have to
            say so here.
 
-       Not pinned: that a format-restricted agreement reports
+       Not tested: that a format-restricted agreement reports
        `not_applicable` at run time on the other platform. Nothing
        consults `ag_formats` during evaluation yet — it is a reporting
-       value today, and pretending otherwise is what a vacuous pin
+       value today, and pretending otherwise is what a vacuous test
        does. *)
     { name = "agreements.formats_restrict_the_version_claims";
       holds = "Exactly the two symbol-version agreements are ELF-only, and every other agreement covers both object formats.";
@@ -2351,8 +2351,8 @@ let agreement_bridge_pins : pure_test list =
     (* What is left of `agreements.theory_target_groups_match_the_table`,
        which also compared `theory.md` §5.11's transcribed membership
        lists against the ▣ counts. The overview is the up-to-date truth
-       now, so the transcription was deleted and the half of the pin
-       that guarded it went with it — a pin for a copy has no work once
+       now, so the transcription was deleted and the half of the test
+       that guarded it went with it — a test for a copy has no work once
        the copy is gone.
 
        This half stands on its own and is the more useful one anyway.
@@ -2417,16 +2417,16 @@ let agreement_bridge_pins : pure_test list =
 
 (* The per-family MODULE pattern: a family publishes the agreements it
    owns, each with a subject, a falsifier-phrased claim, a reference
-   expectation and its methods. This pins the pattern rather than the
+   expectation and its methods. This tests the pattern rather than the
    contents.
 
-   Rewritten 2026-09-12. What it used to pin was that
+   Rewritten 2026-09-12. What it used to test was that
    [symbol_exported/solo] carried the subject [Symbols `Exported] and
    [symbol_exported/pair] carried [Symbols `Required] — two claims
    inside one id, told apart by a refinement of the category. Both are
-   agreements now, and what is worth pinning is that the union of the
+   agreements now, and what is worth testing is that the union of the
    families' declarations IS the registry's domain. *)
-let check_module_pattern_pin : pure_test =
+let check_module_pattern_test : pure_test =
   { name = "agreements.families_declare_the_catalogue";
     holds = "The families together declare every agreement id exactly once, each family declares some, and every agreement states a claim, an expectation and methods.";
     check =
@@ -2466,10 +2466,10 @@ let check_module_pattern_pin : pure_test =
                  Canary_agreement_identity.soname_matches_requirement.C.ag_says))
         && String.equal (C.string_of_subject C.Action_outcome) "action-outcome") }
 
-(* Facts in, checks out. Pinned because it is the direction
+(* Facts in, checks out. Tested because it is the direction
    inputs_of_agreement had backwards — no project should ever name an
    agreement id. *)
-let agreements_for_pin : pure_test =
+let agreements_for_test : pure_test =
   { name = "agreements.facts_in_checks_out";
     holds = "The registry selects agreements from a world's facts alone: build_lib checks only when the lib is built, build_binding checks only when the binding is.";
     check =
@@ -2559,7 +2559,7 @@ let agreements_for_pin : pure_test =
      2. a required symbol missing           → violated, naming it
      3. the library was never inspected     → unavailable
      4. an applicable agreement with no evaluator → not_implemented *)
-let agreement_action_path_pin : pure_test =
+let agreement_action_path_test : pure_test =
   { name = "agreements.action_path_reports_outcomes";
     holds = "Run through the runner, a probe step logs each agreement as holds, violated naming the symbol, unavailable or not implemented, and a violation alone does not fail it.";
     check = (fun () ->
@@ -2692,7 +2692,7 @@ let agreement_action_path_pin : pure_test =
          cstubs gained a consumer record (the linked probe executable)
          and it became applicable. [signatures_agree] under a cext is
          the standing example now — canary has no signature extractor
-         for that boundary — and the pin checks BOTH halves so the
+         for that boundary — and the test checks BOTH halves so the
          claim cannot simply vanish. *)
       let inapplicable_ok =
         (not
@@ -2714,16 +2714,16 @@ let agreement_action_path_pin : pure_test =
    The other half of the action path: a step whose ACCEPTANCE consults
    the evaluation. An [Expect_compat_derived] step follows the record —
    a detected disagreement means the command must fail with that
-   signature — so this pins the full chain on one run:
+   signature — so this tests the full chain on one run:
 
      evidence → evaluation → detected disagreement
               → predicted diagnostics → acceptance
               → CONFIRMED attribution in the verdict
 
-   and, against the previous pin's unconfirmed case, the distinction:
+   and, against the previous test's unconfirmed case, the distinction:
    the same violated agreement is `unconfirmed` where the step passes
    and `confirmed` where the step's own output shows it. *)
-let agreement_acceptance_pin : pure_test =
+let agreement_acceptance_test : pure_test =
   { name = "agreements.one_record_serves_reporting_and_acceptance";
     holds = "One evaluation decides both report and acceptance: a predicted failure that occurs is confirmed, one that does not fails the step, and a violation outranks a hold.";
     check = (fun () ->
@@ -2932,7 +2932,7 @@ let agreement_acceptance_pin : pure_test =
    run"), an inspector attached to it is NOT a dummy (it does the real
    work the dummy exists to host), and every dummy is marked on the
    step so `canary checks --dummies` can enumerate them. *)
-let dummy_action_pin : pure_test =
+let dummy_action_test : pure_test =
   { name = "steps.dummy_action_holds_a_place";
     holds = "A dummy step's command writes its marker and states its reason, and only the base step is marked dummy, not the inspector it hosts.";
     check = (fun () ->
@@ -2990,7 +2990,7 @@ let dummy_action_pin : pure_test =
 
 let all_tests : pure_test list =
   catalogue_tests
-  @ [ binding_source_vocabulary_pin; lib_name_optional_pin;
+  @ [ binding_source_vocabulary_test; lib_name_optional_test;
       probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
@@ -3000,26 +3000,26 @@ let all_tests : pure_test list =
       per_provision_versions_test; thin_config_level_test;
       shadow_policy_drops_same_cell_built_test;
       refs_subset_test;
-      subset_intersects_universe_test; mechanism_catalogue_test; source_fetch_local_pin; cmake_install_assert_staged_pin; inputs_template_pin; mechanism_chain_shape_pin;
+      subset_intersects_universe_test; mechanism_catalogue_test; source_fetch_local_test; cmake_install_assert_staged_test; inputs_template_test; mechanism_chain_shape_test;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       deploy_mismatch_test;
       agnostic_expectation_test; execution_plan_test;
-      agreement_registry_complete_pin; agreement_registry_firing_pin;
-      matrix_marks_from_log_pin;
-      matrix_agreements_from_log_pin;
-      marker_stale_on_spec_change_pin;
-      source_fetch_pinned_ref_check_post_pin ]
+      agreement_registry_complete_test; agreement_registry_firing_test;
+      matrix_marks_from_log_test;
+      matrix_agreements_from_log_test;
+      marker_stale_on_spec_change_test;
+      source_fetch_pinned_ref_check_post_test ]
   @ agreement_fixture_tests
-  @ agreement_bridge_pins
-  @ [ check_module_pattern_pin;
-      agreements_for_pin; agreement_action_path_pin;
-      agreement_acceptance_pin; dummy_action_pin ]
+  @ agreement_bridge_tests
+  @ [ check_module_pattern_test;
+      agreements_for_test; agreement_action_path_test;
+      agreement_acceptance_test; dummy_action_test ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the
    canary_project library ON TOP of it). `canary project-test` passes
-   the project-spec pin tests ([Canary_tests.tests]) through here. *)
+   the project-spec tests ([Canary_tests.tests]) through here. *)
 let run_tests ?(extra : pure_test list = []) () : bool =
   let all_tests = all_tests @ extra in
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

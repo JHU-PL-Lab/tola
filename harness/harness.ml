@@ -10,7 +10,7 @@ open Canary_tests
 
 (* The agreement layer's source, with comments removed — nesting
    tracked rather than guessed per line, because prose may name a
-   sibling module while code may not. Shared by the two pins that read
+   sibling module while code may not. Shared by the two checks that read
    these files. *)
 let agreement_dir = "src/canary/agreement"
 
@@ -38,7 +38,7 @@ let code_without_comments path =
 (** The families, as (module name, comment-free source). A FAMILY is a
     module that publishes [checks] and declares no [composes] — a
     PROPERTY, not a filename convention, so renaming the files cannot
-    empty the pins that read this (2026-09-02). *)
+    empty the checks that read this (2026-09-02). *)
 let agreement_families () : (string * string) list =
   Sys_unix.readdir agreement_dir |> Array.to_list
   |> List.filter ~f:(String.is_suffix ~suffix:".ml")
@@ -56,7 +56,7 @@ let agreement_families () : (string * string) list =
    through a tool/ primitive instead); a count below baseline means
    cleanup happened — lower the baseline in the same commit. Comments
    count too (crude by design: a ratchet, not a parser). *)
-let tool_routing_ratchet_test : pure_test =
+let tool_routing_ratchet_check : pure_test =
   { name = "harness.tool_routing_ratchet";
     holds = "No project spec file has more lines with a raw shell verb that should go through a tool primitive than its frozen baseline allows.";
     check = (fun () ->
@@ -163,12 +163,12 @@ let tool_routing_ratchet_test : pure_test =
                     end));
           !ok) }
 
-(* Five modules had four different orders before this pin. The pin
+(* Five modules had four different orders before this check. The check
    states the two boundaries that carry the meaning — [checks] before
    any description, and no evidence or type declared after the
    descriptions start — rather than the exact banners, so the shape is
    enforced without freezing the prose. *)
-let agreement_module_shape_pin : pure_test =
+let agreement_module_shape_check : pure_test =
   { name = "agreements.families_share_one_shape";
     holds = "Each of the at least five agreement families declares its agreements before the checks list gathering them, and no type or loader after them.";
     check =
@@ -212,14 +212,14 @@ let agreement_module_shape_pin : pure_test =
    would be a second place to get it wrong — but a derivation is only
    safe while the convention holds, and nothing was enforcing it.
 
-   So this pins the convention rather than adding the field. It is what
+   So this checks the convention rather than adding the field. It is what
    lets the record print "declared at" and the overview's tooltip name
    the declaration, both without storing anything.
 
    The binding must be `: agreement` explicitly. That is not pedantry:
    the type annotation is what makes the value greppable at all, and
    every one of the thirteen already carries it. *)
-let agreement_metadata_pin : pure_test =
+let agreement_metadata_check : pure_test =
   { name = "agreements.metadata_is_declared_under_its_slug";
     holds = "Every agreement is declared as a value named after its slug and typed agreement, in the family file its registry row points to.";
     check =
@@ -257,7 +257,7 @@ let agreement_metadata_pin : pure_test =
    the method, because an OCaml closure carries neither its own name nor
    its file — and a string beside code is exactly the thing that rots.
 
-   So the pin holds BOTH directions, and the second one is the one that
+   So the check holds BOTH directions, and the second one is the one that
    matters:
 
    (a) a named function EXISTS in the file the gathering points at. A
@@ -268,7 +268,7 @@ let agreement_metadata_pin : pure_test =
        a red "no evaluator yet" cell — and a red cell nobody believes is
        worse than no column, because the three genuinely unimplemented
        ones are the whole point of the colour. *)
-let agreement_impl_pin : pure_test =
+let agreement_impl_check : pure_test =
   { name = "agreements.impl_functions_exist";
     holds = "Every evaluator function an agreement names is defined in its family file, and every agreement with an evaluator names its function.";
     check =
@@ -340,7 +340,7 @@ let agreement_impl_pin : pure_test =
    requires saying why: canary_agreement_composed is not a family (it reads
    other families' VERDICTS, which is the whole point of it), and a
    module may MENTION a sibling in prose. *)
-let agreement_tiers_pin : pure_test =
+let agreement_tiers_check : pure_test =
   { name = "agreements.families_do_not_reach_sideways";
     holds = "No agreement family names another family in its code, and a composing module names only the families it declares it composes.";
     check =
@@ -361,7 +361,7 @@ let agreement_tiers_pin : pure_test =
                declare what it [composes] — a PROPERTY, not a filename
                convention (2026-09-02). The prefix used to be the
                marker, which made renaming the files a way to empty this
-               pin silently; keying on the property means the rename
+               check silently; keying on the property means the rename
                cannot go dark. *)
             let is_family (_, code) =
               String.is_substring code ~substring:"let checks"
@@ -399,9 +399,9 @@ let agreement_tiers_pin : pure_test =
    The owner column is the point. [inspect_typed_binding_stub_ocaml]
    reads like a language fact and is not one: [external] is how CSTUBS
    spells the boundary, and an OCaml dynlink binding has none. Getting
-   that wrong is what this pin is for. The list grows one entry per
+   that wrong is what this check is for. The list grows one entry per
    module as they land. *)
-let surface_facts_pin : pure_test =
+let surface_facts_check : pure_test =
   { name = "agreements.surface_facts_live_with_their_owner";
     holds = "No agreement family spells an evidence file name owned by a language or mechanism module, such as inspect_mli.";
     check =
@@ -432,15 +432,15 @@ let agreement_doc_checks : pure_test list =
   let module CR = Canary_agreement in
   (* TWO FILES since 2026-09-17, when `registry.md` split. [model.md] is
      the model and the integration; [components.md] is the per-component
-     walk and the target of every [ag_doc] anchor. The pins that read
+     walk and the target of every [ag_doc] anchor. The checks that read
      "the doc" now say which half they mean, because they mean
      different halves: names may appear in either, § cross-references
      resolve WITHIN a file, and the anchors resolve only in the walk. *)
   (* THE MODEL MOVED TO README.md (2026-09-17), when `agreements.md`
-     was deleted and the overview became THE reference. These two pins
+     was deleted and the overview became THE reference. These two checks
      read a LIST, and `read_doc` answers [None] for a missing file, so
      pointing at the deleted file did not fail them — it just stopped
-     them checking half of what they used to. `agreements.pinned_docs_exist`
+     them checking half of what they used to. `agreements.read_docs_exist`
      is the guard that makes that loud next time. *)
   (* two documents since 2026-09-30: the README took theory.md as its
      §5–§8, components.md took mechanism.md as its §3.3–§3.6 *)
@@ -452,7 +452,7 @@ let agreement_doc_checks : pure_test list =
       Some (Stdlib.In_channel.with_open_text p Stdlib.In_channel.input_all)
     else None
   in
-  [ (* The two pins below check the doc's § anchors, which is why six
+  [ (* The two checks below check the doc's § anchors, which is why six
        commits of renaming left them green while the doc went on naming
        canary_agreement_run.ml (retired), contract_registry (the
        registry's old name), ag_role (a field removed with the legacy
@@ -539,7 +539,7 @@ let agreement_doc_checks : pure_test list =
                    action is a constructor and `_post` is the moment, so
                    no `let build_lib_post` exists or should. They became
                    visible when the catalogue was merged into
-                   `agreements.md` and this pin began scanning generated
+                   `agreements.md` and this check began scanning generated
                    content — new coverage, not a new defect. *)
                 "build_lib_post"; "install_lib_post";
                 "LC_LOAD_DYLIB"; "LC_ID_DYLIB"; "LC_RPATH";
@@ -685,38 +685,38 @@ let agreement_doc_checks : pure_test list =
               Fmt.pr "    unresolved doc refs in %s: %s@." doc
                 (String.concat ~sep:", " (List.map bad ~f:(fun r -> "\xc2\xa7" ^ r)));
             List.is_empty bad)) };
-    (* A PIN WHOSE INPUT VANISHED PASSES SILENTLY (2026-09-17).
+    (* A CHECK WHOSE INPUT VANISHED PASSES SILENTLY (2026-09-17).
 
        This replaces `agreements.catalogue_doc_is_generated`, which
        compared a generated region in `agreements.md` against the
        registry. That file was deleted when the overview became THE
        reference and the docs stopped carrying a catalogue — a good
-       change — and the pin did not fail. It began with
+       change — and the check did not fail. It began with
 
            if not (Sys.file_exists path) then true
 
        which is the right answer for "not run from the repo root" and
        the wrong one for "the document is gone", and nothing can tell
-       those apart from inside the check. Two more pins went quiet the
+       those apart from inside the check. Two more checks went quiet the
        same way: `doc_names_live_code` and `doc_cross_refs_resolve` read
        a LIST of docs through `read_doc`, which returns [None] for a
        missing file, so they silently halved their coverage.
 
-       So the guard is one level up: every document a pin reads must
+       So the guard is one level up: every document a check reads must
        EXIST. It fails loudly when a doc is renamed or deleted, which is
-       exactly the moment the pins that read it stop meaning anything —
-       and it is cheap, because the list is the pins' own. Removing a
+       exactly the moment the checks that read it stop meaning anything —
+       and it is cheap, because the list is the checks' own. Removing a
        doc is then a deliberate edit here rather than a silent loss.
 
-       Not pinned, and worth saying: that the docs carry no hand
+       Not checked, and worth saying: that the docs carry no hand
        catalogue. `README.md` states the rule ("We do not maintain
        another catalogue or status list in these docs") and it is not
        mechanically checkable — a table listing agreements is forbidden
        when it restates status and fine when it adds an axis the
        overview lacks, as components.md §3.4's static-provider table does.
        That one is a reading job. *)
-    { name = "agreements.pinned_docs_exist";
-      holds = "Every document the pins read exists, so none of those pins can pass on a missing input.";
+    { name = "agreements.read_docs_exist";
+      holds = "Every document the tests and harness checks read exists, so none of them can pass on a missing input.";
       check =
         (fun () ->
           match Sys_unix.file_exists "doc/canary/design/agreement" with
@@ -733,7 +733,7 @@ let agreement_doc_checks : pure_test list =
               in
               if not (List.is_empty missing) then
                 Fmt.pr
-                  "    doc(s) a pin reads are gone — the pins that read \
+                  "    doc(s) a check reads are gone — the checks that read \
                    them now pass vacuously: %s@."
                   (String.concat ~sep:", " missing);
               List.is_empty missing) };
@@ -840,7 +840,7 @@ let agreement_doc_checks : pure_test list =
                 || String.is_substring text ~substring:("## " ^ num ^ ".")
                 || String.is_substring text ~substring:("# " ^ top ^ ".")) ) } ]
 
-let one_escaper_pin : Canary_project_test.pure_test =
+let one_escaper_check : Canary_project_test.pure_test =
   { name = "overview.one_escaper";
     holds = "Every overview module that defines esc binds it to the one shared escaper, which escapes quotes.";
     check =
@@ -868,7 +868,7 @@ let one_escaper_pin : Canary_project_test.pure_test =
 
 (* The names §0 gives are real. Figure 1's boxes name tests, so a name
    must be written in a test source, not a harness one. *)
-let flow_names_pin : Canary_project_test.pure_test =
+let flow_names_check : Canary_project_test.pure_test =
   { name = "harness.flow_names_exist";
     holds = "Every test a box of Figure 1 names is written in the test sources, every make target it names is in the Makefile, and every module §0 names has a source file.";
     check =
@@ -907,7 +907,7 @@ let flow_names_pin : Canary_project_test.pure_test =
 
 (* A rule a test holds names it, so the list cannot point at a renamed
    check; defined after [base_tests] for that reason. *)
-let layout_rules_explained_pin : Canary_project_test.pure_test =
+let layout_rules_explained_check : Canary_project_test.pure_test =
   { name = "harness.layout_rules_are_explained";
     holds = "Every layout rule says what it holds and why, and every rule a test holds names a registered test.";
     check =
@@ -919,13 +919,13 @@ let layout_rules_explained_pin : Canary_project_test.pure_test =
             &&
             match r.P.lr_check with
             | P.Places _ -> true
-            | P.Pinned_by name ->
+            | P.Tested_by name ->
                 List.exists base_tests ~f:(fun t -> String.equal t.Canary_project_test.name name)))
   }
 
 (* Only the bridge record's kind may appear there: it describes packages,
    not artifacts. *)
-let runs_reads_no_kind_pin : pure_test =
+let runs_reads_no_kind_check : pure_test =
   { name = "harness.runs_module_reads_no_artifact_kind";
     holds = "Canary_overview_runs names no artifact kind of its own, so Canary_matrix stays the one reader of an inspection.";
     check =
@@ -936,20 +936,20 @@ let runs_reads_no_kind_pin : pure_test =
   }
 
 let repo_checks : pure_test list =
-  [ tool_routing_ratchet_test; agreement_module_shape_pin; agreement_metadata_pin;
-    agreement_impl_pin; agreement_tiers_pin; surface_facts_pin ]
+  [ tool_routing_ratchet_check; agreement_module_shape_check; agreement_metadata_check;
+    agreement_impl_check; agreement_tiers_check; surface_facts_check ]
   @ agreement_doc_checks
-  @ [ one_escaper_pin; flow_names_pin; layout_rules_explained_pin; runs_reads_no_kind_pin ]
+  @ [ one_escaper_check; flow_names_check; layout_rules_explained_check; runs_reads_no_kind_check ]
 
 (* The checks on the lists themselves read the list they are on, hence
    [rec]. *)
-let rec self_checks : pure_test list = [ written_checks_run_pin; holds_said_pin ]
+let rec self_checks : pure_test list = [ registration_check; holds_said_check ]
 
 (* A test or harness check left out of its list compiles and never runs.
    The scan reads every record whose name is a literal, in the test
    sources and in this file; both ways of opening such a record must be
    found somewhere, so it cannot pass by finding nothing. *)
-and written_checks_run_pin : pure_test =
+and registration_check : pure_test =
   { name = "harness.every_written_check_runs";
     holds = "Every test and harness check written in the sources is registered, so it runs.";
     check =
@@ -995,7 +995,7 @@ and written_checks_run_pin : pure_test =
 (* The sentence is what the page lists for a test, so it is one line,
    ends as a sentence and fits a table cell; a harness check's reads the
    same way. *)
-and holds_said_pin : pure_test =
+and holds_said_check : pure_test =
   { name = "harness.every_check_says_what_it_holds";
     holds = "Every test and harness check states the claim it holds in one sentence.";
     check =

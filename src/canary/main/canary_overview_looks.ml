@@ -16,7 +16,7 @@ type layout_view = { lv_at : string -> D.pos; lv_w : string -> int; lv_h : int }
 
 type layout_check =
   | Places of (layout_view -> bool)  (** held over any drawing's places *)
-  | Pinned_by of string  (** held over this drawing by that pin *)
+  | Tested_by of string  (** held over this drawing by that test *)
 
 (** A rule the layout keeps, in words a redraw in another framework can
     carry, and how it is checked ([overview.layout_rules_hold]). The
@@ -119,7 +119,7 @@ let layout_rules : layout_rule list =
       "user, 2026-09-24: a hint for \"the left part and right part for the system and \
        language division\". A dividing line was not drawn: every edge crossing it is a \
        cooperation, and one would carry its label on the line."
-      (Pinned_by "overview.visual_vocabulary_is_one_list");
+      (Tested_by "overview.visual_vocabulary_is_one_list");
     rule "No two boxes overlap."
       "A box drawn over another hides a node."
       (Places
@@ -135,13 +135,13 @@ let layout_rules : layout_rule list =
        no label or badge lies under a box, another edge's marks or a band's title."
       "A mark under a box is lost, and a package's edge under a source drew the source as \
        package content. (2026-09-24)"
-      (Pinned_by "overview.edge_marks_clear_the_boxes");
+      (Tested_by "overview.edge_marks_clear_the_boxes");
     rule
       "One diagram: every chain is drawn on the same layout and switched from the panel, \
        never drawn a second time beside it."
       "Laid end to end, chains are compared by memory. (user, 2026-09-24, when §2's \
        drawings were merged into §1)"
-      (Pinned_by "overview.chain_choices_draw_one_chain") ]
+      (Tested_by "overview.chain_choices_draw_one_chain") ]
 
 (* ── the visual vocabulary ── *)
 

@@ -33,7 +33,7 @@ let to_test_file ((subject, path, ts) : file) : Canary_overview_tests.file =
 (* [Canary_overview_looks.layout_rules] states each rule in words. Another
    drawing is held to the same rules by handing them its own positions
    ([layout_view]). See design/overview.md §5. *)
-let layout_rules_pin : Canary_project_test.pure_test =
+let layout_rules_test : Canary_project_test.pure_test =
   { name = "overview.layout_rules_hold";
     holds = "Every layout rule checked over places holds over this drawing's positions, and the page shows the list of rules.";
     check =
@@ -43,23 +43,23 @@ let layout_rules_pin : Canary_project_test.pure_test =
         && List.for_all P.layout_rules ~f:(fun r ->
                match r.P.lr_check with
                | P.Places holds -> holds P.this_layout
-               | P.Pinned_by _ -> true)
+               | P.Tested_by _ -> true)
         (* the page shows the list *)
         && String.is_substring
-             (Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"pin")
+             (Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"test")
              ~substring:{|id="jrules"|})
   }
 
 (* The suite's own tests read the whole list and are on it, hence [rec]. *)
 let rec suite : Canary_project_test.pure_test list =
-  [ layout_rules_pin; tests_listed_pin ]
+  [ layout_rules_test; tests_listed_test ]
 
 and files () : file list =
   (lib_file :: subject_files) @ [ ("the suite itself", "src/canary/main/canary_tests.ml", suite) ]
 
 (* Each file's block holds exactly its own tests, each with its claim
    after its name, and the table counts them. *)
-and tests_listed_pin : Canary_project_test.pure_test =
+and tests_listed_test : Canary_project_test.pure_test =
   { name = "overview.tests_lists_every_test";
     holds = "§0.4 lists every test project-test runs once, under its file and with its claim, and its table counts each file's tests.";
     check =

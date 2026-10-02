@@ -1,4 +1,4 @@
-(** Pins on the run's environment: the opam switch, the platform, strict
+(** Tests on the run's environment: the opam switch, the platform, strict
     mode, the CI rendering and the opam template. *)
 
 open Base
@@ -11,7 +11,7 @@ open Base
    verdict earned in one switch is never served in another; (4) the
    framework tests and (5) OCaml-side shell-outs run under the same
    prologue as steps. *)
-let canary_switch_pin : Canary_project_test.pure_test =
+let canary_switch_test : Canary_project_test.pure_test =
   { name = "switch.selection";
     holds = "A step's shell prologue exports the selected opam switch, framework tests and store queries run in it, and a step's fingerprint depends on it.";
     check =
@@ -84,7 +84,7 @@ let canary_switch_pin : Canary_project_test.pure_test =
    with it; (4) it is part of the step fingerprint, so a verdict earned
    on one platform is never served to the other; (5) the default switch
    is a function of it. *)
-let platform_single_source_pin : Canary_project_test.pure_test =
+let platform_single_source_test : Canary_project_test.pure_test =
   { name = "platform.single_source";
     holds = "The platform is one value that every consumer reads, and the system package manager, loader variable, nm flag and step fingerprint follow it.";
     check =
@@ -127,7 +127,7 @@ let platform_single_source_pin : Canary_project_test.pure_test =
         let f_mac = fingerprint_under Canary_store.MacOS_local in
         let f_wsl = fingerprint_under Canary_store.Wsl in
         (* (5) the mapping: ambient on macOS, [canary] on WSL. Not
-           pinned: that [default_opam_switch] reads [detected_platform],
+           tested: that [default_opam_switch] reads [detected_platform],
            not [platform ()], so a `--platform=macos` render cannot
            repoint this machine's store. The lazy is forced at module
            init, before any override exists, so a test could not tell. *)
@@ -145,10 +145,10 @@ let platform_single_source_pin : Canary_project_test.pure_test =
    by default, since a violated agreement at a passing step is a finding
    about artifacts, not a broken step; (2) the permissive digest equals
    the digest spelled out longhand, with no strict input, so permissive
-   markers stay warm; (3) strict mode changes the digest. Not pinned
+   markers stay warm; (3) strict mode changes the digest. Not tested
    here: that a violation fails the step, which needs a real project's
    log and a deliberate break, not a synthetic [agreement_ctx]. *)
-let strict_mode_pin : Canary_project_test.pure_test =
+let strict_mode_test : Canary_project_test.pure_test =
   { name = "strict.acceptance_policy";
     holds = "Strict mode is off by default, adds nothing to a permissive step's fingerprint, and changes it when on, so no permissive verdict serves a strict run.";
     check =
@@ -194,7 +194,7 @@ let strict_mode_pin : Canary_project_test.pure_test =
    means the artifact is good and the step must succeed, so it renders as
    a plain step; the oracle ([Expect_compat_failure]) always expects a
    failure and renders a verify; a plain success never does. *)
-let gh_derived_polarity_pin : Canary_project_test.pure_test =
+let gh_derived_polarity_test : Canary_project_test.pure_test =
   { name = "gh.derived_expectation_polarity";
     holds = "A step's GitHub Actions rendering adds a verify step only where the step expects a failure, and that verify greps the step's own log.";
     check =
@@ -243,7 +243,7 @@ let gh_derived_polarity_pin : Canary_project_test.pure_test =
    order, not the realization data a declaration carries: a [Vendored_at]
    origin string is realize's to resolve, and realize may know the
    platform. *)
-let platform_enumeration_pin : Canary_project_test.pure_test =
+let platform_enumeration_test : Canary_project_test.pure_test =
   { name = "platform.enumeration_is_agnostic";
     holds = "Declaring, enumerating, selecting and ordering every catalogued project's worlds give the same result under WSL and macOS.";
     check =
@@ -318,7 +318,7 @@ let platform_enumeration_pin : Canary_project_test.pure_test =
         restore ();
         invariant && rebuilt_invariant && pass5_varies) }
 
-let opam_template_render_pin : Canary_project_test.pure_test =
+let opam_template_render_test : Canary_project_test.pure_test =
   { name = "tool.opam_template_render";
     holds = "Rendering zarith's wrapper declaration reproduces the committed zarith-no-conf opam template byte for byte.";
     check =
@@ -333,5 +333,5 @@ let opam_template_render_pin : Canary_project_test.pure_test =
           committed) }
 
 let tests : Canary_project_test.pure_test list =
-  [ canary_switch_pin; opam_template_render_pin; platform_single_source_pin; strict_mode_pin;
-    platform_enumeration_pin; gh_derived_polarity_pin ]
+  [ canary_switch_test; opam_template_render_test; platform_single_source_test; strict_mode_test;
+    platform_enumeration_test; gh_derived_polarity_test ]

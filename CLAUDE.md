@@ -615,7 +615,7 @@ phase E, the rest of the bridges (`design/overview.md` §6.1).
   against the file's own headings (a harness check checks it), so name
   the overview page's sections in words.
 - **A check whose input vanishes is worse than no check**, because it
-  reports success. The harness check `agreements.pinned_docs_exist` holds
+  reports success. The harness check `agreements.read_docs_exist` holds
   every document a check reads.
 - **agreement/ owns the claim; enumeration/ owns the occasion.** When a
   check fires is `design/enumeration/stage6_realize_steps.md` §2b.

@@ -1,4 +1,4 @@
-(** Pins on the pipeline: the passes (analyse, enumerate, select, order,
+(** Tests on the pipeline: the passes (analyse, enumerate, select, order,
     realize), the steps they derive, and the action vocabulary. *)
 
 open Base
@@ -9,7 +9,7 @@ module EN = Canary_enumerate
    build the same shape: [Fetched] ⇒ [Fetch kind]; [Built] ⇒ the kind's
    build action; [Vendored] and [Absent] ⇒ none, as no action of the run
    produces them. [provision_of_actions] reads the provision back. *)
-let providing_arrow_pin : Canary_project_test.pure_test =
+let providing_arrow_test : Canary_project_test.pure_test =
   { name = "arrow.providing_action_total_and_consistent";
     holds = "In the sqlite, z3, llvm and tiny-full tables, each provider's action is the one its provision implies, and an action reads back as its provision.";
     check = (fun () ->
@@ -80,7 +80,7 @@ let providing_arrow_pin : Canary_project_test.pure_test =
    names ([Canary_bridge.of_gate]); zarith's zarith-no-conf world builds
    its binding and has none. The rollout list names the (project, bridge)
    pairs that have a step; extending it is deliberate. *)
-let bridge_step_pin : Canary_project_test.pure_test =
+let bridge_step_test : Canary_project_test.pure_test =
   { name = "steps.bridge_step_drives_the_declared_bridge";
     holds = "In every world of every active project, a bridge step drives the bridge its project declares, and exists only where the binding is fetched.";
     check =
@@ -148,7 +148,7 @@ let bridge_step_pin : Canary_project_test.pure_test =
    under, and every probe of the language depends on the bridge step, so
    a cold run never reads the last run's record. Some bridge step must
    exist, or the check is vacuous. *)
-let gate_after_bridge_pin : Canary_project_test.pure_test =
+let gate_after_bridge_test : Canary_project_test.pure_test =
   { name = "steps.gate_is_read_after_its_bridge_runs";
     holds = "The package gate is read after its bridge runs, at the language's probe, from the record that bridge step writes.";
     check =
@@ -206,7 +206,7 @@ let gate_after_bridge_pin : Canary_project_test.pure_test =
    no agreements; its command writes the marker and says what it stands
    for. Both reasons occur, and zarith's fetched world has the three opam
    pieces and the system package manager's one. *)
-let placeholder_steps_pin : Canary_project_test.pure_test =
+let placeholder_steps_test : Canary_project_test.pure_test =
   { name = "steps.placeholders_stand_for_what_pms_do";
     holds = "Every placeholder step is an entry in its package manager's catalogue of unseen work, and depends only on a real fetch of the same action.";
     check =
@@ -301,7 +301,7 @@ let placeholder_steps_pin : Canary_project_test.pure_test =
 
 (* [action_of_string] looks the name up in [all_actions]; a binding
    source's fetch reads, and an unknown name does not. *)
-let action_names_pin : Canary_project_test.pure_test =
+let action_names_test : Canary_project_test.pure_test =
   { name = "basic.action_names_read_back";
     holds = "Every action's name reads back as that action, no two actions share a name, and an unknown name reads as no action.";
     check =
@@ -323,7 +323,7 @@ let action_names_pin : Canary_project_test.pure_test =
    for Python on purpose and is the named exception; adding a project to
    the list needs a reason. *)
 let mechanism_collision_known : string list = [ "tiny-full" ]
-let one_mechanism_per_language_pin : Canary_project_test.pure_test =
+let one_mechanism_per_language_test : Canary_project_test.pure_test =
   { name = "analysis.one_mechanism_per_language";
     holds = "Every active project except tiny-full declares at most one binding mechanism per language.";
     check =
@@ -366,7 +366,7 @@ let one_mechanism_per_language_pin : Canary_project_test.pure_test =
 (* Full adds no policy override, and Thin is the Subset [Stable] version
    level. Shadowing is unconditional, so the ladder only subsets
    versions. *)
-let shadow_policy_ladder_pin : Canary_project_test.pure_test =
+let shadow_policy_ladder_test : Canary_project_test.pure_test =
   { name = "shadow.policy_ladder";
     holds = "The full run policy is the enumeration's default, the thin one keeps only stable versions, and narrowing refs leaves every other axis full.";
     check =
@@ -405,7 +405,7 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
    builder drops it with a message. The template wins because its answer
    is derived from the world. The same spec with and without the
    declaration differs by that one step. *)
-let inspect_clash_pin : Canary_project_test.pure_test =
+let inspect_clash_test : Canary_project_test.pure_test =
   { name = "steps.template_summary_beats_override";
     holds = "When a probe template declares its own summary, the step builder drops the explicit inspect step for that action and nothing else.";
     check =
@@ -455,7 +455,7 @@ let inspect_clash_pin : Canary_project_test.pure_test =
    (doc/canary/design/action_model.md §§4-5). It witnesses the rebind in
    [derive_steps] only where some step depends on a step with an
    [output_tag], whose [output_dir] differs from its tag's directory. *)
-let dep_dirs_pin : Canary_project_test.pure_test =
+let dep_dirs_test : Canary_project_test.pure_test =
   { name = "steps.dep_dirs_correspond_to_deps";
     holds = "A step has one non-empty directory per dependency, in order, each the output directory of that dependency's step.";
     check =
@@ -507,7 +507,7 @@ let dep_dirs_pin : Canary_project_test.pure_test =
    never where an artifact's evidence is first recorded ([produced_at] is
    empty for every [Probe_*]); (c) a lib's producers are build_lib,
    fetch_lib or install_lib, by the world's provision. *)
-let touches_join_pin : Canary_project_test.pure_test =
+let touches_join_test : Canary_project_test.pure_test =
   { name = "analysis.touches_joins_actions_to_declarations";
     holds = "For every catalogued project, every declared artifact is touched by some action, no probe produces anything, and a lib has more than one producer.";
     check =
@@ -552,7 +552,7 @@ let touches_join_pin : Canary_project_test.pure_test =
    guard stamped with [$CANARY_RUN_ID] and writes the world's marker
    outside it. A shape check, not a timing one: move either across the
    guard and a world re-fetches or never records its own evidence. *)
-let source_refresh_scope_pin : Canary_project_test.pure_test =
+let source_refresh_scope_test : Canary_project_test.pure_test =
   { name = "source.refresh_is_run_scoped";
     holds = "A shared source checkout's refresh sits inside a guard stamped with the run id, and each world writes its marker after that guard.";
     check =
@@ -583,7 +583,7 @@ let source_refresh_scope_pin : Canary_project_test.pure_test =
    consumes what it produces, by the typed catalogue
    ([consumes_of_action]), not by [step.deps]. Checked as a pair, since
    pruning everything passes cairo and pruning nothing passes sqlite. *)
-let demand_prune_pin : Canary_project_test.pure_test =
+let demand_prune_test : Canary_project_test.pure_test =
   { name = "derive.steps_are_demanded";
     holds = "A world realizes only the fetches its steps consume, so cairo's all-fetched world fetches no source while sqlite's built worlds do.";
     check =
@@ -626,7 +626,7 @@ let demand_prune_pin : Canary_project_test.pure_test =
    workspace from [scenario_dir_of] and its project name as
    <project>/<basename>. Both strings reach output paths and env vars, so
    drift would relocate a scenario and orphan its cache markers. *)
-let pipeline_ctx_pin : Canary_project_test.pure_test =
+let pipeline_ctx_test : Canary_project_test.pure_test =
   { name = "pipeline.scenario_names_are_born_safe";
     holds = "Every world's scenario name needs no escaping in a path or a colon-separated variable, and its run context uses that name unchanged.";
     check =
@@ -662,9 +662,9 @@ let pipeline_ctx_pin : Canary_project_test.pure_test =
    [run_config]'s [resolve_versions], the filter after it [select]. One
    of the constraints after the product, [shadow_filter], is
    cross-assignment, so this is checked, not assumed. Thin differs from
-   full only in the version level, so it pins the whole equivalence.
+   full only in the version level, so it tests the whole equivalence.
    Muted projects are included. *)
-let select_post_filter_pin : Canary_project_test.pure_test =
+let select_post_filter_test : Canary_project_test.pure_test =
   { name = "select.thin_post_filter_equals_universe_restriction";
     holds = "For every catalogued project, restricting versions before the product gives the same thin worlds as selecting from the product after it.";
     check =
@@ -700,7 +700,7 @@ let select_post_filter_pin : Canary_project_test.pure_test =
    pass. Select is encoded as [canary emit --stage select] does. Realize
    is left out: encoding it applies [pr_runner_spec], which is not
    pure. *)
-let json_per_pass_pin : Canary_project_test.pure_test =
+let json_per_pass_test : Canary_project_test.pure_test =
   { name = "emit.each_pass_encodes_independently";
     holds = "The declare, analyse, enumerate, select and order encodings name their pass and project, and carry the chains and worlds their pass computed.";
     check =
@@ -761,7 +761,7 @@ let json_per_pass_pin : Canary_project_test.pure_test =
    positive-only. They are compared on canonical assignment keys. It is
    the evidence for deleting one of them, and keeps them from drifting
    apart until then. *)
-let two_constructions_agree_pin : Canary_project_test.pure_test =
+let two_constructions_agree_test : Canary_project_test.pure_test =
   { name = "enumerate.two_constructions_agree";
     holds = "The two enumerations, product then filter and a walk of the follows tree, compute the same worlds for every catalogued project.";
     check =
@@ -800,7 +800,7 @@ let two_constructions_agree_pin : Canary_project_test.pure_test =
 (* Select under the full policy returns enumerate's worlds unchanged. A
    default that narrowed would shrink every run while every count still
    matched. *)
-let select_default_is_identity_pin : Canary_project_test.pure_test =
+let select_default_is_identity_test : Canary_project_test.pure_test =
   { name = "select.full_policy_selects_everything";
     holds = "For every catalogued project, the default run selects every world the enumeration produces.";
     check =
@@ -819,7 +819,7 @@ let select_default_is_identity_pin : Canary_project_test.pure_test =
                 (List.length all) (List.length default);
             ok)) }
 
-let select_subset_pin : Canary_project_test.pure_test =
+let select_subset_test : Canary_project_test.pure_test =
   { name = "select.is_a_subset_of_stage2";
     holds = "For every catalogued project, the thin selection is a subset of the enumerated worlds, so selection only removes.";
     check =
@@ -851,7 +851,7 @@ let select_subset_pin : Canary_project_test.pure_test =
 (* Declare, select and order are total, muted projects included. A
    silent drop in [project_spec_of_rows] would shrink every later
    pass. *)
-let pipeline_total_pin : Canary_project_test.pure_test =
+let pipeline_total_test : Canary_project_test.pure_test =
   { name = "pipeline.stages_total_over_catalogue";
     holds = "For every catalogued project, the spec has one entry per declared row, the default run has a world, and ordering keeps every world.";
     check =
@@ -875,7 +875,7 @@ let pipeline_total_pin : Canary_project_test.pure_test =
    switch holds one version of a package, so a pinned placement locks
    that store's state. Ordering is a sort: none added, dropped or
    duplicated. *)
-let run_order_groups_state_pin : Canary_project_test.pure_test =
+let run_order_groups_state_test : Canary_project_test.pure_test =
   { name = "run_order.groups_by_store_state";
     holds = "For every catalogued project, run order keeps the same scenarios and gives each store state one contiguous run.";
     check =
@@ -921,7 +921,7 @@ let run_order_groups_state_pin : Canary_project_test.pure_test =
 (* The vocabulary is [Canary_world]. A pre-command guard names `exit 1`,
    and a post-hoc claim is grepped from the log rather than appended
    after the command's own exit. *)
-let world_assertion_vocabulary_pin : Canary_project_test.pure_test =
+let world_assertion_vocabulary_test : Canary_project_test.pure_test =
   { name = "world.one_vocabulary";
     holds = "Every world assertion renders one shell wherever it is declared, can abort before the command or grep the log after it, and carries a reason.";
     check =
@@ -991,7 +991,7 @@ let world_assertion_vocabulary_pin : Canary_project_test.pure_test =
    checking that it obeyed. The declarations are listed by hand, so the
    list must be every catalogued project whose lib has a downloaded
    prebuilt (a Vendored origin at a machine root). *)
-let vendored_world_probe_pin : Canary_project_test.pure_test =
+let vendored_world_probe_test : Canary_project_test.pure_test =
   { name = "vendored.probe_names_the_world";
     holds = "In every project whose lib has a downloaded prebuilt, only the vendored world's OCaml probe names the prebuilt's library directory.";
     check =
@@ -1032,7 +1032,7 @@ let vendored_world_probe_pin : Canary_project_test.pure_test =
             List.find spec.Canary_step_builder.probe_binding
               ~f:(fun (l, _, _) -> Poly.equal l Canary_lang.OCaml)
           with
-          | Some (_, _, f) -> f ~output_dir:"/tmp/ws" ~variant_key:"pin"
+          | Some (_, _, f) -> f ~output_dir:"/tmp/ws" ~variant_key:"test"
           | None -> ""
         in
         let checked = ref 0 in
@@ -1063,10 +1063,10 @@ let vendored_world_probe_pin : Canary_project_test.pure_test =
         listed_ok && ok && !checked >= 4) }
 
 let tests : Canary_project_test.pure_test list =
-  [ providing_arrow_pin; shadow_policy_ladder_pin; vendored_world_probe_pin;
-    world_assertion_vocabulary_pin; pipeline_ctx_pin; pipeline_total_pin;
-    select_post_filter_pin; select_subset_pin; select_default_is_identity_pin;
-    two_constructions_agree_pin; json_per_pass_pin; run_order_groups_state_pin;
-    one_mechanism_per_language_pin; bridge_step_pin; gate_after_bridge_pin;
-    placeholder_steps_pin; action_names_pin; touches_join_pin; inspect_clash_pin;
-    dep_dirs_pin; demand_prune_pin; source_refresh_scope_pin ]
+  [ providing_arrow_test; shadow_policy_ladder_test; vendored_world_probe_test;
+    world_assertion_vocabulary_test; pipeline_ctx_test; pipeline_total_test;
+    select_post_filter_test; select_subset_test; select_default_is_identity_test;
+    two_constructions_agree_test; json_per_pass_test; run_order_groups_state_test;
+    one_mechanism_per_language_test; bridge_step_test; gate_after_bridge_test;
+    placeholder_steps_test; action_names_test; touches_join_test; inspect_clash_test;
+    dep_dirs_test; demand_prune_test; source_refresh_scope_test ]

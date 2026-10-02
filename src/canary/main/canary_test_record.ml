@@ -1,4 +1,4 @@
-(** Pins on the run record: the matrix, the manifest, the exported
+(** Tests on the run record: the matrix, the manifest, the exported
     record, and the machines a run is recorded on. *)
 
 open Base
@@ -10,7 +10,7 @@ open Canary_test_fixtures
    round-trips; and in a fixture tree, a zarith world whose manifest drops
    a step shows the manifest's steps and says [run], while the other
    world says [code]. *)
-let manifest_pin : Canary_project_test.pure_test =
+let manifest_test : Canary_project_test.pure_test =
   { name = "manifest.records_what_a_run_realized";
     holds = "The record shows each world's steps as its run wrote them in a manifest, re-deriving them from code only where no run wrote one.";
     check =
@@ -86,7 +86,7 @@ let manifest_pin : Canary_project_test.pure_test =
    cooperation is [coop_of_world]'s, the mechanism pass 2's. zarith's
    rows exercise both kinds: a bridged chain and an artifact-centric
    one. *)
-let record_chains_pin : Canary_project_test.pure_test =
+let record_chains_test : Canary_project_test.pure_test =
   { name = "matrix.record_carries_each_worlds_chain";
     holds = "The record carries each world's chains, one per binding language in order, with the world's cooperation and mechanism, and exports them as such.";
     check =
@@ -238,7 +238,7 @@ let record_chains_pin : Canary_project_test.pure_test =
    declaration empty, a spec gap; an inconclusive peer comparison found
    nothing of its kind in either artifact, which is [vacuous], the one
    blame that asks for nothing. *)
-let blame_attribution_pin : Canary_project_test.pure_test =
+let blame_attribution_test : Canary_project_test.pure_test =
   { name = "matrix.blame_is_static_and_glossed";
     holds = "A cell's blame depends only on its outcome and what it compared against, a pass blames nothing, and every blame word has a gloss.";
     check =
@@ -320,7 +320,7 @@ let blame_attribution_pin : Canary_project_test.pure_test =
    property most likely to regress: calling
    [libdir_of pb (detect_distro ())] in a project declaration puts an
    absolute path in a top-level [let]. *)
-let machine_roots_pin : Canary_project_test.pure_test =
+let machine_roots_test : Canary_project_test.pure_test =
   { name = "machine_roots.declared_at_entry";
     holds = "Machine roots resolve from the table the entry point declares, an undeclared root is an error, and a project declaration needs no root.";
     check =
@@ -360,7 +360,7 @@ let machine_roots_pin : Canary_project_test.pure_test =
 
 (* [detect_env] reads the selection rather than re-probing the box, since
    a record that re-probes describes a different session than its own. *)
-let run_info_session_pin : Canary_project_test.pure_test =
+let run_info_session_test : Canary_project_test.pure_test =
   { name = "run_info.records_the_session";
     holds = "The run record names the session's selected opam switch and platform rather than re-probing the machine, and calls an unselected switch ambient.";
     check =
@@ -392,7 +392,7 @@ let run_info_session_pin : Canary_project_test.pure_test =
    sorts after the lib. Held over every catalogued project, and exactly
    on z3 under its declared ref order [4.15.2, latest, arbipher,
    pre-10549]. *)
-let matrix_row_order_pin : Canary_project_test.pure_test =
+let matrix_row_order_test : Canary_project_test.pure_test =
   { name = "matrix.row_order";
     holds = "In every project, rows follow the declared order of source refs and a fetched lib sorts after the built and staged ones; z3's rows are exactly its declared sequence.";
     check =
@@ -482,7 +482,7 @@ let matrix_row_order_pin : Canary_project_test.pure_test =
 (* The ordinal is #N in the rendered order and the code a digest of the
    row's identity, both display only: neither feeds a cache key or
    scenario identity. *)
-let matrix_row_index_pin : Canary_project_test.pure_test =
+let matrix_row_index_test : Canary_project_test.pure_test =
   { name = "matrix.row_index";
     holds = "Rows are numbered 1 to N, and each carries a six-character code that is unique and the same every time the matrix is built.";
     check =
@@ -525,7 +525,7 @@ let matrix_row_index_pin : Canary_project_test.pure_test =
 
 (* A row then reads left to right as the artifact's progression. Held
    over every registry project that enumerates an Installed lib. *)
-let matrix_cell_stage_pin : Canary_project_test.pure_test =
+let matrix_cell_stage_test : Canary_project_test.pure_test =
   { name = "matrix.cell_stage_progression";
     holds = "In a staged world, the build_lib cell names the tree it built and the install_lib and probe_lib cells name the staged lib.";
     check =
@@ -582,7 +582,7 @@ let matrix_cell_stage_pin : Canary_project_test.pure_test =
    mechanism rides the artifact id, so deduping by id would double
    `ocaml`/`py`); (b) a cell exists exactly when the project declares
    that kind; (c) no two rows of a project share their setting tuple. *)
-let matrix_setting_block_pin : Canary_project_test.pure_test =
+let matrix_setting_block_test : Canary_project_test.pure_test =
   { name = "matrix.setting_block_identifies_world";
     holds = "A row's setting cells, one column per artifact kind and filled where its project declares that kind, identify its world within the project.";
     check =
@@ -638,7 +638,7 @@ let matrix_setting_block_pin : Canary_project_test.pure_test =
    against their marks, since two renderings of one table drift. The page
    names its tables, and with the old page a pointer, neither table can
    decay into a copy on both. *)
-let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
+let matrix_page_has_the_grid_test : Canary_project_test.pure_test =
   { name = "matrix.page_titles_and_agreement_overview";
     holds = "The overview page's agreement table carries as many marks of each kind as the registry's rows, and the old result page is only a pointer to it.";
     check =
@@ -766,7 +766,7 @@ let matrix_page_has_the_grid_pin : Canary_project_test.pure_test =
    undecided ([not_applicable]) is distinguishable from one never
    evaluated; (d) a violation implicates the artifacts its evidence
    named, and nothing else does. *)
-let matrix_check_cell_pin : Canary_project_test.pure_test =
+let matrix_check_cell_test : Canary_project_test.pure_test =
   { name = "matrix.check_cell_merges_worst";
     holds = "A check cell shows its claim's worst outcome over methods and firing sites, dated by the observation that gave it.";
     check =
@@ -788,7 +788,7 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
         (* one OCaml cstubs binding, nothing declared: a literal, so the
            merge's inputs do not depend on a real project's declarations *)
         let an : Canary_project_analysis.t =
-          { an_project = "pin";
+          { an_project = "test";
             an_spec = { Canary_artifact.ps_universe = [] };
             an_chains = [];
             an_declared = None;
@@ -850,7 +850,7 @@ let matrix_check_cell_pin : Canary_project_test.pure_test =
 (* The key is [Canary_agreement.summary_rows]. Only that direction can
    break: the key lists what the registry can decide and the columns what
    the chains reach, so a key row no column uses is expected. *)
-let matrix_key_covers_codes_pin : Canary_project_test.pure_test =
+let matrix_key_covers_codes_test : Canary_project_test.pure_test =
   { name = "matrix.key_explains_every_check_column";
     holds = "Every check column's short code has a row in the agreement key.";
     check =
@@ -872,7 +872,7 @@ let matrix_key_covers_codes_pin : Canary_project_test.pure_test =
    (the fixture's is the one this machine is not); (2) the export is the
    matrix: the printed JSON, decoded by field name independently of the
    encoder, gives back every column and cell. *)
-let record_export_pin : Canary_project_test.pure_test =
+let record_export_test : Canary_project_test.pure_test =
   { name = "matrix.record_export_is_the_matrix";
     holds = "The run record reads step states, their times and the run's platform from the log, and its JSON export gives back every column and cell.";
     check =
@@ -1098,7 +1098,7 @@ let record_export_pin : Canary_project_test.pure_test =
    each row (1) lists exactly the world's steps in order, never a log tag
    no step has; (2) types them as the builder did; (3) gives each the
    state and time of its own log line; (4) exports them unchanged. *)
-let record_steps_pin : Canary_project_test.pure_test =
+let record_steps_test : Canary_project_test.pure_test =
   { name = "matrix.record_carries_every_step";
     holds = "The record lists exactly a world's steps in order, not one entry per action, each with the state and time of its own log line.";
     check =
@@ -1321,7 +1321,7 @@ let record_steps_pin : Canary_project_test.pure_test =
    from the steps' places, in the graph's order; a listed claim is one
    the graph places, with its check columns and their cells' outcomes,
    none left out; the printed JSON decodes to both. *)
-let record_join_pin : Canary_project_test.pure_test =
+let record_join_test : Canary_project_test.pure_test =
   { name = "matrix.record_joins_edges_and_claims";
     holds = "Each row of the record carries the edges its world realizes with the steps that realize them, and each placed claim with its outcomes.";
     check =
@@ -1419,10 +1419,10 @@ let record_join_pin : Canary_project_test.pure_test =
         && List.exists m.M.rows ~f:(fun (r : M.row) -> not (List.is_empty r.M.claims)))
   }
 
-(* Hermetic: no run data; marks are pinned by matrix.marks_from_log.
+(* Hermetic: no run data; marks are tested by matrix.marks_from_log.
    Also z3's web identity: the pre-10549 row's ref links the remote
    commit, and its build_lib cell carries the provision B:d. *)
-let matrix_registry_shape_pin : Canary_project_test.pure_test =
+let matrix_registry_shape_test : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     holds = "The result table has one row per enumerated scenario, the expected count for each active project, and its columns in the canonical order.";
     check =
@@ -1526,7 +1526,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                       with
                       | Some (Some c) ->
                           (* the cell names whichever system PM this
-                             machine has; the pin holds the shape, not
+                             machine has; the test holds the shape, not
                              the PM *)
                           let pm =
                             Canary_store.string_of_pm
@@ -1656,8 +1656,8 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            > 0) }
 
 let tests : Canary_project_test.pure_test list =
-  [ matrix_row_order_pin; matrix_row_index_pin; matrix_cell_stage_pin;
-    matrix_setting_block_pin; matrix_registry_shape_pin; matrix_check_cell_pin;
-    matrix_page_has_the_grid_pin; matrix_key_covers_codes_pin; record_export_pin;
-    record_steps_pin; record_join_pin; manifest_pin; record_chains_pin;
-    blame_attribution_pin; run_info_session_pin; machine_roots_pin ]
+  [ matrix_row_order_test; matrix_row_index_test; matrix_cell_stage_test;
+    matrix_setting_block_test; matrix_registry_shape_test; matrix_check_cell_test;
+    matrix_page_has_the_grid_test; matrix_key_covers_codes_test; record_export_test;
+    record_steps_test; record_join_test; manifest_test; record_chains_test;
+    blame_attribution_test; run_info_session_test; machine_roots_test ]
