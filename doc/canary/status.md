@@ -67,9 +67,9 @@ The verdict is pinned to the page and pinned to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 210 project + 120 artifact + 17 PM = 347** (2026-10-01). `make canary-test`
-after every edit under `src/canary/`; `make canary-post-check` before
-committing.
+**Tests: 196 project + 120 artifact + 17 PM = 333; harness: 17 checks**
+(2026-10-01). `make canary-test` after every edit under `src/canary/`;
+`make canary-post-check` and `make harness` before committing.
 
 **GH CI is alive** (2026-08-27, extended 08-28). `canary_min.yml` runs
 eight projects green on `ubuntu-latest` — sqlite, cairo, zarith, libffi,
