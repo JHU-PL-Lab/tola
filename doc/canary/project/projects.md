@@ -32,9 +32,10 @@ already break the letters.
 Two consequences:
 
 - **A project isn't *in* a pattern; it *has* dimension values.** The
-  ocaml/opam-binding template (`Canary_opam_binding`, the former
-  "Pattern A") is sugar that fills a common combination — not a category
-  anything branches on. B vs A is one field value (`Depext` vs `Conf`).
+  ocaml/opam-binding template (`Canary_opam_binding`, once
+  `canary_pattern_a.ml`) is sugar that fills a common combination — not a
+  category anything branches on. The survey's B vs A is one field value
+  (`Depext` vs `Conf`).
 - **Provenance is an axis, not a fact.** The same library runs as
   `System` in one scenario and `Vendored`/`Built` in another — that axis
   IS the 2×2's lib side (§2).
@@ -213,8 +214,10 @@ Deliberately, each for its own reason:
   mismatches actually happen, so they are the highest-yield targets AND
   the most expensive. After the cheap landings have proven the pipeline.
 
-- **Pattern D (invisible C stubs)** — `mirage-crypto`, `bigstringaf`,
-  43 packages. No leverage until source inspection is in the toolkit.
+- **The survey's Pattern D** (invisible C stubs,
+  [`../surveys/opam.md`](../surveys/opam.md) §2) — `mirage-crypto`,
+  `bigstringaf`, 43 packages. No leverage until source inspection is in
+  the toolkit.
 - **`owl` / `conf-openblas`** — multiple BLAS variants (OpenBLAS / MKL /
   Accelerate). A natural follower after PyTorch.
 - **`bytesrw`** — wants named lib artifacts (D4) *plus* optional deps as

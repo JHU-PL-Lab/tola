@@ -27,9 +27,9 @@ fixture:
 ```
 
 Nor are the two *declaration* styles a fork. sqlite authors typed
-`action_row`s and Pattern-A projects fill a `runner_spec` field, but
-`realize_from_rows` lowers a row into that same field
-(`action/canary_action_templates.ml:390`), so both arrive as
+`action_row`s and projects that use the opam-binding template fill a
+`runner_spec` field, but `realize_from_rows` lowers a row into that same
+field (`action/canary_action_templates.ml:390`), so both arrive as
 `runner_spec.probe_lib : (location * cmd) list`. One model, one sugar
 layer.
 
@@ -58,9 +58,10 @@ how many siblings it happens to have.
 
 Note what is *not* wrong here: sqlite having three lib probes is
 sqlite being richer, not sqlite being irregular. It declares an
-`Installed` provision, so it owes a staged probe; Pattern-A projects
-provide their lib only `Fetched`, so one probe location is the correct
-model for them. The count is modelling; the naming is the defect.
+`Installed` provision, so it owes a staged probe; projects that use the
+opam-binding template provide their lib only `Fetched`, so one probe
+location is the correct model for them. The count is modelling; the
+naming is the defect.
 
 ### Two consequences, both live
 

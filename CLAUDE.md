@@ -25,7 +25,7 @@ dune exec src/bin/canary_main.exe -- inspect-diff --old A --new B            # d
 dune exec src/bin/canary_main.exe -- compat <project> [<variant>]            # static C-symbol cross-check
 dune exec src/bin/canary_main.exe -- verify <project> [<variant>]            # cross-reference prediction vs probe.log
 dune exec src/bin/canary_main.exe -- stages <project|@all>                # store-lifecycle coverage matrix (✓/-/⊘ + legend)
-dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # render variants as enumeration-algorithm provision assignments (ssot §4.2)
+dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # render variants as enumeration-algorithm provision assignments (design/enumeration/)
 dune exec src/bin/canary_main.exe -- tiny engine                             # render tiny's scenarios as enumeration-algorithm mutation-axis projection
 dune exec src/bin/canary_main.exe -- tiny assemble-check --id lib Bs.4       # P3 step 2: emit+assemble a vendored resource onto the witness base (needs `tiny prepare-all`)
 dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # per-scenario last-run verdict matrix (xfail/✓/✗/·)
@@ -208,7 +208,7 @@ Current state and open items in
 [`doc/canary/status.md`](doc/canary/status.md); per-project findings in
 [`doc/canary/project/issues.md`](doc/canary/project/issues.md).
 
-**tiny-factory / tiny1 / tiny-full** (ssot §4.2.5, status §1a — the
+**tiny-factory / tiny1 / tiny-full** (design/enumeration/, status §1a — the
 2026-08-02 arc). Three named things: **tiny-factory** = the machinery
 (scenario specs + workspace materializer + vendored-resource emitter/
 assembler); **tiny1** = the single-scenario projects, each a hand-written
@@ -309,7 +309,7 @@ surveys what opam packages look like IN THE WILD, and hybrids already
 break the letters (bitwuzla is "A for discovery + C for building").
 Canary describes a project by ORTHOGONAL DIMENSIONS — native-lib origin
 × lib discovery × binding origin — carried as data in `store_config`
-(`doc/canary/project/projects.md` §1, ssot §6.1). **A project is not IN a
+(`doc/canary/project/projects.md` §1, `design/enumeration/stage0_naming.md`). **A project is not IN a
 pattern; it HAS dimension values**, and nothing branches on a letter. The
 module once called `canary_pattern_a.ml` is `Canary_opam_binding`, a
 TEMPLATE that fills a common combination. Say "the opam-binding
@@ -328,9 +328,9 @@ one. The base vocabulary types:
 | --- | --- |
 | `base/canary_lang.ml` | `lang` |
 | `base/canary_basic.ml` | `artifact_kind` (what the scenario enumeration ranges over), `action`, `channel` (`Dev`/`Stable` release role) + concrete `version` record, `runner_os`, `probe_action`, `compile_mode`, output-tree naming (`filename`, `variant_file`) |
-| `base/canary_store.ml` | `location`, `artifact_status` (lifecycle state), `provision` (provenance axis — ssot §4.2), `package_manager`, `pm_info`, `system_package_spec`, `distro`, `source_repo` |
+| `base/canary_store.ml` | `location`, `artifact_status` (lifecycle state), `provision` (provenance axis — design/enumeration/stage1_declare_spec.md), `package_manager`, `pm_info`, `system_package_spec`, `distro`, `source_repo` |
 | `base/canary_artifact_api.ml` | `native_api`, `binding_api` (provider/consumer claims) |
-| `base/canary_mechanism.ml` | `discipline`, `mechanism` (binding identity — ssot §4.2.1b) |
+| `base/canary_mechanism.ml` | `discipline`, `mechanism` (binding identity — design/agreement/components.md §3.3) |
 | `base/canary_surface.ml` | `native_surface`, `binding_surface`, `surface` (checking-point view) |
 | `base/canary_action_family.ml` | `t` — an action with its LANGUAGE erased (`Probe_binding OCaml` → `Probe_binding`); `of_action` (total), `of_catalogue`. What the overview's language-free edges name (2026-09-23; names are placeholders, user) |
 | `base/canary_pm_action.ml` | WHAT A PACKAGE MANAGER DOES INSIDE ONE OF OUR ACTIONS (2026-09-23): `does` (`Resolve` \| `Build_package`), `unseen` (`Not_yet how` \| `Out_of_reach why`), `placeholder`, and `inside_install pm ~of_binding` — per PM, the pieces canary does not record. The pipeline derives PLACEHOLDER STEPS from it for every non-dummy fetch (`fetch_lib_apt_policy`, `fetch_binding_ocaml_opam_{plan,solver,build}`): no work, a marker, a `placeholder` log event, `step.placeholder`, placed `Placeholder_for` edges; the overview draws a marker and reads an unperformed action edge as `inside`. Not a dummy. The seed of a PM-solo catalogue (status.md §2.7) |
@@ -354,7 +354,7 @@ reconciling with, not duplicating.
 | `src/canary/base/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro`, `pm_properties` types (was canary_pm_types)    |
 | `src/canary/base/canary_artifact.ml`                | Artifact IDENTITY: `artifact_info` (a SUM since 2026-08-24 — `A_binding of lang * mechanism`, `A_app of app_wiring`, …; was a `{ kind; ext }` record whose pairing was convention-only), `A_lib of string option` since 2026-08-25 — `None` = "this project has one lib", still printing plain `lib` so no id moved; `Some n` names one of several, step 1 of multi_lib §3a), `kind_of` projecting the coarse `artifact_kind`, `mechanism_of`/`wiring_of`/`lib_name_of` for the refinements (`artifact_ext`/`ext_of` retired the same day — every consumer wanted something narrower), the `a_*` smart constructors, `artifact_axes`, `project_spec`, `placement`, `assignment` |
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
-| `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
+| `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (design/agreement/components.md §3.3). Round 1 wires only Static. |
 | `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
 | `src/canary/agreement/canary_agreement.ml`           | **TIER 3 — THE LIST AND THE VIEWS** (was `canary_agreement_registry.ml`, renamed 2026-09-02 for reading: it names the thing, not the shape of it, and sorts ahead of the families). A row is a NAME + doc anchor + enabled flag; the agreement itself comes from the family. Everything else is derived — `evaluate_in_context` (THE production path: action + mechanism + lang + world → selected methods → resolved evidence → `outcome`), `evaluate_over_inputs` / `predicted_by_agreement` / `predicted_contains_any` (the project-supplied-input path the compat expectations still use), `inputs_of_agreement`, `agreement_fixtures`, the firing table + fill list, `proposed_agreements`, `all_agreements`/`pp_agreements`/`pp_catalogue`, `agreements_for`. Holds NO per-agreement description of any kind. Design: `doc/canary/design/agreement/README.md` |
 | `src/canary/agreement/canary_agreement_common.ml`     | **TIER 1 — what every family needs** (was `canary_agreement.ml`): the descriptive types an agreement uses to describe itself (`subject`, `claim`, `basis`, and the `agreement` record), the `checking_method` record (kind · reference · applicability · firing · inputs · evaluator-or-planned-reason · diagnostics · limits · counterexamples) and `evaluate_method`, the `outcome` type (holds/violated/unavailable/inconclusive/not_implemented/not_applicable/disabled/error), the `inspect_input` ADT that NAMES evidence — including the `Declared_*` constructors that make a declaration comparison the same shape as a peer comparison — `agreement_id` (12 descriptive constructors), the `evaluation_schema` cache epoch, the shared firing derivations + `binding_evidence_tag` + `uniform_world`, and the JSON primitives. Membership rule: a family owns what is only about its topic; this owns what more than one family needs |
@@ -373,7 +373,7 @@ reconciling with, not duplicating.
 | `src/canary/tool/canary_pm_solo.ml`                 | THE PM-SOLO TABLE CANARY COVERS (2026-09-23): one row per package manager with a driver (apt, brew, opam, pip). Scope/store READ from the drivers' `properties` (`Canary_pm.properties`, their first reader), bridge kinds from `Canary_bridge.kinds_of_pm`, unseen pieces from `Canary_pm_action`; three prose columns written against the draft's Table 1. With the mechanism catalogue (binding table) and `Canary_topology.coop` / `coop_catalogue` (cooperation table), it is overview §5 — a chain = one mechanism + two PM-solo rows + one cooperation. Tested by `overview.tables_list_what_canary_covers` |
 | `src/canary/tool/canary_bridge_driver.ml`           | THE BRIDGE'S TOOL-LAYER MODEL (2026-09-23, status.md §2.7 E1): what a conf package answers (installed version, depexts, predicate) and how canary DISPATCHES its check in a world — the predicate's own pkg-config invocation, filters evaluated against `opam var`. `record_cmd` → `canary/scripts/inspect_bridge.py` (record into the step's `inspect.json`, kind `bridge`; the SCRIPT exits 0 holds / 1 does not / 3 not dispatchable, but since 2026-09-27 the STEP passes whenever the record is written — the verdict is `gate_admits_the_world`'s, `canary_agreement_bridge.ml`, read at the binding's probe, which depends on the bridge step; tag shared through `Canary_agreement_common.bridge_record_tag`, tested by `steps.gate_is_read_after_its_bridge_runs`). Every PM question is a driver template (`questions`); `record_fields` = what readers may rely on, asserted by artifact-test. A step that drives a bridge carries it in `step.bridge`, the install's action, no agreement context, and sits on `conf_probe`; `runner_spec.bridges` asks for one (zarith only today) |
 | `src/canary/action/canary.ml`                       | 27-line `include` shim (Canary_action + Canary_step_model + Canary_path_table); still consumed by `canary_project_llvm.ml` + `canary_diagram.ml` via `open Canary`. |
-| `src/canary/action/canary_action.ml`                | `action_graph` (was `action_rule` pre-2026-07-21), `store_actions`, `make_action_graph`, `nodes_of_action_graph`, `node_status`, `artifacts_of_action` (colocated 2026-07-22) — the action-graph schema + per-action consumes/produces (SSOT §6.5) |
+| `src/canary/action/canary_action.ml`                | `action_graph` (was `action_rule` pre-2026-07-21), `store_actions`, `make_action_graph`, `nodes_of_action_graph`, `node_status`, `artifacts_of_action` (colocated 2026-07-22) — the action-graph schema + per-action consumes/produces (the action catalogue; design/enumeration/stage6_realize_steps.md) |
 | `src/canary/action/canary_step_model.ml`            | `step_expectation` (incl. `Expect_compat_failure`), `step` (was `action_step` pre-2026-07-21), `logger`, `version_info`, `symbol_*` |
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
 | `src/canary/action/canary_binding_templates.ml`     | M2 step 4 realization: `binding_decl` × ctx → build_binding/probe_binding/probe_lib/user_facing_pkg cmd builders (tiny consumes it; tested byte-equal to the former hand-written literals) |
@@ -381,7 +381,7 @@ reconciling with, not duplicating.
 | `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `agreement_binding`); `lower_expectation_agnostic` — THE one expectation lowering since A7 (the oracle variant retired; tiny1 composes it as a factory combinator); `derive_scenarios`; `related_artifacts_of_actions`. |
 | ~~`canary_scenario_util.ml`~~ (deleted 2026-08-05)  | Folded back into `canary_tiny_scenario.ml` — the "project-agnostic scenario helpers" never gained a second consumer. |
 | `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **abstract-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
-| `src/canary/action/canary_enumerate.ml`             | The `(provision × version × mutation)` enumeration algorithm (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. Ranges over `artifact` (= `Canary_basic.artifact_kind`); `placement` (per-artifact provision + version), `run_config`/`level`/`config`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
+| `src/canary/action/canary_enumerate.ml`             | The `(provision × version × mutation)` enumeration algorithm (design/enumeration/stage3_enumerate_worlds.md) — pure product-then-filter, polymorphic in the mutation. Ranges over `artifact` (= `Canary_basic.artifact_kind`); `placement` (per-artifact provision + version), `run_config`/`level`/`config`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
 | ~~`canary_project.ml`~~ (deleted 2026-08-05, A6)    | The `Canary_project.project` bundle was never read by anything — `Canary_project_run.project_run` IS the project identity (§6.1 top) for generic projects; contract bindings live where consumed (`*_agreement_bindings` → expectation lowering). |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
 | `src/canary/backend/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
@@ -429,7 +429,7 @@ reconciling with, not duplicating.
 | `doc/canary/design/enumeration/stage6_realize_steps.md` | **Pass 6, realize** (`world → steps`) — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. **§2b THE OCCASION** (2026-09-16) — when a check fires: the three gates (applicability at pass 2, firing here, evidence at run time), what realize attaches, why evaluation is not a further pass, where the evidence address comes from. Absorbed `algorithm_explainer.md` |
 | `doc/canary/design/enumeration/stage2_analyse_spec.md` | **Pass 2, analyse** (`spec → spec, enriched`) — what canary DERIVES before any world. The membership rule (no world ⇒ here), why it is a pass and not a second branch, the three-views-two-answers bug it closed, §5 the join, §8 ⚠ the mechanism declaration it does NOT read |
 | `doc/canary/design/action_model.md` | **What an action IS, and what `_post` means** (2026-09-16) — a hook is a MOMENT, not a specification of what runs at it; the join a hook needs; `probe_lib` as three roles (existence · inspection · execution — nothing ever `dlopen`s a lib); the THREE locator vocabularies that block deriving an inspection; §6 the ordered remainder |
-| `doc/canary/design/ssot.md`                    | Project-wide SSOT — canonical ID tables (Ar/Sf/Ag/Sc/scenarios/actions) bridging manuscript ↔ code    |
+| `doc/canary/design/ssot.md`                    | Retired: a redirect table from its old § numbers to where each part lives now (`design/enumeration/`, the paper-side ids in `research/surface_draft/ids.md`) |
 | `doc/canary/design/enumeration/stage0_naming.md` | **Vocabulary, not a pass** — naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
 | `doc/canary/design/enumeration/stage5_order_worlds.md` | **Pass 5, order** (`worlds → worlds`) — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
 | `doc/canary/project/opam_exclusive_store_issue.md` | opam's one-version-per-switch problem — ONE instance of pass 4's principle: what a pin costs, the per-version-switch measurement (`ocaml-system` = ~5 s), and the two open questions (which switch model; what a collateral rebuild is FOR) |
@@ -453,8 +453,8 @@ reconciling with, not duplicating.
 ### Architecture in one paragraph
 
 `store_actions ~langs` and `artifacts_of_action` in
-`action/canary_action.ml` define the universal action catalogue (SSOT
-§6.5): what actions run + what artifacts each touches, per kind (Source
+`action/canary_action.ml` define the universal action catalogue
+(`design/enumeration/stage6_realize_steps.md`): what actions run + what artifacts each touches, per kind (Source
 → Headers → Lib → Binding → App, per language). `pattern_rows_of_paths`
 in `action/canary_path_table.ml` enumerates 15 structural patterns
 like `fetch_source → build_lib → build_binding`. A project provides a
@@ -522,7 +522,7 @@ scenarios dedup). There is **no** `pr_materialize`/pre-place field:
 tiny-full assembles its vendored tree INSIDE its `pr_runner_spec`
 (the `materialize` symbol lives only in tiny-factory,
 `canary_tiny_workspace`); a real project builds/fetches into the
-runner-given dir. See SSOT §6.1 for the taxonomy
+runner-given dir. See `design/enumeration/stage0_naming.md` (Term ↔ code) for the taxonomy
 (project → scenario ≡ variant → runner_spec → step → action) and
 `design/enumeration/stage6_realize_steps.md` §2 for what is data vs code.
 
@@ -855,8 +855,8 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   base's good `.mli`/header in place, so source-manifested drift (a dropped val =
   C2) was invisible and the real failure read as *unexpected*. Terminology: the
   vendored bundle is a **cached artifact** (`cache_artifact`/`cached_artifact_dir`
-  in `canary_tiny_workspace.ml`), NOT a "resource" — ssot uses artifact /
-  artifact_kind.
+  in `canary_tiny_workspace.ml`), NOT a "resource" — the vocabulary is
+  artifact / artifact_kind.
 - **Types shared by multiple `action/` modules belong in `base/`.**
   `canary_action.ml` once depended on `canary_enumerate.ml` for `build_id`,
   `assignment` — moved to `Canary_basic`/`Canary_artifact` (base/).

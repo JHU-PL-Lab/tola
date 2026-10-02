@@ -384,7 +384,7 @@ is the right scope (an origin string is pass 6's to resolve), but it
 means the claim is *both machines enumerate the same worlds*, not
 *nothing below a declaration mentions a platform*. Falsified by making
 the world set itself vary — dropping the Dev version point on macOS in
-the Pattern-A lib row turns it red.
+the opam-binding template's lib row turns it red.
 
 **One correction to the record.** A first pass at this read
 `emit --stage realize` under both platforms, found zlib's and llvm's

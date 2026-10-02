@@ -213,7 +213,8 @@ PyTorch stresses canary's model in ways z3 / llvm don't:
    version with potentially different build flags (CPU vs CUDA, compiler,
    glibc floor).
 2. **Binary-only distribution.** Builds-from-source are rare and painful
-   (~2 GB CUDA wheels). It's all "Pattern A with exotic locators."
+   (~2 GB CUDA wheels). In canary's dimensions the lib is always
+   prebuilt, never `Built`, and found by exotic locators.
 3. **Strict version pinning.** opam `torch` declares
    `conflicts: libtorch { < 2.1.0 | >= 2.2.0 }`. pip's default is
    typically outside that range → classic cross-PM mismatch.

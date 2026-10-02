@@ -820,7 +820,7 @@ hardcode as a `project-test` invariant, and
 
 The static checker audits the artifact table AS DECLARED. The first
 report's four non-uniformities: three CLOSED by the 2026-08-13
-fulfillment (pattern-A typed rows + sources, sqlite's source row +
+fulfillment (zarith/cairo/libffi's typed rows + sources, sqlite's source row +
 api_source, tiny-full's `pr_api_source`); the remaining ones are
 recorded here, reported as-is, NOT special-cased in checker code:
 
@@ -1024,7 +1024,7 @@ the worktree model exists to share.
 
 - [ ] **spec-check warns fulfillment** — the ratchet-tracked ⚠ set,
   updated 2026-08-25 when `lib_pair`/`binding_pair` landed: llvm's
-  missing Publish row (`llvm.dev-shared`); the pattern-A trio + ssl's
+  missing Publish row (`llvm.dev-shared`); zarith/cairo/libffi + ssl's
   wrapper/python/built-binding gaps; sqlite/tiny-full's binding
   dev-source; and the new pair warns — `binding_pair` on
   cairo/libffi/zlib/zstd (a TEMPLATE gap, see §2), `lib_pair` on ssl

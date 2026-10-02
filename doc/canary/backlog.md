@@ -108,9 +108,10 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
       unit -> runner_spec
     ```
 
-    Covers the Pattern A case. Source-build projects (z3, llvm) stay
-    hand-written but adopted `store_config` for their provider tables in
-    A8. Project shapes + landing mechanics: `doc/canary/project/landing.md`.
+    Covers the combination the opam-binding template fills. Source-build
+    projects (z3, llvm) stay hand-written but adopted `store_config` for
+    their provider tables in A8. Project shapes + landing mechanics:
+    `doc/canary/project/landing.md`.
 
 
 33. **Adopt `<pkg>.dev-src` naming convention for source-only opam packages** —

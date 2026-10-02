@@ -185,10 +185,12 @@ is still baked into the action catalogue, so:
   comparable across packagers — 177 vs 297 `ZSTD_` symbols with nothing
   removed, because Debian hides zstd's internals and conda-forge does
   not. Still a `bytesrw` backend, so D5 is de-risked.
-- [ ] **D2b. lmdb** — still worth landing; Pattern B1+E (direct depexts +
-  a `clib:` tag, no conf-*), so it tests the no-conf-indirection style.
-  Its pair comes from the binding's opam pins. `ocurl` is a second
-  Pattern-B specimen (measured: **no conf dependency at all**).
+- [ ] **D2b. lmdb** — still worth landing; the survey's Pattern B1+E
+  (direct depexts + a `clib:` tag, no conf-*;
+  [`../surveys/opam.md`](../surveys/opam.md) §2), so it tests the
+  no-conf-indirection style. Its pair comes from the binding's opam pins.
+  `ocurl` is a second specimen of the survey's Pattern B (measured: **no
+  conf dependency at all**).
 - [ ] **D3. sundials / sundialsml** — **MEASURED 2026-08-25, and the
   premise changed. Blocked on a user decision** (the apt install), not on
   machinery. §G1a still holds: `conf-sundials`'s entire build is
@@ -438,7 +440,7 @@ directions):
   forward). Zarith's live data point: no GMP version constraint
   (conf-gmp presence only) — the fully-flexible case, resting on
   GMP's ABI discipline.
-- [ ] **Pattern datatype→functions conversion**: `Canary_opam_binding`
+- [ ] **Template datatype→functions conversion**: `Canary_opam_binding`
   becomes FUNCTIONS over the general types instead of the `t` record;
   the taxonomy should cover ALL opam packages; pip follows the idea.
 
