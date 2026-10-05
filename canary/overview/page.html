@@ -10,7 +10,7 @@
 through two package managers — one for the system, one for the language —
 and a binding between them. Canary models that join, runs each
 combination a project has, and checks what the pieces must agree on. What
-a run recorded is read from a separate file per machine; only §2's counts
+a run recorded is read from a separate file per machine; only §2.1's counts
 are written into the page, counted over every machine's file when it was
 last rendered.</p>
 
@@ -165,6 +165,21 @@ its row.</p>
 <script type="application/json" id="rtcols">{{results_columns}}</script>
 
 <h2 id="overview">2. The agreements</h2>
+<p>An agreement is a claim about parts of the chain, and this table names
+them before any action does. It has a row for each agreement the chain
+places, registered or candidate, and a column for each layer: the package
+manager on each side (PM_sys, PM_lang) and the artifacts it delivers
+(Art_sys, Art_lang), the two joins between the sides (PM_coop, where the
+package managers cooperate through a bridge, and Binding), and the
+program that uses them. A cell names the part an agreement reads in that
+layer and what it reads there. No agreement relates the two sides
+directly: one that spans them reads the bridge, the binding or the
+program too. The last columns say, for each object format, whether the
+agreement applies there and whether canary checks it. Where each one is
+checked follows from its parts, in §2.1.</p>
+{{agreement_layers}}
+
+<h3 id="checked">2.1 Where each is checked</h3>
 <p>Every agreement, where its rule RAN and where it is CHECKED, over the
 same frames as §1.2's result table — of which it is the template, so an
 empty column there can be looked up here, and ◆ marks the column each

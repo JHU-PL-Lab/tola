@@ -2054,22 +2054,73 @@ let agreements_sit_test : Canary_project_test.pure_test =
               | Some cell, Some st -> String.equal cell (String.concat ~sep:", " st.T.st_edges)
               | _ -> false)
         in
-        let groups = AO.sitting_groups (AO.chains_of m) in
-        let members = List.concat_map groups ~f:(fun g -> g.AO.sg_members) in
-        let grouping_ok =
-          List.length members = List.length T.claim_sites
-          && List.for_all slugs ~f:(fun s ->
-                 List.count members ~f:(fun sm -> String.equal sm.AO.sm_slug s) = 1
-                 && String.is_substring overview
-                      ~substring:(Printf.sprintf {|<code title="%s">|} s))
-          && List.count members ~f:(fun sm -> sm.AO.sm_checked)
-             = List.count T.claim_sites ~f:T.implemented
-          (* the logs agree with the registry *)
-          && List.for_all members ~f:(fun sm -> (not sm.AO.sm_decided) || sm.AO.sm_checked)
+        (* the logs agree with the registry: a run decides only a placed
+           agreement with an evaluator *)
+        let decided_ok =
+          List.for_all (AO.decided_slugs (AO.chains_of m)) ~f:(fun s ->
+              List.exists T.claim_sites ~f:(fun cs ->
+                  String.equal cs.T.cs_claim s && T.implemented cs))
         in
-        once && specimens && table_ok && grouping_ok
-        && String.is_substring (AO.pp_sittings (AO.chains_of m))
-             ~substring:"where the agreements sit on the chain")
+        once && specimens && table_ok && decided_ok)
+  }
+
+(* §2's first table holds what the claim sites and the registry say: a
+   row per placed claim, each part under its layer, and n/a where the
+   registry row excludes a format. Specimens for each word: version tags
+   are ELF-only, required symbols are checked on both formats, behaviour
+   is planned, and a candidate states no format. *)
+let agreements_by_layer_test : Canary_project_test.pure_test =
+  { name = "overview.agreements_by_layer_lists_every_claim";
+    holds = "§2's first table lists every placed claim once, each part under its layer, and marks n/a on exactly the formats its registry row excludes.";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module A = Canary_agreement in
+        let module Tb = Canary_overview_tables in
+        let html = Tb.layers_table () in
+        let rows_once =
+          List.for_all T.claim_sites ~f:(fun cs ->
+              List.length
+                (String.substr_index_all html ~may_overlap:false
+                   ~pattern:(Printf.sprintf "<td><code>%s</code></td>" cs.T.cs_claim))
+              = 1)
+        in
+        let parts_placed =
+          List.for_all T.claim_sites ~f:(fun cs ->
+              let cells = Tb.layer_cells cs in
+              List.for_all cs.T.cs_parts ~f:(fun pt ->
+                  match List.findi T.all_components ~f:(fun _ c -> Poly.equal c pt.T.pt_component) with
+                  | None -> false
+                  | Some (i, _) ->
+                      List.exists (List.nth_exn cells i) ~f:(fun cell ->
+                          String.is_suffix cell ~suffix:(": " ^ pt.T.pt_reads))
+                      && String.is_substring html
+                           ~substring:(Canary_overview_assets.esc pt.T.pt_reads)))
+        in
+        let n_a_ok =
+          List.for_all T.claim_sites ~f:(fun cs ->
+              List.for_all A.all_formats ~f:(fun f ->
+                  let excluded =
+                    match A.agreement_named cs.T.cs_claim with
+                    | Some r ->
+                        not (List.mem r.A.ag_formats f ~equal:Canary_store.equal_object_format)
+                    | None -> false
+                  in
+                  Bool.equal excluded (String.equal (Tb.format_word cs f) "n/a")))
+        in
+        let word slug f =
+          Option.map
+            (List.find T.claim_sites ~f:(fun cs -> String.equal cs.T.cs_claim slug))
+            ~f:(fun cs -> Tb.format_word cs f)
+        in
+        let specimens =
+          Poly.equal (word "declared_versions_exported" Canary_store.Macho) (Some "n/a")
+          && Poly.equal (word "declared_versions_exported" Canary_store.Elf) (Some "checked")
+          && Poly.equal (word "required_symbols_exported" Canary_store.Macho) (Some "checked")
+          && Poly.equal (word "behavior_matches" Canary_store.Elf) (Some "planned")
+          && Poly.equal (word "exports_accounted_for" Canary_store.Elf) (Some "candidate")
+        in
+        rows_once && parts_placed && n_a_ok && specimens)
   }
 
 (* Nodes are drawn after edges, so a box masks what runs under it: a
@@ -3318,7 +3369,8 @@ let tests : Canary_project_test.pure_test list =
     badge_words_test; staged_copy_test; overview_overlay_test; recorded_names_test;
     overlay_words_test; bridge_record_test; placeholder_badges_test; coverage_tables_test;
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;
-    badge_counts_test; agreements_sit_test; edge_marks_test; visual_vocabulary_test; flow_test;
+    badge_counts_test; agreements_sit_test; agreements_by_layer_test; edge_marks_test;
+    visual_vocabulary_test; flow_test;
     flow_files_written_test; exhibits_test; exhibits_export_test; choice_resolved_test; result_cells_test;
     every_machine_test; firing_frames_test; outcome_marks_test;
     agreement_laws_test; mechanism_claims_test; check_index_language_test;

@@ -1,9 +1,9 @@
 (** The overview page, [canary overview]: [canary/overview/page.html] filled
     from the modules that draw each part — §0 ({!Canary_overview_flow});
     §1's diagram ({!Canary_overview_diagram}), its looks and places
-    ({!Canary_overview_looks}) and its panel ({!Canary_overview_panel}); §2
-    ({!Canary_agreement_overview}) with §2.2, and §3
-    ({!Canary_overview_tables}).
+    ({!Canary_overview_looks}) and its panel ({!Canary_overview_panel});
+    §2's table of the agreements by layer and §2.2's census, with §3
+    ({!Canary_overview_tables}); and §2.1 ({!Canary_agreement_overview}).
     §1.2 and a chain's recorded run are laid out by the page's scripts from
     the runs files ({!Canary_overview_runs}), which the page loads and does
     not embed. *)
@@ -63,6 +63,7 @@ let render ?(tests = []) (projects : (string * Canary_project_run.project_run) l
       (* its rows come with the runs files: the script lays them out *)
       ("results_table", Canary_overview_results.table ());
       ("results_columns", Canary_overview_results.columns_json ());
+      ("agreement_layers", Tb.layers_table ());
       ("agreement_overview", overview);
       ("sites", Int.to_string (List.length T.claim_sites));
       ("sites_checked", sites T.implemented);

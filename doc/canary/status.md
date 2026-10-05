@@ -67,7 +67,7 @@ The verdict is tested to appear on the page and tested to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 200 project + 120 artifact + 17 PM + 46 mutation + 2 cache = 385;
+**Tests: 201 project + 120 artifact + 17 PM + 46 mutation + 2 cache = 386;
 harness: 17 checks**
 (2026-10-05). `make canary-test` after every edit under `src/canary/`;
 `make canary-post-check` and `make harness` before committing.

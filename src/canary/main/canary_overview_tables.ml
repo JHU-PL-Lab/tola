@@ -1,6 +1,7 @@
-(** §2.2's census of claim sites and §3's tables of what canary covers —
-    the package managers, the binding mechanisms, the cooperations and the
-    chains canary runs. Every cell is computed from canary's code: the
+(** §2's agreements by layer, §2.2's census of claim sites, and §3's
+    tables of what canary covers — the package managers, the binding
+    mechanisms, the cooperations and the chains canary runs. Every cell is
+    computed from canary's code: the claim sites and the registry, the
     drivers and {!Canary_pm_solo}, the mechanism catalogue, the bridge
     model, {!Canary_topology}'s cooperations and the projects'
     declarations; the prose columns are written in those modules. *)
@@ -10,6 +11,90 @@ module T = Canary_topology
 module E = Canary_overview_exhibits
 
 let esc = Canary_overview_assets.esc
+
+(** A table that may be wider than the page scrolls on its own. *)
+let wide (html : string) = {|<div class="widetable">|} ^ html ^ "</div>"
+
+(* ── §2: the agreements by layer ── *)
+
+(** A placed claim's parts in each layer, in [T.all_components] order:
+    each part as its node and what is read there. *)
+let layer_cells (cs : T.claim_site) : string list list =
+  List.map T.all_components ~f:(fun c ->
+      List.filter_map cs.T.cs_parts ~f:(fun pt ->
+          if Poly.equal pt.T.pt_component c then
+            let node =
+              Option.value_map (T.node_by_id pt.T.pt_node) ~default:pt.T.pt_node ~f:(fun n ->
+                  n.T.nd_label)
+            in
+            Some (node ^ ": " ^ pt.T.pt_reads)
+          else None))
+
+let format_name = function Canary_store.Elf -> "ELF" | Canary_store.Macho -> "Mach-O"
+
+(** Whether a claim applies on an object format, and how far canary is:
+    [checked] (an evaluator), [planned] (a registry row with none), [n/a]
+    (the row excludes the format), [candidate] (not a registry row, so it
+    states no format). *)
+let format_word (cs : T.claim_site) (f : Canary_store.object_format) : string =
+  match Canary_agreement.agreement_named cs.T.cs_claim with
+  | None -> "candidate"
+  | Some r ->
+      if not (List.mem r.Canary_agreement.ag_formats f ~equal:Canary_store.equal_object_format)
+      then "n/a"
+      else if T.implemented cs then "checked"
+      else "planned"
+
+(** §2's first table: one row per placed claim, a column per layer with
+    the parts it relates there, and a column per object format. *)
+let layers_table () =
+  let row (cs : T.claim_site) =
+    let cell parts =
+      Printf.sprintf "<td>%s</td>" (String.concat ~sep:"<br>" (List.map parts ~f:esc))
+    in
+    let word f =
+      let w = format_word cs f in
+      Printf.sprintf "<td class=\"fmt %s\">%s</td>"
+        (String.map w ~f:(fun c -> if Char.equal c '/' then '-' else c))
+        (esc w)
+    in
+    Printf.sprintf "<tr><td><code>%s</code></td><td><code>%s</code></td>%s%s</tr>"
+      (esc (Canary_agreement_common.short_code_of_slug cs.T.cs_claim))
+      (esc cs.T.cs_claim)
+      (String.concat (List.map (layer_cells cs) ~f:cell))
+      (String.concat (List.map Canary_agreement.all_formats ~f:word))
+  in
+  wide
+    (E.table ~cls:"keytbl layers" "tab-layers"
+    ^ "<thead><tr><th>code</th><th>agreement</th>"
+    ^ String.concat
+        (List.map T.all_components ~f:(fun c ->
+             Printf.sprintf "<th>%s</th>" (esc (T.string_of_component c))))
+    ^ String.concat
+        (List.map Canary_agreement.all_formats ~f:(fun f ->
+             Printf.sprintf "<th>%s</th>" (esc (format_name f))))
+    ^ "</tr></thead><tbody>"
+    ^ String.concat (List.map T.claim_sites ~f:row)
+    ^ "</tbody></table>")
+
+(** The same table, for the terminal: per claim, the formats on its line
+    and a line per layer it reads. *)
+let pp_layers () : string =
+  let claim (cs : T.claim_site) =
+    Printf.sprintf "  %-6s %s  [%s]" (Canary_agreement_common.short_code_of_slug cs.T.cs_claim)
+      cs.T.cs_claim
+      (String.concat ~sep:", "
+         (List.map Canary_agreement.all_formats ~f:(fun f ->
+              format_name f ^ " " ^ format_word cs f)))
+    :: List.concat
+         (List.map2_exn T.all_components (layer_cells cs) ~f:(fun c parts ->
+              List.map parts ~f:(fun p ->
+                  Printf.sprintf "         %-9s %s" (T.string_of_component c) p)))
+  in
+  String.concat ~sep:"\n"
+    ("the agreements by layer — the part of the chain each reads in each layer, and the \
+      object formats it applies to"
+    :: List.concat_map T.claim_sites ~f:claim)
 
 (** §2.2: every edge with the claims placed on it, checked and named. *)
 let claim_sites_table () =
@@ -47,9 +132,6 @@ let claim_sites_table () =
     (String.concat (List.map T.edges ~f:row))
 
 (* ── §3 ── *)
-
-(** A table that may be wider than the page scrolls on its own. *)
-let wide (html : string) = {|<div class="widetable">|} ^ html ^ "</div>"
 
 (** One of §3's tables, captioned: its head, then its rows. *)
 let cov_table (id : string) (head : string) (rows : string) : string =

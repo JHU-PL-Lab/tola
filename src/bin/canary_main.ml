@@ -892,13 +892,9 @@ let checks_cmd =
            have no methods, so every column the overview derives would
            be blank. Name, kind, and what is in the way. *)
         Fmt.pr "@.%s@." (Canary_agreement.pp_candidate_table ());
-        (* WHERE EVERY AGREEMENT SITS ON THE CHAIN (2026-09-27, user),
-           candidates included — with how many this machine's recorded
-           runs decided *)
-        Fmt.pr "@.%s@."
-          (Canary_agreement_overview.pp_sittings
-             (Canary_agreement_overview.chains_of
-                (Canary_matrix.matrix_of Canary_registry.all_projects)));
+        (* every placed agreement, candidates included, by the parts of
+           the chain it relates in each layer: §2's first table *)
+        Fmt.pr "@.%s@." (Canary_overview_tables.pp_layers ());
         (* THE SAME TOOLS THE `_ext` ROWS NAME, TRANSPOSED (2026-09-21,
            user: "It's also a good way to understand their roles"). The
            table reads by claim; this reads by tool, and carries what

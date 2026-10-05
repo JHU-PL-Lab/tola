@@ -116,7 +116,7 @@ let standalone ?(scope = "") (svg : string) : string =
 (* ── the files ── *)
 
 (** Every exhibit the export writes, in page order: its file name and its
-    content. [overview] is §2, which holds three of the tables. With a
+    content. [overview] is §2.1, which holds two of the tables. With a
     [choice], only the exhibits it draws, drawn for it from [views]. *)
 let files ?choice ?(views = []) ?(tests = [])
     (projects : (string * Canary_project_run.project_run) list) ~(overview : string) :
@@ -142,7 +142,8 @@ let files ?choice ?(views = []) ?(tests = [])
     | "tab-results" ->
         Some (Canary_overview_results.table ~rows:(Canary_overview_runs.recorded_rows ()) ())
     | "tab-nodes" -> Some (Canary_overview_panel.node_legend ())
-    | "tab-outcomes" | "tab-agreements" | "tab-sittings" -> Some overview
+    | "tab-layers" -> Some (Tb.layers_table ())
+    | "tab-outcomes" | "tab-agreements" -> Some overview
     | "tab-census" -> Some (Tb.claim_sites_table ())
     | "tab-pm" -> Some (Tb.pm_solo_table projects)
     | "tab-mechanisms" -> Some (Tb.binding_table projects)

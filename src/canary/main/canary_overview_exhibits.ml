@@ -24,11 +24,13 @@ let exhibits : exhibit list =
     t "tab-lines" "Where the lines under the node labels come from";
     t "tab-nodes" "What each node is";
     t "tab-results" "The results: one row per chain and machine, the frames as columns";
+    t "tab-layers"
+      "The agreements by layer: the part of the chain each reads in each layer, and the object \
+       formats it applies to";
     t "tab-outcomes" "What a log records, what a check cell shows, and the blame it can carry";
     t "tab-agreements"
       "The agreements over the frames: where each rule ran, where it is checked, and what the \
        runs decided";
-    t "tab-sittings" "The agreements and candidates, grouped by where they sit on the chain";
     t "tab-census" "Every edge of the chain, and the claims on it";
     t "tab-pm" "Each package manager on its own";
     t "tab-mechanisms" "Binding mechanisms, and the claims checked for each";

@@ -48,11 +48,12 @@ let sections : section list =
     s "§1.2" "The results, one row per chain" "results"
       [ "results_key"; "results_table"; "results_columns" ]
       [ "Canary_frames"; "Canary_overview_results"; "Canary_overview_runs" ];
-    s "§2" "The agreements" "overview" [ "agreement_overview" ]
+    s "§2" "The agreements" "overview" [ "agreement_layers" ]
+      [ "Canary_overview_tables"; "Canary_topology" ]
+      ~about:"what each agreement relates, layer by layer, and where it is checked";
+    s "§2.1" "Where each is checked" "checked" [ "agreement_overview" ]
       [ "Canary_agreement_overview" ]
       ~about:"where each rule ran, where it is checked, and what the runs decided";
-    s "§2.1" "Where they sit on the chain" "sittings" []
-      [ "Canary_agreement_overview"; "Canary_topology" ];
     s "§2.2" "Every edge, and the claims on it" "census"
       [ "sites"; "sites_checked"; "sites_named"; "sites_multi"; "claim_sites_table";
         "bare_count"; "bare_edges" ]
@@ -176,14 +177,14 @@ let subjects : subject list =
           [ ("edge states", [ "§1" ]); ("piece cells", [ "§1.2" ]) ] };
     { sj_name = "agreements";
       sj_code =
-        layer "the registry: each claim, and where it sits"
+        layer "the registry: each claim, the parts it relates, and where it sits"
           [ "Canary_agreement"; "Canary_topology" ]
-          [ ("badges", [ "§1" ]); ("check columns", [ "§1.2" ]); ("rows", [ "§2" ]);
-            ("sites", [ "§2.1"; "§2.2" ]) ];
+          [ ("badges", [ "§1" ]); ("check columns", [ "§1.2" ]); ("parts by layer", [ "§2" ]);
+            ("rows", [ "§2.1" ]); ("sites", [ "§2.1"; "§2.2" ]) ];
       sj_run =
         layer "each check's outcome" [ log_file ]
           [ ("badge colours", [ "§1" ]); ("check cells", [ "§1.2" ]);
-            ("decided, blame", [ "§2" ]) ] };
+            ("decided, blame", [ "§2.1" ]) ] };
     { sj_name = "package managers";
       sj_code =
         layer "drivers, bridges, binding mechanisms, cooperation kinds"
