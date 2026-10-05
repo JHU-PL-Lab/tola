@@ -6,9 +6,12 @@ metadata:
 ---
 
 Stage every commit by explicit file name; never `git add` a directory,
-`-A` or `.`. The user's in-progress files stay unstaged and untouched:
+`-A` or `.`. The user's in-progress files stay unstaged:
 `doc/canary/research/draft.md`, `draft.pdf`, `draft_drift.md`, and the
-untracked `doc/audit/multi_pm.md`.
+untracked `doc/audit/multi_pm.md`. Of these, only `draft_drift.md` may be
+edited: it is the paper's material queue (user, 2026-10-05: "you are
+free to adjust it"); `draft.md`, which the user is writing, is never
+modified.
 
 **Why:** a directory add once swept the drafts into a commit (2026-10-01,
 undone at once). The user's standing rule: never touch draft.md, stage by
