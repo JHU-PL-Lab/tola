@@ -753,6 +753,31 @@ let string_of_layer = function
     capability file ships inside the native package. *)
 type side = S_sys | S_lang
 
+(** The layers an agreement relates: on each side a package manager and
+    the artifacts it delivers, the two joins between the sides (the
+    package managers' cooperation through a bridge, and the binding), and
+    the program that uses them. [component_admits] says which nodes lie
+    in each. *)
+type component = Pm_sys | Pm_lang | Pm_coop | Art_sys | Art_lang | Binding | Program
+
+let all_components = [ Pm_sys; Pm_lang; Pm_coop; Art_sys; Art_lang; Binding; Program ]
+
+let string_of_component = function
+  | Pm_sys -> "PM_sys"
+  | Pm_lang -> "PM_lang"
+  | Pm_coop -> "PM_coop"
+  | Art_sys -> "Art_sys"
+  | Art_lang -> "Art_lang"
+  | Binding -> "Binding"
+  | Program -> "Program"
+
+(** The side a component lies on; the joins and the program lie on
+    neither. *)
+let side_of_component = function
+  | Pm_sys | Art_sys -> Some S_sys
+  | Pm_lang | Art_lang -> Some S_lang
+  | Pm_coop | Binding | Program -> None
+
 type node = {
   nd_id : string;
   nd_label : string;  (** the GENERIC name — never a package *)
@@ -894,6 +919,22 @@ let nodes : node list =
          cannot see" } ]
 
 let node_by_id id = List.find nodes ~f:(fun n -> String.equal n.nd_id id)
+
+(** Whether a node lies in a component: a package manager's own layers
+    on its side, the bridge for the cooperation, a side's artifacts for
+    its artifacts (the language side's for the binding too), and a
+    program node for the program. *)
+let component_admits (c : component) (n : node) : bool =
+  let managed = match n.nd_layer with L_pm | L_package -> true | L_artifact | L_program -> false in
+  let artifact = Poly.equal n.nd_layer L_artifact in
+  let bridge = String.equal n.nd_id "bridge" in
+  match c with
+  | Pm_coop -> bridge
+  | Pm_sys -> Poly.equal n.nd_side S_sys && managed
+  | Pm_lang -> Poly.equal n.nd_side S_lang && managed && not bridge
+  | Art_sys -> Poly.equal n.nd_side S_sys && artifact
+  | Art_lang | Binding -> Poly.equal n.nd_side S_lang && artifact
+  | Program -> Poly.equal n.nd_layer L_program
 
 (** An EDGE points from components to a component, and its meaning is
     deliberately left OPEN (user, 2026-09-23, terminology step 0: "the
@@ -1825,80 +1866,148 @@ let gone_for_action (gones : (Canary_lang.lang * string list) list)
    checksum. That is why the end-to-end invariants are the ones we do
    not have. *)
 
-(* A claim site names an AGREEMENT — a registry row, or a candidate from
-   [Canary_agreement.proposed_agreements] — and the edges it sits on.
-   Whether the agreement is checked is NOT stated here: it is the
-   registry's to say ({!implemented}). It was a hand-written flag until
-   2026-09-24, and three sites said "implemented" for agreements whose
-   every method is planned, so the page drew their edges' badges as
-   checked while nothing checked them. *)
+(* A claim site names an agreement (a registry row, or a candidate from
+   [Canary_agreement.proposed_agreements]), the parts of the chain it
+   relates, and the edges it sits on. Whether it is checked is the
+   registry's to say ({!implemented}). *)
+
+(** One part of the chain a claim relates: its layer, the node, and what
+    is read there. *)
+type part = { pt_component : component; pt_node : string; pt_reads : string }
+
 type claim_site = {
   cs_claim : string;
-  cs_edges : string list;  (** edge ids — a SET, see above *)
+  cs_parts : part list;  (** what it relates, before any action *)
+  cs_edges : string list;  (** where it is checked: edge ids, a SET (see above) *)
 }
 
 let claim_sites : claim_site list =
-  [ (* --- the library against what the experiment declared ---
-
-       ⚠ TWO EDGES, and the first cut had one. These claims are about the
-       LIBRARY NODE, and the node has two producers: a local build and a
-       system package's payload. A fetched library is checked exactly as
-       a built one is — what differs is whose rule is being recovered
-       (our compiler, or a packager's build that happened on someone
-       else's machine years ago). Placing them on [build_lib] alone made
-       [realize_sys] look bare, which is what caught it: the page said
-       nothing checks a package's payload, and something does.
-
-       This is also the multi-edge structure paying for itself on its
-       first day rather than hypothetically. *)
-    { cs_claim = "declared_symbols_exported"; cs_edges = [ "build_lib"; "realize_sys" ] };
-    { cs_claim = "soname_matches_declaration"; cs_edges = [ "build_lib"; "realize_sys" ] };
-    { cs_claim = "declared_versions_exported"; cs_edges = [ "build_lib"; "realize_sys" ] };
-    { cs_claim = "exports_accounted_for"; cs_edges = [ "build_lib"; "realize_sys" ] };
-    (* --- the binding against the library --- *)
-    { cs_claim = "required_symbols_exported"; cs_edges = [ "link_mod" ] };
-    { cs_claim = "soname_matches_requirement"; cs_edges = [ "link_mod" ] };
-    { cs_claim = "required_versions_exported"; cs_edges = [ "link_mod" ] };
-    { cs_claim = "dependencies_provided"; cs_edges = [ "link_mod" ] };
-    { cs_claim = "signatures_agree"; cs_edges = [ "build_stub" ] };
-    { cs_claim = "signatures_match_debug_info"; cs_edges = [ "build_stub" ] };
-    (* --- the package against its own artifacts --- *)
-    { cs_claim = "api_names_present"; cs_edges = [ "install_surf" ] };
-    { cs_claim = "package_contains_declared_files"; cs_edges = [ "install_lang" ] };
-    { cs_claim = "repack_preserves_api"; cs_edges = [ "pack" ] };
-    { cs_claim = "repack_complete"; cs_edges = [ "pack" ] };
-    (* --- staging --- *)
-    { cs_claim = "staged_interface_preserved"; cs_edges = [ "stage" ] };
-    { cs_claim = "no_build_paths_in_installed_library"; cs_edges = [ "stage" ] };
-    (* --- source --- *)
-    { cs_claim = "source_is_declared_ref"; cs_edges = [ "build_lib" ] };
-    { cs_claim = "build_tree_configured_for_source"; cs_edges = [ "build_lib" ] };
-    (* --- runtime: the only claims with a loader under them --- *)
-    { cs_claim = "behavior_matches"; cs_edges = [ "run" ] };
-    { cs_claim = "correspondence_holds_across_the_binding"; cs_edges = [ "run" ] };
-    { cs_claim = "no_duplicate_implementation"; cs_edges = [ "run" ] };
-    { cs_claim = "interposition_binds_build_target"; cs_edges = [ "run" ] };
-    { cs_claim = "denotation_stable_across_worlds"; cs_edges = [ "run" ] };
-    (* ⚠ THE FIRST END-TO-END CLAIM. Every claim site above sits on one
-       edge — a per-layer invariant, in the network analogy. This one
-       spans three: the PM resolved, the package realized what it
-       promised, and the program built from the package alone did what
-       the hand-resolved one did. It is the kind the asymmetry between
-       apt and opam makes hard and the kind we had none of. *)
+  let p c node reads = { pt_component = c; pt_node = node; pt_reads = reads } in
+  [ (* the library against what the experiment declared, on both of the
+       library's producers: a local build and a system package's payload *)
+    { cs_claim = "declared_symbols_exported";
+      cs_parts = [ p Art_sys "lib_sys" "exports, against the declaration" ];
+      cs_edges = [ "build_lib"; "realize_sys" ] };
+    { cs_claim = "soname_matches_declaration";
+      cs_parts = [ p Art_sys "lib_sys" "its own name, against the declaration" ];
+      cs_edges = [ "build_lib"; "realize_sys" ] };
+    { cs_claim = "declared_versions_exported";
+      cs_parts = [ p Art_sys "lib_sys" "symbol-version tags, against the declaration" ];
+      cs_edges = [ "build_lib"; "realize_sys" ] };
+    { cs_claim = "exports_accounted_for";
+      cs_parts = [ p Art_sys "lib_sys" "every export, accounted for by the declaration" ];
+      cs_edges = [ "build_lib"; "realize_sys" ] };
+    (* the binding against the library *)
+    { cs_claim = "required_symbols_exported";
+      cs_parts = [ p Art_sys "lib_sys" "exports"; p Binding "stub_lang" "undefined symbols" ];
+      cs_edges = [ "link_mod" ] };
+    { cs_claim = "soname_matches_requirement";
+      cs_parts =
+        [ p Art_sys "lib_sys" "its own name"; p Binding "mod_lang" "the library name it records" ];
+      cs_edges = [ "link_mod" ] };
+    { cs_claim = "required_versions_exported";
+      cs_parts =
+        [ p Art_sys "lib_sys" "versioned exports"; p Binding "mod_lang" "versioned references" ];
+      cs_edges = [ "link_mod" ] };
+    { cs_claim = "dependencies_provided";
+      cs_parts =
+        [ p Art_sys "lib_sys" "what the world provides";
+          p Binding "mod_lang" "every library it records needing" ];
+      cs_edges = [ "link_mod" ] };
+    { cs_claim = "signatures_agree";
+      cs_parts = [ p Art_sys "hdr_sys" "prototypes"; p Binding "src_lang" "typed externals" ];
+      cs_edges = [ "build_stub" ] };
+    { cs_claim = "signatures_match_debug_info";
+      cs_parts = [ p Art_sys "lib_sys" "debug info"; p Binding "stub_lang" "signatures" ];
+      cs_edges = [ "build_stub" ] };
+    (* the package against its own artifacts *)
+    { cs_claim = "api_names_present";
+      cs_parts = [ p Art_lang "surf_lang" "names, against the declared watchlist" ];
+      cs_edges = [ "install_surf" ] };
+    { cs_claim = "package_contains_declared_files";
+      cs_parts =
+        [ p Pm_lang "pkg_lang" "the files it declares"; p Art_lang "mod_lang" "the files installed" ];
+      cs_edges = [ "install_lang" ] };
+    { cs_claim = "repack_preserves_api";
+      cs_parts =
+        [ p Pm_lang "pkg_lang" "the API as packed"; p Art_lang "mod_lang" "the API as built" ];
+      cs_edges = [ "pack" ] };
+    { cs_claim = "repack_complete";
+      cs_parts = [ p Pm_lang "pkg_lang" "as packed"; p Art_lang "mod_lang" "as built" ];
+      cs_edges = [ "pack" ] };
+    (* staging *)
+    { cs_claim = "staged_interface_preserved";
+      cs_parts =
+        [ p Art_sys "lib_sys" "its interface as built";
+          p Art_sys "staged_sys" "its interface as staged" ];
+      cs_edges = [ "stage" ] };
+    { cs_claim = "no_build_paths_in_installed_library";
+      cs_parts = [ p Art_sys "staged_sys" "no build-tree paths" ];
+      cs_edges = [ "stage" ] };
+    (* source *)
+    { cs_claim = "source_is_declared_ref";
+      cs_parts = [ p Art_sys "src_sys" "its ref, against the declaration" ];
+      cs_edges = [ "build_lib" ] };
+    { cs_claim = "build_tree_configured_for_source";
+      cs_parts = [ p Art_sys "src_sys" "the build tree configured for it" ];
+      cs_edges = [ "build_lib" ] };
+    (* running: the only claims with a loader under them *)
+    { cs_claim = "behavior_matches";
+      cs_parts = [ p Program "consumer_artifact" "its results, against a test suite" ];
+      cs_edges = [ "run" ] };
+    { cs_claim = "correspondence_holds_across_the_binding";
+      cs_parts =
+        [ p Art_sys "lib_sys" "a native call's result";
+          p Binding "mod_lang" "the same call through it";
+          p Program "consumer_artifact" "the call it makes" ];
+      cs_edges = [ "run" ] };
+    { cs_claim = "no_duplicate_implementation";
+      cs_parts =
+        [ p Art_sys "lib_sys" "its symbols";
+          p Program "consumer_artifact" "one implementation loaded" ];
+      cs_edges = [ "run" ] };
+    { cs_claim = "interposition_binds_build_target";
+      cs_parts =
+        [ p Art_sys "lib_sys" "the library built against";
+          p Program "consumer_artifact" "what each symbol binds to" ];
+      cs_edges = [ "run" ] };
+    { cs_claim = "denotation_stable_across_worlds";
+      cs_parts = [ p Program "consumer_artifact" "its results, against another world's" ];
+      cs_edges = [ "run" ] };
+    (* end to end, across three edges: the PM resolved, the package
+       realized what it promised, and the program built from the package
+       alone did what the hand-resolved one did *)
     { cs_claim = "package_resolution_suffices";
+      cs_parts =
+        [ p Pm_lang "pm_lang" "its resolution";
+          p Pm_lang "pkg_lang" "the package alone";
+          p Program "consumer_package" "behaves as the hand-resolved program" ];
       cs_edges = [ "resolve_lang"; "run_packaged"; "same_program" ] };
-    { cs_claim = "compatibility_version_satisfied"; cs_edges = [ "link_mod" ] };
-    (* --- the diagonal: the first candidate on a cooperation edge --- *)
-    { cs_claim = "discovery_matches_link"; cs_edges = [ "discover" ] };
-    (* --- THE BRIDGE'S CLAIMS (2026-09-23, status.md §2.7 E): placeholders
-       for what a bridge states, on the edges where it states it. Each has
-       its evidence recorded for zarith and no comparator yet, so each is a
-       candidate badge — the bridge edges stop reading as bare because the
-       CLAIM is known, not because anything decides it. --- *)
-    { cs_claim = "gate_admits_the_world"; cs_edges = [ "conf_probe" ] };
-    { cs_claim = "declared_gate_matches_package"; cs_edges = [ "depends" ] };
-    { cs_claim = "gate_bounds_the_library"; cs_edges = [ "depends"; "conf_probe" ] };
-    { cs_claim = "depext_names_the_provided_package"; cs_edges = [ "depext" ] } ]
+    { cs_claim = "compatibility_version_satisfied";
+      cs_parts =
+        [ p Art_sys "lib_sys" "its compatibility version";
+          p Binding "mod_lang" "the compatibility version it records" ];
+      cs_edges = [ "link_mod" ] };
+    (* discovery, on the capability file's edge *)
+    { cs_claim = "discovery_matches_link";
+      cs_parts =
+        [ p Pm_sys "cap" "pkg-config's answer"; p Binding "mod_lang" "the library it links" ];
+      cs_edges = [ "discover" ] };
+    (* the bridge's claims, on the edges where a bridge states them *)
+    { cs_claim = "gate_admits_the_world";
+      cs_parts = [ p Pm_sys "cap" "what the check queries"; p Pm_coop "bridge" "its check" ];
+      cs_edges = [ "conf_probe" ] };
+    { cs_claim = "declared_gate_matches_package";
+      cs_parts =
+        [ p Pm_lang "pkg_lang" "the bridge it depends on"; p Pm_coop "bridge" "the bridge package" ];
+      cs_edges = [ "depends" ] };
+    { cs_claim = "gate_bounds_the_library";
+      cs_parts = [ p Art_sys "lib_sys" "its version"; p Pm_coop "bridge" "its version bound" ];
+      cs_edges = [ "depends"; "conf_probe" ] };
+    { cs_claim = "depext_names_the_provided_package";
+      cs_parts =
+        [ p Pm_sys "pkg_sys" "the package that provides it"; p Pm_coop "bridge" "its depext" ];
+      cs_edges = [ "depext" ] } ]
 
 (** IS A PLACED AGREEMENT CHECKED ANYWHERE? The registry's answer: a row
     whose methods include one with an evaluator. A candidate (not a

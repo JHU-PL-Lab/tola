@@ -301,6 +301,78 @@ let every_step_placed_test : Canary_project_test.pure_test =
              | _ -> false))
   }
 
+(* What a claim relates comes before where it is checked: each placed
+   claim names its parts, and each part's node lies in its layer. *)
+let claim_parts_test : Canary_project_test.pure_test =
+  { name = "topology.claims_name_their_parts";
+    holds = "Every placed claim names its parts, each on a node of the chain that lies in the part's layer.";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let bad =
+          List.concat_map T.claim_sites ~f:(fun cs ->
+              if List.is_empty cs.T.cs_parts then [ cs.T.cs_claim ^ ": no parts" ]
+              else
+                List.filter_map cs.T.cs_parts ~f:(fun pt ->
+                    match T.node_by_id pt.T.pt_node with
+                    | Some n when T.component_admits pt.T.pt_component n -> None
+                    | Some _ ->
+                        Some
+                          (Printf.sprintf "%s: %s is not in %s" cs.T.cs_claim pt.T.pt_node
+                             (T.string_of_component pt.T.pt_component))
+                    | None -> Some (Printf.sprintf "%s: no node %s" cs.T.cs_claim pt.T.pt_node)))
+        in
+        List.iter bad ~f:(Fmt.pr "    %s@.");
+        (not (List.is_empty T.claim_sites)) && List.is_empty bad)
+  }
+
+(* The two sides meet only through a join: a claim relating a system-side
+   layer to a language-side one has the bridge, the binding or the
+   program among its parts. *)
+let sides_meet_test : Canary_project_test.pure_test =
+  { name = "topology.sides_meet_through_a_join";
+    holds = "No claim relates a system-side layer to a language-side layer unless the bridge, the binding or the program is among its parts.";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let bad =
+          List.filter T.claim_sites ~f:(fun cs ->
+              let sides =
+                List.map cs.T.cs_parts ~f:(fun pt -> T.side_of_component pt.T.pt_component)
+              in
+              let has s = List.mem sides (Some s) ~equal:Poly.equal in
+              has T.S_sys && has T.S_lang && not (List.mem sides None ~equal:Poly.equal))
+        in
+        List.iter bad ~f:(fun cs ->
+            Fmt.pr "    %s relates both sides with no join among its parts@." cs.T.cs_claim);
+        List.is_empty bad)
+  }
+
+(* Where a claim is checked follows from what it relates: each edge it
+   sits on starts or ends at one of its parts. *)
+let sits_by_parts_test : Canary_project_test.pure_test =
+  { name = "topology.claims_sit_where_their_parts_are";
+    holds = "Every edge a claim sits on starts or ends at one of the claim's parts.";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let bad =
+          List.concat_map T.claim_sites ~f:(fun cs ->
+              let parts = List.map cs.T.cs_parts ~f:(fun pt -> pt.T.pt_node) in
+              List.filter_map cs.T.cs_edges ~f:(fun id ->
+                  match List.find T.edges ~f:(fun e -> String.equal e.T.eg_id id) with
+                  | None -> Some (cs.T.cs_claim ^ ": no edge " ^ id)
+                  | Some e ->
+                      if
+                        List.exists (e.T.eg_to :: e.T.eg_from) ~f:(fun n ->
+                            List.mem parts n ~equal:String.equal)
+                      then None
+                      else Some (Printf.sprintf "%s: %s touches none of its parts" cs.T.cs_claim id)))
+        in
+        List.iter bad ~f:(Fmt.pr "    %s@.");
+        (not (List.is_empty T.claim_sites)) && List.is_empty bad)
+  }
+
 (* Every action edge is in exactly one piece of one frame; no node
    repeats within a frame (it repeats across frames, where it is consumed
    again); and every agreement with an evaluator has a check column at
@@ -3242,7 +3314,7 @@ let staged_copy_test : Canary_project_test.pure_test =
 
 let tests : Canary_project_test.pure_test list =
   [ topology_joins_test; topology_graph_test; overview_sections_test; every_step_placed_test;
-    frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
+    claim_parts_test; sides_meet_test; sits_by_parts_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
     badge_words_test; staged_copy_test; overview_overlay_test; recorded_names_test;
     overlay_words_test; bridge_record_test; placeholder_badges_test; coverage_tables_test;
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;
