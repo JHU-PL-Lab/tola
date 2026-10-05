@@ -1105,25 +1105,37 @@ let write (m : M.t) ~(generated_at : string) : string =
   Stdio.Out_channel.write_all path ~data:(payload m ~generated_at);
   path
 
-(** Every view in the runs files the page loads, every machine's: beside
-    the page, or in [dir]. *)
-let recorded_views ?(dir = Stdlib.Filename.dirname Canary_overview_assets.docs_path) () :
-    (string * Yojson.Basic.t) list list =
-  List.concat_map all_file_names ~f:(fun f ->
+(** Each runs file the page loads that exists, beside the page or in
+    [dir]: the machine it names, and its views. *)
+let recorded_machines ?(dir = Stdlib.Filename.dirname Canary_overview_assets.docs_path) () :
+    (string * (string * Yojson.Basic.t) list list) list =
+  List.filter_map all_file_names ~f:(fun f ->
       let path = Stdlib.Filename.concat dir f in
-      if not (Stdlib.Sys.file_exists path) then []
+      if not (Stdlib.Sys.file_exists path) then None
       else
         let text = Stdio.In_channel.read_all path in
         match (String.index text '{', String.rindex text '}') with
         | Some a, Some b -> (
             match Yojson.Basic.from_string (String.sub text ~pos:a ~len:(b - a + 1)) with
-            | `Assoc kv -> (
-                match List.Assoc.find kv "views" ~equal:String.equal with
-                | Some (`List vs) -> List.filter_map vs ~f:(function `Assoc v -> Some v | _ -> None)
-                | _ -> [])
-            | _ -> []
-            | exception _ -> [])
-        | _ -> [])
+            | `Assoc kv ->
+                let machine =
+                  match List.Assoc.find kv "machine" ~equal:String.equal with
+                  | Some (`String m) -> m
+                  | _ -> f
+                in
+                let views =
+                  match List.Assoc.find kv "views" ~equal:String.equal with
+                  | Some (`List vs) -> List.filter_map vs ~f:(function `Assoc v -> Some v | _ -> None)
+                  | _ -> []
+                in
+                Some (machine, views)
+            | _ -> None
+            | exception _ -> None)
+        | _ -> None)
+
+(** Every view in the runs files the page loads, every machine's. *)
+let recorded_views ?dir () : (string * Yojson.Basic.t) list list =
+  List.concat_map (recorded_machines ?dir ()) ~f:snd
 
 (** Every machine's §1.2 rows. *)
 let recorded_rows ?dir () : Canary_overview_results.row list =

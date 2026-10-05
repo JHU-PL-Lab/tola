@@ -14,6 +14,19 @@ a run recorded is read from a separate file per machine; only §2.1's counts
 are written into the page, counted over every machine's file when it was
 last rendered.</p>
 
+<section id="status" class="status">
+<h2>Where the project stands</h2>
+<p>Each number here is either computed when the page is made, from the
+code and the runs files, or recorded: read by hand or by a long run, with
+the date it was read and how to read it again. A recorded value changes
+only when someone flushes it, by following its row's how. The recorded
+rows live in <code>canary/overview/status.json</code>, and
+<code>canary overview --status</code> prints all of this.</p>
+{{status_live}}
+{{status_recorded}}
+{{status_tracks}}
+</section>
+
 <h2 id="outline">0. Outline, and how this page is made</h2>
 {{outline}}
 

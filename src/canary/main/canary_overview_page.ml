@@ -1,5 +1,6 @@
 (** The overview page, [canary overview]: [canary/overview/page.html] filled
-    from the modules that draw each part — §0 ({!Canary_overview_flow});
+    from the modules that draw each part — the front matter, where the
+    project stands ({!Canary_overview_status}); §0 ({!Canary_overview_flow});
     §1's diagram ({!Canary_overview_diagram}), its looks and places
     ({!Canary_overview_looks}) and its panel ({!Canary_overview_panel});
     §2's table of the agreements by layer and §2.2's census, with §3
@@ -80,6 +81,9 @@ let render ?(tests = []) (projects : (string * Canary_project_run.project_run) l
       ("flow_figure", Canary_overview_flow.figure ());
       ("flow_key", Canary_overview_looks.key_html Canary_overview_looks.Flow_key);
       ("flow_table", Canary_overview_flow.table ());
+      ("status_live", Canary_overview_status.live_html ~tests ());
+      ("status_recorded", Canary_overview_status.recorded_html ());
+      ("status_tracks", Canary_overview_status.tracks_html ());
       ("tests_table", Canary_overview_tests.table tests);
       ("tests_lists", Canary_overview_tests.lists tests);
       ("generated_at", esc generated_at);

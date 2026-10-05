@@ -1401,7 +1401,9 @@ let flow_test : Canary_project_test.pure_test =
       (fun () ->
         let module F = Canary_overview_flow in
         let slots = Canary_overview_assets.slots "page.html" in
-        let claimed = F.page_slots @ List.concat_map F.sections ~f:(fun s -> s.F.sc_slots) in
+        let claimed =
+          F.page_slots @ F.front_slots @ List.concat_map F.sections ~f:(fun s -> s.F.sc_slots)
+        in
         let slots_ok =
           List.for_all slots ~f:(fun sl -> List.count claimed ~f:(String.equal sl) = 1)
           && List.for_all claimed ~f:(List.mem slots ~equal:String.equal)
@@ -1474,12 +1476,58 @@ let flow_files_written_test : Canary_project_test.pure_test =
         (not (List.is_empty into_files)) && List.is_empty bad)
   }
 
+(* A recorded row can be flushed only if it says how it was read: a value,
+   the date it was read, and how to read it again. The page shows every
+   computed and recorded row. *)
+let status_rows_test : Canary_project_test.pure_test =
+  { name = "overview.status_says_how_each_number_is_read";
+    holds = "Every recorded row of where the project stands has a value, the date it was read and how to read it again, and the page shows every row.";
+    check =
+      (fun () ->
+        let module S = Canary_overview_status in
+        let d = S.data () in
+        let dated s =
+          String.length s = 10
+          && String.for_alli s ~f:(fun i c ->
+                 if i = 4 || i = 7 then Char.equal c '-' else Char.is_digit c)
+        in
+        let row_ok (r : S.recorded) =
+          let ok =
+            (not (String.is_empty r.S.rc_what))
+            && (not (String.is_empty r.S.rc_value))
+            && (not (String.is_empty r.S.rc_how))
+            && dated r.S.rc_as_of
+          in
+          if not ok then Fmt.pr "    %S lacks a value, a date or a how@." r.S.rc_what;
+          ok
+        in
+        let recorded_ok =
+          dated d.S.d_flushed
+          && (not (List.is_empty d.S.d_recorded))
+          && List.for_all d.S.d_recorded ~f:row_ok
+          && List.for_all d.S.d_tracks ~f:(fun t ->
+                 dated t.S.tr_judged_on && not (String.is_empty t.S.tr_now))
+        in
+        let esc = Canary_overview_assets.esc in
+        let page =
+          Canary_overview_page.render Canary_registry.all_specs ~overview:"" ~generated_at:"test"
+        in
+        let shown =
+          String.is_substring page ~substring:{|<section id="status"|}
+          && List.for_all (S.live ()) ~f:(fun (w, _, _) -> String.is_substring page ~substring:(esc w))
+          && List.for_all d.S.d_recorded ~f:(fun r ->
+                 String.is_substring page ~substring:(esc r.S.rc_value))
+        in
+        recorded_ok && shown)
+  }
+
 (* Each exhibit appears once, in list order, captioned with its label and
    title, and §0 lists it; every table on the page, and every drawing (an
-   svg with role="img"), is one of them. See design/overview.md §1. *)
+   svg with role="img"), is one of them, except the front matter's tables:
+   the project's working state, not the paper's. See design/overview.md §1. *)
 let exhibits_test : Canary_project_test.pure_test =
   { name = "overview.exhibits_are_captioned";
-    holds = "Every figure and table is numbered and titled, so the page and the manuscript cite one by its id.";
+    holds = "Every figure and table outside the front matter is numbered and titled, so the page and the manuscript cite one by its id.";
     check =
       (fun () ->
         let module E = Canary_overview_exhibits in
@@ -1529,9 +1577,15 @@ let exhibits_test : Canary_project_test.pure_test =
           List.length ps = List.length E.exhibits
           && List.for_all2_exn (List.drop_last_exn ps) (List.tl_exn ps) ~f:(fun a b -> a < b)
         in
+        let front =
+          Option.bind (String.substr_index page ~pattern:{|<section id="status"|}) ~f:(fun a ->
+              Option.map (String.substr_index page ~pos:a ~pattern:"</section>") ~f:(fun b ->
+                  (a, b)))
+        in
+        let in_front i = match front with Some (a, b) -> a <= i && i < b | None -> false in
         let tables_ok =
           List.for_all (all "<table") ~f:(fun i ->
-              String.is_substring (tag_at i) ~substring:{| id="tab-|})
+              in_front i || String.is_substring (tag_at i) ~substring:{| id="tab-|})
         in
         let drawings =
           List.filter (all "<svg") ~f:(fun i ->
@@ -3371,7 +3425,8 @@ let tests : Canary_project_test.pure_test list =
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;
     badge_counts_test; agreements_sit_test; agreements_by_layer_test; edge_marks_test;
     visual_vocabulary_test; flow_test;
-    flow_files_written_test; exhibits_test; exhibits_export_test; choice_resolved_test; result_cells_test;
+    flow_files_written_test; status_rows_test; exhibits_test; exhibits_export_test;
+    choice_resolved_test; result_cells_test;
     every_machine_test; firing_frames_test; outcome_marks_test;
     agreement_laws_test; mechanism_claims_test; check_index_language_test;
     applicability_reads_declaration_test ]

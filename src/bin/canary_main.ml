@@ -1571,6 +1571,16 @@ let overview_cmd =
              sections that show them, and the page's sections with the \
              template slots and modules behind each.")
   in
+  let status =
+    Arg.(
+      value & flag
+      & info [ "status" ]
+          ~doc:
+            "Print where the project stands, the page's front matter, instead \
+             of writing the page: the numbers computed from the code and the \
+             runs files, and the rows recorded in canary/overview/status.json, \
+             each with the date it was read and how to read it again.")
+  in
   let exhibits =
     Arg.(
       value
@@ -1601,7 +1611,7 @@ let overview_cmd =
   let coop = choice_opt "coop" "A cooperation, by its code (conf, absorbed, …)" in
   let native = choice_opt "native" "The native side's package manager, or none" in
   let lang = choice_opt "lang" "The language side's package manager, or none" in
-  let run project json flow exhibits chain world mechanism coop native lang () =
+  let run project json flow status exhibits chain world mechanism coop native lang () =
     let m () = Canary_matrix.matrix_of Canary_registry.all_projects in
     let chosen =
       List.exists Option.is_some [ chain; world; mechanism; coop; native; lang ]
@@ -1613,6 +1623,7 @@ let overview_cmd =
     let tests = Canary_tests.test_files () in
     if flow then
       print_string (Canary_overview_flow.text () ^ Canary_overview_tests.text tests)
+    else if status then print_string (Canary_overview_status.text ~tests ())
     else if Option.is_some exhibits then begin
       let m = m () in
       (* §2 counts what §1.2 shows: every machine's runs file, as written *)
@@ -1698,10 +1709,11 @@ let overview_cmd =
           addresses (docs/canary/projects/) landing on §1.2, and each of \
           its figures and tables on its own (doc/canary/research/exhibits/). \
           With --json, prints the run record instead and writes nothing; \
-          with --flow, prints §0, how the page is made. Runs nothing.")
+          with --flow, prints §0, how the page is made; with --status, \
+          where the project stands. Runs nothing.")
     Term.(
-      const run $ project $ json $ flow $ exhibits $ chain $ world $ mechanism $ coop $ native
-      $ lang $ const ())
+      const run $ project $ json $ flow $ status $ exhibits $ chain $ world $ mechanism $ coop
+      $ native $ lang $ const ())
 
 let tiny_scenarios_list_cmd =
   Cmd.v

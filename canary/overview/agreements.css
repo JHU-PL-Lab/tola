@@ -22,6 +22,7 @@ table.keytbl th,table.keytbl td{border:1px solid var(--line);
 padding:.2rem .5rem;text-align:left;font-weight:400}
 table.keytbl th{background:var(--card);font-weight:600}
 table.keytbl td.kc{font-family:ui-monospace,monospace;font-weight:700}
+table.status .date{white-space:nowrap}
 span.kq{color:var(--mut)}
 p.verdict{font-size:.78rem;color:#1a7f37;margin:.2rem 0 .6rem;
 font-family:ui-monospace,monospace}

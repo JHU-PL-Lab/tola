@@ -74,6 +74,10 @@ let sections : section list =
 (** The template slots that belong to the page as a whole. *)
 let page_slots = [ "css"; "agreements_css"; "generated_at"; "scripts" ]
 
+(** The front matter's slots, before §0: where the project stands
+    ({!Canary_overview_status}). *)
+let front_slots = [ "status_live"; "status_recorded"; "status_tracks" ]
+
 let section_of (num : string) : section option =
   List.find sections ~f:(fun s -> String.equal s.sc_num num)
 
@@ -600,6 +604,10 @@ let text () : string =
            (if List.is_empty s.sc_slots then "-" else String.concat ~sep:", " s.sc_slots)
            indent (String.concat ~sep:", " s.sc_code)));
   add (Printf.sprintf "  the page as a whole\n    slots: %s\n" (String.concat ~sep:", " page_slots));
+  add
+    (Printf.sprintf
+       "  the front matter, where the project stands (canary overview --status)\n    slots: %s\n"
+       (String.concat ~sep:", " front_slots));
   add "\nThe terms\n";
   List.iter terms ~f:(fun (t, d) -> add (Printf.sprintf "  %s: %s\n" t d));
   add "\nThe figure\n";

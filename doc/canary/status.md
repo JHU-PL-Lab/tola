@@ -67,9 +67,10 @@ The verdict is tested to appear on the page and tested to AGREE with what the
 audit computes — a page claiming the laws hold beside a failing audit
 would be worse than no line at all.
 
-**Tests: 201 project + 120 artifact + 17 PM + 46 mutation + 2 cache = 386;
-harness: 17 checks**
-(2026-10-05). `make canary-test` after every edit under `src/canary/`;
+**Tests and checks:** counted where the project's numbers live, the
+overview page's front matter (`canary overview --status`): the model
+tests computed, the framework suites and the harness as last flushed.
+`make canary-test` after every edit under `src/canary/`;
 `make canary-post-check` and `make harness` before committing.
 
 **GH CI is alive** (2026-08-27, extended 08-28). `canary_min.yml` runs
