@@ -15,7 +15,6 @@ tr.extrow{background:color-mix(in srgb,var(--warn) 6%,transparent)}
 tr.extrow td.kc{color:var(--warn)}
 table.grid td.lm{font-size:.72rem;white-space:nowrap}
 table.grid td.kind{font-size:.72rem;white-space:nowrap;color:var(--mut)}
-th.seth{background:var(--card)}
 td .mk{font-weight:600}
 table.keytbl{border-collapse:collapse;margin-top:.5rem;font-size:.82rem}
 table.keytbl th,table.keytbl td{border:1px solid var(--line);
@@ -41,4 +40,3 @@ td.g.dd{background:#dbeafe;color:#0a3069}
 td.g.nn{background:transparent}
 td.g.tgt{background:#f0e6ff;color:#512a97}
 td.g.own{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
-.grid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}

@@ -66,10 +66,10 @@ let layout_rules : layout_rule list =
     rule
       "One step below each package sits its side's cooperation node: the capability file \
        under the native package, the bridge under the binding package."
-      "Each side's package manager, with what it manages, forms one regular box: the \
-       bridge is an opam package like any other, the capability file is the native \
-       package's content, and the cooperation spans the two. (user, 2026-10-06; until then \
-       the bridge sat on the packages' row)"
+      "Each side's packaging forms one regular box under its package manager's: the \
+       bridge is an opam package like any other, the capability file is part of the native \
+       package's packaging, and the cooperation spans the two. (user, 2026-10-06; until \
+       then the bridge sat on the packages' row)"
       (Places (fun v -> y v "cap" > y v "pkg_sys" && y v "bridge" > y v "pkg_lang"));
     rule
       "Nodes of one kind on the two sides share a row: the two package managers, the two \
@@ -110,8 +110,8 @@ let layout_rules : layout_rule list =
            && y v "pkg_sys" < y v "src_sys" && y v "src_sys" < y v "hdr_sys"
            && y v "pkg_lang" < y v "src_lang" && y v "src_lang" < y v "stub_lang"));
     rule
-      "The capability file is content inside the native package: it sits a level below \
-       it, off its lower right."
+      "The capability file is part of the native package's packaging: it sits a level \
+       below the package, off its lower right."
       "gmp.pc ships in libgmp-dev and is written by its packager — not a package, and not \
        the bridge's. (user, 2026-09-22 and 2026-09-24)"
       (Places (fun v -> x v "cap" > x v "pkg_sys" && y v "cap" > y v "pkg_sys"));

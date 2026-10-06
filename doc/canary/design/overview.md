@@ -33,10 +33,11 @@ not say:
 - The page embeds two pieces of data its scripts read: §1's choices as
   `#joindata` (`Canary_overview_join`) and §1.2's column keys as
   `#rtcols` (`Canary_overview_results`, over `Canary_frames`). A run
-  reaches the page only through the runs files beside it, except for §2's
-  counts, which are counted over every machine's runs file when the page
-  is rendered (`Canary_overview_runs.recorded_chains`), so §2 counts the
-  rows §1.2 shows. Figure 1 still draws them from this machine's record.
+  reaches the page only through the runs files beside it, except for
+  §2.1's counts and the front matter's, which are counted over every
+  machine's runs file when the page is rendered
+  (`Canary_overview_runs.recorded_chains`), so §2.1 counts the rows §1.2
+  shows. Figure 2 draws its recorded runs from the same files.
 - §1.2's cells are computed once, in OCaml, when a machine writes its runs
   file: `Canary_overview_results.cells` turns a recorded world into a row
   filed by column key, and the runs file carries it. The header is drawn

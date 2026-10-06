@@ -37,7 +37,7 @@
     {v
       conf-gmp   a separate opam package   carries package IDENTITY
                                            (+ the depext mapping)
-      gmp.pc     content inside libgmp-dev carries CAPABILITY
+      gmp.pc     in libgmp-dev's packaging carries CAPABILITY
                                            (name, version, cflags, libs)
     v}
 
@@ -851,7 +851,7 @@ let nodes : node list =
       nd_gloss = "apt, brew, dnf — resolves and installs native packages" };
     { nd_id = "pkg_sys"; nd_label = "native package"; nd_layer = L_package;
       nd_side = S_sys;
-      nd_gloss = "the unit the system PM ships: payload plus metadata" };
+      nd_gloss = "the unit the system PM ships: its packaging and its payload" };
     { nd_id = "src_sys"; nd_label = "native source"; nd_layer = L_artifact;
       nd_side = S_sys;
       nd_gloss =
@@ -875,10 +875,10 @@ let nodes : node list =
     { nd_id = "cap"; nd_label = "capability file"; nd_layer = L_package;
       nd_side = S_sys;
       nd_gloss =
-        "a .pc file, a CMake config, a *-config script: content inside \
-         the provider, owned by the package that ships it, recording how \
-         the artifacts beside it are built against. Not a bridge — a \
-         source of claims, and what a conf package's check reads" };
+        "a .pc file, a CMake config, a *-config script: part of the \
+         packaging of the package that ships it, recording how the \
+         artifacts beside it are built against. Not a bridge — a source \
+         of claims, and what a conf package's check reads" };
     (* the language side's, not a third side between the two (user,
        2026-09-24: "it belongs to the language PM's side"): an opam
        maintainer writes conf-gmp, and opam resolves it *)
@@ -986,7 +986,7 @@ let join_spans : (component * string list) list =
 let component_of_node (id : string) : component option =
   List.Assoc.find node_components id ~equal:String.equal
 
-(** An EDGE points from components to a component, and its meaning is
+(** An EDGE points from one or more nodes to a node, and its meaning is
     deliberately left OPEN (user, 2026-09-23, terminology step 0: "the
     backbone meaning is action, but for agreement use case, we just need
     an edge to point to two components, so use edge and leave it meaning
@@ -1057,8 +1057,8 @@ let edges : edge list =
     { eg_id = "realize_cap"; eg_from = [ "pkg_sys" ]; eg_to = "cap";
       eg_annotation = Info "packager"; eg_tool = "the packager";
       eg_says =
-        "the capability file describes the payload beside it — and \
-         nothing we run reads it";
+        "the capability file describes the payload beside it; pkg-config \
+         reads it, and so does the bridge's check canary dispatches";
       eg_diagonal = true; eg_observation = false };
     { eg_id = "build_lib"; eg_from = [ "src_sys" ]; eg_to = "lib_sys";
       eg_annotation = Action Canary_action_family.Build_lib;

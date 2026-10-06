@@ -69,7 +69,7 @@ let live ?(tests = []) () : (string * string * string) list =
       "canary checks --firing" );
     ( "The model",
       Printf.sprintf
-        "%d layers, %d nodes, %d edges; %d cooperation kinds, %d package managers with \
+        "%d components, %d nodes, %d edges; %d cooperation kinds, %d package managers with \
          drivers, %d binding mechanisms"
         (List.length T.all_components) (List.length T.nodes) (List.length T.edges)
         (List.length T.coop_catalogue) (List.length Canary_pm_solo.table)

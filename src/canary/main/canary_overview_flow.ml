@@ -130,8 +130,9 @@ let terms : (string * string) list =
     ("chain", "one world in one binding language: what §1 draws, and a row of §1.2");
     ("action", "a step canary runs; each edge of §1 is named by the family of actions that realizes it");
     ( "agreement",
-      "a claim canary checks between artifacts; a candidate is a claim named but not yet \
-       checked, and a claim's site is the edges it sits on" );
+      "a claim canary checks between parts of the chain, in one layer or across them; a \
+       candidate is a claim named but not yet checked, and a claim's site is the edges it \
+       sits on" );
     ("binding mechanism", "how a language binds the native library: cstubs, cext, ctypes …");
     ("cooperation", "how the two package managers are joined: through a bridge, a gate, or nothing");
     ("bridge", "packaging made for two package managers to cooperate, such as opam's conf-* packages");
@@ -139,7 +140,7 @@ let terms : (string * string) list =
       "what a package says it offers — a .pc or META file — part of the packaging of the \
        package that ships it" );
     ( "frame",
-      "a column group of §1.2 and §2: one action as §1 draws it — what it consumes, its \
+      "a column group of §1.2 and §2.1: one action as §1 draws it — what it consumes, its \
        pieces, what it produces, and the checks on each" );
     ( "test",
       "a check that holds one claim about what canary's code computes, for a run or for this \
