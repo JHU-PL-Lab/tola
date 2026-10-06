@@ -227,9 +227,10 @@ let classes (d : drawing) (id : string) : string list =
   | Some v when List.mem v.R.vw_dim id ~equal:String.equal -> [ "dim" ]
   | _ -> []
 
-(** The drawing's SVG. *)
+(** The drawing's SVG, carrying the components' boxes for the panel's
+    button to show. *)
 let svg (d : drawing) : string =
-  Canary_overview_diagram.diagram ~case_slots:true ~ph_slots:true ~classes:(classes d)
+  Canary_overview_diagram.diagram ~boxes:true ~case_slots:true ~ph_slots:true ~classes:(classes d)
     ~counts:(fun e -> R.badge_counts (Option.value (find d.dr_claims e) ~default:[]))
     ~lines:(fun n ->
       Option.map (find d.dr_lines n) ~f:(fun l ->

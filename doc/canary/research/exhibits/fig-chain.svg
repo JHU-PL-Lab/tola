@@ -13,6 +13,12 @@ border:1px solid var(--line);border-radius:10px}
 paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
 .sidecap{font:600 11px ui-sans-serif,system-ui,sans-serif;fill:var(--mut);
 letter-spacing:.14em;text-anchor:middle}
+.cbox{fill:none;stroke:var(--acc);stroke-width:1.6;stroke-dasharray:7 4}
+.ctab{fill:var(--card);stroke:var(--acc);stroke-width:1.2}
+.cname{font:700 14px ui-sans-serif,system-ui,sans-serif;fill:var(--fg)}
+.csub{font-size:10px}
+.diagram:not(.boxed) .cboxes{display:none}
+.diagram.boxed .bandlabel{display:none}
 .node rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
 .node .nlabel{font:600 13px ui-sans-serif,system-ui,sans-serif;
 fill:var(--fg);text-anchor:middle}
@@ -81,7 +87,7 @@ svg:root{width:auto;height:auto;max-width:none;margin:0;padding:0;border:0;borde
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
  markerHeight="7" orient="auto-start-reverse">
 <path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
-<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/><text class="sidecap" x="230" y="20">SYSTEM SIDE</text><text class="sidecap" x="990" y="20">LANGUAGE SIDE</text><g class="edge bare" data-edge="resolve_sys"><title>our action fetch_lib — a package of this name and version is installable here</title>
+<rect class="band pm" x="8" y="30" width="1204" height="70" rx="10"/><rect class="band package" x="8" y="140" width="1204" height="170" rx="10"/><rect class="band artifact" x="8" y="350" width="1204" height="320" rx="10"/><rect class="band program" x="8" y="710" width="1204" height="74" rx="10"/><text class="sidecap" x="230" y="20">SYSTEM SIDE</text><text class="sidecap" x="990" y="20">LANGUAGE SIDE</text><g class="cboxes"><polygon class="cbox" points="114,28 446,28 446,309 114,309"/><polygon class="cbox" points="774,28 1106,28 1106,309 774,309"/><polygon class="cbox" points="6,363 346,363 346,675 6,675"/><polygon class="cbox" points="874,363 1214,363 1214,675 874,675"/><polygon class="cbox" points="216,231 1004,231 1004,297 216,297"/><polygon class="cbox" points="116,531 1104,531 1104,601 116,601"/></g><g class="edge bare" data-edge="resolve_sys"><title>our action fetch_lib — a package of this name and version is installable here</title>
 <line x1="230" y1="62" x2="230" y2="180" marker-end="url(#a)"/>
 <text class="elabel" x="230" y="114">fetch_lib</text><g class="phm"><title></title><rect x="173" y="113" width="22" height="16" rx="3"/><text x="184" y="125">…</text></g></g><g class="edge" data-edge="realize_sys"><title>our action fetch_lib — the package's payload is on disk where it claims</title>
 <line x1="230" y1="180" x2="230" y2="566" marker-end="url(#a)"/>
@@ -161,4 +167,4 @@ svg:root{width:auto;height:auto;max-width:none;margin:0;padding:0;border:0;borde
 <rect x="306" y="739" width="208" height="46" rx="7"/>
 <text class="nlabel" x="410" y="767" data-y0="767" data-y1="760" data-y2="755">consumer (artifact-linked)</text><text class="ncase" x="410" y="776" data-y1="776" data-y2="769"></text><text class="nplace" x="410" y="781"></text></g><g class="node program" data-node="consumer_package"><title>names only the binding package and lets the PM resolve the rest. Says the RECIPE is right — which is the half a build-tree probe cannot see</title>
 <rect x="646" y="739" width="208" height="46" rx="7"/>
-<text class="nlabel" x="750" y="767" data-y0="767" data-y1="760" data-y2="755">consumer (package-linked)</text><text class="ncase" x="750" y="776" data-y1="776" data-y2="769"></text><text class="nplace" x="750" y="781"></text></g></svg>
+<text class="nlabel" x="750" y="767" data-y0="767" data-y1="760" data-y2="755">consumer (package-linked)</text><text class="ncase" x="750" y="776" data-y1="776" data-y2="769"></text><text class="nplace" x="750" y="781"></text></g><g class="cboxes"><rect class="ctab" x="124" y="18" width="44" height="20" rx="4"/><text class="cname" x="131" y="33">M<tspan class="csub" dy="4">sys</tspan></text><rect class="ctab" x="784" y="18" width="51" height="20" rx="4"/><text class="cname" x="791" y="33">M<tspan class="csub" dy="4">lang</tspan></text><rect class="ctab" x="16" y="353" width="44" height="20" rx="4"/><text class="cname" x="23" y="368">A<tspan class="csub" dy="4">sys</tspan></text><rect class="ctab" x="884" y="353" width="51" height="20" rx="4"/><text class="cname" x="891" y="368">A<tspan class="csub" dy="4">lang</tspan></text><rect class="ctab" x="587" y="287" width="46" height="20" rx="4"/><text class="cname" x="594" y="302">Co<tspan class="csub" dy="4">op</tspan></text><rect class="ctab" x="585" y="591" width="51" height="20" rx="4"/><text class="cname" x="592" y="606">B<tspan class="csub" dy="4">mech</tspan></text></g></svg>

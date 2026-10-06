@@ -1297,6 +1297,8 @@ let visual_vocabulary_test : Canary_project_test.pure_test =
         let scope =
           [ "band"; "bandlabel"; "sidecap"; "node"; "ncase"; "nplace"; "edge"; "elabel";
             "cbadge"; "cnum"; "phm"; "declmark"; "gone";
+            (* the components' boxes, which Figure 3 names the same way *)
+            "cboxes"; "cbox"; "ctab"; "cname"; "csub"; "boxed";
             (* §0.2's figure *)
             "flow"; "fbox"; "fshape"; "ffold"; "fline"; "fhead"; "flink"; "flane"; "fsub";
             "fnote"; "fdot"; "fagent" ]
@@ -2865,15 +2867,15 @@ let chain_choices_test : Canary_project_test.pure_test =
           && List.for_all [ "ps"; "pl"; "m"; "k" ] ~f:(fun g ->
                  List.for_all (in_order g) ~f:(fun v -> Option.is_some (rel (g ^ "|" ^ v))))
         in
-        (* one diagram, with no separate recorded-run or cases section, and
-           each hand-drawn case's prose in §1 with its cooperation; the
-           grouped sibling (Figure 4) redraws the graph while the components
-           are discussed (relaxed 2026-10-06) *)
+        (* one diagram, carrying every component's box for the panel's
+           button to show, with no separate recorded-run or cases section,
+           and each hand-drawn case's prose in §1 with its cooperation *)
+        let count pattern = List.length (String.substr_index_all page ~may_overlap:false ~pattern) in
         let merged =
-          List.length (String.substr_index_all page ~may_overlap:false ~pattern:{|class="diagram"|})
-          = 1
-            + List.count Canary_overview_exhibits.exhibits ~f:(fun e ->
-                  String.equal e.Canary_overview_exhibits.ex_id "fig-chain-components")
+          count {|class="diagram"|} = 1
+          && count {|<polygon class="cbox"|} = List.length Canary_overview_diagram.containers
+          && count {|<rect class="ctab"|} = List.length Canary_overview_diagram.containers
+          && has {|<button id="jboxes"|}
           && (not (String.is_substring page ~substring:{|id="recwrap"|}))
           && (not (String.is_substring page ~substring:{|id="cases"|}))
           && List.for_all Canary_overview_cases.hand_cases ~f:(fun (c : Canary_overview_cases.case) ->

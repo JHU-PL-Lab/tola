@@ -25,7 +25,6 @@ let exhibits : exhibit list =
     f "fig-components"
       "The components: each side's package manager over its artifacts, and the joins between \
        the sides";
-    f "fig-chain-components" "Figure 2's nodes, each inside its component";
     t "tab-nodes" "What each node is";
     t "tab-results" "The results: one row per chain and machine, the frames as columns";
     t "tab-layers"

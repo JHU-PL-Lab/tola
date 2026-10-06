@@ -297,8 +297,10 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e :
     hide, grey or outline it; [counts] is what an edge's two badges count;
     [lines], [places] and [markers] are what a chosen chain writes under a
     node and a recorded run marks on an edge. A caption names each side
-    over its column. *)
-let diagram ?(by_component = false) ?(ph_slots = false) ?(case_slots = false)
+    over its column. [boxes] draws each component's box, shown while the
+    drawing is [boxed], which then omits the bands' titles: the boxes name
+    the regions. *)
+let diagram ?(boxes = false) ?(ph_slots = false) ?(case_slots = false)
     ?(classes = fun (_ : string) -> ([] : string list))
     ?(counts =
       fun id ->
@@ -312,16 +314,14 @@ let diagram ?(by_component = false) ?(ph_slots = false) ?(case_slots = false)
   let bands =
     String.concat (List.map bands_def ~f:(fun (y, h, _, cls) -> band_rect ~y ~h ~cls))
   in
-  (* drawn by component, the containers name the regions and the bands
-     only shade the layers *)
   let band_labels =
-    if by_component then ""
-    else String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
+    String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
   in
-  let outlines =
-    if by_component then String.concat (List.map containers ~f:container_outline) else ""
+  let box_group draw =
+    if boxes then {|<g class="cboxes">|} ^ String.concat (List.map containers ~f:draw) ^ "</g>"
+    else ""
   in
-  let tabs = if by_component then String.concat (List.map containers ~f:container_tab) else "" in
+  let outlines = box_group container_outline and tabs = box_group container_tab in
   let captions =
     Printf.sprintf
       {|<text class="sidecap" x="%d" y="20">SYSTEM SIDE</text><text class="sidecap" x="%d" y="20">LANGUAGE SIDE</text>|}

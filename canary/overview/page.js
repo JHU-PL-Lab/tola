@@ -200,6 +200,10 @@ if(jbox&&J){
   };
   jbox.addEventListener('click',function(e){
     var b=e.target.closest('button[data-g]'); if(b) pick(b.dataset.g,b.dataset.v); });
+  // the components' boxes: a way of looking at the chain, kept across choices
+  var bx=document.getElementById('jboxes'), fig=jbox.querySelector('svg.diagram');
+  if(bx&&fig) bx.addEventListener('click',function(){
+    bx.classList.toggle('on', fig.classList.toggle('boxed')); });
   var wsel=document.getElementById('jworld');
   if(wsel) wsel.addEventListener('change',function(){ S.v=wsel.value; draw(); });
   // #chain=<id> — §3.4's rows link here; #rec=<world> — one recorded world

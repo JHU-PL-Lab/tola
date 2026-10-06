@@ -242,7 +242,7 @@ let join_panel (j : Canary_overview_join.t) =
   in
   Printf.sprintf
     {|<div class="join" id="join">
-%s%s%s%s%s
+%s%s%s%s%s%s
 <div id="jrecbar" hidden><p class="mechnote"><label>recorded world:
 <select id="jworld"></select></label></p><p id="jrechead" class="edet"></p></div>
 <p class="mechnote" id="jnorec" hidden>No run of this package is recorded on
@@ -277,6 +277,9 @@ is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
     (row "binding mechanism" m_buttons)
     (row "cooperation" k_buttons)
     (row "package in canary" c_buttons)
+    (* a way of looking at the chain, not a choice of one *)
+    (row "components"
+       {|<button id="jboxes" title="Draw each component's box over the chain: each side's package manager over the artifacts it delivers, and the two joins across the sides">boxes</button>|})
     (E.figure "fig-chain" (Canary_overview_draw.svg (opening j)))
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with

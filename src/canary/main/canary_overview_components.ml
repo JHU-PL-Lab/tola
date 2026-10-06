@@ -1,9 +1,9 @@
 (** The components alone, without their nodes: each side's package manager
     over the artifacts it delivers, with the joins between the sides in the
     middle column, the cooperation between the package managers above and
-    the binding between the artifacts below. Drawn on its own; Figure 2's
-    nodes, grouped the same way, are {!Canary_overview_diagram.diagram}
-    [~by_component:true]. *)
+    the binding between the artifacts below. Drawn on its own; Figure 2
+    draws the same boxes around its nodes while its panel's boxes button
+    is on ({!Canary_overview_diagram.diagram} [~boxes]). *)
 
 open Base
 module T = Canary_topology

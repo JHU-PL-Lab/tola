@@ -128,8 +128,6 @@ let files ?choice ?(views = []) ?(tests = [])
   let figure = function
     | "fig-flow" -> Some (standalone (Canary_overview_flow.svg ()))
     | "fig-components" -> Some (standalone (Canary_overview_components.svg ()))
-    | "fig-chain-components" ->
-        Some (standalone (Canary_overview_diagram.diagram ~by_component:true ()))
     | "fig-chain" ->
         Some
           (standalone

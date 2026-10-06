@@ -153,17 +153,15 @@ let layout_rules : layout_rule list =
       (Tested_by "overview.edge_marks_clear_the_boxes");
     rule
       "One diagram: every chain is drawn on the same layout and switched from the panel, \
-       never drawn a second time beside it. Relaxed while the components are discussed: \
-       Figure 4 draws the same graph grouped by component, until Figure 2 can show or omit \
-       the boxes itself."
+       never drawn a second time beside it; the components' boxes are switched on it too."
       "Laid end to end, chains are compared by memory. (user, 2026-09-24, when §2's \
-       drawings were merged into §1; relaxed 2026-10-06)"
+       drawings were merged into §1; the boxes, 2026-10-06)"
       (Tested_by "overview.chain_choices_draw_one_chain") ]
 
 (* ── the visual vocabulary ── *)
 
 type vh_element =
-  | Frame  (** the bands and the side captions *)
+  | Frame  (** the bands, the side captions and the components' boxes *)
   | Node  (** a node's box *)
   | Name  (** a line under a node's label *)
   | Edge  (** an edge's line *)
@@ -244,6 +242,14 @@ let visual_hints : visual_hint list =
       (Drawn (List.map D.bands_def ~f:(fun (_, _, title, _) -> title)));
     hint "sides" Frame [ "sidecap" ] [ ".sidecap" ] Always
       (Drawn [ "SYSTEM SIDE"; "LANGUAGE SIDE" ]);
+    hint "components" Frame
+      [ "cboxes"; "cbox"; "ctab"; "cname"; "csub"; "boxed" ]
+      [ ".cbox"; ".ctab"; ".cname"; ".csub"; ".diagram:not(.boxed) .cboxes";
+        ".diagram.boxed .bandlabel" ]
+      Always Chain_key
+      ~sample:
+        {|<svg width="30" height="18" viewBox="0 0 30 18"><rect class="cbox" x="2" y="3" width="26" height="12"/></svg>|}
+      ~says:"a component's box, while the boxes button is on";
     (* ── the panel ── *)
     hint "button.chosen" Button [ "on" ] [ ".selbar button.on" ] Always Chain_key
       ~sample:{|<span class="kbtn on">opam</span>|} ~says:"a choice made";

@@ -38,7 +38,7 @@ let sections : section list =
     s "§0.4" "The tests" "tests" [ "tests_table"; "tests_lists" ]
       [ "Canary_overview_tests"; "Canary_tests" ];
     s "§1" "A chain, layer by layer" "layers"
-      [ "missing_steps"; "chain_key"; "join_panel"; "components_figure"; "chain_components_figure" ]
+      [ "missing_steps"; "chain_key"; "join_panel"; "components_figure" ]
       [ "Canary_overview_diagram"; "Canary_overview_components"; "Canary_overview_looks";
         "Canary_overview_panel";
         "Canary_overview_cases"; "Canary_overview_join"; "Canary_overview_draw";

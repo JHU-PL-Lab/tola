@@ -67,9 +67,6 @@ let render ?(tests = []) (projects : (string * Canary_project_run.project_run) l
       ("agreement_layers", Tb.layers_table ());
       ( "components_figure",
         Canary_overview_exhibits.figure "fig-components" (Canary_overview_components.svg ()) );
-      ( "chain_components_figure",
-        Canary_overview_exhibits.figure "fig-chain-components"
-          (Canary_overview_diagram.diagram ~by_component:true ()) );
       ("agreement_overview", overview);
       ("sites", Int.to_string (List.length T.claim_sites));
       ("sites_checked", sites T.implemented);
