@@ -130,19 +130,19 @@ diagram.</div>
 <p id="edet" class="edet">hover an edge</p>
 
 <p>Figure 3 draws the chain's components alone. Down each side, the
-package manager's management part manages the packages, and the packages
-provide the artifacts: M<sub>sys</sub>, P<sub>sys</sub> and
-A<sub>sys</sub>, and likewise on the language side. Between the sides
+package manager (M) manages packages; a package is its packaging (P),
+what it declares, and its payload, the artifacts it carries; and the
+artifacts (A) are that payload or what a build makes. Between the sides
 are the two joins, and the sides meet only through them. The cooperation
-(Co<sub>op</sub>) joins the packages, and the managers take part in it
-only through them; the binding mechanism (B<sub>mech</sub>) joins the
+(Co<sub>op</sub>) joins the packaging, and the managers take part in it
+only through it; the binding mechanism (B<sub>mech</sub>) joins the
 artifacts. The two joins relate, and neither requires the other: a
 binding mechanism is the only reason two package managers cooperate, and
 its kind decides what they must arrange, which the cooperation arranges
-only by proxy. The panel's <em>components</em> buttons draw the
-components' boxes on Figure 2, each on its own, with each node inside
-the side that owns it: a manager's box holds the packages it manages,
-the bridge in M<sub>lang</sub>'s box as the opam package it is. The joins' boxes
+only by proxy. The panel's <em>components</em> buttons draw the same
+boxes on Figure 2, each on its own, with each node inside the component
+that owns it: the capability file in P<sub>sys</sub>'s box, the bridge
+in P<sub>lang</sub>'s as the opam package it is. The joins' boxes
 overlap the sides they join, over the nodes they span: Co<sub>op</sub>
 the capability file and the bridge, B<sub>mech</sub> every artifact of
 both sides, around both A boxes. The two sources are source repositories,
@@ -221,11 +221,12 @@ claims sit: <code>behavior_matches</code>,
 <p>An agreement is a claim about parts of the chain, and this table names
 them before any action does. It has a row for each agreement the chain
 places, registered or candidate, and a column for each component (§3,
-Figure 3): the package manager on each side (M<sub>sys</sub>,
-M<sub>lang</sub>) and the artifacts it delivers (A<sub>sys</sub>,
+Figure 3): on each side the package manager (M<sub>sys</sub>,
+M<sub>lang</sub>), the packaging of the packages it manages
+(P<sub>sys</sub>, P<sub>lang</sub>) and the artifacts (A<sub>sys</sub>,
 A<sub>lang</sub>), the two joins between the sides (Co<sub>op</sub>, where
-the package managers cooperate through a bridge, and B<sub>mech</sub>, the
-binding mechanism), and the program that uses them. A cell names the part an agreement reads in that
+the package managers cooperate through their packaging, and
+B<sub>mech</sub>, the binding mechanism), and the program that uses them. A cell names the part an agreement reads in that
 layer and what it reads there. No agreement relates the two sides
 directly: one that spans them reads the bridge, the binding or the
 program too. The last columns say, for each object format, whether the
@@ -286,14 +287,16 @@ The layered-model draft's tables were the reference for the columns; they
 also cover ecosystems canary does not reach yet (RPM, Cargo, Cabal,
 RubyGems, Conda, Nix).</p>
 <p>The tables follow Figure 3's components: §3.1's rows are the package
-managers' management parts (M<sub>sys</sub>, M<sub>lang</sub>), §3.2's
+managers (M<sub>sys</sub>, M<sub>lang</sub>) with what their packaging
+can declare (P<sub>sys</sub>, P<sub>lang</sub>), §3.2's
 the binding mechanisms (B<sub>mech</sub>), §3.3's the cooperations
 (Co<sub>op</sub>).</p>
 <h3 id="pm-solo">3.1 Each package manager on its own</h3>
-<div class="note"><strong>A bridge is package content.</strong> It is a
+<div class="note"><strong>A bridge is packaging.</strong> It is a
 package, or part of one, that exists so two package managers can
 cooperate — opam's <code>conf-*</code> packages and <code>depexts</code>
-fields — and it belongs to neither side's own content. It is optional: two
+fields — and it declares rather than carries: it has no payload of its
+own. It is optional: two
 package managers may cooperate through a bridge or through nothing but the
 artifacts, and a language package that links whatever the system
 installed is not thereby broken. Each package manager defines its own

@@ -56,7 +56,7 @@ let layout_rules : layout_rule list =
                    && top < y v n.T.nd_id && y v n.T.nd_id < top + h))));
     rule
       "A package and what it ships form one vertical line: its package manager above it, \
-       its content below it — native package, headers, library, with the staged copy under \
+       its payload below it — native package, headers, library, with the staged copy under \
        the library it copies; binding package, stub, module, surface."
       "user, 2026-09-27: \"vertical line for a package and package content\""
       (Places
@@ -97,7 +97,7 @@ let layout_rules : layout_rule list =
            && y v "hdr_sys" - y v "src_sys" = d
            && y v "stub_lang" - y v "src_lang" = d));
     rule
-      "A source is not package content, so it sits beside its package's line, clear of \
+      "A source is in no package, so it sits beside its package's line, clear of \
        it: the native source to the upper left of the headers, the binding source to the \
        upper right of the stub."
       "user, 2026-09-24: \"the source is not in the package which usually contains the \
@@ -149,7 +149,7 @@ let layout_rules : layout_rule list =
       "Nothing drawn hides anything else: no edge runs under a source it does not join, and \
        no label or badge lies under a box, another edge's marks or a band's title."
       "A mark under a box is lost, and a package's edge under a source drew the source as \
-       package content. (2026-09-24)"
+       part of the package. (2026-09-24)"
       (Tested_by "overview.edge_marks_clear_the_boxes");
     rule
       "One diagram: every chain is drawn on the same layout and switched from the panel, \

@@ -18,7 +18,7 @@ let box_h = 46
 type pos = { px : int; py : int }
 
 (** The two sources, source repositories: each sits beside its package's
-    column, clear of its edges (a source is not package content), in a
+    column, clear of its edges (a source is in no package), in a
     narrower box on a patch of the PM layer's colour, since it is fetched
     rather than built. *)
 let sources = [ "src_sys"; "src_lang" ]
@@ -64,8 +64,10 @@ let rect x0 y0 x1 y1 = [ (x0, y0); (x1, y0); (x1, y1); (x0, y1) ]
     gives it, the binding mechanism's around both sides' artifact boxes.
     The sources and the program's nodes are in no component's box. *)
 let containers : (T.component * (int * int) list) list =
-  [ (T.Pm_sys, rect 114 28 446 337);
-    (T.Pm_lang, rect 774 28 1106 337);
+  [ (T.Pm_sys, rect 114 27 446 97);
+    (T.Pm_lang, rect 774 27 1106 97);
+    (T.Pkg_sys, rect 114 135 446 337);
+    (T.Pkg_lang, rect 774 135 1106 337);
     (T.Art_sys, rect 114 503 346 731);
     (T.Art_lang, rect 874 503 1106 731);
     (T.Pm_coop, rect 216 259 1004 325);

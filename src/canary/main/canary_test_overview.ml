@@ -482,49 +482,50 @@ let arrows_carry_ends_test : Canary_project_test.pure_test =
   }
 
 (* Figure 3 is the components' design: down each side a manager manages
-   its packages, which provide its artifacts; the cooperation sits with the
-   packages and joins them, the managers taking part through them; the
-   binding mechanism sits with the artifacts and joins them; the two joins
-   relate; and no link runs from one side straight to the other. The
-   drawing draws every box and link of it. *)
+   its packages, whose packaging declares its artifacts; the cooperation
+   sits with the packaging and joins it, the managers taking part through
+   it; the binding mechanism sits with the artifacts and joins them; the
+   two joins relate; and no link runs from one side straight to the
+   other. The drawing draws every box and link of it. *)
 let components_figure_test : Canary_project_test.pure_test =
   { name = "overview.components_figure_reads_down_and_across";
-    holds = "In Figure 3 each side reads manager, manages, packages, provides, artifacts, and the sides meet only through the joins, which relate to each other.";
+    holds = "In Figure 3 each side reads manager, manages, packaging, declares, artifacts, and the sides meet only through the joins, which relate to each other.";
     check =
       (fun () ->
         let module T = Canary_topology in
         let module C = Canary_overview_components in
         let has a b k = List.mem C.links (a, b, k) ~equal:Poly.equal in
         let at c = C.place c in
-        (* a column: manager, packages, artifacts, top to bottom *)
-        let side s ~m ~a =
-          let col, _ = at (C.Component m) in
-          Poly.equal (at (C.Component m)) (col, 0)
-          && Poly.equal (at (C.Packages s)) (col, 1)
-          && Poly.equal (at (C.Component a)) (col, 2)
-          && has (C.Component m) (C.Packages s) C.Manages
-          && has (C.Packages s) (C.Component a) C.Provides
+        (* a column: manager, packaging, artifacts, top to bottom *)
+        let side ~m ~p ~a =
+          let col, _ = at m in
+          Poly.equal (at m) (col, 0)
+          && Poly.equal (at p) (col, 1)
+          && Poly.equal (at a) (col, 2)
+          && has m p C.Manages && has p a C.Declares
         in
         let sides =
-          side T.S_sys ~m:T.Pm_sys ~a:T.Art_sys && side T.S_lang ~m:T.Pm_lang ~a:T.Art_lang
-          && fst (at (C.Component T.Pm_sys)) <> fst (at (C.Component T.Pm_lang))
+          side ~m:T.Pm_sys ~p:T.Pkg_sys ~a:T.Art_sys
+          && side ~m:T.Pm_lang ~p:T.Pkg_lang ~a:T.Art_lang
+          && fst (at T.Pm_sys) <> fst (at T.Pm_lang)
         in
-        let coop = C.Component T.Pm_coop and bind = C.Component T.Binding in
+        let coop = T.Pm_coop and bind = T.Binding in
         let joins =
-          snd (at coop) = snd (at (C.Packages T.S_sys))
-          && snd (at bind) = snd (at (C.Component T.Art_sys))
-          && has (C.Packages T.S_sys) coop C.Joins && has coop (C.Packages T.S_lang) C.Joins
-          && has (C.Component T.Pm_sys) coop C.Takes_part
-          && has (C.Component T.Pm_lang) coop C.Takes_part
-          && has (C.Component T.Art_sys) bind C.Joins && has bind (C.Component T.Art_lang) C.Joins
+          snd (at coop) = snd (at T.Pkg_sys)
+          && snd (at bind) = snd (at T.Art_sys)
+          && has T.Pkg_sys coop C.Joins && has coop T.Pkg_lang C.Joins
+          && has T.Pm_sys coop C.Takes_part && has T.Pm_lang coop C.Takes_part
+          && has T.Art_sys bind C.Joins && has bind T.Art_lang C.Joins
           && has coop bind C.Relates
         in
         (* no link from one side's column to the other's *)
         let apart =
-          let col c = fst (at c) and sys = fst (at (C.Component T.Pm_sys))
-          and lang = fst (at (C.Component T.Pm_lang)) in
+          let col c = fst (at c) and sys = fst (at T.Pm_sys) and lang = fst (at T.Pm_lang) in
           List.for_all C.links ~f:(fun (a, b, _) ->
-              not (Set.equal (Set.of_list (module Int) [ col a; col b ]) (Set.of_list (module Int) [ sys; lang ])))
+              not
+                (Set.equal
+                   (Set.of_list (module Int) [ col a; col b ])
+                   (Set.of_list (module Int) [ sys; lang ])))
         in
         let svg = C.svg () in
         let count pattern = List.length (String.substr_index_all svg ~may_overlap:false ~pattern) in
@@ -532,10 +533,10 @@ let components_figure_test : Canary_project_test.pure_test =
         let drawn =
           count {|<g class="cnode|} = List.length C.cells
           && count ">manages<" = kinds C.Manages
-          && count ">provides<" = kinds C.Provides
+          && count ">declares<" = kinds C.Declares
           && count ">relates<" = kinds C.Relates
           && count {|<line class="cdot"|} = kinds C.Takes_part + kinds C.Relates
-          && count {|<line class="clink"|} = kinds C.Manages + kinds C.Provides + kinds C.Joins
+          && count {|<line class="clink"|} = kinds C.Manages + kinds C.Declares + kinds C.Joins
         in
         sides && joins && apart && drawn)
   }

@@ -2,7 +2,7 @@
     and whether the world canary constructed honours it (2026-09-27,
     overview.md §6.1 E2).
 
-    A bridge is package content that exists so one package manager can
+    A bridge is packaging that exists so one package manager can
     reach another ([Canary_bridge]): opam's [conf-gmp] is an opam package
     whose build is a check against the system. The binding package
     depends on it, so opam admits the binding only where that check

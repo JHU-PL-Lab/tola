@@ -15,7 +15,7 @@
 
     {1 The bridge}
 
-    A BRIDGE is a concrete, separate piece of package content whose
+    A BRIDGE is a concrete, separate piece of packaging whose
     PURPOSE is package-manager cooperation (user, 2026-09-22). Three
     things follow from that definition and all three matter:
 
@@ -753,20 +753,36 @@ let string_of_layer = function
     capability file ships inside the native package. *)
 type side = S_sys | S_lang
 
-(** The layers an agreement relates: on each side a package manager and
-    the artifacts it delivers, the two joins between the sides (the
-    package managers' cooperation through a bridge, and the binding), and
-    the program that uses them. [component_admits] says which nodes lie
-    in each. *)
-type component = Pm_sys | Pm_lang | Pm_coop | Art_sys | Art_lang | Binding | Program
+(** The layers an agreement relates. On each side: a package manager, the
+    packaging of the packages it manages (what a package declares), and the
+    artifacts (what packages carry as their payload, or a build makes).
+    Between the sides: the two joins, the package managers' cooperation
+    through the packaging and the binding between the artifacts. And the
+    program that uses them. [component_admits] says which nodes lie in
+    each. *)
+type component =
+  | Pm_sys
+  | Pm_lang
+  | Pkg_sys
+  | Pkg_lang
+  | Pm_coop
+  | Art_sys
+  | Art_lang
+  | Binding
+  | Program
 
-let all_components = [ Pm_sys; Pm_lang; Pm_coop; Art_sys; Art_lang; Binding; Program ]
+(** In layer order, each join after the layer it joins: the order of §2's
+    columns. *)
+let all_components =
+  [ Pm_sys; Pm_lang; Pkg_sys; Pkg_lang; Pm_coop; Art_sys; Art_lang; Binding; Program ]
 
 (** The components' names as the paper writes them: a base, and a
     subscript after the underscore ([M_sys] is M with sys below it). *)
 let string_of_component = function
   | Pm_sys -> "M_sys"
   | Pm_lang -> "M_lang"
+  | Pkg_sys -> "P_sys"
+  | Pkg_lang -> "P_lang"
   | Pm_coop -> "Co_op"
   | Art_sys -> "A_sys"
   | Art_lang -> "A_lang"
@@ -782,8 +798,8 @@ let component_name_parts (c : component) : string * string =
 (** The side a component lies on; the joins and the program lie on
     neither. *)
 let side_of_component = function
-  | Pm_sys | Art_sys -> Some S_sys
-  | Pm_lang | Art_lang -> Some S_lang
+  | Pm_sys | Pkg_sys | Art_sys -> Some S_sys
+  | Pm_lang | Pkg_lang | Art_lang -> Some S_lang
   | Pm_coop | Binding | Program -> None
 
 type node = {
@@ -928,30 +944,34 @@ let nodes : node list =
 
 let node_by_id id = List.find nodes ~f:(fun n -> String.equal n.nd_id id)
 
-(** Whether a node lies in a component: a package manager's own layers
-    on its side, the bridge for the cooperation, a side's artifacts for
-    its artifacts (the language side's for the binding too), and a
-    program node for the program. *)
+(** Whether a node lies in a component: a package manager's layer on its
+    side, the package layer on its side for the packaging, the capability
+    file and the bridge for the cooperation, a side's artifacts for its
+    artifacts (the language side's for the binding too), and a program
+    node for the program. *)
 let component_admits (c : component) (n : node) : bool =
-  let managed = match n.nd_layer with L_pm | L_package -> true | L_artifact | L_program -> false in
+  let on s layer = Poly.equal n.nd_side s && Poly.equal n.nd_layer layer in
   let artifact = Poly.equal n.nd_layer L_artifact in
   let bridge = String.equal n.nd_id "bridge" in
   match c with
   | Pm_coop -> bridge || String.equal n.nd_id "cap"
-  | Pm_sys -> Poly.equal n.nd_side S_sys && managed
-  | Pm_lang -> Poly.equal n.nd_side S_lang && managed
+  | Pm_sys -> on S_sys L_pm
+  | Pm_lang -> on S_lang L_pm
+  | Pkg_sys -> on S_sys L_package
+  | Pkg_lang -> on S_lang L_package
   | Art_sys -> Poly.equal n.nd_side S_sys && artifact
   | Art_lang | Binding -> Poly.equal n.nd_side S_lang && artifact
   | Program -> Poly.equal n.nd_layer L_program
 
-(** The component that owns each node. A side owns what it manages or
-    delivers, the bridge included, an opam package like any other, and
-    the stub, the binding's shim on the language side. The joins own
-    nothing: they span the sides. The two sources are source repositories,
-    fetched rather than built, and no component owns them. *)
+(** The component that owns each node. A package manager owns its own
+    node; the packaging owns its side's packages and what they declare,
+    the capability file and the bridge included, an opam package like any
+    other; the artifacts own the rest of the side, the stub among them.
+    The joins own nothing: they span the sides. The two sources are source
+    repositories, fetched rather than built, and no component owns them. *)
 let node_components : (string * component) list =
-  [ ("pm_sys", Pm_sys); ("pkg_sys", Pm_sys); ("cap", Pm_sys);
-    ("pm_lang", Pm_lang); ("pkg_lang", Pm_lang); ("bridge", Pm_lang);
+  [ ("pm_sys", Pm_sys); ("pkg_sys", Pkg_sys); ("cap", Pkg_sys);
+    ("pm_lang", Pm_lang); ("pkg_lang", Pkg_lang); ("bridge", Pkg_lang);
     ("hdr_sys", Art_sys); ("lib_sys", Art_sys); ("staged_sys", Art_sys);
     ("stub_lang", Art_lang); ("mod_lang", Art_lang); ("surf_lang", Art_lang);
     ("consumer_artifact", Program); ("consumer_package", Program) ]
@@ -1956,14 +1976,14 @@ let claim_sites : claim_site list =
       cs_edges = [ "install_surf" ] };
     { cs_claim = "package_contains_declared_files";
       cs_parts =
-        [ p Pm_lang "pkg_lang" "the files it declares"; p Art_lang "mod_lang" "the files installed" ];
+        [ p Pkg_lang "pkg_lang" "the files it declares"; p Art_lang "mod_lang" "the files installed" ];
       cs_edges = [ "install_lang" ] };
     { cs_claim = "repack_preserves_api";
       cs_parts =
-        [ p Pm_lang "pkg_lang" "the API as packed"; p Art_lang "mod_lang" "the API as built" ];
+        [ p Pkg_lang "pkg_lang" "the API as packed"; p Art_lang "mod_lang" "the API as built" ];
       cs_edges = [ "pack" ] };
     { cs_claim = "repack_complete";
-      cs_parts = [ p Pm_lang "pkg_lang" "as packed"; p Art_lang "mod_lang" "as built" ];
+      cs_parts = [ p Pkg_lang "pkg_lang" "as packed"; p Art_lang "mod_lang" "as built" ];
       cs_edges = [ "pack" ] };
     (* staging *)
     { cs_claim = "staged_interface_preserved";
@@ -2010,7 +2030,7 @@ let claim_sites : claim_site list =
     { cs_claim = "package_resolution_suffices";
       cs_parts =
         [ p Pm_lang "pm_lang" "its resolution";
-          p Pm_lang "pkg_lang" "the package alone";
+          p Pkg_lang "pkg_lang" "the package alone";
           p Program "consumer_package" "behaves as the hand-resolved program" ];
       cs_edges = [ "resolve_lang"; "run_packaged"; "same_program" ] };
     { cs_claim = "compatibility_version_satisfied";
@@ -2021,22 +2041,22 @@ let claim_sites : claim_site list =
     (* discovery, on the capability file's edge *)
     { cs_claim = "discovery_matches_link";
       cs_parts =
-        [ p Pm_sys "cap" "pkg-config's answer"; p Binding "mod_lang" "the library it links" ];
+        [ p Pkg_sys "cap" "pkg-config's answer"; p Binding "mod_lang" "the library it links" ];
       cs_edges = [ "discover" ] };
     (* the bridge's claims, on the edges where a bridge states them *)
     { cs_claim = "gate_admits_the_world";
-      cs_parts = [ p Pm_sys "cap" "what the check queries"; p Pm_coop "bridge" "its check" ];
+      cs_parts = [ p Pkg_sys "cap" "what the check queries"; p Pm_coop "bridge" "its check" ];
       cs_edges = [ "conf_probe" ] };
     { cs_claim = "declared_gate_matches_package";
       cs_parts =
-        [ p Pm_lang "pkg_lang" "the bridge it depends on"; p Pm_coop "bridge" "the bridge package" ];
+        [ p Pkg_lang "pkg_lang" "the bridge it depends on"; p Pm_coop "bridge" "the bridge package" ];
       cs_edges = [ "depends" ] };
     { cs_claim = "gate_bounds_the_library";
       cs_parts = [ p Art_sys "lib_sys" "its version"; p Pm_coop "bridge" "its version bound" ];
       cs_edges = [ "depends"; "conf_probe" ] };
     { cs_claim = "depext_names_the_provided_package";
       cs_parts =
-        [ p Pm_sys "pkg_sys" "the package that provides it"; p Pm_coop "bridge" "its depext" ];
+        [ p Pkg_sys "pkg_sys" "the package that provides it"; p Pm_coop "bridge" "its depext" ];
       cs_edges = [ "depext" ] } ]
 
 (** IS A PLACED AGREEMENT CHECKED ANYWHERE? The registry's answer: a row

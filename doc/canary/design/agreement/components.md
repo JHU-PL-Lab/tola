@@ -470,7 +470,7 @@ A recorder supplies facts; the comparison with that policy supplies blame.
 
 ### 5.7 Bridges between package managers
 
-A bridge is package content that exists so one package manager can reach
+A bridge is packaging that exists so one package manager can reach
 another. opam's `conf-gmp` makes three statements: the binding package
 depends on it (with or without a bound), its depexts name the system package
 that provides GMP (`libgmp-dev` on Debian), and its build is a check that

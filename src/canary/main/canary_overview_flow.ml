@@ -120,6 +120,10 @@ let terms : (string * string) list =
       "the system side — the native library and its package manager — and the language \
        side — the binding and its package manager" );
     ("layer", "package manager, package, artifact, program: §1 draws them top to bottom");
+    ( "packaging",
+      "what a package declares: its metadata, the files it lists, what it depends on, a \
+       capability file; P in Figure 3" );
+    ("payload", "what a package carries: its artifacts");
     ( "world",
       "one choice of where each of a project's artifacts comes from — fetched, built or \
        installed — and at which version" );
@@ -130,9 +134,10 @@ let terms : (string * string) list =
        checked, and a claim's site is the edges it sits on" );
     ("binding mechanism", "how a language binds the native library: cstubs, cext, ctypes …");
     ("cooperation", "how the two package managers are joined: through a bridge, a gate, or nothing");
-    ("bridge", "package content made for two package managers to cooperate, such as opam's conf-* packages");
+    ("bridge", "packaging made for two package managers to cooperate, such as opam's conf-* packages");
     ( "capability file",
-      "what a package says it offers — a .pc or META file — owned by the package that ships it" );
+      "what a package says it offers — a .pc or META file — part of the packaging of the \
+       package that ships it" );
     ( "frame",
       "a column group of §1.2 and §2: one action as §1 draws it — what it consumes, its \
        pieces, what it produces, and the checks on each" );
