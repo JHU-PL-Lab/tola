@@ -49,6 +49,8 @@ let sections : section list =
     s "§1.2" "The results, one row per chain" "results"
       [ "results_key"; "results_table"; "results_columns" ]
       [ "Canary_frames"; "Canary_overview_results"; "Canary_overview_runs" ];
+    s "§1.3" "A binding at run time" "runtime" [] []
+      ~about:"planned: the run-time half of each binding mechanism";
     s "§2" "The agreements" "overview" [ "agreement_layers" ]
       [ "Canary_overview_tables"; "Canary_topology" ]
       ~about:"what each agreement relates, layer by layer, and where it is checked";

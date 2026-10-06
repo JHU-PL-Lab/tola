@@ -937,25 +937,29 @@ let component_admits (c : component) (n : node) : bool =
   let artifact = Poly.equal n.nd_layer L_artifact in
   let bridge = String.equal n.nd_id "bridge" in
   match c with
-  | Pm_coop -> bridge
+  | Pm_coop -> bridge || String.equal n.nd_id "cap"
   | Pm_sys -> Poly.equal n.nd_side S_sys && managed
-  | Pm_lang -> Poly.equal n.nd_side S_lang && managed && not bridge
+  | Pm_lang -> Poly.equal n.nd_side S_lang && managed
   | Art_sys -> Poly.equal n.nd_side S_sys && artifact
   | Art_lang | Binding -> Poly.equal n.nd_side S_lang && artifact
   | Program -> Poly.equal n.nd_layer L_program
 
-(** The component each node is drawn in. A partition: the language module
-    is admitted by both the binding (what it links) and the language's
-    artifacts (its API), and is drawn with the language's artifacts; the
-    capability file ships in the native package, so it is the system PM's. *)
+(** The component that owns each node: a partition. A side owns what it
+    manages or delivers, the bridge included, an opam package like any
+    other; the binding mechanism owns only its compiled stub. *)
 let node_components : (string * component) list =
   [ ("pm_sys", Pm_sys); ("pkg_sys", Pm_sys); ("cap", Pm_sys);
-    ("bridge", Pm_coop);
-    ("pm_lang", Pm_lang); ("pkg_lang", Pm_lang);
+    ("pm_lang", Pm_lang); ("pkg_lang", Pm_lang); ("bridge", Pm_lang);
     ("src_sys", Art_sys); ("hdr_sys", Art_sys); ("lib_sys", Art_sys); ("staged_sys", Art_sys);
-    ("src_lang", Binding); ("stub_lang", Binding);
-    ("mod_lang", Art_lang); ("surf_lang", Art_lang);
+    ("src_lang", Art_lang); ("mod_lang", Art_lang); ("surf_lang", Art_lang);
+    ("stub_lang", Binding);
     ("consumer_artifact", Program); ("consumer_package", Program) ]
+
+(** The nodes each join spans, across the sides it joins: the cooperation
+    runs between the capability file and the bridge, the binding mechanism
+    from the library through its stub to the module. *)
+let join_spans : (component * string list) list =
+  [ (Pm_coop, [ "cap"; "bridge" ]); (Binding, [ "lib_sys"; "stub_lang"; "mod_lang" ]) ]
 
 let component_of_node (id : string) : component option =
   List.Assoc.find node_components id ~equal:String.equal

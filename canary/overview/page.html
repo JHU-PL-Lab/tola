@@ -135,9 +135,13 @@ M<sub>sys</sub> over A<sub>sys</sub>, M<sub>lang</sub> over
 A<sub>lang</sub>. Between the sides are the two joins, the cooperation
 between the package managers (Co<sub>op</sub>) and the binding mechanism
 (B<sub>mech</sub>), and the sides meet only through them. Figure 4 draws
-Figure 2's nodes inside the component each belongs to. Both are siblings
-of Figure 2 while the components are discussed; the end is one Figure 2
-that shows or omits the boxes.</p>
+Figure 2's nodes inside the side that owns each one, the bridge in
+M<sub>lang</sub>'s box as the opam package it is. The joins' boxes
+overlap the sides they join, over the nodes they span: Co<sub>op</sub>
+the capability file and the bridge, B<sub>mech</sub> the library, its
+own compiled stub and the module. Both figures are siblings of Figure 2
+while the components are discussed; the end is one Figure 2 that shows
+or omits the boxes.</p>
 {{components_figure}}
 {{chain_components_figure}}
 
@@ -188,6 +192,20 @@ its row.</p>
 <code>canary overview</code> writes each machine's runs to
 <code>overview_runs.js</code> beside it.</p>
 <script type="application/json" id="rtcols">{{results_columns}}</script>
+
+<h3 id="runtime">1.3 A binding at run time</h3>
+<p><em>Planned.</em> Figure 2 draws the binding's build-time half and a
+single run edge. Run time differs by mechanism: compiled stubs are linked
+into the module, and the loader brings in the library when the program
+starts; an extension module is loaded on import, with the libraries it
+records needing; ctypes, cffi and dynlink open the library by name when
+first called. A figure here, with the mechanism selectable, will draw the
+process with its loaded images, how a call travels from the language
+through the stub or FFI to the native symbol, and where the run-time
+claims sit: <code>behavior_matches</code>,
+<code>correspondence_holds_across_the_binding</code>,
+<code>no_duplicate_implementation</code> and
+<code>interposition_binds_build_target</code>.</p>
 
 <h2 id="overview">2. The agreements</h2>
 <p>An agreement is a claim about parts of the chain, and this table names

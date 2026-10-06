@@ -373,13 +373,13 @@ let sits_by_parts_test : Canary_project_test.pure_test =
         (not (List.is_empty T.claim_sites)) && List.is_empty bad)
   }
 
-(* The figures that group the chain by component draw what the topology
-   says: each node is in one component that admits it, and on Figure 2's
-   layout each node's box lies inside its own component's container and
-   inside no other's. *)
+(* The figure that groups the chain by component draws what the topology
+   says: each node is owned by one component that admits it, and on Figure
+   2's layout each node's box lies inside exactly its owner's container and
+   those of the joins that span it. *)
 let components_contain_test : Canary_project_test.pure_test =
   { name = "overview.components_contain_their_nodes";
-    holds = "Every node belongs to one component that admits it, and in the chain drawn by component each node lies inside its own component's container and no other.";
+    holds = "Every node is owned by one component that admits it, and in the chain drawn by component each node lies inside exactly its owner's container and those of the joins that span it.";
     check =
       (fun () ->
         let module T = Canary_topology in
@@ -416,21 +416,29 @@ let components_contain_test : Canary_project_test.pure_test =
               | Some c when not (T.component_admits c n) ->
                   Some (Printf.sprintf "%s: not admitted by %s" n.T.nd_id (T.string_of_component c))
               | Some c ->
-                  let in_ok =
-                    match List.Assoc.find D.containers c ~equal:Poly.equal with
-                    | None -> Poly.equal c T.Program
-                    | Some pts -> List.for_all (corners n.T.nd_id) ~f:(inside pts)
+                  let expected =
+                    c
+                    :: List.filter_map T.join_spans ~f:(fun (j, ns) ->
+                           Option.some_if (List.mem ns n.T.nd_id ~equal:String.equal) j)
                   in
-                  let elsewhere =
-                    List.exists D.containers ~f:(fun (c', pts) ->
-                        (not (Poly.equal c c'))
-                        && List.exists (corners n.T.nd_id) ~f:(inside pts))
+                  let cs = corners n.T.nd_id in
+                  let ok =
+                    List.for_all D.containers ~f:(fun (c', pts) ->
+                        if List.mem expected c' ~equal:Poly.equal then List.for_all cs ~f:(inside pts)
+                        else not (List.exists cs ~f:(inside pts)))
                   in
-                  if in_ok && not elsewhere then None
-                  else Some (n.T.nd_id ^ ": outside its container, or inside another"))
+                  if ok then None
+                  else
+                    Some
+                      (n.T.nd_id
+                     ^ ": not inside exactly its owner's container and the joins spanning it"))
+        in
+        let spans_named =
+          List.for_all T.join_spans ~f:(fun (_, ns) ->
+              List.for_all ns ~f:(fun id -> Option.is_some (T.node_by_id id)))
         in
         List.iter bad ~f:(Fmt.pr "    %s@.");
-        (not (List.is_empty D.containers)) && List.is_empty bad)
+        (not (List.is_empty D.containers)) && spans_named && List.is_empty bad)
   }
 
 (* Every action edge is in exactly one piece of one frame; no node
@@ -2279,7 +2287,7 @@ let edge_marks_test : Canary_project_test.pure_test =
         let marks =
           List.concat_map segments ~f:(fun (e, f) ->
               let src = P.pos_of f and dst = P.pos_of e.T.eg_to in
-              let mx, my = P.anchor_of e ~src ~dst in
+              let mx, my = P.anchor_of ~from:f e ~src ~dst in
               let w = chars (P.annotation_label e.T.eg_annotation) * 66 / 10 in
               let label =
                 if List.mem P.label_starts_at_midpoint e.T.eg_id ~equal:String.equal then
@@ -2298,23 +2306,35 @@ let edge_marks_test : Canary_project_test.pure_test =
               let w = chars label * 72 / 10 in
               ((P.canvas_w / 2) - (w / 2), y + 11, (P.canvas_w / 2) + (w / 2), y + 22))
         in
-        let under_a_box m = List.exists node_ids ~f:(fun n -> hit m (rect_of n)) in
-        List.for_all marks ~f:(fun (_, m) -> not (under_a_box m))
-        && List.for_all marks ~f:(fun (s, m) ->
-               List.for_all marks ~f:(fun (s', m') -> Poly.equal s s' || not (hit m m')))
-        && List.for_all marks ~f:(fun (_, m) -> not (List.exists band_labels ~f:(hit m)))
-        && List.for_all band_labels ~f:(fun b -> not (under_a_box b))
-        && List.for_all segments ~f:(fun (e, f) ->
-               let src = P.pos_of f and dst = P.pos_of e.T.eg_to in
-               List.for_all P.side_nodes ~f:(fun n ->
-                   String.equal n f || String.equal n e.T.eg_to
-                   ||
-                   let b0, b1, b2, b3 = rect_of n in
-                   not
-                     (List.exists (List.range 1 100) ~f:(fun t ->
-                          let px = src.P.px + ((dst.P.px - src.P.px) * t / 100)
-                          and py = src.P.py + ((dst.P.py - src.P.py) * t / 100) in
-                          b0 < px && px < b2 && b1 < py && py < b3)))))
+        let under_a_box m = List.find node_ids ~f:(fun n -> hit m (rect_of n)) in
+        let seg (e, f) = e ^ " from " ^ f in
+        let fails =
+          List.filter_map marks ~f:(fun (s, m) ->
+              Option.map (under_a_box m) ~f:(fun n -> seg s ^ ": a mark under " ^ n))
+          @ List.concat_map marks ~f:(fun (s, m) ->
+                List.filter_map marks ~f:(fun (s', m') ->
+                    Option.some_if
+                      ((not (Poly.equal s s')) && Poly.(s < s') && hit m m')
+                      (seg s ^ " and " ^ seg s' ^ ": marks overlap")))
+          @ List.filter_map marks ~f:(fun (s, m) ->
+                Option.some_if (List.exists band_labels ~f:(hit m)) (seg s ^ ": a mark on a band's title"))
+          @ List.filter_map band_labels ~f:(fun b ->
+                Option.map (under_a_box b) ~f:(fun n -> "a band's title under " ^ n))
+          @ List.concat_map segments ~f:(fun (e, f) ->
+                let src = P.pos_of f and dst = P.pos_of e.T.eg_to in
+                List.filter_map P.side_nodes ~f:(fun n ->
+                    let b0, b1, b2, b3 = rect_of n in
+                    Option.some_if
+                      ((not (String.equal n f || String.equal n e.T.eg_to))
+                      && List.exists (List.range 1 100) ~f:(fun t ->
+                             let px = src.P.px + ((dst.P.px - src.P.px) * t / 100)
+                             and py = src.P.py + ((dst.P.py - src.P.py) * t / 100) in
+                             b0 < px && px < b2 && b1 < py && py < b3))
+                      (seg (e.T.eg_id, f) ^ ": runs under " ^ n)))
+          |> List.dedup_and_sort ~compare:String.compare
+        in
+        List.iter fails ~f:(Fmt.pr "    %s@.");
+        List.is_empty fails)
   }
 
 (* §1's filled count per mechanism is pass 2's answer, asked

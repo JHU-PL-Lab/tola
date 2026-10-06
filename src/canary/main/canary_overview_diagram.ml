@@ -25,23 +25,27 @@ let side_box_w = 150
 let box_w_of (id : string) : int =
   if List.mem side_nodes id ~equal:String.equal then side_box_w else box_w
 
-(** Each node's centre. A package's column holds what it ships, top to
-    bottom; the capability file sits a level below the native package, off
-    its lower right; the bridge sits on the package row, nearer the binding
-    package; each consumer under the side whose resolution it uses. *)
+(** Each node's centre. Each side's package manager heads a column of
+    what it manages and what its package ships; the two columns mirror
+    each other. One step below each package sits its side's cooperation
+    node, the capability file and the bridge, the two on one row and each
+    a little inward, off the column's edges. The compiled stub, the
+    binding mechanism's own, sits between the sides on the row of the
+    library and module it links. Each consumer sits under the side whose
+    resolution it uses. *)
 let layout : (string * pos) list =
   [ ("pm_sys", { px = 230; py = 62 });
     ("pm_lang", { px = 990; py = 62 });
-    ("pkg_sys", { px = 230; py = 200 });
-    ("cap", { px = 470; py = 275 });
-    ("bridge", { px = 670; py = 200 });
-    ("pkg_lang", { px = 990; py = 200 });
-    ("src_sys", { px = 91; py = 392 });
+    ("pkg_sys", { px = 230; py = 180 });
+    ("cap", { px = 330; py = 264 });
+    ("bridge", { px = 890; py = 264 });
+    ("pkg_lang", { px = 990; py = 180 });
+    ("src_sys", { px = 91; py = 398 });
     ("hdr_sys", { px = 230; py = 482 });
     ("lib_sys", { px = 230; py = 566 });
     ("staged_sys", { px = 230; py = 640 });
-    ("src_lang", { px = 1129; py = 392 });
-    ("stub_lang", { px = 990; py = 482 });
+    ("src_lang", { px = 1129; py = 482 });
+    ("stub_lang", { px = 610; py = 566 });
     ("mod_lang", { px = 990; py = 566 });
     ("surf_lang", { px = 990; py = 640 });
     ("consumer_artifact", { px = 410; py = 762 });
@@ -52,18 +56,22 @@ let pos_of id =
   | Some p -> p
   | None -> { px = 610; py = 440 }
 
-(** Each component's container on this layout, a polygon around the nodes
-    {!Canary_topology.node_components} puts in it. The system PM's turns a
-    corner to take in the capability file, off the native package's lower
-    right; the program's nodes stay in their band. *)
+(** Each component's container on this layout. A side's box holds the
+    nodes {!Canary_topology.node_components} gives it; a join's box
+    overlaps the sides it joins, over the nodes {!Canary_topology.join_spans}
+    gives it. The program's nodes stay in their band. *)
 let containers : (T.component * (int * int) list) list =
   let rect x0 y0 x1 y1 = [ (x0, y0); (x1, y0); (x1, y1); (x0, y1) ] in
-  [ (T.Pm_sys, [ (114, 28); (346, 28); (346, 242); (586, 242); (586, 310); (114, 310) ]);
-    (T.Pm_coop, rect 554 166 786 232);
-    (T.Pm_lang, rect 874 28 1106 236);
-    (T.Art_sys, rect 10 356 346 676);
-    (T.Binding, rect 874 356 1212 518);
-    (T.Art_lang, rect 874 530 1106 676) ]
+  [ (T.Pm_sys, rect 114 28 446 309);
+    (T.Pm_lang, rect 774 28 1106 309);
+    (T.Art_sys, rect 6 363 346 675);
+    (T.Art_lang, rect 874 447 1214 675);
+    (T.Pm_coop, rect 216 231 1004 297);
+    (T.Binding, rect 116 531 1104 601) ]
+
+(** A join's name sits at its box's bottom centre, clear of the sides'
+    names at their top left. *)
+let is_join (c : T.component) = Poly.equal c T.Pm_coop || Poly.equal c T.Binding
 
 (** Edges whose label starts at the midpoint instead of centring on it:
     they leave the native column at a shallow angle, and a centred label
@@ -74,12 +82,22 @@ let label_starts_at_midpoint = [ "realize_cap"; "discover" ]
     tail to head — 50 unless listed, placed so no mark falls under a box
     or on another edge's marks ([overview.edge_marks_clear_the_boxes]). *)
 let label_at =
-  [ ("build_lib", 80); ("run", 60); ("run_packaged", 75); ("install_lang", 20);
-    ("install_surf", 30) ]
+  [ ("build_lib", 80); ("run", 60); ("run_packaged", 75); ("install_lang", 35);
+    ("install_surf", 48) ]
 
-let anchor_of (e : T.edge) ~(src : pos) ~(dst : pos) : int * int =
+(** The same for one segment of an edge with several sources, where its
+    segments share a line: the library's segment of [link_mod] runs under
+    the stub, so its marks sit before it. *)
+let segment_label_at = [ (("link_mod", "lib_sys"), 25) ]
+
+let anchor_of ?from (e : T.edge) ~(src : pos) ~(dst : pos) : int * int =
   let pct =
-    Option.value (List.Assoc.find label_at e.T.eg_id ~equal:String.equal) ~default:50
+    match
+      Option.bind from ~f:(fun f ->
+          List.Assoc.find segment_label_at (e.T.eg_id, f) ~equal:Poly.equal)
+    with
+    | Some p -> p
+    | None -> Option.value (List.Assoc.find label_at e.T.eg_id ~equal:String.equal) ~default:50
   in
   (src.px + ((dst.px - src.px) * pct / 100), src.py + ((dst.py - src.py) * pct / 100))
 
@@ -123,14 +141,21 @@ let container_outline ((_, pts) : T.component * (int * int) list) : string =
   Printf.sprintf {|<polygon class="cbox" points="%s"/>|}
     (String.concat ~sep:" " (List.map pts ~f:(fun (x, y) -> Printf.sprintf "%d,%d" x y)))
 
-(** A container's name on a tab across its top edge, drawn over everything. *)
+(** A container's name on a tab across its edge, drawn over everything: a
+    side's at its top left, a join's at its bottom centre. *)
 let container_tab ((c, pts) : T.component * (int * int) list) : string =
   let x0, y0 = List.hd_exn pts in
   let base, sub = T.component_name_parts c in
   let w = (String.length base * 9) + (String.length sub * 7) + 14 in
-  Printf.sprintf {|<rect class="ctab" x="%d" y="%d" width="%d" height="20" rx="4"/>%s|}
-    (x0 + 10) (y0 - 10) w
-    (component_name ~x:(x0 + 17) ~y:(y0 + 5) c)
+  let tx, ty =
+    if is_join c then
+      let x1 = List.fold pts ~init:x0 ~f:(fun m (x, _) -> Int.max m x)
+      and y1 = List.fold pts ~init:y0 ~f:(fun m (_, y) -> Int.max m y) in
+      (((x0 + x1) / 2) - (w / 2), y1 - 10)
+    else (x0 + 10, y0 - 10)
+  in
+  Printf.sprintf {|<rect class="ctab" x="%d" y="%d" width="%d" height="20" rx="4"/>%s|} tx ty w
+    (component_name ~x:(tx + 7) ~y:(ty + 15) c)
 
 (** A node. Nodes are drawn after the edges, so the boxes mask the lines
     that run under them and every edge can be a straight segment. A
@@ -236,7 +261,7 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e :
              (esc (e.T.eg_says))
              (src.px - 46) (src.py - 10)
          else
-           let mx, my = anchor_of e ~src ~dst in
+           let mx, my = anchor_of ~from:from_id e ~src ~dst in
            let badge =
              if not placed then ""
              else
