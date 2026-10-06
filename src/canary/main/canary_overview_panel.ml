@@ -276,7 +276,6 @@ is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
     (row "language-side PM" (pm_buttons J.Language "pl"))
     (row "binding mechanism" m_buttons)
     (row "cooperation" k_buttons)
-    (row "package in canary" c_buttons)
     (* ways of looking at the chain, not choices of one: each component's box *)
     (row "components"
        (String.concat
@@ -295,6 +294,7 @@ is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
                Printf.sprintf {|<button data-box="%s" title="%s">%s</button>|} (esc k)
                  (esc ("the whole " ^ k ^ " side, from its package manager down to its artifacts"))
                  (esc k)))))
+    (row "package in canary" c_buttons)
     (E.figure "fig-chain" (Canary_overview_draw.svg (opening j)))
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with
