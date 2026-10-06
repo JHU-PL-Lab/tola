@@ -47,6 +47,8 @@ letter-spacing:.14em;text-anchor:middle}
 .cnode rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
 .cnode.cmanage rect{fill:var(--pm)}.cnode.cart rect{fill:var(--art)}
 .cnode.cjoin rect{stroke-dasharray:6 4}
+.cnode.cpkg rect{fill:var(--pkg)}
+.cdot{stroke:var(--fg);stroke-width:1.4;fill:none;stroke-dasharray:2 4}
 .cgloss{font:11.5px ui-sans-serif,system-ui,sans-serif;fill:var(--mut)}
 .clink{stroke:var(--fg);stroke-width:1.4;fill:none}
 .clabel{font:11px ui-monospace,monospace;fill:var(--mut)}

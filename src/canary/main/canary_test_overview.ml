@@ -481,6 +481,65 @@ let arrows_carry_ends_test : Canary_project_test.pure_test =
         && List.is_empty missing)
   }
 
+(* Figure 3 is the components' design: down each side a manager manages
+   its packages, which provide its artifacts; the cooperation sits with the
+   packages and joins them, the managers taking part through them; the
+   binding mechanism sits with the artifacts and joins them; the two joins
+   relate; and no link runs from one side straight to the other. The
+   drawing draws every box and link of it. *)
+let components_figure_test : Canary_project_test.pure_test =
+  { name = "overview.components_figure_reads_down_and_across";
+    holds = "In Figure 3 each side reads manager, manages, packages, provides, artifacts, and the sides meet only through the joins, which relate to each other.";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module C = Canary_overview_components in
+        let has a b k = List.mem C.links (a, b, k) ~equal:Poly.equal in
+        let at c = C.place c in
+        (* a column: manager, packages, artifacts, top to bottom *)
+        let side s ~m ~a =
+          let col, _ = at (C.Component m) in
+          Poly.equal (at (C.Component m)) (col, 0)
+          && Poly.equal (at (C.Packages s)) (col, 1)
+          && Poly.equal (at (C.Component a)) (col, 2)
+          && has (C.Component m) (C.Packages s) C.Manages
+          && has (C.Packages s) (C.Component a) C.Provides
+        in
+        let sides =
+          side T.S_sys ~m:T.Pm_sys ~a:T.Art_sys && side T.S_lang ~m:T.Pm_lang ~a:T.Art_lang
+          && fst (at (C.Component T.Pm_sys)) <> fst (at (C.Component T.Pm_lang))
+        in
+        let coop = C.Component T.Pm_coop and bind = C.Component T.Binding in
+        let joins =
+          snd (at coop) = snd (at (C.Packages T.S_sys))
+          && snd (at bind) = snd (at (C.Component T.Art_sys))
+          && has (C.Packages T.S_sys) coop C.Joins && has coop (C.Packages T.S_lang) C.Joins
+          && has (C.Component T.Pm_sys) coop C.Takes_part
+          && has (C.Component T.Pm_lang) coop C.Takes_part
+          && has (C.Component T.Art_sys) bind C.Joins && has bind (C.Component T.Art_lang) C.Joins
+          && has coop bind C.Relates
+        in
+        (* no link from one side's column to the other's *)
+        let apart =
+          let col c = fst (at c) and sys = fst (at (C.Component T.Pm_sys))
+          and lang = fst (at (C.Component T.Pm_lang)) in
+          List.for_all C.links ~f:(fun (a, b, _) ->
+              not (Set.equal (Set.of_list (module Int) [ col a; col b ]) (Set.of_list (module Int) [ sys; lang ])))
+        in
+        let svg = C.svg () in
+        let count pattern = List.length (String.substr_index_all svg ~may_overlap:false ~pattern) in
+        let kinds k = List.count C.links ~f:(fun (_, _, k') -> Poly.equal k k') in
+        let drawn =
+          count {|<g class="cnode|} = List.length C.cells
+          && count ">manages<" = kinds C.Manages
+          && count ">provides<" = kinds C.Provides
+          && count ">relates<" = kinds C.Relates
+          && count {|<line class="cdot"|} = kinds C.Takes_part + kinds C.Relates
+          && count {|<line class="clink"|} = kinds C.Manages + kinds C.Provides + kinds C.Joins
+        in
+        sides && joins && apart && drawn)
+  }
+
 (* Every action edge is in exactly one piece of one frame; no node
    repeats within a frame (it repeats across frames, where it is consumed
    again); and every agreement with an evaluator has a check column at
@@ -3560,7 +3619,7 @@ let staged_copy_test : Canary_project_test.pure_test =
 let tests : Canary_project_test.pure_test list =
   [ topology_joins_test; topology_graph_test; overview_sections_test; every_step_placed_test;
     claim_parts_test; sides_meet_test; sits_by_parts_test; components_contain_test;
-    arrows_carry_ends_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
+    arrows_carry_ends_test; components_figure_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
     badge_words_test; staged_copy_test; overview_overlay_test; recorded_names_test;
     overlay_words_test; bridge_record_test; placeholder_badges_test; coverage_tables_test;
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;

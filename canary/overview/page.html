@@ -129,15 +129,20 @@ diagram.</div>
 {{join_panel}}
 <p id="edet" class="edet">hover an edge</p>
 
-<p>Figure 3 draws the chain's components alone. On each side a package
-manager's management part sits over the artifacts it delivers:
-M<sub>sys</sub> over A<sub>sys</sub>, M<sub>lang</sub> over
-A<sub>lang</sub>. Between the sides are the two joins, the cooperation
-between the package managers (Co<sub>op</sub>) and the binding mechanism
-(B<sub>mech</sub>), and the sides meet only through them. The panel's
-<em>components</em> buttons draw the same boxes on Figure 2, each on its
-own, with each node inside the side that owns it, the bridge in
-M<sub>lang</sub>'s box as the opam package it is. The joins' boxes
+<p>Figure 3 draws the chain's components alone. Down each side, the
+package manager's management part manages the packages, and the packages
+provide the artifacts: M<sub>sys</sub>, P<sub>sys</sub> and
+A<sub>sys</sub>, and likewise on the language side. Between the sides
+are the two joins, and the sides meet only through them. The cooperation
+(Co<sub>op</sub>) joins the packages, and the managers take part in it
+only through them; the binding mechanism (B<sub>mech</sub>) joins the
+artifacts. The two joins relate, and neither requires the other: a
+binding mechanism is the only reason two package managers cooperate, and
+its kind decides what they must arrange, which the cooperation arranges
+only by proxy. The panel's <em>components</em> buttons draw the
+components' boxes on Figure 2, each on its own, with each node inside
+the side that owns it: a manager's box holds the packages it manages,
+the bridge in M<sub>lang</sub>'s box as the opam package it is. The joins' boxes
 overlap the sides they join, over the nodes they span: Co<sub>op</sub>
 the capability file and the bridge, B<sub>mech</sub> every artifact of
 both sides, around both A boxes. The two sources are source repositories,

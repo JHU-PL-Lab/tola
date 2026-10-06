@@ -137,12 +137,15 @@ let squeeze ~(size : float) ~(w : int) (s : string) : string =
     Printf.sprintf {| textLength="%d" lengthAdjust="spacingAndGlyphs"|} w
   else ""
 
-(** A component's name, its subscript set lower and smaller. *)
-let component_name ~x ~y (c : T.component) : string =
-  let base, sub = T.component_name_parts c in
+(** A name with its subscript set lower and smaller, as M{_sys}. *)
+let typeset_name ~x ~y ((base, sub) : string * string) : string =
   Printf.sprintf {|<text class="cname" x="%d" y="%d">%s%s</text>|} x y (esc base)
     (if String.is_empty sub then ""
      else Printf.sprintf {|<tspan class="csub" dy="4">%s</tspan>|} (esc sub))
+
+(** A component's name, typeset. *)
+let component_name ~x ~y (c : T.component) : string =
+  typeset_name ~x ~y (T.component_name_parts c)
 
 (** The key a box answers to: its groups carry it, and so does the panel's
     button that shows them. A component's box has two groups, the outline

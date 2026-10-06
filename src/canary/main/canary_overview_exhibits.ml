@@ -23,8 +23,8 @@ let exhibits : exhibit list =
        actions between them";
     t "tab-lines" "Where the lines under the node labels come from";
     f "fig-components"
-      "The components: each side's package manager over its artifacts, and the joins between \
-       the sides";
+      "The components: down each side a package manager, its packages and its artifacts, and \
+       the joins between the sides";
     t "tab-nodes" "What each node is";
     t "tab-results" "The results: one row per chain and machine, the frames as columns";
     t "tab-layers"
