@@ -52,6 +52,19 @@ let pos_of id =
   | Some p -> p
   | None -> { px = 610; py = 440 }
 
+(** Each component's container on this layout, a polygon around the nodes
+    {!Canary_topology.node_components} puts in it. The system PM's turns a
+    corner to take in the capability file, off the native package's lower
+    right; the program's nodes stay in their band. *)
+let containers : (T.component * (int * int) list) list =
+  let rect x0 y0 x1 y1 = [ (x0, y0); (x1, y0); (x1, y1); (x0, y1) ] in
+  [ (T.Pm_sys, [ (114, 28); (346, 28); (346, 242); (586, 242); (586, 310); (114, 310) ]);
+    (T.Pm_coop, rect 554 166 786 232);
+    (T.Pm_lang, rect 874 28 1106 236);
+    (T.Art_sys, rect 10 356 346 676);
+    (T.Binding, rect 874 356 1212 518);
+    (T.Art_lang, rect 874 530 1106 676) ]
+
 (** Edges whose label starts at the midpoint instead of centring on it:
     they leave the native column at a shallow angle, and a centred label
     would run under a box. *)
@@ -97,6 +110,27 @@ let squeeze ~(size : float) ~(w : int) (s : string) : string =
   if Float.(of_int chars * 0.6 * size > of_int w) then
     Printf.sprintf {| textLength="%d" lengthAdjust="spacingAndGlyphs"|} w
   else ""
+
+(** A component's name, its subscript set lower and smaller. *)
+let component_name ~x ~y (c : T.component) : string =
+  let base, sub = T.component_name_parts c in
+  Printf.sprintf {|<text class="cname" x="%d" y="%d">%s%s</text>|} x y (esc base)
+    (if String.is_empty sub then ""
+     else Printf.sprintf {|<tspan class="csub" dy="4">%s</tspan>|} (esc sub))
+
+(** A container's outline, drawn under the edges. *)
+let container_outline ((_, pts) : T.component * (int * int) list) : string =
+  Printf.sprintf {|<polygon class="cbox" points="%s"/>|}
+    (String.concat ~sep:" " (List.map pts ~f:(fun (x, y) -> Printf.sprintf "%d,%d" x y)))
+
+(** A container's name on a tab across its top edge, drawn over everything. *)
+let container_tab ((c, pts) : T.component * (int * int) list) : string =
+  let x0, y0 = List.hd_exn pts in
+  let base, sub = T.component_name_parts c in
+  let w = (String.length base * 9) + (String.length sub * 7) + 14 in
+  Printf.sprintf {|<rect class="ctab" x="%d" y="%d" width="%d" height="20" rx="4"/>%s|}
+    (x0 + 10) (y0 - 10) w
+    (component_name ~x:(x0 + 17) ~y:(y0 + 5) c)
 
 (** A node. Nodes are drawn after the edges, so the boxes mask the lines
     that run under them and every edge can be a straight segment. A
@@ -251,7 +285,7 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e :
     [lines], [places] and [markers] are what a chosen chain writes under a
     node and a recorded run marks on an edge. A caption names each side
     over its column. *)
-let diagram ?(ph_slots = false) ?(case_slots = false)
+let diagram ?(by_component = false) ?(ph_slots = false) ?(case_slots = false)
     ?(classes = fun (_ : string) -> ([] : string list))
     ?(counts =
       fun id ->
@@ -265,9 +299,16 @@ let diagram ?(ph_slots = false) ?(case_slots = false)
   let bands =
     String.concat (List.map bands_def ~f:(fun (y, h, _, cls) -> band_rect ~y ~h ~cls))
   in
+  (* drawn by component, the containers name the regions and the bands
+     only shade the layers *)
   let band_labels =
-    String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
+    if by_component then ""
+    else String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
   in
+  let outlines =
+    if by_component then String.concat (List.map containers ~f:container_outline) else ""
+  in
+  let tabs = if by_component then String.concat (List.map containers ~f:container_tab) else "" in
   let captions =
     Printf.sprintf
       {|<text class="sidecap" x="%d" y="20">SYSTEM SIDE</text><text class="sidecap" x="%d" y="20">LANGUAGE SIDE</text>|}
@@ -290,5 +331,5 @@ let diagram ?(ph_slots = false) ?(case_slots = false)
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
  markerHeight="7" orient="auto-start-reverse">
 <path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
-%s%s%s%s%s</svg>|}
-    canvas_w canvas_h bands captions es band_labels ns
+%s%s%s%s%s%s%s</svg>|}
+    canvas_w canvas_h bands captions outlines es band_labels ns tabs

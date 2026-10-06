@@ -38,8 +38,9 @@ let sections : section list =
     s "§0.4" "The tests" "tests" [ "tests_table"; "tests_lists" ]
       [ "Canary_overview_tests"; "Canary_tests" ];
     s "§1" "A chain, layer by layer" "layers"
-      [ "missing_steps"; "chain_key"; "join_panel" ]
-      [ "Canary_overview_diagram"; "Canary_overview_looks"; "Canary_overview_panel";
+      [ "missing_steps"; "chain_key"; "join_panel"; "components_figure"; "chain_components_figure" ]
+      [ "Canary_overview_diagram"; "Canary_overview_components"; "Canary_overview_looks";
+        "Canary_overview_panel";
         "Canary_overview_cases"; "Canary_overview_join"; "Canary_overview_draw";
         "Canary_overview_runs" ]
       ~about:"what canary models between two package managers, with a recorded run drawn on it";
@@ -58,7 +59,8 @@ let sections : section list =
       [ "sites"; "sites_checked"; "sites_named"; "sites_multi"; "claim_sites_table";
         "bare_count"; "bare_edges" ]
       [ "Canary_overview_tables"; "Canary_topology" ];
-    s "§3" "The model: package managers, mechanisms, cooperations" "tables" []
+    s "§3" "The model: package managers, mechanisms, cooperations" "tables"
+      []
       [ "Canary_overview_tables" ]
       ~about:"the pieces a chain is made of, and the chains canary runs";
     s "§3.1" "Each package manager on its own" "pm-solo" [ "pm_solo_table" ]

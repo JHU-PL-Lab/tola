@@ -762,14 +762,22 @@ type component = Pm_sys | Pm_lang | Pm_coop | Art_sys | Art_lang | Binding | Pro
 
 let all_components = [ Pm_sys; Pm_lang; Pm_coop; Art_sys; Art_lang; Binding; Program ]
 
+(** The components' names as the paper writes them: a base, and a
+    subscript after the underscore ([M_sys] is M with sys below it). *)
 let string_of_component = function
-  | Pm_sys -> "PM_sys"
-  | Pm_lang -> "PM_lang"
-  | Pm_coop -> "PM_coop"
-  | Art_sys -> "Art_sys"
-  | Art_lang -> "Art_lang"
-  | Binding -> "Binding"
+  | Pm_sys -> "M_sys"
+  | Pm_lang -> "M_lang"
+  | Pm_coop -> "Co_op"
+  | Art_sys -> "A_sys"
+  | Art_lang -> "A_lang"
+  | Binding -> "B_mech"
   | Program -> "Program"
+
+(** A component's name split for typesetting: the base and its subscript. *)
+let component_name_parts (c : component) : string * string =
+  match String.lsplit2 (string_of_component c) ~on:'_' with
+  | Some (base, sub) -> (base, sub)
+  | None -> (string_of_component c, "")
 
 (** The side a component lies on; the joins and the program lie on
     neither. *)
@@ -935,6 +943,22 @@ let component_admits (c : component) (n : node) : bool =
   | Art_sys -> Poly.equal n.nd_side S_sys && artifact
   | Art_lang | Binding -> Poly.equal n.nd_side S_lang && artifact
   | Program -> Poly.equal n.nd_layer L_program
+
+(** The component each node is drawn in. A partition: the language module
+    is admitted by both the binding (what it links) and the language's
+    artifacts (its API), and is drawn with the language's artifacts; the
+    capability file ships in the native package, so it is the system PM's. *)
+let node_components : (string * component) list =
+  [ ("pm_sys", Pm_sys); ("pkg_sys", Pm_sys); ("cap", Pm_sys);
+    ("bridge", Pm_coop);
+    ("pm_lang", Pm_lang); ("pkg_lang", Pm_lang);
+    ("src_sys", Art_sys); ("hdr_sys", Art_sys); ("lib_sys", Art_sys); ("staged_sys", Art_sys);
+    ("src_lang", Binding); ("stub_lang", Binding);
+    ("mod_lang", Art_lang); ("surf_lang", Art_lang);
+    ("consumer_artifact", Program); ("consumer_package", Program) ]
+
+let component_of_node (id : string) : component option =
+  List.Assoc.find node_components id ~equal:String.equal
 
 (** An EDGE points from components to a component, and its meaning is
     deliberately left OPEN (user, 2026-09-23, terminology step 0: "the

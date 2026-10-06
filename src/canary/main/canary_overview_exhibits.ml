@@ -22,6 +22,10 @@ let exhibits : exhibit list =
       "A chain, layer by layer: package managers, packages, artifacts and programs, with the \
        actions between them";
     t "tab-lines" "Where the lines under the node labels come from";
+    f "fig-components"
+      "The components: each side's package manager over its artifacts, and the joins between \
+       the sides";
+    f "fig-chain-components" "Figure 2's nodes, each inside its component";
     t "tab-nodes" "What each node is";
     t "tab-results" "The results: one row per chain and machine, the frames as columns";
     t "tab-layers"

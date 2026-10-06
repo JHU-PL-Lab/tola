@@ -37,6 +37,18 @@ border:1px solid var(--line);border-radius:10px}
 paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
 .sidecap{font:600 11px ui-sans-serif,system-ui,sans-serif;fill:var(--mut);
 letter-spacing:.14em;text-anchor:middle}
+/* the components: containers around Figure 2's nodes, and the components
+   drawn alone */
+.cbox{fill:none;stroke:var(--acc);stroke-width:1.6;stroke-dasharray:7 4}
+.ctab{fill:var(--card);stroke:var(--acc);stroke-width:1.2}
+.cname{font:700 14px ui-sans-serif,system-ui,sans-serif;fill:var(--fg)}
+.csub{font-size:10px}
+.cnode rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
+.cnode.cmanage rect{fill:var(--pm)}.cnode.cart rect{fill:var(--art)}
+.cnode.cjoin rect{stroke-dasharray:6 4}
+.cgloss{font:11.5px ui-sans-serif,system-ui,sans-serif;fill:var(--mut)}
+.clink{stroke:var(--fg);stroke-width:1.4;fill:none}
+.clabel{font:11px ui-monospace,monospace;fill:var(--mut)}
 .node rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
 .node .nlabel{font:600 13px ui-sans-serif,system-ui,sans-serif;
 fill:var(--fg);text-anchor:middle}

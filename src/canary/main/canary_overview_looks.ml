@@ -138,9 +138,11 @@ let layout_rules : layout_rule list =
       (Tested_by "overview.edge_marks_clear_the_boxes");
     rule
       "One diagram: every chain is drawn on the same layout and switched from the panel, \
-       never drawn a second time beside it."
+       never drawn a second time beside it. Relaxed while the components are discussed: \
+       Figure 4 draws the same graph grouped by component, until Figure 2 can show or omit \
+       the boxes itself."
       "Laid end to end, chains are compared by memory. (user, 2026-09-24, when §2's \
-       drawings were merged into §1)"
+       drawings were merged into §1; relaxed 2026-10-06)"
       (Tested_by "overview.chain_choices_draw_one_chain") ]
 
 (* ── the visual vocabulary ── *)

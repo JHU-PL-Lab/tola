@@ -129,6 +129,18 @@ diagram.</div>
 {{join_panel}}
 <p id="edet" class="edet">hover an edge</p>
 
+<p>Figure 3 draws the chain's components alone. On each side a package
+manager's management part sits over the artifacts it delivers:
+M<sub>sys</sub> over A<sub>sys</sub>, M<sub>lang</sub> over
+A<sub>lang</sub>. Between the sides are the two joins, the cooperation
+between the package managers (Co<sub>op</sub>) and the binding mechanism
+(B<sub>mech</sub>), and the sides meet only through them. Figure 4 draws
+Figure 2's nodes inside the component each belongs to. Both are siblings
+of Figure 2 while the components are discussed; the end is one Figure 2
+that shows or omits the boxes.</p>
+{{components_figure}}
+{{chain_components_figure}}
+
 <div class="note warn"><strong>One edge runs both ways.</strong>
 <code>binding package</code> ↔ <code>language module</code> is an
 <em>install</em> when the binding is fetched and a <em>pack</em> when it
@@ -180,11 +192,12 @@ its row.</p>
 <h2 id="overview">2. The agreements</h2>
 <p>An agreement is a claim about parts of the chain, and this table names
 them before any action does. It has a row for each agreement the chain
-places, registered or candidate, and a column for each layer: the package
-manager on each side (PM_sys, PM_lang) and the artifacts it delivers
-(Art_sys, Art_lang), the two joins between the sides (PM_coop, where the
-package managers cooperate through a bridge, and Binding), and the
-program that uses them. A cell names the part an agreement reads in that
+places, registered or candidate, and a column for each component (§3,
+Figure 3): the package manager on each side (M<sub>sys</sub>,
+M<sub>lang</sub>) and the artifacts it delivers (A<sub>sys</sub>,
+A<sub>lang</sub>), the two joins between the sides (Co<sub>op</sub>, where
+the package managers cooperate through a bridge, and B<sub>mech</sub>, the
+binding mechanism), and the program that uses them. A cell names the part an agreement reads in that
 layer and what it reads there. No agreement relates the two sides
 directly: one that spans them reads the bridge, the binding or the
 program too. The last columns say, for each object format, whether the
@@ -244,6 +257,10 @@ and the projects' declarations — so a table lists only what canary covers.
 The layered-model draft's tables were the reference for the columns; they
 also cover ecosystems canary does not reach yet (RPM, Cargo, Cabal,
 RubyGems, Conda, Nix).</p>
+<p>The tables follow Figure 3's components: §3.1's rows are the package
+managers' management parts (M<sub>sys</sub>, M<sub>lang</sub>), §3.2's
+the binding mechanisms (B<sub>mech</sub>), §3.3's the cooperations
+(Co<sub>op</sub>).</p>
 <h3 id="pm-solo">3.1 Each package manager on its own</h3>
 <div class="note"><strong>A bridge is package content.</strong> It is a
 package, or part of one, that exists so two package managers can

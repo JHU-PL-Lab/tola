@@ -69,7 +69,9 @@ let layers_table () =
     ^ "<thead><tr><th>code</th><th>agreement</th>"
     ^ String.concat
         (List.map T.all_components ~f:(fun c ->
-             Printf.sprintf "<th>%s</th>" (esc (T.string_of_component c))))
+             let base, sub = T.component_name_parts c in
+             Printf.sprintf "<th>%s%s</th>" (esc base)
+               (if String.is_empty sub then "" else "<sub>" ^ esc sub ^ "</sub>")))
     ^ String.concat
         (List.map Canary_agreement.all_formats ~f:(fun f ->
              Printf.sprintf "<th>%s</th>" (esc (format_name f))))

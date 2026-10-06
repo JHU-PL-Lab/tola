@@ -373,6 +373,66 @@ let sits_by_parts_test : Canary_project_test.pure_test =
         (not (List.is_empty T.claim_sites)) && List.is_empty bad)
   }
 
+(* The figures that group the chain by component draw what the topology
+   says: each node is in one component that admits it, and on Figure 2's
+   layout each node's box lies inside its own component's container and
+   inside no other's. *)
+let components_contain_test : Canary_project_test.pure_test =
+  { name = "overview.components_contain_their_nodes";
+    holds = "Every node belongs to one component that admits it, and in the chain drawn by component each node lies inside its own component's container and no other.";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module D = Canary_overview_diagram in
+        (* ray casting: is the point strictly inside the polygon? *)
+        let inside pts (x, y) =
+          let a = Array.of_list pts in
+          let n = Array.length a in
+          let rec go i acc =
+            if i = n then acc
+            else
+              let xi, yi = a.(i) and xj, yj = a.((i + n - 1) % n) in
+              let crosses =
+                (not (Bool.equal (yi > y) (yj > y)))
+                &&
+                let dx = Float.of_int (xj - xi)
+                and dy = Float.of_int (yj - yi)
+                and ry = Float.of_int (y - yi) in
+                Float.(of_int x < (dx * ry / dy) + of_int xi)
+              in
+              go (i + 1) (if crosses then not acc else acc)
+          in
+          go 0 false
+        in
+        let corners id =
+          let p = D.pos_of id and w = D.box_w_of id in
+          let x0 = p.D.px - (w / 2) and y0 = p.D.py - (D.box_h / 2) in
+          [ (x0, y0); (x0 + w, y0); (x0, y0 + D.box_h); (x0 + w, y0 + D.box_h) ]
+        in
+        let bad =
+          List.filter_map T.nodes ~f:(fun n ->
+              match T.component_of_node n.T.nd_id with
+              | None -> Some (n.T.nd_id ^ ": no component")
+              | Some c when not (T.component_admits c n) ->
+                  Some (Printf.sprintf "%s: not admitted by %s" n.T.nd_id (T.string_of_component c))
+              | Some c ->
+                  let in_ok =
+                    match List.Assoc.find D.containers c ~equal:Poly.equal with
+                    | None -> Poly.equal c T.Program
+                    | Some pts -> List.for_all (corners n.T.nd_id) ~f:(inside pts)
+                  in
+                  let elsewhere =
+                    List.exists D.containers ~f:(fun (c', pts) ->
+                        (not (Poly.equal c c'))
+                        && List.exists (corners n.T.nd_id) ~f:(inside pts))
+                  in
+                  if in_ok && not elsewhere then None
+                  else Some (n.T.nd_id ^ ": outside its container, or inside another"))
+        in
+        List.iter bad ~f:(Fmt.pr "    %s@.");
+        (not (List.is_empty D.containers)) && List.is_empty bad)
+  }
+
 (* Every action edge is in exactly one piece of one frame; no node
    repeats within a frame (it repeats across frames, where it is consumed
    again); and every agreement with an evaluator has a check column at
@@ -2786,9 +2846,14 @@ let chain_choices_test : Canary_project_test.pure_test =
                  List.for_all (in_order g) ~f:(fun v -> Option.is_some (rel (g ^ "|" ^ v))))
         in
         (* one diagram, with no separate recorded-run or cases section, and
-           each hand-drawn case's prose in §1 with its cooperation *)
+           each hand-drawn case's prose in §1 with its cooperation; the
+           grouped sibling (Figure 4) redraws the graph while the components
+           are discussed (relaxed 2026-10-06) *)
         let merged =
-          List.length (String.substr_index_all page ~may_overlap:false ~pattern:{|class="diagram"|}) = 1
+          List.length (String.substr_index_all page ~may_overlap:false ~pattern:{|class="diagram"|})
+          = 1
+            + List.count Canary_overview_exhibits.exhibits ~f:(fun e ->
+                  String.equal e.Canary_overview_exhibits.ex_id "fig-chain-components")
           && (not (String.is_substring page ~substring:{|id="recwrap"|}))
           && (not (String.is_substring page ~substring:{|id="cases"|}))
           && List.for_all Canary_overview_cases.hand_cases ~f:(fun (c : Canary_overview_cases.case) ->
@@ -3419,7 +3484,7 @@ let staged_copy_test : Canary_project_test.pure_test =
 
 let tests : Canary_project_test.pure_test list =
   [ topology_joins_test; topology_graph_test; overview_sections_test; every_step_placed_test;
-    claim_parts_test; sides_meet_test; sits_by_parts_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
+    claim_parts_test; sides_meet_test; sits_by_parts_test; components_contain_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
     badge_words_test; staged_copy_test; overview_overlay_test; recorded_names_test;
     overlay_words_test; bridge_record_test; placeholder_badges_test; coverage_tables_test;
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;
