@@ -883,11 +883,11 @@ let nodes : node list =
       nd_gloss =
         "the binding's own repository — separate from the library's, and \
          often at a different ref" };
-    { nd_id = "stub_lang"; nd_label = "compiled stub"; nd_layer = L_artifact;
+    { nd_id = "stub_lang"; nd_label = "stub"; nd_layer = L_artifact;
       nd_side = S_lang;
       nd_gloss =
-        "the C shim the binding compiles: what records the symbols it \
-         requires of the library" };
+        "the binding's shim to the library, where its mechanism has one: \
+         what records the symbols it requires of the library" };
     { nd_id = "mod_lang"; nd_label = "language module"; nd_layer = L_artifact;
       nd_side = S_lang;
       nd_gloss = "the compiled language-side artifact the consumer links" };
@@ -946,20 +946,21 @@ let component_admits (c : component) (n : node) : bool =
 
 (** The component that owns each node: a partition. A side owns what it
     manages or delivers, the bridge included, an opam package like any
-    other; the binding mechanism owns only its compiled stub. *)
+    other, and the stub, the binding's shim on the language side. The
+    joins own nothing: they span the sides. *)
 let node_components : (string * component) list =
   [ ("pm_sys", Pm_sys); ("pkg_sys", Pm_sys); ("cap", Pm_sys);
     ("pm_lang", Pm_lang); ("pkg_lang", Pm_lang); ("bridge", Pm_lang);
     ("src_sys", Art_sys); ("hdr_sys", Art_sys); ("lib_sys", Art_sys); ("staged_sys", Art_sys);
-    ("src_lang", Art_lang); ("mod_lang", Art_lang); ("surf_lang", Art_lang);
-    ("stub_lang", Binding);
+    ("src_lang", Art_lang); ("stub_lang", Art_lang); ("mod_lang", Art_lang);
+    ("surf_lang", Art_lang);
     ("consumer_artifact", Program); ("consumer_package", Program) ]
 
-(** The nodes each join spans, across the sides it joins: the cooperation
-    runs between the capability file and the bridge, the binding mechanism
-    from the library through its stub to the module. *)
+(** The nodes each join spans, one from each side on one row: the
+    cooperation the capability file and the bridge, the binding mechanism
+    the library and the module. *)
 let join_spans : (component * string list) list =
-  [ (Pm_coop, [ "cap"; "bridge" ]); (Binding, [ "lib_sys"; "stub_lang"; "mod_lang" ]) ]
+  [ (Pm_coop, [ "cap"; "bridge" ]); (Binding, [ "lib_sys"; "mod_lang" ]) ]
 
 let component_of_node (id : string) : component option =
   List.Assoc.find node_components id ~equal:String.equal

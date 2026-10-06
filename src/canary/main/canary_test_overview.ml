@@ -2287,7 +2287,7 @@ let edge_marks_test : Canary_project_test.pure_test =
         let marks =
           List.concat_map segments ~f:(fun (e, f) ->
               let src = P.pos_of f and dst = P.pos_of e.T.eg_to in
-              let mx, my = P.anchor_of ~from:f e ~src ~dst in
+              let mx, my = P.anchor_of e ~src ~dst in
               let w = chars (P.annotation_label e.T.eg_annotation) * 66 / 10 in
               let label =
                 if List.mem P.label_starts_at_midpoint e.T.eg_id ~equal:String.equal then

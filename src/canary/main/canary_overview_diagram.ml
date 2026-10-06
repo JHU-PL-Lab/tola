@@ -29,10 +29,8 @@ let box_w_of (id : string) : int =
     what it manages and what its package ships; the two columns mirror
     each other. One step below each package sits its side's cooperation
     node, the capability file and the bridge, the two on one row and each
-    a little inward, off the column's edges. The compiled stub, the
-    binding mechanism's own, sits between the sides on the row of the
-    library and module it links. Each consumer sits under the side whose
-    resolution it uses. *)
+    a little inward, off the column's edges. Each consumer sits under the
+    side whose resolution it uses. *)
 let layout : (string * pos) list =
   [ ("pm_sys", { px = 230; py = 62 });
     ("pm_lang", { px = 990; py = 62 });
@@ -44,8 +42,8 @@ let layout : (string * pos) list =
     ("hdr_sys", { px = 230; py = 482 });
     ("lib_sys", { px = 230; py = 566 });
     ("staged_sys", { px = 230; py = 640 });
-    ("src_lang", { px = 1129; py = 482 });
-    ("stub_lang", { px = 610; py = 566 });
+    ("src_lang", { px = 1129; py = 398 });
+    ("stub_lang", { px = 990; py = 482 });
     ("mod_lang", { px = 990; py = 566 });
     ("surf_lang", { px = 990; py = 640 });
     ("consumer_artifact", { px = 410; py = 762 });
@@ -65,7 +63,7 @@ let containers : (T.component * (int * int) list) list =
   [ (T.Pm_sys, rect 114 28 446 309);
     (T.Pm_lang, rect 774 28 1106 309);
     (T.Art_sys, rect 6 363 346 675);
-    (T.Art_lang, rect 874 447 1214 675);
+    (T.Art_lang, rect 874 363 1214 675);
     (T.Pm_coop, rect 216 231 1004 297);
     (T.Binding, rect 116 531 1104 601) ]
 
@@ -85,19 +83,9 @@ let label_at =
   [ ("build_lib", 80); ("run", 60); ("run_packaged", 75); ("install_lang", 35);
     ("install_surf", 48) ]
 
-(** The same for one segment of an edge with several sources, where its
-    segments share a line: the library's segment of [link_mod] runs under
-    the stub, so its marks sit before it. *)
-let segment_label_at = [ (("link_mod", "lib_sys"), 25) ]
-
-let anchor_of ?from (e : T.edge) ~(src : pos) ~(dst : pos) : int * int =
+let anchor_of (e : T.edge) ~(src : pos) ~(dst : pos) : int * int =
   let pct =
-    match
-      Option.bind from ~f:(fun f ->
-          List.Assoc.find segment_label_at (e.T.eg_id, f) ~equal:Poly.equal)
-    with
-    | Some p -> p
-    | None -> Option.value (List.Assoc.find label_at e.T.eg_id ~equal:String.equal) ~default:50
+    Option.value (List.Assoc.find label_at e.T.eg_id ~equal:String.equal) ~default:50
   in
   (src.px + ((dst.px - src.px) * pct / 100), src.py + ((dst.py - src.py) * pct / 100))
 
@@ -261,7 +249,7 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e :
              (esc (e.T.eg_says))
              (src.px - 46) (src.py - 10)
          else
-           let mx, my = anchor_of ~from:from_id e ~src ~dst in
+           let mx, my = anchor_of e ~src ~dst in
            let badge =
              if not placed then ""
              else

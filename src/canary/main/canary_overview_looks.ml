@@ -57,14 +57,12 @@ let layout_rules : layout_rule list =
     rule
       "A package and what it ships form one vertical line: its package manager above it, \
        its content below it — native package, headers, library, with the staged copy under \
-       the library it copies; binding package, module, surface."
-      "user, 2026-09-27: \"vertical line for a package and package content\". The compiled \
-       stub left the binding package's line for the binding mechanism's place between the \
-       sides (user, 2026-10-06)."
+       the library it copies; binding package, stub, module, surface."
+      "user, 2026-09-27: \"vertical line for a package and package content\""
       (Places
          (fun v ->
            one_line v x [ "pm_sys"; "pkg_sys"; "hdr_sys"; "lib_sys"; "staged_sys" ]
-           && one_line v x [ "pm_lang"; "pkg_lang"; "mod_lang"; "surf_lang" ]));
+           && one_line v x [ "pm_lang"; "pkg_lang"; "stub_lang"; "mod_lang"; "surf_lang" ]));
     rule
       "One step below each package sits its side's cooperation node: the capability file \
        under the native package, the bridge under the binding package."
@@ -75,16 +73,16 @@ let layout_rules : layout_rule list =
       (Places (fun v -> y v "cap" > y v "pkg_sys" && y v "bridge" > y v "pkg_lang"));
     rule
       "Nodes of one kind on the two sides share a row: the two package managers, the two \
-       packages, the capability file and the bridge, the library and the module with the \
-       stub between them, the staged copy and the surface, the two consumers."
+       packages, the capability file and the bridge, the two sources, headers and stub, \
+       library and module, staged copy and surface, the two consumers."
       "user, 2026-09-24: \"if they are on the same abstraction layers, they can stay on \
        the same horizontal line\""
       (Places
          (fun v ->
            List.for_all
              [ [ "pm_sys"; "pm_lang" ]; [ "pkg_sys"; "pkg_lang" ]; [ "cap"; "bridge" ];
-               [ "lib_sys"; "stub_lang"; "mod_lang" ]; [ "staged_sys"; "surf_lang" ];
-               [ "consumer_artifact"; "consumer_package" ] ]
+               [ "src_sys"; "src_lang" ]; [ "hdr_sys"; "stub_lang" ]; [ "lib_sys"; "mod_lang" ];
+               [ "staged_sys"; "surf_lang" ]; [ "consumer_artifact"; "consumer_package" ] ]
              ~f:(one_line v y)));
     rule
       "Four pairs are one equal step apart: native package and capability file, binding \
@@ -98,11 +96,6 @@ let layout_rules : layout_rule list =
            && y v "bridge" - y v "pkg_lang" = d
            && y v "hdr_sys" - y v "src_sys" = d
            && y v "stub_lang" - y v "src_lang" = d));
-    rule
-      "The compiled stub, the binding mechanism's own node, sits between the two sides."
-      "The binding mechanism joins the two sides' artifacts; its box spans the library, the \
-       stub and the module. (user, 2026-10-06)"
-      (Places (fun v -> x v "lib_sys" < x v "stub_lang" && x v "stub_lang" < x v "mod_lang"));
     rule
       "A source is not package content, so it sits beside its package's line, clear of \
        it: the native source to the upper left of the headers, the binding source to the \
