@@ -280,6 +280,10 @@ let visual_hints : visual_hint list =
       [ ".join .edge.jdead"; ".join .edge.jdead .cbadge,.join .edge.jdead .cnum" ]
       Generic Chain_key ~sample:(sw "gr")
       ~says:"greyed — in these chains the relation exists and does not fire";
+    hint "edge.filtered" Edge [ "filtered" ] [ ".edge.filtered" ] Always
+      (No_key
+         "an arrow the arrows row leaves out is not drawn, with its label and badges; the row \
+          says which arrows show");
     hint "hover" Edge [] [ "svg .edge:hover line,svg .edge:hover path" ] Always
       (No_key
          "the edge under the pointer thickens and its description shows under the \

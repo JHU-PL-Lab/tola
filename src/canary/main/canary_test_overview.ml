@@ -410,10 +410,10 @@ let components_contain_test : Canary_project_test.pure_test =
           let x0 = p.D.px - (w / 2) and y0 = p.D.py - (D.box_h / 2) in
           [ (x0, y0); (x0 + w, y0); (x0, y0 + D.box_h); (x0 + w, y0 + D.box_h) ]
         in
-        (* inside exactly the boxes [expected] names, of [boxes] *)
-        let exactly cs boxes expected =
-          List.for_all boxes ~f:(fun (b, pts) ->
-              if List.mem expected b ~equal:Poly.equal then List.for_all cs ~f:(inside pts)
+        (* inside exactly the drawn boxes whose keys [expected] lists *)
+        let exactly cs drawn key expected =
+          List.for_all drawn ~f:(fun (b, pts) ->
+              if List.mem expected (key b) ~equal:String.equal then List.for_all cs ~f:(inside pts)
               else not (List.exists cs ~f:(inside pts)))
         in
         let placed =
@@ -427,14 +427,8 @@ let components_contain_test : Canary_project_test.pure_test =
               | Some c when not (T.component_admits c n) ->
                   Some (Printf.sprintf "%s: not admitted by %s" id (T.string_of_component c))
               | _ ->
-                  let joins =
-                    List.filter_map T.join_spans ~f:(fun (j, ns) ->
-                        Option.some_if (List.mem ns id ~equal:String.equal) j)
-                  in
-                  let side = if Poly.equal n.T.nd_layer T.L_program then [] else [ n.T.nd_side ] in
-                  let cs = corners id in
-                  if exactly cs D.containers (Option.to_list owner @ joins)
-                     && exactly cs D.side_boxes side
+                  let boxes = D.boxes_of_node id and cs = corners id in
+                  if exactly cs D.containers D.box_key boxes && exactly cs D.side_boxes D.side_key boxes
                   then None
                   else Some (id ^ ": not inside exactly its owner's box, its joins' and its side's"))
         in
@@ -457,6 +451,34 @@ let components_contain_test : Canary_project_test.pure_test =
         in
         List.iter bad ~f:(Fmt.pr "    %s@.");
         (not (List.is_empty D.containers)) && spans_named && List.is_empty bad)
+  }
+
+(* The arrows row decides by what each drawn segment carries: the boxes
+   its tail and its head lie in, which are the model's, the same the
+   containment test holds the drawing to. *)
+let arrows_carry_ends_test : Canary_project_test.pure_test =
+  { name = "overview.arrows_carry_their_ends_boxes";
+    holds = "Every drawn arrow segment carries the boxes its tail and its head lie in, as the model gives them, so the arrows row decides by the model.";
+    check =
+      (fun () ->
+        let module T = Canary_topology in
+        let module D = Canary_overview_diagram in
+        let svg = D.diagram ~boxes:true () in
+        let keys id = Canary_overview_assets.esc (String.concat ~sep:" " (D.boxes_of_node id)) in
+        let missing =
+          List.concat_map T.edges ~f:(fun e ->
+              List.filter_map e.T.eg_from ~f:(fun f ->
+                  let want =
+                    Printf.sprintf {|data-edge="%s" data-tail-boxes="%s" data-head-boxes="%s"|}
+                      e.T.eg_id (keys f) (keys e.T.eg_to)
+                  in
+                  Option.some_if (not (String.is_substring svg ~substring:want))
+                    (e.T.eg_id ^ " from " ^ f ^ ": not carrying its ends' boxes")))
+        in
+        List.iter missing ~f:(Fmt.pr "    %s@.");
+        (not (List.is_empty T.edges))
+        && List.exists T.nodes ~f:(fun n -> not (List.is_empty (D.boxes_of_node n.T.nd_id)))
+        && List.is_empty missing)
   }
 
 (* Every action edge is in exactly one piece of one frame; no node
@@ -1316,7 +1338,7 @@ let visual_vocabulary_test : Canary_project_test.pure_test =
           [ "band"; "bandlabel"; "sidecap"; "node"; "ncase"; "nplace"; "edge"; "elabel";
             "cbadge"; "cnum"; "phm"; "declmark"; "gone";
             (* the components' boxes, which Figure 3 names the same way *)
-            "cbx"; "cbox"; "ctab"; "cname"; "csub"; "shown"; "sbox"; "srcbox";
+            "cbx"; "cbox"; "ctab"; "cname"; "csub"; "shown"; "sbox"; "srcbox"; "filtered";
             (* §0.2's figure *)
             "flow"; "fbox"; "fshape"; "ffold"; "fline"; "fhead"; "flink"; "flane"; "fsub";
             "fnote"; "fdot"; "fagent" ]
@@ -2904,6 +2926,9 @@ let chain_choices_test : Canary_project_test.pure_test =
           && List.for_all groups ~f:(fun (key, n) ->
                  count (Printf.sprintf {|<g class="cbx" data-c="%s">|} key) = n
                  && has (Printf.sprintf {|<button data-box="%s"|} key))
+          (* the modes the page's script reads *)
+          && List.for_all [ "all"; "none"; "both"; "one" ] ~f:(fun m ->
+                 has (Printf.sprintf {|<button data-arrows="%s"|} m))
           && (not (String.is_substring page ~substring:{|id="recwrap"|}))
           && (not (String.is_substring page ~substring:{|id="cases"|}))
           && List.for_all Canary_overview_cases.hand_cases ~f:(fun (c : Canary_overview_cases.case) ->
@@ -3534,7 +3559,8 @@ let staged_copy_test : Canary_project_test.pure_test =
 
 let tests : Canary_project_test.pure_test list =
   [ topology_joins_test; topology_graph_test; overview_sections_test; every_step_placed_test;
-    claim_parts_test; sides_meet_test; sits_by_parts_test; components_contain_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
+    claim_parts_test; sides_meet_test; sits_by_parts_test; components_contain_test;
+    arrows_carry_ends_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
     badge_words_test; staged_copy_test; overview_overlay_test; recorded_names_test;
     overlay_words_test; bridge_record_test; placeholder_badges_test; coverage_tables_test;
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;

@@ -242,7 +242,7 @@ let join_panel (j : Canary_overview_join.t) =
   in
   Printf.sprintf
     {|<div class="join" id="join">
-%s%s%s%s%s%s%s
+%s%s%s%s%s%s%s%s
 <div id="jrecbar" hidden><p class="mechnote"><label>recorded world:
 <select id="jworld"></select></label></p><p id="jrechead" class="edet"></p></div>
 <p class="mechnote" id="jnorec" hidden>No run of this package is recorded on
@@ -294,6 +294,22 @@ is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
                Printf.sprintf {|<button data-box="%s" title="%s">%s</button>|} (esc k)
                  (esc ("the whole " ^ k ^ " side, from its package manager down to its artifacts"))
                  (esc k)))))
+    (* which arrows show, by how many of an arrow's two ends lie in a shown box *)
+    (row "arrows"
+       (String.concat
+          (List.map
+             [ ("all", "every arrow the chain has", "all");
+               ("none", "no arrow", "none");
+               ( "both",
+                 "arrows with both ends in shown boxes: the actions a component encapsulates",
+                 "both ends inside" );
+               ( "one",
+                 "arrows with exactly one end in a shown box: the interactions between components",
+                 "one end inside" ) ]
+             ~f:(fun (v, title, label) ->
+               Printf.sprintf {|<button data-arrows="%s" title="%s"%s>%s</button>|} v (esc title)
+                 (if String.equal v "all" then {| class="on"|} else "")
+                 (esc label)))))
     (row "package in canary" c_buttons)
     (E.figure "fig-chain" (Canary_overview_draw.svg (opening j)))
     m_notes k_notes pm_notes c_notes runs0

@@ -151,6 +151,23 @@ let box_key (c : T.component) : string = T.string_of_component c
 
 let side_key = function T.S_sys -> "system" | T.S_lang -> "language"
 
+(** The boxes a node lies in, by key, as the model gives them: its
+    owner's, the joins' that span it and, above the program, its side's.
+    The arrows row reads it, and the containment test holds the drawing
+    to it. *)
+let boxes_of_node (id : string) : string list =
+  match T.node_by_id id with
+  | None -> []
+  | Some n ->
+      let components =
+        Option.to_list (T.component_of_node id)
+        @ List.filter_map T.join_spans ~f:(fun (j, ns) ->
+              Option.some_if (List.mem ns id ~equal:String.equal) j)
+      in
+      List.filter_map components ~f:(fun c ->
+          Option.some_if (List.Assoc.mem containers c ~equal:Poly.equal) (box_key c))
+      @ if Poly.equal n.T.nd_layer T.L_program then [] else [ side_key n.T.nd_side ]
+
 (** One of a box's groups, hidden until it is [shown]. *)
 let box_group (key : string) (inner : string) : string =
   Printf.sprintf {|<g class="cbx" data-c="%s">%s</g>|} (esc key) inner
@@ -277,14 +294,20 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e :
       (if placed then "" else " bare")
       extra
   in
+  (* the boxes a segment's two ends lie in, which the arrows row reads *)
+  let ends from_id =
+    Printf.sprintf {| data-tail-boxes="%s" data-head-boxes="%s"|}
+      (esc (String.concat ~sep:" " (boxes_of_node from_id)))
+      (esc (String.concat ~sep:" " (boxes_of_node e.T.eg_to)))
+  in
   String.concat
     (List.map e.T.eg_from ~f:(fun from_id ->
          let src = pos_of from_id in
          if String.equal from_id e.T.eg_to then
            (* a self edge: probe_lib reads the artifact it stands on *)
            Printf.sprintf
-             {|<g class="%s" data-edge="%s"><title>%s</title><path d="M %d %d a 30 26 0 1 1 22 0"/></g>|}
-             cls (esc e.T.eg_id)
+             {|<g class="%s" data-edge="%s"%s><title>%s</title><path d="M %d %d a 30 26 0 1 1 22 0"/></g>|}
+             cls (esc e.T.eg_id) (ends from_id)
              (esc (e.T.eg_says))
              (src.px - 46) (src.py - 10)
          else
@@ -321,10 +344,10 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e :
                  (esc says) (mx - 57) (my - 8) (mx - 46) (my + 4)
            in
            Printf.sprintf
-             {|<g class="%s" data-edge="%s"><title>%s — %s</title>
+             {|<g class="%s" data-edge="%s"%s><title>%s — %s</title>
 <line x1="%d" y1="%d" x2="%d" y2="%d" marker-end="url(#a)"/>
 <text class="%s" x="%d" y="%d"%s>%s</text>%s%s</g>|}
-             cls (esc e.T.eg_id)
+             cls (esc e.T.eg_id) (ends from_id)
              (esc (annotation_title e.T.eg_annotation))
              (esc e.T.eg_says) src.px src.py dst.px dst.py
              (annotation_class e.T.eg_annotation) mx (my - 7) anchor

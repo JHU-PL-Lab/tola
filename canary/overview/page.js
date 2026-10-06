@@ -203,14 +203,31 @@ if(jbox&&J){
   };
   jbox.addEventListener('click',function(e){
     var b=e.target.closest('button[data-g]'); if(b) pick(b.dataset.g,b.dataset.v); });
-  // each component's box on its own button: a way of looking at the
-  // chain, kept across choices
-  var fig=jbox.querySelector('svg.diagram');
-  if(fig) jbox.querySelectorAll('button[data-box]').forEach(function(b){
-    b.addEventListener('click',function(){
-      var on=b.classList.toggle('on');
-      fig.querySelectorAll('.cbx[data-c="'+b.dataset.box+'"]').forEach(function(g){
-        g.classList.toggle('shown',on); }); }); });
+  // each box on its own button, and the arrows by how many of their two
+  // ends lie in a shown box: ways of looking at the chain, kept across
+  // choices
+  var fig=jbox.querySelector('svg.diagram'), arrows='all';
+  var filterArrows=function(){
+    var shown={};
+    jbox.querySelectorAll('button[data-box].on').forEach(function(b){ shown[b.dataset.box]=1; });
+    var inside=function(keys){ return (keys||'').split(' ').some(function(k){ return shown[k]; }); };
+    fig.querySelectorAll('.edge').forEach(function(g){
+      var n=(inside(g.dataset.tailBoxes)?1:0)+(inside(g.dataset.headBoxes)?1:0);
+      g.classList.toggle('filtered',
+        arrows==='none'||(arrows==='both'&&n<2)||(arrows==='one'&&n!==1)); }); };
+  if(fig){
+    jbox.querySelectorAll('button[data-box]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var on=b.classList.toggle('on');
+        fig.querySelectorAll('.cbx[data-c="'+b.dataset.box+'"]').forEach(function(g){
+          g.classList.toggle('shown',on); });
+        filterArrows(); }); });
+    jbox.querySelectorAll('button[data-arrows]').forEach(function(b){
+      b.addEventListener('click',function(){
+        arrows=b.dataset.arrows;
+        jbox.querySelectorAll('button[data-arrows]').forEach(function(x){
+          x.classList.toggle('on',x===b); });
+        filterArrows(); }); }); }
   var wsel=document.getElementById('jworld');
   if(wsel) wsel.addEventListener('change',function(){ S.v=wsel.value; draw(); });
   // #chain=<id> — §3.4's rows link here; #rec=<world> — one recorded world

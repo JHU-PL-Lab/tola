@@ -42,6 +42,7 @@ letter-spacing:.14em;text-anchor:middle}
 .cname{font:700 14px ui-sans-serif,system-ui,sans-serif;fill:var(--fg)}
 .csub{font-size:10px}
 .cbx:not(.shown){display:none}
+.edge.filtered{display:none}
 .sbox{fill:none;stroke:var(--fg);stroke-width:1.3;stroke-dasharray:12 5}
 .cnode rect{fill:var(--card);stroke:var(--fg);stroke-width:1.3}
 .cnode.cmanage rect{fill:var(--pm)}.cnode.cart rect{fill:var(--art)}
