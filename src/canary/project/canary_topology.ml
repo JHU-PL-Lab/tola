@@ -944,23 +944,24 @@ let component_admits (c : component) (n : node) : bool =
   | Art_lang | Binding -> Poly.equal n.nd_side S_lang && artifact
   | Program -> Poly.equal n.nd_layer L_program
 
-(** The component that owns each node: a partition. A side owns what it
-    manages or delivers, the bridge included, an opam package like any
-    other, and the stub, the binding's shim on the language side. The
-    joins own nothing: they span the sides. *)
+(** The component that owns each node. A side owns what it manages or
+    delivers, the bridge included, an opam package like any other, and
+    the stub, the binding's shim on the language side. The joins own
+    nothing: they span the sides. The two sources are source repositories,
+    fetched rather than built, and no component owns them. *)
 let node_components : (string * component) list =
   [ ("pm_sys", Pm_sys); ("pkg_sys", Pm_sys); ("cap", Pm_sys);
     ("pm_lang", Pm_lang); ("pkg_lang", Pm_lang); ("bridge", Pm_lang);
-    ("src_sys", Art_sys); ("hdr_sys", Art_sys); ("lib_sys", Art_sys); ("staged_sys", Art_sys);
-    ("src_lang", Art_lang); ("stub_lang", Art_lang); ("mod_lang", Art_lang);
-    ("surf_lang", Art_lang);
+    ("hdr_sys", Art_sys); ("lib_sys", Art_sys); ("staged_sys", Art_sys);
+    ("stub_lang", Art_lang); ("mod_lang", Art_lang); ("surf_lang", Art_lang);
     ("consumer_artifact", Program); ("consumer_package", Program) ]
 
-(** The nodes each join spans, one from each side on one row: the
-    cooperation the capability file and the bridge, the binding mechanism
-    the library and the module. *)
+(** The nodes each join spans across the sides: the cooperation the
+    capability file and the bridge, the binding mechanism every artifact
+    of both sides. *)
 let join_spans : (component * string list) list =
-  [ (Pm_coop, [ "cap"; "bridge" ]); (Binding, [ "lib_sys"; "mod_lang" ]) ]
+  [ (Pm_coop, [ "cap"; "bridge" ]);
+    (Binding, [ "hdr_sys"; "lib_sys"; "staged_sys"; "stub_lang"; "mod_lang"; "surf_lang" ]) ]
 
 let component_of_node (id : string) : component option =
   List.Assoc.find node_components id ~equal:String.equal

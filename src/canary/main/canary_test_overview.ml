@@ -373,13 +373,14 @@ let sits_by_parts_test : Canary_project_test.pure_test =
         (not (List.is_empty T.claim_sites)) && List.is_empty bad)
   }
 
-(* The figure that groups the chain by component draws what the topology
-   says: each node is owned by one component that admits it, and on Figure
-   2's layout each node's box lies inside exactly its owner's container and
-   those of the joins that span it. *)
+(* Figure 2's boxes draw what the topology says: each node but a source
+   repository is owned by one component that admits it, and each node's
+   box lies inside exactly its owner's box, those of the joins that span
+   it and, above the program, its side's. A source lies on its patch of
+   the PM layer's colour, which no other node touches. *)
 let components_contain_test : Canary_project_test.pure_test =
   { name = "overview.components_contain_their_nodes";
-    holds = "Every node is owned by one component that admits it, and in the chain drawn by component each node lies inside exactly its owner's container and those of the joins that span it.";
+    holds = "Every node but a source is owned by a component that admits it, and on Figure 2 lies inside exactly its owner's box, its joins' and, above the program, its side's; a source sits alone on its patch.";
     check =
       (fun () ->
         let module T = Canary_topology in
@@ -409,30 +410,47 @@ let components_contain_test : Canary_project_test.pure_test =
           let x0 = p.D.px - (w / 2) and y0 = p.D.py - (D.box_h / 2) in
           [ (x0, y0); (x0 + w, y0); (x0, y0 + D.box_h); (x0 + w, y0 + D.box_h) ]
         in
-        let bad =
-          List.filter_map T.nodes ~f:(fun n ->
-              match T.component_of_node n.T.nd_id with
-              | None -> Some (n.T.nd_id ^ ": no component")
-              | Some c when not (T.component_admits c n) ->
-                  Some (Printf.sprintf "%s: not admitted by %s" n.T.nd_id (T.string_of_component c))
-              | Some c ->
-                  let expected =
-                    c
-                    :: List.filter_map T.join_spans ~f:(fun (j, ns) ->
-                           Option.some_if (List.mem ns n.T.nd_id ~equal:String.equal) j)
-                  in
-                  let cs = corners n.T.nd_id in
-                  let ok =
-                    List.for_all D.containers ~f:(fun (c', pts) ->
-                        if List.mem expected c' ~equal:Poly.equal then List.for_all cs ~f:(inside pts)
-                        else not (List.exists cs ~f:(inside pts)))
-                  in
-                  if ok then None
-                  else
-                    Some
-                      (n.T.nd_id
-                     ^ ": not inside exactly its owner's container and the joins spanning it"))
+        (* inside exactly the boxes [expected] names, of [boxes] *)
+        let exactly cs boxes expected =
+          List.for_all boxes ~f:(fun (b, pts) ->
+              if List.mem expected b ~equal:Poly.equal then List.for_all cs ~f:(inside pts)
+              else not (List.exists cs ~f:(inside pts)))
         in
+        let placed =
+          List.filter_map T.nodes ~f:(fun n ->
+              let id = n.T.nd_id in
+              let owner = T.component_of_node id in
+              let source = List.mem D.sources id ~equal:String.equal in
+              match owner with
+              | None when not source -> Some (id ^ ": no component")
+              | Some _ when source -> Some (id ^ ": a source repository with an owner")
+              | Some c when not (T.component_admits c n) ->
+                  Some (Printf.sprintf "%s: not admitted by %s" id (T.string_of_component c))
+              | _ ->
+                  let joins =
+                    List.filter_map T.join_spans ~f:(fun (j, ns) ->
+                        Option.some_if (List.mem ns id ~equal:String.equal) j)
+                  in
+                  let side = if Poly.equal n.T.nd_layer T.L_program then [] else [ n.T.nd_side ] in
+                  let cs = corners id in
+                  if exactly cs D.containers (Option.to_list owner @ joins)
+                     && exactly cs D.side_boxes side
+                  then None
+                  else Some (id ^ ": not inside exactly its owner's box, its joins' and its side's"))
+        in
+        let on_patches =
+          List.concat_map D.sources ~f:(fun s ->
+              let x, y, w, h = D.source_patch s in
+              let patch = D.rect x y (x + w) (y + h) in
+              List.filter_map T.nodes ~f:(fun n ->
+                  let cs = corners n.T.nd_id in
+                  if String.equal n.T.nd_id s then
+                    Option.some_if (not (List.for_all cs ~f:(inside patch))) (s ^ ": off its patch")
+                  else
+                    Option.some_if (List.exists cs ~f:(inside patch))
+                      (n.T.nd_id ^ ": on " ^ s ^ "'s patch")))
+        in
+        let bad = placed @ on_patches in
         let spans_named =
           List.for_all T.join_spans ~f:(fun (_, ns) ->
               List.for_all ns ~f:(fun id -> Option.is_some (T.node_by_id id)))
@@ -1298,7 +1316,7 @@ let visual_vocabulary_test : Canary_project_test.pure_test =
           [ "band"; "bandlabel"; "sidecap"; "node"; "ncase"; "nplace"; "edge"; "elabel";
             "cbadge"; "cnum"; "phm"; "declmark"; "gone";
             (* the components' boxes, which Figure 3 names the same way *)
-            "cbx"; "cbox"; "ctab"; "cname"; "csub"; "shown";
+            "cbx"; "cbox"; "ctab"; "cname"; "csub"; "shown"; "sbox"; "srcbox";
             (* §0.2's figure *)
             "flow"; "fbox"; "fshape"; "ffold"; "fline"; "fhead"; "flink"; "flane"; "fsub";
             "fnote"; "fdot"; "fagent" ]
@@ -2324,7 +2342,7 @@ let edge_marks_test : Canary_project_test.pure_test =
                 Option.map (under_a_box b) ~f:(fun n -> "a band's title under " ^ n))
           @ List.concat_map segments ~f:(fun (e, f) ->
                 let src = P.pos_of f and dst = P.pos_of e.T.eg_to in
-                List.filter_map P.side_nodes ~f:(fun n ->
+                List.filter_map P.sources ~f:(fun n ->
                     let b0, b1, b2, b3 = rect_of n in
                     Option.some_if
                       ((not (String.equal n f || String.equal n e.T.eg_to))
@@ -2872,15 +2890,19 @@ let chain_choices_test : Canary_project_test.pure_test =
            section, and each hand-drawn case's prose in §1 with its
            cooperation *)
         let count pattern = List.length (String.substr_index_all page ~may_overlap:false ~pattern) in
-        let boxes = Canary_overview_diagram.containers in
+        let module D = Canary_overview_diagram in
+        let groups =
+          List.map D.containers ~f:(fun (c, _) -> (D.box_key c, 2))
+          @ List.map D.side_boxes ~f:(fun (s, _) -> (D.side_key s, 1))
+        in
         let merged =
           count {|class="diagram"|} = 1
-          && count {|<polygon class="cbox"|} = List.length boxes
-          && count {|<rect class="ctab"|} = List.length boxes
-          && count {|<button data-box="|} = List.length boxes
-          && List.for_all boxes ~f:(fun (c, _) ->
-                 let key = Canary_overview_diagram.box_key c in
-                 count (Printf.sprintf {|<g class="cbx" data-c="%s">|} key) = 2
+          && count {|<polygon class="cbox"|} = List.length D.containers
+          && count {|<rect class="ctab"|} = List.length D.containers
+          && count {|<polygon class="sbox"|} = List.length D.side_boxes
+          && count {|<button data-box="|} = List.length groups
+          && List.for_all groups ~f:(fun (key, n) ->
+                 count (Printf.sprintf {|<g class="cbx" data-c="%s">|} key) = n
                  && has (Printf.sprintf {|<button data-box="%s"|} key))
           && (not (String.is_substring page ~substring:{|id="recwrap"|}))
           && (not (String.is_substring page ~substring:{|id="cases"|}))

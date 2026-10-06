@@ -242,7 +242,7 @@ let join_panel (j : Canary_overview_join.t) =
   in
   Printf.sprintf
     {|<div class="join" id="join">
-%s%s%s%s%s%s
+%s%s%s%s%s%s%s
 <div id="jrecbar" hidden><p class="mechnote"><label>recorded world:
 <select id="jworld"></select></label></p><p id="jrechead" class="edet"></p></div>
 <p class="mechnote" id="jnorec" hidden>No run of this package is recorded on
@@ -287,6 +287,14 @@ is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
                  (esc (Canary_overview_diagram.box_key c))
                  (esc (l1 ^ " " ^ l2))
                  (esc base) (esc sub)))))
+    (* and each side whole, which the manuscript draws on its own *)
+    (row "sides"
+       (String.concat
+          (List.map Canary_overview_diagram.side_boxes ~f:(fun (s, _) ->
+               let k = Canary_overview_diagram.side_key s in
+               Printf.sprintf {|<button data-box="%s" title="%s">%s</button>|} (esc k)
+                 (esc ("the whole " ^ k ^ " side, from its package manager down to its artifacts"))
+                 (esc k)))))
     (E.figure "fig-chain" (Canary_overview_draw.svg (opening j)))
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with

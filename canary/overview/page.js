@@ -101,6 +101,9 @@ if(jbox&&J){
       var lab=l?l.textContent:id;
       if(line) prov.push([lab, n.kind, line, n.src]);
       if(place) prov.push([lab, 'placement', place, (v.place_sources||{})[id]]); });
+    // a source's patch goes with its node
+    jbox.querySelectorAll('[data-of]').forEach(function(p){
+      p.classList.toggle('gone', gone.indexOf(p.getAttribute('data-of'))>=0); });
     // the list under the diagram: every line above, with its source
     var pb=document.getElementById('jprovbody'), psum=document.getElementById('jprovsum');
     if(pb){ var cnt={};

@@ -17,13 +17,15 @@ let box_h = 46
 
 type pos = { px : int; py : int }
 
-(** The two sources sit beside their package's column, clear of its edges
-    (a source is not package content), in narrower boxes. *)
-let side_nodes = [ "src_sys"; "src_lang" ]
-let side_box_w = 150
+(** The two sources, source repositories: each sits beside its package's
+    column, clear of its edges (a source is not package content), in a
+    narrower box on a patch of the PM layer's colour, since it is fetched
+    rather than built. *)
+let sources = [ "src_sys"; "src_lang" ]
+let source_box_w = 150
 
 let box_w_of (id : string) : int =
-  if List.mem side_nodes id ~equal:String.equal then side_box_w else box_w
+  if List.mem sources id ~equal:String.equal then source_box_w else box_w
 
 (** Each node's centre. Each side's package manager heads a column of
     what it manages and what its package ships; the two columns mirror
@@ -35,41 +37,59 @@ let layout : (string * pos) list =
   [ ("pm_sys", { px = 230; py = 62 });
     ("pm_lang", { px = 990; py = 62 });
     ("pkg_sys", { px = 230; py = 180 });
-    ("cap", { px = 330; py = 264 });
-    ("bridge", { px = 890; py = 264 });
+    ("cap", { px = 330; py = 292 });
+    ("bridge", { px = 890; py = 292 });
     ("pkg_lang", { px = 990; py = 180 });
-    ("src_sys", { px = 91; py = 398 });
-    ("hdr_sys", { px = 230; py = 482 });
-    ("lib_sys", { px = 230; py = 566 });
-    ("staged_sys", { px = 230; py = 640 });
-    ("src_lang", { px = 1129; py = 398 });
-    ("stub_lang", { px = 990; py = 482 });
-    ("mod_lang", { px = 990; py = 566 });
-    ("surf_lang", { px = 990; py = 640 });
-    ("consumer_artifact", { px = 410; py = 762 });
-    ("consumer_package", { px = 750; py = 762 }) ]
+    ("src_sys", { px = 91; py = 426 });
+    ("hdr_sys", { px = 230; py = 538 });
+    ("lib_sys", { px = 230; py = 622 });
+    ("staged_sys", { px = 230; py = 696 });
+    ("src_lang", { px = 1129; py = 426 });
+    ("stub_lang", { px = 990; py = 538 });
+    ("mod_lang", { px = 990; py = 622 });
+    ("surf_lang", { px = 990; py = 696 });
+    ("consumer_artifact", { px = 410; py = 842 });
+    ("consumer_package", { px = 750; py = 842 }) ]
 
 let pos_of id =
   match List.Assoc.find layout id ~equal:String.equal with
   | Some p -> p
   | None -> { px = 610; py = 440 }
 
+let rect x0 y0 x1 y1 = [ (x0, y0); (x1, y0); (x1, y1); (x0, y1) ]
+
 (** Each component's container on this layout. A side's box holds the
     nodes {!Canary_topology.node_components} gives it; a join's box
     overlaps the sides it joins, over the nodes {!Canary_topology.join_spans}
-    gives it. The program's nodes stay in their band. *)
+    gives it, the binding mechanism's around both sides' artifact boxes.
+    The sources and the program's nodes are in no component's box. *)
 let containers : (T.component * (int * int) list) list =
-  let rect x0 y0 x1 y1 = [ (x0, y0); (x1, y0); (x1, y1); (x0, y1) ] in
-  [ (T.Pm_sys, rect 114 28 446 309);
-    (T.Pm_lang, rect 774 28 1106 309);
-    (T.Art_sys, rect 6 363 346 675);
-    (T.Art_lang, rect 874 363 1214 675);
-    (T.Pm_coop, rect 216 231 1004 297);
-    (T.Binding, rect 116 531 1104 601) ]
+  [ (T.Pm_sys, rect 114 28 446 337);
+    (T.Pm_lang, rect 774 28 1106 337);
+    (T.Art_sys, rect 114 503 346 731);
+    (T.Art_lang, rect 874 503 1106 731);
+    (T.Pm_coop, rect 216 259 1004 325);
+    (T.Binding, rect 106 495 1114 739) ]
 
-(** A join's name sits at its box's bottom centre, clear of the sides'
-    names at their top left. *)
-let is_join (c : T.component) = Poly.equal c T.Pm_coop || Poly.equal c T.Binding
+(** Each side's box, from its package manager down to its artifacts,
+    around its components' boxes, its source and its caption. *)
+let side_boxes : (T.side * (int * int) list) list =
+  [ (T.S_sys, rect 4 4 452 749); (T.S_lang, rect 768 4 1216 749) ]
+
+(** Where a component's name sits on its box, clear of the other names and
+    the edges' marks: a side's at its top left, the cooperation's at its
+    bottom centre, the binding mechanism's at its top centre. *)
+type tab_place = Top_left | Top_centre | Bottom_centre
+
+let tab_place = function
+  | T.Pm_coop -> Bottom_centre
+  | T.Binding -> Top_centre
+  | _ -> Top_left
+
+(** A source's patch: the PM layer's colour around its box. *)
+let source_patch (id : string) : int * int * int * int =
+  let p = pos_of id and w = box_w_of id in
+  (p.px - (w / 2) - 6, p.py - (box_h / 2) - 8, w + 12, box_h + 16)
 
 (** Edges whose label starts at the midpoint instead of centring on it:
     they leave the native column at a shallow angle, and a centred label
@@ -80,7 +100,7 @@ let label_starts_at_midpoint = [ "realize_cap"; "discover" ]
     tail to head — 50 unless listed, placed so no mark falls under a box
     or on another edge's marks ([overview.edge_marks_clear_the_boxes]). *)
 let label_at =
-  [ ("build_lib", 80); ("run", 60); ("run_packaged", 75); ("install_lang", 35);
+  [ ("build_lib", 80); ("run", 68); ("run_packaged", 75); ("install_lang", 40);
     ("install_surf", 48) ]
 
 let anchor_of (e : T.edge) ~(src : pos) ~(dst : pos) : int * int =
@@ -94,9 +114,9 @@ let anchor_of (e : T.edge) ~(src : pos) ~(dst : pos) : int * int =
 (** The four bands: top, height, label, class. *)
 let bands_def : (int * int * string * string) list =
   [ (30, 70, "PM LAYER — who resolves and installs", "pm");
-    (140, 170, "PACKAGE LAYER — symbolic claims, and the bridge between them", "package");
-    (350, 320, "ARTIFACT LAYER — what is actually on disk", "artifact");
-    (710, 74, "PROGRAM — the only band where anything runs", "program") ]
+    (140, 198, "PACKAGE LAYER — symbolic claims, and the bridge between them", "package");
+    (378, 348, "ARTIFACT LAYER — what is actually on disk", "artifact");
+    (790, 74, "PROGRAM — the only band where anything runs", "program") ]
 
 let band_rect ~y ~h ~cls =
   Printf.sprintf {|<rect class="band %s" x="8" y="%d" width="%d" height="%d" rx="10"/>|}
@@ -124,34 +144,42 @@ let component_name ~x ~y (c : T.component) : string =
     (if String.is_empty sub then ""
      else Printf.sprintf {|<tspan class="csub" dy="4">%s</tspan>|} (esc sub))
 
-(** The key a component's box answers to: its two groups, the outline
-    and the tab, carry it, and so does the panel's button that shows them. *)
+(** The key a box answers to: its groups carry it, and so does the panel's
+    button that shows them. A component's box has two groups, the outline
+    and the tab; a side's has one, named by the side's caption. *)
 let box_key (c : T.component) : string = T.string_of_component c
 
-(** One of a component's box's groups, hidden until it is [shown]. *)
-let box_group (c : T.component) (inner : string) : string =
-  Printf.sprintf {|<g class="cbx" data-c="%s">%s</g>|} (esc (box_key c)) inner
+let side_key = function T.S_sys -> "system" | T.S_lang -> "language"
+
+(** One of a box's groups, hidden until it is [shown]. *)
+let box_group (key : string) (inner : string) : string =
+  Printf.sprintf {|<g class="cbx" data-c="%s">%s</g>|} (esc key) inner
+
+let points pts = String.concat ~sep:" " (List.map pts ~f:(fun (x, y) -> Printf.sprintf "%d,%d" x y))
 
 (** A container's outline, drawn under the edges. *)
 let container_outline ((c, pts) : T.component * (int * int) list) : string =
-  box_group c
-    (Printf.sprintf {|<polygon class="cbox" points="%s"/>|}
-       (String.concat ~sep:" " (List.map pts ~f:(fun (x, y) -> Printf.sprintf "%d,%d" x y))))
+  box_group (box_key c) (Printf.sprintf {|<polygon class="cbox" points="%s"/>|} (points pts))
 
-(** A container's name on a tab across its edge, drawn over everything: a
-    side's at its top left, a join's at its bottom centre. *)
+(** A side's outline, drawn under the edges. *)
+let side_outline ((s, pts) : T.side * (int * int) list) : string =
+  box_group (side_key s) (Printf.sprintf {|<polygon class="sbox" points="%s"/>|} (points pts))
+
+(** A container's name on a tab across its edge, drawn over everything,
+    where {!tab_place} puts it. *)
 let container_tab ((c, pts) : T.component * (int * int) list) : string =
   let x0, y0 = List.hd_exn pts in
   let base, sub = T.component_name_parts c in
   let w = (String.length base * 9) + (String.length sub * 7) + 14 in
+  let x1 = List.fold pts ~init:x0 ~f:(fun m (x, _) -> Int.max m x)
+  and y1 = List.fold pts ~init:y0 ~f:(fun m (_, y) -> Int.max m y) in
   let tx, ty =
-    if is_join c then
-      let x1 = List.fold pts ~init:x0 ~f:(fun m (x, _) -> Int.max m x)
-      and y1 = List.fold pts ~init:y0 ~f:(fun m (_, y) -> Int.max m y) in
-      (((x0 + x1) / 2) - (w / 2), y1 - 10)
-    else (x0 + 10, y0 - 10)
+    match tab_place c with
+    | Top_left -> (x0 + 10, y0 - 10)
+    | Top_centre -> (((x0 + x1) / 2) - (w / 2), y0 - 10)
+    | Bottom_centre -> (((x0 + x1) / 2) - (w / 2), y1 - 10)
   in
-  box_group c
+  box_group (box_key c)
     (Printf.sprintf {|<rect class="ctab" x="%d" y="%d" width="%d" height="20" rx="4"/>%s|} tx ty
        w
        (component_name ~x:(tx + 7) ~y:(ty + 15) c))
@@ -327,8 +355,18 @@ let diagram ?(boxes = false) ?(ph_slots = false) ?(case_slots = false)
   let band_labels =
     String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
   in
-  let every draw = if boxes then String.concat (List.map containers ~f:draw) else "" in
-  let outlines = every container_outline and tabs = every container_tab in
+  (* a source's patch goes with its node: the page's script hides both *)
+  let patches =
+    String.concat
+      (List.map sources ~f:(fun id ->
+           let x, y, w, h = source_patch id in
+           Printf.sprintf
+             {|<rect class="band pm srcbox%s" data-of="%s" x="%d" y="%d" width="%d" height="%d" rx="8"/>|}
+             (extra id) id x y w h))
+  in
+  let every draw l = if boxes then String.concat (List.map l ~f:draw) else "" in
+  let outlines = every side_outline side_boxes ^ every container_outline containers
+  and tabs = every container_tab containers in
   let captions =
     Printf.sprintf
       {|<text class="sidecap" x="%d" y="20">SYSTEM SIDE</text><text class="sidecap" x="%d" y="20">LANGUAGE SIDE</text>|}
@@ -352,4 +390,4 @@ let diagram ?(boxes = false) ?(ph_slots = false) ?(case_slots = false)
  markerHeight="7" orient="auto-start-reverse">
 <path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
 %s%s%s%s%s%s%s</svg>|}
-    canvas_w canvas_h bands captions outlines es band_labels ns tabs
+    canvas_w canvas_h (bands ^ patches) captions outlines es band_labels ns tabs
