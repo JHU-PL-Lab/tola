@@ -1298,7 +1298,7 @@ let visual_vocabulary_test : Canary_project_test.pure_test =
           [ "band"; "bandlabel"; "sidecap"; "node"; "ncase"; "nplace"; "edge"; "elabel";
             "cbadge"; "cnum"; "phm"; "declmark"; "gone";
             (* the components' boxes, which Figure 3 names the same way *)
-            "cboxes"; "cbox"; "ctab"; "cname"; "csub"; "boxed";
+            "cbx"; "cbox"; "ctab"; "cname"; "csub"; "shown";
             (* §0.2's figure *)
             "flow"; "fbox"; "fshape"; "ffold"; "fline"; "fhead"; "flink"; "flane"; "fsub";
             "fnote"; "fdot"; "fagent" ]
@@ -2867,15 +2867,21 @@ let chain_choices_test : Canary_project_test.pure_test =
           && List.for_all [ "ps"; "pl"; "m"; "k" ] ~f:(fun g ->
                  List.for_all (in_order g) ~f:(fun v -> Option.is_some (rel (g ^ "|" ^ v))))
         in
-        (* one diagram, carrying every component's box for the panel's
-           button to show, with no separate recorded-run or cases section,
-           and each hand-drawn case's prose in §1 with its cooperation *)
+        (* one diagram, carrying every component's box with a button of
+           its own to show it, with no separate recorded-run or cases
+           section, and each hand-drawn case's prose in §1 with its
+           cooperation *)
         let count pattern = List.length (String.substr_index_all page ~may_overlap:false ~pattern) in
+        let boxes = Canary_overview_diagram.containers in
         let merged =
           count {|class="diagram"|} = 1
-          && count {|<polygon class="cbox"|} = List.length Canary_overview_diagram.containers
-          && count {|<rect class="ctab"|} = List.length Canary_overview_diagram.containers
-          && has {|<button id="jboxes"|}
+          && count {|<polygon class="cbox"|} = List.length boxes
+          && count {|<rect class="ctab"|} = List.length boxes
+          && count {|<button data-box="|} = List.length boxes
+          && List.for_all boxes ~f:(fun (c, _) ->
+                 let key = Canary_overview_diagram.box_key c in
+                 count (Printf.sprintf {|<g class="cbx" data-c="%s">|} key) = 2
+                 && has (Printf.sprintf {|<button data-box="%s"|} key))
           && (not (String.is_substring page ~substring:{|id="recwrap"|}))
           && (not (String.is_substring page ~substring:{|id="cases"|}))
           && List.for_all Canary_overview_cases.hand_cases ~f:(fun (c : Canary_overview_cases.case) ->

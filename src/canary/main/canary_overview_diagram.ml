@@ -124,10 +124,19 @@ let component_name ~x ~y (c : T.component) : string =
     (if String.is_empty sub then ""
      else Printf.sprintf {|<tspan class="csub" dy="4">%s</tspan>|} (esc sub))
 
+(** The key a component's box answers to: its two groups, the outline
+    and the tab, carry it, and so does the panel's button that shows them. *)
+let box_key (c : T.component) : string = T.string_of_component c
+
+(** One of a component's box's groups, hidden until it is [shown]. *)
+let box_group (c : T.component) (inner : string) : string =
+  Printf.sprintf {|<g class="cbx" data-c="%s">%s</g>|} (esc (box_key c)) inner
+
 (** A container's outline, drawn under the edges. *)
-let container_outline ((_, pts) : T.component * (int * int) list) : string =
-  Printf.sprintf {|<polygon class="cbox" points="%s"/>|}
-    (String.concat ~sep:" " (List.map pts ~f:(fun (x, y) -> Printf.sprintf "%d,%d" x y)))
+let container_outline ((c, pts) : T.component * (int * int) list) : string =
+  box_group c
+    (Printf.sprintf {|<polygon class="cbox" points="%s"/>|}
+       (String.concat ~sep:" " (List.map pts ~f:(fun (x, y) -> Printf.sprintf "%d,%d" x y))))
 
 (** A container's name on a tab across its edge, drawn over everything: a
     side's at its top left, a join's at its bottom centre. *)
@@ -142,8 +151,10 @@ let container_tab ((c, pts) : T.component * (int * int) list) : string =
       (((x0 + x1) / 2) - (w / 2), y1 - 10)
     else (x0 + 10, y0 - 10)
   in
-  Printf.sprintf {|<rect class="ctab" x="%d" y="%d" width="%d" height="20" rx="4"/>%s|} tx ty w
-    (component_name ~x:(tx + 7) ~y:(ty + 15) c)
+  box_group c
+    (Printf.sprintf {|<rect class="ctab" x="%d" y="%d" width="%d" height="20" rx="4"/>%s|} tx ty
+       w
+       (component_name ~x:(tx + 7) ~y:(ty + 15) c))
 
 (** A node. Nodes are drawn after the edges, so the boxes mask the lines
     that run under them and every edge can be a straight segment. A
@@ -297,9 +308,8 @@ let edge_svg ?(extra = "") ~(counts : int * int) ?(ph_slot = false) ?marker (e :
     hide, grey or outline it; [counts] is what an edge's two badges count;
     [lines], [places] and [markers] are what a chosen chain writes under a
     node and a recorded run marks on an edge. A caption names each side
-    over its column. [boxes] draws each component's box, shown while the
-    drawing is [boxed], which then omits the bands' titles: the boxes name
-    the regions. *)
+    over its column. [boxes] draws each component's box, hidden until its
+    button shows it. *)
 let diagram ?(boxes = false) ?(ph_slots = false) ?(case_slots = false)
     ?(classes = fun (_ : string) -> ([] : string list))
     ?(counts =
@@ -317,11 +327,8 @@ let diagram ?(boxes = false) ?(ph_slots = false) ?(case_slots = false)
   let band_labels =
     String.concat (List.map bands_def ~f:(fun (y, _, label, _) -> band_label ~y ~label))
   in
-  let box_group draw =
-    if boxes then {|<g class="cboxes">|} ^ String.concat (List.map containers ~f:draw) ^ "</g>"
-    else ""
-  in
-  let outlines = box_group container_outline and tabs = box_group container_tab in
+  let every draw = if boxes then String.concat (List.map containers ~f:draw) else "" in
+  let outlines = every container_outline and tabs = every container_tab in
   let captions =
     Printf.sprintf
       {|<text class="sidecap" x="%d" y="20">SYSTEM SIDE</text><text class="sidecap" x="%d" y="20">LANGUAGE SIDE</text>|}

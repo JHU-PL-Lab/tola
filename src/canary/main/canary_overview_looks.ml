@@ -243,13 +243,12 @@ let visual_hints : visual_hint list =
     hint "sides" Frame [ "sidecap" ] [ ".sidecap" ] Always
       (Drawn [ "SYSTEM SIDE"; "LANGUAGE SIDE" ]);
     hint "components" Frame
-      [ "cboxes"; "cbox"; "ctab"; "cname"; "csub"; "boxed" ]
-      [ ".cbox"; ".ctab"; ".cname"; ".csub"; ".diagram:not(.boxed) .cboxes";
-        ".diagram.boxed .bandlabel" ]
+      [ "cbx"; "cbox"; "ctab"; "cname"; "csub"; "shown" ]
+      [ ".cbox"; ".ctab"; ".cname"; ".csub"; ".cbx:not(.shown)" ]
       Always Chain_key
       ~sample:
         {|<svg width="30" height="18" viewBox="0 0 30 18"><rect class="cbox" x="2" y="3" width="26" height="12"/></svg>|}
-      ~says:"a component's box, while the boxes button is on";
+      ~says:"a component's box, while its button is on";
     (* ── the panel ── *)
     hint "button.chosen" Button [ "on" ] [ ".selbar button.on" ] Always Chain_key
       ~sample:{|<span class="kbtn on">opam</span>|} ~says:"a choice made";

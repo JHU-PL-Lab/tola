@@ -277,9 +277,16 @@ is listed in <code>doc/canary/design/overview.md</code> §4.</p></details>
     (row "binding mechanism" m_buttons)
     (row "cooperation" k_buttons)
     (row "package in canary" c_buttons)
-    (* a way of looking at the chain, not a choice of one *)
+    (* ways of looking at the chain, not choices of one: each component's box *)
     (row "components"
-       {|<button id="jboxes" title="Draw each component's box over the chain: each side's package manager over the artifacts it delivers, and the two joins across the sides">boxes</button>|})
+       (String.concat
+          (List.map Canary_overview_diagram.containers ~f:(fun (c, _) ->
+               let base, sub = T.component_name_parts c in
+               let l1, l2 = Canary_overview_components.gloss c in
+               Printf.sprintf {|<button data-box="%s" title="%s">%s<sub>%s</sub></button>|}
+                 (esc (Canary_overview_diagram.box_key c))
+                 (esc (l1 ^ " " ^ l2))
+                 (esc base) (esc sub)))))
     (E.figure "fig-chain" (Canary_overview_draw.svg (opening j)))
     m_notes k_notes pm_notes c_notes runs0
     (match unbanded with
