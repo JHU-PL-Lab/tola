@@ -2546,6 +2546,44 @@ let badge_counts_test : Canary_project_test.pure_test =
         per_mechanism_ok && views_ok && agreements_ok && page_ok)
   }
 
+(* §3.1's table says one short thing per cell (user, 2026-10-06): what a
+   person writes there is a term, not prose, what every row shares sits in
+   the notes under it, and each cell of a row has a feature over it. *)
+let pm_table_terms_test : Canary_project_test.pure_test =
+  { name = "overview.pm_table_cells_are_terms";
+    holds = "Every cell §3.1's table writes by hand is one short term, at most 48 characters, and every cell of its rows has a feature in the header over it.";
+    check =
+      (fun () ->
+        let module S = Canary_pm_solo in
+        let long =
+          List.concat_map S.table ~f:(fun r ->
+              List.filter_map
+                [ ("format", r.S.ps_format); ("version", r.S.ps_version);
+                  ("capability file", r.S.ps_capability); ("built", r.S.ps_built);
+                  ("carries", r.S.ps_carries) ]
+                ~f:(fun (f, v) ->
+                  Option.some_if
+                    (String.is_empty v || String.length v > 48)
+                    (Canary_store.string_of_pm r.S.ps_pm ^ " " ^ f ^ ": " ^ v)))
+        in
+        List.iter long ~f:(Fmt.pr "    %s@.");
+        let html = Canary_overview_tables.pm_solo_table Canary_registry.all_specs in
+        let count pattern s = List.length (String.substr_index_all s ~may_overlap:false ~pattern) in
+        let body =
+          match (String.substr_index html ~pattern:"<tbody>", String.substr_index html ~pattern:"</tbody>") with
+          | Some a, Some b -> String.sub html ~pos:a ~len:(b - a)
+          | _ -> ""
+        in
+        let features =
+          List.sum (module Int) Canary_overview_tables.pm_solo_groups ~f:(fun (_, fs) -> List.length fs)
+        in
+        (* each row: a cell per feature, and "used by" *)
+        let rows = count "<tr>" body in
+        rows = List.length S.table
+        && count "<td>" body = rows * (features + 1)
+        && List.is_empty long)
+  }
+
 (* The PM-solo table has a row for exactly the package managers canary
    has a driver for, its scope and store read from that driver; the
    binding table is the mechanism catalogue; and the page draws one chain
@@ -3622,7 +3660,8 @@ let tests : Canary_project_test.pure_test list =
     claim_parts_test; sides_meet_test; sits_by_parts_test; components_contain_test;
     arrows_carry_ends_test; components_figure_test; frames_test; one_reader_test; template_test; results_table_test; agreement_counts_test;
     badge_words_test; staged_copy_test; overview_overlay_test; recorded_names_test;
-    overlay_words_test; bridge_record_test; placeholder_badges_test; coverage_tables_test;
+    overlay_words_test; bridge_record_test; placeholder_badges_test; pm_table_terms_test;
+    coverage_tables_test;
     package_band_test; chain_choices_test; chain_absence_test; drawn_line_sources_test;
     badge_counts_test; agreements_sit_test; agreements_by_layer_test; edge_marks_test;
     visual_vocabulary_test; flow_test;

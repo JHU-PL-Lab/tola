@@ -192,7 +192,7 @@ let join_panel (j : Canary_overview_join.t) =
            let v = Canary_store.string_of_pm r.Canary_pm_solo.ps_pm in
            Printf.sprintf {|<p class="mechnote jnote" data-jpm="%s"%s><b>%s</b> — %s.</p>|}
              (esc v) (hidden_unless (Poly.equal pl0 (Some v))) (esc v)
-             (esc r.Canary_pm_solo.ps_package)))
+             (esc (Canary_pm_solo.summary r))))
   in
   let c_notes =
     String.concat

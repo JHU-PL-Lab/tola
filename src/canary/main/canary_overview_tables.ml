@@ -136,8 +136,8 @@ let claim_sites_table () =
 (* ── §3 ── *)
 
 (** One of §3's tables, captioned: its head, then its rows. *)
-let cov_table (id : string) (head : string) (rows : string) : string =
-  wide (E.table ~cls:"cov" id ^ head ^ "<tbody>" ^ rows ^ "</tbody></table>")
+let cov_table ?(foot = "") (id : string) (head : string) (rows : string) : string =
+  wide (E.table ~cls:"cov" id ^ head ^ "<tbody>" ^ rows ^ "</tbody>" ^ foot ^ "</table>")
 
 let cells (xs : string list) =
   "<tr>" ^ String.concat (List.map xs ~f:(fun x -> "<td>" ^ x ^ "</td>")) ^ "</tr>"
@@ -163,40 +163,49 @@ let pm_users (projects : (string * Canary_project_run.project_run) list)
       in
       if uses then Some name else None)
 
+(** §3.1's columns: the components they describe, and under each its
+    features, one short term per cell. *)
+let pm_solo_groups =
+  [ ("M · package manager", [ "manager"; "side"; "store"; "not recorded" ]);
+    ("P · packaging", [ "format"; "version"; "capability file"; "bridges" ]);
+    ("A · payload", [ "built"; "carries" ]) ]
+
 (** §3.1: each package manager on its own. *)
 let pm_solo_table projects =
   let row (r : Canary_pm_solo.row) =
     let pm = r.Canary_pm_solo.ps_pm in
-    let unseen =
-      Canary_pm_action.inside_install pm ~of_binding:true
-      |> List.map ~f:(fun p ->
-             Printf.sprintf "%s <span class=\"from\">%s</span>"
-               (esc p.Canary_pm_action.ph_key)
-               (match p.Canary_pm_action.ph_unseen with
-                | Canary_pm_action.Not_yet _ -> "not yet"
-                | Canary_pm_action.Out_of_reach _ -> "out of reach"))
-    in
-    let dash = function [] -> "—" | xs -> String.concat ~sep:"<br>" xs in
+    let terms = function [] -> "—" | xs -> esc (String.concat ~sep:", " xs) in
     cells
-      [ Printf.sprintf "<b>%s</b><br><span class=\"from\">%s</span>"
-          (esc (Canary_store.string_of_pm pm))
-          (esc (Canary_pm_solo.scope_of pm));
+      [ Printf.sprintf "<b>%s</b>" (esc (Canary_store.string_of_pm pm));
+        esc (Canary_pm_solo.scope_of pm);
         esc (Canary_pm_solo.store_of pm);
-        esc r.Canary_pm_solo.ps_package;
-        esc r.Canary_pm_solo.ps_versions;
-        esc r.Canary_pm_solo.ps_ships;
-        (* the terms §1 writes under "capability file" and "bridge package" *)
+        terms (Canary_pm_solo.unrecorded_of pm);
+        esc r.Canary_pm_solo.ps_format;
+        esc r.Canary_pm_solo.ps_version;
+        (* the term §1 writes under "capability file" *)
         Printf.sprintf "<b>%s</b>" (esc r.Canary_pm_solo.ps_capability);
-        dash (List.map (Canary_bridge.kinds_of_pm pm) ~f:esc);
-        dash unseen;
-        (match pm_users projects pm with [] -> "—" | us -> esc (String.concat ~sep:", " us)) ]
+        terms (Canary_pm_solo.bridges_of pm);
+        esc r.Canary_pm_solo.ps_built;
+        esc r.Canary_pm_solo.ps_carries;
+        terms (pm_users projects pm) ]
   in
-  cov_table "tab-pm"
-    (heads
-       [ "package manager"; "store"; "what a package is"; "its versions";
-         "what it ships for others to read"; "its capability file";
-         "bridges it defines"; "inside an install, unseen"; "used by" ])
-    (String.concat (List.map Canary_pm_solo.table ~f:row))
+  let width = 1 + List.sum (module Int) pm_solo_groups ~f:(fun (_, fs) -> List.length fs) in
+  let head =
+    "<thead><tr>"
+    ^ String.concat
+        (List.map pm_solo_groups ~f:(fun (g, fs) ->
+             Printf.sprintf {|<th colspan="%d">%s</th>|} (List.length fs) (esc g)))
+    ^ {|<th rowspan="2">used by</th></tr><tr>|}
+    ^ String.concat
+        (List.concat_map pm_solo_groups ~f:(fun (_, fs) ->
+             List.map fs ~f:(fun f -> "<th>" ^ esc f ^ "</th>")))
+    ^ "</tr></thead>"
+  in
+  let foot =
+    Printf.sprintf {|<tfoot><tr><td colspan="%d">%s</td></tr></tfoot>|} width
+      (String.concat ~sep:" " (List.map Canary_pm_solo.notes ~f:esc))
+  in
+  cov_table ~foot "tab-pm" head (String.concat (List.map Canary_pm_solo.table ~f:row))
 
 (** Which projects bind through [m], per pass 2 — the mechanism each
     declared binding language resolves to. *)
