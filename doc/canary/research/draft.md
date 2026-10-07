@@ -1,209 +1,108 @@
---
-
-<!-- SKELETON, 2026-08-26. Bullet stage: every bullet is a CLAIM, not a
-     topic — a topic can be filled a hundred ways, a claim one way, so
-     filling is retrieval rather than invention. One level deep on
-     purpose: nothing below a section gets written until that section's
-     thesis is accepted. Material to mine: draft_old.md,
-     draft_comment_old.md, surface_draft/ (incl. tiny.md), and design/.
--->
-
-# Practical Bug-Finding for Language Bindings across Package Managers
-
-## 0 Meta (not the body)
-
-**Status snapshot — 2026-09-03.** Working-draft furniture; delete
-before submission. Baseline from the 2026-08-26 progress review; the
-checking row rewritten 09-03 against the agreement layer as it now
-stands. Percentages are judgement, evidence is not.
-
-| Track                                 | State                     | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Framework** (canary core)           | ~80%                      | M1 closed 2026-08-16. M2: steps 1–3 done, 7 of 10 open. Five-pass pipeline with `emit --stage N` dumps (08-24); own opam switch, platform carried not sniffed (08-26); four test suites green on Linux and macOS                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **Checking** (the agreement registry) | ~45%, moving              | Now its own layer, `src/canary/agreement/` (10 modules, ~2.4k lines), replacing `surface/` — and it **has production consumers** (step builder, local runner, GH backend, project specs), closing the standing gap that it was a producer nothing read. Registry: **12 agreements — 5 wired, 1 blocked, 2 stubbed, 4 proposed**, under named slugs (`symbol_exported`, `soname_denotes_needed`, …) that replaced `c1..c8`. Catalogue §1.7 is broader than the registry: **38 checks — 17 wired, 7 declared-but-unimplemented rows, 14 proposed** — over three targets, each with a falsifier, a method, and a *source*. Doc is 2382 lines on a **12-section outline; §1, §2, §12 and §3.1 done**, resuming at §3 |
-| **Witness** (tiny)                    | ~85%, regressed           | tiny1 22/22 pass, but detection coverage 12/24 — watchlist-blind on c5/c6/abi. tiny-full advertises six worlds and runs **one**; its lib and binding axes sit in dead code. Open decision: restore or delete                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Projects** (empirical breadth)      | ~45%                      | 10 registry projects + tiny1, 42 scenarios, 41 run. Against the declared 2×2 lower bound: 2 full, 1 collapse-only, 6 half, 1 neither                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| **Findings** (the product)            | ~50%                      | Real and reproducible: z3's forward cell (791 symbols required, 705 provided), ncurses `libtinfo` closure-shape segfault with identical symbol sets, zstd symbol-count-as-packager-policy, sundials 6→7 API break. **Zero upstream PRs filed**                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| **Paper**                             | ~20% prose, spine settled | Old manuscript retired to `draft_old.md` (873 lines, largely roadmap bullets). This file is a bullet skeleton: claim agreed, three tiers agreed (enumerate / realize / attribute), materials triaged with a fate per file, related work surveyed. **Prosing.**                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| **Delivery / ops**                    | ~25%                      | CI still runs the pre-A5 shape, one chain per project rather than the enumerated set; web results page not built; report milestone deferred                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-
-**The through-line.** The runner is the finished half and the checker is
-not: landing a project is cheap, but what a landing *checks* is still
-per-project tables, and no repair has yet been driven off a check.
-Growing the roster adds rows, not claims.
-
----
+# Practical Principles and Bug-Finding for Language Bindings across Package Managers
 
 ## 1. The problem
 
-**The claim.** This is a bug-finding framework, not a verifier: it 
-does not prove a deployment
-sound, it exhibits real failures in one. It works in three
-operations — **enumerate** the worlds a binding is actually deployed
-into, **realize** each one while keeping the record of how it was
-built, and **attribute** a violation back to the declaration or
-transition that produced it, with the agreement registry supplying the
-checks applied inside each world. The evidence is real defects,
-reported and fixed upstream.
+t.b.c
 
-*Thesis: a language binding is assembled by many parties out of many
-tools, each of which checks its own step and takes the rest on trust.
-So the agreements between steps are never checked by anyone, and a
-defect made in one place is found in another, long afterwards, and
-charged to the wrong party.*
+## 2. Our solution
+<!-- , and why it wins -->
 
-<!-- the setting: who builds this, and where they meet -->
+### 2.0 Rationale & Outline
 
-- Multi-language bindings are ubiquitous and critical, and the chain
-  that delivers them crosses tools and people no one specified together.
-- Defects are therefore quirky, surface late, and get blamed wrong.
-- **The chain spans actors**: the upstream library developer, the
-  binding author (on-tree or off), maintainers in several package
-  managers, an administrator, and an end user. Each sees one hop, and
-  no one sees the chain.
-- **Packaging is where those actors meet.** It is what delivers and
-  distributes the software, so it is also where their cooperation has
-  to hold. The end user starts from a *package* — never from the
-  source the developer wrote, and rarely from the combination the
-  binding author tested.
+(essential complexity) The bugs around cross-language bindings are tricky. The trickness comes from the essencial 
+complexity in the problem setting. It's involved two stacks, the language and the system, 
+ranging from the files to the packages, and also the interaction between both the language 
+tools but also the package managers. What's more, concrete case also depends on the 
+specific package manifest and the running environments.
 
-<!-- what holds the chain together, and why it is fragile -->
+_sw: diagram-one-stack * 2_
+_sw: diagram-binding-mechanism_
+_sw: diagram-coop_
 
-- **The chain rests on a mixture of agreements.** A few are specified;
-  more are conventions; many are purely **behavioural** — true only
-  because a compiler, a linker or a loader happens to act that way.
-  None of them is owned by the party on the other side of the join.
-- **The only oracle in use is a successful command**, and it is weak
-  twice over. It is narrow: violations that some tool enforces get
-  rejected, while everything merely *tolerated* passes green until
-  usage finally touches it. And it is unfaithful: a linker may
-  silently drop a version script, a build may not re-run, an install
-  may skip a rule — all of it reported as success.
+$$
+PM_{lang} \rightarrow Package_{lang} \leftrightarrow 
+Artifact_{lang} \leftrightarrow Binding \leftrightarrow Artifact_{sys} 
+\leftrightarrow Package_{sys} \leftarrow PM_{sys}
+$$
+<!-- _sw: update color to align with diagram, also fold one-line as layers_ -->
 
-<!-- why the failures land late, and on the wrong party -->
+_sw: this formula is not good, since pm-coop is not here_
 
-- **A defect is a property of the package *and* the use.** Different
-  end uses touch different parts of a surface, so a deployment that is
-  healthy under one user's usage is broken under another's. This is
-  why checking has to reach the run and cannot stop at the build.
-- **Management latency puts distance between cause and symptom.** The
-  packaged binding lags the library it wraps, so a defect enters
-  upstream and surfaces downstream — long after shipping, and far from
-  the party who could fix it.
-- Together these make binding packages **error-prone to produce, hard
-  to test, and hard to attribute** once something breaks.
+(this work)  Our target is to study the workflow a.k.a real-world actions around the 
+language bindings. It doesn't only cover immediately on how an binding is 
+created and used, but also cover all the lifecycle for the dependent artifacts, 
+tools including package managers, and systems where they are working on. 
+Before delving into what build, deploy and runtime tests we can do, and how to establish 
+the expectation and blaming, we first introduce on how we see these issues, and how this work (canary frame) 
+targets to handle these issues. We propose a perspective **modeling** to treat the whole chain as separate components as:
 
-### What already exists, component by component
+- $M_{lang}$ and $P_{lang}$. Package managers for a language for only the management part
+- $M_{sys}$. Package managers for system for only the management part
+- $A_{lang}$. Language artifacts and related tools including compilers, interpreters, inspectors
+- $A_{sys}$. System artifacts and related tools.
+- $B_{mech}$. Binding mechanism that a language and a system cooperates
+- $Co_{op}$. The cooperation between two package managers.
 
-<!-- the honest survey: each component HAS a checker; each stops at
-     the same boundary -->
+At the artifact-layer, we treat binding mechanism as first-class variant to study, while
+at the package-layer, we also treat package managers' cooperations explicitly. This split 
+also helps to split normal managements on naming, versioning, resolution, dependencies, 
+and also give the cooperations a dedicated study, that interaction based on package content, 
+and via special constructs e.g. virtual packages. We can see here naturally residents a M*N 
+problem essentially, and it cannot always be solved by the courtesy from some good packages.
 
-- **The native library.** Consumers rest on its exported symbols, its
-  soname, its version nodes. This is the best-served component:
-  `abidiff`, `abicompat` and the newer `abicheck` compare a library
-  against a consumer, and Debian's symbols machinery and
-  Fedora/openSUSE ABI QA run such checks routinely. They compare the
-  two binaries they are handed, and never ask which two a user will
-  actually have.
-- **The foreign interface** — the binding's stubs and declarations.
-  Per-language analyses exist (Jinn, TurboJet, FFIChecker, Python/C
-  checkers), as do the generators (SWIG, `bindgen`, cffi). Each covers
-  one language's protocol, and a generator validates against the
-  header it was given rather than the library that will be loaded.
-- **The binding's user-facing API** — what the repacking presents
-  upward. Essentially only the binding's own test suite covers it, and
-  a test suite exercises what its author thought to exercise, in the
-  one configuration its author had.
-- **Versions and dependency constraints.** Every ecosystem ships a
-  resolver — opam, pip, conda, dose3 — and cross-ecosystem resolution
-  now has research systems too: HyperRes, and the Package Calculus.
-  The deployed resolvers decide what *may* be installed together from
-  **declared metadata**, never whether the installed artifacts fit;
-  the research systems model resolution and stop, deliberately, before
-  anything is realized.
-- **Where each artifact came from.** SBOM formats, SLSA and
-  reproducible builds record provenance faithfully. Provenance answers
-  *where it came from*, which is a different question from *does it
-  fit*.
-- **The realized deployment, and the run.** Ecosystems run substantial
-  rebuild-and-test infrastructure — autopkgtest, conda-forge
-  migrators, opam bulk builds, `cibuildwheel`, `auditwheel`,
-  `rpminspect`. Each explores within one ecosystem, at the versions
-  that ecosystem chose, normalising foreign dependencies into its own
-  package model.
+The motivation to treat the real-world pm with bindings as a combination of several components 
+in ragged formality.
 
-<!-- the payoff: why none of it closes the three properties above -->
+A real-world project using cross-language bindings, along with its deployment in package managers, 
+have to declare and experience actions in such components. These information may be provided by 
+different people. _sw: stating what they can provide._
 
-- **Every partial answer stops at the same boundary: it takes the
-  other side as given.** The library checker is handed its consumer;
-  the FFI checker is handed its library; the resolver hands over
-  metadata and stops; the rebuild farm fixes the ecosystem and varies
-  inside it. The defect lives in the join, and the join is the one
-  thing no party owns.
-- **The asymmetry is one of adoption, not only of ideas.** Everything
-  that became production infrastructure is *local* — `auditwheel` and
-  manylinux, `cibuildwheel`, opam `depexts`, conda-forge migrators,
-  Debian archive QA, `rpminspect`, libabigail. Everything
-  compositional is a prototype or an emerging standard. A correct
-  compositional check therefore helps nobody today, because nothing
-  runs it in the world the user gets.
-- **So a binding can fail while every local subsystem behaved
-  correctly by its own contract.** The questions nobody asks are the
-  compositional ones: which header did the binding actually observe,
-  which implementation did its package manager intend, which provider
-  did the build select, which one did the runtime finally load, and
-  does the declaration the binding carries match that provider?
+However, not all the components are specified, especially for _irregular_ package. For example, a 
+pip package has bundled native library artifact, or an opam package who builts a native library from 
+source. Our modeling treats they misses one-side of management.
 
-_Material: draft_old.md §Motivation; the courtesy paragraph;
-related/canary-practical-cross-language-bindings-report.md §§2–5, 9–10;
-related/adoption-in-practice.md (the adoption asymmetry)._
+We use the practice enumerations for interesting **actions** during any above commponents. The 
+enumeration will cover useful combinations for artifacts appeared in each components (and staged). 
+Those actions may fail or generate outputs that the framework treats them as failure signals that 
+we try to trace and blame. Given the miscellerous systems themselves and cooperations may never 
+have invariants or inferences, and some standards are just conventions. We would call them **agreements**.
 
-## 2. Our solution, and why it wins
+(existing studies) Traditional PL topics concern one component, e.g. one language, and declared strictness can 
+range from fully verification, type-checked, to untyped. There are also studies and tools on 
+some across boundaries studies, including FFI; there is also studies on PM, which respects the 
+complexity of full chains and focus on the resolutions.
 
-**NEED AN EXAMPLE, maybe we need tiny back**
+(exisiting works in PL abstract) Common PL tools are concerning one set of rules,
+and the combination of applying them on joinable components, e.g. interpretation, typecheck,
+ static analysis, etc. Package managers under our discussion, is the real-world application, to 
+ combine a group of different set of rules, that covers multiple package managers, multiple 
+ package content, and the cooperations between them. Some sets of rules can be typechecker, e.g.
+ the provider or consumer of the bindings can be in a typed language, but it's just some cases.
+ They also don't always start with the original input, say even with the full language tools, 
+ we cannot re-compile and re-build everyting from scratch. The problem extended to ensure the 
+ artitrary artifacts
 
-### 2.1 Canary Overall
+(expect for users) With the above theoretical and framework preparation, the users are expected 
+to provide a project manifest including only two parts of information: (1) the source code which 
+is for the system library, for the binding, or both, (2) arbitrary resource declaration including 
+code repo, package provision, etc. The canary framework will generates enough testcases, then 
+detect bugs and blame coresponding components.
 
-**Thesis**: a project declares only what it is; the framework derives the
-worlds, realizes them, and keeps the record of how each was realized.
-The deployed set is a product, and a product is derivable — which is
-what makes provenance an experimental variable rather than a fixed
-assumption.
+The whole paper follows the outline. They are:
 
-This work present the Canary framework. Canary enumerates practical operations 
-, from a project manifest containing the necessary project-specific commands for
-building, installing and delivering the project, together with declaration of
-artifacts such as source code, packages and releases for upstream libraries or binding.
-Each enumerated scenario contains a sequence of possible action that may span 
-several stages. A scenarion can run locally through a OCaml driver program, or 
-as a continuous integration workflow. Scenarion enumeration provides covers 
-situations in which artifacts of interest may be used, in situations that library
-developers or package maintainers may not anticipate and that library users
-may not encounter exhaustively.
+- SS 3. Modeling for bindings, packages, and package managers
+- SS 4. Actions
+- SS 5. Agreements
+- SS 6. Case study for Bug and Fix
+- SS 6. Evaluations
+- SS 7. Implementation
 
-Besides enumerating scenario combinations, we also enhance each scenario's
-action chain with checks dispatched from the agreement registry for the involved 
-artifacts. For example, consider a project `tiny`, in which an OCaml module uses a 
-binding to a C library
-Its source files include the header file `tiny.h`, C source `tiny.c`, 
-OCaml C stub `tiny_stub.c`, OCaml binding `tiny.ml` and an OCaml signautre `tiny.mli`.
-Building OCaml binding `dlltiny.so` and others needs C header and the compiled 
-library `libtiny.so` (assume ELF format in Linux). Compliing and running the OCaml 
-binding locally needs linker and loader to treat `dlltiny.so`. With the binding,
-a user can use it directly, but a library develop may publish `tiny_help`
-library which declares this dependency, and let the user fetch that files.
-Both system and language-specific package managers help deliver and resolve artifacts.
-However, they also complicates the situations on how artifacts are declared, which artifact to use,
-whether they fit together, and more broadly, how the package managers cooperate.
+@import "draft_ss3.md"
 
-<!-- Such a registry is necessary because the checking for some artifacts
-are studies e.g. some ABI checker and reverse dependency analyzer, however it's 
-not intergrated in a holistic and practical perspective that end-user may
-encounter, and not in an explicit manner.  -->
 
-## 3. Practical enumeration
+## 4. Practical enumeration
 
-### 3.1 RATIONALE — why enumerate at all
+### 4.1 RATIONALE — why enumerate at all
 
 The movitation for enumeration is straightforward:
 **to dry-run possible scenarion and encounter the error before users do**. 
@@ -250,7 +149,7 @@ It's a fragiled but common practice. Canary handle real-world provisioning
 irregularities by supporting ad-hoc package _co-providers_ to specify them 
 in our project specification.
 
-### 3.2 Action, the basic operation and enumeration unit
+### 4.2 Action, the basic operation and enumeration unit
 
 Canary uses actions to describe project operations, including _build-library_,
 _build-binding_, _install-library_, _publish-package_, etc. An action's 
@@ -276,7 +175,7 @@ being tested.. It also reflects the common structure of project workflows.
 The project-independent enumeration can be shared, while only project-specfic 
 information needs to be declared in a dedicated data structure.
 
-### 3.4 Project Manifest
+### 4.3 Project Manifest
 
 (SW: _spec_ may not be a good name. The intention looks like a project _manifest_)
 
@@ -295,9 +194,9 @@ native library z3 include official project source, which needs to build,
 the latest stable packages in the platform of interest, and the python 
 package `z3-solver`.
 
-### 3.5 Running Actions
+### 4.4 Running Actions
 
-An action is instantiated  using information from a project manifest. 
+An action is instantiated using information from a project manifest. 
 For instance, the _build-project_ action for project z3 gets the building command and
 the path to the source code artifact. Canary also prepares the output path required
 by the build command.
@@ -326,14 +225,79 @@ complete scenario, e.g. _fetch-project-v1_, _build-project-v1_,
 _building-a-binding-vb2-with-v1_, _pack-vb2-as-a-package_, _fetch-package_,
 _run-app-using-package_.
 
-## 4. Principled checking
+### 4.5 Compiling to Actions
 
-### 4.1 Rationale
+Canary implememtation approaches is like a compiler which takes static surface 
+information as the inintial IR, to runnable steps on concrete backends end terminal IR. 
+This design helps to clearly inspect information in each stage, reduce duplicated work 
+on configurations, and only fulfill complete commands until the platform-dependent 
+instructions are necessary.
 
-<!-- In Search of Lost Agreement -->
+_sw: t-b-c The necessarity and benefit is mainly for engineering, a.k.a practical usage._
 
-<!-- It not only includes what exact checking are performed, but also explicit on
-what the checking are themselves. -->
+## 5. Principled checking
+
+### 5.1 Rationale
+
+PL researches usually concern one set of rules or semantics, and it applies on 
+multiple components compositionally. Real-world package managers across language 
+bindings contain naturally heretogenous parts, while some steps can be typechecked 
+if one side of binding uses a language supporting it. Thus, it may combinate multiple
+systems on integrating good virtue of each involved components that people wish to have.
+
+The complete pipeline for a consumer program of using a binding can be split 
+into three parts, resolving the binding side module, resolving the native side module,
+and invoking the binding mechanism. The real order of these parts can vary and differ, 
+but we can see the different layers for the artifacts that around the bindings, and
+the peripheral structures and steps that helps to find thoe artifacts.
+
+The **artifact layer** is dictated by the language and binary tools. The agreement between 
+the inputs and the outputs is introduced by the tools, and indirectly by any specification 
+if that tools obey. For example, a compiler compiles a source code `src` to an output `obj`.
+We can inspect the `obj` to find the evident that it should be aligned with the `src`:
+if it's the case that C code compiles to an ELF object, we can inspect the symbols, functions, 
+etc; if it's the OCaml compiles to code to a bytecode, we can using ocaml's objdump 
+to inspect. The observation here is the artifact creation carries some agreements from 
+the tools and the creation is unavoidably to lose information. These agreements is a _search of the 
+lost agreement_ for arbitrary given artifacts, that the package managers might provide. 
+With this perspective, for any existing actions in the artifact layer, we can seek  
+some direct agreements.
+
+Considering the binding mechanism, we can also find agreements that spans several actions.
+For example, the binding usually provides similar interfaces in different sides. For example, 
+the native library can provide math operations in its syntax, while the binding library 
+has coresponding operations. These agreements depends on which binding mechanism you are using. 
+for example, whether requiring C stubs, whether involving separate compiled steps, or whether 
+pure dynamically. Beyond the binding mechanism, both the presense and invarants on one side 
+shall be kept conventionally on the other side. The agreement can be detected and checked 
+via either the static inspection, or dynamic runtime tests
+
+The remaining pipeline are in **package layer**, which concerns how to declare and locate 
+the artifacts as package payloads. Our would like to view one package manager from the 
+package payload side and the management side, because they don't have to be coupled. For 
+example, we usually describe Debian apt as a system package manager, and it uses to manage 
+system packages, some of which are native binary libraries. We can see ELF has its own 
+specification, versioning, convertions, which are not determined by the package managers.
+The same is also true for Mach-O and homebrew. However, the package manager side can 
+enforces some conventions for the managed material, e.g. how to set its rpath. We 
+treat the package management side and payload side separately, and it helps us to understand 
+and propose agreements better.
+
+The artifacts for a binding can be provided by separate package managers. Multiple 
+package managers have different cooperation patterns. A package manager can be aware and 
+even specify another package manager. For example, opam once uses `depext` to
+ speicfy the external dependencies and now prefer to use virtual conf-package which directs 
+ depending on system packages managers. If a package manager itself is agnostic about 
+ other package managers, the task is either left to packages or to users, so that the 
+ solution (or the fact) are various. For example, opam's `z3` package currently has 
+ to build a `libz3` within the opam package. For pip's `z3-solver`, it ships 
+ a prebuilt `libz3` in the package.
+
+The above disussion forms perspectives to treat the actions as the join from two package
+managers including their management parts and payload parts, and the binding mechanism parts. 
+The four components at three layers helps to category the agreements.
+
+### 5.1 Rationale (Old, Shall be absorbed)
 
 There are several motivations for principled checking. (1)
 we want to make explicit which checks are performed and what they mean. 
@@ -368,11 +332,11 @@ action should satisfy but can fail.  We avoid stronger terms such as _invariant_
 because software can often still work even when an agreement is violated.
 
 Canary centralizes the agreements in a module named agreement registry.
-When an  action touches a particular artifact, or involves a binding mechanism or
+When an action touches a particular artifact, or involves a binding mechanism or
 tool, it will look up the agreement it should check. Each agreement provides 
 a command template, so that the corresponding can perform alongside with the action.
 
-### 4.2 Agreement at a Glance
+### 5.2 Agreement at a Glance
 
 Agreements can be on one or several artifact. Artifacts can be checked by  
 inspecting artifacts with tools or running tests.
@@ -400,7 +364,7 @@ system binary utilities and language own toolset.
 2. check native lib, for recorded resolution path: 
   - if build profile is install, none of local building path should appear -->
 
-### 4.3 Native Binary Artifact
+### 5.3 Native Binary Artifact
 
 Many upstream project provides C libraries, and other languages can access 
 through the system ABI. Compiling a C library requires header files that may
@@ -418,52 +382,6 @@ violation may be tolerated if other conventional search paths compensate for
 it.
 
 We use compiler toolset and platform binary utils to inspect the artifacts.
-
-### 4.4 Language bindings and their mechanisms
-
-#### 4.4.1 Agreements for OCaml and its binding mechanism
-
-OCaml has source code files for implementation and interfaces, as well as 
-compiled modules for bytecode and native-code format.The OCaml toolchain 
-provides tools for inspecting bytecode files. Platform tools can inspect native binaries.
-
-OCaml binding mechanism to use native library is via compiled C stubs. A binding
-module is compiled statically and can then be used like an ordinary module, either when
-compiling a program or when loading it dynamically into a toplevel.
-
-The official OCaml manual includes a section on creating bindings. However, how to 
-ensure that a binding is constructed correctly, and which agreements are observed, is 
-not explicitly stated, especially considering when considering different
-ways of producing and consuming the native binary
-
-Agreements within pure OCaml code are usually maintained because the relevant
-files are shipped together in a common OCaml package. However, agreements
-between the native C side and the OCaml side are usually maintained implicitly.
-
-<!-- 
-When an OCaml binding is created, agreements are established among the native
-binary, the C header file and the OCaml C stub. When the binding is subsequently
-used locally or delivered to users, static use requires agreement between the
-binding and the C header and native binary that can be located.
- -->
-
-#### 4.4.1 Agreements for Python
-
-*Material: [component agreements](../design/agreement/components.md), §3.2.*
-
-### 4.5 Versions, packaging and provenance
-
-*Material: [component agreements](../design/agreement/components.md), §§4–5.*
-
-### 4.6 Deployment and behavioural evidence
-
-*Material: [component agreements](../design/agreement/components.md), §6.*
-
-### 4.7 Registry integration and coverage
-
-*Material: [agreement guide](../design/agreement/README.md), §§3–4;
-[checker integration discussion](related/canary-practical-cross-language-bindings-report.md),
-section 9; `src/canary/agreement/`.*
 
 ## 5. Attribution and Blame
 

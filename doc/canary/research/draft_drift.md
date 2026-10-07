@@ -1,91 +1,150 @@
 # Draft drift: what draft.md does not say yet
 
-*2026-09-29.* A checklist for writing [`draft.md`](draft.md) against the
-overview page (`docs/canary/overview.html`, `make view`), which is the
-current picture. The draft's prose dates from 2026-08-26 to 09-03 and
-its §0 snapshot from 09-03. Each item gives what exists now, whether
-the paper can claim it, where it belongs in the draft, and where to read
-it.
+<!-- Material to mine: draft_old.md,
+     draft_comment_old.md, surface_draft/ (incl. tiny.md), and design/.
+-->
 
-- **landed**: a real run decides it;
-- **partial**: some of it runs;
-- **planned**: designed, not built.
+## 0. The framing: a binding is a heterogeneous join
 
-Numbers are a snapshot, so re-run the command beside a number before
-citing it.
+### 0.1 One stack: management over artifacts
+
+- A package manager does not handle artifacts directly. It manages
+  packages: names, versions, dependency constraints, and a solver that
+  picks a consistent set. The artifacts carry their own facts: exported
+  symbols, sonames, symbol versions, interfaces.
+- So even one stack has two levels, management over artifacts, and the
+  explanation can start there, before any binding. The PM touches
+  versioning and resolution for the artifacts' provision and
+  compatibility, but a solved version set stands in for compatibility;
+  it does not guarantee that the symbols agree.
+- Within one stack, some ecosystems derive management metadata from
+  artifact facts, which narrows the gap (to verify before citing): RPM
+  generates requirements from the sonames and symbol versions a binary
+  needs; Debian's symbols files record the package version that
+  introduced each symbol, and `dpkg-shlibdeps` turns the symbols a binary
+  uses into dependencies.
+
+### 0.2 Two stacks: what a binding brings
+
+- A binding joins two ecosystems, a native library and a program in
+  another language, so it brings two stacks, each with its own package
+  manager: PM_sys over Art_sys, PM_lang over Art_lang.
+- The stacks are joined at both levels:
+  - at the artifact level by the **binding**: a stub or extension that
+    calls the native library, linked or loaded against it;
+  - at the management level by the **cooperation** of the two package
+    managers (PM_coop): a bridge package (opam's conf-*), a depext naming
+    a system package, a capability file (`.pc`), or nothing.
+- The cooperation exists only because there are two stacks; one stack
+  needs none. The program sits on top and reaches both through the
+  binding.
+- Canary's model is this square with the program on top: Figure 2's
+  nodes and edges, the seven layers of the page's Table 6, and eleven
+  cooperation kinds (unified, absorbed, conf, depext, capability,
+  artifacts only, and others).
+
+### 0.3 The two joins are not coupled
+
+- PL's paired notions are coupled by construction: an expression and its
+  type, a term and its value, are related by a judgment the language
+  defines.
+- The binding and the cooperation have no such relation. The cooperation
+  concerns the artifacts on the two sides (the system's library is
+  present, at some version), not the binding. It does not know the
+  binding's mechanism: compiled stubs need headers and a library at
+  build time, ctypes only a library at load time. Nor does it know the
+  symbols, soname or ABI the binding needs.
+- So the square need not commute: what the cooperation admits at the
+  management level is not, by construction, what the binding needs at
+  the artifact level. A world both package managers accept can still fail
+  at link or load time.
+- The agreements across the square's diagonal are commutation checks:
+  `gate_bounds_the_library` (the bridge's bound against the library's
+  version) and `discovery_matches_link` (pkg-config's answer against what
+  the binding links). Both are candidates. No agreement yet checks that
+  the gate admits only libraries exporting what the binding requires;
+  that would be a composition of `gate_admits_the_world` and
+  `required_symbols_exported`.
+
+### 0.4 The tensions, side by side
+
+- **Artifact-facing** (management over artifacts, in each stack): the PM
+  resolves versions for provision and compatibility, but a version
+  stands in for the artifact. It cannot guarantee that symbols, sonames or
+  interfaces agree; canary's agreements check what it cannot.
+- **Binding-facing** (the cooperation): it is not aligned with the binding
+  mechanism and carries too little metadata, names and version bounds,
+  rarely an artifact fact.
+- **The design question:** could the cooperation's metadata be derived
+  from the artifacts the binding needs, so that the solvers' yes implies
+  the linker's and the loader's? Within one stack RPM and Debian do part
+  of this (0.1). Across stacks the nearest is manylinux: a wheel's tag
+  bounds the glibc symbol versions it needs from the system, and
+  `auditwheel` bundles every other native library into the wheel (to
+  verify).
+
+### 0.5 The design space
+
+Each axis, with points canary has met or models (cooperation kinds in
+brackets):
+- **Who supplies the native artifact:** the system PM (apt, brew); the
+  binding's package, bundling or building it (absorbed: wheels, and z3's
+  opam package, which ships its own libz3); one PM for both stacks
+  (unified: opam's libtorch beside the torch binding; Nix, Guix and
+  conda, to verify); the binding's own source tree (local).
+- **What crosses the management join:** nothing (artifacts only); a
+  capability file (capability: `.pc`, and Cargo's `*-sys` crates, to
+  verify); a package name (depext); a predicate checked against the
+  system (conf: opam's conf-*); version bounds on it; artifact facts
+  (manylinux, 0.4).
+- **How the binding joins the artifacts:** statically, through compiled
+  stubs or extensions (link time: headers and a library), or dynamically,
+  through an FFI (load or call time: a library only). The mechanism
+  decides which artifact facts matter, and when.
+- **Who checks what:** the solvers check metadata; each tool checks its
+  own rule at its action (compiler, linker, loader); canary checks
+  agreements over the artifacts that survive, in every world the package
+  managers admit, and places a failure at a layer or a join.
+
+### 0.6 A PL perspective: the heterogeneous join
+
+- PL work on multi-language systems studies the artifact join (FFI
+  typing and checking) for a fixed build; work on dependency solving
+  studies one management level. A binding deployed through two package
+  managers is both at once: two independent dependency systems and a
+  cross-language join, with no judgment relating the two joins. Survey
+  this before claiming it is new.
+- The paper's framing: the system is a heterogeneous join; actions are
+  how its components make and use each other's parts; agreements are
+  what must hold within a component and across a join; bugs are failures
+  placed at one of them.
+
+### 0.7 Where today's material lands
+
+- **Understanding:** 0.1–0.4; the layers (the page's Table 6); actions
+  as the edges of Figure 2; the agreements' kinds and bases (§4 below).
+- **Handling:** enumerating the worlds the components admit (§3 below),
+  running and checking them (§4), attributing a failure to a layer or a
+  join (§5).
+- **The bugs, by location:** the findings in §7 below, each placed at its
+  layer or join. A table of them is the page's next addition.
 
 ## 1. Terms to settle first
 
-The page defines its terms in §0.1. The draft uses other words for some
-of the same things, and in one place the same word for a different
-thing.
+- **The model's name, to decide.** The model is a square: two stacks
+  (system, language), each management over artifacts, joined at the
+  management level by the cooperation and at the artifact level by the
+  binding, with the program on top. Candidates:
+  - *the binding square*: names the shape and asks 0.3's question,
+    whether it commutes; recommended;
+  - *the two-stack model*: plain, but silent on the joins;
+  - *the heterogeneous join*: better as the thesis than as the diagram's
+    name.
 
-| page | draft | to decide |
-| --- | --- | --- |
-| **world**: one choice of where each of a project's artifacts comes from, and at which version | scenario (§2.1, §3) | The code enumerates worlds; "scenario" survives in older docs and code names. Pick one for the paper. |
-| **chain**: one world in one binding language, the path from two package managers to the programs | the chain of actors (§1); the action chain (§2.1) | §1's sense and the page's agree; the paper should use one and define it. |
-| **side**: the system side and the language side | native side, binding side (§2.0, §4.1) | §2.0's "binding side pm and package" seems to mean the system side, but the binding itself sits on the language side. |
-| **layer**: package manager, package, artifact, program | "four components at three layers" (§4.1) | The page has four layers on two sides. §4.1's cut is the same, with the package manager folded into the package layer. |
-| **cooperation**: how two package managers are joined (§3.3, 11 kinds) | "pm cooperation" (§2.0), "cooperation patterns" (§4.1) | Same concept; the page has the catalogue. |
-| **bridge** and **capability file** | "virtual conf-package", `depext` (§4.1) | The page keeps them apart. A bridge (opam's conf-* packages and depexts fields) is package content made for cooperation. A capability file (`.pc`, META) says what a package offers, and belongs to that package. |
-| **binding mechanism** | "bind mechanism" (§4.2) | Same; the catalogue has five. |
-| **agreement**, **candidate**, **claim site**, **kind** | agreement (§4) | The page adds candidates (claims named, with no evaluator), sites (the edges of the model a claim sits on) and six kinds (§2 below). |
-| **blame**: why a check has no verdict (evidence, declaration, version, stale, vacuous) | blame: the party answerable for a failure (§5) | **A collision.** The page's word names a gap in canary's own evidence or spec; §5's names a party. The paper needs two words. |
-| **linking lift** | "artifact-to-package lift" (§2.0) | Same idea; pick one name. |
-| a project's **declarations** | "project manifest" (§3.4, proposed) | The code says spec, `project_run`; the page says declarations. "Manifest" works if the paper defines it. |
-| **frame**: one action as §1 draws it, a column group of §1.2 and §2 | — | Only needed if the paper shows the result table. |
+  The layer names stay as the page has them: PM_sys, PM_lang, PM_coop,
+  Art_sys, Art_lang, Binding, Program; "management" and "artifact" for
+  the two levels; "join" for PM_coop and Binding.
 
-## 2. Section by section
-
-### §0 Meta: the snapshot is stale
-
-| the draft says (09-03) | now | re-derive with |
-| --- | --- | --- |
-| 12 agreements, 5 wired, under slugs such as `symbol_exported` and `soname_denotes_needed` | 14 registered agreements: 11 with an evaluator, 9 **landed**. With 16 candidates, 30 claims sit on the model. Slugs renamed, e.g. `required_symbols_exported`, `soname_matches_requirement` | `canary checks --landing` |
-| a five-pass pipeline | six passes over four IRs | `canary emit <p> --stage N` |
-| 10 projects and tiny1, 42 scenarios, 41 run | the record holds 10 projects, 28 worlds, 42 chains; z3 is muted and runs separately | `canary overview --json` |
-| z3's forward cell: 791 symbols required, 705 provided | the notes disagree: 791/705 (08-19) and 776/705 with 85 missing (09-15). Run z3 and read its stub inspection before citing | `canary action z3`, then the record |
-| web results page not built | the overview page is the results page | `make view` |
-| the agreement catalogue doc (2382 lines) | retired; page §2 is the catalogue. Four agreement docs remain, due a cleanup | — |
-
-### §1 The problem
-
-Aligned. Two points the page now makes concrete:
-
-- **The two package managers, by side:** apt and brew on the system
-  side, opam and pip on the language side (page §3.1).
-- **Where they meet:** a bridge, or nothing (page §3.3). opam's conf-*
-  packages and depexts are bridges; pip bundles the library instead.
-  Cargo's `*-sys` crates meet through a capability file and no bridge.
-  That contrast left the page and belongs here or in §8.
-
-### §2.0 Rationale and §2.1 Canary overall
-
-- **The layered model** (built from code, and drawn). Your split — a
-  package manager and package layer per side, their cooperation and its
-  irregularities, then the package-free binding mechanism — is the
-  page's §1 and §3. A chain joins three things:
-  - two package managers, one per side by its driver's scope (§3.1);
-  - a binding mechanism, which decides which artifacts exist (§3.2);
-  - a cooperation, which decides the package nodes and joining edges
-    (§3.3). It is derived per world from where its artifacts come from
-    and the gates its project declares.
-
-  One fixed, hand-written graph carries every chain: 16 nodes and 21
-  edges, each edge named by an action family. Read the page's §1 note
-  "A chain is a join", and §3's intro.
-- **"Package special irregularity"** is what the cooperation kinds
-  record:
-  - *absorbed by the consumer package*: opam's z3 and llvm packages
-    build the library inside;
-  - *no package manager between*: sqlite's Python binding ships with
-    CPython, so its fetch is an "included" step;
-  - *unified package universe*: torch, with libtorch as an opam package;
-  - *⚠ bridge still gates against a system this world does not use*:
-    cairo, libffi, sqlite.
-
-  Seven of the 11 kinds have worlds. Four are named only: undeclared,
-  direct depext, artifact-centric capability-mediated, and incomplete.
 - **"Artifact-to-package lift"** is the page's linking lift, **planned**.
   What exists: the two consumer programs, artifact-linked and
   package-linked, are nodes of the model, and z3 has both probes wired.
@@ -94,10 +153,7 @@ Aligned. Two points the page now makes concrete:
   is a candidate with no evaluator. The design, which keeps a name apart
   from a resolution the package failed to provide, is overview.md §6.2
   step 5.
-- **Placeholders** (landed): steps that stand for what a package manager
-  does inside our actions and canary cannot record — apt's policy,
-  opam's plan, solver and build. The page draws them as "inside" marks.
-  They are an honest boundary of observation.
+
 - **"NEED AN EXAMPLE"**: candidates, each drawn on the page (§3.4):
   - zarith: the conf-gmp bridge, whose own check a bridge step records,
     decided by `gate_admits_the_world`;
@@ -106,10 +162,10 @@ Aligned. Two points the page now makes concrete:
   - llvm: `Opcode.UncondBr` — the released binding (LLVM 19) lacks what
     its example uses (LLVM 21 and later).
 
-  tiny remains the minimal witness.
-- **Figures.** The page's §1 diagram is the model figure. The page's
-  §0.2 figure is the architecture figure: code, passes, run, record and
-  page, with what the harness holds.
+## 2. Material by the draft's sections
+
+Each block keeps the draft's section number; §0.7 says where it lands
+under the framing.
 
 ### §3 Practical enumeration
 
@@ -132,15 +188,17 @@ Aligned. Two points the page now makes concrete:
   run's record is its manifests (what each world realized), its
   `actions.log` and its inspections. The page's §1.2 shows one row per
   chain.
-- **Numbering:** §3.3 is missing.
+
+--
 
 ### §4 Principled checking
 
 - **Categorizing agreements by layer is built.** Every agreement and
-  candidate has a claim site, the edges of the model it sits on. Page
-  §2.1 groups them by reach and layer. §2.2 lists them edge by edge,
-  with the four edges that carry no claim: `resolve_sys`, `realize_hdr`,
-  `realize_cap`, `build_hdr`.
+  candidate names the parts of the chain it relates, layer by layer, and
+  the edges it sits on. The page's §2 opens with them by layer (Table 6),
+  with the object formats each applies to; §2.1 shows where each is
+  checked; §2.2 lists them edge by edge, with the four edges that carry
+  no claim: `resolve_sys`, `realize_hdr`, `realize_cap`, `build_hdr`.
 - **What is claimed: six kinds.**
   - admissibility: would one action have accepted these inputs together?
   - promise: is this artifact what its producer said it would be?
@@ -198,9 +256,11 @@ Aligned. Two points the page now makes concrete:
 - Page §0.2 is the architecture figure.
 - The code's layers: base, agreement, tool, action, backend, then
   project and main.
-- The harness: 195 project, 120 artifact and 17 package-manager tests;
-  a round-trip gate that fails if a landed agreement stops deciding on
-  sqlite; pins that hold the page's own lists to the code.
+- The checks (their counts: `canary overview --status`): the model tests
+  (`project-test`); the framework tests (artifact, package-manager,
+  mutation, cache); a round-trip gate that fails if a landed agreement
+  stops deciding on sqlite; and the agents' harness, which holds the
+  repository's own text to the code.
 - Canary runs in its own opam switch, and the platform is carried, not
   sniffed.
 
@@ -213,18 +273,41 @@ Aligned. Two points the page now makes concrete:
   - 11 cooperation kinds, 7 with worlds;
   - a model of 16 nodes and 21 edges;
   - 14 registered agreements (9 landed) and 16 candidates.
-- **Findings to verify before citing:**
-  - z3's forward cell: symbols a HEAD binding requires that apt's libz3
-    lacks.
-  - z3's both-released world: the opam package ships its own libz3, so
-    the declared apt library is never loaded.
-  - ssl: `dependencies_provided` violated on `libcrypto.so.3`.
-  - sqlite: the built 3.43.2 violates its own declared exports, because
-    the declaration cannot say "from 3.44"; the blame falls on the
-    declaration.
-  - zarith: the conf-gmp gate, recorded.
-  - torch: the stock package does not build with dune 3.23.1; canary
-    carries the one-line fix.
+- **Findings to verify before citing**, each with the layer or join it
+  sits at (0.7):
+  - Binding × Art_sys: z3's forward cell, symbols a HEAD binding requires
+    that apt's libz3 lacks.
+  - PM_coop: z3's both-released world, where the opam package ships its
+    own libz3, so the declared apt library is never loaded; the actual
+    join (absorbed) is not the declared one.
+  - Binding × Art_sys: ssl, `dependencies_provided` violated on
+    `libcrypto.so.3`.
+  - Art_sys against its declaration: sqlite, where the built 3.43.2
+    violates its own declared exports because the declaration cannot say
+    "from 3.44"; the blame falls on the declaration.
+  - PM_coop × PM_sys: zarith's conf-gmp gate, recorded (it holds).
+  - PM_lang: torch, whose stock package does not build with dune 3.23.1;
+    canary carries the one-line fix.
+  - Binding × Art_sys, blamed on the cooperation (§5): ncurses. apt 6.4
+    and conda-forge 6.6 agree on the soname, on all 463 exported symbols
+    and on all ten version nodes, yet the vendored world segfaults. The
+    binding's link line was frozen in Debian's shape (`-lncursesw
+    -ltinfo`, pkg-config's answer there), and conda-forge splits tinfo
+    into a narrow and a wide object, so ncurses' globals load twice. The
+    candidate `no_duplicate_implementation` states it (project
+    issues.md, 2026-08-25).
+  - PM_coop: zstd. Its binding declares a bare `conf-zstd`, whose own
+    build checks `pkg-config --atleast-version=1.3.8`, a floor that
+    `opam show --field=depends` cannot see. The candidates
+    `declared_gate_matches_package` and `gate_bounds_the_library` state
+    it (project projects.md, 2026-08-20).
+  - Art_sys: zstd again. Two packagings of libzstd export 177 and 297
+    `ZSTD_` symbols with nothing removed, so a symbol count is packager
+    policy, not API (projects.md).
+  - Binding × Art_sys: sundials 6→7. The binding compiles its 6.x path
+    against a 7.x library, because `configure` accepts the version
+    syntactically and no 7.x guard exists: a real upstream bug, and the
+    costliest to run, at 177 apt packages (plan.md).
 
   The 09-03 snapshot said zero upstream PRs; check.
 
@@ -256,3 +339,84 @@ Recover the earlier text with
 
 `canary checks --landing`, `canary overview --json`,
 `canary overview --flow`, `make view`, `canary spec-check @all`.
+
+
+### 5.4 Language bindings and their mechanisms
+
+#### 5.4.1 Agreements for OCaml and its binding mechanism
+
+OCaml has source code files for implementation and interfaces, as well as 
+compiled modules for bytecode and native-code format.The OCaml toolchain 
+provides tools for inspecting bytecode files. Platform tools can inspect native binaries.
+
+OCaml binding mechanism to use native library is via compiled C stubs. A binding
+module is compiled statically and can then be used like an ordinary module, either when
+compiling a program or when loading it dynamically into a toplevel.
+
+The official OCaml manual includes a section on creating bindings. However, how to 
+ensure that a binding is constructed correctly, and which agreements are observed, is 
+not explicitly stated, especially considering when considering different
+ways of producing and consuming the native binary
+
+Agreements within pure OCaml code are usually maintained because the relevant
+files are shipped together in a common OCaml package. However, agreements
+between the native C side and the OCaml side are usually maintained implicitly.
+
+<!-- 
+When an OCaml binding is created, agreements are established among the native
+binary, the C header file and the OCaml C stub. When the binding is subsequently
+used locally or delivered to users, static use requires agreement between the
+binding and the C header and native binary that can be located.
+ -->
+
+#### 4.4.1 Agreements for Python
+
+*Material: [component agreements](../design/agreement/components.md), §3.2.*
+
+### 4.5 Versions, packaging and provenance
+
+*Material: [component agreements](../design/agreement/components.md), §§4–5.*
+
+### 4.6 Deployment and behavioural evidence
+
+*Material: [component agreements](../design/agreement/components.md), §6.*
+
+### 4.7 Registry integration and coverage
+
+*Material: [agreement guide](../design/agreement/README.md), §§3–4;
+[checker integration discussion](related/canary-practical-cross-language-bindings-report.md),
+section 9; `src/canary/agreement/`.*
+
+
+--- (should be in other doc)
+
+**Aside: variants of (lambda) calculus**. In PL, there are variants of languages, e.g. pure
+ lambda calculus, and lambda calculus with support or dissupport of natural numbers, integer,
+ booleans, and any operations in and between them. Some entities and their operations are 
+ algebraic and exist ahead of the computational model. We can also have other computational 
+ devices for example, first-class language. The opens a perspective to see a concrete language
+  is consisting of the computational side but not doing algebraic operations, and the algebraic
+  (logic) side. The formar provides the variables, substitution, resolution, closures, which 
+  all assitant to computational, and can be cmoposed to latters. This is an analogy of the 
+  package management side, and the artifact inside of a package.
+
+-- old 2.1 to check and delete
+
+### 2.1 Rationale: perspectives and solutions
+
+Given many involved artifacts and tools are real-world ad-hoc usage and solutions, 
+we are lean to the practical analysis, which starts from the _actions_ in real-world, 
+and identify the _agreements_ people wish to obey, and confirm or blame as 
+experirenced programmers. We don't start from the specification of tools or artifacts, 
+and we also don't target to provide any formal definitions or semantics.
+
+We choose the practical approach, that experienced programmers may use to trigger 
+real-world bugs, that is to consturct sanity check programming and run tools or commands. 
+When treating it as a test generation issue, two questions are how to generate tests, 
+and how to expect the results.
+
+Seek for expectation is challenging for this herotegenous configurations. If 
+a user encounters an misaligned function, who shall it blame, himself, the binding package, the system 
+package, etc? We establish the perspective, which is also a theoretical model to understand the combination
+for those components. Aside, this perspective also carry a diagram template to show both the generic 
+workflow and any concrete running logs.
