@@ -550,6 +550,16 @@ Not urgent (user, 2026-09-27):
   sites, while ▣, R and D come from each agreement's evidence and
   rooting, and the two can disagree (`discovery_matches_link`). Once §6.2
   step 3 derives the sites from rooting, the columns can go.
+- **A source repository has no place of its own** (user, 2026-10-06).
+  Conceptually it sits where a package manager does, but managed by a
+  source manager (git, a release server) rather than a package manager,
+  and outside the artifact layer. The model keeps both sources in the
+  artifact layer and owned by no component. The figures draw them outside
+  the artifact boxes, on a patch of the PM layer's colour. The page's §2
+  puts a part that reads a source under the component whose tools read
+  it: A_sys's build, B_mech's compiler. Giving the source manager its
+  place means a layer or a component for it, a column in §2, and the
+  frames' colours.
 
 And two left open by the bridge decisions: *version transport* (which
 version domain a bridge carries across — one bool today, and llvm's

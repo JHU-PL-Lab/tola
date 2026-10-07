@@ -256,7 +256,7 @@ let visual_hints : visual_hint list =
     hint "source.patch" Frame [ "srcbox" ] [] Always Chain_key
       ~sample:
         {|<svg width="30" height="18" viewBox="0 0 30 18"><rect class="band pm" x="2" y="2" width="26" height="14" rx="4"/></svg>|}
-      ~says:"a source repository: fetched, not built, so outside the artifact layer";
+      ~says:"a source repository: fetched, not built, so in no component's box";
     (* ── the panel ── *)
     hint "button.chosen" Button [ "on" ] [ ".selbar button.on" ] Always Chain_key
       ~sample:{|<span class="kbtn on">opam</span>|} ~says:"a choice made";

@@ -149,8 +149,8 @@ in P<sub>lang</sub>'s as the opam package it is. The joins' boxes
 overlap the sides they join, over the nodes they span: Co<sub>op</sub>
 the capability file and the bridge, B<sub>mech</sub> every artifact of
 both sides, around both A boxes. The two sources are source repositories,
-fetched rather than built, so they lie outside the artifact layer's
-boxes, each on a patch of the PM layer's colour. The <em>sides</em>
+fetched rather than built, so no component owns them: they lie outside
+the A boxes, each on a patch of the PM layer's colour. The <em>sides</em>
 buttons box each side whole, from its package manager down to its
 artifacts. The <em>arrows</em> row counts an arrow's two ends in the
 shown boxes: <em>both ends inside</em> leaves the actions a box
@@ -229,8 +229,13 @@ M<sub>lang</sub>), the packaging of the packages it manages
 (P<sub>sys</sub>, P<sub>lang</sub>) and the artifacts (A<sub>sys</sub>,
 A<sub>lang</sub>), the two joins between the sides (Co<sub>op</sub>, where
 the package managers cooperate through their packaging, and
-B<sub>mech</sub>, the binding mechanism), and the program that uses them. A cell names the part an agreement reads in that
-layer and what it reads there. No agreement relates the two sides
+B<sub>mech</sub>, the binding mechanism), and the program that uses them.
+A cell names the part an agreement reads and what it reads there, in the
+column of the component that owns the part. A part no component owns,
+one of the two sources, sits with the component whose tools read it:
+A<sub>sys</sub>'s build reads the native source, and
+B<sub>mech</sub>'s compiler the binding source's typed externals. No
+agreement relates the two sides
 directly: one that spans them reads the bridge, the binding or the
 program too. The last columns say, for each object format, whether the
 agreement applies there and whether canary checks it. Where each one is
