@@ -600,11 +600,16 @@ agreement layer's September history, which this section carried until
 2026-09-29, is
 [`worklog_2026_09_agreements.md`](doc/canary/worklog/worklog_2026_09_agreements.md).
 
-**Where the work is** (2026-09-29). The overview page is the one results
+**Where the work is** (2026-10-07). The overview page is the one results
 page. §1.2 has a row per chain (one world in one binding language) and
 the diagram's frames as columns; §2 counts the same cells
-(`Canary_matrix.chain_checks`), and §1's badges colour from them. Next is
-phase E, the rest of the bridges (`design/overview.md` §6.1).
+(`Canary_matrix.chain_checks`), and §1's badges colour from them. The
+page's figures and tables are being shaped for the manuscript, around
+the components (M, P and A on each side, Co_op and B_mech between):
+Figure 2's boxes and arrows filter, Figure 3 and Table 10 are done.
+Next is the cooperation table (§3.3), redesigned as the pickup note
+records. After it come the exports, then phase E, the rest of the
+bridges (`design/overview.md` §6.1).
 
 **Rules that history set, still in force:**
 
@@ -882,6 +887,16 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
 
 - `cc` = Claude Code (user shorthand)
 - Allowed bash: `make *` and `dune *` only
+- **One set of terms in all places** (user, 2026-10-07): the page, its
+  tables and figures, the code's names and comments, and the paper say
+  the same thing with the same word. When a term changes, it changes
+  everywhere in one step. The current set is in the pickup note's §2
+  and on the page's §0.1.
+- **A table the manuscript embeds** has one short term per cell (Table
+  10 holds it with a test: at most 48 characters). Its columns sit
+  under two header rows, the components above and one feature each
+  below. What every row shares goes in the table's foot (user,
+  2026-10-06).
 - **Comments state the concluded design, briefly** (user, 2026-09-29):
   the sections, terms and workflows as they are now. The reasoning
   happens in the chat; the history belongs in the worklog and the commit
@@ -952,14 +967,16 @@ context is ephemeral; CLAUDE.md and the working memory in
 session on any machine can reconstruct from.
 
 **Latest pickup note:
-[`doc/canary/worklog/handoff_2026_08_26.md`](doc/canary/worklog/handoff_2026_08_26.md)**
-(mac → WSL). The paper-plan half of the handoff: what the 2026-08-26
-session changed, the ordered plan split into prose (author) / delivery
-(agent-ownable), and the decisions waiting on the user. The macOS port
-has its own checklist in
-[`doc/canary/design/platform.md`](doc/canary/design/platform.md) §6–7.
-A dated pickup note is the right form when work MOVES machines; this
-file stays the durable snapshot.
+[`doc/canary/worklog/handoff_2026_10_07.md`](doc/canary/worklog/handoff_2026_10_07.md)**
+(WSL → the other machine). What the 2026-10-06/07 session changed in
+the overview's figures, components and tables, the terms the user
+settled, and the cooperation table's agreed redesign with its open
+questions, which is not built yet. The one before it,
+[`handoff_2026_08_26.md`](doc/canary/worklog/handoff_2026_08_26.md)
+(mac → WSL), carries the paper plan; the macOS port has its own
+checklist in [`doc/canary/design/platform.md`](doc/canary/design/platform.md)
+§6–7. A dated pickup note is the right form when work MOVES machines;
+this file stays the durable snapshot.
 
 **Before ending a session**, update this file with current state:
 

@@ -18,6 +18,7 @@ deleted.
 - [CAML_LD_LIBRARY_PATH shadows fresh dlls](gotcha_caml_ld_shadow.md) — guard a build step's OCaml self-check with absolute paths
 - [Reaching the mac runner](gotcha_mac_runner_reachability.md) — its IP moves (find it with ARP), mDNS is unreliable, push from the host
 - [Two sessions, one working tree](gotcha_shared_working_tree.md) — a checkout moves the other's branch, `git add -A` sweeps its files; check `git reflog`
+- [Headless screenshots on WSL](gotcha_headless_screenshots.md) — snap Chromium writes only under home (`_out/shots/`); an anchor renders blank, so render an exhibit or a scripted copy of the page
 
 ## On hold
 - [Diagram model refactor](project_diagram_model_refactor.md) — one model with merge and expand operations for canary_diagram.ml's Mermaid output
